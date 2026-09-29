@@ -6,7 +6,9 @@ import { SecurityRepository } from "#modules/security/data/SecurityRepository.js
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
 import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";
+import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { createMemoryRedis } from "../../mocks/memory-redis.js";
 
 vi.mock("#modules/security/services/panic.js", () => ({
   enterPanic: vi.fn(),
@@ -17,6 +19,10 @@ vi.mock("#modules/security/services/verification.js", () => ({
   postOrEditVerifyPanel: vi.fn(),
   loadVerificationConfig: vi.fn(),
   grantVerified: vi.fn(),
+}));
+
+vi.mock("#modules/security/services/restore-guild.js", () => ({
+  restoreGuildFromBackup: vi.fn(),
 }));
 
 const GUILD_ID = "123456789012345678";
@@ -56,6 +62,7 @@ describe("security module RPC handlers", () => {
   const mockEnterPanic = enterPanic as ReturnType<typeof vi.fn>;
   const mockRevertPanic = revertPanic as ReturnType<typeof vi.fn>;
   const mockPostOrEditVerifyPanel = postOrEditVerifyPanel as ReturnType<typeof vi.fn>;
+  const mockRestoreGuildFromBackup = restoreGuildFromBackup as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -74,7 +81,7 @@ describe("security module RPC handlers", () => {
     } as any;
 
     repositoryCache.clear();
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).redis = createMemoryRedis();
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
@@ -317,6 +324,124 @@ describe("security module RPC handlers", () => {
       await expect(
         call("guild.verificationPanel.set", { channelId: CHANNEL_ID }, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
+    });
+
+    it("two concurrently double-submitted identical requests only post the panel once", async () => {
+      mockPostOrEditVerifyPanel.mockResolvedValue({
+        channelId: CHANNEL_ID,
+        messageId: MESSAGE_ID,
+        posted: true,
+        edited: false,
+        moved: false,
+        createdChannel: true,
+        oldMessageDeleted: false,
+      });
+
+      const input = { createChannel: true };
+      const [first, second] = await Promise.allSettled([
+        call("guild.verificationPanel.set", input),
+        call("guild.verificationPanel.set", input),
+      ]);
+
+      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledTimes(1);
+      const outcomes = [first.status, second.status];
+      expect(outcomes.filter((s) => s === "fulfilled")).toHaveLength(1);
+      expect(outcomes.filter((s) => s === "rejected")).toHaveLength(1);
+    });
+
+    it("a retry submitted after the first call finished replays the same result", async () => {
+      mockPostOrEditVerifyPanel.mockResolvedValue({
+        channelId: CHANNEL_ID,
+        messageId: MESSAGE_ID,
+        posted: true,
+        edited: false,
+        moved: false,
+        createdChannel: true,
+        oldMessageDeleted: false,
+      });
+
+      const input = { createChannel: true };
+      const first = await call("guild.verificationPanel.set", input);
+      const second = await call("guild.verificationPanel.set", input);
+
+      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledTimes(1);
+      expect(second).toEqual(first);
+    });
+  });
+
+  describe("guild.backups.restore", () => {
+    it("restores through the security service", async () => {
+      mockRestoreGuildFromBackup.mockResolvedValue({
+        rolesRestored: 2,
+        channelsRestored: 1,
+      });
+
+      const res = (await call("guild.backups.restore", { backupId: 7 })) as any;
+
+      expect(mockRestoreGuildFromBackup).toHaveBeenCalledWith(GUILD_ID, 7);
+      expect(res).toEqual({
+        success: true,
+        rolesRestored: 2,
+        channelsRestored: 1,
+      });
+    });
+
+    it("throws and does not cache when no backup is found", async () => {
+      mockRestoreGuildFromBackup.mockResolvedValue(null);
+
+      await expect(call("guild.backups.restore", { backupId: 7 })).rejects.toThrow(
+        "No backup found to restore",
+      );
+
+      mockRestoreGuildFromBackup.mockResolvedValue({
+        rolesRestored: 1,
+        channelsRestored: 0,
+      });
+      const res = (await call("guild.backups.restore", { backupId: 7 })) as any;
+      expect(res).toEqual({ success: true, rolesRestored: 1, channelsRestored: 0 });
+      expect(mockRestoreGuildFromBackup).toHaveBeenCalledTimes(2);
+    });
+
+    it("two concurrently double-submitted identical restores only recreate roles/channels once", async () => {
+      mockRestoreGuildFromBackup.mockResolvedValue({
+        rolesRestored: 3,
+        channelsRestored: 5,
+      });
+
+      const [first, second] = await Promise.allSettled([
+        call("guild.backups.restore", { backupId: 9 }),
+        call("guild.backups.restore", { backupId: 9 }),
+      ]);
+
+      expect(mockRestoreGuildFromBackup).toHaveBeenCalledTimes(1);
+      const outcomes = [first.status, second.status];
+      expect(outcomes.filter((s) => s === "fulfilled")).toHaveLength(1);
+      expect(outcomes.filter((s) => s === "rejected")).toHaveLength(1);
+    });
+
+    it("a retry submitted after the first restore finished replays the same result", async () => {
+      mockRestoreGuildFromBackup.mockResolvedValue({
+        rolesRestored: 3,
+        channelsRestored: 5,
+      });
+
+      const first = await call("guild.backups.restore", { backupId: 9 });
+      const second = await call("guild.backups.restore", { backupId: 9 });
+
+      expect(mockRestoreGuildFromBackup).toHaveBeenCalledTimes(1);
+      expect(second).toEqual(first);
+    });
+
+    it("a later restore of a different backup is not treated as a duplicate", async () => {
+      mockRestoreGuildFromBackup
+        .mockResolvedValueOnce({ rolesRestored: 1, channelsRestored: 0 })
+        .mockResolvedValueOnce({ rolesRestored: 2, channelsRestored: 2 });
+
+      const first = await call("guild.backups.restore", { backupId: 1 });
+      const second = await call("guild.backups.restore", { backupId: 2 });
+
+      expect(mockRestoreGuildFromBackup).toHaveBeenCalledTimes(2);
+      expect(first).not.toEqual(second);
     });
   });
 });
