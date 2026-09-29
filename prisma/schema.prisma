@@ -383,6 +383,7 @@ model DownloaderRepo {
   url       String   @db.VarChar(200)
   branch    String   @default("master") @db.VarChar(64)
   commit    String?  @db.VarChar(40) // Pinned commit hash
+  signedBy  String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -396,6 +397,7 @@ model DownloaderModule {
   moduleName  String   @map("module_name") @db.VarChar(64)
   version     String?  @db.VarChar(32)
   commit      String?  @db.VarChar(40) // Commit at time of install
+  signedBy    String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
   pinned      Boolean  @default(false) // Frozen against ,module update / updateall
   installedAt DateTime @default(now()) @map("installed_at")
 

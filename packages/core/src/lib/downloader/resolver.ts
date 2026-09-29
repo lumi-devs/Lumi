@@ -15,6 +15,8 @@ import {
 } from "#lib/module-system/manifest.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy } from "#lib/env.js";
+import { verifyCommitSignature, type SignatureVerification } from "./signature.js";
 
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
@@ -53,6 +55,45 @@ export interface RepoUpdateResult {
   changed: boolean;
   diffStat: string;
   recloned: boolean;
+  signedBy: string | null;
+  signatureWarning: string | null;
+}
+
+export interface AddRepoResult {
+  sha: string | null;
+  signedBy: string | null;
+  signatureWarning: string | null;
+}
+
+/**
+ * Thrown when `ADDON_SIGNATURE_POLICY=require` and a commit that is about to
+ * go live (a repo's HEAD, an update's target SHA, or a pinned install
+ * revision) fails signature verification against
+ * `ADDON_ALLOWED_SIGNERS_FILE`.
+ */
+export class AddonSignatureRejectedError extends Error {
+  public readonly sha: string;
+  public readonly verification: Exclude<SignatureVerification, { status: "valid" }>;
+
+  public constructor(sha: string, verification: Exclude<SignatureVerification, { status: "valid" }>) {
+    super(`Commit \`${sha.slice(0, 7)}\` was rejected: ${describeVerification(verification)}.`);
+    this.name = "AddonSignatureRejectedError";
+    this.sha = sha;
+    this.verification = verification;
+  }
+}
+
+function describeVerification(
+  verification: Exclude<SignatureVerification, { status: "valid" }>,
+): string {
+  switch (verification.status) {
+    case "unsigned":
+      return "the commit is not signed";
+    case "untrusted":
+      return `the signer is not in the trusted allowed-signers list (${verification.detail})`;
+    case "invalid":
+      return `signature verification failed (${verification.detail})`;
+  }
 }
 
 
@@ -116,6 +157,42 @@ export const PinRoot = path.join(ModuleRoot, ".lumi-pins");
 
 export class DownloadResolver {
   /**
+   * Checks `sha` against `ADDON_SIGNATURE_POLICY` before it is allowed to go
+   * live. `off` (or `warn`/`require` with no allowed-signers file configured
+   * - `require` alone never reaches this state; {@linkcode
+   * validateAddonSignatureConfig} in `#lib/env.js` refuses to boot without
+   * one) is a no-op. `warn` logs and returns a warning string for the caller
+   * to surface. `require` throws {@linkcode AddonSignatureRejectedError}.
+   */
+  private async _checkSignaturePolicy(
+    repoPath: string,
+    sha: string,
+  ): Promise<{ signedBy: string | null; signatureWarning: string | null }> {
+    const policy = getAddonSignaturePolicy();
+    if (policy === "off") return { signedBy: null, signatureWarning: null };
+
+    const allowedSignersFile = getAddonAllowedSignersFile();
+    if (!allowedSignersFile) {
+      return { signedBy: null, signatureWarning: null };
+    }
+
+    const verification = await verifyCommitSignature(repoPath, sha, allowedSignersFile);
+    if (verification.status === "valid") {
+      return { signedBy: verification.signer, signatureWarning: null };
+    }
+
+    if (policy === "require") {
+      throw new AddonSignatureRejectedError(sha, verification);
+    }
+
+    const warning = describeVerification(verification);
+    container.logger?.warn?.(
+      `[Downloader] Signature warning for ${sha.slice(0, 7)}: ${warning}`,
+    );
+    return { signedBy: null, signatureWarning: warning };
+  }
+
+  /**
    * Clones `name` if it isn't on disk yet. Never pulls an existing checkout -
    * a repo that's already cloned must go through {@linkcode updateRepo}, so
    * that pulling in new upstream commits is always an explicit, reviewable
@@ -125,7 +202,7 @@ export class DownloadResolver {
     name: string,
     url: string,
     branch = "default",
-  ): Promise<string | null> {
+  ): Promise<AddRepoResult> {
     name = repoSchema.parse(name);
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
@@ -159,7 +236,19 @@ export class DownloadResolver {
         throw new Error("Git clone failed");
       });
 
-      return this._getHeadSha(repoPath);
+      const sha = await this._getHeadSha(repoPath);
+
+      if (sha) {
+        try {
+          const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, sha);
+          return { sha, signedBy, signatureWarning };
+        } catch (err) {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          throw err;
+        }
+      }
+
+      return { sha, signedBy: null, signatureWarning: null };
     });
   }
 
@@ -226,12 +315,26 @@ export class DownloadResolver {
         }
         try {
           await this._revalidateInstalledModules(name, repoPath, repoPath);
+          const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, newSha);
+          return {
+            oldSha,
+            newSha,
+            changed: oldSha !== newSha,
+            diffStat: "",
+            recloned,
+            signedBy,
+            signatureWarning,
+          };
         } catch (validationErr) {
+          if (validationErr instanceof AddonSignatureRejectedError) {
+            throw new Error(
+              `${validationErr.message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
+            );
+          }
           throw new Error(
             `${(validationErr as Error).message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
           );
         }
-        return { oldSha, newSha, changed: oldSha !== newSha, diffStat: "", recloned };
       }
 
       const targetRef = await this._resolveFetchTarget(repoPath, branch);
@@ -241,7 +344,15 @@ export class DownloadResolver {
 
       const changed = oldSha !== newSha;
       if (!changed) {
-        return { oldSha, newSha, changed: false, diffStat: "", recloned: false };
+        return {
+          oldSha,
+          newSha,
+          changed: false,
+          diffStat: "",
+          recloned: false,
+          signedBy: null,
+          signatureWarning: null,
+        };
       }
 
       const diffStat = oldSha
@@ -256,12 +367,15 @@ export class DownloadResolver {
         os.tmpdir(),
         `lumi-repo-update-${name}-${randomUUID()}`,
       );
+      let signedBy: string | null = null;
+      let signatureWarning: string | null = null;
       try {
         await execGit(["-C", repoPath, "worktree", "add", "--detach", tmpDir, newSha]).catch(
           execError(`Failed to stage ${name}'s fetched revision for validation`),
         );
 
         await this._revalidateInstalledModules(name, repoPath, tmpDir);
+        ({ signedBy, signatureWarning } = await this._checkSignaturePolicy(tmpDir, newSha));
 
         // Validation passed - now, and only now, move the live checkout.
         await execGit(["-C", repoPath, "reset", "--hard", newSha]).catch(
@@ -274,7 +388,7 @@ export class DownloadResolver {
         await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
       }
 
-      return { oldSha, newSha, changed: true, diffStat, recloned: false };
+      return { oldSha, newSha, changed: true, diffStat, recloned: false, signedBy, signatureWarning };
     });
   }
 
@@ -424,7 +538,9 @@ export class DownloadResolver {
     repoName: string,
     moduleName: string,
     revision?: string,
-  ): Promise<ModuleInfo & { commit: string | null }> {
+  ): Promise<
+    ModuleInfo & { commit: string | null; signedBy: string | null; signatureWarning: string | null }
+  > {
     repoName = repoSchema.parse(repoName);
     moduleName = repoSchema.parse(moduleName);
 
@@ -438,8 +554,11 @@ export class DownloadResolver {
     // sha, sharing objects with (but never mutating) the shared clone.
     let commit: string | null = null;
     let sourceRoot = repoPath;
+    let signedBy: string | null = null;
+    let signatureWarning: string | null = null;
     if (revision) {
       commit = await this.resolveRevision(repoPath, revision);
+      ({ signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, commit));
       sourceRoot = await this._ensurePinWorktree(repoPath, repoName, commit);
     }
 
@@ -553,7 +672,7 @@ export class DownloadResolver {
       `[Downloader] Installed ${moduleName} from ${repoName}${commit ? ` @ ${commit}` : ""}`,
     );
 
-    return { ...info, commit };
+    return { ...info, commit, signedBy, signatureWarning };
   }
 
   /**

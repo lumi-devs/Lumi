@@ -195,14 +195,14 @@ export class RepoCommand extends BaseSubcommand {
     );
 
     try {
-      await this.downloaderService.addRepo(name, url, branch);
+      const { signatureWarning } = await this.downloaderService.addRepo(name, url, branch);
       this.container.logger.info(
         `[Repo] ${Emojis.Repo} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
-      await ctx.replySuccess(
-        `${Emojis.Repo} ${t("core:repoAddedTitle")}`,
-        t("core:repoAddedText", { name }),
-      );
+      const body = [t("core:repoAddedText", { name }), signatureWarning ? `${Emojis.WarningSign} Signature warning: ${signatureWarning}.` : null]
+        .filter(Boolean)
+        .join("\n\n");
+      await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoAddedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       this.container.logger.warn(
@@ -252,7 +252,14 @@ export class RepoCommand extends BaseSubcommand {
       const shaLine = result.changed
         ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
         : "Already up to date.";
-      const body = [t("core:repoUpdatedText", { name }), shaLine, result.diffStat]
+      const body = [
+        t("core:repoUpdatedText", { name }),
+        shaLine,
+        result.diffStat,
+        result.signatureWarning
+          ? `${Emojis.WarningSign} Signature warning: ${result.signatureWarning}.`
+          : null,
+      ]
         .filter(Boolean)
         .join("\n\n");
       await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoUpdatedTitle")}`, body);
@@ -278,7 +285,7 @@ export class RepoCommand extends BaseSubcommand {
 
     const list = repos.map(
       (r) =>
-        `**${r.name}** (\`${r.branch}\`)${r.commit ? ` @ \`${r.commit.slice(0, 7)}\`` : ""}\n<${r.url}>`,
+        `**${r.name}** (\`${r.branch}\`)${r.commit ? ` @ \`${r.commit.slice(0, 7)}\`` : ""}${r.signedBy ? ` (signed by ${r.signedBy})` : ""}\n<${r.url}>`,
     );
     await paginateList({
       interactionOrMessage: ctx.source,

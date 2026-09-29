@@ -67,14 +67,17 @@ export async function installModule(
   user: User,
 ): Promise<CardReply> {
   try {
-    await downloader().installModule(repoName, moduleName);
+    const { signatureWarning } = await downloader().installModule(repoName, moduleName);
     container.logger.debug(
       `[Module] ${Emojis.Install} Installed: ${moduleName} from ${repoName} by ${user.tag}`,
     );
-    return makeSuccessCard(
-      `${Emojis.Install} Module Installed`,
+    const body = [
       `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
-    );
+      signatureWarning ? `${Emojis.Error} Signature warning: ${signatureWarning}.` : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    return makeSuccessCard(`${Emojis.Install} Module Installed`, body);
   } catch (err: unknown) {
     if (err instanceof ModuleAlreadyInstalledError) {
       return moduleAlreadyInstalledCard(moduleName, user.id);
