@@ -9,6 +9,7 @@ COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/api/package.json apps/api/package.json
+COPY apps/scheduler/package.json apps/scheduler/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY apps/docs/package.json apps/docs/package.json
 RUN bun install --frozen-lockfile
@@ -33,6 +34,14 @@ RUN bunx prisma generate && chown -R bun:bun /app
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/api/src/main.ts"]
+
+FROM source AS scheduler
+ENV NODE_ENV=production
+COPY apps/scheduler/ apps/scheduler/
+RUN bunx prisma generate && chown -R bun:bun /app
+USER bun
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["sh", "-c", "exec bun apps/scheduler/src/main.ts"]
 
 FROM source AS dashboard-build
 ENV NODE_ENV=production \

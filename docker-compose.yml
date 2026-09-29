@@ -170,6 +170,18 @@ services:
     expose:
       - "8091"
 
+  scheduler:
+    <<: *lumi-service
+    container_name: lumi-scheduler
+    image: ghcr.io/lumi-devs/lumi-scheduler:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: scheduler
+    environment:
+      <<: *lumi-env
+      METRICS_HOST: "0.0.0.0"
+
   dashboard:
     image: ghcr.io/lumi-devs/lumi-dashboard:latest
     build:

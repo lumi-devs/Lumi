@@ -63,6 +63,7 @@ jobs:
         target:
           - name: worker
           - name: api
+          - name: scheduler
           - name: dashboard
     steps:
       - name: Checkout repository
@@ -82,6 +83,8 @@ jobs:
             echo "image=ghcr.io/${REPO_LOWER}-dashboard" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.target.name }}" = "api" ]; then
             echo "image=ghcr.io/${REPO_LOWER}-api" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.target.name }}" = "scheduler" ]; then
+            echo "image=ghcr.io/${REPO_LOWER}-scheduler" >> $GITHUB_OUTPUT
           else
             echo "image=ghcr.io/${REPO_LOWER}" >> $GITHUB_OUTPUT
           fi

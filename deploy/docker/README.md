@@ -28,9 +28,9 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 
 ## 🌟 Overview & Container Architecture
 
-Lumi's container setup provides complete flexibility: run a single bot container against the core data plane, or launch a fully orchestrated stack with extra worker replicas, a dashboard, and OpenTelemetry tracing.
+Lumi's container setup provides complete flexibility: run a single bot container against the core data plane, or launch a fully orchestrated stack with extra worker replicas, a scheduler, a dashboard, and OpenTelemetry tracing.
 
-Every worker process is identical: `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns, each child holding a real Discord WebSocket connection and running all command, module, and interaction logic in-process. There is no separate scheduler or gateway container - exactly one child per pod, the one holding shard id `0`, is elected "primary" (zero-coordination, via `isPrimaryShard()`) and is the sole owner of BullMQ job scheduling. RPC serving is not part of that primary-shard role - it lives in a separate, gateway-free `api` service (default compose service, like `worker`) that the dashboard talks to instead. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
+Every worker process is identical: `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns, each child holding a real Discord WebSocket connection and running all command, module, and interaction logic in-process. Job scheduling is owned by a separate, gateway-free `scheduler` service that runs the BullMQ worker and manages repeatable jobs. RPC serving lives in a separate, gateway-free `api` service (default compose service, like `worker`) that the dashboard talks to instead. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
 
 ### Docker Compose Architecture Diagram
 
@@ -49,6 +49,7 @@ flowchart TD
         W[lumi-worker<br/>Default]
         WS[lumi-worker-scale<br/>Profile: scale]
         Api[lumi-api<br/>Default]
+        Sched[lumi-scheduler<br/>Default]
         Dev[lumi-dev<br/>Profile: development]
     end
 
@@ -83,13 +84,16 @@ flowchart TD
     Api -.->|Queries, direct by default| PG
     Api <-->|Cache & pub/sub| Redis
 
-    W <-->|BullMQ Tasks, primary shard only| Redis
+    Sched <-->|BullMQ Job Processing| Redis
+    Sched <-->|Queries| PG
 
     W -->|OTLP Traces / Metrics| OTEL
     WS -->|OTLP Traces / Metrics| OTEL
+    Sched -->|OTLP Traces / Metrics| OTEL
     OTEL -->|Traces| Tempo
     Prom -->|Scrape Metrics| W
     Prom -->|Scrape Metrics| WS
+    Prom -->|Scrape Metrics| Sched
     Graf -->|Dashboards| Prom
     Graf -->|Dashboards| Tempo
 ```
@@ -99,7 +103,7 @@ flowchart TD
 ## 🏗️ Dockerfile Multi-Stage Target Pipeline
 
 The root [`Dockerfile`](../../Dockerfile) uses one shared dependency chain that then branches into
-two independent final targets, `worker` and `dashboard`, based on `oven/bun:1-alpine`:
+multiple independent final targets based on `oven/bun:1-alpine`:
 
 ```mermaid
 graph LR
@@ -107,6 +111,7 @@ graph LR
     deps --> source[source<br/>+ packages/, prisma/]
     source --> worker[worker target<br/>prisma generate, runs main.ts]
     source --> api[api target<br/>prisma generate, runs main.ts]
+    source --> scheduler[scheduler target<br/>prisma generate, runs main.ts]
     source --> dbuild[dashboard-build<br/>next build]
     base --> dashboard[dashboard target<br/>copies .next/standalone from dbuild]
     dbuild --> dashboard
@@ -117,7 +122,7 @@ graph LR
 1. **`base`**: Installs minimal Alpine utilities (`dumb-init`).
 2. **`deps`**: Copies every workspace `package.json` and runs `bun install --frozen-lockfile`.
 3. **`source`**: Adds `tsconfig`/`prisma.config.ts`, the `packages/` workspaces, and the Prisma
-   schema — shared by both final targets below.
+   schema — shared by all final targets below.
 4. **`worker`** (`docker compose build` target `worker`): adds `apps/worker/`, runs
    `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
    `bun apps/worker/src/main.ts` directly - no migration step. There is no separate `migrate`
@@ -126,7 +131,12 @@ graph LR
    `DIRECT_POSTGRES_URL`) instead of the default `CMD` - a distinct image tag would otherwise
    race the worker image for the same name on `compose build`, and pull-only users (CI doesn't
    publish a `migrate` image) would get the worker image with no override, which never exits.
-5. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
+5. **`api`** (`docker compose build` target `api`): adds `apps/api/`, runs `bunx prisma generate`,
+   switches to unprivileged user `bun`, and on container start runs `bun apps/api/src/main.ts`.
+6. **`scheduler`** (`docker compose build` target `scheduler`): adds `apps/scheduler/`, runs
+   `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
+   `bun apps/scheduler/src/main.ts`.
+7. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
    `apps/dashboard/` and runs `bun run --filter=@lumi/dashboard build` (a real Next.js
    standalone build, with placeholder env values that only matter at build time); the final
    `dashboard` target (from `base`, not `source`) copies just `.next/standalone`, `.next/static`
@@ -140,9 +150,10 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `migrate` | *(default)* | - | One-shot `bunx prisma migrate deploy`, then exits. `worker`/`worker-scale`/`api` wait on it (`depends_on: condition: service_completed_successfully`) instead of each running migrations on their own startup. |
-| `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ job scheduling. |
-| `api` | *(default)* | - | Stateless internal RPC server for the dashboard - no Discord gateway connection, no BullMQ. |
+| `migrate` | *(default)* | - | One-shot `bunx prisma migrate deploy`, then exits. `worker`/`worker-scale`/`api`/`scheduler` wait on it (`depends_on: condition: service_completed_successfully`) instead of each running migrations on their own startup. |
+| `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; runs all commands, interactions, and listeners. |
+| `scheduler` | *(default)* | - | BullMQ job scheduler and worker process - no Discord gateway connection, no RPC serving. |
+| `api` | *(default)* | - | Stateless internal RPC server for the dashboard - no Discord gateway connection, no job scheduling. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
 | `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. Points `POSTGRES_URL` at `pgbouncer:6432` (extra replicas mean extra DB connections). |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, built from the `dashboard` Dockerfile target (Next.js standalone output). |

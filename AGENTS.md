@@ -21,14 +21,16 @@ system topology — treat it as source of truth for anything below.
 - `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
   that spawns one identical child process per shard it owns (`shard-client.ts`); every process
   owns the Discord gateway connection(s) for its shards and runs every command, module, and
-  interaction handler. There is no separate scheduler role - exactly one shard per pod (the one
-  holding shard id `0`) is elected "primary" with zero coordination and owns BullMQ job
-  scheduling (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). RPC serving is not part of
-  that primary-shard role — it's a separate `apps/api` process (see below), not gated by
-  shard/`isPrimaryShard()` at all.
+  interaction handler. `isPrimaryShard()` gates only the shared metrics port / cluster readiness
+  probes (see `apps/worker/src/telemetry.ts`); BullMQ job scheduling is owned by a separate
+  `apps/scheduler` process (see below). RPC serving is not part of any shard role — it's a
+  separate `apps/api` process (see below), not gated by shard/`isPrimaryShard()` at all.
 - `apps/api` — gateway-free RPC server for the dashboard. Boots a `SapphireClient` without
   calling `.login()`, and owns `packages/core/src/lib/rpc/*` serving
   (`registerRpcHandlers()`/`startRpcHttpServer()`). No BullMQ, no Discord gateway connection.
+- `apps/scheduler` — gateway-free BullMQ worker and scheduler. Owns job processing,
+  repeatable-job registration, and the cluster-wide scheduler lock. No Discord gateway
+  connection, no RPC serving.
 - `apps/dashboard` — Next.js (App Router) web admin panel; talks to `apps/api` only over an
   internal HTTP RPC bridge, never touches Postgres/Redis directly.
 - `packages/core` — the framework itself: module loader, database service, command/permit
