@@ -22,14 +22,11 @@ let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 const services = await bootstrapApiApp({
   extraDrainSteps: [
     {
-      // Ahead of the HTTP server stop: each SSE connection's own cleanup
-      // (stop its event-bus consume loop, destroy its ephemeral consumer
-      // group) needs Redis still reachable, and needs to run under our own
-      // control rather than racing Bun.serve's own socket teardown.
-      name: "sse-connections",
-      run: () => closeAllSseConnections(),
-    },
-    {
+      // Stop accepting new connections first: `Bun.Server#stop()` without
+      // `closeActiveConnections` rejects new sockets immediately but leaves
+      // already-open ones (including live SSE streams) alive, so a /events
+      // request can no longer slip in between this and the SSE cleanup step
+      // below - the race that ran when SSE connections were closed first.
       name: "rpc-http-server",
       run: async () => {
         if (rpcServer) {
@@ -37,6 +34,15 @@ const services = await bootstrapApiApp({
           rpcServer = null;
         }
       },
+    },
+    {
+      // After the server has stopped accepting new connections: each SSE
+      // connection's own cleanup (stop its event-bus consume loop, destroy
+      // its ephemeral consumer group) needs Redis still reachable, and needs
+      // to run under our own control rather than racing Bun.serve's own
+      // socket teardown of the connections `stop()` above left open.
+      name: "sse-connections",
+      run: () => closeAllSseConnections(),
     },
   ],
 });
