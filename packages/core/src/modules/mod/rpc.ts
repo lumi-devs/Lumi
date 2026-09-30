@@ -12,6 +12,7 @@ import { liftModerationCaseWithUndo } from "./services/case-lift.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
+import { errorCode } from "#lib/utilities/errors.js";
 import {
   removeThresholdRule,
   setThresholdRule,
@@ -125,10 +126,11 @@ export const modRpcHandlers = implementRpc(modRpc, {
         `[RPC] Failed to revoke case #${caseNumber} (${guildId}/${moderationCase.userId}):`,
         err,
       );
-      throw new CodedRpcError(
-        RpcFailureCodes.HandlerError,
-        "Could not undo this action on Discord. Try again shortly.",
-      );
+      const message =
+        errorCode(err) === 50013
+          ? "Lumi lacks permission to undo this on Discord (needs Ban Members / Moderate Members). Grant it and try again."
+          : "Could not undo this action on Discord. Try again shortly.";
+      throw new CodedRpcError(RpcFailureCodes.HandlerError, message);
     }
 
     return { success: true, caseNumber };

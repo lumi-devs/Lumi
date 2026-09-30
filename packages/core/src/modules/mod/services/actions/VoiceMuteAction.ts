@@ -116,7 +116,7 @@ export class VoiceMuteAction {
       })
       .catch((err: unknown) => {
         const code = errorCode(err);
-        if (code === 10007 || code === 50013) return;
+        if (code === 10007) return;
         throw err;
       });
   }

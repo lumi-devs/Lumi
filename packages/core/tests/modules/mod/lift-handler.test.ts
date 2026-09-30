@@ -89,4 +89,25 @@ describe('handleModLiftFire', () => {
     expect(container.client.rest.patch).toHaveBeenCalled();
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(4);
   });
+
+  it('leaves the case active, logs, and rethrows when Discord denies the undo with 50013', async () => {
+    (container.db.moderation.getModerationCaseById as any).mockResolvedValue({
+      id: 5,
+      caseNumber: 5,
+      guildId: 'g1',
+      userId: 'u1',
+      action: 'mute',
+      active: true
+    });
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    (container.client.rest.patch as any).mockRejectedValue(err);
+
+    await expect(handleModLiftFire({ caseId: 5 })).rejects.toThrow('Missing Permissions');
+
+    expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
+    expect(container.logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('lacks Discord permission'),
+      err,
+    );
+  });
 });
