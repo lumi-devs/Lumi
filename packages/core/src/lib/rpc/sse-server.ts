@@ -136,7 +136,7 @@ function errorResponse(err: unknown): Response {
 /**
  * GET /events?guildId=...&actorId=...
  *
- * Internal-only: the caller (apps/dashboard's server-side route handler,
+ * Internal-only: the caller (the dashboard's server-side route handler,
  * per the SSE plan's later slice) already passed the same
  * `RPC_INTERNAL_TOKEN` bearer check `http-server.ts` runs for `/rpc`, so this
  * function only owns the guild-scoping half - `actorId`/`guildId` are

@@ -44,11 +44,6 @@
       "entry": ["src/main.ts", "src/shard-client.ts"],
       "project": ["src/**/*.ts"]
     },
-    "apps/dashboard": {
-      "next": true,
-      "entry": ["tests/**/*.test.{ts,tsx}", "tests/setup.ts"],
-      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"]
-    },
     "apps/docs": {
       "next": true,
       "entry": ["scripts/*.ts"],

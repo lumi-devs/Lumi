@@ -73,7 +73,7 @@ services:
   # on their own startup (that raced on every scaled replica before this). Reuses the
   # worker image/build (same tag, same `target: worker`) rather than a separate image -
   # a distinct `migrate` tag would race the worker image for ownership of the same name
-  # on `compose build`, and pull-based users (CI only publishes worker/api/dashboard
+  # on `compose build`, and pull-based users (CI only publishes worker/api/scheduler
   # images) would get the worker image with no command override, i.e. it never exits.
   migrate:
     <<: *lumi-service
@@ -184,18 +184,14 @@ services:
       METRICS_HOST: "0.0.0.0"
 
   dashboard:
-    image: ghcr.io/lumi-devs/lumi-dashboard:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: dashboard
+    image: ghcr.io/lumi-devs/lumi-dashboard:${LUMI_DASHBOARD_TAG:-latest}
     container_name: lumi-dashboard
     environment:
       <<: *lumi-env
       DASHBOARD_HOST: "0.0.0.0"
       DASHBOARD_PORT: "8080"
       # Doubles as NextAuth's session JWT encryption secret — see
-      # apps/dashboard/src/lib/env.ts.
+      # src/lib/env.ts in the lumi-dashboard repo.
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env - generate with: openssl rand -hex 32}"
       # Internal-only HTTP RPC bridge to the api process (see
       # packages/core/src/lib/rpc/http-server.ts) - reachable over lumi-net,

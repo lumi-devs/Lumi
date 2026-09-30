@@ -66,10 +66,11 @@ For day-to-day development, run the processes directly instead of in containers:
 ```bash title="Dev runs"
 # Bot worker with live reload (needs Postgres + Redis reachable)
 bun run --filter @lumi/worker dev
-
-# Dashboard on http://localhost:8080
-bun run --cwd apps/dashboard dev
 ```
+
+The dashboard is developed from its own repo,
+[`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard) (`bun run dev` there,
+also on `http://localhost:8080`).
 
 Next: [Configuration](/docs/getting-started/configuration), or jump straight to
 [First commands](/docs/getting-started/first-commands) once the bot is online.

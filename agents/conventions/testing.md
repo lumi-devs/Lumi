@@ -1,5 +1,9 @@
 # Testing
 
+> The dashboard now lives in its own repo, [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard).
+> Paths below that used to be `apps/dashboard/...` in this repo are now repo-root-relative
+> there; `bun run test` in this repo no longer runs the dashboard's test suite.
+
 ## Where tests live
 
 Every package that has tests puts them under its own `tests/` directory, mirroring
@@ -29,58 +33,21 @@ exception noted below):
 - `packages/sharding/tests/shard-telemetry.test.ts`,
   `packages/observability/tests/observability.test.ts` — one file per package,
   small surface area.
-- `apps/dashboard/tests/components/*.test.tsx` for React component tests,
-  `apps/dashboard/tests/lib/*.test.ts` for plain TS (`rpc.ts`, `auth-guards.ts`,
-  `proxy.ts`, `client-ip.ts`, `guild-routes.ts`, `setup-issues.ts`,
-  `config-labels.ts`, `log-format.ts`). Same split as `src/components` vs `src/lib`.
+- The dashboard's own `tests/components/*.test.tsx` and `tests/lib/*.test.ts` now live in
+  the `lumi-dashboard` repo, with their own testing conventions — not covered here.
 
 Deciding where a new test goes: if you touched `packages/core/src/modules/<x>/...`,
 the test goes in `packages/core/tests/modules/<x>/`. If you touched
 `packages/core/src/lib/...`, it goes in `packages/core/tests/core/` (lib-level
 behavior is tested through the `core/` folder, not a separate `lib/` mirror — there
-is no `packages/core/tests/lib/`). If you touched `apps/dashboard/src/components/`
-or `apps/dashboard/src/lib/`, mirror into `apps/dashboard/tests/components/` or
-`apps/dashboard/tests/lib/` respectively.
+is no `packages/core/tests/lib/`).
 
 ## Running tests
 
-`bun run test` is `vitest run && bun run --cwd apps/dashboard test` — two separate
-Vitest invocations, not one shared run. The dashboard has its own `vitest` script
-(`apps/dashboard/package.json:14`, plain `vitest run`) and its own
-`vitest.config.ts` (`apps/dashboard/vitest.config.ts`), because it needs things the
-root config doesn't:
-
-- A `#` alias resolving to `apps/dashboard/src` — deliberately *not* registered in
-  the shared root config, because a bare `"#"` prefix-alias there would collide
-  with `packages/core`'s `#lib/*`, `#utilities/*` etc. subpath imports
-  (`apps/dashboard/vitest.config.ts:4-16`, comment explains the collision risk).
-- `oxc: { jsx: { runtime: "automatic" } }` — Vite's oxc transformer reads
-  `apps/dashboard/tsconfig.json`'s `"jsx": "preserve"` (needed for `next build`)
-  which otherwise leaves JSX untransformed under Vitest
-  (`apps/dashboard/vitest.config.ts:23-31`).
-- `environment: "node"` at the config level, same as root — but individual
-  component test files that render React opt into `jsdom` per-file with a
-  `// @vitest-environment jsdom` pragma comment on line 1 (every file under
-  `apps/dashboard/tests/components/*.test.tsx` does this, e.g.
-  `guild-picker.test.tsx:1`, `anti-nuke-card.test.tsx:1`). Plain-TS tests in
-  `tests/lib/` don't need it.
-- `setupFiles: ["./tests/setup.ts"]` — mocks the `server-only` package (which
-  throws outside Next's `react-server` condition), wires React Testing Library's
-  `cleanup()` into `afterEach` since `test.globals` isn't turned on, and stubs
-  `IntersectionObserver`/`ResizeObserver` for `jsdom`
-  (`apps/dashboard/tests/setup.ts`).
-
-Root `vitest.config.ts` (repo root) is minimal: `environment: "node"`,
-`include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts']`, `tsconfigPaths: true`
-for resolving `#lib/*.js` etc. It only globs `packages/**` — `apps/worker` has no
-test suite of its own currently (worth flagging if you're about to write one: there
-is no established pattern for it yet).
-
-`bun run test:coverage` runs both suites with `--coverage` and both report to a
-shared `coverage/` tree — the dashboard's `vitest.config.ts` explicitly points its
-`reportsDirectory` at `../../coverage/dashboard` instead of the default
-`apps/dashboard/coverage`, specifically so `bun run test:coverage`'s single
-`coverage/` output covers both invocations (`apps/dashboard/vitest.config.ts:39-44`).
+`bun run test` in this repo is `bun test --parallel`, globbing `packages/**` — it no longer
+runs the dashboard's own test suite, which lives and runs in the `lumi-dashboard` repo.
+`apps/worker` has no test suite of its own currently (worth flagging if you're about to
+write one: there is no established pattern for it yet).
 
 ## The mock Prisma driver
 

@@ -35,7 +35,8 @@ dashboard (Next.js) ──RPC+token──▶ primary child :8091 ──▶ Postg
 
 ## The dashboard RPC bridge
 
-`apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token. Every
+The dashboard ([`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), its own
+repo) never opens a Postgres or Redis connection and never holds the bot token. Every
 read and write is proxied over an internal HTTP RPC bridge to the worker: a `server-only` client
 posts an envelope (`id`, `action`, `guildId`, `actorId`, optional `traceparent`, `data`) to the
 primary shard, authenticated by `RPC_INTERNAL_TOKEN`. A dashboard outage or traffic spike can

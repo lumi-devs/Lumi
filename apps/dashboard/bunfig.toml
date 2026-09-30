@@ -1,5 +1,0 @@
-[test]
-root = "tests"
-preload = ["./tests/happydom-register.ts", "./tests/setup.ts"]
-coverageReporter = ["text", "lcov"]
-coverageDir = "../../coverage/dashboard"

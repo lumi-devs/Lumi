@@ -1,11 +1,12 @@
 /**
  * Canonical permit-node vocabulary, single-sourced for every consumer.
  *
- * Previously `packages/core/.../permit-nodes.ts` and
- * `apps/dashboard/.../permit-nodes.ts` each maintained a hand-kept copy of
- * the same node list; any new `requiredPermit` had to touch both or the
- * dashboard picker drifted. This module is the one source of truth — core
- * adds emoji/label helpers on top, the dashboard adds descriptions.
+ * Previously `packages/core/.../permit-nodes.ts` and the dashboard's own
+ * `permit-nodes.ts` each maintained a hand-kept copy of the same node list;
+ * any new `requiredPermit` had to touch both or the dashboard picker drifted.
+ * This module is the one source of truth — core adds emoji/label helpers on
+ * top, the dashboard (which now consumes it via the published
+ * `@lumi-devs/contracts` package) adds descriptions.
  */
 
 export interface PermitNodeGroup {

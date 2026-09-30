@@ -31,15 +31,19 @@ system topology — treat it as source of truth for anything below.
 - `apps/scheduler` — gateway-free BullMQ worker and scheduler. Owns job processing,
   repeatable-job registration, and the cluster-wide scheduler lock. No Discord gateway
   connection, no RPC serving.
-- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `apps/api` only over an
-  internal HTTP RPC bridge, never touches Postgres/Redis directly.
+- The dashboard (Next.js App Router web admin panel) lives in its own repo,
+  [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), published as the
+  `ghcr.io/lumi-devs/lumi-dashboard` image. It talks to `apps/api` only over the internal HTTP
+  RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
+  `@lumi-devs/observability` from GitHub Packages rather than importing this repo's source — see
+  "Releasing contracts" below for how a contracts change reaches it.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
   event bus (`#lib/event-bus/`) and shard telemetry for the dashboard's fleet view
   (`#lib/sharding/`) — shard assignment itself is still discord.js's `ShardingManager`, not
   custom code.
 - `packages/contracts` — RPC schemas (the typed router) and shared type definitions used by
-  both `worker` and `dashboard`.
+  `worker` and, via the published `@lumi-devs/contracts` package, the dashboard repo.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
 
@@ -90,10 +94,11 @@ Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk
 
 ## RPC bridge (dashboard ↔ api)
 
-`apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token.
-Every read/write is proxied over an internal HTTP RPC bridge to `apps/api`
-(`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
-`server-only` module reachable only from Server Components/Route Handlers/Server Actions).
+The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Redis
+connection and never holds the bot token. Every read/write is proxied over an internal HTTP RPC
+bridge to `apps/api` (the dashboard's own `src/lib/rpc.ts` calling into this repo's
+`packages/core/src/lib/rpc/http-server.ts`, a `server-only` module reachable only from Server
+Components/Route Handlers/Server Actions).
 
 The action surface is a typed router, built from per-slice contract files under
 `packages/contracts/src/rpc/*.ts` (one per module: `afk.ts`, `mod.ts`, `dashboard.ts`, ...)
@@ -104,13 +109,29 @@ implementing it with `implementRpc()` (`packages/core/src/lib/rpc/implement.ts`)
 module's own `#modules/<name>/rpc.ts` (bot-owner/system-level actions instead live in
 `#lib/rpc/account-rpc.ts` / `#lib/rpc/system-rpc.ts`), and adding it to the static list in
 `packages/core/src/lib/rpc/registry.ts` so it's registered even while the module is disabled.
-The caller side is `apps/dashboard/src/lib/guild-reads.ts` (reads, cached with React's
-`cache()`) or `apps/dashboard/src/actions/*` (mutations, Server Actions) — never a direct
-database call from the dashboard.
+The caller side, in the dashboard repo, is `src/lib/guild-reads.ts` (reads, cached with React's
+`cache()`) or `src/actions/*` (mutations, Server Actions) — never a direct database call from
+the dashboard.
 Full walkthrough: [`agents/architecture/rpc-bridge.md`](agents/architecture/rpc-bridge.md) and
 [`agents/workflows/adding-an-rpc-action.md`](agents/workflows/adding-an-rpc-action.md) — both
 predate this typed-router layout and still describe the older hand-written contract, so treat
 them as directionally useful rather than literal.
+
+### Releasing contracts
+
+A dashboard-visible change to `packages/contracts` (or `packages/observability`) only reaches
+`lumi-dashboard` once it's published and re-pinned there:
+
+1. Bump the version in `packages/contracts/package.json` (and `packages/observability/package.json`
+   if it changed too).
+2. Tag the release as `contracts-v<version>` and push the tag — `.github/workflows/publish-packages.yml`
+   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to GitHub Packages from that tag.
+3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
+   open a PR there.
+
+`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it requires the same
+major version, and while the major version is `0`, the same minor version too — so a breaking
+contracts change and the dashboard's pin bump must land together.
 
 Full reference: [`dashboard.md`](apps/docs/content/docs/guides/dashboard.mdx). System-level view: the
 [Architecture doc site page](apps/docs/content/docs/reference/architecture.mdx).
@@ -161,23 +182,22 @@ one-off commands as `nix develop --command <cmd>`.
 
 - `bun run typecheck` — `tsc --noEmit` over the root `tsconfig.json`, then `turbo run
   typecheck`, which fans out to every workspace package's own `typecheck` script
-  (`tsc --noEmit -p tsconfig.json` in each, including the dashboard's own `tsconfig`).
+  (`tsc --noEmit -p tsconfig.json` in each).
 - `bun run lint` — `turbo run lint:all`, a root-only turbo task (not a per-package fan-out)
   that runs the root's own `lint:all` script: `eslint packages/*/src packages/core/tests
-  apps/worker/src apps/dashboard/src apps/docs/src --fix`. Note it **auto-fixes**.
-  `apps/dashboard` also has its own `lint` script, `eslint src` — plain ESLint, not
-  `next lint`, which Next 16 removed.
-- `bun run test` — `bun test --parallel` at the root (globs `packages/**`) plus
-  `bun run --cwd apps/dashboard test` (also `bun test --parallel`, its own config for the
-  DOM-based component tests).
+  apps/worker/src apps/docs/src --fix`. Note it **auto-fixes**.
+- `bun run test` — `bun test --parallel` at the root (globs `packages/**`).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
+
+The dashboard (its own repo, `lumi-devs/lumi-dashboard`) has its own `typecheck`/`lint`/`test`
+scripts, run there rather than from this repo.
 
 ## Testing conventions
 
 Tests live alongside or under a `tests/` directory per package: `packages/core/tests/`
 (mirrors `packages/core/src/lib/**`, including the former `event-bus`/`sharding` packages'
-tests at `tests/lib/event-bus/` and `tests/lib/sharding/`), `packages/observability/tests/`,
-and `apps/dashboard/tests/`. `packages/contracts` instead co-locates `*.test.ts` files next
+tests at `tests/lib/event-bus/` and `tests/lib/sharding/`), and `packages/observability/tests/`.
+`packages/contracts` instead co-locates `*.test.ts` files next
 to the source they cover (e.g. `packages/contracts/src/rpc/router.test.ts`). For
 database-touching unit tests, `packages/core/tests/mocks/prisma.ts` provides an offline
 in-memory mock Prisma driver so tests don't need a live Postgres instance.

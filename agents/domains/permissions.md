@@ -1,6 +1,9 @@
 # Permissions (Permit Nodes)
 
-Grounded in `packages/core/src/lib/permissions/`, `apps/dashboard/src/lib/permit-nodes.ts`,
+> `src/lib/permit-nodes.ts` below is in the `lumi-dashboard` repo (its own repo now,
+> [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard)), not this one.
+
+Grounded in `packages/core/src/lib/permissions/`, `src/lib/permit-nodes.ts`,
 and `packages/core/tests/core/permit_autocomplete.test.ts`.
 
 ## The vocabulary
@@ -97,7 +100,7 @@ itself requires `admin.*` to touch:
 
 Two files, kept manually in sync (there is no codegen or shared source-of-truth file — the
 dashboard file's own doc comment says so): `packages/core/src/lib/permissions/permit-nodes.ts`
-and `apps/dashboard/src/lib/permit-nodes.ts`.
+and `src/lib/permit-nodes.ts`.
 
 The core file is a flat `{ prefix, nodes: string[] }[]` plus an emoji lookup
 (`PermitNodeEmoji`, `permit-nodes.ts:31-50`) used only for `/permit`'s autocomplete label —
@@ -109,7 +112,7 @@ The dashboard file is a *richer* mirror — same prefixes/order, but each node i
 needs human-readable copy, not an emoji:
 
 ```ts
-// apps/dashboard/src/lib/permit-nodes.ts:60-69
+// src/lib/permit-nodes.ts:60-69
 {
   node: "mod.say",
   label: "Relay messages",

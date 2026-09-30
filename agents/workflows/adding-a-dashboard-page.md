@@ -1,21 +1,26 @@
 # Adding a page to the dashboard
 
-Worked example: `apps/dashboard/src/app/guild/[guildId]/moderation/notes/page.tsx`
+> This whole workflow is now carried out in the dashboard's own repo,
+> [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard) — all `src/...`
+> paths below are relative to that repo's root, not this one. Only the RPC-side steps
+> (contract slice, `implementRpc`, `registry.ts`) happen here.
+
+Worked example: `src/app/guild/[guildId]/moderation/notes/page.tsx`
 (the mod-notes page) — a real, complete guild-scoped page: auth guard, one RPC
 read, a client-side filter, a table component, an export action. Background:
 `agents/architecture/rpc-bridge.md` for the read/mutation split this all rests on.
 
 ## 1. Where the file goes
 
-`apps/dashboard/src/app/` is Next.js App Router. Every guild-scoped page lives
-under `apps/dashboard/src/app/guild/[guildId]/<path>/page.tsx`. Nesting mirrors
+`src/app/` is Next.js App Router. Every guild-scoped page lives
+under `src/app/guild/[guildId]/<path>/page.tsx`. Nesting mirrors
 the URL exactly — `moderation/notes/page.tsx` is `/guild/[guildId]/moderation/notes`.
 There's also a non-guild-scoped `system/` tree (bot-owner-only pages —
 `system/shards`, `system/modules`, `system/blocklist`, `system/users`,
 `system/audit`, `system/addons`) which uses `requireBotOwner()` instead of
 `requireGuild()` (step 2) but is otherwise the same shape.
 
-`apps/dashboard/src/app/guild/[guildId]/layout.tsx` wraps every page under that
+`src/app/guild/[guildId]/layout.tsx` wraps every page under that
 segment — it already calls `requireGuild(guildId)` once and renders the side
 nav/header, so an individual page doesn't need to redo the guild-picker/invite
 flow. It does still need its own `requireGuild` call (see step 2) since a
@@ -42,7 +47,7 @@ export default async function ModNotesPage({
 }
 ```
 
-`requireGuild` (`apps/dashboard/src/lib/auth-guards.ts:20-24`) 404s (not 403s)
+`requireGuild` (`src/lib/auth-guards.ts:20-24`) 404s (not 403s)
 if the session's guild list doesn't include this guild with manage
 permissions — `notFound()` rather than `redirect()`, deliberately, so an
 unauthorized caller can't distinguish "guild exists but you can't manage it"
@@ -69,7 +74,7 @@ If the function you need doesn't exist yet in `dashboard-fetch.ts`, that's a
 new RPC action — see `agents/workflows/adding-an-rpc-action.md`, "Reads" section
 — not something to work around with a fetch call to a REST endpoint the worker
 doesn't have. The dashboard never opens a direct Postgres/Redis connection;
-`dashboard-fetch.ts` (and `apps/dashboard/src/actions/*` for mutations) is the
+`dashboard-fetch.ts` (and `src/actions/*` for mutations) is the
 entire data-access surface.
 
 Wrap a fetch in a `try`/`catch` and degrade gracefully rather than letting an
@@ -84,14 +89,14 @@ whole nav shell.
 ## 4. Composing the page
 
 Real components used by the notes page, all from
-`apps/dashboard/src/components/ui/*` and `apps/dashboard/src/components/guild/*`:
+`src/components/ui/*` and `src/components/guild/*`:
 `PageHeader` (title + description banner), `Card`/`CardHeader`/`CardTitle`/
 `CardDescription`, `FilterBar` (the search-by-field control, driven by
 `searchParams` so filters are URL-shareable and server-rendered rather than
 client state), `EmptyState` (no-data / error placeholders, `compact` variant
 for inline-in-card use), `Badge`, `ExportLogButton` (wraps a Server Action for
 a downloadable JSON export). Reach for these before building a new one-off
-component — check `apps/dashboard/src/components/ui/` first.
+component — check `src/components/ui/` first.
 
 If the page renders a module's settings, stop and read
 `agents/domains/dashboard-design.md` first. Settings pages do not list their own
@@ -101,7 +106,7 @@ sections, groups or field names — they derive them from the module's
 that doc exists to prevent.
 
 The actual data table (`GuildModNotesTable`) is its own component under
-`apps/dashboard/src/components/guild/`, receiving plain serializable props
+`src/components/guild/`, receiving plain serializable props
 (`guildId`, `userId`, `notes`, `memberNames`) — it's a Client Component (any
 interactive table with row actions needs to be, to call Server Actions on
 click), while `page.tsx` itself stays a Server Component. Keep the split at
@@ -111,16 +116,16 @@ that need `"use client"` live in `components/guild/`.
 ## 5. Wiring mutations from the page's own client components
 
 The table component calls Server Actions directly (e.g. `removeModNote` from
-`apps/dashboard/src/actions/mod-notes-actions.ts`), not the page. If your new
+`src/actions/mod-notes-actions.ts`), not the page. If your new
 page needs a mutation and no action exists yet for it, add it per
 `agents/workflows/adding-an-rpc-action.md`'s mutation-caller step — one
-`"use server"` file under `apps/dashboard/src/actions/`, wrapped in
+`"use server"` file under `src/actions/`, wrapped in
 `runAction`, calling `revalidatePath` with this page's own route on success so
 the page reflects the change without a manual refresh.
 
 ## 6. Hooking into the sidebar
 
-`apps/dashboard/src/lib/guild-nav.ts` is the single source both the rendered
+`src/lib/guild-nav.ts` is the single source both the rendered
 sidebar (`GuildSideNav`) and the command palette (`CommandPalette`) read from
 — a link added here reaches both automatically, nothing else to wire. Add an
 entry to the right `GuildNavGroup` in `guildManagementGroups(guildId)`:
@@ -145,7 +150,7 @@ Setup are top-level), it goes in `guildTopLinks` instead.
 
 ## 7. Tests
 
-Component-level tests live in `apps/dashboard/tests/components/*.test.tsx`
+Component-level tests live in `tests/components/*.test.tsx`
 (`@vitest-environment jsdom` at the top of the file, `render`/`screen` from
 React Testing Library, query by role/name). Not every page has a dedicated
 page-level test — the notes page itself doesn't — but its interactive table
@@ -177,4 +182,4 @@ module after the mocks are registered, then `render(await PageComponent())`
 since these are `async` Server Components.
 
 Plain TS logic (helpers, formatters used by the page) go in
-`apps/dashboard/tests/lib/*.test.ts` instead — mirrors `src/lib`.
+`tests/lib/*.test.ts` instead — mirrors `src/lib`.

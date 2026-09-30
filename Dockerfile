@@ -10,7 +10,6 @@ COPY packages/observability/package.json packages/observability/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/scheduler/package.json apps/scheduler/package.json
-COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY apps/docs/package.json apps/docs/package.json
 RUN bun install --frozen-lockfile
 
@@ -42,24 +41,3 @@ RUN bunx prisma generate && chown -R bun:bun /app
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/scheduler/src/main.ts"]
-
-FROM source AS dashboard-build
-ENV NODE_ENV=production \
-    SKIP_ENV_VALIDATION=1 \
-    RPC_HTTP_URL=http://127.0.0.1:8091 \
-    DISCORD_OAUTH2_CLIENT_ID=build-placeholder \
-    DISCORD_OAUTH2_CLIENT_SECRET=build-placeholder \
-    DASHBOARD_SESSION_SECRET=build-placeholder-session-secret-must-be-32chars
-COPY apps/dashboard/ apps/dashboard/
-RUN bun run --filter=@lumi/dashboard build
-
-FROM base AS dashboard
-RUN apk add --no-cache nodejs
-ENV NODE_ENV=production
-COPY --from=dashboard-build --chown=bun:bun /app/apps/dashboard/.next/standalone ./
-COPY --from=dashboard-build --chown=bun:bun /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
-COPY --from=dashboard-build --chown=bun:bun /app/apps/dashboard/public ./apps/dashboard/public
-USER bun
-EXPOSE 8080
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "PORT=${DASHBOARD_PORT:-8080} HOSTNAME=${DASHBOARD_HOST:-0.0.0.0} exec node apps/dashboard/server.js"]

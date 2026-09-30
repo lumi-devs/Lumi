@@ -5,7 +5,7 @@ coverage/
 .turbo/
 *.tsbuildinfo
 .antigravitycli/
-# Next.js build output (apps/dashboard).
+# Next.js build output (apps/docs).
 .next/
 next-env.d.ts
 # Astro build output/type cache (apps/docs).

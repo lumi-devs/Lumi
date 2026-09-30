@@ -15,7 +15,7 @@ body:
       options:
         - "@lumi/core (Framework, Modules, Event Bus, Sharding Telemetry)"
         - "@lumi/worker (Gateway, Commands, Scheduled Tasks)"
-        - "@lumi/dashboard (Web Dashboard)"
+        - "lumi-dashboard (Web Dashboard, separate repo)"
         - "@lumi/contracts (Dashboard ↔ Worker RPC)"
         - "Addon SDK (lumi/*, sandboxed addons)"
         - "@lumi/observability (Logging, Tracing, Metrics)"

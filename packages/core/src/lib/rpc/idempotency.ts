@@ -31,7 +31,7 @@ interface IdempotencyRecord {
 // `dispatchRpc` (packages/core/src/lib/rpc/dispatch.ts) never wraps the
 // handler in a timeout or AbortController - `timeoutMs` on the contract entry
 // only drives the dashboard fetch client's own AbortController
-// (apps/dashboard/src/lib/rpc.ts). So a handler that runs past its declared
+// (src/lib/rpc.ts in the lumi-dashboard repo). So a handler that runs past its declared
 // timeout keeps running server-side even after the caller sees a timeout
 // error; the base pending TTL below only has to survive the *declared*
 // budget plus scheduling/network jitter, not an unbounded overrun - that's

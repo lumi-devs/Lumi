@@ -1,10 +1,14 @@
 # Dashboard page design
 
-Grounded in `apps/dashboard/src/lib/config-sections.ts`,
-`apps/dashboard/src/components/ui/section-tabs.tsx`,
-`apps/dashboard/src/components/guild/config-group-card.tsx`,
-`apps/dashboard/src/components/guild/module-config-form.tsx`, and
-`apps/dashboard/src/app/guild/[guildId]/security/page.tsx` as the worked example.
+> The dashboard now lives in its own repo, [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard).
+> Paths below (`src/...`) are relative to that repo's root, not this one; the schema they
+> derive from (`configSchema`, `ConfigField`, `sectionsOf`) still lives here.
+
+Grounded in `src/lib/config-sections.ts`,
+`src/components/ui/section-tabs.tsx`,
+`src/components/guild/config-group-card.tsx`,
+`src/components/guild/module-config-form.tsx`, and
+`src/app/guild/[guildId]/security/page.tsx` as the worked example.
 
 ## The rule
 
@@ -59,7 +63,7 @@ dashboard consume. One declaration feeds both surfaces.
 
 ## Deriving the page
 
-`sectionsOf(fields)` (`apps/dashboard/src/lib/config-sections.ts`) is the whole
+`sectionsOf(fields)` (`src/lib/config-sections.ts`) is the whole
 derivation:
 
 ```ts
@@ -68,7 +72,7 @@ const sections = sectionsOf(module.configFields);
 ```
 
 Two properties matter and both are tested
-(`apps/dashboard/tests/lib/config-sections.test.ts`):
+(`tests/lib/config-sections.test.ts`):
 
 - **Order is declaration order, not alphabetical.** Schema order is a design
   decision — on `/security` the Panic Mode fields are declared first so the
@@ -113,11 +117,11 @@ groups.
 
 Widgets that aren't config fields — the panic console, the verification panel
 record, the backup list — can't live in the schema. Their placement is a small
-map from section name to widget (`apps/dashboard/src/lib/security-widgets.ts`),
+map from section name to widget (`src/lib/security-widgets.ts`),
 and it is the **only** place the dashboard hardcodes a security section name.
 
 Because that map can drift from core, it is checked by test rather than trusted
-(`apps/dashboard/tests/lib/security-widgets.test.ts`): every widget must name a
+(`tests/lib/security-widgets.test.ts`): every widget must name a
 section the schema declares, and every declared section must be mapped. Renaming
 a section in core fails a test instead of silently dropping a console.
 
