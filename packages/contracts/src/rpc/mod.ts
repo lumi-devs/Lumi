@@ -7,7 +7,7 @@ import type {
   WarnThresholdView,
 } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
-import { PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
+import { CursorSchema, PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
 
 export const WarnThresholdActions = [
   "mute",
@@ -69,6 +69,7 @@ export const modRpc = {
       moderatorId: SnowflakeSchema.optional(),
       page: PageSchema,
       pageSize: PageSizeSchema,
+      cursor: CursorSchema,
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
@@ -147,6 +148,7 @@ export const modRpc = {
       status: s.enum(AppealStatuses).optional(),
       page: PageSchema,
       pageSize: PageSizeSchema,
+      cursor: CursorSchema,
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,

@@ -82,9 +82,12 @@ export interface ModerationCaseView {
 
 export interface CasesListData {
   cases: ModerationCaseView[];
-  total: number;
+  /** Omitted in cursor mode, where the exact count is not computed. */
+  total?: number;
   page: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface WarnThresholdView {
@@ -184,9 +187,12 @@ export interface AuditEntryView {
 
 export interface AuditListData {
   entries: AuditEntryView[];
-  total: number;
+  /** Omitted in cursor mode, where the exact count is not computed. */
+  total?: number;
   page: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface ConfigHistoryEntryView {
@@ -201,9 +207,12 @@ export interface ConfigHistoryEntryView {
 
 export interface ConfigHistoryListData {
   entries: ConfigHistoryEntryView[];
-  total: number;
+  /** Omitted in cursor mode, where the exact count is not computed. */
+  total?: number;
   page: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface ConfigOverrideView {
@@ -254,9 +263,12 @@ export interface AppealView {
 
 export interface AppealsListData {
   appeals: AppealView[];
-  total: number;
+  /** Omitted in cursor mode, where the exact count is not computed. */
+  total?: number;
   page: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface AppealCaseSummary {

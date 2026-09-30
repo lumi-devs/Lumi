@@ -1,5 +1,12 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  createdAtIdKeysetWhere,
+  CreatedAtIdOrderBy,
+  decodeCreatedAtIdCursor,
+  encodeCreatedAtIdCursor,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 export interface ConfigHistoryEntry {
   id: number;
@@ -56,26 +63,49 @@ export class ConfigHistoryRepository extends Repository {
       actorId?: string;
       skip?: number;
       take?: number;
+      /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      cursor?: string;
     } = {},
-  ): Promise<{ entries: ConfigHistoryEntry[]; total: number }> {
-    const where = {
+  ): Promise<{ entries: ConfigHistoryEntry[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.moduleName ? { moduleName: filter.moduleName } : {}),
       ...(filter.key ? { key: filter.key } : {}),
       ...(filter.actorId ? { actorId: filter.actorId } : {}),
     };
+    const take = filter.take ?? 25;
 
+    if (filter.cursor !== undefined) {
+      const cursor = decodeCreatedAtIdCursor(filter.cursor);
+      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
+      const rows = await this.prisma.moduleConfigHistory.findMany({
+        where,
+        orderBy: CreatedAtIdOrderBy,
+        take: take + 1,
+      });
+      const { page, hasMore } = splitPage(rows, take);
+      const last = page.at(-1);
+      return {
+        entries: page,
+        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      };
+    }
+
+    const skip = filter.skip ?? 0;
     const [entries, total] = await this.prisma.$transaction([
       this.prisma.moduleConfigHistory.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        where: baseWhere,
+        orderBy: CreatedAtIdOrderBy,
+        skip,
+        take,
       }),
-      this.prisma.moduleConfigHistory.count({ where }),
+      this.prisma.moduleConfigHistory.count({ where: baseWhere }),
     ]);
+    const last = entries.at(-1);
+    const nextCursor =
+      skip + entries.length < total && last ? encodeCreatedAtIdCursor(last) : null;
 
-    return { entries, total };
+    return { entries, total, nextCursor };
   }
 
   public getConfigHistoryEntry(id: number): Promise<ConfigHistoryEntry | null> {

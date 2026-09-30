@@ -197,6 +197,39 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
         call("guild.cases.list", { pageSize: 500 }),
       ).rejects.toThrow("Bad payload");
     });
+
+    it("pages by cursor, omitting total and returning nextCursor", async () => {
+      prisma.$seed(
+        "moderationCase",
+        Array.from({ length: 5 }, (_, i) => makeCase({ id: i + 1, caseNumber: i + 1 })),
+      );
+
+      const first = (await call("guild.cases.list", { pageSize: 2 })) as any;
+      expect(first.total).toBe(5);
+      expect(first.nextCursor).toBeTruthy();
+      expect(first.cases.map((c: any) => c.caseNumber)).toEqual([5, 4]);
+
+      const second = (await call("guild.cases.list", {
+        pageSize: 2,
+        cursor: first.nextCursor,
+      })) as any;
+      expect(second.total).toBeUndefined();
+      expect(second.cases.map((c: any) => c.caseNumber)).toEqual([3, 2]);
+      expect(second.nextCursor).toBeTruthy();
+
+      const third = (await call("guild.cases.list", {
+        pageSize: 2,
+        cursor: second.nextCursor,
+      })) as any;
+      expect(third.cases.map((c: any) => c.caseNumber)).toEqual([1]);
+      expect(third.nextCursor).toBeNull();
+    });
+
+    it("rejects an invalid cursor", async () => {
+      await expect(
+        call("guild.cases.list", { cursor: "not-a-real-cursor" }),
+      ).rejects.toThrow("Invalid pagination cursor");
+    });
   });
 
   describe("guild.cases.revoke", () => {

@@ -205,6 +205,40 @@ describe("dashboard module audit + history + override RPC handlers", () => {
         call("guild.audit.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
     });
+
+    it("pages by cursor, omitting total and returning nextCursor", async () => {
+      prisma.$seed(
+        "auditLedger",
+        Array.from({ length: 5 }, (_, i) =>
+          makeAudit({ id: i + 1, createdAt: new Date(2026, 0, i + 1) }),
+        ),
+      );
+
+      const first = (await call("guild.audit.list", { pageSize: 2 })) as any;
+      expect(first.total).toBe(5);
+      expect(first.nextCursor).toBeTruthy();
+      expect(first.entries.map((e: any) => e.id)).toEqual([5, 4]);
+
+      const second = (await call("guild.audit.list", {
+        pageSize: 2,
+        cursor: first.nextCursor,
+      })) as any;
+      expect(second.total).toBeUndefined();
+      expect(second.entries.map((e: any) => e.id)).toEqual([3, 2]);
+
+      const third = (await call("guild.audit.list", {
+        pageSize: 2,
+        cursor: second.nextCursor,
+      })) as any;
+      expect(third.entries.map((e: any) => e.id)).toEqual([1]);
+      expect(third.nextCursor).toBeNull();
+    });
+
+    it("rejects an invalid cursor", async () => {
+      await expect(
+        call("guild.audit.list", { cursor: "not-a-real-cursor" }),
+      ).rejects.toThrow("Invalid pagination cursor");
+    });
   });
 
   describe("guild.history.list", () => {
@@ -242,6 +276,34 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       await expect(
         call("guild.history.list", {}, INTRUDER_ID),
       ).rejects.toThrow("Missing ManageGuild permission");
+    });
+
+    it("pages by cursor, omitting total and returning nextCursor", async () => {
+      prisma.$seed(
+        "moduleConfigHistory",
+        Array.from({ length: 3 }, (_, i) =>
+          makeHistory({ id: i + 1, createdAt: new Date(2026, 0, i + 1) }),
+        ),
+      );
+
+      const first = (await call("guild.history.list", { pageSize: 2 })) as any;
+      expect(first.total).toBe(3);
+      expect(first.entries.map((e: any) => e.id)).toEqual([3, 2]);
+      expect(first.nextCursor).toBeTruthy();
+
+      const second = (await call("guild.history.list", {
+        pageSize: 2,
+        cursor: first.nextCursor,
+      })) as any;
+      expect(second.total).toBeUndefined();
+      expect(second.entries.map((e: any) => e.id)).toEqual([1]);
+      expect(second.nextCursor).toBeNull();
+    });
+
+    it("rejects an invalid cursor", async () => {
+      await expect(
+        call("guild.history.list", { cursor: "not-a-real-cursor" }),
+      ).rejects.toThrow("Invalid pagination cursor");
     });
   });
 

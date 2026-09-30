@@ -213,14 +213,22 @@ function applyUpdateData(record: Rec, data: Rec): Rec {
   return next;
 }
 
+/** `Date` compares by reference under `===`, so two equal timestamps from
+ * distinct `Date` instances (routine for seeded/inserted rows) would
+ * otherwise never be treated as equal and fall through to a spurious `>`
+ * comparison - breaking multi-clause `orderBy` tie-breaks entirely. */
+function toComparable(value: unknown): unknown {
+  return value instanceof Date ? value.getTime() : value;
+}
+
 function applyOrderBy(rows: Rec[], orderBy: unknown): Rec[] {
   if (!orderBy) return rows;
   const clauses = Array.isArray(orderBy) ? orderBy : [orderBy];
   return [...rows].sort((a, b) => {
     for (const clause of clauses as Rec[]) {
       for (const [field, dir] of Object.entries(clause)) {
-        const av = a[field];
-        const bv = b[field];
+        const av = toComparable(a[field]);
+        const bv = toComparable(b[field]);
         if (av === bv) continue;
         const cmp = av! > bv! ? 1 : -1;
         return dir === "desc" ? -cmp : cmp;

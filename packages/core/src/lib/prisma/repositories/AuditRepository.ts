@@ -4,6 +4,13 @@ import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
+import {
+  createdAtIdKeysetWhere,
+  CreatedAtIdOrderBy,
+  decodeCreatedAtIdCursor,
+  encodeCreatedAtIdCursor,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 import { tryParseJSON } from "@sapphire/utilities";
 import { Time } from "@sapphire/time-utilities";
@@ -54,6 +61,8 @@ export interface AuditLedgerFilter {
   platform?: AuditPlatform;
   skip?: number;
   take?: number;
+  /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+  cursor?: string;
 }
 
 /**
@@ -221,25 +230,46 @@ export class AuditRepository extends Repository {
   // Omitting `guildId` reads across every guild — bot-owner scoped callers only.
   public async listAuditLogs(
     filter: AuditLedgerFilter = {},
-  ): Promise<{ entries: AuditLedger[]; total: number }> {
-    const where = {
+  ): Promise<{ entries: AuditLedger[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       ...(filter.guildId ? { guildId: filter.guildId } : {}),
       ...(filter.userId ? { userId: filter.userId } : {}),
       ...(filter.action ? { action: { contains: filter.action } } : {}),
       ...(filter.platform ? { platform: filter.platform } : {}),
     };
+    const take = filter.take ?? 25;
 
+    if (filter.cursor !== undefined) {
+      const cursor = decodeCreatedAtIdCursor(filter.cursor);
+      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
+      const rows = await this.prisma.auditLedger.findMany({
+        where,
+        orderBy: CreatedAtIdOrderBy,
+        take: take + 1,
+      });
+      const { page, hasMore } = splitPage(rows, take);
+      const last = page.at(-1);
+      return {
+        entries: page,
+        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      };
+    }
+
+    const skip = filter.skip ?? 0;
     const [entries, total] = await this.prisma.$transaction([
       this.prisma.auditLedger.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        where: baseWhere,
+        orderBy: CreatedAtIdOrderBy,
+        skip,
+        take,
       }),
-      this.prisma.auditLedger.count({ where }),
+      this.prisma.auditLedger.count({ where: baseWhere }),
     ]);
+    const last = entries.at(-1);
+    const nextCursor =
+      skip + entries.length < total && last ? encodeCreatedAtIdCursor(last) : null;
 
-    return { entries, total };
+    return { entries, total, nextCursor };
   }
 
   async #ensureGroup(key: string) {
