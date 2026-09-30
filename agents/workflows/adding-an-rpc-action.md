@@ -179,7 +179,7 @@ full reload; reads never call it because they don't mutate anything.
 ## That's the whole change
 
 No code generation, no schema registry to update elsewhere, no need to touch
-`dispatchRpc`/`http-server.ts` — those are transport-level and already handle
+`dispatchRpc`/`rpc-http-server.ts` — those are transport-level and already handle
 any action string generically. If the new action needs a permission check
 beyond plain guild-manager (bot-owner-only, a specific permit node), that's a
 handler-level decision (see the "gotchas" in `agents/architecture/rpc-bridge.md`),

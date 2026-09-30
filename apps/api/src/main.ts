@@ -7,9 +7,9 @@ import {
   registerInfrastructureReadinessProbes,
   registerRpcHandlers,
   registerRpcReadinessProbe,
-  startRpcHttpServer,
 } from "@lumi/core";
 import { container } from "@sapphire/framework";
+import { startRpcHttpServer } from "./rpc-http-server.js";
 
 let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 

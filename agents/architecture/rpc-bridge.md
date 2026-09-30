@@ -146,24 +146,24 @@ to update elsewhere.
 
 ## Transport auth: `RPC_INTERNAL_TOKEN`
 
-`packages/core/src/lib/rpc/http-server.ts` is the actual HTTP surface — a raw `Bun.serve`,
+`apps/api/src/rpc-http-server.ts` is the actual HTTP surface — a raw `Bun.serve`,
 not Express/Fastify. Two routes only: unauthenticated `GET /healthz` (liveness/readiness
 probes have no way to hold a secret, and it discloses nothing beyond "process is up",
-`http-server.ts:81-85`) and `POST /rpc` for everything else.
+`rpc-http-server.ts:81-85`) and `POST /rpc` for everything else.
 
 Every `/rpc` call must carry `Authorization: Bearer <RPC_INTERNAL_TOKEN>`, checked with a
 constant-time comparison over SHA-256 digests of the token, not the raw strings
-(`tokenMatches`, `http-server.ts:39-42`) — deliberately so neither the byte values nor the
-token's *length* leak through response timing. `readInternalToken` (`http-server.ts:51-74`)
+(`tokenMatches`, `rpc-http-server.ts:39-42`) — deliberately so neither the byte values nor the
+token's *length* leak through response timing. `readInternalToken` (`rpc-http-server.ts:51-74`)
 refuses to boot in production if `RPC_INTERNAL_TOKEN` is unset; in development it logs a loud
 warning and runs unauthenticated instead. `startRpcHttpServer` additionally refuses to bind to
-any non-loopback host without a token set (`http-server.ts:131-137`) — binding
+any non-loopback host without a token set (`rpc-http-server.ts:131-137`) — binding
 `RPC_HTTP_HOST` beyond `127.0.0.1` with no token throws at startup rather than silently serving
 open. On the dashboard side, `RpcClient.call` (`src/lib/rpc.ts:34-100`) always
 attaches the bearer header (`rpc.ts:66-69`) and is itself `server-only` — the module import
 throws if anything tries to pull it into a client bundle.
 
-Reachability is explicitly *not* treated as authorization — the `http-server.ts` file's own
+Reachability is explicitly *not* treated as authorization — the `rpc-http-server.ts` file's own
 top comment spells out that anything on the docker network (or with an SSRF primitive aimed at
 it) can open a socket to `/rpc`, and `actorId` in the body is an *unsigned claim* the handlers
 act on. The token check is what makes trusting `actorId` downstream (as `guild.modNotes.add`'s
@@ -171,14 +171,14 @@ handler does above) safe at all.
 
 ## `dispatchRpc` — the transport-agnostic core
 
-`packages/core/src/lib/rpc/dispatch.ts:34-89`. `http-server.ts` is presently the only caller,
+`packages/core/src/lib/rpc/dispatch.ts:34-89`. `rpc-http-server.ts` is presently the only caller,
 but the split exists so a future transport (the file comment mentions this) just needs its own
 auth before calling in. Two checks happen before the handler runs:
 
 1. Handler lookup by exact `action` string; unknown action returns `{ ok: false, error: ... }`
    with **no HTTP-level distinction** — this always comes back as HTTP 200 with `ok: false` in
    the JSON body, not a 404. Only auth failures (401) and malformed JSON/missing `action`
-   (400) get non-200 status codes (`http-server.ts:89-109`); everything else, including
+   (400) get non-200 status codes (`rpc-http-server.ts:89-109`); everything else, including
    "handler not found" and any handler-thrown error, is 200 with `ok: false`.
 2. `req.guildId && !(await container.db.config.isDashboardEnabled(req.guildId))` — a guild can
    opt out of the dashboard entirely; every guild-scoped action respects this uniformly at the
