@@ -39,8 +39,9 @@
     "modules:manifest": "bun packages/core/scripts/generate-manifests.ts",
     "validate": "bun packages/core/scripts/validate-addon.ts",
     "addon:create": "bun scripts/create-addon.ts",
-    "test": "bun test --parallel",
-    "test:coverage": "bun test --parallel --coverage",
+    "test": "bun test --parallel --path-ignore-patterns '**/tests/integration/**'",
+    "test:coverage": "bun test --parallel --coverage --path-ignore-patterns '**/tests/integration/**'",
+    "test:integration": "bun test packages/*/tests/integration",
     "verify:resilience": "bun packages/core/scripts/verify-resilience.ts",
     "bench": "bun packages/core/scripts/benchmark.ts"
   },

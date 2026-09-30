@@ -178,6 +178,65 @@ jobs:
           files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
           fail_ci_if_error: false
 
+  integration:
+    name: Integration Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Same major versions as docker-compose.yml's postgres/redis services.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: lumi_test
+          POSTGRES_USER: lumi
+          POSTGRES_PASSWORD: lumi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lumi -d lumi_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Prisma CLI datasource (see prisma.config.ts) - a throwaway CI-only
+      # database, never a name that could collide with a real deployment.
+      POSTGRES_URL: postgresql://lumi:lumi@localhost:5432/lumi_test
+      # Read only by packages/core/tests/integration/setup.ts - deliberately
+      # not DATABASE_URL/POSTGRES_URL, so a real .env can never be picked up
+      # by accident here or in local runs.
+      LUMI_TEST_DATABASE_URL: postgresql://lumi:lumi@localhost:5432/lumi_test
+      # Dedicated DB index, never index 0 - the suite only ever SCANs/deletes
+      # its own key prefixes within it, never FLUSHALL.
+      LUMI_TEST_REDIS_URL: redis://localhost:6379/1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - name: Apply Prisma migrations to the CI Postgres service
+        run: bunx prisma migrate deploy
+      - run: bun run test:integration
+
   build:
     name: Build
     needs: changes
@@ -247,7 +306,7 @@ jobs:
 
   ci-status:
     name: CI Status / All Checks Passed
-    needs: [changes, lint, typecheck, test, build, validate-examples, nix-check]
+    needs: [changes, lint, typecheck, test, integration, build, validate-examples, nix-check]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -259,7 +318,7 @@ jobs:
           echo "Evaluating CI Results: $results"
           
           failed=0
-          for job in changes lint typecheck test build validate-examples nix-check; do
+          for job in changes lint typecheck test integration build validate-examples nix-check; do
             result=$(echo "$results" | jq -r --arg job "$job" '.[$job].result // empty')
             echo "Job $job: $result"
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
