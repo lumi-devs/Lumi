@@ -367,6 +367,21 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       ).rejects.toThrow("Could not undo this action on Discord");
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(true);
     });
+
+    it("surfaces a specific missing-permission error and leaves the case active on Discord 50013", async () => {
+      const del = vi.fn().mockRejectedValue(Object.assign(new Error("Missing Permissions"), { code: 50013 }));
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+        delete: del,
+      }) as any;
+      prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "ban" })]);
+
+      await expect(
+        call("guild.cases.revoke", { caseNumber: 3 }),
+      ).rejects.toThrow("Lumi lacks permission to undo this on Discord");
+      expect(prisma.$all("moderationCase")[0]!["active"]).toBe(true);
+    });
   });
 
   describe("guild.warnThresholds.list", () => {

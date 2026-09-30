@@ -92,7 +92,7 @@ export class BanAction {
       .delete(Routes.guildBan(guildId, targetId), { reason })
       .catch((err: unknown) => {
         const code = errorCode(err);
-        if (code === 10026 || code === 50013) return;
+        if (code === 10026) return;
         throw err;
       });
   }

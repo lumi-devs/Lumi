@@ -3,6 +3,7 @@ import { Time } from "@sapphire/time-utilities";
 import { acquireRedisLock } from "#lib/lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
 import { liftModerationCaseWithUndo } from "#modules/mod/services/case-lift.js";
+import { errorCode } from "#lib/utilities/errors.js";
 
 const ActionLabels: Record<string, string> = {
   mute: "Mute",
@@ -40,8 +41,11 @@ async function liftCase(payload: ModLiftPayload): Promise<void> {
       `[ModLiftTask] Lifted case #${c.caseNumber} (${c.guildId}/${c.userId}).`,
     );
   } catch (err: unknown) {
+    const missingPermission = errorCode(err) === 50013;
     container.logger.error(
-      `[ModLiftTask] Failed to lift case #${c.caseNumber} (${c.guildId}/${c.userId}):`,
+      missingPermission
+        ? `[ModLiftTask] Lumi lacks Discord permission to auto-lift case #${c.caseNumber} (${c.guildId}/${c.userId}). The case stays active; grant the bot the permission and retry from the dashboard.`
+        : `[ModLiftTask] Failed to lift case #${c.caseNumber} (${c.guildId}/${c.userId}):`,
       err,
     );
     throw err;
