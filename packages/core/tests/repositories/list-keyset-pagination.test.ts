@@ -97,23 +97,23 @@ describe("keyset pagination - AuditRepository.listAuditLogs", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
-  it("omits total in cursor mode but returns it in page mode", async () => {
+  it("returns total on the first page but omits it once a cursor is supplied", async () => {
     seed(3);
-    const pageMode = await repo.listAuditLogs({ guildId: GUILD_ID, skip: 0, take: 2 });
-    expect(pageMode.total).toBe(3);
-    expect(pageMode.nextCursor).not.toBeNull();
+    const firstPage = await repo.listAuditLogs({ guildId: GUILD_ID, take: 2 });
+    expect(firstPage.total).toBe(3);
+    expect(firstPage.nextCursor).not.toBeNull();
 
     const cursorPage = await repo.listAuditLogs({
       guildId: GUILD_ID,
       take: 2,
-      cursor: pageMode.nextCursor!,
+      cursor: firstPage.nextCursor!,
     });
     expect(cursorPage.total).toBeUndefined();
   });
 
-  it("returns null nextCursor on the last page mode page", async () => {
+  it("returns null nextCursor on the last first page", async () => {
     seed(2);
-    const res = await repo.listAuditLogs({ guildId: GUILD_ID, skip: 0, take: 25 });
+    const res = await repo.listAuditLogs({ guildId: GUILD_ID, take: 25 });
     expect(res.total).toBe(2);
     expect(res.nextCursor).toBeNull();
   });

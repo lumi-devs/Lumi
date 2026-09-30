@@ -14,9 +14,15 @@ describe("parseRpcResponse", () => {
     ).toEqual({ id: "1", ok: true, data: { a: 1 } });
   });
 
-  it("accepts ok:false with an error and a code", () => {
+  it("accepts ok:false with an error, a code, and retryable", () => {
     expect(
-      parseRpcResponse({ id: "1", ok: false, error: "nope", code: "HANDLER_ERROR" }),
+      parseRpcResponse({
+        id: "1",
+        ok: false,
+        error: "nope",
+        code: "HANDLER_ERROR",
+        retryable: false,
+      }),
     ).toEqual({ id: "1", ok: false, error: "nope", code: "HANDLER_ERROR", retryable: false });
   });
 
@@ -48,13 +54,10 @@ describe("parseRpcResponse", () => {
     expect(() => parseRpcResponse({ ok: true })).toThrow(/Malformed/);
   });
 
-  it("defaults retryable from the code table when the field is absent (an older worker/dashboard build)", () => {
-    expect(
+  it("rejects ok:false without retryable", () => {
+    expect(() =>
       parseRpcResponse({ id: "1", ok: false, error: "nope", code: "CONFLICT" }),
-    ).toEqual({ id: "1", ok: false, error: "nope", code: "CONFLICT", retryable: true });
-    expect(
-      parseRpcResponse({ id: "1", ok: false, error: "nope", code: "FORBIDDEN" }),
-    ).toEqual({ id: "1", ok: false, error: "nope", code: "FORBIDDEN", retryable: false });
+    ).toThrow(/without retryable/);
   });
 
   it("keeps an explicit retryable/retryAfterMs on the wire", () => {

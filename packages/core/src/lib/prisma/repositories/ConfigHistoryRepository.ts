@@ -65,9 +65,8 @@ export class ConfigHistoryRepository extends Repository {
       moduleName?: string;
       key?: string;
       actorId?: string;
-      skip?: number;
       take?: number;
-      /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
       cursor?: string;
     } = {},
   ): Promise<{ entries: ConfigHistoryEntry[]; total?: number; nextCursor: string | null }> {
@@ -78,38 +77,28 @@ export class ConfigHistoryRepository extends Repository {
       ...(filter.actorId ? { actorId: filter.actorId } : {}),
     };
     const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+        : baseWhere;
 
-    if (filter.cursor !== undefined) {
-      const cursor = decodeCreatedAtIdCursor(filter.cursor);
-      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
-      const rows = await this.prisma.moduleConfigHistory.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.moduleConfigHistory.findMany({
         where,
         orderBy: CreatedAtIdOrderBy,
         take: take + 1,
-      });
-      const { page, hasMore } = splitPage(rows, take);
-      const last = page.at(-1);
-      return {
-        entries: page,
-        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
-      };
-    }
-
-    const skip = filter.skip ?? 0;
-    const [entries, total] = await this.prisma.$transaction([
-      this.prisma.moduleConfigHistory.findMany({
-        where: baseWhere,
-        orderBy: CreatedAtIdOrderBy,
-        skip,
-        take,
       }),
-      this.prisma.moduleConfigHistory.count({ where: baseWhere }),
+      filter.cursor === undefined
+        ? this.prisma.moduleConfigHistory.count({ where: baseWhere })
+        : undefined,
     ]);
-    const last = entries.at(-1);
-    const nextCursor =
-      skip + entries.length < total && last ? encodeCreatedAtIdCursor(last) : null;
-
-    return { entries, total, nextCursor };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      entries: page,
+      total,
+      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+    };
   }
 
   public getConfigHistoryEntry(id: number): Promise<ConfigHistoryEntry | null> {

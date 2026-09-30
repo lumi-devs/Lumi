@@ -6,7 +6,6 @@ import {
   tokenMatches,
   presentedToken,
   readInternalToken,
-  resetContractVersionWarningForTests,
 } from "../src/rpc-http-server.js";
 import { registerRpcHandlers } from "@lumi/core";
 import { CONTRACT_VERSION } from "@lumi/contracts/rpc";
@@ -33,7 +32,6 @@ describe("RPC HTTP Server & Auth Verification", () => {
     } as any;
 
     registerRpcHandlers();
-    resetContractVersionWarningForTests();
   });
 
   afterEach(() => {
@@ -172,6 +170,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Unauthorized",
         code: "UNAUTHORIZED",
+        retryable: false,
       });
     });
 
@@ -192,6 +191,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Unauthorized",
         code: "UNAUTHORIZED",
+        retryable: false,
       });
     });
 
@@ -212,6 +212,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Unauthorized",
         code: "UNAUTHORIZED",
+        retryable: false,
       });
     });
 
@@ -221,6 +222,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": CONTRACT_VERSION,
         },
         body: "{ malformed json...",
       });
@@ -232,6 +234,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Malformed JSON body",
         code: "BAD_REQUEST",
+        retryable: false,
       });
     });
 
@@ -241,6 +244,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": CONTRACT_VERSION,
         },
         body: JSON.stringify({ id: "req-123" }),
       });
@@ -252,6 +256,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Missing action",
         code: "BAD_REQUEST",
+        retryable: false,
       });
     });
 
@@ -261,6 +266,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": CONTRACT_VERSION,
         },
         body: JSON.stringify({ id: "req-999", action: "auth.whoami" }),
       });
@@ -277,7 +283,10 @@ describe("RPC HTTP Server & Auth Verification", () => {
     it("allows unauthenticated requests in development mode when token is unset", async () => {
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-lumi-contract-version": CONTRACT_VERSION,
+        },
         body: JSON.stringify({ id: "dev-req", action: "auth.whoami" }),
       });
       const res = await handleRpcHttpRequest(req, null);
@@ -323,7 +332,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
       expect(json.code).toBe("CONTRACT_MISMATCH");
     });
 
-    it("allows a missing x-lumi-contract-version header and logs a warning once", async () => {
+    it("rejects a missing x-lumi-contract-version header like a mismatch", async () => {
       const req = new Request("http://127.0.0.1/rpc", {
         method: "POST",
         headers: {
@@ -332,14 +341,12 @@ describe("RPC HTTP Server & Auth Verification", () => {
         },
         body: JSON.stringify({ id: "req-no-header", action: "auth.whoami" }),
       });
-      const res = await handleRpcHttpRequest(req, TEST_TOKEN, mockLogger);
+      const res = await handleRpcHttpRequest(req, TEST_TOKEN);
 
-      expect(res.status).toBe(200);
-      expect(mockLogger).toHaveBeenCalledWith(
-        "warn",
-        expect.stringContaining("x-lumi-contract-version"),
-        expect.anything(),
-      );
+      expect(res.status).toBe(409);
+      const json = (await res.json()) as { id: string; ok: boolean; code: string };
+      expect(json.ok).toBe(false);
+      expect(json.code).toBe("CONTRACT_MISMATCH");
     });
 
     it("returns 500 without leaking internals when dispatch itself throws", async () => {
@@ -352,6 +359,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${TEST_TOKEN}`,
+          "x-lumi-contract-version": CONTRACT_VERSION,
         },
         body: JSON.stringify({
           id: "db-down",
@@ -367,6 +375,7 @@ describe("RPC HTTP Server & Auth Verification", () => {
         ok: false,
         error: "Internal error",
         code: "INTERNAL",
+        retryable: false,
       });
     });
   });

@@ -18,7 +18,7 @@ import {
   guildBannerUrl,
   guildIconUrl,
 } from "#lib/rpc/discord-rest-lookup.js";
-import { paginate } from "#lib/rpc/validation.js";
+import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
 import { publishDashboardEvent } from "#lib/rpc/dashboard-events.js";
 import type { APIRole } from "discord-api-types/v10";
 
@@ -255,13 +255,12 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   },
 
   "guild.audit.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
+    const { pageSize, take } = resolvePageSize(input);
     const { entries, total, nextCursor } = await container.db.audit.listAuditLogs({
       guildId,
       userId: input.userId,
       action: input.action,
       platform: input.platform,
-      skip,
       take,
       cursor: input.cursor,
     });
@@ -276,20 +275,18 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
         createdAt: e.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
       nextCursor,
     };
   },
 
   "guild.history.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
+    const { pageSize, take } = resolvePageSize(input);
     const { entries, total, nextCursor } =
       await container.db.configHistory.listGuildConfigHistory(guildId, {
         moduleName: input.moduleName,
         key: input.key,
         actorId: input.actorId,
-        skip,
         take,
         cursor: input.cursor,
       });
@@ -304,7 +301,6 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
         createdAt: e.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
       nextCursor,
     };
