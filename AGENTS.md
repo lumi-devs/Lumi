@@ -188,9 +188,15 @@ one-off commands as `nix develop --command <cmd>`.
   (`tsc --noEmit -p tsconfig.json` in each).
 - `bun run lint` — `turbo run lint:all`, a root-only turbo task (not a per-package fan-out)
   that runs the root's own `lint:all` script: `eslint packages/*/src packages/core/tests
-  apps/worker/src apps/docs/src --fix`. Note it **auto-fixes**.
-- `bun run test` — `bun test --parallel` at the root (globs `packages/**`).
+  apps/worker/src apps/docs/src apps/cli/src apps/cli/tests --fix`. Note it **auto-fixes**.
+- `bun run test` — `bun test --parallel` at the root (globs `packages/**`, per `bunfig.toml`'s
+  `[test] root`), then `bun test --parallel ./apps/cli/tests` for the CLI's own tests (outside
+  that root, so it's a second explicit invocation rather than a bunfig change).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
+- `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start
+  <worker|api|scheduler|all>`, `migrate [status]`, `addon <create|validate>`, `module list`,
+  `config`. A thin wrapper over the same code these bullets already describe - see
+  [`apps/docs/content/docs/reference/cli.mdx`](apps/docs/content/docs/reference/cli.mdx).
 
 The dashboard (its own repo, `lumi-devs/lumi-dashboard`) has its own `typecheck`/`lint`/`test`
 scripts, run there rather than from this repo.

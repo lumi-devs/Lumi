@@ -16,11 +16,16 @@ const GREEN = "\x1b[32m";
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
 
-async function main() {
-  const target = process.argv[2];
+/**
+ * Runs addon validation against a raw argv (e.g. `process.argv.slice(2)`, or
+ * `["some/path"]`). Exported so both this script's own CLI entrypoint and
+ * `apps/cli` (`lumi addon validate`) share the exact same checker.
+ */
+export async function runValidateAddon(argv: string[]): Promise<number> {
+  const target = argv[0];
   if (!target) {
     console.error("Usage: bun run validate <addon-dir | repo-dir>");
-    process.exit(2);
+    return 2;
   }
 
   const abs = path.resolve(target);
@@ -30,7 +35,7 @@ async function main() {
     console.error(
       `${RED}No addons found at ${abs}${RESET} (expected an info.json here or in a subdirectory).`,
     );
-    process.exit(2);
+    return 2;
   }
 
   let totalErrors = 0;
@@ -55,7 +60,9 @@ async function main() {
   console.log(
     `\n${results.size} addon(s) · ${totalErrors} error(s) · ${totalWarnings} warning(s)`,
   );
-  process.exit(totalErrors > 0 ? 1 : 0);
+  return totalErrors > 0 ? 1 : 0;
 }
 
-void main();
+if (import.meta.main) {
+  runValidateAddon(process.argv.slice(2)).then((code) => process.exit(code));
+}
