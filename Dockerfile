@@ -1,6 +1,6 @@
 FROM docker.io/oven/bun:1-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache dumb-init
+RUN apk upgrade --no-cache && apk add --no-cache dumb-init
 
 FROM base AS deps
 COPY package.json bun.lock ./
