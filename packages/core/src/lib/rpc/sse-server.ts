@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { container } from "@sapphire/framework";
-import { DashboardEventStream, type DashboardEvent } from "@lumi/contracts/events";
+import {
+  DashboardEventSchema,
+  DashboardEventStream,
+  type DashboardEvent,
+} from "@lumi/contracts/events";
+import { dashboardEventPublishFailures } from "@lumi/observability";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
 import type { BusMessage } from "#lib/event-bus/types.js";
@@ -55,9 +60,18 @@ let starting: Promise<void> | null = null;
 
 async function handleIncoming(msg: BusMessage<DashboardEvent>): Promise<void> {
   await msg.ack();
-  const conns = connectionsByGuild.get(msg.body.guildId);
+  const validated = DashboardEventSchema.run(msg.body);
+  if (validated.isErr()) {
+    dashboardEventPublishFailures.inc({ reason: "invalid" });
+    container.logger?.warn?.("[Sse] dropping malformed dashboard event", {
+      err: validated.error.message,
+    });
+    return;
+  }
+  const body = validated.unwrap();
+  const conns = connectionsByGuild.get(body.guildId);
   if (!conns || conns.size === 0) return;
-  const chunk = `data: ${JSON.stringify(msg.body)}\n\n`;
+  const chunk = `data: ${JSON.stringify(body)}\n\n`;
   // Snapshot before iterating: a connection's own close() (triggered below
   // on a failed/overloaded send) mutates `conns` mid-loop, and one slow or
   // disconnected client must never stop delivery to the rest.

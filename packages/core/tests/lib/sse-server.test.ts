@@ -6,6 +6,7 @@ import {
   _activeSseConnectionCount,
   MaxSseConnections,
 } from "#lib/rpc/sse-server.js";
+import { dashboardEventPublishFailures } from "@lumi/observability";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "987654321098765432";
@@ -33,6 +34,7 @@ describe("SSE endpoint (apps/api /events)", () => {
 
   beforeEach(() => {
     capturedHandler = null;
+    dashboardEventPublishFailures.reset();
     stopFn = vi.fn().mockResolvedValue(undefined);
     destroyGroupFn = vi.fn().mockResolvedValue(undefined);
     consumeFn = vi
@@ -138,6 +140,7 @@ describe("SSE endpoint (apps/api /events)", () => {
       nack: vi.fn(),
       body: {
         type: "module.stateChanged",
+        v: 1,
         guildId: OTHER_GUILD_ID,
         moduleName: "afk",
         enabled: true,
@@ -157,6 +160,7 @@ describe("SSE endpoint (apps/api /events)", () => {
       nack: vi.fn(),
       body: {
         type: "module.stateChanged",
+        v: 1,
         guildId: GUILD_ID,
         moduleName: "afk",
         enabled: true,
@@ -182,6 +186,7 @@ describe("SSE endpoint (apps/api /events)", () => {
 
     const event = {
       type: "config.changed",
+      v: 1,
       guildId: GUILD_ID,
       moduleName: "afk",
       key: "channel",
@@ -203,6 +208,36 @@ describe("SSE endpoint (apps/api /events)", () => {
     await reader.cancel();
   });
 
+  it("drops a malformed event body instead of forwarding it to connections", async () => {
+    const res = await open(GUILD_ID, OWNER_ID);
+    const reader = res.body!.getReader();
+
+    const ack = vi.fn().mockResolvedValue(undefined);
+    await capturedHandler!({
+      id: "bad-0",
+      deliveryCount: 1,
+      ack,
+      nack: vi.fn(),
+      body: {
+        type: "module.stateChanged",
+        v: 1,
+        guildId: GUILD_ID,
+        moduleName: "afk",
+        enabled: "not-a-boolean",
+        actorId: OWNER_ID,
+        at: Date.now(),
+      },
+    });
+
+    expect(ack).toHaveBeenCalled();
+    expect(container.logger.warn).toHaveBeenCalled();
+    expect((await dashboardEventPublishFailures.get()).values).toContainEqual(
+      expect.objectContaining({ labels: { reason: "invalid" }, value: 1 }),
+    );
+
+    await reader.cancel();
+  });
+
   it("a disconnected connection is dropped from fan-out without blocking delivery to others", async () => {
     const resGood = await open(GUILD_ID, OWNER_ID);
     const resBad = await open(GUILD_ID, OWNER_ID);
@@ -219,6 +254,7 @@ describe("SSE endpoint (apps/api /events)", () => {
     const decoder = new TextDecoder();
     const event = {
       type: "module.stateChanged",
+      v: 1,
       guildId: GUILD_ID,
       moduleName: "afk",
       enabled: false,
