@@ -74,6 +74,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged moderation cases.",
+    readOnly: true,
   }),
   "guild.cases.revoke": rpcAction<{ success: boolean; caseNumber: number }>()({
     input: s.object({ caseNumber: s.number().int().greaterThanOrEqual(1) }),
@@ -87,6 +88,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List warn-count escalation rules.",
+    readOnly: true,
   }),
   "guild.warnThresholds.set": rpcAction<{
     success: boolean;
@@ -109,6 +111,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Moderator notes for a user.",
+    readOnly: true,
   }),
   "guild.modNotes.add": rpcAction<{ success: boolean; note: ModNoteView }>()({
     input: s.object({
@@ -153,6 +156,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged appeals for reviewers.",
+    readOnly: true,
   }),
   "guild.appeals.review": rpcAction<{
     success: boolean;

@@ -169,3 +169,188 @@ describe("RpcClient", () => {
     expect(await client.healthy()).toBe(false);
   });
 });
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Swaps `globalThis.fetch` for the duration of `fn` so tests can count/steer transport calls directly, independent of the breaker's own gating. */
+async function withMockFetch<T>(
+  impl: (...args: Parameters<typeof fetch>) => Promise<Response>,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const original = globalThis.fetch;
+  globalThis.fetch = impl as typeof fetch;
+  try {
+    return await fn();
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+describe("RpcClient circuit breaker", () => {
+  it("opens after failureThreshold transport failures and short-circuits without calling fetch", async () => {
+    let fetchCalls = 0;
+    await withMockFetch(
+      async () => {
+        fetchCalls++;
+        throw new Error("connection refused");
+      },
+      async () => {
+        const client = new RpcClient({
+          baseUrl: "http://localhost:1",
+          breaker: { failureThreshold: 2, cooldownMs: 10_000 },
+        });
+        await client.invoke("guild.afk.list", { guildId: "g1" }).catch(() => {});
+        await client.invoke("guild.afk.list", { guildId: "g1" }).catch(() => {});
+        expect(fetchCalls).toBe(2);
+        expect(client.breakerState()).toBe("open");
+
+        const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+        expect(fetchCalls).toBe(2);
+        expect(err).toBeInstanceOf(RpcError);
+        expect((err as RpcError).code).toBe("WORKER_DOWN");
+        expect((err as RpcError).retryable).toBe(true);
+        expect((err as RpcError).retryAfterMs).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  it("closes on a successful half-open probe after the cooldown elapses", async () => {
+    let mode: "fail" | "succeed" = "fail";
+    await withMockFetch(
+      async () => {
+        if (mode === "fail") throw new Error("down");
+        return Response.json({ id: "1", ok: true, data: { entries: [] } });
+      },
+      async () => {
+        const client = new RpcClient({
+          baseUrl: "http://localhost:1",
+          breaker: { failureThreshold: 1, cooldownMs: 20 },
+        });
+        await client.invoke("guild.afk.list", { guildId: "g1" }).catch(() => {});
+        expect(client.breakerState()).toBe("open");
+
+        await sleep(30);
+        mode = "succeed";
+        const result = await client.invoke("guild.afk.list", { guildId: "g1" });
+        expect(result).toEqual({ entries: [] });
+        expect(client.breakerState()).toBe("closed");
+      },
+    );
+  });
+
+  it("reopens on a failed half-open probe after the cooldown elapses", async () => {
+    await withMockFetch(
+      async () => {
+        throw new Error("still down");
+      },
+      async () => {
+        const client = new RpcClient({
+          baseUrl: "http://localhost:1",
+          breaker: { failureThreshold: 1, cooldownMs: 20 },
+        });
+        await client.invoke("guild.afk.list", { guildId: "g1" }).catch(() => {});
+        expect(client.breakerState()).toBe("open");
+
+        await sleep(30);
+        const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(RpcError);
+        expect((err as RpcError).code).toBe("WORKER_DOWN");
+        expect(client.breakerState()).toBe("open");
+      },
+    );
+  });
+
+  it("never trips on coded RpcErrors from a reachable server", async () => {
+    const baseUrl = serve(() =>
+      Response.json({ id: "1", ok: false, error: "not allowed", code: RpcFailureCodes.Forbidden }),
+    );
+    const client = new RpcClient({
+      baseUrl,
+      breaker: { failureThreshold: 2, cooldownMs: 10_000 },
+    });
+    for (let i = 0; i < 5; i++) {
+      const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+      expect((err as RpcError).code).toBe(RpcFailureCodes.Forbidden);
+    }
+    expect(client.breakerState()).toBe("closed");
+  });
+
+  it("can be disabled via breaker: false", async () => {
+    let fetchCalls = 0;
+    await withMockFetch(
+      async () => {
+        fetchCalls++;
+        throw new Error("connection refused");
+      },
+      async () => {
+        const client = new RpcClient({ baseUrl: "http://localhost:1", breaker: false });
+        for (let i = 0; i < 5; i++) {
+          await client.invoke("guild.afk.list", { guildId: "g1" }).catch(() => {});
+        }
+        expect(fetchCalls).toBe(5);
+        expect(client.breakerState()).toBe("disabled");
+      },
+    );
+  });
+});
+
+describe("RpcClient read retries", () => {
+  it("retries a read action and succeeds on the second attempt", async () => {
+    let fetchCalls = 0;
+    await withMockFetch(
+      async () => {
+        fetchCalls++;
+        if (fetchCalls === 1) throw new Error("connection refused");
+        return Response.json({ id: "1", ok: true, data: { entries: [] } });
+      },
+      async () => {
+        const client = new RpcClient({
+          baseUrl: "http://localhost:1",
+          retry: { attempts: 2, baseDelayMs: 1 },
+        });
+        const result = await client.invoke("guild.afk.list", { guildId: "g1" });
+        expect(result).toEqual({ entries: [] });
+        expect(fetchCalls).toBe(2);
+      },
+    );
+  });
+
+  it("never retries a mutation, even with retry configured", async () => {
+    let fetchCalls = 0;
+    await withMockFetch(
+      async () => {
+        fetchCalls++;
+        throw new Error("connection refused");
+      },
+      async () => {
+        const client = new RpcClient({
+          baseUrl: "http://localhost:1",
+          retry: { attempts: 3, baseDelayMs: 1 },
+        });
+        const err = await client
+          .invoke("guild.logClaims.issue", { guildId: "g1" })
+          .catch((e: unknown) => e);
+        expect(err).toBeInstanceOf(RpcError);
+        expect((err as RpcError).code).toBe("WORKER_DOWN");
+        expect(fetchCalls).toBe(1);
+      },
+    );
+  });
+
+  it("does not retry a non-transport (coded) error even on a read action", async () => {
+    let fetchCalls = 0;
+    const baseUrl = serve(() => {
+      fetchCalls++;
+      return Response.json({ id: "1", ok: false, error: "not allowed", code: RpcFailureCodes.Forbidden });
+    });
+    const client = new RpcClient({
+      baseUrl,
+      retry: { attempts: 3, baseDelayMs: 1 },
+    });
+    const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+    expect((err as RpcError).code).toBe(RpcFailureCodes.Forbidden);
+    expect(fetchCalls).toBe(1);
+  });
+});

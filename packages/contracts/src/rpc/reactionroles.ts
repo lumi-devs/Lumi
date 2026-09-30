@@ -28,6 +28,7 @@ export const reactionrolesRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List role menus for a guild.",
+    readOnly: true,
   }),
   "guild.reactionroles.menus.set": rpcAction<{
     success: boolean;

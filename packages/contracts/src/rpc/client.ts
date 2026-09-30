@@ -85,12 +85,136 @@ type CallOptions<A extends RpcActionName> = {
   actorId?: string;
 } & (RpcInput<A> extends undefined ? { data?: undefined } : { data: RpcInput<A> });
 
+export type RpcCircuitState = "closed" | "open" | "half-open";
+
+export interface RpcCircuitBreakerOptions {
+  /** Consecutive transport failures before the breaker trips from `closed` to `open`. */
+  failureThreshold: number;
+  /** How long the breaker stays `open` before allowing a single `half-open` probe. */
+  cooldownMs: number;
+}
+
+const DefaultBreakerOptions: RpcCircuitBreakerOptions = {
+  failureThreshold: 5,
+  cooldownMs: 10_000,
+};
+
+/**
+ * Mirrors `packages/core/src/lib/utilities/resilience.ts`'s `CircuitBreaker`
+ * semantics (closed/open/half-open, single half-open probe) without
+ * importing it - `packages/contracts` must never import `packages/core` (see
+ * `packages/core/tests/architecture/import-graph.test.ts`), so this is a
+ * small, deliberately duplicated copy scoped to the client's own transport
+ * failures rather than a generic reusable gate.
+ */
+class RpcCircuitBreaker {
+  private readonly failureThreshold: number;
+  private readonly cooldownMs: number;
+  private state: RpcCircuitState = "closed";
+  private consecutiveFailures = 0;
+  private openedAt = 0;
+  private halfOpenProbeInFlight = false;
+
+  public constructor(options: RpcCircuitBreakerOptions) {
+    this.failureThreshold = options.failureThreshold;
+    this.cooldownMs = options.cooldownMs;
+  }
+
+  public getState(): RpcCircuitState {
+    if (this.state === "open" && Date.now() - this.openedAt >= this.cooldownMs) {
+      this.state = "half-open";
+      this.halfOpenProbeInFlight = false;
+    }
+    return this.state;
+  }
+
+  public remainingCooldownMs(): number {
+    return Math.max(0, this.cooldownMs - (Date.now() - this.openedAt));
+  }
+
+  /** Reserves a slot to call through, or refuses without mutating state further. */
+  public tryAcquire(): boolean {
+    const state = this.getState();
+    if (state === "open") return false;
+    if (state === "half-open") {
+      if (this.halfOpenProbeInFlight) return false;
+      this.halfOpenProbeInFlight = true;
+    }
+    return true;
+  }
+
+  public onSuccess(): void {
+    this.consecutiveFailures = 0;
+    this.state = "closed";
+    this.halfOpenProbeInFlight = false;
+  }
+
+  public onFailure(): void {
+    if (this.state === "half-open") {
+      this.trip();
+      return;
+    }
+    this.consecutiveFailures++;
+    if (this.consecutiveFailures >= this.failureThreshold) {
+      this.trip();
+    }
+    this.halfOpenProbeInFlight = false;
+  }
+
+  private trip(): void {
+    this.state = "open";
+    this.openedAt = Date.now();
+    this.consecutiveFailures = 0;
+    this.halfOpenProbeInFlight = false;
+  }
+}
+
+export interface RpcRetryOptions {
+  /** Total attempts, including the first - 1 means "no retry". */
+  attempts: number;
+  /** Base delay for jittered exponential backoff between attempts. */
+  baseDelayMs: number;
+}
+
 export interface RpcClientOptions {
   baseUrl: string;
   token?: string;
   logger?: (msg: string) => void;
   /** Lets a caller stamp W3C trace headers onto the outgoing request without this package depending on a tracing library. */
   injectTraceHeaders?: () => { traceparent?: string; tracestate?: string };
+  /**
+   * Fails fast instead of piling up timeouts against a down `apps/api`.
+   * `false` disables it entirely. On by default (5 consecutive transport
+   * failures, 10s cooldown) since every caller benefits from not queuing
+   * requests behind a dead server.
+   */
+  breaker?: RpcCircuitBreakerOptions | false;
+  /**
+   * Retries a request on a retryable transport failure (`TIMEOUT` /
+   * `WORKER_DOWN`) - only ever applied to actions the router marks
+   * `readOnly` (see `packages/contracts/src/rpc/define.ts`), since a mutation
+   * retried after a dropped response could double its side effect. Off by
+   * default; retries never push the total wall-clock time for a call past
+   * its own `timeoutMs` budget.
+   */
+  retry?: RpcRetryOptions;
+}
+
+function isRetryableTransportError(err: unknown): boolean {
+  return (
+    err instanceof RpcError &&
+    err.retryable &&
+    (err.code === "TIMEOUT" || err.code === "WORKER_DOWN")
+  );
+}
+
+function jitteredBackoff(baseDelayMs: number, attempt: number): number {
+  const exponential = baseDelayMs * 2 ** (attempt - 1);
+  return exponential * (0.5 + Math.random() * 0.5);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -106,12 +230,22 @@ export class RpcClient {
   private readonly token: string;
   private readonly log: (msg: string) => void;
   private readonly injectTraceHeaders: () => { traceparent?: string; tracestate?: string };
+  private readonly breaker?: RpcCircuitBreaker;
+  private readonly retry?: RpcRetryOptions;
 
   public constructor(options: RpcClientOptions) {
     this.baseUrl = options.baseUrl;
     this.token = options.token ?? "";
     this.log = options.logger ?? (() => {});
     this.injectTraceHeaders = options.injectTraceHeaders ?? (() => ({}));
+    const breakerOptions = options.breaker === undefined ? DefaultBreakerOptions : options.breaker;
+    this.breaker = breakerOptions === false ? undefined : new RpcCircuitBreaker(breakerOptions);
+    this.retry = options.retry;
+  }
+
+  /** Exposed for callers wanting to surface breaker state (e.g. a health widget); not used internally beyond `invoke`. */
+  public breakerState(): RpcCircuitState | "disabled" {
+    return this.breaker?.getState() ?? "disabled";
   }
 
   private buildRequest(
@@ -165,15 +299,35 @@ export class RpcClient {
     }
   }
 
-  public async invoke<A extends RpcActionName>(
+  /** One attempt: breaker gate, transport call, envelope parse. Records the outcome on the breaker. */
+  private async attemptInvoke<A extends RpcActionName>(
     action: A,
     options: CallOptions<A>,
+    timeoutMs: number,
   ): Promise<RpcOutput<A>> {
-    const raw = await this.post(
-      action,
-      this.buildRequest(action, options.guildId, options.actorId, options.data),
-      rpcRouter[action].timeoutMs,
-    );
+    if (this.breaker && !this.breaker.tryAcquire()) {
+      throw new RpcError("WORKER_DOWN", action, `RPC ${action}: circuit breaker open`, {
+        retryable: true,
+        retryAfterMs: this.breaker.remainingCooldownMs(),
+      });
+    }
+
+    let raw: unknown;
+    try {
+      raw = await this.post(
+        action,
+        this.buildRequest(action, options.guildId, options.actorId, options.data),
+        timeoutMs,
+      );
+    } catch (err: unknown) {
+      if (this.breaker && err instanceof RpcError && (err.code === "TIMEOUT" || err.code === "WORKER_DOWN")) {
+        this.breaker.onFailure();
+      }
+      throw err;
+    }
+    // Transport got a response at all, so the api is up regardless of what's in it.
+    this.breaker?.onSuccess();
+
     let response;
     try {
       response = parseRpcResponse(raw);
@@ -192,6 +346,42 @@ export class RpcClient {
       throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
     }
     return response.data as RpcOutput<A>;
+  }
+
+  public async invoke<A extends RpcActionName>(
+    action: A,
+    options: CallOptions<A>,
+  ): Promise<RpcOutput<A>> {
+    const timeoutMs = rpcRouter[action].timeoutMs;
+    const isReadOnly = Boolean((rpcRouter[action] as { readOnly?: boolean }).readOnly);
+    const retryCfg = isReadOnly ? this.retry : undefined;
+    const maxAttempts = retryCfg ? Math.max(1, retryCfg.attempts) : 1;
+    const deadlineAt = Date.now() + timeoutMs;
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const remaining = deadlineAt - Date.now();
+      if (attempt > 1 && remaining <= 0) {
+        throw lastError;
+      }
+      try {
+        return await this.attemptInvoke(action, options, Math.min(timeoutMs, Math.max(remaining, 1)));
+      } catch (err) {
+        lastError = err;
+        const canRetry =
+          attempt < maxAttempts && retryCfg !== undefined && isRetryableTransportError(err);
+        if (!canRetry) {
+          throw err;
+        }
+        const remainingBudget = deadlineAt - Date.now();
+        const backoff = jitteredBackoff(retryCfg.baseDelayMs, attempt);
+        if (remainingBudget <= 0 || backoff >= remainingBudget) {
+          throw err;
+        }
+        await sleep(backoff);
+      }
+    }
+    throw lastError;
   }
 
   /** Hits the server's `/healthz` — used by readiness probes. */

@@ -10,6 +10,7 @@ export const tempvcRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List temporary-voice generator channels.",
+    readOnly: true,
   }),
   "guild.tempvc.generators.set": rpcAction<{
     success: boolean;
@@ -35,5 +36,6 @@ export const tempvcRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List temporary-voice records.",
+    readOnly: true,
   }),
 };

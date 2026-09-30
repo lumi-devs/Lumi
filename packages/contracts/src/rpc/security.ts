@@ -30,6 +30,7 @@ export const securityRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Read panic-mode state.",
+    readOnly: true,
   }),
   "guild.panic.set": rpcAction<PanicSetResult>()({
     input: s.object({
@@ -49,6 +50,7 @@ export const securityRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Read the verification panel binding.",
+    readOnly: true,
   }),
   "guild.verificationPanel.set": rpcAction<VerificationPanelSetResult>()({
     input: s.object({
@@ -81,6 +83,7 @@ export const securityRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List guild backups (role/channel counts).",
+    readOnly: true,
   }),
   "guild.backups.restore": rpcAction<{
     success: boolean;

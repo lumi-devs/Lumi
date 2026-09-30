@@ -19,6 +19,7 @@ export const downloaderRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
     summary: "List registered repos.",
+    readOnly: true,
   }),
   "downloader.repo.modules": rpcAction<{
     repoName: string;
@@ -28,6 +29,7 @@ export const downloaderRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "List modules a repo offers.",
+    readOnly: true,
   }),
   "downloader.module.install": rpcAction<{
     success: boolean;
