@@ -16,12 +16,20 @@ Growth is bounded by deleting old data on a schedule, not by partitioning:
 
 - `handleDataRetentionFire()`
   (`packages/core/src/modules/core/services/data-retention.ts`) runs as a
-  scheduled task and purges audit entries, moderation cases, config history,
-  and economy transactions past their own env-configured window
-  (`AUDIT_RETENTION_DAYS`, `CASE_RETENTION_DAYS`,
-  `CONFIG_HISTORY_RETENTION_DAYS`, `ECONOMY_TRANSACTION_RETENTION_DAYS`),
-  plus departed-guild data past `GUILD_DATA_RETENTION_DAYS` once the whole
-  shard fleet confirms the departure.
+  scheduled task and purges audit entries, moderation cases (and their
+  resolved appeals), config history, and economy transactions past their own
+  env-configured window (`AUDIT_RETENTION_DAYS`,
+  `CONFIG_HISTORY_RETENTION_DAYS`, `MODERATION_RETENTION_DAYS`,
+  `ECONOMY_TRANSACTION_RETENTION_DAYS`), plus departed-guild data past
+  `GUILD_DATA_RETENTION_DAYS` once the whole shard fleet confirms the
+  departure. `MODERATION_RETENTION_DAYS` defaults to `0` (keep forever) —
+  moderation history has legal/audit value an operator opts out of, not into
+  — and even with a window set, an active case or pending appeal is never
+  eligible regardless of age. Each purge deletes in bounded batches (1000
+  rows) rather than one unbounded `DELETE`, and when `AUDIT_ARCHIVE_DIR` is
+  set, every batch is written as gzip-compressed JSONL under it before being
+  deleted, so an operator can keep the data outside Postgres instead of
+  losing it outright.
 - `GuildBackup` rows (`prisma/schema.prisma`) stay capped per guild in
   Postgres, not moved to object storage:
   `SecurityRepository.pruneBackups(guildId, keep)` deletes everything past

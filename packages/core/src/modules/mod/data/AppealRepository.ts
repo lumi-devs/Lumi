@@ -1,6 +1,10 @@
 import type { Appeal } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "#lib/retention/archive.js";
+import {
   createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
   decodeCreatedAtIdCursor,
@@ -116,5 +120,38 @@ export class AppealRepository extends Repository {
     });
     if (count === 0) return null;
     return this.prisma.appeal.findUnique({ where: { id } });
+  }
+
+  /**
+   * Purges resolved appeals (anything but `pending`) older than `date`. A
+   * pending appeal is never eligible regardless of age, mirroring
+   * `ModerationRepository.purgeOldCases` never touching an active case.
+   */
+  public async purgeOldAppeals(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "appeals",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.appeal.findMany({
+          where: {
+            createdAt: { lt: date },
+            status: { not: "pending" },
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.appeal.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
+      },
+    });
   }
 }

@@ -373,6 +373,39 @@ export function validateAddonSignatureConfig(): void {
   }
 }
 
+/** How long `AuditLedger` rows survive before the retention sweep purges them. */
+export function resolveAuditRetentionDays(): number {
+  return envParseInteger("AUDIT_RETENTION_DAYS", 90);
+}
+
+/** How long `ModuleConfigHistory` rows survive before the retention sweep purges them. */
+export function resolveConfigHistoryRetentionDays(): number {
+  return envParseInteger("CONFIG_HISTORY_RETENTION_DAYS", 90);
+}
+
+/**
+ * How long a lifted/inactive moderation case (and its resolved appeal, if
+ * any) survives before the retention sweep purges it. Defaults to `0`, which
+ * means keep forever - moderation history has legal/audit value an operator
+ * has to opt out of, not into. An active case (or a pending appeal) is never
+ * eligible regardless of this setting or its age.
+ */
+export function resolveModerationRetentionDays(): number {
+  return envParseInteger("MODERATION_RETENTION_DAYS", 0);
+}
+
+/**
+ * Root directory the retention sweep writes a gzip-compressed JSONL archive
+ * to before deleting a batch of rows from any purged table (audit ledger,
+ * config history, moderation cases, appeals) - each table gets its own
+ * subdirectory. Unset skips archiving entirely: matching rows are deleted
+ * with no backup, the behavior before this setting existed.
+ */
+export const getAuditArchiveDir = (): string | null => {
+  const raw = process.env["AUDIT_ARCHIVE_DIR"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+};
+
 export function getShardList(): number[] | "auto" {
   const raw = process.env["SHARD_LIST"];
   if (!raw || raw === "auto") return "auto";

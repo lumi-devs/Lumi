@@ -5,6 +5,10 @@ import { RedisKeys } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "#lib/retention/archive.js";
+import {
   createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
   decodeCreatedAtIdCursor,
@@ -281,10 +285,30 @@ export class AuditRepository extends Repository {
     }
   }
 
-  public async purgeOldEntries(date: Date): Promise<number> {
-    const { count } = await this.prisma.auditLedger.deleteMany({
-      where: { createdAt: { lt: date } },
+  public async purgeOldEntries(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "audit_ledger",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.auditLedger.findMany({
+          where: {
+            createdAt: { lt: date },
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.auditLedger.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
+      },
     });
-    return count;
   }
 }
