@@ -1,10 +1,5 @@
 import { parseArgs } from "node:util";
-import {
-  runDoctor,
-  formatDoctorReport,
-  doctorExitCode,
-  type RunDoctorOptions,
-} from "@lumi/core/doctor";
+import { doctorExitCode, formatDoctorReport, runDoctor } from "@lumi/core/doctor";
 
 export const help = `Usage: lumi doctor [--json]
 
@@ -40,8 +35,7 @@ export async function run(argv: string[]): Promise<number> {
     return 2;
   }
 
-  const options: RunDoctorOptions = {};
-  const results = await runDoctor(options);
+  const results = await runDoctor();
   const report = formatDoctorReport(results, { json: values.json === true });
   console.log(report);
   return doctorExitCode(results);

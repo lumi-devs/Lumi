@@ -1,87 +1,59 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
-import { runCli } from "../src/main.js";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import type { DoctorCheckResult } from "@lumi/core/doctor";
 
-function captureConsole() {
-  const logs: string[] = [];
-  const errors: string[] = [];
-  const logSpy = mock((...args: unknown[]) => {
-    logs.push(args.join(" "));
-  });
-  const errorSpy = mock((...args: unknown[]) => {
-    errors.push(args.join(" "));
-  });
-  const originalLog = console.log;
-  const originalError = console.error;
-  console.log = logSpy;
-  console.error = errorSpy;
-  return {
-    logs,
-    errors,
-    restore: () => {
-      console.log = originalLog;
-      console.error = originalError;
-    },
-  };
-}
+let results: DoctorCheckResult[] = [];
 
-describe("doctor command", () => {
+void mock.module("@lumi/core/doctor", () => ({
+  runDoctor: () => Promise.resolve(results),
+  formatDoctorReport: (rows: DoctorCheckResult[], { json }: { json: boolean }) =>
+    json ? JSON.stringify(rows) : rows.map((r) => `${r.status} ${r.name}`).join("\n"),
+  doctorExitCode: (rows: DoctorCheckResult[]) => (rows.some((r) => r.status === "fail") ? 1 : 0),
+}));
+
+const { runCli } = await import("../src/main.js");
+
+describe("lumi doctor", () => {
+  let logs: string[];
+  let errors: string[];
+
+  beforeEach(() => {
+    logs = [];
+    errors = [];
+    spyOn(console, "log").mockImplementation((...args: unknown[]) => void logs.push(args.join(" ")));
+    spyOn(console, "error").mockImplementation((...args: unknown[]) => void errors.push(args.join(" ")));
+  });
+
   afterEach(() => {
     mock.restore();
   });
 
-  it("prints help and exits 0 for --help", async () => {
-    const cap = captureConsole();
-    try {
-      const code = await runCli(["doctor", "--help"]);
-      expect(code).toBe(0);
-      expect(cap.logs.join("\n")).toContain("Usage: lumi doctor");
-    } finally {
-      cap.restore();
-    }
+  it("prints help and exits 0", async () => {
+    expect(await runCli(["doctor", "--help"])).toBe(0);
+    expect(logs.join("\n")).toContain("Usage: lumi doctor");
   });
 
-  it("runs doctor checks with human-readable output", async () => {
-    const cap = captureConsole();
-    try {
-      const code = await runCli(["doctor"]);
-      const output = cap.logs.join("\n");
-      // Output should contain check results with status glyphs (✓, ⚠, ✗, –)
-      expect(output).toMatch(/[✓⚠✗–]/);
-      // Exit code should be 0 (no failures) or 1 (some failures) based on actual checks
-      expect([0, 1]).toContain(code);
-    } finally {
-      cap.restore();
-    }
+  it("prints the report and exits 0 when nothing fails", async () => {
+    results = [
+      { name: "postgres", status: "ok", detail: "" },
+      { name: "redis", status: "warn", detail: "old" },
+    ];
+    expect(await runCli(["doctor"])).toBe(0);
+    expect(logs.join("\n")).toBe("ok postgres\nwarn redis");
   });
 
-  it("runs doctor checks with JSON output for --json", async () => {
-    const cap = captureConsole();
-    try {
-      const code = await runCli(["doctor", "--json"]);
-      const output = cap.logs.join("\n");
-      // Output should be valid JSON
-      const json = JSON.parse(output);
-      expect(Array.isArray(json)).toBe(true);
-      if (json.length > 0) {
-        expect(json[0]).toHaveProperty("name");
-        expect(json[0]).toHaveProperty("status");
-        expect(json[0]).toHaveProperty("detail");
-      }
-      // Exit code should be 0 (no failures) or 1 (some failures) based on actual checks
-      expect([0, 1]).toContain(code);
-    } finally {
-      cap.restore();
-    }
+  it("exits 1 when a check fails", async () => {
+    results = [{ name: "discord-token", status: "fail", detail: "401" }];
+    expect(await runCli(["doctor"])).toBe(1);
   });
 
-  it("exits 2 for unexpected positional arguments", async () => {
-    const cap = captureConsole();
-    try {
-      const code = await runCli(["doctor", "invalid"]);
-      expect(code).toBe(2);
-      expect(cap.errors.join("\n")).toContain("Usage: lumi doctor");
-    } finally {
-      cap.restore();
-    }
+  it("emits JSON with --json", async () => {
+    results = [{ name: "redis", status: "ok", detail: "" }];
+    expect(await runCli(["doctor", "--json"])).toBe(0);
+    expect(JSON.parse(logs.join("\n"))).toEqual(results);
+  });
+
+  it("exits 2 on unexpected positional arguments", async () => {
+    expect(await runCli(["doctor", "invalid"])).toBe(2);
+    expect(errors.join("\n")).toContain("Usage: lumi doctor");
   });
 });
