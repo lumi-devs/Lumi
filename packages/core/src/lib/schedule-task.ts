@@ -3,6 +3,21 @@ import type { ScheduledTasks } from "#lib/types/common.js";
 import { wrapWithTraceContext } from "#lib/scheduler-otel.js";
 
 /**
+ * BullMQ priority values for the single shared scheduled-tasks queue (lower
+ * runs sooner). A job with no `priority` set is not "unprioritized" in the
+ * neutral sense - BullMQ always drains its wait list ahead of the prioritized
+ * set, so it would jump ahead of even `CRITICAL`. `SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS`
+ * (`#lib/client/scheduled-tasks-queue.js`) defaults every job to `UTILITY` for
+ * that reason; a call site only needs this to move a job off that default.
+ */
+export const QueuePriority = {
+  CRITICAL: 1,
+  UTILITY: 5,
+  CLEANUP: 10,
+} as const;
+export type QueuePriority = (typeof QueuePriority)[keyof typeof QueuePriority];
+
+/**
  * Forwarded verbatim to `container.tasks.create(task, options)`. Either a ms
  * delay (number) or the full options bag with `customJobOptions.jobId` for
  * idempotency / cancel-by-id.
@@ -19,6 +34,7 @@ export type ScheduleOptions =
         jobId?: string;
         removeOnComplete?: boolean | number;
         removeOnFail?: boolean | number;
+        priority?: number;
       };
     };
 

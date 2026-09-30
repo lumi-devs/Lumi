@@ -57,6 +57,9 @@ export async function destroySchedulerContainerServices(
   await services.failedJobsWatcher
     .close()
     .catch(warnOnCleanupError("Failed-jobs watcher close"));
+  await services.queueDepthWatcher
+    .close()
+    .catch(warnOnCleanupError("Queue-depth watcher close"));
   if (container.tasks) {
     await container.tasks
       .close()

@@ -111,6 +111,14 @@ export const failedJobsTotal = new Counter({
   registers: [registry],
 });
 
+/** Depth of the shared scheduled-tasks BullMQ queue, by job state. */
+export const scheduledJobsGauge = new Gauge({
+  name: "lumi_scheduled_jobs",
+  help: "BullMQ scheduled-tasks queue depth, by state",
+  labelNames: ["state"] as const,
+  registers: [registry],
+});
+
 // ── Gateway / shard ───────────────────────────────────────────────────────────
 
 export const shardLatency = new Gauge({

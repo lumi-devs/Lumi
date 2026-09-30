@@ -1,5 +1,6 @@
 import { parseRedisConnectionOption } from "#lib/database/redis.js";
 import { envParseInteger } from "#lib/env.js";
+import { QueuePriority } from "#lib/schedule-task.js";
 import type { ConnectionOptions } from "bullmq";
 
 /**
@@ -26,10 +27,19 @@ export function getScheduledTasksConnectionOptions(): ConnectionOptions {
 /**
  * The default job options every scheduled-tasks BullMQ `Queue` in the fleet
  * must share (see `getScheduledTasksConnectionOptions()`).
+ *
+ * @remarks
+ *
+ * `priority` defaults to `UTILITY` here, not in `scheduleTask()` itself,
+ * because BullMQ's `Queue.add()` merges `{ ...defaultJobOptions, ...opts }` -
+ * a per-call `customJobOptions.priority` still wins, but a call that omits it
+ * lands on `UTILITY` instead of the unprioritized "runs before everything,
+ * even `CRITICAL`" bucket BullMQ gives jobs with no priority at all.
  */
 export const SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS = {
   attempts: 5,
   backoff: { type: "exponential", delay: 5_000 },
   removeOnComplete: 1_000,
   removeOnFail: 5_000,
+  priority: QueuePriority.UTILITY,
 } as const;
