@@ -5,6 +5,7 @@ import semver from "semver";
 import { AddonDiscordCapabilities } from "@lumi/contracts";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { unknownDiscordCapabilities } from "#lib/addon-sandbox/capabilities.js";
+import { isValidDependencySpec } from "#lib/module-system/dependencies.js";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -20,6 +21,8 @@ const infoSchema = s.object({
   description: s.string().lengthGreaterThanOrEqual(1),
   short: s.string().lengthGreaterThanOrEqual(1).optional(),
   version: s.string().regex(/^\d+\.\d+\.\d+/),
+  dependencies: s.array(s.string()).optional(),
+  conflicts: s.array(s.string()).optional(),
   requirements: s.array(s.string()).optional(),
   tags: s.array(s.string()).optional(),
   min_bot_version: s.string().optional(),
@@ -206,6 +209,25 @@ export function isVersionCompatible(
   return semver.gte(current, min);
 }
 
+/**
+ * Validates a `dependencies` array's entries are each a plain module name
+ * (`"economy"`) or a name with a valid semver range (`"leveling@^1.2.0"`),
+ * appending a clear error per malformed entry.
+ */
+function validateDependencySpecs(
+  entries: string[] | undefined,
+  source: string,
+  errors: string[],
+): void {
+  for (const entry of entries ?? []) {
+    if (!isValidDependencySpec(entry)) {
+      errors.push(
+        `${source}: "dependencies" entry "${entry}" is not valid - expected a module name ("economy") or a name with a semver range ("leveling@^1.2.0").`,
+      );
+    }
+  }
+}
+
 export function isMaxVersionCompatible(
   maxVersion: string,
   currentVersion: string,
@@ -259,6 +281,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             `info.json "max_bot_version" (${val.max_bot_version}) is lower than current Lumi version (${LumiInfo.version}).`,
           );
         }
+        validateDependencySpecs(val.dependencies, "info.json", errors);
       }
     } catch (err) {
       errors.push(
@@ -296,6 +319,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             `manifest.json "name" (${val.name}) must match the directory name (${base}).`,
           );
         }
+        validateDependencySpecs(val.dependencies, "manifest.json", errors);
       }
       for (const unknown of unknownDiscordCapabilities(
         (manifest as { capabilities?: unknown }).capabilities,
