@@ -18,14 +18,27 @@ vi.mock("#lib/database/guild-eviction.js", () => ({
   evictGuildRedisState: vi.fn().mockResolvedValue(undefined),
 }));
 
+const baseShard = {
+  status: "Ready",
+  ping: 10,
+  guildCount: 1,
+  shardCount: 2,
+  updatedAt: 0,
+  eventLoopLagP99Ms: null,
+  memoryRssMb: 0,
+  heapUsedMb: 0,
+  uptimeSec: 0,
+  pid: 0,
+  lastReadyAt: null,
+};
 const fleetReady = {
   clusterName: "default",
   observedAt: 0,
   replicas: [],
   missingShardIds: [],
   shards: [
-    { shardId: 0, replicaId: "r1", status: "Ready", ping: 10, guildCount: 1, shardCount: 2, updatedAt: 0 },
-    { shardId: 1, replicaId: "r1", status: "Ready", ping: 10, guildCount: 1, shardCount: 2, updatedAt: 0 },
+    { ...baseShard, shardId: 0, replicaId: "r1" },
+    { ...baseShard, shardId: 1, replicaId: "r1" },
   ],
   shardCount: 2,
 };
@@ -34,9 +47,7 @@ const fleetNotReady = {
   observedAt: 0,
   replicas: [],
   missingShardIds: [1],
-  shards: [
-    { shardId: 0, replicaId: "r1", status: "Ready", ping: 10, guildCount: 1, shardCount: 2, updatedAt: 0 },
-  ],
+  shards: [{ ...baseShard, shardId: 0, replicaId: "r1" }],
   shardCount: 2,
 };
 

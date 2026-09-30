@@ -39,7 +39,22 @@ interface ShardTelemetry {
   shardCount: number;
   /** Wall-clock of this sample (ms). */
   updatedAt: number;
+  /** p99 event-loop delay of the reporting process, in ms; null until the first window closes. */
+  eventLoopLagP99Ms: number | null;
+  /** Resident set size of the reporting process, in MB. */
+  memoryRssMb: number;
+  /** Used heap of the reporting process, in MB. */
+  heapUsedMb: number;
+  /** How long the reporting process has been alive, in seconds. */
+  uptimeSec: number;
+  /** PID of the reporting process. */
+  pid: number;
+  /** Wall-clock of this shard's last Ready/Resume event (ms); null if it hasn't happened yet. */
+  lastReadyAt: number | null;
 }
+
+/** Publish interval (ms) callers default to when they don't override it. */
+export const DefaultPublishIntervalMs = 10_000;
 
 /** One sample of every shard this process currently owns. */
 export type ShardTelemetrySample = Omit<
@@ -66,7 +81,7 @@ export class ShardTelemetryPublisher {
   private published = new Set<number>();
 
   public constructor(private readonly opts: ShardTelemetryPublisherOptions) {
-    this.intervalMs = opts.intervalMs ?? 10_000;
+    this.intervalMs = opts.intervalMs ?? DefaultPublishIntervalMs;
     this.ttlMs = opts.ttlMs ?? this.intervalMs * 3;
   }
 
@@ -126,6 +141,34 @@ export class ShardTelemetryPublisher {
       });
     }
   }
+}
+
+/**
+ * A shard's row is stale once it's older than `staleAfterMs` - it may still be
+ * inside the TTL window (`ttlMs`, a multiple of the publish interval) but old
+ * enough that the fleet view shouldn't call it healthy without saying so.
+ */
+export function isShardStale(
+  row: Pick<ShardTelemetry, "updatedAt">,
+  nowMs: number,
+  staleAfterMs: number,
+): boolean {
+  return nowMs - row.updatedAt > staleAfterMs;
+}
+
+/**
+ * Per-shard last Ready/Resume timestamp. Gateway events land on whichever
+ * listener owns the socket, not on the telemetry publisher itself, so this is
+ * the cheap in-memory handoff between the two rather than a second Redis write.
+ */
+const lastReadyAtByShard = new Map<number, number>();
+
+export function recordShardReady(shardId: number, atMs: number = Date.now()): void {
+  lastReadyAtByShard.set(shardId, atMs);
+}
+
+export function getLastReadyAt(shardId: number): number | null {
+  return lastReadyAtByShard.get(shardId) ?? null;
 }
 
 interface ClusterReplicaState {

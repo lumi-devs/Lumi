@@ -6,8 +6,13 @@ import { implementRpc } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
 import {
   DefaultClusterName,
+  DefaultPublishIntervalMs,
+  isShardStale,
   readClusterShards,
 } from "#lib/sharding/shard-telemetry.js";
+
+/** A shard with no fresh row in 3 publish intervals is flagged stale in the fleet view. */
+const StaleAfterMs = DefaultPublishIntervalMs * 3;
 
 export const systemRpcHandlers = implementRpc(systemRpc, {
   "system.dashboard.get": async () => {
@@ -158,6 +163,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       redis: container.redis,
       clusterName: getClusterName() ?? DefaultClusterName,
     });
+    const now = Date.now();
     return {
       clusterName: snapshot.clusterName,
       shardCount: snapshot.shardCount,
@@ -173,6 +179,13 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
         ping: s.ping,
         guildCount: s.guildCount,
         lastHeartbeatAt: new Date(s.updatedAt).toISOString(),
+        eventLoopLagP99Ms: s.eventLoopLagP99Ms,
+        memoryRssMb: s.memoryRssMb,
+        heapUsedMb: s.heapUsedMb,
+        uptimeSec: s.uptimeSec,
+        pid: s.pid,
+        lastReadyAt: s.lastReadyAt === null ? null : new Date(s.lastReadyAt).toISOString(),
+        stale: isShardStale(s, now, StaleAfterMs),
       })),
       missingShardIds: snapshot.missingShardIds,
     };
