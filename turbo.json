@@ -21,6 +21,9 @@
       "dependsOn": ["^typecheck"]
     },
     "//#lint:all": {},
+    "//#lint:all:fix": {
+      "cache": false
+    },
     "test": {}
   }
 }

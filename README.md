@@ -197,8 +197,11 @@ bun run test
 # Run type checks across all packages
 bun run typecheck
 
-# Run linter
+# Run linter (check-only)
 bun run lint
+
+# Run linter with auto-fixes
+bun run lint:fix
 ```
 
 ---

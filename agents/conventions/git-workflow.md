@@ -116,7 +116,9 @@ when only docs changed; the required jobs when code under `apps/**` or
 
 - **lint** — `bun run lint:all` (or, on a PR, `turbo run lint:all --filter
   [origin/$BASE_REF...HEAD]` first, falling back to the full `bun run lint` if
-  that fails)
+  that fails); this is check-only (no `--fix`) — the fix variant is
+  `bun run lint:fix` (`turbo run lint:all:fix`), for local use only, never run
+  in CI
 - **typecheck** — same filtered/full pattern, `bun run typecheck`
 - **test** — `bun run test:coverage` (both root vitest and dashboard vitest,
   with coverage), uploads `coverage/lcov.info` +

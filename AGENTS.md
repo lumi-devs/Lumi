@@ -188,7 +188,9 @@ one-off commands as `nix develop --command <cmd>`.
   (`tsc --noEmit -p tsconfig.json` in each).
 - `bun run lint` — `turbo run lint:all`, a root-only turbo task (not a per-package fan-out)
   that runs the root's own `lint:all` script: `eslint packages/*/src packages/core/tests
-  apps/worker/src apps/docs/src --fix`. Note it **auto-fixes**.
+  apps/worker/src apps/docs/src`. Check-only, no `--fix` — this is what CI runs. For local
+  auto-fixing, use `bun run lint:fix` (`turbo run lint:all:fix`, the same eslint invocation
+  with `--fix`).
 - `bun run test` — `bun test --parallel` at the root (globs `packages/**`).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 
