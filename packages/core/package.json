@@ -10,7 +10,8 @@
     "./setup": "./src/lib/client/setup.ts",
     "./setup-api": "./src/lib/client/setup-api.ts",
     "./setup-scheduler": "./src/lib/client/setup-scheduler.ts",
-    "./env": "./src/lib/env.ts"
+    "./env": "./src/lib/env.ts",
+    "./doctor": "./src/lib/doctor/index.ts"
   },
   "imports": {
     "#lib/*.js": "./src/lib/*.ts",

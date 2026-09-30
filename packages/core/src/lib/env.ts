@@ -289,6 +289,18 @@ export const getRpcInternalToken = (): string | null => {
   return token && token.length > 0 ? token : null;
 };
 
+/**
+ * Base URL of the `apps/api` RPC server (e.g. `http://worker:8091`), set on
+ * whatever deployment/operator surface needs to reach it - not read by the
+ * worker/api/scheduler processes themselves, only by tooling (the doctor
+ * diagnostics) that probes it from outside. Unset means the RPC surface
+ * hasn't been wired up for that caller yet, not a misconfiguration.
+ */
+export const getRpcHealthUrl = (): string | null => {
+  const raw = process.env["RPC_HTTP_URL"]?.trim();
+  return raw ? raw.replace(/\/+$/, "") : null;
+};
+
 export const getBotToken = (): string => envParseString("BOT_TOKEN");
 
 export function getTotalShards(): number | "auto" {
