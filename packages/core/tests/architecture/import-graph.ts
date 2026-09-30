@@ -172,7 +172,6 @@ const APP_ROOTS: Array<[string, string]> = [
   ["apps/scheduler/src", "scheduler"],
   ["apps/worker/src", "worker"],
   ["apps/cli/src", "cli"],
-  ["apps/docs/src", "docs"],
 ];
 
 export function ownerOf(absPath: string): Owner {

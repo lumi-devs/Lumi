@@ -5,11 +5,6 @@ coverage/
 .turbo/
 *.tsbuildinfo
 .antigravitycli/
-# Next.js build output (apps/docs).
-.next/
-next-env.d.ts
-# Astro build output/type cache (apps/docs).
-.astro/
 # Prisma: ignore only the generated client and any local dev DB. The schema,
 # migrations, and the data layer (packages/*/src/prisma) are tracked source.
 /prisma/generated/
@@ -41,11 +36,6 @@ indirections.txt
 # it, or move the addon into a real lumi-addons checkout when it's ready).
 /addons/
 .bug-hunter/
-apps/docs/AGENTS.md
-apps/docs/CLAUDE.md
-# Fumadocs build-time source collection and generated data (apps/docs).
-apps/docs/.source/
-apps/docs/src/generated/
 
 # Release working notes (audits, checkpoints, raw tool output). Scratch, not source.
 /.lumi-0.4/

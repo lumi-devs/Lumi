@@ -18,7 +18,7 @@ interface FileImport {
 }
 
 const PACKAGE_SOURCE_DIRS = ["packages/contracts/src", "packages/core/src", "packages/observability/src"];
-const APP_SOURCE_DIRS = ["apps/api/src", "apps/scheduler/src", "apps/worker/src", "apps/cli/src", "apps/docs/src"];
+const APP_SOURCE_DIRS = ["apps/api/src", "apps/scheduler/src", "apps/worker/src", "apps/cli/src"];
 
 const allFiles = [...PACKAGE_SOURCE_DIRS, ...APP_SOURCE_DIRS].flatMap((dir) => listSourceFiles(dir));
 
@@ -91,7 +91,7 @@ describe("package dependency direction", () => {
     reportAndAssert(violations);
   });
 
-  it("apps/* never import another apps/* (apps/docs may import packages only)", () => {
+  it("apps/* never import another apps/*", () => {
     const violations: string[] = [];
 
     for (const { file, ref } of allImports) {

@@ -10,7 +10,6 @@ COPY packages/observability/package.json packages/observability/package.json
 COPY apps/worker/package.json apps/worker/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/scheduler/package.json apps/scheduler/package.json
-COPY apps/docs/package.json apps/docs/package.json
 COPY apps/cli/package.json apps/cli/package.json
 RUN bun install --frozen-lockfile
 

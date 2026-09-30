@@ -5,5 +5,5 @@
     "allowImportingTsExtensions": true,
     "rootDir": "."
   },
-  "include": ["examples", "prisma.config.ts"]
+  "include": ["examples", "prisma.config.ts", "scripts/docs"]
 }

@@ -6,10 +6,10 @@ export const DashboardOAuthCheckName = "dashboard-oauth";
 
 /**
  * The dashboard is its own deployment (its own repo, `lumi-devs/lumi-dashboard`)
- * with its own env parsing - these three are the ones `apps/docs/scripts/
- * generate-content.ts`'s `dashboardMeta` marks `required: "yes"` for OAuth
- * login to work. This check never fails: an operator running only the
- * worker/api/scheduler side legitimately has none of these set.
+ * with its own env parsing - these three are the ones `scripts/docs/lib.ts`'s
+ * `dashboardMeta` marks `required: "yes"` for OAuth login to work. This check
+ * never fails: an operator running only the worker/api/scheduler side
+ * legitimately has none of these set.
  */
 const RequiredDashboardOAuthKeys = [
   "DISCORD_OAUTH2_CLIENT_ID",

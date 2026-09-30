@@ -11,8 +11,8 @@
   ],
   "workspaces": {
     ".": {
-      "entry": ["prisma.config.ts"],
-      "project": ["prisma.config.ts"]
+      "entry": ["prisma.config.ts", "scripts/docs/export.ts", "scripts/docs/check.ts"],
+      "project": ["prisma.config.ts", "scripts/docs/**/*.ts"]
     },
     "packages/core": {
       "entry": [
@@ -43,11 +43,6 @@
     "apps/worker": {
       "entry": ["src/main.ts", "src/shard-client.ts"],
       "project": ["src/**/*.ts"]
-    },
-    "apps/docs": {
-      "next": true,
-      "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"]
     }
   }
 }

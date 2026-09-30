@@ -10,9 +10,10 @@ duplicate copy here.
 
 A few pointers specific to this docs site:
 
-- Content lives under `apps/docs/content/docs/**/*.mdx`. The tables inside
-  `apps/docs/content/docs/reference/` are generated at build time from source
-  (`apps/docs/scripts/generate-content.ts`) — edit the source they're generated from, not the
-  rendered page.
+- Content lives under `docs/site/content/docs/**/*.mdx` in the main
+  [lumi-devs/Lumi](https://github.com/lumi-devs/Lumi) repo — PRs for content go there, not
+  against this site's repo. The tables inside `docs/site/content/docs/reference/` are
+  generated at build time from source (`scripts/docs/export.ts`) — edit the source they're
+  generated from, not the rendered page.
 - Add-on authoring docs are intentionally thin this release — see
   [Add-ons Overview](/docs/addons/overview).
