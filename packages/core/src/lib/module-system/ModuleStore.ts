@@ -16,6 +16,10 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { BaseValidator } from "@sapphire/shapeshift";
+import {
+  isDependencySatisfied,
+  parseDependencySpec,
+} from "./dependencies.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { AddonHost } from "#lib/addon-sandbox/AddonHost.js";
 import {
@@ -308,7 +312,12 @@ export class ModuleStore extends Store<Module> {
 
       if (!enabled) {
         for (const dependent of this.#records.values()) {
-          if (dependent.enabled && dependent.meta.dependencies?.includes(name)) {
+          if (
+            dependent.enabled &&
+            dependent.meta.dependencies?.some(
+              (dep) => parseDependencySpec(dep).name === name,
+            )
+          ) {
             await this.setEnabled(
               dependent.name,
               false,
@@ -812,20 +821,31 @@ export class ModuleStore extends Store<Module> {
 
       visiting.add(name);
       for (const dep of record.meta.dependencies ?? []) {
-        if (!this.#records.has(dep)) {
+        const { name: depName, range } = parseDependencySpec(dep);
+        const depRecord = this.#records.get(depName);
+        if (!depRecord) {
           visiting.delete(name);
           this.#disableBrokenModule(
             name,
-            `Module '${name}' requires missing dependency '${dep}'`,
+            `Module '${name}' requires missing dependency '${depName}'`,
             broken,
           );
           return false;
         }
-        if (!visit(dep)) {
+        if (range && !isDependencySatisfied(range, depRecord.meta.version)) {
           visiting.delete(name);
           this.#disableBrokenModule(
             name,
-            `Module '${name}' disabled because its dependency '${dep}' is unavailable`,
+            `Module '${name}' requires '${depName}@${range}' but found version '${depRecord.meta.version}'`,
+            broken,
+          );
+          return false;
+        }
+        if (!visit(depName)) {
+          visiting.delete(name);
+          this.#disableBrokenModule(
+            name,
+            `Module '${name}' disabled because its dependency '${depName}' is unavailable`,
             broken,
           );
           return false;

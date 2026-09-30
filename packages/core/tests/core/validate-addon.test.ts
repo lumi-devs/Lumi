@@ -171,6 +171,70 @@ describe("validateAddon", () => {
     expect(errors).toEqual([]);
   });
 
+  it("accepts plain-name and ranged semver dependencies on both info.json and manifest.json", async () => {
+    const dir = await makeAddon("ranged-deps", {
+      "info.json": JSON.stringify({
+        name: "ranged-deps",
+        author: ["T"],
+        description: "d",
+        short: "s",
+        version: "1.0.0",
+        end_user_data_statement: "d",
+        dependencies: ["economy", "leveling@^1.2.0"],
+      }),
+      "index.ts": GOOD_INDEX,
+      "manifest.json": JSON.stringify({
+        name: "ranged-deps",
+        displayName: "M",
+        emoji: "🧪",
+        description: "d",
+        version: "1.0.0",
+        targetUtility: "worker",
+        subStores: [],
+        configFields: [],
+        dependencies: ["economy", "leveling@^1.2.0"],
+      }),
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+  });
+
+  it("flags a dependency entry with an invalid semver range", async () => {
+    const dir = await makeAddon("bad-range", {
+      "info.json": JSON.stringify({
+        name: "bad-range",
+        author: ["T"],
+        description: "d",
+        short: "s",
+        version: "1.0.0",
+        end_user_data_statement: "d",
+        dependencies: ["leveling@not-a-range"],
+      }),
+      "index.ts": GOOD_INDEX,
+    });
+    const { errors } = await validateAddon(dir);
+    expect(
+      errors.some((e) => e.includes('"leveling@not-a-range"') && e.includes("info.json")),
+    ).toBe(true);
+  });
+
+  it("flags a dependency entry with an invalid module name", async () => {
+    const dir = await makeAddon("bad-name", {
+      "info.json": JSON.stringify({
+        name: "bad-name",
+        author: ["T"],
+        description: "d",
+        short: "s",
+        version: "1.0.0",
+        end_user_data_statement: "d",
+        dependencies: ["Not Valid@^1.0.0"],
+      }),
+      "index.ts": GOOD_INDEX,
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes('"Not Valid@^1.0.0"'))).toBe(true);
+  });
+
   it("flags an invalid manifest.json schema or mismatched name", async () => {
     const dir = await makeAddon("bad-manifest", {
       "info.json": JSON.stringify({ name: "bad-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0" }),

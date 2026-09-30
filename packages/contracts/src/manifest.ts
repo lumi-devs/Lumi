@@ -34,6 +34,11 @@ export interface ModuleManifest {
   description: string;
   version: string;
   disableable?: boolean;
+  /**
+   * Other modules this one requires, each either a plain name (`"economy"`)
+   * or a name with a semver range (`"leveling@^1.2.0"`) that the installed
+   * module's `version` must satisfy.
+   */
   dependencies?: string[];
   conflicts?: string[];
   configOverrides?: boolean;
