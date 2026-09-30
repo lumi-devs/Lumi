@@ -301,6 +301,22 @@ export const getRpcHealthUrl = (): string | null => {
   return raw ? raw.replace(/\/+$/, "") : null;
 };
 
+/**
+ * Concurrent-in-flight cap for the RPC dispatch bulkhead gating
+ * `guildManager`-authorized actions (every such action's authorizer makes a
+ * Discord REST call before the handler even runs). Bounds how many can be
+ * mid-flight at once so a Discord REST stall queues those actions instead of
+ * starving DB-only RPC actions sharing the same process.
+ */
+export function resolveRpcDiscordBulkheadSize(): number {
+  return envParseInteger("RPC_DISCORD_BULKHEAD_SIZE", 16);
+}
+
+/** Callers queued behind {@linkcode resolveRpcDiscordBulkheadSize} before dispatch starts rejecting with a retryable error. */
+export function resolveRpcDiscordBulkheadQueueLimit(): number {
+  return envParseInteger("RPC_DISCORD_BULKHEAD_QUEUE_LIMIT", 64);
+}
+
 export const getBotToken = (): string => envParseString("BOT_TOKEN");
 
 export function getTotalShards(): number | "auto" {
