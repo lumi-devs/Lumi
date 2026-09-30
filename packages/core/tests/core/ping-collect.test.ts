@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
 import { container } from "@sapphire/framework";
-import { collectPingData, getRuntimeLabel } from "#modules/core/services/ping-collect.js";
+import {
+  collectPingData,
+  getRuntimeLabel,
+  resetPingCachesForTests,
+} from "#modules/core/services/ping-collect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 
 describe("collectPingData", () => {
   beforeEach(() => {
+    resetPingCachesForTests();
     spyOn(globalThis, "fetch").mockResolvedValue(new Response("colo=LHR\n"));
 
     container.logger = {
@@ -54,5 +59,29 @@ describe("collectPingData", () => {
 
   it("names the runtime it is executing on", () => {
     expect(getRuntimeLabel()).toMatch(/^(Bun v|Node\.js )/);
+  });
+
+  it("passes an abort signal with a bounded timeout to the gateway-node lookup", async () => {
+    await collectPingData();
+
+    const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("falls back to Unknown instead of throwing when the gateway-node fetch times out", async () => {
+    spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("The operation was aborted.", "TimeoutError"));
+
+    const data = await collectPingData();
+
+    expect(data.gatewayNode).toBe("Unknown");
+  });
+
+  it("falls back to Unknown instead of throwing when the gateway-node fetch rejects", async () => {
+    spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
+
+    const data = await collectPingData();
+
+    expect(data.gatewayNode).toBe("Unknown");
   });
 });

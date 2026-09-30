@@ -230,6 +230,29 @@ export const cacheMisses = new Counter({
   registers: [registry],
 });
 
+// ── Bulkheads (Semaphore) ────────────────────────────────────────────────────
+
+export const semaphoreInFlight = new Gauge({
+  name: "lumi_semaphore_in_flight",
+  help: "Permits currently checked out of a named semaphore",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+export const semaphoreQueued = new Gauge({
+  name: "lumi_semaphore_queued",
+  help: "Callers waiting for a permit on a named semaphore",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+export const semaphoreRejectedTotal = new Counter({
+  name: "lumi_semaphore_rejected_total",
+  help: "Callers rejected because a named semaphore's queue was full",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
 // ── Dashboard events (SSE) ───────────────────────────────────────────────────
 
 export const dashboardEventPublishFailures = new Counter({
