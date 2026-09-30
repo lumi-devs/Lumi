@@ -1,0 +1,82 @@
+---
+title: CLI
+description: The lumi command-line entrypoint - start processes, run migrations, manage addons, and inspect configuration.
+---
+
+`lumi` (`apps/cli`) is a thin command-line wrapper around code that already exists elsewhere
+in the repo - it starts the same processes `docker-compose.yml` starts, runs the same Prisma
+commands the `migrate` Compose service runs, and calls the exact same addon scaffolding/
+validation functions `bun run addon:create`/`bun run validate` do. It exists so a self-hoster
+running Lumi outside Compose (bare `bun`, a systemd unit, a single VM) has one command instead
+of memorizing several `bun run` invocations across different working directories.
+
+Run it directly during development:
+
+```sh
+bun apps/cli/src/main.ts <command> [options]
+```
+
+Or, once installed as a workspace bin (`lumi` → `apps/cli/src/main.ts`, resolved via the
+repo's `package.json` `"bin"` field) or through the `lumi` binary baked into the worker/api/
+scheduler container images:
+
+```sh
+lumi <command> [options]
+```
+
+Every command supports `--help`, and `lumi --version`/`lumi -v` prints the CLI's own version.
+
+## `lumi start <worker|api|scheduler|all>`
+
+Starts one process, or all three.
+
+- A single target spawns `bun apps/<target>/src/main.ts`, inheriting this process's stdio and
+  environment - identical to running that app directly.
+- `all` runs a small supervisor: it spawns worker, api and scheduler as three separate
+  processes, prefixes every output line with `[worker]`/`[api]`/`[scheduler]`, and forwards
+  `SIGINT`/`SIGTERM` to all three. The moment any one of them exits non-zero, the supervisor
+  terminates the other two and exits non-zero itself.
+
+**Why three processes instead of one address space?** worker, api and scheduler each
+bootstrap their own `@sapphire/framework` `container` - the process-wide singleton
+`packages/core` hangs `container.client`/`container.db`/`container.redis`/etc. off. Running
+all three bootstraps inside one process would have the second and third overwrite the first's
+container. `lumi start all` is the single-*command* install story, not a single-*process* one:
+one command still supervises three processes, matching what Compose already runs today.
+
+## `lumi migrate [status]`
+
+Runs Prisma migrations against `POSTGRES_URL` - the same command the Compose `migrate`
+one-shot service runs before worker/api/scheduler start.
+
+- `lumi migrate` → `bunx prisma migrate deploy`
+- `lumi migrate status` → `bunx prisma migrate status`
+
+## `lumi addon <create|validate>`
+
+- `lumi addon create <name> [options]` - scaffolds a new addon. Same generator as
+  `bun run addon:create`, called through the same exported function
+  (`scripts/create-addon.ts`'s `runCreateAddon`) - not a second copy of the scaffolding logic.
+- `lumi addon validate <addon-dir|repo-dir>` - runs the same structural checks the Downloader
+  applies before loading an addon. Same function as `bun run validate`
+  (`packages/core/scripts/validate-addon.ts`'s `runValidateAddon`).
+
+## `lumi module list`
+
+Lists every bundled module (`packages/core/src/modules/*`, plus any extra `LUMI_DEV_PATHS`
+roots), printing name, version and description read from each module's `manifest.json`. Uses
+the exact same directory walk `bun run modules:manifest` uses to discover module directories
+(`packages/core/scripts/generate-manifests.ts`'s exported `walk`), without importing module
+code.
+
+## `lumi config`
+
+Prints every environment variable `packages/core/src/lib/env.ts` reads - discovered by
+scanning that file for its literal env-var keys, so this list can never drift from the real
+accessors - along with each one's currently resolved value.
+
+Secrets are redacted: any key whose name contains `token`, `secret`, `password` or `key`
+prints as `***redacted***`, and any URL value with embedded `user:pass@` credentials has just
+the credentials redacted (e.g. `postgresql://***:***@host:5432/lumi`) - the rest of the value
+still prints, so you can confirm *which* database/host/port is configured without leaking the
+password.

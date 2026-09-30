@@ -33,6 +33,16 @@
         "@sapphire/framework": "^5.5.1",
       },
     },
+    "apps/cli": {
+      "name": "@lumi/cli",
+      "version": "0.1.0",
+      "bin": {
+        "lumi": "./src/main.ts",
+      },
+      "dependencies": {
+        "@lumi/core": "workspace:*",
+      },
+    },
     "apps/docs": {
       "name": "@lumi/docs",
       "version": "0.3.0",
@@ -346,6 +356,8 @@
     "@keyv/serialize": ["@keyv/serialize@1.1.1", "", {}, "sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA=="],
 
     "@lumi/api": ["@lumi/api@workspace:apps/api"],
+
+    "@lumi/cli": ["@lumi/cli@workspace:apps/cli"],
 
     "@lumi/contracts": ["@lumi/contracts@workspace:packages/contracts"],
 
