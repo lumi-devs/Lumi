@@ -4,8 +4,9 @@
  *
  * Generates the minimal directory shape a real addon needs (`info.json`,
  * `index.ts` with `@DefineModule`/`cfg`, one command stub, a README) into
- * `./addons/<name>` by default - mirroring `examples/hello-world`,
- * the addon the Quick Start guide (docs/QUICK_START_ADDON.md) walks through.
+ * `./addons/<name>` by default - mirroring `hello-world` in
+ * lumi-devs/lumi-addons's `examples/`, the addon the Quick Start guide
+ * (docs/QUICK_START_ADDON.md) walks through.
  *
  * `./addons/` is a plain local scratch directory (gitignored), the same shape
  * `LUMI_DEV_PATHS` expects: point it at the directory *containing* one or more

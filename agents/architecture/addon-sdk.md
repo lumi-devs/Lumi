@@ -157,7 +157,8 @@ Two files, distinct purposes, both validated if present:
 
 - `info.json` — required, author-supplied Downloader metadata (name, author, description,
   version, `end_user_data_statement`, optional `requirements`/`tags`/`min_bot_version`/
-  `max_bot_version`/`hidden`). Real example, `examples/hello-world/info.json`:
+  `max_bot_version`/`hidden`). Real example, `hello-world/info.json` in
+  [`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s `examples/`:
 
   ```json
   {
@@ -180,6 +181,5 @@ Two files, distinct purposes, both validated if present:
   a freshly-installed addon's synthesized one starts with an empty `configFields` array until
   it's regenerated.
 
-No example addon in this repo ships a hand-written `manifest.json` — all three
-`examples/*` addons (`hello-world`, `tag-manager`, `giveaway`) rely on `info.json` only and
-let the manifest get generated.
+The three reference addons (`hello-world`, `tag-manager`, `giveaway`) now live in
+[`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s `examples/`, not this repo.

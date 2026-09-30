@@ -6,7 +6,7 @@ import type { ChildToHost, HostToChild } from "@lumi/contracts";
 import { childEnv } from "./AddonHost.js";
 
 const ChildEntry = fileURLToPath(new URL("../../runtime/addon-child.ts", import.meta.url));
-const HelloWorld = fileURLToPath(new URL("../../../../../examples/hello-world", import.meta.url));
+const HelloWorld = fileURLToPath(new URL("../../../tests/fixtures/addons/hello-world", import.meta.url));
 
 /**
  * Drives a real addon child process end to end — the check that the boundary

@@ -126,16 +126,17 @@ when only docs changed; the required jobs when code under `apps/**` or
   (`continue-on-error: true` on the Codecov step specifically — a Codecov
   failure doesn't fail CI, a test failure does)
 - **build** — `bun turbo run build` across the monorepo
-- **validate-examples** — only when `examples/**`, `scripts/validate-addon.ts`,
-  or the downloader/addon-sdk source changed; runs `bun run validate examples`
-  against the Downloader's structural rules
 - **nix-check** — only when `flake.nix`/`flake.lock` changed; `nix flake check`
 
 A final `ci-status` job aggregates all of the above and is the one actually
 required for merge (`needs: [changes, lint, typecheck, test, build,
-validate-examples, nix-check]`, fails if any upstream job failed or was
+nix-check]`, fails if any upstream job failed or was
 cancelled) — branch protection should point at this job, not the individual ones,
 since several of them conditionally skip.
+
+The example addons (`hello-world`, `tag-manager`, `giveaway`) that this validator used to run
+against in-repo now live in [`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s
+`examples/`, validated by that repo's own CI.
 
 Separately, `.github/workflows/changeset-check.yml` (a different workflow, see
 above) blocks the PR independently if a changeset is missing.
