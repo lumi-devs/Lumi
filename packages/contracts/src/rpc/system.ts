@@ -46,6 +46,7 @@ export const systemRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
     summary: "System-panel overview.",
+    readOnly: true,
   }),
   "system.maintenance.set": rpcAction<{
     success: boolean;
@@ -101,12 +102,14 @@ export const systemRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.medium,
     summary: "Cross-guild audit log.",
+    readOnly: true,
   }),
   "system.blocklist.list": rpcAction<BlocklistListData>()({
     input: PaginationSchema,
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
     summary: "Global blocklist.",
+    readOnly: true,
   }),
   "system.blocklist.add": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistAddSchema,
@@ -124,5 +127,6 @@ export const systemRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
     summary: "Shard telemetry: replicas, shard states, missing ids.",
+    readOnly: true,
   }),
 };

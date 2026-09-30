@@ -25,6 +25,7 @@ export const accountRpc = {
     auth: "public",
     timeoutMs: RpcTimeouts.long,
     summary: "Returns { isBotOwner }; defers to the worker PermitResolver.",
+    readOnly: true,
   }),
   "global.gdpr.delete": rpcAction<{
     success: boolean;

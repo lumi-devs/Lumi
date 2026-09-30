@@ -19,6 +19,7 @@ export const loggingRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List channels pending as log destinations.",
+    readOnly: true,
   }),
   "guild.logClaims.issue": rpcAction<{ code: string; expiresIn: number }>()({
     auth: "guildManager",

@@ -24,6 +24,15 @@ interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
+  /**
+   * True only for a pure read with no side effect worth worrying about on a
+   * duplicate call - the one thing `RpcClient`'s opt-in retry is allowed to
+   * repeat on a transport failure. Left unset (falsy) for anything that
+   * writes, even idempotent writes like `guild.config.set`: a retry there
+   * could double a side effect (e.g. re-sending a notification) the handler
+   * doesn't dedupe on its own.
+   */
+  readOnly?: boolean;
 }
 
 export interface RpcActionDef<
@@ -48,6 +57,7 @@ export interface RpcSliceEntry {
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
+  readOnly?: boolean;
 }
 
 export type RpcInputOf<E> =

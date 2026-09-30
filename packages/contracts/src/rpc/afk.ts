@@ -6,5 +6,6 @@ export const afkRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List AFK entries.",
+    readOnly: true,
   }),
 };
