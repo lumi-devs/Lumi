@@ -16,7 +16,7 @@ import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.j
 import { KickAction } from '#modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { cancelTask } from '#lib/schedule-task.js';
+import { cancelTask, scheduleTask, QueuePriority } from '#lib/schedule-task.js';
 
 vi.mock('@sapphire/framework', () => ({
   container: {
@@ -75,7 +75,8 @@ vi.mock('@sapphire/framework', () => ({
 
 vi.mock('#lib/schedule-task.js', () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
-  cancelTask: vi.fn().mockResolvedValue(undefined)
+  cancelTask: vi.fn().mockResolvedValue(undefined),
+  QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 }
 }));
 
 vi.mock('#lib/module-system/Utility.js', () => ({
@@ -107,6 +108,14 @@ describe('Mod Helpers & Duration Parsing', () => {
   it('scheduleCaseLift returns early if expiresAt is null', async () => {
     await scheduleCaseLift(container, { id: 102, expiresAt: null });
     expect(container.logger.error).not.toHaveBeenCalled();
+  });
+
+  it('scheduleCaseLift schedules the lift job at CRITICAL priority', async () => {
+    const mockCase = { id: 103, expiresAt: new Date(Date.now() + 5000) };
+    await scheduleCaseLift(container, mockCase);
+    const call = (scheduleTask as any).mock.calls.at(-1);
+    expect(call[0]).toBe('mod-lift');
+    expect(call[2].customJobOptions.priority).toBe(QueuePriority.CRITICAL);
   });
 });
 

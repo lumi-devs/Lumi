@@ -9,6 +9,7 @@ import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import type { RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { watchFailedJobs } from "#lib/scheduler-failed-jobs.js";
+import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
 import { SapphireClient, container } from "@sapphire/framework";
 import { installContainerServices } from "./container-services.js";
 
@@ -17,6 +18,7 @@ export interface SchedulerContainerServices {
   ownedEventBus: OwnedEventBus;
   schedulerLock: RedisLock;
   failedJobsWatcher: { close(): Promise<void> };
+  queueDepthWatcher: { close(): Promise<void> };
 }
 
 /**
@@ -84,6 +86,13 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
   await container.tasks.createRepeated();
 
   const failedJobsWatcher = watchFailedJobs(container.tasks);
+  const queueDepthWatcher = watchQueueDepth(container.tasks);
 
-  return { client, ownedEventBus, schedulerLock, failedJobsWatcher };
+  return {
+    client,
+    ownedEventBus,
+    schedulerLock,
+    failedJobsWatcher,
+    queueDepthWatcher,
+  };
 }
