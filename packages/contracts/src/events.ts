@@ -10,26 +10,41 @@
  * group already pays a Redis round-trip per XREADGROUP - multiplying that by
  * per-event-type streams buys nothing at today's volume. Split it if a
  * genuinely hot event type needs its own MAXLEN/backpressure budget.
+ *
+ * These events are a best-effort live-UI hint, not a durable audit trail -
+ * the database stays the source of truth for everything they describe.
  */
+
+import { s, type Type } from "@sapphire/shapeshift";
+import { SnowflakeSchema, ModuleNameSchema, ConfigKeySchema } from "./rpc/schemas.js";
 
 export const DashboardEventStream = "lumi:dashboard-events";
 
-export interface ModuleStateChangedEvent {
-  type: "module.stateChanged";
-  guildId: string;
-  moduleName: string;
-  enabled: boolean;
-  actorId: string;
-  at: number;
-}
+export const ModuleStateChangedEventSchema = s.object({
+  type: s.literal("module.stateChanged"),
+  v: s.literal(1),
+  guildId: SnowflakeSchema,
+  moduleName: ModuleNameSchema,
+  enabled: s.boolean(),
+  actorId: SnowflakeSchema,
+  at: s.number(),
+});
 
-export interface ConfigChangedEvent {
-  type: "config.changed";
-  guildId: string;
-  moduleName: string;
-  key: string;
-  actorId: string;
-  at: number;
-}
+export const ConfigChangedEventSchema = s.object({
+  type: s.literal("config.changed"),
+  v: s.literal(1),
+  guildId: SnowflakeSchema,
+  moduleName: ModuleNameSchema,
+  key: ConfigKeySchema,
+  actorId: SnowflakeSchema,
+  at: s.number(),
+});
 
-export type DashboardEvent = ModuleStateChangedEvent | ConfigChangedEvent;
+export const DashboardEventSchema = s.union([
+  ModuleStateChangedEventSchema,
+  ConfigChangedEventSchema,
+]);
+
+export type ModuleStateChangedEvent = Type<typeof ModuleStateChangedEventSchema>;
+export type ConfigChangedEvent = Type<typeof ConfigChangedEventSchema>;
+export type DashboardEvent = Type<typeof DashboardEventSchema>;

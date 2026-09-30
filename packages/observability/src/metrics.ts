@@ -230,6 +230,15 @@ export const cacheMisses = new Counter({
   registers: [registry],
 });
 
+// ── Dashboard events (SSE) ───────────────────────────────────────────────────
+
+export const dashboardEventPublishFailures = new Counter({
+  name: "lumi_dashboard_event_publish_failures_total",
+  help: "Dashboard SSE events dropped or failed to publish, by reason",
+  labelNames: ["reason"] as const,
+  registers: [registry],
+});
+
 /** Start a tiny /metrics HTTP server. No-op (returns null) if METRICS_ENABLED=false. */
 export function startMetricsServer(port: number): ReturnType<typeof Bun.serve> | null {
   if (process.env["METRICS_ENABLED"] === "false") return null;
