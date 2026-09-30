@@ -44,14 +44,14 @@ export class SetupWizardButtonHandler extends BaseInteractionHandler {
     if (!interaction.inGuild()) return;
 
     if (head === "agebtn") {
-      if (!hasSetupAccess(interaction)) throw setupAccessDenied();
+      if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
       return interaction.showModal(
         buildSetupAgeModal(stateFromSegments(parts.slice(2))),
       );
     }
 
     await this.acknowledge(interaction);
-    if (!hasSetupAccess(interaction)) throw setupAccessDenied();
+    if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
     const { guildId } = interaction;
 
     if (head === "finish") {

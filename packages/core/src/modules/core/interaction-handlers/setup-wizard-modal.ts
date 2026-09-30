@@ -31,7 +31,7 @@ export class SetupWizardModalHandler extends InteractionHandler {
     if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
 
-    if (!hasSetupAccess(interaction)) {
+    if (!(await hasSetupAccess(interaction))) {
       return interaction.followUp(
         ephemeralCard(
           makeErrorCard(

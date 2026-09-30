@@ -1,4 +1,5 @@
-import { Precondition, container } from "@sapphire/framework";
+import { Precondition } from "@sapphire/framework";
+import { authorize } from "#lib/permissions/authorize.js";
 import type { PermitSubject } from "#lib/permissions/subject.js";
 
 export abstract class PermitPrecondition extends Precondition {
@@ -12,8 +13,8 @@ export abstract class PermitPrecondition extends Precondition {
   }
 
   protected async checkPermit(subject: PermitSubject, permitNode: string, deniedMessage: string) {
-    const hasPermit = await container.permitResolver.hasPermit({ ...subject, permitNode });
-    return hasPermit
+    const allowed = await authorize(subject, { kind: "permit", node: permitNode });
+    return allowed
       ? this.ok()
       : this.error({ identifier: "PermissionDenied", message: deniedMessage });
   }

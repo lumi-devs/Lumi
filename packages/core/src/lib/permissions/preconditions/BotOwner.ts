@@ -1,6 +1,6 @@
 import { Precondition } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { authorize } from "#lib/permissions/authorize.js";
 
 declare module "@sapphire/framework" {
   interface Preconditions {
@@ -18,7 +18,8 @@ export class BotOwnerPrecondition extends Precondition {
   }
 
   async #check(userId: string) {
-    return PermitResolver.isBotOwner(userId)
+    const allowed = await authorize({ userId }, { kind: "botOwner" });
+    return allowed
       ? this.ok()
       : this.error({
           identifier: "PermissionDenied",

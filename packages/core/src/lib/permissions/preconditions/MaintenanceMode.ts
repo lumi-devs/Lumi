@@ -5,7 +5,7 @@ import type {
   ContextMenuCommandInteraction,
   Message,
 } from "discord.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { authorize } from "#lib/permissions/authorize.js";
 
 @ApplyOptions<AllFlowsPrecondition.Options>({ position: 10 })
 export class MaintenanceModePrecondition extends AllFlowsPrecondition {
@@ -25,7 +25,7 @@ export class MaintenanceModePrecondition extends AllFlowsPrecondition {
     const globalConfig = await container.db.global.getGlobalConfig();
     if (!globalConfig.maintenanceMode) return this.ok();
 
-    if (PermitResolver.isBotOwner(userId)) return this.ok();
+    if (await authorize({ userId }, { kind: "botOwner" })) return this.ok();
 
     const msg =
       globalConfig.maintenanceMessage ??

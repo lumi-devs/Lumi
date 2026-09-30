@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { systemRpc } from "@lumi/contracts/rpc";
 import { getClusterName } from "#lib/env.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { authorize } from "#lib/permissions/authorize.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
 import {
@@ -130,7 +130,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
   },
 
   "system.blocklist.add": async ({ actorId, input }) => {
-    if (PermitResolver.isBotOwner(input.userId)) {
+    if (await authorize({ userId: input.userId }, { kind: "botOwner" })) {
       throw new Error("Cannot blocklist a bot owner");
     }
     if (await container.db.access.isUserBlocklisted(input.userId, null)) {

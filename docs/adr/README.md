@@ -25,6 +25,7 @@ is the doc" don't need an ADR.
 | [0008](0008-one-bullmq-queue-with-priorities.md) | One BullMQ queue with priorities, not per-tier queues | Accepted |
 | [0009](0009-no-changesets-lockstep-contracts-release.md) | No Changesets: contracts and observability release in lockstep | Accepted |
 | [0010](0010-single-process-install-is-a-supervisor.md) | Single-process install is a supervisor, not one address space | Accepted |
+| [0011](0011-single-authorization-evaluator.md) | One `authorize()` evaluator for commands, RPC and the addon SDK | Accepted |
 
 ## Adding a new ADR
 

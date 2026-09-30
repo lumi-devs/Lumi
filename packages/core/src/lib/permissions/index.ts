@@ -7,10 +7,11 @@ import "./preconditions/ModuleEnabled.js";
 import "./preconditions/NotBlocked.js";
 import "./preconditions/NotIgnored.js";
 import "./preconditions/RequirePermit.js";
-import { permitResolver } from "./PermitResolver.js";
+import { authorize } from "./authorize.js";
 import { memberRoleIds } from "./subject.js";
 
 export * from "./PermitResolver.js";
+export * from "./authorize.js";
 
 /**
  * Granular permit-node check for interaction handlers, which (unlike
@@ -32,12 +33,14 @@ export async function hasRequiredPermit(
 
   const guild = (t.guild as { ownerId?: string }) ?? null;
   const channelId = t.channelId as string | undefined;
-  return permitResolver.hasPermit({
-    guildId,
-    userId,
-    roleIds: memberRoleIds(t.member),
-    channelId,
-    permitNode,
-    guildOwnerId: guild?.ownerId ?? "",
-  });
+  return authorize(
+    {
+      userId,
+      guildId,
+      roleIds: memberRoleIds(t.member),
+      channelId,
+      guildOwnerId: guild?.ownerId ?? "",
+    },
+    { kind: "permit", node: permitNode },
+  );
 }
