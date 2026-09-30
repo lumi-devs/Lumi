@@ -79,12 +79,13 @@ async function verifyAppeal(
 export const modRpcHandlers = implementRpc(modRpc, {
   "guild.cases.list": async ({ guildId, input }) => {
     const { page, pageSize, skip, take } = paginate(input);
-    const { cases, total } = await container.db.moderation.listCases(guildId, {
+    const { cases, total, nextCursor } = await container.db.moderation.listCases(guildId, {
       action: input.action && isCaseAction(input.action) ? input.action : undefined,
       userId: input.userId,
       moderatorId: input.moderatorId,
       skip,
       take,
+      cursor: input.cursor,
     });
     return {
       cases: cases.map((c) => ({
@@ -102,6 +103,7 @@ export const modRpcHandlers = implementRpc(modRpc, {
       total,
       page,
       pageSize,
+      nextCursor,
     };
   },
 
@@ -258,10 +260,11 @@ export const modRpcHandlers = implementRpc(modRpc, {
 
   "guild.appeals.list": async ({ guildId, input }) => {
     const { page, pageSize, skip, take } = paginate(input);
-    const { appeals, total } = await container.db.appeals.listForGuild(guildId, {
+    const { appeals, total, nextCursor } = await container.db.appeals.listForGuild(guildId, {
       status: input.status,
       skip,
       take,
+      cursor: input.cursor,
     });
     const cases = await container.db.moderation.getModerationCasesByIds(
       appeals.map((a) => a.caseId),
@@ -285,6 +288,7 @@ export const modRpcHandlers = implementRpc(modRpc, {
       total,
       page,
       pageSize,
+      nextCursor,
     };
   },
 

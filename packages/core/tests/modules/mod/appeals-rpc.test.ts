@@ -386,6 +386,46 @@ describe("mod module appeals RPC handlers", () => {
 
       expect(res.total).toBe(0);
     });
+
+    it("pages by cursor, omitting total and returning nextCursor", async () => {
+      prisma.$seed(
+        "moderationCase",
+        Array.from({ length: 3 }, (_, i) => makeCase({ id: i + 1, caseNumber: i + 1 })),
+      );
+      prisma.$seed(
+        "appeal",
+        Array.from({ length: 3 }, (_, i) => ({
+          id: i + 1,
+          guildId: GUILD_ID,
+          userId: TARGET_ID,
+          caseId: i + 1,
+          status: "pending",
+          message: "please",
+          reviewedBy: null,
+          reviewedAt: null,
+          createdAt: new Date(2026, 0, i + 1),
+        })),
+      );
+
+      const first = (await callAuthed("guild.appeals.list", { pageSize: 2 })) as any;
+      expect(first.total).toBe(3);
+      expect(first.appeals.map((a: any) => a.id)).toEqual([3, 2]);
+      expect(first.nextCursor).toBeTruthy();
+
+      const second = (await callAuthed("guild.appeals.list", {
+        pageSize: 2,
+        cursor: first.nextCursor,
+      })) as any;
+      expect(second.total).toBeUndefined();
+      expect(second.appeals.map((a: any) => a.id)).toEqual([1]);
+      expect(second.nextCursor).toBeNull();
+    });
+
+    it("rejects an invalid cursor", async () => {
+      await expect(
+        callAuthed("guild.appeals.list", { cursor: "not-a-real-cursor" }),
+      ).rejects.toThrow("Invalid pagination cursor");
+    });
   });
 
   describe("guild.appeals.review", () => {

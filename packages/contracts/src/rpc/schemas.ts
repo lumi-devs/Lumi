@@ -29,6 +29,18 @@ export const PageSizeSchema = s
   .lessThanOrEqual(100)
   .optional();
 
+/**
+ * Opaque keyset-pagination cursor - a base64url string, never interpreted by
+ * the caller. Bounded well above any real encoded cursor's length so a
+ * malformed/oversized value fails schema validation before it ever reaches
+ * `decodeCreatedAtIdCursor`/`decodeSingleKeyCursor`.
+ */
+export const CursorSchema = s
+  .string()
+  .lengthGreaterThanOrEqual(1)
+  .lengthLessThanOrEqual(512)
+  .optional();
+
 export const ModuleNameSchema = s
   .string()
   .lengthGreaterThanOrEqual(1)
@@ -54,6 +66,7 @@ export const AuditFilterShape = {
   platform: s.enum(["discord", "web"] as const).optional(),
   page: PageSchema,
   pageSize: PageSizeSchema,
+  cursor: CursorSchema,
 };
 
 export const BlocklistAddSchema = s.object({

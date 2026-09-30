@@ -1,5 +1,12 @@
 import type { Appeal } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  createdAtIdKeysetWhere,
+  CreatedAtIdOrderBy,
+  decodeCreatedAtIdCursor,
+  encodeCreatedAtIdCursor,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 export type AppealStatus =
   | "pending"
@@ -44,24 +51,51 @@ export class AppealRepository extends Repository {
 
   public async listForGuild(
     guildId: string,
-    filter: { status?: AppealStatus; skip?: number; take?: number } = {},
-  ): Promise<{ appeals: Appeal[]; total: number }> {
-    const where = {
+    filter: {
+      status?: AppealStatus;
+      skip?: number;
+      take?: number;
+      /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      cursor?: string;
+    } = {},
+  ): Promise<{ appeals: Appeal[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.status ? { status: filter.status } : {}),
     };
+    const take = filter.take ?? 25;
 
+    if (filter.cursor !== undefined) {
+      const cursor = decodeCreatedAtIdCursor(filter.cursor);
+      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
+      const rows = await this.prisma.appeal.findMany({
+        where,
+        orderBy: CreatedAtIdOrderBy,
+        take: take + 1,
+      });
+      const { page, hasMore } = splitPage(rows, take);
+      const last = page.at(-1);
+      return {
+        appeals: page,
+        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      };
+    }
+
+    const skip = filter.skip ?? 0;
     const [appeals, total] = await this.prisma.$transaction([
       this.prisma.appeal.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        where: baseWhere,
+        orderBy: CreatedAtIdOrderBy,
+        skip,
+        take,
       }),
-      this.prisma.appeal.count({ where }),
+      this.prisma.appeal.count({ where: baseWhere }),
     ]);
+    const last = appeals.at(-1);
+    const nextCursor =
+      skip + appeals.length < total && last ? encodeCreatedAtIdCursor(last) : null;
 
-    return { appeals, total };
+    return { appeals, total, nextCursor };
   }
 
   /**

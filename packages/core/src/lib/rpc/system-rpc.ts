@@ -85,13 +85,14 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
   // stays bot-owner only even when a `guildId` filter narrows it to one.
   "system.audit.list": async ({ input }) => {
     const { page, pageSize, skip, take } = paginate(input);
-    const { entries, total } = await container.db.audit.listAuditLogs({
+    const { entries, total, nextCursor } = await container.db.audit.listAuditLogs({
       guildId: input.guildId,
       userId: input.userId,
       action: input.action,
       platform: input.platform,
       skip,
       take,
+      cursor: input.cursor,
     });
     return {
       entries: entries.map((e) => ({
@@ -106,6 +107,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       total,
       page,
       pageSize,
+      nextCursor,
     };
   },
 

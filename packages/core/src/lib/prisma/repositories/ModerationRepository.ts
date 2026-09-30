@@ -1,6 +1,12 @@
 import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  decodeSingleKeyCursor,
+  encodeSingleKeyCursor,
+  singleKeyKeysetWhere,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
 const SweepPageSize = 500;
@@ -86,26 +92,49 @@ export class ModerationRepository extends Repository {
       moderatorId?: string;
       skip?: number;
       take?: number;
+      /** Opaque `caseNumber` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      cursor?: string;
     } = {},
-  ): Promise<{ cases: ModerationCase[]; total: number }> {
-    const where = {
+  ): Promise<{ cases: ModerationCase[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.action ? { action: filter.action } : {}),
       ...(filter.userId ? { userId: filter.userId } : {}),
       ...(filter.moderatorId ? { moderatorId: filter.moderatorId } : {}),
     };
+    const take = filter.take ?? 25;
 
-    const [cases, total] = await this.prisma.$transaction([
-      this.prisma.moderationCase.findMany({
+    if (filter.cursor !== undefined) {
+      const caseNumber = decodeSingleKeyCursor(filter.cursor);
+      const where = { ...baseWhere, ...singleKeyKeysetWhere("caseNumber", caseNumber) };
+      const rows = await this.prisma.moderationCase.findMany({
         where,
         orderBy: { caseNumber: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
-      }),
-      this.prisma.moderationCase.count({ where }),
-    ]);
+        take: take + 1,
+      });
+      const { page, hasMore } = splitPage(rows, take);
+      const last = page.at(-1);
+      return {
+        cases: page,
+        nextCursor: hasMore && last ? encodeSingleKeyCursor(last.caseNumber) : null,
+      };
+    }
 
-    return { cases, total };
+    const skip = filter.skip ?? 0;
+    const [cases, total] = await this.prisma.$transaction([
+      this.prisma.moderationCase.findMany({
+        where: baseWhere,
+        orderBy: { caseNumber: "desc" },
+        skip,
+        take,
+      }),
+      this.prisma.moderationCase.count({ where: baseWhere }),
+    ]);
+    const last = cases.at(-1);
+    const nextCursor =
+      skip + cases.length < total && last ? encodeSingleKeyCursor(last.caseNumber) : null;
+
+    return { cases, total, nextCursor };
   }
 
   /**
