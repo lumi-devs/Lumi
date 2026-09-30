@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
 import { handleModLiftFire } from '#modules/mod/services/lift-handler.js';
+import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
+
+const discordRest = new FakeDiscordRestPort();
 
 vi.mock('@sapphire/framework', () => ({
   container: {
@@ -25,12 +28,7 @@ vi.mock('@sapphire/framework', () => ({
       error: vi.fn(),
       debug: vi.fn()
     },
-    client: {
-      rest: {
-        patch: vi.fn().mockResolvedValue(undefined),
-        delete: vi.fn().mockResolvedValue(undefined)
-      }
-    }
+    discordRest
   }
 }));
 
@@ -43,6 +41,7 @@ vi.mock('#lib/module-system/Utility.js', () => ({
 describe('handleModLiftFire', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('does nothing when the case is missing or already inactive', async () => {
@@ -64,13 +63,11 @@ describe('handleModLiftFire', () => {
       action: 'voice_mute',
       active: true
     });
+    const clearVoiceMute = vi.spyOn(discordRest, 'clearVoiceMute');
 
     await handleModLiftFire({ caseId: 3 });
 
-    expect(container.client.rest.patch).toHaveBeenCalledWith(
-      expect.stringContaining('/guilds/g1/members/u1'),
-      expect.objectContaining({ body: { mute: false } })
-    );
+    expect(clearVoiceMute).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(3);
   });
 
@@ -83,10 +80,11 @@ describe('handleModLiftFire', () => {
       action: 'mute',
       active: true
     });
+    const clearTimeout = vi.spyOn(discordRest, 'clearTimeout');
 
     await handleModLiftFire({ caseId: 4 });
 
-    expect(container.client.rest.patch).toHaveBeenCalled();
+    expect(clearTimeout).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(4);
   });
 
@@ -100,7 +98,7 @@ describe('handleModLiftFire', () => {
       active: true
     });
     const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
-    (container.client.rest.patch as any).mockRejectedValue(err);
+    discordRest.failNextWith('clearTimeout', err);
 
     await expect(handleModLiftFire({ caseId: 5 })).rejects.toThrow('Missing Permissions');
 

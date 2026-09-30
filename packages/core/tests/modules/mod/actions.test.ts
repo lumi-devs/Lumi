@@ -17,6 +17,9 @@ import { KickAction } from '#modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
 import { cancelTask } from '#lib/schedule-task.js';
+import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
+
+const discordRest = new FakeDiscordRestPort();
 
 vi.mock('@sapphire/framework', () => ({
   container: {
@@ -57,6 +60,7 @@ vi.mock('@sapphire/framework', () => ({
       info: vi.fn(),
       warn: vi.fn()
     },
+    discordRest,
     client: {
       user: { id: 'bot-1' },
       users: { fetch: vi.fn() },
@@ -64,10 +68,6 @@ vi.mock('@sapphire/framework', () => ({
         cache: {
           get: vi.fn()
         }
-      },
-      rest: {
-        delete: vi.fn(),
-        patch: vi.fn()
       }
     }
   }
@@ -325,18 +325,13 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockGuild.bans.remove).toHaveBeenCalled();
   });
 
-  it('BanAction.undoRaw handles 10026 (unknown ban) silently', async () => {
-    const err = new Error('Unknown Ban');
-    (err as any).code = 10026;
-    (container.client.rest.delete as any).mockRejectedValue(err);
-
+  it('BanAction.undoRaw delegates to the Discord REST port (which owns 10026 handling)', async () => {
     await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
   });
 
-  it('BanAction.undoRaw propagates 50013 (missing permissions) instead of swallowing it', async () => {
-    const err = new Error('Missing Permissions');
-    (err as any).code = 50013;
-    (container.client.rest.delete as any).mockRejectedValue(err);
+  it('BanAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('removeBan', err);
 
     await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });
@@ -397,18 +392,13 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(cancelTask).toHaveBeenCalledWith('mod-lift:55');
   });
 
-  it('MuteAction.undoRaw handles 10007 (unknown member) silently', async () => {
-    const err = new Error('Unknown Member');
-    (err as any).code = 10007;
-    (container.client.rest.patch as any).mockRejectedValue(err);
-
+  it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
     await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
   });
 
-  it('MuteAction.undoRaw propagates 50013 (missing permissions) instead of swallowing it', async () => {
-    const err = new Error('Missing Permissions');
-    (err as any).code = 50013;
-    (container.client.rest.patch as any).mockRejectedValue(err);
+  it('MuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearTimeout', err);
 
     await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });
@@ -476,18 +466,13 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(cancelTask).toHaveBeenCalledWith('mod-lift:77');
   });
 
-  it('VoiceMuteAction.undoRaw handles 10007 (unknown member) silently', async () => {
-    const err = new Error('Unknown Member');
-    (err as any).code = 10007;
-    (container.client.rest.patch as any).mockRejectedValue(err);
-
+  it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
     await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
   });
 
-  it('VoiceMuteAction.undoRaw propagates 50013 (missing permissions) instead of swallowing it', async () => {
-    const err = new Error('Missing Permissions');
-    (err as any).code = 50013;
-    (container.client.rest.patch as any).mockRejectedValue(err);
+  it('VoiceMuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearVoiceMute', err);
 
     await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });

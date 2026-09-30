@@ -75,17 +75,13 @@ function isConfirmedAbsent(err: unknown): boolean {
  * a read that then feeds a full-replace PATCH (lost-update risk) or an
  * authorization decision (a just-revoked permission staying valid for up to
  * 20s). Same shape as {@linkcode fetchChannelMessageRest}'s existing
- * uncached precedent.
+ * uncached precedent. Routed through `container.discordRest` (rather than
+ * `container.client.rest` directly) so this - and the `checkGuildManagerRest`
+ * authorizer it backs - can be tested against a fake instead of a mocked
+ * REST client.
  */
 async function fetchGuildRestUncached(guildId: string): Promise<APIGuild | null> {
-  return (
-    container.client.rest.get(Routes.guild(guildId), {
-      query: new URLSearchParams({ with_counts: "true" }),
-    }) as Promise<APIGuild>
-  ).catch((err: unknown) => {
-    if (isConfirmedAbsent(err)) return null;
-    throw err;
-  });
+  return container.discordRest.fetchGuild(guildId);
 }
 
 /** Uncached counterpart of {@linkcode fetchGuildMemberRest} - see {@linkcode fetchGuildRestUncached}. */
@@ -93,14 +89,7 @@ async function fetchGuildMemberRestUncached(
   guildId: string,
   userId: string,
 ): Promise<APIGuildMember | null> {
-  return (
-    container.client.rest.get(
-      Routes.guildMember(guildId, userId),
-    ) as Promise<APIGuildMember>
-  ).catch((err: unknown) => {
-    if (isConfirmedAbsent(err)) return null;
-    throw err;
-  });
+  return container.discordRest.fetchMember(guildId, userId);
 }
 
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {

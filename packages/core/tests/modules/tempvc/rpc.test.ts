@@ -5,6 +5,7 @@ import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -16,25 +17,20 @@ function everyoneRole(permissions = "0") {
   return { id: GUILD_ID, permissions };
 }
 
+/** Wires a `DiscordRestPort` fake to answer `checkGuildManagerRest`'s guild/member lookups. */
 function mockRest(opts: {
   ownerId: string;
   roles?: { id: string; permissions: string }[];
   memberRoles?: string[];
-}) {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      return Promise.resolve({
-        id: GUILD_ID,
-        owner_id: opts.ownerId,
-        roles: opts.roles ?? [everyoneRole()],
-      });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      return Promise.resolve({ roles: opts.memberRoles ?? [] });
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  return get;
+}): FakeDiscordRestPort {
+  const fake = new FakeDiscordRestPort();
+  fake.seedGuild({
+    id: GUILD_ID,
+    owner_id: opts.ownerId,
+    roles: opts.roles ?? [everyoneRole()],
+  } as any);
+  fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: opts.memberRoles ?? [] } as any);
+  return fake;
 }
 
 describe("tempvc module RPC handlers", () => {
@@ -64,8 +60,8 @@ describe("tempvc module RPC handlers", () => {
 
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
-      rest: { get: mockRest({ ownerId: OWNER_ID }) },
     } as any;
+    (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
     (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
@@ -108,10 +104,7 @@ describe("tempvc module RPC handlers", () => {
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () => {
-    container.client = {
-      ...container.client,
-      rest: { get: mockRest({ ownerId: OWNER_ID, memberRoles: [] }) },
-    } as any;
+    (container as any).discordRest = mockRest({ ownerId: OWNER_ID, memberRoles: [] });
   };
 
   describe("guild.tempvc.generators", () => {

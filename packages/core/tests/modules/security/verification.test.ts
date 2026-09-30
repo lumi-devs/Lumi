@@ -9,6 +9,7 @@ import {
 } from "#modules/security/services/verification.js";
 import { MaxAttempts, type CaptchaState } from "#modules/security/services/captcha.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 vi.mock("@sapphire/plugin-i18next", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
@@ -55,22 +56,19 @@ beforeEach(() => {
 describe("grantVerified", () => {
   it("grants the verified role and strips the pending role", async () => {
     const restPatch = vi.fn().mockResolvedValue(undefined);
-    const restGet = vi.fn().mockImplementation((route: string) => {
-      if (route === "/guilds/g1/members/u1") {
-        return Promise.resolve({
-          roles: ["pending-role", "other-role"],
-          user: { id: "u1" },
-        });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
+    const discordRest = new FakeDiscordRestPort();
+    discordRest.seedMember("g1", {
+      user: { id: "u1" },
+      roles: ["pending-role", "other-role"],
+    } as any);
     const getAllModuleConfig = vi.fn().mockResolvedValue({
       verification_enabled: true,
       verified_role_id: "verified-role",
       verification_pending_role_id: "pending-role",
     });
     setContainer({ db: { config: { getAllModuleConfig } } });
-    (container as any).client = { rest: { get: restGet, patch: restPatch } };
+    (container as any).client = { rest: { patch: restPatch } };
+    (container as any).discordRest = discordRest;
 
     const result = await grantVerified("g1", "u1");
 
@@ -89,15 +87,17 @@ describe("grantVerified", () => {
   });
 
   it("denies verification when the guild has no verified role configured", async () => {
-    const restGet = vi.fn();
+    const discordRest = new FakeDiscordRestPort();
+    const fetchMember = vi.spyOn(discordRest, "fetchMember");
     const getAllModuleConfig = vi.fn().mockResolvedValue({});
     setContainer({ db: { config: { getAllModuleConfig } } });
-    (container as any).client = { rest: { get: restGet, patch: vi.fn() } };
+    (container as any).client = { rest: { patch: vi.fn() } };
+    (container as any).discordRest = discordRest;
 
     const result = await grantVerified("g1", "u1");
 
     expect(result).toBe(false);
-    expect(restGet).not.toHaveBeenCalled();
+    expect(fetchMember).not.toHaveBeenCalled();
   });
 });
 

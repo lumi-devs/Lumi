@@ -3,6 +3,7 @@ import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -27,6 +28,7 @@ const afkModule = {
 
 describe("dashboard module guild read RPC handlers", () => {
   let restGet: ReturnType<typeof vi.fn>;
+  let discordRest: FakeDiscordRestPort;
   let everyoneRole: { id: string; name: string; color: number; position: number; permissions: string };
   let modRole: { id: string; name: string; color: number; position: number; permissions: string };
   let channels: { id: string; name: string; type: number }[];
@@ -95,6 +97,17 @@ describe("dashboard module guild read RPC handlers", () => {
       user: { id: BOT_ID },
     } as any;
 
+    discordRest = new FakeDiscordRestPort();
+    discordRest.seedGuild({
+      id: GUILD_ID,
+      owner_id: OWNER_ID,
+      roles: [everyoneRole, modRole],
+    } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: MANAGER_ID }, roles: [MOD_ROLE_ID] } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: [] } as any);
+    vi.spyOn(discordRest, "fetchMember");
+    (container as any).discordRest = discordRest;
+
     (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     (container as any).db = {
@@ -141,7 +154,7 @@ describe("dashboard module guild read RPC handlers", () => {
       expect(result.banner).toBe("https://cdn/123456789012345678/banner/banner-hash.png");
       expect(result.settings.prefix).toBe("!");
       expect(container.db.config.getGuildSettings).toHaveBeenCalledWith(GUILD_ID);
-      expect(restGet).not.toHaveBeenCalledWith(`/guilds/${GUILD_ID}/members/${OWNER_ID}`);
+      expect(discordRest.fetchMember).not.toHaveBeenCalledWith(GUILD_ID, OWNER_ID);
       expect(result.modules).toEqual([
         {
           name: "afk",
@@ -167,7 +180,7 @@ describe("dashboard module guild read RPC handlers", () => {
       const result = (await call("guild.shell.get", MANAGER_ID)) as any;
 
       expect(result.name).toBe("Test Guild");
-      expect(restGet).toHaveBeenCalledWith(`/guilds/${GUILD_ID}/members/${MANAGER_ID}`);
+      expect(discordRest.fetchMember).toHaveBeenCalledWith(GUILD_ID, MANAGER_ID);
     });
   });
 

@@ -9,6 +9,7 @@ import { postOrEditVerifyPanel } from "#modules/security/services/verification.j
 import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMemoryRedis } from "../../mocks/memory-redis.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 vi.mock("#modules/security/services/panic.js", () => ({
   enterPanic: vi.fn(),
@@ -35,25 +36,20 @@ function everyoneRole(permissions = "0") {
   return { id: GUILD_ID, permissions };
 }
 
+/** Wires a `DiscordRestPort` fake to answer `checkGuildManagerRest`'s guild/member lookups. */
 function mockRest(opts: {
   ownerId: string;
   roles?: { id: string; permissions: string }[];
   memberRoles?: string[];
-}) {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      return Promise.resolve({
-        id: GUILD_ID,
-        owner_id: opts.ownerId,
-        roles: opts.roles ?? [everyoneRole()],
-      });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      return Promise.resolve({ roles: opts.memberRoles ?? [] });
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  return get;
+}): FakeDiscordRestPort {
+  const fake = new FakeDiscordRestPort();
+  fake.seedGuild({
+    id: GUILD_ID,
+    owner_id: opts.ownerId,
+    roles: opts.roles ?? [everyoneRole()],
+  } as any);
+  fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: opts.memberRoles ?? [] } as any);
+  return fake;
 }
 
 describe("security module RPC handlers", () => {
@@ -76,9 +72,7 @@ describe("security module RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      rest: { get: mockRest({ ownerId: OWNER_ID }) },
-    } as any;
+    (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
     (container as any).redis = createMemoryRedis();
@@ -118,10 +112,7 @@ describe("security module RPC handlers", () => {
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () => {
-    container.client = {
-      ...container.client,
-      rest: { get: mockRest({ ownerId: OWNER_ID, memberRoles: [] }) },
-    } as any;
+    (container as any).discordRest = mockRest({ ownerId: OWNER_ID, memberRoles: [] });
   };
 
   describe("guild.panic.get", () => {

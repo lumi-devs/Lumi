@@ -7,6 +7,7 @@ import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryR
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
@@ -47,8 +48,14 @@ function makeHistory(overrides: Record<string, unknown> = {}) {
 
 describe("dashboard module audit + history + override RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let restGet: ReturnType<typeof vi.fn>;
+  let discordRest: FakeDiscordRestPort;
   let config: { setConfig: ReturnType<typeof vi.fn> };
+
+  /** Re-seeds `checkGuildManagerRest`'s guild/member lookups; the intruder holds `memberRoles` (none by default). */
+  function seedGuildManager(memberRoles: string[] = []) {
+    discordRest.seedGuild({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: memberRoles } as any);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -63,21 +70,9 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    restGet = vi.fn().mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({
-          id: GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [everyoneRole()],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
-
-    container.client = { rest: { get: restGet } } as any;
+    discordRest = new FakeDiscordRestPort();
+    seedGuildManager();
+    (container as any).discordRest = discordRest;
     (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
@@ -121,20 +116,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
   const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
-  const denyPermissions = () =>
-    restGet.mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({
-          id: GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [everyoneRole()],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
+  const denyPermissions = () => seedGuildManager([]);
 
   describe("guild.audit.list", () => {
     it("returns newest-first entries with a total and serialized dates", async () => {

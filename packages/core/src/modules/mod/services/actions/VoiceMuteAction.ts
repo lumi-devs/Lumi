@@ -1,9 +1,7 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { liftAllActiveCases } from "../helpers.js";
-import { errorCode } from "#lib/utilities/errors.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { runModerationAction } from "../runModerationAction.js";
 
@@ -109,15 +107,6 @@ export class VoiceMuteAction {
   ): Promise<void> {
     const key = RedisKeys.voiceMuteState(guildId, targetId);
     await container.invalidation.invalidate(key);
-    await container.client.rest
-      .patch(Routes.guildMember(guildId, targetId), {
-        body: { mute: false },
-        reason,
-      })
-      .catch((err: unknown) => {
-        const code = errorCode(err);
-        if (code === 10007) return;
-        throw err;
-      });
+    await container.discordRest.clearVoiceMute(guildId, targetId, reason);
   }
 }

@@ -5,6 +5,7 @@ import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -20,28 +21,17 @@ function memberWith(roleIds: string[]) {
   return { roles: roleIds };
 }
 
+/** Wires a `DiscordRestPort` fake to answer `checkGuildManagerRest`'s guild/member lookups. */
 function mockRest(opts: {
   guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
   member?: unknown;
-  patch?: ReturnType<typeof vi.fn>;
-  delete?: ReturnType<typeof vi.fn>;
-}) {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      if (opts.guild === null || opts.guild === undefined) {
-        return Promise.reject(new Error("Unknown Guild"));
-      }
-      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
-      return Promise.resolve(opts.member);
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  const patch = opts.patch ?? vi.fn().mockResolvedValue(undefined);
-  const del = opts.delete ?? vi.fn().mockResolvedValue(undefined);
-  return { rest: { get, patch, delete: del } };
+}): FakeDiscordRestPort {
+  const fake = new FakeDiscordRestPort();
+  if (opts.guild) fake.seedGuild({ id: GUILD_ID, ...opts.guild } as any);
+  if (opts.member !== undefined) {
+    fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, ...(opts.member as object) } as any);
+  }
+  return fake;
 }
 
 function makeCase(overrides: Record<string, unknown> = {}) {
@@ -79,10 +69,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = mockRest({
+    (container as any).discordRest = mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
       member: memberWith([]),
-    }) as any;
+    });
 
     (container as any).redis = {
       get: vi.fn().mockResolvedValue(null),
@@ -123,10 +113,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
   describe("guild.cases.list", () => {
     it("rejects an actor without ManageGuild", async () => {
-      container.client = mockRest({
+      (container as any).discordRest = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-      }) as any;
+      });
 
       await expect(
         call("guild.cases.list", {}, INTRUDER_ID),
@@ -248,10 +238,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      container.client = mockRest({
+      (container as any).discordRest = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-      }) as any;
+      });
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3 })]);
 
       await expect(
@@ -261,50 +251,44 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("unbans on Discord before lifting a ban case", async () => {
-      const del = vi.fn().mockResolvedValue(undefined);
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        delete: del,
-      }) as any;
+      });
+      (container as any).discordRest = fake;
+      const removeBan = vi.spyOn(fake, "removeBan");
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "ban" })]);
 
       const res = (await call("guild.cases.revoke", { caseNumber: 3 })) as any;
 
       expect(res).toEqual({ success: true, caseNumber: 3 });
-      expect(del).toHaveBeenCalledWith(
-        expect.stringContaining(`/guilds/${GUILD_ID}/bans/${TARGET_ID}`),
-        expect.anything(),
-      );
+      expect(removeBan).toHaveBeenCalledWith(GUILD_ID, TARGET_ID, expect.any(String));
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(false);
     });
 
     it("clears the timeout on Discord before lifting a mute case", async () => {
-      const patch = vi.fn().mockResolvedValue(undefined);
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        patch,
-      }) as any;
+      });
+      (container as any).discordRest = fake;
+      const clearTimeout = vi.spyOn(fake, "clearTimeout");
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "mute" })]);
 
       const res = (await call("guild.cases.revoke", { caseNumber: 3 })) as any;
 
       expect(res).toEqual({ success: true, caseNumber: 3 });
-      expect(patch).toHaveBeenCalledWith(
-        expect.stringContaining(`/guilds/${GUILD_ID}/members/${TARGET_ID}`),
-        expect.objectContaining({ body: { communication_disabled_until: null } }),
-      );
+      expect(clearTimeout).toHaveBeenCalledWith(GUILD_ID, TARGET_ID, expect.any(String));
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(false);
     });
 
     it("clears the voice mute on Discord before lifting a voice_mute case", async () => {
-      const patch = vi.fn().mockResolvedValue(undefined);
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        patch,
-      }) as any;
+      });
+      (container as any).discordRest = fake;
+      const clearVoiceMute = vi.spyOn(fake, "clearVoiceMute");
       prisma.$seed("moderationCase", [
         makeCase({ id: 7, caseNumber: 3, action: "voice_mute" }),
       ]);
@@ -312,20 +296,18 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       const res = (await call("guild.cases.revoke", { caseNumber: 3 })) as any;
 
       expect(res).toEqual({ success: true, caseNumber: 3 });
-      expect(patch).toHaveBeenCalledWith(
-        expect.stringContaining(`/guilds/${GUILD_ID}/members/${TARGET_ID}`),
-        expect.objectContaining({ body: { mute: false } }),
-      );
+      expect(clearVoiceMute).toHaveBeenCalledWith(GUILD_ID, TARGET_ID, expect.any(String));
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(false);
     });
 
     it("still lifts a ban case when the user was already unbanned on Discord", async () => {
-      const del = vi.fn().mockRejectedValue(Object.assign(new Error("Unknown Ban"), { code: 10026 }));
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        delete: del,
-      }) as any;
+      });
+      (container as any).discordRest = fake;
+      // The fake's `removeBan` already models "already undone" as a no-op
+      // (see the adapter test for the 10026 mapping this represents).
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "ban" })]);
 
       const res = (await call("guild.cases.revoke", { caseNumber: 3 })) as any;
@@ -335,31 +317,32 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("does not call Discord for a case with no Discord-side effect", async () => {
-      const patch = vi.fn().mockResolvedValue(undefined);
-      const del = vi.fn().mockResolvedValue(undefined);
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        patch,
-        delete: del,
-      }) as any;
+      });
+      (container as any).discordRest = fake;
+      const clearTimeout = vi.spyOn(fake, "clearTimeout");
+      const removeBan = vi.spyOn(fake, "removeBan");
+      const clearVoiceMute = vi.spyOn(fake, "clearVoiceMute");
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "warn" })]);
 
       const res = (await call("guild.cases.revoke", { caseNumber: 3 })) as any;
 
       expect(res).toEqual({ success: true, caseNumber: 3 });
-      expect(patch).not.toHaveBeenCalled();
-      expect(del).not.toHaveBeenCalled();
+      expect(clearTimeout).not.toHaveBeenCalled();
+      expect(removeBan).not.toHaveBeenCalled();
+      expect(clearVoiceMute).not.toHaveBeenCalled();
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(false);
     });
 
     it("surfaces a generic error and leaves the case active when the Discord undo fails", async () => {
-      const del = vi.fn().mockRejectedValue(Object.assign(new Error("Missing Access"), { code: 50001 }));
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        delete: del,
-      }) as any;
+      });
+      fake.failNextWith("removeBan", Object.assign(new Error("Missing Access"), { code: 50001 }));
+      (container as any).discordRest = fake;
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "ban" })]);
 
       await expect(
@@ -369,12 +352,12 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("surfaces a specific missing-permission error and leaves the case active on Discord 50013", async () => {
-      const del = vi.fn().mockRejectedValue(Object.assign(new Error("Missing Permissions"), { code: 50013 }));
-      container.client = mockRest({
+      const fake = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-        delete: del,
-      }) as any;
+      });
+      fake.failNextWith("removeBan", Object.assign(new Error("Missing Permissions"), { code: 50013 }));
+      (container as any).discordRest = fake;
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3, action: "ban" })]);
 
       await expect(
@@ -401,10 +384,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      container.client = mockRest({
+      (container as any).discordRest = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-      }) as any;
+      });
 
       await expect(
         call("guild.warnThresholds.list", undefined, INTRUDER_ID),
@@ -493,10 +476,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      container.client = mockRest({
+      (container as any).discordRest = mockRest({
         guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
         member: memberWith([]),
-      }) as any;
+      });
 
       await expect(
         call("guild.warnThresholds.set", { warnCount: 3, action: "mute" }, INTRUDER_ID),
