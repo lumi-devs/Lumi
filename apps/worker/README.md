@@ -58,7 +58,7 @@ flowchart TD
     subgraph External Infrastructure
         DB[(PostgreSQL 17 / PgBouncer)]
         Discord[Discord REST API]
-        Dash[apps/dashboard]
+        Dash[lumi-dashboard]
         Api[apps/api]
     end
 

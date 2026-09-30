@@ -2,9 +2,10 @@ import type { ConfigField } from "./config.js";
 
 /**
  * Text channel (`ChannelType.GuildText` = `0`) as a numeric literal, not a
- * discord.js import — this file is shared with `apps/dashboard`, which
- * doesn't depend on discord.js at all, and the value never changes without
- * a breaking Discord API change.
+ * discord.js import — this file is shared with the dashboard (via the
+ * published `@lumi-devs/contracts` package), which doesn't depend on
+ * discord.js at all, and the value never changes without a breaking Discord
+ * API change.
  */
 const DefaultPickableChannelTypeIds = [0] as const;
 

@@ -132,14 +132,20 @@ export const permitNodeCount: number = permitNodeGroups.reduce(
 }
 
 // --- 4. Environment variables --------------------------------------------------
-// env.ts and dashboard/src/lib/env.ts have no single schema object to import —
-// they're a bag of functions/getters reading process.env["KEY"] ad hoc. Real
-// generation of names is possible (regex-scan for the literal reads); the
+// env.ts has no single schema object to import — it's a bag of
+// functions/getters reading process.env["KEY"] ad hoc. Real generation of
+// names is possible (regex-scan for the literal reads); the
 // required/default/description columns cannot be extracted from source
 // without a lot of bespoke parsing for marginal gain, so they stay a
 // hand-maintained lookup here, and the generator fails the build if a scanned
 // key has no lookup entry or a lookup entry no longer matches a scanned key —
 // the drift check the old configuration/page.tsx never had.
+//
+// The dashboard's own env vars (dashboardMeta below) can't get that drift
+// check anymore: its source (src/lib/env.ts) moved to the separate
+// lumi-dashboard repo, so there's nothing here to scan. dashboardMeta stays a
+// plain hand-maintained table — keep it in sync by hand when that repo's
+// env.ts changes.
 
 interface EnvMeta {
   required: string;
@@ -251,18 +257,11 @@ const WORKER_ENV_FILES = [
   "prisma.config.ts",
 ];
 
-// AUTH_URL is consumed by NextAuth's own convention-based env lookup, never
-// read directly in application code, so it can't be scanned for.
-const DASHBOARD_ENV_SCAN_EXCEPTIONS = new Set(["AUTH_URL"]);
-
 async function generateEnvVars(): Promise<void> {
   const workerScanned = new Set<string>();
   for (const file of WORKER_ENV_FILES) {
     for (const key of await scanEnvKeys(path.join(REPO_ROOT, file))) workerScanned.add(key);
   }
-  const dashboardScanned = await scanEnvKeys(
-    path.join(REPO_ROOT, "apps/dashboard/src/lib/env.ts"),
-  );
 
   const problems: string[] = [];
   for (const key of workerScanned) {
@@ -270,13 +269,6 @@ async function generateEnvVars(): Promise<void> {
   }
   for (const key of Object.keys(workerMeta)) {
     if (!workerScanned.has(key)) problems.push(`docs metadata for ${key} has no matching process.env read in ${WORKER_ENV_FILES.join(", ")}`);
-  }
-  for (const key of dashboardScanned) {
-    if (!(key in dashboardMeta)) problems.push(`apps/dashboard/src/lib/env.ts reads ${key}, which has no docs metadata`);
-  }
-  for (const key of Object.keys(dashboardMeta)) {
-    if (DASHBOARD_ENV_SCAN_EXCEPTIONS.has(key)) continue;
-    if (!dashboardScanned.has(key)) problems.push(`docs metadata for ${key} has no matching process.env read in apps/dashboard/src/lib/env.ts`);
   }
   if (problems.length > 0) {
     throw new Error(

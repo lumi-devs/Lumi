@@ -3,14 +3,6 @@ title: FAQ
 description: Known gotchas worth knowing before you hit them.
 ---
 
-### The dashboard Compose profile doesn't start
-
-The shared `Dockerfile` `runner` target has no `next build` stage for the dashboard and copies
-source only, while the `dashboard` Compose service runs `next start`, which needs a prebuilt
-`.next` directory — the container exits immediately with *"Could not find a production build in
-the '.next' directory."* Run the dashboard outside Docker for now:
-`bun run --cwd apps/dashboard dev`. See [Docker Compose](/docs/deploy/docker-compose).
-
 ### The worker won't start — `RPC_INTERNAL_TOKEN` error
 
 This is deliberate, not a bug: an unset `RPC_INTERNAL_TOKEN` is a hard failure at boot rather

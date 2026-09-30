@@ -113,10 +113,11 @@ graph LR
     source --> worker[worker target<br/>prisma generate, runs main.ts]
     source --> api[api target<br/>prisma generate, runs main.ts]
     source --> scheduler[scheduler target<br/>prisma generate, runs main.ts]
-    source --> dbuild[dashboard-build<br/>next build]
-    base --> dashboard[dashboard target<br/>copies .next/standalone from dbuild]
-    dbuild --> dashboard
 ```
+
+The dashboard is built and published from its own repo,
+[`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), as
+`ghcr.io/lumi-devs/lumi-dashboard` — it has no target in this Dockerfile.
 
 ### Stage Summary
 
@@ -137,11 +138,10 @@ graph LR
 6. **`scheduler`** (`docker compose build` target `scheduler`): adds `apps/scheduler/`, runs
    `bunx prisma generate`, switches to unprivileged user `bun`, and on container start runs
    `bun apps/scheduler/src/main.ts`.
-7. **`dashboard-build`** → **`dashboard`**: `dashboard-build` (from `source`) adds
-   `apps/dashboard/` and runs `bun run --filter=@lumi/dashboard build` (a real Next.js
-   standalone build, with placeholder env values that only matter at build time); the final
-   `dashboard` target (from `base`, not `source`) copies just `.next/standalone`, `.next/static`
-   and `public` out of it and runs `node apps/dashboard/server.js`.
+
+The `dashboard` compose service pulls its image (`ghcr.io/lumi-devs/lumi-dashboard`) straight
+from GHCR rather than building it — that image is built by the `lumi-dashboard` repo's own
+CI, not this Dockerfile.
 
 ---
 
@@ -157,7 +157,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `api` | *(default)* | - | Stateless internal RPC server for the dashboard - no Discord gateway connection, no job scheduling. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
 | `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. Points `POSTGRES_URL` at `pgbouncer:6432` (extra replicas mean extra DB connections). |
-| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, built from the `dashboard` Dockerfile target (Next.js standalone output). |
+| `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, pulled from `ghcr.io/lumi-devs/lumi-dashboard` (built in its own repo). |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 18 primary database server. |
 | `pgbouncer` | `pgbouncer`, `scale` | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. Opt-in - see [Deployment Tiers](#-deployment-tiers) below. |
 | `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 8 data store for entity caching and event streams. |

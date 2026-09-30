@@ -64,7 +64,6 @@ jobs:
           - name: worker
           - name: api
           - name: scheduler
-          - name: dashboard
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -79,9 +78,7 @@ jobs:
         id: image_meta
         run: |
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          if [ "${{ matrix.target.name }}" = "dashboard" ]; then
-            echo "image=ghcr.io/${REPO_LOWER}-dashboard" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.target.name }}" = "api" ]; then
+          if [ "${{ matrix.target.name }}" = "api" ]; then
             echo "image=ghcr.io/${REPO_LOWER}-api" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.target.name }}" = "scheduler" ]; then
             echo "image=ghcr.io/${REPO_LOWER}-scheduler" >> $GITHUB_OUTPUT

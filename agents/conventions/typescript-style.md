@@ -69,10 +69,9 @@ that matter more day to day than the type-checked ones above:
 `experimentalDecorators` + `emitDecoratorMetadata` (Sapphire's `@ApplyOptions`
 decorators need these), `verbatimModuleSyntax`. Path aliases split two ways: `#lib/*.js`-style
 subpath imports live in the root `package.json` `"imports"` map, `@lumi/*` package aliases
-live in `tsconfig.base.json` paths (which extends this base). `apps/dashboard` has its own tsconfig (DOM
-lib, JSX) — that's why `bun run typecheck` runs `turbo run typecheck:all` (root
-`tsc --noEmit -p tsconfig.json`, which excludes the dashboard) and then a separate
-`turbo run typecheck --filter=@lumi/dashboard`.
+live in `tsconfig.base.json` paths (which extends this base). The dashboard (its own repo,
+`lumi-devs/lumi-dashboard`) has its own tsconfig (DOM lib, JSX) and its own `typecheck`
+script, run there rather than from this repo.
 
 ## Comments: terse, functional, never AI-sounding
 
@@ -151,7 +150,7 @@ section (`// ---- Helpers ----`) — split the file or trust the reader instead.
   `PermissionRepository.ts`, `redis-lock.ts`, `regex-worker/validate.ts`,
   `rpc/validation.ts`, `scheduled-tasks.ts`, `types/common.ts`,
   `utilities/command-response.ts`, and every reference in `packages/core/tests` and
-  `apps/dashboard/src`. Only the identifier changed — the underlying string values
+  `src`. Only the identifier changed — the underlying string values
   (Discord `custom_id`s etc.) were left untouched. `LumiEvents`
   (`packages/core/src/lib/types/common.ts:16`) and `DefaultLanguage`
   (`packages/core/src/lib/i18n/index.ts:40`) follow the same pattern. If you find

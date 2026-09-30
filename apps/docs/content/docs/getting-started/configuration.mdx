@@ -20,9 +20,9 @@ resolver. `SHARD_COUNT`, `SHARDS`, `SHARDING_MANAGER`, and `HOSTNAME` are inject
 
 ## Dashboard
 
-Read by `apps/dashboard/src/lib/env.ts`. The dashboard holds no bot token and opens no database
-connection — it only needs its session secret, Discord OAuth2 credentials, and the worker RPC
-address.
+Read by `src/lib/env.ts` in the [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard)
+repo. The dashboard holds no bot token and opens no database connection — it only needs its
+session secret, Discord OAuth2 credentials, and the worker RPC address.
 
 <DashboardEnvTable />
 
