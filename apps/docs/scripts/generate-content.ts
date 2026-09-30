@@ -8,7 +8,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { rpcRouter } from "@lumi/contracts/rpc";
+import * as rpcContract from "@lumi/contracts/rpc";
+import { generateSdkReference } from "./generate-sdk-reference";
 
 const DOCS_ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const REPO_ROOT = path.resolve(DOCS_ROOT, "../../");
@@ -321,21 +322,62 @@ export const composeEnvVars: EnvRow[] = ${JSON.stringify(composeRows, null, 2)};
 // --- 5. RPC actions -----------------------------------------------------------
 
 async function generateRpcActions(): Promise<void> {
+  const { rpcRouter } = rpcContract;
+
   const rows = Object.entries(rpcRouter)
-    .map(([name, entry]) => ({ name, auth: entry.auth, summary: entry.summary }))
+    .map(([name, entry]) => ({
+      name,
+      auth: entry.auth,
+      timeoutMs: entry.timeoutMs,
+      requiresEnabled: entry.requiresEnabled ?? null,
+      summary: entry.summary,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  type RpcSlice = Record<string, { auth: string; timeoutMs: number; requiresEnabled?: string; summary: string }>;
+  const sliceEntries = Object.entries(rpcContract as Record<string, unknown>).filter(
+    (entry) => entry[0].endsWith("Rpc") && entry[0] !== "rpcRouter" && typeof entry[1] === "object" && entry[1] !== null,
+  ) as [string, RpcSlice][];
+
+  if (sliceEntries.length === 0) {
+    throw new Error("[generate-content] found no *Rpc slice exports on @lumi/contracts/rpc");
+  }
+
+  const sliceGroups = sliceEntries
+    .map(([exportName, slice]) => ({
+      slice: exportName.replace(/Rpc$/, ""),
+      actions: Object.entries(slice)
+        .map(([name, entry]) => ({
+          name,
+          auth: entry.auth,
+          timeoutMs: entry.timeoutMs,
+          requiresEnabled: entry.requiresEnabled ?? null,
+          summary: entry.summary,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => a.slice.localeCompare(b.slice));
 
   await writeGenerated(
     "rpc-actions.ts",
     `export interface RpcActionRow {
   name: string;
   auth: string;
+  timeoutMs: number;
+  requiresEnabled: string | null;
   summary: string;
+}
+
+export interface RpcSliceGroup {
+  slice: string;
+  actions: RpcActionRow[];
 }
 
 export const rpcActions: RpcActionRow[] = ${JSON.stringify(rows, null, 2)};
 
 export const rpcActionCount: number = rpcActions.length;
+
+export const rpcSliceGroups: RpcSliceGroup[] = ${JSON.stringify(sliceGroups, null, 2)};
 `,
   );
 }
@@ -464,6 +506,7 @@ async function main() {
     generateEnvVars(),
     generateRpcActions(),
     generateCommands(manifests),
+    generateSdkReference(writeGenerated),
   ]);
   console.log(`[generate-content] wrote generated docs data to ${path.relative(REPO_ROOT, OUT_DIR)}/`);
 }

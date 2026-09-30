@@ -1,22 +1,33 @@
 ---
 title: Overview
-description: The current state of third-party add-ons, and what's changing.
+description: How third-party add-ons run, and where to find their SDK reference.
 ---
 
 Third-party modules plug into the same loader as built-in ones — downloaded modules are
 symlinked into `packages/core/src/modules/` alongside `afk`, `mod`, `welcome`, and the rest.
 
-## Authoring docs are deliberately not here yet
+## Execution model
 
-Lumi's add-on SDK is being redesigned this release around a real runtime sandbox — today,
-downloaded module code runs in-process with no execution boundary, which the 0.4 release is
-replacing with worker-thread/process isolation and a message-passing API. Because that redesign
-changes the add-on-facing surface (imports, permissions, how a module talks to the host), any
-authoring guide written against the current surface would describe an API that's about to
-change. That documentation lands once the sandbox ships.
+Addon code does not run in-process with the host. Each addon module runs in its own `Bun.spawn`
+child process (`packages/core/src/lib/addon-sandbox/AddonHost.ts`), and every call it makes back
+into the bot — sending a message, reading config, touching KV/Redis, scheduling a task — crosses
+an IPC boundary as an RPC-style request/response message rather than a direct function call. The
+host checks each request against a per-addon capability grant
+(`packages/core/src/lib/addon-sandbox/capabilities.ts`): an addon only gets `kv` by default, and
+must explicitly declare `redis`, `scheduling`, or specific Discord actions (e.g. `sendMessage`,
+`editMessage`) before the corresponding host method is allowed to run. An addon with no capability
+for a method has that call rejected by the host, not merely discouraged in docs.
 
-## What's still true today
+The one supported way for addon code to reach the host is the `lumi` SDK package
+(`packages/core/src/lib/addon-sandbox/sdk/`) — see the [SDK Reference](/docs/addons/sdk-reference)
+for every export it provides. Addon code should never import `#lib/*` or `#modules/*` directly;
+those aliases are for host code and are not part of the addon-facing surface.
 
-Installing, browsing, and managing add-ons that already exist — as an admin, through the
-dashboard or `/download` — is unaffected by the sandbox redesign and documented in
-[Distribution](/docs/addons/distribution).
+This is an early-stage sandbox boundary, not a hardened security sandbox — treat installed addons
+as code you've chosen to trust (verified via [signed commits](/docs/addons/distribution) if you
+enable that), not as isolation against a malicious author.
+
+## Managing add-ons
+
+Installing, browsing, and managing add-ons — as an admin, through `/repo` and `/download` — is
+documented in [Distribution](/docs/addons/distribution).

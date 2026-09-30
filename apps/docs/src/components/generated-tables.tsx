@@ -4,8 +4,9 @@ const Table = defaultMdxComponents.table;
 import { workerEnvVars, dashboardEnvVars, observabilityEnvVars, composeEnvVars } from "@/generated/env-vars";
 import { commandGroups, commandCount } from "@/generated/commands";
 import { permitNodeGroups, permitNodeCount } from "@/generated/permits";
-import { rpcActions, rpcActionCount } from "@/generated/rpc-actions";
+import { rpcActionCount, rpcSliceGroups } from "@/generated/rpc-actions";
 import { dataPrivacyRows } from "@/generated/data-privacy";
+import { sdkImportGroups, sdkExportCount } from "@/generated/sdk-reference";
 
 function EnvRows({ rows }: { rows: { name: string; required: string; fallback: string; about: string }[] }) {
   return (
@@ -118,35 +119,75 @@ export function PermitCount() {
   return <>{permitNodeCount}</>;
 }
 
-export function RpcTable() {
+export function RpcCount() {
+  return <>{rpcActionCount}</>;
+}
+
+export function RpcSliceTables() {
   return (
-    <Table>
-      <thead>
-        <tr>
-          <th>Action</th>
-          <th>Auth</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rpcActions.map((action) => (
-          <tr key={action.name}>
-            <td>
-              <code>{action.name}</code>
-            </td>
-            <td>
-              <code>{action.auth}</code>
-            </td>
-            <td>{action.summary}</td>
-          </tr>
-        ))}
-      </tbody>
-    </Table>
+    <>
+      {rpcSliceGroups.map((group) => (
+        <div key={group.slice}>
+          <h3>{group.slice}</h3>
+          <Table>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Auth</th>
+                <th>Timeout</th>
+                <th>Requires module</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.actions.map((action) => (
+                <tr key={action.name}>
+                  <td>
+                    <code>{action.name}</code>
+                  </td>
+                  <td>
+                    <code>{action.auth}</code>
+                  </td>
+                  <td>{action.timeoutMs}ms</td>
+                  <td>{action.requiresEnabled ? <code>{action.requiresEnabled}</code> : "—"}</td>
+                  <td>{action.summary}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      ))}
+    </>
   );
 }
 
-export function RpcCount() {
-  return <>{rpcActionCount}</>;
+export function SdkExportCount() {
+  return <>{sdkExportCount}</>;
+}
+
+export function SdkReferenceSections() {
+  return (
+    <>
+      {sdkImportGroups.map((group) => (
+        <div key={group.importPath}>
+          <h2>
+            <code>{group.importPath}</code>
+          </h2>
+          {group.exports.map((entry) => (
+            <div key={entry.name}>
+              <h3>
+                <code>{entry.name}</code> <em>{entry.kind}</em>
+              </h3>
+              {entry.summary ? <p>{entry.summary}</p> : null}
+              <pre>
+                <code>{entry.signature}</code>
+              </pre>
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function DataPrivacyTable() {

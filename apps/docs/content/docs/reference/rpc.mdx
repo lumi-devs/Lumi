@@ -3,7 +3,7 @@ title: RPC Reference
 description: Every dashboard-to-worker RPC action, generated from the contract.
 ---
 
-import { RpcTable, RpcCount } from "@/components/generated-tables";
+import { RpcSliceTables, RpcCount } from "@/components/generated-tables";
 
 The dashboard never touches Postgres, Redis, or the bot token. It posts one of <RpcCount />
 actions to the worker's internal RPC server, and the worker executes it.
@@ -30,4 +30,8 @@ independently, so the envelope is the one shape TypeScript cannot guarantee.
 
 ## Actions
 
-<RpcTable />
+One table per contract slice (`packages/contracts/src/rpc/<slice>.ts`), showing the auth mode,
+timeout budget, the module that must be enabled for the action to run (when the action requires
+one), and its summary.
+
+<RpcSliceTables />

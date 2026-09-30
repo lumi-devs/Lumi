@@ -1,4 +1,4 @@
 {
   "title": "Add-ons",
-  "pages": ["overview", "distribution"]
+  "pages": ["overview", "sdk-reference", "distribution"]
 }

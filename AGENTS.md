@@ -77,9 +77,12 @@ per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`)
 sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
 `scheduled-tasks/`). For the agent-facing deep dive (lifecycle hooks, config schema builders,
 real gotchas), see [`agents/architecture/module-system.md`](agents/architecture/module-system.md)
-and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md) — the public
-doc site has no addon-authoring walkthrough yet (`apps/docs/content/docs/addons/overview.mdx`
-explains why: it's deliberately withheld until the sandbox's addon-facing surface settles).
+and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md). The public doc
+site's addon-facing surface is the generated
+[SDK Reference](apps/docs/content/docs/addons/sdk-reference.mdx) (every export of
+`packages/core/src/lib/addon-sandbox/sdk/`, regenerated from source on every docs build) plus
+[`apps/docs/content/docs/addons/overview.mdx`](apps/docs/content/docs/addons/overview.mdx) for the
+sandbox's execution model.
 
 **Zero cross-module import law**: a module must never import directly from a sibling
 module. Shared code belongs under `#lib/*`.
