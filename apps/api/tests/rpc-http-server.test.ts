@@ -7,8 +7,8 @@ import {
   presentedToken,
   readInternalToken,
   resetContractVersionWarningForTests,
-} from "../../src/lib/rpc/http-server.js";
-import { registerRpcHandlers } from "../../src/lib/rpc/registry.js";
+} from "../src/rpc-http-server.js";
+import { registerRpcHandlers } from "@lumi/core";
 import { CONTRACT_VERSION } from "@lumi/contracts/rpc";
 
 describe("RPC HTTP Server & Auth Verification", () => {
@@ -446,6 +446,40 @@ describe("RPC HTTP Server & Auth Verification", () => {
         "info",
         "[RpcHttp] Internal RPC HTTP server listening",
         expect.anything(),
+      );
+    });
+
+    it("retries port binding on EADDRINUSE and succeeds once orphaned socket clears", async () => {
+      let attemptCount = 0;
+      const mockServer = {
+        stop: vi.fn(),
+      };
+
+      vi.spyOn(Bun, "serve").mockImplementation((_opts: any) => {
+        attemptCount++;
+        if (attemptCount === 1) {
+          throw new Error("EADDRINUSE: Address already in use");
+        }
+        return mockServer as any;
+      });
+
+      process.env["RPC_INTERNAL_TOKEN"] = "test-secret-token";
+      const logger = vi.fn();
+      const serverHandle = await startRpcHttpServer(logger, 3, 10);
+
+      expect(serverHandle).toBe<typeof mockServer>(mockServer);
+      expect(attemptCount).toBe(2);
+      expect(logger).toHaveBeenCalledWith(
+        "warn",
+        expect.stringContaining("Failed to bind internal RPC HTTP server on attempt 1/3"),
+        expect.objectContaining({
+          error: expect.stringContaining("EADDRINUSE"),
+        }),
+      );
+      expect(logger).toHaveBeenCalledWith(
+        "info",
+        expect.stringContaining("Internal RPC HTTP server listening"),
+        expect.objectContaining({ authenticated: true }),
       );
     });
 

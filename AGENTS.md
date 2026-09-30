@@ -26,8 +26,9 @@ system topology — treat it as source of truth for anything below.
   `apps/scheduler` process (see below). RPC serving is not part of any shard role — it's a
   separate `apps/api` process (see below), not gated by shard/`isPrimaryShard()` at all.
 - `apps/api` — gateway-free RPC server for the dashboard. Boots a `SapphireClient` without
-  calling `.login()`, and owns `packages/core/src/lib/rpc/*` serving
-  (`registerRpcHandlers()`/`startRpcHttpServer()`). No BullMQ, no Discord gateway connection.
+  calling `.login()`, registers `packages/core/src/lib/rpc/*` handlers
+  (`registerRpcHandlers()`), and owns its own HTTP transport (`apps/api/src/rpc-http-server.ts`,
+  `startRpcHttpServer()`) that serves them. No BullMQ, no Discord gateway connection.
 - `apps/scheduler` — gateway-free BullMQ worker and scheduler. Owns job processing,
   repeatable-job registration, and the cluster-wide scheduler lock. No Discord gateway
   connection, no RPC serving.
@@ -100,7 +101,7 @@ Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk
 The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Redis
 connection and never holds the bot token. Every read/write is proxied over an internal HTTP RPC
 bridge to `apps/api` (the dashboard's own `src/lib/rpc.ts` calling into this repo's
-`packages/core/src/lib/rpc/http-server.ts`, a `server-only` module reachable only from Server
+`apps/api/src/rpc-http-server.ts`, a `server-only` module reachable only from Server
 Components/Route Handlers/Server Actions).
 
 The action surface is a typed router, built from per-slice contract files under
@@ -228,3 +229,8 @@ tests at `tests/lib/event-bus/` and `tests/lib/sharding/`), and `packages/observ
 to the source they cover (e.g. `packages/contracts/src/rpc/router.test.ts`). For
 database-touching unit tests, `packages/core/tests/mocks/prisma.ts` provides an offline
 in-memory mock Prisma driver so tests don't need a live Postgres instance.
+
+`apps/api` has its own `tests/` directory (its own `bunfig.toml`, `root = "tests"`) and its own
+`test` script, run separately from the root's package-scoped `bun test --parallel` (root
+`bunfig.toml` sets `root = "packages"`) — the root `test`/`test:coverage` scripts chain into it
+with `bun run --cwd apps/api test`, the same pattern the dashboard used before it moved out.

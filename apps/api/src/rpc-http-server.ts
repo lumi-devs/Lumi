@@ -1,13 +1,11 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { dispatchRpc } from "#lib/rpc/dispatch.js";
-import { handleSseRequest } from "#lib/rpc/sse-server.js";
+import { dispatchRpc, handleSseRequest, logError } from "@lumi/core";
 import {
   envParseInteger,
   envParseString,
   getRpcInternalToken,
   isProduction,
-} from "#lib/env.js";
-import { logError } from "#lib/utilities/errors.js";
+} from "@lumi/core/env";
 import {
   CONTRACT_VERSION,
   contractVersionsCompatible,
