@@ -8,6 +8,7 @@ import {
 } from "@lumi/contracts/rpc";
 import type { AppealVerifyResult } from "@lumi/contracts/views";
 import { verifyAppealToken } from "./services/appeal-token.js";
+import { liftModerationCaseWithUndo } from "./services/case-lift.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { paginate } from "#lib/rpc/validation.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
@@ -114,7 +115,22 @@ export const modRpcHandlers = implementRpc(modRpc, {
       throw new Error(`Case #${caseNumber} is already revoked`);
     }
 
-    await container.db.moderation.liftModerationCase(moderationCase.id);
+    try {
+      await liftModerationCaseWithUndo(
+        moderationCase,
+        `[Revoked via dashboard] Case #${caseNumber}`,
+      );
+    } catch (err) {
+      container.logger.error(
+        `[RPC] Failed to revoke case #${caseNumber} (${guildId}/${moderationCase.userId}):`,
+        err,
+      );
+      throw new CodedRpcError(
+        RpcFailureCodes.HandlerError,
+        "Could not undo this action on Discord. Try again shortly.",
+      );
+    }
+
     return { success: true, caseNumber };
   },
 
