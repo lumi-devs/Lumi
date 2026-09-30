@@ -10,7 +10,7 @@ import {
   type RpcRequest,
   type RpcSliceEntry,
 } from "@lumi/contracts/rpc";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { authorize } from "#lib/permissions/authorize.js";
 import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
 
 interface RpcAuthContexts {
@@ -97,11 +97,11 @@ const authorizers: RpcAuthorizers = {
     const actorId = await requireGuildManager(guildId, req.actorId);
     return { guildId, actorId };
   },
-  botOwner: (req) => {
-    if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
+  botOwner: async (req) => {
+    if (!req.actorId || !(await authorize({ userId: req.actorId }, { kind: "botOwner" }))) {
       throw forbidden("Bot Owner authorization required for this action.");
     }
-    return Promise.resolve({ actorId: req.actorId });
+    return { actorId: req.actorId };
   },
   session: (req) => {
     if (!req.actorId) throw forbidden("actorId is required");

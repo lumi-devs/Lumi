@@ -75,6 +75,49 @@ export default tseslint.config(
     },
   },
   {
+    // RPC, Sapphire preconditions and the addon sandbox make "what may you
+    // do" decisions through the single `authorize()` evaluator, not by
+    // reaching into PermitResolver's internals directly. Repeats the
+    // repo-wide `no-restricted-imports` entries above (flat config replaces,
+    // rather than merges, a rule's options per matching file) plus this
+    // directory-scoped addition.
+    files: [
+      'packages/core/src/lib/rpc/**/*.ts',
+      'packages/core/src/lib/permissions/preconditions/**/*.ts',
+      'packages/core/src/lib/addon-sandbox/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/modules/*/**', '../**/modules/**', '../../**/modules/**'],
+              message:
+                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
+            },
+          ],
+          paths: [
+            {
+              name: 'discord.js',
+              importNames: ['EmbedBuilder'],
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+            },
+            {
+              name: '@discordjs/builders',
+              importNames: ['EmbedBuilder'],
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+            },
+            {
+              name: '#lib/permissions/PermitResolver.js',
+              message: 'Authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Enforce CommandContext reply helper conventions.
     files: ['packages/core/src/**/commands/*.ts'],
     rules: {

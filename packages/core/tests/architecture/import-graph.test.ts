@@ -228,6 +228,29 @@ describe("package dependency direction", () => {
 
     reportAndAssert(violations);
   });
+
+  it("rpc/, preconditions/ and the addon sandbox reach PermitResolver only through authorize()", () => {
+    const violations: string[] = [];
+    const RESTRICTED_ROOTS = [
+      join(REPO_ROOT, "packages/core/src/lib/rpc"),
+      join(REPO_ROOT, "packages/core/src/lib/permissions/preconditions"),
+      join(REPO_ROOT, "packages/core/src/lib/addon-sandbox"),
+    ];
+    const PERMIT_RESOLVER = join(REPO_ROOT, "packages/core/src/lib/permissions/PermitResolver.ts");
+
+    for (const { file, ref } of allImports) {
+      if (!RESTRICTED_ROOTS.some((root) => file === root || file.startsWith(`${root}/`))) continue;
+
+      const resolved = resolveSpecifier(file, ref.specifier);
+      if ((resolved.kind === "relative" || resolved.kind === "alias") && resolved.path === PERMIT_RESOLVER) {
+        violations.push(
+          formatViolation(file, ref, "authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly"),
+        );
+      }
+    }
+
+    reportAndAssert(violations);
+  });
 });
 
 describe("import-graph self-check", () => {

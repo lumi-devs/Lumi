@@ -10,6 +10,7 @@ import {
   type APIRole,
 } from "discord-api-types/v10";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { authorize } from "#lib/permissions/authorize.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { swallow } from "#lib/utilities/errors.js";
 
@@ -215,6 +216,10 @@ function computeGuildPermissions(guild: APIGuild, member: APIGuildMember): Permi
   return new PermissionsBitField(bits);
 }
 
+async function isGuildManager(actorId: string, guildId: string, memberPermissions: PermissionsBitField): Promise<boolean> {
+  return authorize({ userId: actorId, guildId, memberPermissions }, { kind: "guildManager" });
+}
+
 export interface RestGuildManagerCheck {
   guild: APIGuild;
   isManager: boolean;
@@ -245,10 +250,7 @@ export async function checkGuildManagerRest(
   if (!member) return { guild, isManager: false };
 
   const permissions = computeGuildPermissions(guild, member);
-  const isManager =
-    permissions.has(PermissionsBitField.Flags.ManageGuild) ||
-    permissions.has(PermissionsBitField.Flags.Administrator);
-  return { guild, isManager };
+  return { guild, isManager: await isGuildManager(actorId, guildId, permissions) };
 }
 
 export function guildIconUrl(guild: Pick<APIGuild, "id" | "icon">): string | null {

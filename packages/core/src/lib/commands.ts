@@ -1,6 +1,6 @@
 import { CommandContext } from "#lib/command-context.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { authorize } from "#lib/permissions/authorize.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
 import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
@@ -8,7 +8,6 @@ import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarnin
 import {
   BucketScope,
   Command,
-  container,
   type ApplicationCommandRegistry,
   type Args,
 } from "@sapphire/framework";
@@ -374,8 +373,7 @@ function shadowRegistrationDefaults(piece: BaseCommand | BaseSubcommand): void {
  * `container.stores.get("preconditions")`, which only exists once a real
  * Sapphire client has loaded every precondition piece. So this mirrors the
  * two access checks Lumi commands actually declare - `BotOwner` and
- * `requiredPermit` - directly against the same primitives
- * (`PermitResolver.isBotOwner`, `container.permitResolver.hasPermit`) their
+ * `requiredPermit` - through the same `authorize()` evaluator their
  * precondition classes use, off of the same `preconditions`/`requiredPermit`
  * options every command already sets to gate its real run. Wiring this into
  * the constructor - once, for every Lumi command - means a future command
@@ -393,7 +391,7 @@ function guardAutocompleteRun(
       await interaction.respond([]);
       return;
     }
-    if (gates.requiresBotOwner && !PermitResolver.isBotOwner(interaction.user.id)) {
+    if (gates.requiresBotOwner && !(await authorize({ userId: interaction.user.id }, { kind: "botOwner" }))) {
       await interaction.respond([]);
       return;
     }
@@ -402,14 +400,16 @@ function guardAutocompleteRun(
         await interaction.respond([]);
         return;
       }
-      const hasPermit = await container.permitResolver.hasPermit({
-        guildId: interaction.guild.id,
-        userId: interaction.user.id,
-        roleIds: memberRoleIds(interaction.member),
-        channelId: interaction.channelId,
-        permitNode: gates.requiredPermit,
-        guildOwnerId: interaction.guild.ownerId,
-      });
+      const hasPermit = await authorize(
+        {
+          userId: interaction.user.id,
+          guildId: interaction.guild.id,
+          roleIds: memberRoleIds(interaction.member),
+          channelId: interaction.channelId,
+          guildOwnerId: interaction.guild.ownerId,
+        },
+        { kind: "permit", node: gates.requiredPermit },
+      );
       if (!hasPermit) {
         await interaction.respond([]);
         return;
