@@ -138,13 +138,7 @@ const RpcResponseEnvelopeSchema = s.object({
   retryAfterMs: s.number().optional(),
 });
 
-/**
- * Throws with a clear message if `raw` isn't a well-formed `RpcResponse`
- * envelope. A response without `retryable` (an older worker/dashboard build
- * that predates this field) falls back to {@linkcode RpcRetryableByDefault}
- * for the code, so this stays backward compatible across independently
- * deployed builds.
- */
+/** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
 export function parseRpcResponse(raw: unknown): RpcResponse {
   let envelope;
   try {
@@ -164,12 +158,17 @@ export function parseRpcResponse(raw: unknown): RpcResponse {
       "Malformed RPC response envelope: ok:false without error and code",
     );
   }
+  if (envelope.retryable === undefined) {
+    throw new Error(
+      "Malformed RPC response envelope: ok:false without retryable",
+    );
+  }
   return {
     id: envelope.id,
     ok: false,
     error: envelope.error,
     code: envelope.code,
-    retryable: envelope.retryable ?? RpcRetryableByDefault[envelope.code],
+    retryable: envelope.retryable,
     retryAfterMs: envelope.retryAfterMs,
   };
 }

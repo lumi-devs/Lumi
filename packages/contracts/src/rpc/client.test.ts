@@ -27,7 +27,13 @@ describe("RpcClient", () => {
 
   it("throws RpcError with the server's code on a coded failure", async () => {
     const baseUrl = serve(() =>
-      Response.json({ id: "1", ok: false, error: "not allowed", code: RpcFailureCodes.Forbidden }),
+      Response.json({
+        id: "1",
+        ok: false,
+        error: "not allowed",
+        code: RpcFailureCodes.Forbidden,
+        retryable: false,
+      }),
     );
     const client = new RpcClient({ baseUrl });
     const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
@@ -55,18 +61,24 @@ describe("RpcClient", () => {
     expect((err as RpcError).retryAfterMs).toBe(2500);
   });
 
-  it("defaults retryable from the code table when an older server omits the field", async () => {
+  it("surfaces MALFORMED when the server omits retryable on a failure envelope", async () => {
     const baseUrl = serve(() =>
       Response.json({ id: "1", ok: false, error: "already in progress", code: RpcFailureCodes.Conflict }),
     );
     const client = new RpcClient({ baseUrl });
     const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
-    expect((err as RpcError).retryable).toBe(true);
+    expect((err as RpcError).code).toBe("MALFORMED");
   });
 
   it("maps GUILD_NOT_FOUND and CONTRACT_MISMATCH via the helper predicates", async () => {
     const baseUrl = serve(() =>
-      Response.json({ id: "1", ok: false, error: "no guild", code: RpcFailureCodes.GuildNotFound }),
+      Response.json({
+        id: "1",
+        ok: false,
+        error: "no guild",
+        code: RpcFailureCodes.GuildNotFound,
+        retryable: false,
+      }),
     );
     const client = new RpcClient({ baseUrl });
     const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
@@ -264,7 +276,13 @@ describe("RpcClient circuit breaker", () => {
 
   it("never trips on coded RpcErrors from a reachable server", async () => {
     const baseUrl = serve(() =>
-      Response.json({ id: "1", ok: false, error: "not allowed", code: RpcFailureCodes.Forbidden }),
+      Response.json({
+        id: "1",
+        ok: false,
+        error: "not allowed",
+        code: RpcFailureCodes.Forbidden,
+        retryable: false,
+      }),
     );
     const client = new RpcClient({
       baseUrl,
@@ -343,7 +361,13 @@ describe("RpcClient read retries", () => {
     let fetchCalls = 0;
     const baseUrl = serve(() => {
       fetchCalls++;
-      return Response.json({ id: "1", ok: false, error: "not allowed", code: RpcFailureCodes.Forbidden });
+      return Response.json({
+        id: "1",
+        ok: false,
+        error: "not allowed",
+        code: RpcFailureCodes.Forbidden,
+        retryable: false,
+      });
     });
     const client = new RpcClient({
       baseUrl,

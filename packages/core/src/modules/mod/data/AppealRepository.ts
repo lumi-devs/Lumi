@@ -53,9 +53,8 @@ export class AppealRepository extends Repository {
     guildId: string,
     filter: {
       status?: AppealStatus;
-      skip?: number;
       take?: number;
-      /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
       cursor?: string;
     } = {},
   ): Promise<{ appeals: Appeal[]; total?: number; nextCursor: string | null }> {
@@ -64,38 +63,26 @@ export class AppealRepository extends Repository {
       ...(filter.status ? { status: filter.status } : {}),
     };
     const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+        : baseWhere;
 
-    if (filter.cursor !== undefined) {
-      const cursor = decodeCreatedAtIdCursor(filter.cursor);
-      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
-      const rows = await this.prisma.appeal.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.appeal.findMany({
         where,
         orderBy: CreatedAtIdOrderBy,
         take: take + 1,
-      });
-      const { page, hasMore } = splitPage(rows, take);
-      const last = page.at(-1);
-      return {
-        appeals: page,
-        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
-      };
-    }
-
-    const skip = filter.skip ?? 0;
-    const [appeals, total] = await this.prisma.$transaction([
-      this.prisma.appeal.findMany({
-        where: baseWhere,
-        orderBy: CreatedAtIdOrderBy,
-        skip,
-        take,
       }),
-      this.prisma.appeal.count({ where: baseWhere }),
+      filter.cursor === undefined ? this.prisma.appeal.count({ where: baseWhere }) : undefined,
     ]);
-    const last = appeals.at(-1);
-    const nextCursor =
-      skip + appeals.length < total && last ? encodeCreatedAtIdCursor(last) : null;
-
-    return { appeals, total, nextCursor };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      appeals: page,
+      total,
+      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+    };
   }
 
   /**

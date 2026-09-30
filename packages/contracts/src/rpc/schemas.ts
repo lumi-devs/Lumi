@@ -64,7 +64,6 @@ export const AuditFilterShape = {
     .lengthLessThanOrEqual(128)
     .optional(),
   platform: s.enum(["discord", "web"] as const).optional(),
-  page: PageSchema,
   pageSize: PageSizeSchema,
   cursor: CursorSchema,
 };

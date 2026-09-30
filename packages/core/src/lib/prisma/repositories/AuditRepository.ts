@@ -59,9 +59,8 @@ export interface AuditLedgerFilter {
   userId?: string;
   action?: string;
   platform?: AuditPlatform;
-  skip?: number;
   take?: number;
-  /** Opaque `(createdAt, id)` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+  /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
   cursor?: string;
 }
 
@@ -238,38 +237,28 @@ export class AuditRepository extends Repository {
       ...(filter.platform ? { platform: filter.platform } : {}),
     };
     const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+        : baseWhere;
 
-    if (filter.cursor !== undefined) {
-      const cursor = decodeCreatedAtIdCursor(filter.cursor);
-      const where = { ...baseWhere, ...createdAtIdKeysetWhere(cursor) };
-      const rows = await this.prisma.auditLedger.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.auditLedger.findMany({
         where,
         orderBy: CreatedAtIdOrderBy,
         take: take + 1,
-      });
-      const { page, hasMore } = splitPage(rows, take);
-      const last = page.at(-1);
-      return {
-        entries: page,
-        nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
-      };
-    }
-
-    const skip = filter.skip ?? 0;
-    const [entries, total] = await this.prisma.$transaction([
-      this.prisma.auditLedger.findMany({
-        where: baseWhere,
-        orderBy: CreatedAtIdOrderBy,
-        skip,
-        take,
       }),
-      this.prisma.auditLedger.count({ where: baseWhere }),
+      filter.cursor === undefined
+        ? this.prisma.auditLedger.count({ where: baseWhere })
+        : undefined,
     ]);
-    const last = entries.at(-1);
-    const nextCursor =
-      skip + entries.length < total && last ? encodeCreatedAtIdCursor(last) : null;
-
-    return { entries, total, nextCursor };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      entries: page,
+      total,
+      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+    };
   }
 
   async #ensureGroup(key: string) {

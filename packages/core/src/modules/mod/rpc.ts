@@ -10,7 +10,7 @@ import type { AppealVerifyResult } from "@lumi/contracts/views";
 import { verifyAppealToken } from "./services/appeal-token.js";
 import { liftModerationCaseWithUndo } from "./services/case-lift.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
-import { paginate } from "#lib/rpc/validation.js";
+import { resolvePageSize } from "#lib/rpc/validation.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import {
@@ -78,12 +78,11 @@ async function verifyAppeal(
 
 export const modRpcHandlers = implementRpc(modRpc, {
   "guild.cases.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
+    const { pageSize, take } = resolvePageSize(input);
     const { cases, total, nextCursor } = await container.db.moderation.listCases(guildId, {
       action: input.action && isCaseAction(input.action) ? input.action : undefined,
       userId: input.userId,
       moderatorId: input.moderatorId,
-      skip,
       take,
       cursor: input.cursor,
     });
@@ -101,7 +100,6 @@ export const modRpcHandlers = implementRpc(modRpc, {
         createdAt: c.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
       nextCursor,
     };
@@ -259,10 +257,9 @@ export const modRpcHandlers = implementRpc(modRpc, {
   },
 
   "guild.appeals.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
+    const { pageSize, take } = resolvePageSize(input);
     const { appeals, total, nextCursor } = await container.db.appeals.listForGuild(guildId, {
       status: input.status,
-      skip,
       take,
       cursor: input.cursor,
     });
@@ -286,7 +283,6 @@ export const modRpcHandlers = implementRpc(modRpc, {
         createdAt: a.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
       nextCursor,
     };

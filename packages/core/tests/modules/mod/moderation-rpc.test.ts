@@ -132,7 +132,6 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       const res = (await call("guild.cases.list", {})) as any;
 
       expect(res.total).toBe(2);
-      expect(res.page).toBe(1);
       expect(res.pageSize).toBe(25);
       expect(res.cases.map((c: any) => c.caseNumber)).toEqual([2, 1]);
       expect(res.cases[0].createdAt).toBe("2026-01-01T00:00:00.000Z");
@@ -164,7 +163,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       expect(byModerator.total).toBe(0);
     });
 
-    it("paginates and reports the unpaginated total", async () => {
+    it("pages via cursor and reports the exact total only on the first page", async () => {
       prisma.$seed(
         "moderationCase",
         Array.from({ length: 5 }, (_, i) =>
@@ -172,13 +171,17 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
         ),
       );
 
-      const res = (await call("guild.cases.list", {
-        page: 2,
-        pageSize: 2,
-      })) as any;
+      const firstPage = (await call("guild.cases.list", { pageSize: 2 })) as any;
+      expect(firstPage.total).toBe(5);
+      expect(firstPage.cases.map((c: any) => c.caseNumber)).toEqual([5, 4]);
+      expect(firstPage.nextCursor).not.toBeNull();
 
-      expect(res.total).toBe(5);
-      expect(res.cases.map((c: any) => c.caseNumber)).toEqual([3, 2]);
+      const secondPage = (await call("guild.cases.list", {
+        pageSize: 2,
+        cursor: firstPage.nextCursor,
+      })) as any;
+      expect(secondPage.total).toBeUndefined();
+      expect(secondPage.cases.map((c: any) => c.caseNumber)).toEqual([3, 2]);
     });
 
     it("excludes cases belonging to another guild", async () => {

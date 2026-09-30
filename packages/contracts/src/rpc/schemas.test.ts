@@ -92,19 +92,22 @@ describe("CursorSchema", () => {
   });
 });
 
-describe("AuditFilterShape backward compatibility", () => {
+describe("AuditFilterShape (cursor-only)", () => {
   const AuditFilter = s.object(AuditFilterShape);
 
-  it("still validates an old payload sent with no cursor field at all", () => {
+  it("strips an unrecognized page field", () => {
     const payload = { userId: "123456789012345678", page: 2, pageSize: 10 };
-    expect(AuditFilter.parse(payload)).toEqual(payload);
+    expect(AuditFilter.parse(payload)).toEqual({
+      userId: "123456789012345678",
+      pageSize: 10,
+    });
   });
 
-  it("still validates a bare page/pageSize payload", () => {
+  it("validates a bare pageSize payload", () => {
     expect(AuditFilter.parse({})).toEqual({});
   });
 
-  it("accepts a payload that additionally sends a cursor", () => {
+  it("accepts a payload that sends a cursor", () => {
     const payload = { cursor: "eyJhIjoxfQ" };
     expect(AuditFilter.parse(payload)).toEqual(payload);
   });

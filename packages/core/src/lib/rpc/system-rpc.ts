@@ -3,7 +3,7 @@ import { systemRpc } from "@lumi/contracts/rpc";
 import { getClusterName } from "#lib/env.js";
 import { authorize } from "#lib/permissions/authorize.js";
 import { implementRpc } from "#lib/rpc/implement.js";
-import { paginate } from "#lib/rpc/validation.js";
+import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,
@@ -89,13 +89,12 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
   // Unlike `guild.audit.list`, this reads the ledger across every guild, so it
   // stays bot-owner only even when a `guildId` filter narrows it to one.
   "system.audit.list": async ({ input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
+    const { pageSize, take } = resolvePageSize(input);
     const { entries, total, nextCursor } = await container.db.audit.listAuditLogs({
       guildId: input.guildId,
       userId: input.userId,
       action: input.action,
       platform: input.platform,
-      skip,
       take,
       cursor: input.cursor,
     });
@@ -110,7 +109,6 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
         createdAt: e.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
       nextCursor,
     };

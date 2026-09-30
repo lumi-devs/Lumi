@@ -138,7 +138,6 @@ export const dashboardRpc = {
       moduleName: ModuleNameSchema.optional(),
       key: ConfigKeySchema.optional(),
       actorId: SnowflakeSchema.optional(),
-      page: PageSchema,
       pageSize: PageSizeSchema,
       cursor: CursorSchema,
     }),

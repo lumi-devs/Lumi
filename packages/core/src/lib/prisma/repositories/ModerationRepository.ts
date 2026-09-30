@@ -90,9 +90,8 @@ export class ModerationRepository extends Repository {
       action?: CaseAction;
       userId?: string;
       moderatorId?: string;
-      skip?: number;
       take?: number;
-      /** Opaque `caseNumber` cursor - when given, pages by keyset instead of `skip` and `total` is omitted. */
+      /** Opaque `caseNumber` cursor. Omitted for the first page, where `total` is also returned. */
       cursor?: string;
     } = {},
   ): Promise<{ cases: ModerationCase[]; total?: number; nextCursor: string | null }> {
@@ -103,38 +102,31 @@ export class ModerationRepository extends Repository {
       ...(filter.moderatorId ? { moderatorId: filter.moderatorId } : {}),
     };
     const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? {
+            ...baseWhere,
+            ...singleKeyKeysetWhere("caseNumber", decodeSingleKeyCursor(filter.cursor)),
+          }
+        : baseWhere;
 
-    if (filter.cursor !== undefined) {
-      const caseNumber = decodeSingleKeyCursor(filter.cursor);
-      const where = { ...baseWhere, ...singleKeyKeysetWhere("caseNumber", caseNumber) };
-      const rows = await this.prisma.moderationCase.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.moderationCase.findMany({
         where,
         orderBy: { caseNumber: "desc" },
         take: take + 1,
-      });
-      const { page, hasMore } = splitPage(rows, take);
-      const last = page.at(-1);
-      return {
-        cases: page,
-        nextCursor: hasMore && last ? encodeSingleKeyCursor(last.caseNumber) : null,
-      };
-    }
-
-    const skip = filter.skip ?? 0;
-    const [cases, total] = await this.prisma.$transaction([
-      this.prisma.moderationCase.findMany({
-        where: baseWhere,
-        orderBy: { caseNumber: "desc" },
-        skip,
-        take,
       }),
-      this.prisma.moderationCase.count({ where: baseWhere }),
+      filter.cursor === undefined
+        ? this.prisma.moderationCase.count({ where: baseWhere })
+        : undefined,
     ]);
-    const last = cases.at(-1);
-    const nextCursor =
-      skip + cases.length < total && last ? encodeSingleKeyCursor(last.caseNumber) : null;
-
-    return { cases, total, nextCursor };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      cases: page,
+      total,
+      nextCursor: hasMore && last ? encodeSingleKeyCursor(last.caseNumber) : null,
+    };
   }
 
   /**

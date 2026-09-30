@@ -9,6 +9,7 @@ import {
 import {
   CONTRACT_VERSION,
   contractVersionsCompatible,
+  makeRpcFailure,
   RpcFailureCodes,
   type RpcRequest,
 } from "@lumi/contracts/rpc";
@@ -78,53 +79,28 @@ export function readInternalToken(
 }
 
 const ContractVersionHeader = "x-lumi-contract-version";
-let warnedMissingContractVersionHeader = false;
-
-/** Test-only: resets the "warn once" latch so each test starts from a clean slate. */
-export function resetContractVersionWarningForTests(): void {
-  warnedMissingContractVersionHeader = false;
-}
 
 /**
- * Rejects a `/rpc` call whose caller built against an incompatible
- * `@lumi/contracts` version — the dashboard and `apps/api` now ship (and
+ * Rejects a `/rpc` call whose caller built against an incompatible (or
+ * absent) `@lumi/contracts` version — the dashboard and `apps/api` ship (and
  * version) independently, so this is the one place that can no longer
- * assume they match. A missing header means an older dashboard build that
- * predates this handshake: allowed through, but logged once so an operator
- * notices they're running mismatched builds.
+ * assume they match. A missing header is rejected exactly like a mismatch:
+ * every caller is expected to send its contract version.
  */
-function checkContractVersion(
-  req: Request,
-  log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
-): Response | null {
+function checkContractVersion(req: Request): Response | null {
   const theirVersion = req.headers.get(ContractVersionHeader);
-  if (!theirVersion) {
-    if (!warnedMissingContractVersionHeader) {
-      warnedMissingContractVersionHeader = true;
-      log(
-        "warn",
-        `[RpcHttp] Request missing ${ContractVersionHeader} header — assuming an older dashboard build that predates the contract version handshake; accepting anyway.`,
-        { serverContractVersion: CONTRACT_VERSION },
-      );
-    }
-    return null;
-  }
-  if (contractVersionsCompatible(CONTRACT_VERSION, theirVersion)) return null;
-  return Response.json(
-    {
-      id: "",
-      ok: false,
-      error: `Contract version mismatch: caller is on @lumi/contracts@${theirVersion}, this server is on @lumi/contracts@${CONTRACT_VERSION}. Update one side to match.`,
-      code: RpcFailureCodes.ContractMismatch,
-    },
-    { status: 409 },
-  );
+  if (theirVersion && contractVersionsCompatible(CONTRACT_VERSION, theirVersion)) return null;
+  const error = theirVersion
+    ? `Contract version mismatch: caller is on @lumi/contracts@${theirVersion}, this server is on @lumi/contracts@${CONTRACT_VERSION}. Update one side to match.`
+    : `Missing ${ContractVersionHeader} header: this server is on @lumi/contracts@${CONTRACT_VERSION} and requires callers to report their contract version.`;
+  return Response.json(makeRpcFailure("", error, RpcFailureCodes.ContractMismatch), {
+    status: 409,
+  });
 }
 
 export async function handleRpcHttpRequest(
   req: Request,
   internalToken: string | null,
-  log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void = () => {},
 ): Promise<Response> {
   const { pathname } = new URL(req.url);
   // Unauthenticated on purpose: liveness/readiness probes have no way to
@@ -138,10 +114,9 @@ export async function handleRpcHttpRequest(
   // instead of a single JSON envelope.
   if (req.method === "GET" && pathname === "/events") {
     if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
-      return Response.json(
-        { ok: false, error: "Unauthorized", code: RpcFailureCodes.Unauthorized },
-        { status: 401 },
-      );
+      return Response.json(makeRpcFailure("", "Unauthorized", RpcFailureCodes.Unauthorized), {
+        status: 401,
+      });
     }
     return handleSseRequest(req);
   }
@@ -149,40 +124,23 @@ export async function handleRpcHttpRequest(
     return new Response("not found", { status: 404 });
   }
   if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
-    return Response.json(
-      {
-        id: "",
-        ok: false,
-        error: "Unauthorized",
-        code: RpcFailureCodes.Unauthorized,
-      },
-      { status: 401 },
-    );
+    return Response.json(makeRpcFailure("", "Unauthorized", RpcFailureCodes.Unauthorized), {
+      status: 401,
+    });
   }
-  const contractMismatch = checkContractVersion(req, log);
+  const contractMismatch = checkContractVersion(req);
   if (contractMismatch) return contractMismatch;
   let body: RpcRequest<unknown>;
   try {
     body = (await req.json()) as RpcRequest<unknown>;
   } catch {
-    return Response.json(
-      {
-        id: "",
-        ok: false,
-        error: "Malformed JSON body",
-        code: RpcFailureCodes.BadRequest,
-      },
-      { status: 400 },
-    );
+    return Response.json(makeRpcFailure("", "Malformed JSON body", RpcFailureCodes.BadRequest), {
+      status: 400,
+    });
   }
   if (!body?.action) {
     return Response.json(
-      {
-        id: body?.id ?? "",
-        ok: false,
-        error: "Missing action",
-        code: RpcFailureCodes.BadRequest,
-      },
+      makeRpcFailure(body?.id ?? "", "Missing action", RpcFailureCodes.BadRequest),
       { status: 400 },
     );
   }
@@ -190,12 +148,7 @@ export async function handleRpcHttpRequest(
     return Response.json(await dispatchRpc(body));
   } catch {
     return Response.json(
-      {
-        id: body?.id ?? "",
-        ok: false,
-        error: "Internal error",
-        code: RpcFailureCodes.Internal,
-      },
+      makeRpcFailure(body?.id ?? "", "Internal error", RpcFailureCodes.Internal),
       { status: 500 },
     );
   }
@@ -228,7 +181,7 @@ export async function startRpcHttpServer(
         hostname: host,
         port,
         fetch(req) {
-          return handleRpcHttpRequest(req, internalToken, log);
+          return handleRpcHttpRequest(req, internalToken);
         },
       });
       log("info", "[RpcHttp] Internal RPC HTTP server listening", {

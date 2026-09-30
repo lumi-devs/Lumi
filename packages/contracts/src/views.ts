@@ -82,9 +82,8 @@ export interface ModerationCaseView {
 
 export interface CasesListData {
   cases: ModerationCaseView[];
-  /** Omitted in cursor mode, where the exact count is not computed. */
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
   total?: number;
-  page: number;
   pageSize: number;
   /** Opaque cursor for the next page, or `null` when this is the last page. */
   nextCursor: string | null;
@@ -187,9 +186,8 @@ export interface AuditEntryView {
 
 export interface AuditListData {
   entries: AuditEntryView[];
-  /** Omitted in cursor mode, where the exact count is not computed. */
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
   total?: number;
-  page: number;
   pageSize: number;
   /** Opaque cursor for the next page, or `null` when this is the last page. */
   nextCursor: string | null;
@@ -207,9 +205,8 @@ export interface ConfigHistoryEntryView {
 
 export interface ConfigHistoryListData {
   entries: ConfigHistoryEntryView[];
-  /** Omitted in cursor mode, where the exact count is not computed. */
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
   total?: number;
-  page: number;
   pageSize: number;
   /** Opaque cursor for the next page, or `null` when this is the last page. */
   nextCursor: string | null;
@@ -263,9 +260,8 @@ export interface AppealView {
 
 export interface AppealsListData {
   appeals: AppealView[];
-  /** Omitted in cursor mode, where the exact count is not computed. */
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
   total?: number;
-  page: number;
   pageSize: number;
   /** Opaque cursor for the next page, or `null` when this is the last page. */
   nextCursor: string | null;
