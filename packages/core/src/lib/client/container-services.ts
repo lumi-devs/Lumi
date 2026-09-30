@@ -5,6 +5,7 @@ import {
   SignalBus,
 } from "#lib/database/redis.js";
 import { AddonModulesRoot } from "#lib/downloader/resolver.js";
+import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { permitResolver } from "#lib/permissions/PermitResolver.js";
@@ -71,6 +72,7 @@ export function installContainerServices(
     invalidation: new InvalidationBus(createRedisClient()),
     signals: new SignalBus(createRedisClient()),
     db: new DatabaseService(prisma, redis, container.logger, prismaReader),
+    discordRest: new DiscordRestAdapter(),
     eventBus: ownedEventBus.bus,
     moduleStore,
     permitResolver,

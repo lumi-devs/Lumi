@@ -3,6 +3,7 @@ import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -13,9 +14,15 @@ function everyoneRole(permissions = "0") {
 }
 
 describe("dashboard module config write RPC handlers", () => {
-  let restGet: ReturnType<typeof vi.fn>;
+  let discordRest: FakeDiscordRestPort;
   let configUtility: any;
   let transaction: any;
+
+  /** Re-seeds `checkGuildManagerRest`'s guild/member lookups; the intruder holds `memberRoles` (none by default). */
+  function seedGuildManager(memberRoles: string[] = []) {
+    discordRest.seedGuild({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: memberRoles } as any);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -28,21 +35,9 @@ describe("dashboard module config write RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    restGet = vi.fn().mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({
-          id: GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [everyoneRole()],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
-
-    container.client = { rest: { get: restGet } } as any;
+    discordRest = new FakeDiscordRestPort();
+    seedGuildManager();
+    (container as any).discordRest = discordRest;
     (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     transaction = {
@@ -103,20 +98,7 @@ describe("dashboard module config write RPC handlers", () => {
   const call = (action: RpcActionName, data?: unknown, actorId = OWNER_ID) =>
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
-  const denyPermissions = () =>
-    restGet.mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({
-          id: GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [everyoneRole()],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
+  const denyPermissions = () => seedGuildManager([]);
 
   describe("guild.module.toggle", () => {
     it("persists the new enabled state for a known module", async () => {

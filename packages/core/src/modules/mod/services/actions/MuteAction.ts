@@ -1,11 +1,9 @@
 import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { Routes } from "discord-api-types/v10";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { liftAllActiveCases } from "../helpers.js";
 import { sendModActionDm } from "../notify.js";
 import { formatDuration } from "#lib/utilities/time.js";
-import { errorCode } from "#lib/utilities/errors.js";
 import { runModerationAction } from "../runModerationAction.js";
 
 export interface MuteApplyOptions {
@@ -93,15 +91,6 @@ export class MuteAction {
     targetId: string,
     reason: string,
   ): Promise<void> {
-    await container.client.rest
-      .patch(Routes.guildMember(guildId, targetId), {
-        body: { communication_disabled_until: null },
-        reason,
-      })
-      .catch((err: unknown) => {
-        const code = errorCode(err);
-        if (code === 10007) return;
-        throw err;
-      });
+    await container.discordRest.clearTimeout(guildId, targetId, reason);
   }
 }

@@ -4,6 +4,7 @@ import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const SendMessagesBit = PermissionFlagsBits.SendMessages.toString();
 
@@ -12,7 +13,9 @@ function setContainer(overrides: {
   restGet?: ReturnType<typeof vi.fn>;
   restPatch?: ReturnType<typeof vi.fn>;
   restPut?: ReturnType<typeof vi.fn>;
+  discordRest?: FakeDiscordRestPort;
 }) {
+  (container as any).discordRest = overrides.discordRest ?? new FakeDiscordRestPort();
   (container as any).redis = {
     incr: vi.fn(),
     expire: vi.fn(),
@@ -45,9 +48,6 @@ describe("enterPanic / revertPanic", () => {
     async () => {
       const GUILD_ID = "g-panic";
       const restGet = vi.fn().mockImplementation((route: string) => {
-        if (route === `/guilds/${GUILD_ID}`) {
-          return Promise.resolve({ id: GUILD_ID, features: [] });
-        }
         if (route === `/guilds/${GUILD_ID}/channels`) {
           return Promise.resolve([
             { id: "c1", type: ChannelType.GuildText, permission_overwrites: [] },
@@ -60,12 +60,15 @@ describe("enterPanic / revertPanic", () => {
       const restPut = vi.fn().mockResolvedValue(undefined);
       const savePanicState = vi.fn().mockResolvedValue(undefined);
       const getPanicState = vi.fn().mockResolvedValue(null);
+      const discordRest = new FakeDiscordRestPort();
+      discordRest.seedGuild({ id: GUILD_ID, features: [] } as any);
 
       setContainer({
         db: { security: { savePanicState, getPanicState } },
         restGet,
         restPatch,
         restPut,
+        discordRest,
       });
 
       const result = await enterPanic(GUILD_ID, "actor-1", []);
@@ -102,9 +105,6 @@ describe("enterPanic / revertPanic", () => {
     async () => {
       const GUILD_ID = "g-panic";
       const restGet = vi.fn().mockImplementation((route: string) => {
-        if (route === `/guilds/${GUILD_ID}`) {
-          return Promise.resolve({ id: GUILD_ID, features: ["INVITES_DISABLED"] });
-        }
         if (route === `/guilds/${GUILD_ID}/channels`) {
           return Promise.resolve([
             { id: "c1", type: ChannelType.GuildText, permission_overwrites: [] },
@@ -121,12 +121,15 @@ describe("enterPanic / revertPanic", () => {
         lockedChannels: { c1: true },
       });
       const clearPanicState = vi.fn().mockResolvedValue(undefined);
+      const discordRest = new FakeDiscordRestPort();
+      discordRest.seedGuild({ id: GUILD_ID, features: ["INVITES_DISABLED"] } as any);
 
       setContainer({
         db: { security: { getPanicState, clearPanicState } },
         restGet,
         restPatch,
         restPut,
+        discordRest,
       });
 
       const result = await revertPanic(GUILD_ID);

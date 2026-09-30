@@ -7,6 +7,7 @@ import {
   MaxSseConnections,
 } from "#lib/rpc/sse-server.js";
 import { dashboardEventPublishFailures } from "@lumi/observability";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "987654321098765432";
@@ -26,7 +27,6 @@ type CapturedHandler = (msg: {
 }) => Promise<void>;
 
 describe("SSE endpoint (apps/api /events)", () => {
-  let restGet: ReturnType<typeof vi.fn>;
   let consumeFn: ReturnType<typeof vi.fn>;
   let destroyGroupFn: ReturnType<typeof vi.fn>;
   let stopFn: ReturnType<typeof vi.fn>;
@@ -58,23 +58,15 @@ describe("SSE endpoint (apps/api /events)", () => {
       close: vi.fn(),
     };
 
-    restGet = vi.fn().mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] });
-      }
-      if (route === `/guilds/${OTHER_GUILD_ID}`) {
-        return Promise.resolve({
-          id: OTHER_GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [{ id: OTHER_GUILD_ID, permissions: "0" }],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
-    container.client = { rest: { get: restGet } } as any;
+    const discordRest = new FakeDiscordRestPort();
+    discordRest.seedGuild({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] } as any);
+    discordRest.seedGuild({
+      id: OTHER_GUILD_ID,
+      owner_id: OWNER_ID,
+      roles: [{ id: OTHER_GUILD_ID, permissions: "0" }],
+    } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: [] } as any);
+    (container as any).discordRest = discordRest;
   });
 
   afterEach(async () => {
