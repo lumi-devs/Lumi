@@ -30,3 +30,7 @@ everything up front.
 This is distinct from `apps/docs/`, which is the public, user-facing
 documentation site (self-hosters and third-party addon authors) — that content
 is written for humans running the bot, not for an agent editing its source.
+
+For *why* a given architectural shape was chosen, not just how it works, see
+[`docs/adr/`](../docs/adr/README.md) — short, source-grounded architecture
+decision records.

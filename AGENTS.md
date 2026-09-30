@@ -6,7 +6,8 @@ map, not a manual — for anything not covered here, see
 actual source (architecture, conventions, domain guides, step-by-step
 workflows), or [`apps/docs/`](apps/docs/src/app/) — the public, user-facing
 docs site (self-hosters and add-on authors), built from that directory on
-every push to `main`.
+every push to `main`. For why a given architectural shape was chosen, see
+[`docs/adr/`](docs/adr/README.md).
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
 discord.js v14, Prisma/PostgreSQL, Redis.
