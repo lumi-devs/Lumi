@@ -44,10 +44,61 @@ is no `packages/core/tests/lib/`).
 
 ## Running tests
 
-`bun run test` in this repo is `bun test --parallel`, globbing `packages/**` — it no longer
-runs the dashboard's own test suite, which lives and runs in the `lumi-dashboard` repo.
-`apps/worker` has no test suite of its own currently (worth flagging if you're about to
-write one: there is no established pattern for it yet).
+`bun run test` in this repo is `bun test --parallel --path-ignore-patterns
+'**/tests/integration/**'`, globbing `packages/**` — it no longer runs the dashboard's own
+test suite, which lives and runs in the `lumi-dashboard` repo. `apps/worker` has no test
+suite of its own currently (worth flagging if you're about to write one: there is no
+established pattern for it yet). The `--path-ignore-patterns` flag keeps this suite fully
+offline: every file under a package's `tests/integration/` directory is excluded, so this
+command never needs a running Postgres or Redis. See the next section for that suite.
+
+## Real-service integration tests
+
+`packages/core/tests/integration/` holds tests that exercise real Postgres and Redis rather
+than the offline mock Prisma driver or a mocked `container.redis` — currently
+`withIdempotency` (`idempotency.test.ts`), the scheduler lease/generic Redis lock
+(`scheduler-lock.test.ts`), the Redis Streams event bus's publish/consume/ack path
+(`event-bus.test.ts`), and a Prisma round-trip through `ModerationRepository`
+(`moderation-repository.test.ts`). These are excluded from `bun run test` and instead run via
+`bun run test:integration` (`bun test packages/*/tests/integration`), a separate root script.
+
+**Env vars, deliberately not the app's own names.** `packages/core/tests/integration/setup.ts`
+reads `LUMI_TEST_DATABASE_URL` and `LUMI_TEST_REDIS_URL` — never `DATABASE_URL`,
+`POSTGRES_URL`/`DIRECT_POSTGRES_URL`, or `REDIS_HOST`/`REDIS_PASSWORD` — so a developer's own
+`.env` (pointed at a real dev/prod database) can never be picked up here by accident. Every
+test file wraps its `describe` block in `integrationDescribe` from `setup.ts`, which calls
+through to a real `describe` when both vars are set and to `describe.skip` (with the missing-env
+reason baked into the skip name) otherwise — so `bun run test:integration` with the vars unset
+exits 0 having skipped everything, both locally and if the CI job's services ever fail to come
+up.
+
+**Running it locally**: start the Postgres/Redis containers from `docker-compose.yml` yourself
+(`docker compose up -d postgres redis` or equivalent — do **not** point these tests at your
+main dev database or dev Redis DB index). Create a separate database for it (e.g. `lumi_test`,
+via `docker compose exec postgres createdb -U lumi lumi_test`), apply the schema to it with
+Prisma pointed at that database (`POSTGRES_URL=postgresql://lumi:lumi@localhost:5432/lumi_test
+bunx prisma migrate deploy`), then export:
+
+```sh
+export LUMI_TEST_DATABASE_URL=postgresql://lumi:lumi@localhost:5432/lumi_test
+export LUMI_TEST_REDIS_URL=redis://:lumi@localhost:6379/1
+bun run test:integration
+```
+
+Use a Redis DB index other than `0` (the app's own default) in `LUMI_TEST_REDIS_URL` — the
+suite only ever `SCAN`s and deletes its own key prefixes (`lumi:rpc:idem:`,
+`lumi:test:int:*`) or exact known keys (`lumi:scheduler:leader`) it created itself, and never
+issues `FLUSHALL`/`FLUSHDB`, but a dedicated index keeps it fully isolated from anything else
+sharing that Redis regardless. The Prisma test similarly only ever deletes the exact `Guild`
+rows (and, via `onDelete: Cascade`, their `ModerationCase`/`GuildCaseCounter` rows) it created,
+keyed on randomly generated guild ids — never a table-wide delete.
+
+**In CI**, the `integration` job in `.github/workflows/ci.yml` runs this suite against GitHub
+Actions service containers (`postgres:18-alpine`, `redis:8-alpine` — matching
+`docker-compose.yml`'s major versions), applying `bunx prisma migrate deploy` against the
+service Postgres before running `bun run test:integration` with `LUMI_TEST_DATABASE_URL`/
+`LUMI_TEST_REDIS_URL` pointed at the services. It's a separate job from `test` (the offline
+suite) and is included in the `ci-status` aggregator's required job list.
 
 ## The mock Prisma driver
 
