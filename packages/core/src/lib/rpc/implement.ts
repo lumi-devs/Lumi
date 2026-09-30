@@ -70,6 +70,7 @@ export async function requireGuildManager(
     throw new CodedRpcError(
       RpcFailureCodes.HandlerError,
       "Could not verify your permissions with Discord right now. Try again shortly.",
+      { retryable: true },
     );
   }
   if (!check) {

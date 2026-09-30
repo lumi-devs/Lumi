@@ -3,7 +3,9 @@ import { Prisma } from "@prisma/client";
 import { runWithContext } from "@lumi/observability";
 import {
   CodedRpcError,
+  makeRpcFailure,
   RpcFailureCodes,
+  RpcRetryableByDefault,
   type RpcRequest,
   type RpcResponse,
 } from "@lumi/contracts/rpc";
@@ -24,24 +26,18 @@ import { errorFrom, logError } from "#lib/utilities/errors.js";
 export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
   const handler = getRpcHandler(req.action);
   if (!handler) {
-    return {
-      id: req.id,
-      ok: false,
-      error: `No handler registered for action "${req.action}"`,
-      code: RpcFailureCodes.UnknownAction,
-    };
+    return makeRpcFailure(
+      req.id,
+      `No handler registered for action "${req.action}"`,
+      RpcFailureCodes.UnknownAction,
+    );
   }
 
   if (
     req.guildId &&
     !(await container.db.config.isDashboardEnabled(req.guildId))
   ) {
-    return {
-      id: req.id,
-      ok: false,
-      error: "Dashboard disabled",
-      code: RpcFailureCodes.DashboardDisabled,
-    };
+    return makeRpcFailure(req.id, "Dashboard disabled", RpcFailureCodes.DashboardDisabled);
   }
 
   return runWithContext(
@@ -74,15 +70,13 @@ export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
           err instanceof Prisma.PrismaClientValidationError ||
           err instanceof Prisma.PrismaClientInitializationError;
         const safeErr = isPrismaError ? handlePrismaError(err) : errorFrom(err);
-        return {
-          id: req.id,
-          ok: false,
-          error: safeErr.message ?? "Internal error",
-          code:
-            err instanceof CodedRpcError
-              ? err.code
-              : RpcFailureCodes.HandlerError,
-        };
+        const code =
+          err instanceof CodedRpcError ? err.code : RpcFailureCodes.HandlerError;
+        return makeRpcFailure(req.id, safeErr.message ?? "Internal error", code, {
+          retryable:
+            err instanceof CodedRpcError ? err.retryable : RpcRetryableByDefault[code],
+          retryAfterMs: err instanceof CodedRpcError ? err.retryAfterMs : undefined,
+        });
       }
     },
   );

@@ -34,6 +34,34 @@ describe("RpcClient", () => {
     expect(err).toBeInstanceOf(RpcError);
     expect((err as RpcError).code).toBe(RpcFailureCodes.Forbidden);
     expect((err as RpcError).action).toBe("guild.afk.list");
+    expect((err as RpcError).retryable).toBe(false);
+  });
+
+  it("carries the server's retryable/retryAfterMs onto RpcError", async () => {
+    const baseUrl = serve(() =>
+      Response.json({
+        id: "1",
+        ok: false,
+        error: "already in progress",
+        code: RpcFailureCodes.Conflict,
+        retryable: true,
+        retryAfterMs: 2500,
+      }),
+    );
+    const client = new RpcClient({ baseUrl });
+    const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RpcError);
+    expect((err as RpcError).retryable).toBe(true);
+    expect((err as RpcError).retryAfterMs).toBe(2500);
+  });
+
+  it("defaults retryable from the code table when an older server omits the field", async () => {
+    const baseUrl = serve(() =>
+      Response.json({ id: "1", ok: false, error: "already in progress", code: RpcFailureCodes.Conflict }),
+    );
+    const client = new RpcClient({ baseUrl });
+    const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+    expect((err as RpcError).retryable).toBe(true);
   });
 
   it("maps GUILD_NOT_FOUND and CONTRACT_MISMATCH via the helper predicates", async () => {
@@ -59,6 +87,7 @@ describe("RpcClient", () => {
     const err = await invokePromise.catch((e: unknown) => e);
     expect(err).toBeInstanceOf(RpcError);
     expect((err as RpcError).code).toBe("TIMEOUT");
+    expect((err as RpcError).retryable).toBe(true);
   }, 10_000);
 
   it("throws WORKER_DOWN when the connection is refused", async () => {
@@ -66,6 +95,7 @@ describe("RpcClient", () => {
     const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(RpcError);
     expect((err as RpcError).code).toBe("WORKER_DOWN");
+    expect((err as RpcError).retryable).toBe(true);
   });
 
   it("throws MALFORMED when the response body is not valid JSON", async () => {
@@ -74,6 +104,7 @@ describe("RpcClient", () => {
     const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(RpcError);
     expect((err as RpcError).code).toBe("MALFORMED");
+    expect((err as RpcError).retryable).toBe(false);
   });
 
   it("throws MALFORMED when the response envelope doesn't parse", async () => {

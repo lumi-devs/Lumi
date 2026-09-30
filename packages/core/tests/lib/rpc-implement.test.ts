@@ -147,6 +147,7 @@ describe("RPC guild access under Discord API failures", () => {
 
       await expect(requireGuildManager(GUILD_ID, ACTOR_ID)).rejects.toMatchObject({
         code: "HANDLER_ERROR",
+        retryable: true,
         message: expect.not.stringMatching(/Service Unavailable/),
       });
     });
@@ -239,7 +240,7 @@ describe("RPC guild access under Discord API failures", () => {
         const rejection = await requireGuildManager(GUILD_ID, ACTOR_ID).catch(
           (err: unknown) => err,
         );
-        expect(rejection).toMatchObject({ code: "HANDLER_ERROR" });
+        expect(rejection).toMatchObject({ code: "HANDLER_ERROR", retryable: true });
         expect((rejection as Error).message).not.toBe(error.message);
         expect((rejection as Error).message).not.toBe(
           "Missing ManageGuild permission",
@@ -315,6 +316,8 @@ describe("dispatchRpc error shaping", () => {
       ok: false,
       error: "Dashboard disabled",
       code: "DASHBOARD_DISABLED",
+      retryable: false,
+      retryAfterMs: undefined,
     });
   });
 
@@ -336,7 +339,28 @@ describe("dispatchRpc error shaping", () => {
     expect(res.ok).toBe(false);
     expect(res.error).toBe("A permit named mods already exists.");
     expect(res.code).toBe("HANDLER_ERROR");
+    expect((res as any).retryable).toBe(false);
     expect(res.data).toBeUndefined();
+  });
+
+  it("carries a CodedRpcError's retryable/retryAfterMs override onto the envelope", async () => {
+    const { CodedRpcError, RpcFailureCodes } = await import("@lumi/contracts/rpc");
+    failWhoAmI(
+      new CodedRpcError(RpcFailureCodes.HandlerError, "try again shortly", {
+        retryable: true,
+        retryAfterMs: 2000,
+      }),
+    );
+
+    const res = await dispatchRpc({
+      id: "req-4b",
+      action: "auth.whoami",
+      actorId: ACTOR_ID,
+    });
+
+    expect(res.ok).toBe(false);
+    expect((res as any).retryable).toBe(true);
+    expect((res as any).retryAfterMs).toBe(2000);
   });
 
   it("logs the failure for operators while still answering the caller", async () => {
@@ -390,6 +414,8 @@ describe("dispatchRpc error shaping", () => {
       ok: false,
       error: "Guild not found in bot cache",
       code: "GUILD_NOT_FOUND",
+      retryable: false,
+      retryAfterMs: undefined,
     });
   });
 
