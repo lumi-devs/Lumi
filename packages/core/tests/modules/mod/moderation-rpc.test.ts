@@ -364,7 +364,11 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
       await expect(
         call("guild.cases.revoke", { caseNumber: 3 }),
-      ).rejects.toThrow("Could not undo this action on Discord");
+      ).rejects.toMatchObject({
+        message: expect.stringContaining("Could not undo this action on Discord"),
+        code: "HANDLER_ERROR",
+        retryable: true,
+      });
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(true);
     });
 
@@ -379,7 +383,11 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
       await expect(
         call("guild.cases.revoke", { caseNumber: 3 }),
-      ).rejects.toThrow("Lumi lacks permission to undo this on Discord");
+      ).rejects.toMatchObject({
+        message: expect.stringContaining("Lumi lacks permission to undo this on Discord"),
+        code: "HANDLER_ERROR",
+        retryable: false,
+      });
       expect(prisma.$all("moderationCase")[0]!["active"]).toBe(true);
     });
   });

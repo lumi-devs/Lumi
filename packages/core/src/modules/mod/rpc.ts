@@ -126,11 +126,13 @@ export const modRpcHandlers = implementRpc(modRpc, {
         `[RPC] Failed to revoke case #${caseNumber} (${guildId}/${moderationCase.userId}):`,
         err,
       );
-      const message =
-        errorCode(err) === 50013
-          ? "Lumi lacks permission to undo this on Discord (needs Ban Members / Moderate Members). Grant it and try again."
-          : "Could not undo this action on Discord. Try again shortly.";
-      throw new CodedRpcError(RpcFailureCodes.HandlerError, message);
+      const missingPermission = errorCode(err) === 50013;
+      const message = missingPermission
+        ? "Lumi lacks permission to undo this on Discord (needs Ban Members / Moderate Members). Grant it and try again."
+        : "Could not undo this action on Discord. Try again shortly.";
+      throw new CodedRpcError(RpcFailureCodes.HandlerError, message, {
+        retryable: !missingPermission,
+      });
     }
 
     return { success: true, caseNumber };

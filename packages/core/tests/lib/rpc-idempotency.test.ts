@@ -53,7 +53,7 @@ describe("withIdempotency", () => {
     ).rejects.toThrow(CodedRpcError);
     await expect(
       withIdempotency("test.action", GUILD_ID, TIMEOUT_MS, { a: 1 }, fn),
-    ).rejects.toMatchObject({ code: RpcFailureCodes.Conflict });
+    ).rejects.toMatchObject({ code: RpcFailureCodes.Conflict, retryable: true });
 
     releaseFirst();
     await firstCall;

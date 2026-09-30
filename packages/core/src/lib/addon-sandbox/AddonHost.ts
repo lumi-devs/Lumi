@@ -14,7 +14,7 @@ import type {
   ChildToHost,
   HostToChild,
 } from "@lumi/contracts";
-import { RpcFailureCodes } from "@lumi/contracts/rpc";
+import { makeRpcFailure, RpcFailureCodes } from "@lumi/contracts/rpc";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
@@ -186,12 +186,11 @@ class AddonProcess {
 
   async #dispatch(request: AddonRpcRequest): Promise<AddonRpcResponse> {
     if (!isMethodAllowed(request.action, this.capabilities)) {
-      return {
-        id: request.id,
-        ok: false,
-        error: `Addon "${this.record.name}" lacks the capability for "${request.action}"`,
-        code: RpcFailureCodes.Forbidden,
-      };
+      return makeRpcFailure(
+        request.id,
+        `Addon "${this.record.name}" lacks the capability for "${request.action}"`,
+        RpcFailureCodes.Forbidden,
+      );
     }
     const scope = request.invocationId
       ? this.#pending.get(request.invocationId)?.scope
@@ -205,7 +204,7 @@ class AddonProcess {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       container.logger.warn(`[addon:${this.record.name}] ${request.action} failed: ${message}`);
-      return { id: request.id, ok: false, error: message, code: RpcFailureCodes.HandlerError };
+      return makeRpcFailure(request.id, message, RpcFailureCodes.HandlerError);
     }
   }
 

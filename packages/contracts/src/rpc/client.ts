@@ -1,18 +1,62 @@
 import { randomUUID } from "node:crypto";
 import { CONTRACT_VERSION } from "../version.js";
-import { parseRpcResponse, RpcFailureCodes, type RpcFailureCode, type RpcRequest } from "./envelope.js";
+import {
+  parseRpcResponse,
+  RpcFailureCodes,
+  RpcRetryableByDefault,
+  type RpcFailureCode,
+  type RpcRequest,
+} from "./envelope.js";
 import { rpcRouter, type RpcActionName, type RpcInput, type RpcOutput } from "./router.js";
 
 export type RpcErrorCode = "TIMEOUT" | "WORKER_DOWN" | "MALFORMED" | RpcFailureCode;
 
+/**
+ * Default retryability for the client-only codes (the transport never got a
+ * server envelope to read `retryable` off): a timeout or a refused/dropped
+ * connection is exactly the "worth retrying" case, an undecodable body is
+ * not - retrying the same malformed response gets the same result.
+ */
+const ClientOnlyRetryableByDefault = {
+  TIMEOUT: true,
+  WORKER_DOWN: true,
+  MALFORMED: false,
+} as const satisfies Record<"TIMEOUT" | "WORKER_DOWN" | "MALFORMED", boolean>;
+
+function isClientOnlyCode(
+  code: RpcErrorCode,
+): code is keyof typeof ClientOnlyRetryableByDefault {
+  return code in ClientOnlyRetryableByDefault;
+}
+
+function retryableForCode(code: RpcErrorCode): boolean {
+  return isClientOnlyCode(code)
+    ? ClientOnlyRetryableByDefault[code]
+    : RpcRetryableByDefault[code];
+}
+
+export interface RpcErrorOptions {
+  retryable?: boolean;
+  retryAfterMs?: number;
+}
+
 export class RpcError extends Error {
   public readonly code: RpcErrorCode;
   public readonly action: string;
-  public constructor(code: RpcErrorCode, action: string, message?: string) {
+  public readonly retryable: boolean;
+  public readonly retryAfterMs?: number;
+  public constructor(
+    code: RpcErrorCode,
+    action: string,
+    message?: string,
+    options?: RpcErrorOptions,
+  ) {
     super(message ?? `RPC ${action}: ${code}`);
     this.name = "RpcError";
     this.code = code;
     this.action = action;
+    this.retryable = options?.retryable ?? retryableForCode(code);
+    this.retryAfterMs = options?.retryAfterMs;
   }
 }
 
@@ -137,7 +181,12 @@ export class RpcClient {
       this.log(`Discarding malformed RPC envelope for ${action}: ${String(err)}`);
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
-    if (!response.ok) throw new RpcError(response.code, action, response.error);
+    if (!response.ok) {
+      throw new RpcError(response.code, action, response.error, {
+        retryable: response.retryable,
+        retryAfterMs: response.retryAfterMs,
+      });
+    }
     if (response.data === undefined || response.data === null) {
       this.log(`RPC ${action}: response ok but missing expected data`);
       throw new RpcError("MALFORMED", action, `RPC ${action}: response missing expected data`);
