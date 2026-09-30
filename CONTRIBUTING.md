@@ -153,8 +153,11 @@ Run the full verification suite locally prior to pushing your branch:
 # 1. Monorepo TypeScript compilation check
 bun run typecheck
 
-# 2. ESLint linting with auto-fixes
+# 2. ESLint linting (check-only, matches CI)
 bun run lint
+
+# 2b. ESLint with auto-fixes, for local cleanup
+bun run lint:fix
 
 # 3. Unit and integration tests (Vitest)
 bun run test
@@ -169,7 +172,8 @@ bun run verify:resilience
 | Verification Command | Execution Tool | Target / Description |
 | :--- | :--- | :--- |
 | `bun run typecheck` | `tsc` | Monorepo-wide type checking without emitting files |
-| `bun run lint` | `eslint` | Code style enforcement and linting auto-fixes |
+| `bun run lint` | `eslint` | Code style enforcement (check-only, no auto-fix) |
+| `bun run lint:fix` | `eslint --fix` | Same checks, with auto-fixes applied locally |
 | `bun run test` | `vitest` | Fast unit and integration tests across packages |
 | `bun run test:e2e` | `vitest` | Black-box E2E tests executing full bot flows |
 | `bun run verify:resilience` | Bun TS | Redis Streams event bus fault tolerance test suite |
