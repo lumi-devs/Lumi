@@ -2,6 +2,7 @@
 import { parseArgs } from "node:util";
 import * as addon from "./commands/addon.js";
 import * as config from "./commands/config.js";
+import * as doctor from "./commands/doctor.js";
 import * as migrate from "./commands/migrate.js";
 import * as moduleCmd from "./commands/module.js";
 import * as start from "./commands/start.js";
@@ -21,6 +22,7 @@ const COMMANDS: CliCommand[] = [
   { name: "addon", summary: "Scaffold or validate an addon.", help: addon.help, run: addon.run },
   { name: "module", summary: "Inspect bundled modules.", help: moduleCmd.help, run: moduleCmd.run },
   { name: "config", summary: "Print resolved environment configuration.", help: config.help, run: config.run },
+  { name: "doctor", summary: "Run diagnostic checks.", help: doctor.help, run: doctor.run },
 ];
 
 function printTopLevelHelp(): void {

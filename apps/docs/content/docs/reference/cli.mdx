@@ -80,3 +80,14 @@ prints as `***redacted***`, and any URL value with embedded `user:pass@` credent
 the credentials redacted (e.g. `postgresql://***:***@host:5432/lumi`) - the rest of the value
 still prints, so you can confirm *which* database/host/port is configured without leaking the
 password.
+
+## `lumi doctor [--json]`
+
+Runs the doctor check suite: validates Discord token, database, Redis, RPC, dashboard OAuth
+configuration, filesystem, addon compatibility, and job queue health.
+
+- Prints one line per check with a status glyph (`✓` pass, `⚠` warn, `✗` fail, `–` skip) and
+  its detail message. Exit code is 1 if any check reports `fail`, 0 otherwise - warnings and
+  skips don't fail the suite.
+- `--json` emits a machine-readable JSON array of check results for scripting and CI
+  integration.
