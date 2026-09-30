@@ -221,7 +221,7 @@ one-off commands as `nix develop --command <cmd>`.
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 - `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start
   <worker|api|scheduler|all>`, `migrate [status]`, `addon <create|validate>`, `module list`,
-  `config`. A thin wrapper over the same code these bullets already describe - see
+  `config`, `doctor [--json]`. A thin wrapper over the same code these bullets already describe - see
   [`apps/docs/content/docs/reference/cli.mdx`](apps/docs/content/docs/reference/cli.mdx).
 
 The dashboard (its own repo, `lumi-devs/lumi-dashboard`) has its own `typecheck`/`lint`/`test`
