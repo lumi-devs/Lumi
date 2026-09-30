@@ -196,7 +196,7 @@ function normalizeVersion(v: string): string | null {
  * between `1.0.0` and `1.0.1`), build metadata (`1.0.1+build.5`), and `v`-prefixed
  * versions. An unparseable version on either side is treated as incompatible.
  */
-function isVersionCompatible(
+export function isVersionCompatible(
   minVersion: string,
   currentVersion: string,
 ): boolean {
@@ -206,7 +206,7 @@ function isVersionCompatible(
   return semver.gte(current, min);
 }
 
-function isMaxVersionCompatible(
+export function isMaxVersionCompatible(
   maxVersion: string,
   currentVersion: string,
 ): boolean {
