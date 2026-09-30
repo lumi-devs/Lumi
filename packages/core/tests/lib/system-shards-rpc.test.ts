@@ -22,7 +22,12 @@ function fakeRedis(store: Map<string, string>) {
   };
 }
 
-function shardRow(shardId: number, replicaId: string, updatedAt: number) {
+function shardRow(
+  shardId: number,
+  replicaId: string,
+  updatedAt: number,
+  over: Record<string, unknown> = {},
+) {
   return JSON.stringify({
     shardId,
     replicaId,
@@ -31,6 +36,13 @@ function shardRow(shardId: number, replicaId: string, updatedAt: number) {
     guildCount: 12,
     shardCount: 3,
     updatedAt,
+    eventLoopLagP99Ms: 8,
+    memoryRssMb: 200,
+    heapUsedMb: 90,
+    uptimeSec: 120,
+    pid: 999,
+    lastReadyAt: updatedAt,
+    ...over,
   });
 }
 
@@ -93,10 +105,49 @@ describe("system.shards.get RPC handler", () => {
       ping: 37,
       guildCount: 12,
       lastHeartbeatAt: "2026-01-03T00:00:00.000Z",
+      eventLoopLagP99Ms: 8,
+      memoryRssMb: 200,
+      heapUsedMb: 90,
+      uptimeSec: 120,
+      pid: 999,
+      lastReadyAt: "2026-01-03T00:00:00.000Z",
+      stale: true,
     });
     expect(
       result.replicas.find((r: any) => r.replicaId === "gw-a"),
     ).toMatchObject({ reportingShardIds: [0, 1] });
+  });
+
+  it("marks a shard stale once it's older than 3 publish intervals, fresh otherwise", async () => {
+    const now = Date.now();
+    store.set(
+      `lumi:cluster:${CLUSTER}:shard:0`,
+      shardRow(0, "gw-a", now - 5_000),
+    );
+    store.set(
+      `lumi:cluster:${CLUSTER}:shard:1`,
+      shardRow(1, "gw-a", now - 60_000),
+    );
+
+    const result = (await call()) as any;
+
+    expect(result.shards.find((s: any) => s.shardId === 0)).toMatchObject({
+      stale: false,
+    });
+    expect(result.shards.find((s: any) => s.shardId === 1)).toMatchObject({
+      stale: true,
+    });
+  });
+
+  it("carries a null lastReadyAt through as null, not an epoch timestamp", async () => {
+    store.set(
+      `lumi:cluster:${CLUSTER}:shard:0`,
+      shardRow(0, "gw-a", Date.now(), { lastReadyAt: null }),
+    );
+
+    const result = (await call()) as any;
+
+    expect(result.shards[0]).toMatchObject({ lastReadyAt: null });
   });
 
   it("flags missing shard ids", async () => {

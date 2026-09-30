@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, jest, beforeEach, afterEach } from "bun:test";
 import {
   ShardTelemetryPublisher,
+  isShardStale,
   readClusterShards,
   type ShardTelemetrySample,
 } from "#lib/sharding/shard-telemetry.js";
@@ -42,6 +43,12 @@ function sample(shardId: number, over: Partial<ShardTelemetrySample> = {}): Shar
     ping: 42,
     guildCount: 10,
     shardCount: 4,
+    eventLoopLagP99Ms: 5,
+    memoryRssMb: 128,
+    heapUsedMb: 64,
+    uptimeSec: 3600,
+    pid: 4242,
+    lastReadyAt: null,
     ...over,
   };
 }
@@ -71,6 +78,14 @@ describe("ShardTelemetryPublisher", () => {
     const row = JSON.parse(redis.store.get(`lumi:cluster:${CLUSTER}:shard:1`));
     expect(row).toMatchObject({ shardId: 1, replicaId: "gw-a", ping: 42 });
     expect(typeof row.updatedAt).toBe("number");
+    expect(row).toMatchObject({
+      eventLoopLagP99Ms: 5,
+      memoryRssMb: 128,
+      heapUsedMb: 64,
+      uptimeSec: 3600,
+      pid: 4242,
+      lastReadyAt: null,
+    });
 
     const write = redis.commands.find(
       (c: { cmd: string; args: unknown[] }) =>
@@ -173,5 +188,19 @@ describe("readClusterShards", () => {
 
     expect(cluster.nodes).toHaveBeenCalledWith("master");
     expect(snapshot.shards.map((s) => s.shardId)).toEqual([0, 1]);
+  });
+});
+
+describe("isShardStale", () => {
+  it("is not stale exactly at the threshold", () => {
+    expect(isShardStale({ updatedAt: 0 }, 30_000, 30_000)).toBe(false);
+  });
+
+  it("is stale one ms past the threshold", () => {
+    expect(isShardStale({ updatedAt: 0 }, 30_001, 30_000)).toBe(true);
+  });
+
+  it("is never stale for a row updated in the same instant", () => {
+    expect(isShardStale({ updatedAt: 30_000 }, 30_000, 30_000)).toBe(false);
   });
 });

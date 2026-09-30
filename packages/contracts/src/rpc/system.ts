@@ -23,6 +23,20 @@ export interface ShardStateView {
   ping: number | null;
   guildCount: number;
   lastHeartbeatAt: string;
+  /** p99 event-loop delay of the reporting process, in ms; null until the first window closes. */
+  eventLoopLagP99Ms?: number | null;
+  /** Resident set size of the reporting process, in MB. */
+  memoryRssMb?: number;
+  /** Used heap of the reporting process, in MB. */
+  heapUsedMb?: number;
+  /** How long the reporting process has been alive, in seconds. */
+  uptimeSec?: number;
+  /** PID of the reporting process. */
+  pid?: number;
+  /** This shard's last Ready/Resume timestamp; null if it hasn't happened yet. */
+  lastReadyAt?: string | null;
+  /** True once `lastHeartbeatAt` is older than the fleet's staleness threshold. */
+  stale?: boolean;
 }
 
 /** One gateway process in the cluster. */
