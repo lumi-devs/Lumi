@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["config/*.ts", "examples/**"],
+  "ignore": ["config/*.ts", "packages/core/tests/fixtures/addons/**"],
   "ignoreDependencies": [
     "postcss-load-config",
     "tailwindcss",

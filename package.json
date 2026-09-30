@@ -12,7 +12,7 @@
   "bin": {
     "lumi": "./apps/cli/src/main.ts"
   },
-  "comment:exports": "The addon API. Addon code runs in its own process (packages/core/src/lib/addon-sandbox) with no bot token, database URL or Redis URL, and reaches the bot only through these subpaths. This map is mirrored at runtime into data/3rd-party-modules/package.json; it lives here too so examples/ and repo tooling resolve the same surface an installed addon gets.",
+  "comment:exports": "The addon API. Addon code runs in its own process (packages/core/src/lib/addon-sandbox) with no bot token, database URL or Redis URL, and reaches the bot only through these subpaths. This map is mirrored at runtime into data/3rd-party-modules/package.json; it lives here too so repo tooling (and lumi-devs/lumi-addons's examples/, linked via its own scripts/setup.sh) resolve the same surface an installed addon gets.",
   "exports": {
     ".": "./packages/core/src/lib/addon-sandbox/sdk/index.ts",
     "./commands": "./packages/core/src/lib/addon-sandbox/sdk/commands.ts",
