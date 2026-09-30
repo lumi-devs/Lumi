@@ -18,6 +18,25 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { Time } from "@sapphire/time-utilities";
 import { fitLines, type CardReply } from "#lib/ui/cards.js";
 
+/** Total page count for `itemCount` items shown `perPage` at a time; always at least 1. */
+export function computePageCount(itemCount: number, perPage: number): number {
+  return Math.max(1, Math.ceil(itemCount / perPage));
+}
+
+/** The slice of `items` shown on `pageIndex` (0-based) at `perPage` items per page. */
+export function sliceForPage<T>(
+  items: readonly T[],
+  perPage: number,
+  pageIndex: number,
+): T[] {
+  return items.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
+}
+
+/** Clamps a page index to the valid `[0, totalPages - 1]` range. */
+export function clampPageIndex(pageIndex: number, totalPages: number): number {
+  return Math.min(Math.max(pageIndex, 0), totalPages - 1);
+}
+
 export interface PaginationOptions {
   interactionOrMessage: ChatInputCommandInteraction | Message;
   totalPages: number;
@@ -116,9 +135,9 @@ export async function paginateContainer(options: PaginationOptions) {
 
   collector.on("collect", async (i) => {
     if (i.customId === `${customIdPrefix}:prev`) {
-      activePage = Math.max(0, activePage - 1);
+      activePage = clampPageIndex(activePage - 1, totalPages);
     } else if (i.customId === `${customIdPrefix}:next`) {
-      activePage = Math.min(totalPages - 1, activePage + 1);
+      activePage = clampPageIndex(activePage + 1, totalPages);
     } else {
       return;
     }
@@ -159,7 +178,7 @@ export async function paginateList(options: PaginateListOptions) {
     time = Time.Minute,
   } = options;
 
-  const totalPages = Math.max(1, Math.ceil(items.length / perPage));
+  const totalPages = computePageCount(items.length, perPage);
 
   return paginateContainer({
     interactionOrMessage,
@@ -178,7 +197,7 @@ export async function paginateList(options: PaginateListOptions) {
           .setDivider(true),
       );
 
-      const slice = items.slice(pageIndex * perPage, (pageIndex + 1) * perPage);
+      const slice = sliceForPage(items, perPage, pageIndex);
       const body = slice.length ? fitLines(slice) : "*Nothing here yet.*";
 
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
