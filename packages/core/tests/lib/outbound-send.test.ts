@@ -14,6 +14,7 @@ const cancelTask = vi.fn().mockResolvedValue(undefined);
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask,
   cancelTask,
+  QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 },
 }));
 
 /** Records send start/finish order so overlap can be asserted. */
@@ -63,6 +64,7 @@ describe("queueSend", () => {
         content: "hello",
         at: expect.any(Number),
       }),
+      { customJobOptions: { priority: 5 } },
     );
   });
 

@@ -10,6 +10,7 @@ import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcReco
 
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
+  QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 },
 }));
 
 vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
