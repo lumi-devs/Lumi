@@ -30,6 +30,11 @@
       "types": "./dist/rpc/index.d.ts",
       "default": "./dist/rpc/index.js"
     },
+    "./rpc/client": {
+      "bun": "./src/rpc/client.ts",
+      "types": "./dist/rpc/client.d.ts",
+      "default": "./dist/rpc/client.js"
+    },
     "./events": {
       "bun": "./src/events.ts",
       "types": "./dist/events.d.ts",
