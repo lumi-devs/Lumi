@@ -205,6 +205,10 @@ const workerMeta: Record<string, EnvMeta> = {
   DB_SLOW_QUERY_THRESHOLD_MS: { required: "no", fallback: "1000", about: "Prisma queries slower than this log a warning and increment lumi_db_slow_queries_total." },
   ADDON_SIGNATURE_POLICY: { required: "no", fallback: "off", about: "How strictly the Downloader enforces git SSH commit-signature verification before an addon repo/module revision goes live: off, warn, or require." },
   ADDON_ALLOWED_SIGNERS_FILE: { required: "no", fallback: "—", about: "Path to a git allowed_signers file listing trusted addon signers. Required (and validated to exist) when ADDON_SIGNATURE_POLICY=require." },
+  AUDIT_RETENTION_DAYS: { required: "no", fallback: "90", about: "How long audit ledger entries survive before the retention sweep purges them." },
+  CONFIG_HISTORY_RETENTION_DAYS: { required: "no", fallback: "90", about: "How long module config history entries survive before the retention sweep purges them." },
+  MODERATION_RETENTION_DAYS: { required: "no", fallback: "0 (keep forever)", about: "How long a lifted case and its resolved appeal survive before the retention sweep purges them. 0 keeps moderation history forever; active cases and pending appeals are never purged regardless of this setting." },
+  AUDIT_ARCHIVE_DIR: { required: "no", fallback: "—", about: "Root directory the retention sweep writes a gzip-compressed JSONL archive to before deleting a batch, for any purged table (not just the audit ledger). Unset deletes with no backup." },
 };
 
 const dashboardMeta: Record<string, EnvMeta> = {

@@ -268,6 +268,10 @@ model ModerationCase {
   // just to take one page.
   @@index([active, id])
   @@index([action, active, id])
+  // Cross-guild retention sweep: lifted cases (active = false) older than the
+  // configured window, paginated by id the same way the id-ordered sweeps
+  // above are.
+  @@index([active, createdAt, id])
   @@map("moderation_cases")
 }
 
@@ -295,6 +299,9 @@ model Appeal {
   @@index([guildId, createdAt, id])
   @@index([userId])
   @@index([reviewedBy])
+  // Cross-guild retention sweep: resolved appeals (status != pending) older
+  // than the configured window, paginated by id.
+  @@index([status, createdAt, id])
   @@map("appeals")
 }
 
@@ -480,6 +487,9 @@ model ModuleConfigHistory {
   @@index([guildId, createdAt, id])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
+  // Cross-guild retention sweep, paginated by id - mirrors AuditLedger's
+  // plain `createdAt` index.
+  @@index([createdAt])
   @@map("module_config_history")
 }
 

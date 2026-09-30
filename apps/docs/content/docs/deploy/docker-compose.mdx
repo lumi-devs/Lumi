@@ -203,6 +203,33 @@ docker compose up -d
 For the Kubernetes `CronJob` equivalent, see
 [`deploy/k8s/README.md`](https://github.com/lumi-devs/lumi/blob/main/deploy/k8s/README.md#backups--restore-testing).
 
+## Data retention
+
+Separately from the `pg_dump` backups above, a daily scheduled task (`data-retention-sweep`,
+see [ADR 0007](https://github.com/lumi-devs/lumi/blob/main/docs/adr/0007-retention-and-archive-over-table-partitioning.md))
+keeps unbounded tables bounded by deleting old rows instead of partitioning them. Each table has
+its own configurable window:
+
+| Variable | Default | Table |
+| :--- | :--- | :--- |
+| `AUDIT_RETENTION_DAYS` | `90` | Audit ledger entries |
+| `CONFIG_HISTORY_RETENTION_DAYS` | `90` | Module config history entries |
+| `MODERATION_RETENTION_DAYS` | `0` (keep forever) | Lifted moderation cases and their resolved appeals |
+| `ECONOMY_TRANSACTION_RETENTION_DAYS` | `365` | Economy transactions |
+
+`MODERATION_RETENTION_DAYS` defaults to keeping moderation history forever — it has legal/audit
+value an operator opts out of, not into. Even when a window is set, an **active** case (or a
+**pending** appeal) is never purged regardless of age; only lifted cases and resolved appeals
+older than the window are eligible.
+
+Deletes run in bounded batches of 1000 rows so a sweep never holds row locks for longer than one
+batch. Set `AUDIT_ARCHIVE_DIR` to a writable directory to archive a batch before it's deleted,
+rather than losing it outright: each batch is written as gzip-compressed JSONL to
+`<AUDIT_ARCHIVE_DIR>/<table>/<date>-<timestamp>-<pid>.jsonl.gz` (one file per batch, so a crash
+mid-write can never corrupt a batch a previous one already finished). If a batch fails to
+archive, it's left in place and logged instead of being deleted unarchived — the next scheduled
+run retries it.
+
 ## Observability stack
 
 ```bash
