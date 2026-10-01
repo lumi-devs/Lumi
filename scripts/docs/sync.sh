@@ -52,4 +52,19 @@ if [ -z "$(find "$DATA_DST" -type f -print -quit)" ]; then
   exit 1
 fi
 
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  echo "==> Writing build-info.json"
+  sha="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+  committed_at="$(git -C "$REPO_ROOT" show -s --format=%cI HEAD)"
+  # Empty when the checkout is shallow or has no release tags yet; the site then omits the comparison.
+  release="$(git -C "$REPO_ROOT" describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || true)"
+  exact="false"
+  if [ -n "$release" ] && [ "$(git -C "$REPO_ROOT" rev-list -n 1 "$release")" = "$sha" ]; then
+    exact="true"
+  fi
+  printf '{"sha":"%s","committedAt":"%s","latestRelease":%s,"isRelease":%s}\n' \
+    "$sha" "$committed_at" "$([ -n "$release" ] && printf '"%s"' "$release" || printf null)" "$exact" \
+    >"$DATA_DST/build-info.json"
+fi
+
 echo "==> Sync complete: $SITE_ROOT"
