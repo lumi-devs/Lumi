@@ -18,7 +18,7 @@
     "#modules/*.js": "./src/modules/*.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/fixtures/addons/tsconfig.json",
     "lint": "eslint src tests --fix"
   },
   "dependencies": {

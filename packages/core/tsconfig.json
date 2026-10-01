@@ -5,6 +5,6 @@
     "allowImportingTsExtensions": true
   },
   "include": ["index.ts", "src", "tests"],
-  // Loaded by the addon child process, which resolves the `lumi` SDK the way an installed addon does.
+  // Imports the `lumi` SDK by its package name; checked by its own tsconfig, which maps it.
   "exclude": ["tests/fixtures/addons"]
 }
