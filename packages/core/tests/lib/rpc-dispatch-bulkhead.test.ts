@@ -8,17 +8,18 @@ import { registry } from "@lumi/observability";
 const GUILD_ID = "123456789012345678";
 const ACTOR_ID = "222222222222222222";
 
-/** A deferred REST `guild` lookup so a test can control exactly when the "Discord" call resolves. */
+/** A deferred guild lookup on the Discord REST port so a test controls exactly when "Discord" answers. */
 function deferredGuildRest() {
   let resolve!: () => void;
   const gate = new Promise<void>((r) => (resolve = r));
-  const get = vi.fn().mockImplementation(async (route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      await gate;
-      return { id: GUILD_ID, owner_id: ACTOR_ID, roles: [{ id: GUILD_ID, permissions: "0" }] };
-    }
-    throw new Error(`Unexpected route: ${route}`);
+  const get = vi.fn().mockImplementation(async () => {
+    await gate;
+    return { id: GUILD_ID, owner_id: ACTOR_ID, roles: [{ id: GUILD_ID, permissions: "0" }] };
   });
+  (container as any).discordRest = {
+    fetchGuild: get,
+    fetchMember: vi.fn().mockResolvedValue({ user: { id: ACTOR_ID }, roles: [] }),
+  };
   return { get, resolve };
 }
 
@@ -54,7 +55,6 @@ describe("RPC dispatch: Discord bulkhead", () => {
   it("queues the (N+1)th guildManager call behind the bulkhead's size, then admits it once a slot frees", async () => {
     resetDiscordBulkheadForTests(1, 10);
     const { get, resolve } = deferredGuildRest();
-    container.client = { rest: { get } } as any;
 
     const first = dispatchRpc({
       id: "req-1",
@@ -89,8 +89,7 @@ describe("RPC dispatch: Discord bulkhead", () => {
 
   it("rejects with a retryable error once the bulkhead's queue is full", async () => {
     resetDiscordBulkheadForTests(1, 1);
-    const { get } = deferredGuildRest();
-    container.client = { rest: { get } } as any;
+    deferredGuildRest();
 
     const inFlight = dispatchRpc({
       id: "req-a",

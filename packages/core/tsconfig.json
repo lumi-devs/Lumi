@@ -4,5 +4,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["index.ts", "src", "tests"]
+  "include": ["index.ts", "src", "tests"],
+  // Loaded by the addon child process, which resolves the `lumi` SDK the way an installed addon does.
+  "exclude": ["tests/fixtures/addons"]
 }
