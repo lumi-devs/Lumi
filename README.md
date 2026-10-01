@@ -8,7 +8,7 @@
     <a href="https://github.com/lumi-devs/Lumi/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/Lumi/security.yml?branch=main&style=flat-square&label=Security&logo=github" alt="Security"></a>
     <a href="https://codecov.io/gh/lumi-devs/Lumi"><img src="https://codecov.io/gh/lumi-devs/Lumi/branch/main/graph/badge.svg" alt="Coverage"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="GPL v3"></a>
-    <a href="https://lumi-devs.github.io/Lumi/"><img src="https://img.shields.io/badge/docs-lumi--devs.github.io-4C6EF5?style=flat-square&logo=gitbook&logoColor=white" alt="Documentation"></a>
+    <a href="https://lumi-devs.github.io/Lumi-docs/"><img src="https://img.shields.io/badge/docs-lumi--devs.github.io-4C6EF5?style=flat-square&logo=gitbook&logoColor=white" alt="Documentation"></a>
   </p>
 
   <p>
@@ -23,7 +23,7 @@
   <p>
     <a href="#quickstart">Quickstart</a>
     •
-    <a href="https://lumi-devs.github.io/Lumi/">Documentation</a>
+    <a href="https://lumi-devs.github.io/Lumi-docs/">Documentation</a>
     •
     <a href="#addons">Addons</a>
     •
@@ -41,7 +41,7 @@
 
 Every feature in Lumi is an independent module that can be enabled or disabled per server from `/module` or the web dashboard. Community addons can be installed from Git repositories via an in-chat Downloader or authored with the typed `lumi` SDK. An optional Next.js web dashboard talks to the worker over an internal RPC bridge without requiring direct database access.
 
-See the [documentation site](https://lumi-devs.github.io/Lumi/) for the full list of modules and what each one does.
+See the [documentation site](https://lumi-devs.github.io/Lumi-docs/) for the full list of modules and what each one does.
 
 ---
 
@@ -65,7 +65,7 @@ docker compose up -d
 
 The bot connects to Discord, and the web admin dashboard will be available at `http://localhost:8080`.
 
-For step-by-step guidance on reverse proxies, TLS, and shard scaling, see the [Self-Hosting Guide](https://lumi-devs.github.io/Lumi/guides/self-hosting).
+For step-by-step guidance on reverse proxies, TLS, and shard scaling, see the [Self-Hosting Guide](https://lumi-devs.github.io/Lumi-docs/guides/self-hosting).
 
 ---
 
@@ -141,7 +141,7 @@ Validate your addon before distributing:
 bun run validate ./addons/my-addon
 ```
 
-Read the [Module Creation Guide](https://lumi-devs.github.io/Lumi/guides/module-creation) and [API Reference](https://lumi-devs.github.io/Lumi/api-reference) for complete documentation.
+Read the [Module Creation Guide](https://lumi-devs.github.io/Lumi-docs/guides/module-creation) and [API Reference](https://lumi-devs.github.io/Lumi-docs/api-reference) for complete documentation.
 
 ---
 
@@ -171,7 +171,7 @@ Read the [Module Creation Guide](https://lumi-devs.github.io/Lumi/guides/module-
 - **Web Dashboard**: Built with Next.js 16 App Router. Holds no bot tokens and opens no database connections; all reads and writes flow through the authenticated RPC bridge.
 - **Concurrency & Caching**: Single-flight L1 prefix caching and distributed Redis mutexes prevent database stampedes during high-volume events.
 
-See the full [Architecture Reference](https://lumi-devs.github.io/Lumi/architecture) for detailed system specifications.
+See the full [Architecture Reference](https://lumi-devs.github.io/Lumi-docs/architecture) for detailed system specifications.
 
 ---
 

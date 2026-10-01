@@ -37,6 +37,8 @@
     "lint:all:fix": "NODE_OPTIONS=\"--max-old-space-size=4096\" eslint packages/*/src packages/core/tests apps/*/src apps/*/tests --fix",
     "knip": "knip",
     "db:generate": "prisma generate",
+    "docs:export": "bun run scripts/docs/export.ts",
+    "docs:check": "bun run scripts/docs/check.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
