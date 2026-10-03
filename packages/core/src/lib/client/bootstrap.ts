@@ -88,6 +88,7 @@ export async function bootstrapClientApp(
       ) => container.logger[level](`[Shutdown] ${msg}`, meta ?? "");
       log("info", `${sig} received`);
       const drainSteps = [
+        { name: "addon-shutdown", run: () => (client.stores.get("modules") as any)?.stopAddonProcesses() },
         { name: "client-destroy", run: () => client.destroy() },
         ...(options.extraDrainSteps ?? []),
         { name: "tracing-shutdown", run: () => shutdownTracing() },

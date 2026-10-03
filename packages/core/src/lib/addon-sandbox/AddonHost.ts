@@ -265,6 +265,16 @@ export class AddonHost {
     }
   }
 
+  #shuttingDown = false;
+
+  stopAll(): void {
+    this.#shuttingDown = true;
+    for (const [name, proc] of this.#processes) {
+      this.#processes.delete(name);
+      proc.kill();
+    }
+  }
+
   stop(name: string): void {
     const proc = this.#processes.get(name);
     if (!proc) return;
@@ -355,6 +365,7 @@ export class AddonHost {
 
   #onExit(proc: AddonProcess, code: number | null): void {
     const { name } = proc.record;
+    if (this.#shuttingDown) return;
     if (this.#processes.get(name) !== proc) return;
     this.#processes.delete(name);
 

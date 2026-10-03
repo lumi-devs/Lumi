@@ -5,7 +5,7 @@
   "description": "Greets new members with a welcome card, posts goodbye cards on leave, assigns join roles, and optionally sends a DM greeting.",
   "short": "Welcome cards, goodbye cards, join roles, and DM greetings.",
   "endUserDataStatement": "No persistent user data. Join and leave events are rendered into cards at delivery time and are not stored.",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],

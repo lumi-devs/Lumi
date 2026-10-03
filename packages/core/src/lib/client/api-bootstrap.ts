@@ -112,6 +112,7 @@ export async function bootstrapApiApp(
         // depends on - otherwise an in-flight request can hit a connection
         // that's already been closed. `runDrainSequence` runs these strictly
         // sequentially, so order here is the actual shutdown order.
+        { name: "addon-shutdown", run: () => (container.stores.get("modules") as any)?.stopAddonProcesses() },
         ...(options.extraDrainSteps ?? []),
         { name: "api-container-services", run: () => destroyApiContainerServices(services) },
         { name: "tracing-shutdown", run: () => shutdownTracing() },

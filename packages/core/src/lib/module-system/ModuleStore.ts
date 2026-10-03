@@ -113,6 +113,10 @@ export class ModuleStore extends Store<Module> {
     return !isPathInside(path.resolve(dir), path.resolve(fileURLToPath(coreRoot)));
   }
 
+  public stopAddonProcesses(): void {
+    this.#addons.stopAll();
+  }
+
   /**
    * Discovers and loads all modules from the registered root paths, respecting global enabled states and resolving dependencies.
    */

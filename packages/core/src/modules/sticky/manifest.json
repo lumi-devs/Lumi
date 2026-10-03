@@ -4,7 +4,7 @@
   "emoji": "📌",
   "description": "Re-posts a configured message to the bottom of a channel every time a new message is sent there.",
   "short": "Keep a message pinned to the bottom of a channel.",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "disableable": true,
   "dependencies": [],
   "conflicts": [],
