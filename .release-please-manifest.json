@@ -1,0 +1,5 @@
+{
+  ".": "1.0.0",
+  "packages/contracts": "0.6.0",
+  "packages/observability": "0.6.0"
+}
