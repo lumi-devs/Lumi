@@ -3,7 +3,7 @@ import { time, TimestampStyles } from "@discordjs/formatters";
 import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { restoreFromBackup } from "../services/backup.js";
+import { restoreFromBackup } from "@lumi/application/services/security/backup.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { makeErrorCard } from "#lib/ui/cards.js";
 

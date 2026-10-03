@@ -21,8 +21,8 @@ import { TempVcKeys, TempVcPanelId } from "../constants.js";
 import {
   showLimitModal,
   showRenameModal,
-} from "#modules/tempvc/services/panel-helpers.js";
-import { resolveOwnedVc, resolveVc } from "#modules/tempvc/services/panel-guard.js";
+} from "@lumi/application/services/tempvc/panel-helpers.js";
+import { resolveOwnedVc, resolveVc } from "@lumi/application/services/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBlockView,

@@ -16,11 +16,11 @@ import {
   checkHierarchy,
   type DuplicateCaseCheckContext,
 } from "#lib/moderation/ModerationCommand.js";
-import { BanAction } from "#modules/mod/services/actions/BanAction.js";
-import { KickAction } from "#modules/mod/services/actions/KickAction.js";
-import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
+import { BanAction } from "@lumi/application/services/mod/actions/BanAction.js";
+import { KickAction } from "@lumi/application/services/mod/actions/KickAction.js";
+import { MuteAction } from "@lumi/application/services/mod/actions/MuteAction.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
+import { WarnAction } from "@lumi/application/services/mod/actions/WarnAction.js";
 import { PunishAuthorModalId } from "../constants.js";
 import type { CaseAction } from "@prisma/client";
 

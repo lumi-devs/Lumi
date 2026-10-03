@@ -15,8 +15,8 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeSuccessCard } from "#lib/ui/cards.js";
 import type { VcRecord } from "#modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../constants.js";
-import { showLimitModal, showRenameModal } from "#modules/tempvc/services/panel-helpers.js";
-import { resolveOwnedRecord } from "#modules/tempvc/services/panel-guard.js";
+import { showLimitModal, showRenameModal } from "@lumi/application/services/tempvc/panel-helpers.js";
+import { resolveOwnedRecord } from "@lumi/application/services/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBackRows,

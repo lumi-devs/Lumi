@@ -4,7 +4,7 @@ import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,
   type SlotPayoutKey,
-} from "./services/slots.js";
+} from "@lumi/application/services/economy/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
 export interface EconomyConfig {

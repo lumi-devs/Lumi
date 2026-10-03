@@ -37,6 +37,15 @@
       "@lumi/observability/tracing": ["./packages/observability/src/tracing.ts"],
       "@lumi/core": ["./packages/core/index.ts"],
       "@lumi/core/setup": ["./packages/core/src/lib/client/setup.ts"],
+      "@lumi/application": ["./packages/application/src/index.ts"],
+      "@lumi/application/*": ["./packages/application/src/*"],
+      "@lumi/infrastructure": ["./packages/infrastructure/src/index.ts"],
+      "@lumi/infrastructure/database": ["./packages/infrastructure/src/database/index.ts"],
+      "@lumi/infrastructure/cache": ["./packages/infrastructure/src/cache/index.ts"],
+      "@lumi/infrastructure/queues": ["./packages/infrastructure/src/queues/index.ts"],
+      "@lumi/infrastructure/services": ["./packages/infrastructure/src/services/index.ts"],
+      "@lumi/infrastructure/*": ["./packages/infrastructure/src/*"],
+      "#modules/*.js": ["./packages/core/src/modules/*.ts"],
       "#lib/env.js": ["./packages/core/src/lib/env.ts"],
       "#lib/*.js": ["./packages/core/src/lib/*.ts"]
     }

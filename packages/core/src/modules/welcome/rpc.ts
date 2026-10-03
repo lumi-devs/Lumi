@@ -17,7 +17,7 @@ import {
   renderGoodbyeCard,
   renderWelcomeCard,
   templateVarsFor,
-} from "./services/welcome.js";
+} from "@lumi/application/services/welcome/welcome.js";
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
   "guild.welcome.sendTest": async ({ guildId, actorId, input }) => {

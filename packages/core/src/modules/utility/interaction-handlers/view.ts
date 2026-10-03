@@ -4,7 +4,7 @@ import {
 import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
 import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
-import { handleMediaRequest } from "../services/media-utils.js";
+import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 import { UserMediaViewId } from "../constants.js";
 
 @ApplyOptions<ModuleInteractionHandler.Options>({

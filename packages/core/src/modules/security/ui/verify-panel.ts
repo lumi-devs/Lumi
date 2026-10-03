@@ -10,7 +10,7 @@ import {
   buildCaptchaRows,
   sequenceDisplay,
   type CaptchaState,
-} from "../services/captcha.js";
+} from "@lumi/application/services/security/captcha.js";
 
 export const VerifyButtonId = "sec:verify";
 

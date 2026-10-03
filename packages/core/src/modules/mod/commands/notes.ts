@@ -3,7 +3,7 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { GuildMember } from "discord.js";
-import { NotesAction } from "#modules/mod/services/actions/NotesAction.js";
+import { NotesAction } from "@lumi/application/services/mod/actions/NotesAction.js";
 
 const Root = "commands";
 

@@ -3,7 +3,7 @@ import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-sa
 import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
 import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
 import { AfkKeys, AfkTTL } from "../constants.js";
-import { sanitizeReason } from "../services/format.js";
+import { sanitizeReason } from "@lumi/application/services/afk/format.js";
 import type { AfkEntry } from "@prisma/client";
 
 export interface AfkMention {

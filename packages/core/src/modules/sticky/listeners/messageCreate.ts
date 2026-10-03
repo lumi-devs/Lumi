@@ -10,7 +10,7 @@ import {
   isStickyOnCooldown,
   setStickyMessageId,
 } from "../data/sticky-store.js";
-import { stickyIndex } from "../services/sticky-index.js";
+import { stickyIndex } from "@lumi/application/services/sticky/sticky-index.js";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "stickyMessageCreate",

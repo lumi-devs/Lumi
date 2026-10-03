@@ -1,7 +1,7 @@
 import { parseRedisConnectionOption } from "#lib/database/redis.js";
 import { envParseInteger } from "#lib/env.js";
 import { QueuePriority } from "#lib/schedule-task.js";
-import type { ConnectionOptions } from "bullmq";
+import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastructure/queues";
 
 /**
  * The BullMQ queue name `@sapphire/plugin-scheduled-tasks` uses by default,

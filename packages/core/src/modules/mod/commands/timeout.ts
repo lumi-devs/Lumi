@@ -7,8 +7,8 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
-import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
+import { MuteAction } from "@lumi/application/services/mod/actions/MuteAction.js";
+import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
 const MaxTimeoutMs = 28 * Time.Day;

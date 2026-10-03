@@ -6,7 +6,7 @@ import {
   issueLogClaimCode,
   listLogClaims,
   LogClaimCodeTtlMs,
-} from "./services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 import {
   fetchChannelRest,

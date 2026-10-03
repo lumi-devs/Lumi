@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { enterPanic } from "../services/panic.js";
+import { enterPanic } from "@lumi/application/services/security/panic.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import {

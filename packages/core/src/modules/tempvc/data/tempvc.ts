@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { TempVcRecord } from "@prisma/client";
-import { tempVcRegistry } from "../services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 
 export interface GeneratorConfig {
   /**

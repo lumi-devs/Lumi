@@ -9,7 +9,7 @@ import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../constants.js";
-import { resolveOwnedVc } from "#modules/tempvc/services/panel-guard.js";
+import { resolveOwnedVc } from "@lumi/application/services/tempvc/panel-guard.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
 

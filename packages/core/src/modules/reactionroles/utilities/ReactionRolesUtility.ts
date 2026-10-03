@@ -26,13 +26,13 @@ import {
   type ReactionRoleMode,
   type ReactionRoleOption,
 } from "../data/reactionroles.js";
-import { reactionRoleRegistry } from "../services/registry.js";
+import { reactionRoleRegistry } from "@lumi/application/services/reactionroles/registry.js";
 import { buildMenuCard } from "../ui/menu-card.js";
 import {
   applyOptionToggle,
   applySelectToggle,
   type RoleToggleResult,
-} from "../services/role-toggle.js";
+} from "@lumi/application/services/reactionroles/role-toggle.js";
 import { getMaxMenus } from "../config.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 

@@ -4,7 +4,7 @@ import { container } from "@sapphire/framework";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleAfkDeleteMessageFire } from "./services/delete-handler.js";
+import { handleAfkDeleteMessageFire } from "@lumi/application/services/afk/delete-handler.js";
 
 @DefineModule({
   name: "afk",

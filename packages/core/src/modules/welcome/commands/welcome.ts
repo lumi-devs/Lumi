@@ -3,9 +3,9 @@ import { Command } from "@sapphire/framework";
 import { ChannelType } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { sendWelcomeCard } from "../services/welcome.js";
-import { loadWelcomeConfig } from "../services/welcome.js";
-import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "../services/welcome.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
+import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";
 
 const PreviewKinds = ["welcome", "goodbye", "dm"] as const;
 type PreviewKind = (typeof PreviewKinds)[number];

@@ -3,9 +3,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { BankService } from "../services/BankService.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "leaderboard",

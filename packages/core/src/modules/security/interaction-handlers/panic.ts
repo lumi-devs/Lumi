@@ -6,7 +6,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ButtonInteraction } from "discord.js";
 import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
 import { fetchTyped } from "#lib/commands.js";
-import { revertPanic } from "../services/panic.js";
+import { revertPanic } from "@lumi/application/services/security/panic.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
 import { PanicRevertId, buildPanicRevertedCard } from "../ui/panic-card.js";

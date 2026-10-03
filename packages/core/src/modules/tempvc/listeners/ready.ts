@@ -5,7 +5,7 @@ import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { tempVcRegistry } from "../services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 
 /**
  * Reconcile runs against every guild on the shard before it is healthy, so

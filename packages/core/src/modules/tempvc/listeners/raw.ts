@@ -5,7 +5,7 @@ import { logError } from "#lib/utilities/errors.js";
 import {
   seedVoiceStates,
   clearVoiceChannelOccupancy,
-} from "../services/voice-occupancy.js";
+} from "@lumi/application/services/tempvc/voice-occupancy.js";
 import { listVcRecords } from "../data/tempvc.js";
 
 @ApplyOptions<Listener.Options>({

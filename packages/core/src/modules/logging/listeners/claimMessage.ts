@@ -12,7 +12,7 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "../services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 
 @ApplyOptions<GuildMessageListener.Options>({
   name: "loggingClaimMessage",

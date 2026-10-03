@@ -5,9 +5,9 @@ import {
   PanelMessageDefault,
   PanelTitleDefault,
 } from "./constants.js";
-import { tempVcRegistry } from "./services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleTempVcCleanupFire } from "./services/cleanup-handler.js";
+import { handleTempVcCleanupFire } from "@lumi/application/services/tempvc/cleanup-handler.js";
 
 @DefineModule({
   name: ModuleName,
