@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import path from "node:path";
 
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
@@ -403,6 +404,29 @@ export function resolveModerationRetentionDays(): number {
  */
 export const getAuditArchiveDir = (): string | null => {
   const raw = process.env["AUDIT_ARCHIVE_DIR"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+};
+
+/** Root directory the `gdpr-export` scheduled task writes gzipped JSON exports to. */
+export function getGdprExportDir(): string {
+  return envParseString(
+    "GDPR_EXPORT_DIR",
+    path.join(process.cwd(), "data", "gdpr-exports"),
+  );
+}
+
+/** How long a finished export's file (and its `GdprExportJob` row) survives before the cleanup sweep removes it. */
+export function resolveGdprExportTtlHours(): number {
+  return envParseInteger("GDPR_EXPORT_TTL_HOURS", 24);
+}
+
+/**
+ * HMAC key for signing the short-lived GDPR export download token. Falls
+ * back to `RPC_INTERNAL_TOKEN` (also a shared secret already present on every
+ * replica) when unset, rather than requiring a second secret to provision.
+ */
+export const getGdprExportSigningSecret = (): string | null => {
+  const raw = process.env["GDPR_EXPORT_SIGNING_SECRET"]?.trim();
   return raw && raw.length > 0 ? raw : null;
 };
 

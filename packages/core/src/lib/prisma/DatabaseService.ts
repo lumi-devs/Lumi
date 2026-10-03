@@ -26,11 +26,10 @@ import { SecurityRepository } from "#modules/security/data/SecurityRepository.js
 import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
 import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
 import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
-import { FeatureFlagRepository } from "#lib/prisma/repositories/FeatureFlagRepository.js";
+import { GdprExportJobRepository } from "#lib/prisma/repositories/GdprExportJobRepository.js";
 
 export type { ConfigHistoryEntry } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
-export type { FeatureFlagOverrideEntry } from "#lib/prisma/repositories/FeatureFlagRepository.js";
 
 /**
  * Thin facade over the per-domain repositories.  Each repo owns its tables +
@@ -61,7 +60,7 @@ export class DatabaseService {
   public readonly tempvc: TempVcRepository;
   public readonly economy: EconomyRepository;
   public readonly reactionRoles: ReactionRoleRepository;
-  public readonly featureFlags: FeatureFlagRepository;
+  public readonly gdprExportJobs: GdprExportJobRepository;
 
   public constructor(
     private readonly prisma: DatabaseClient,
@@ -110,7 +109,7 @@ export class DatabaseService {
     this.tempvc = new TempVcRepository(prisma, redis, logger, this);
     this.economy = new EconomyRepository(prisma, redis, logger, this);
     this.reactionRoles = new ReactionRoleRepository(prisma, redis, logger, this);
-    this.featureFlags = new FeatureFlagRepository(prisma, redis, logger, this);
+    this.gdprExportJobs = new GdprExportJobRepository(prisma, redis, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */

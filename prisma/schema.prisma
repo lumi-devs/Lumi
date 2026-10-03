@@ -71,6 +71,13 @@ enum AuditPlatform {
   web
 }
 
+enum GdprExportJobStatus {
+  pending
+  running
+  done
+  failed
+}
+
 enum EconomyTxnKind {
   deposit
   withdraw
@@ -113,35 +120,6 @@ model GlobalModuleState {
   updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("global_module_state")
-}
-
-/** Global kill switch + percentage rollout for an experimental code path, with optional per-guild overrides. */
-model FeatureFlag {
-  key            String    @id @db.VarChar(100)
-  description    String?   @db.VarChar(500)
-  enabled        Boolean   @default(false)
-  rolloutPercent Int       @default(0) @map("rollout_percent")
-  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
-  updatedBy      String?   @map("updated_by") @db.VarChar(20)
-
-  overrides FeatureFlagOverride[]
-
-  @@map("feature_flags")
-}
-
-/** Forces a flag on/off for one guild regardless of its global rollout percentage. */
-model FeatureFlagOverride {
-  id        Int      @id @default(autoincrement())
-  flagKey   String   @map("flag_key") @db.VarChar(100)
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  enabled   Boolean
-  createdAt DateTime @default(now()) @map("created_at")
-
-  flag FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
-
-  @@unique([flagKey, guildId], name: "uq_feature_flag_override")
-  @@index([guildId])
-  @@map("feature_flag_overrides")
 }
 
 model Guild {
@@ -377,6 +355,26 @@ model Blocklist {
   @@index([guildId, createdAt])
   @@index([blockedBy])
   @@map("blocklist")
+}
+
+// Async GDPR export jobs (ADR: large exports move off the request path onto
+// the scheduled-tasks queue). Global like GlobalBlock - keyed on the
+// requesting user, no guild scope.
+model GdprExportJob {
+  id          String              @id @default(uuid())
+  userId      String              @map("user_id") @db.VarChar(20)
+  requestedBy String              @map("requested_by") @db.VarChar(20)
+  status      GdprExportJobStatus @default(pending)
+  error       String?             @db.VarChar(1000)
+  filePath    String?             @map("file_path") @db.VarChar(500)
+  sizeBytes   Int?                @map("size_bytes")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  completedAt DateTime?           @map("completed_at")
+  expiresAt   DateTime?           @map("expires_at")
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("gdpr_export_jobs")
 }
 
 // Whole-guild ignore is Guild.ignored; every row here is one ignored channel.

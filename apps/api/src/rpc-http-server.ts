@@ -1,5 +1,12 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { dispatchRpc, handleSseRequest, logError } from "@lumi/core";
+import { container } from "@sapphire/framework";
+import {
+  dispatchRpc,
+  GdprExportSigningKeyUnavailable,
+  handleSseRequest,
+  logError,
+  verifyGdprExportToken,
+} from "@lumi/core";
 import {
   envParseInteger,
   envParseString,
@@ -98,6 +105,58 @@ function checkContractVersion(req: Request): Response | null {
   });
 }
 
+const GdprExportDownloadPath = "/gdpr-export";
+
+/**
+ * Streams a finished GDPR export. Authenticated by the signed `token` query
+ * param alone (not the `RPC_INTERNAL_TOKEN` bearer) - it's handed to a
+ * browser as a plain download link, which can't attach an Authorization
+ * header. The path streamed is always the `GdprExportJob` row's own
+ * `filePath`, read fresh from the database here; the token only proves the
+ * caller was handed this job id recently by `global.gdpr.export.status`, it
+ * never carries a path itself.
+ */
+async function handleGdprExportDownload(req: Request): Promise<Response> {
+  const token = new URL(req.url).searchParams.get("token");
+  if (!token) {
+    return Response.json({ error: "Missing token" }, { status: 400 });
+  }
+
+  let verification: ReturnType<typeof verifyGdprExportToken>;
+  try {
+    verification = verifyGdprExportToken(token);
+  } catch (err) {
+    if (err instanceof GdprExportSigningKeyUnavailable) {
+      return Response.json({ error: "Export downloads are not configured" }, { status: 503 });
+    }
+    throw err;
+  }
+
+  if (!verification.valid) {
+    return Response.json({ error: "Invalid or expired download link" }, { status: 401 });
+  }
+
+  const job = await container.db.gdprExportJobs.findById(verification.jobId);
+  if (!job || job.status !== "done" || !job.filePath) {
+    return Response.json({ error: "Export not found" }, { status: 404 });
+  }
+  if (!job.expiresAt || job.expiresAt.getTime() < Date.now()) {
+    return Response.json({ error: "Export has expired" }, { status: 410 });
+  }
+
+  const file = Bun.file(job.filePath);
+  if (!(await file.exists())) {
+    return Response.json({ error: "Export file is no longer available" }, { status: 404 });
+  }
+
+  return new Response(file, {
+    headers: {
+      "content-type": "application/gzip",
+      "content-disposition": `attachment; filename="lumi-user-data-${job.userId}.json.gz"`,
+    },
+  });
+}
+
 export async function handleRpcHttpRequest(
   req: Request,
   internalToken: string | null,
@@ -119,6 +178,9 @@ export async function handleRpcHttpRequest(
       });
     }
     return handleSseRequest(req);
+  }
+  if (req.method === "GET" && pathname === GdprExportDownloadPath) {
+    return handleGdprExportDownload(req);
   }
   if (req.method !== "POST" || pathname !== "/rpc") {
     return new Response("not found", { status: 404 });
