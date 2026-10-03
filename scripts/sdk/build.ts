@@ -96,7 +96,7 @@ async function writeSdkPackageJson(): Promise<void> {
     description:
       "Type declarations for the Lumi addon SDK (the `lumi` package addon code imports at runtime). " +
       "Types only - no runtime code; the host resolves `lumi` itself.",
-    license: "GPL-3.0-only",
+    license: "AGPL-3.0-only",
     repository: {
       type: "git",
       url: "https://github.com/lumi-devs/Lumi.git",

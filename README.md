@@ -153,4 +153,4 @@ bun apps/cli/src/main.ts addon test my-addon
 
 ## License
 
-Lumi is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
+Lumi is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
