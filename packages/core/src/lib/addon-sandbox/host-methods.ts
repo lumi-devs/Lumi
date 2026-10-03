@@ -361,7 +361,11 @@ export function callHostMethod(
   if (!Object.hasOwn(Methods, request.action)) {
     throw new Error(`Unknown addon method "${request.action}"`);
   }
-  const data = ParamSchemas[request.action]!.parse(request.data);
+  const validator = ParamSchemas[request.action];
+  if (!validator) {
+    throw new Error(`Missing parameter schema validator for "${request.action}"`);
+  }
+  const data = validator.parse(request.data);
   const method = Methods[request.action] as (
     params: unknown,
     scope: HostCallScope,
