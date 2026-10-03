@@ -77,6 +77,10 @@ export class LumiClient extends SapphireClient {
 
     const result = await super.login(token);
 
+    await this.application?.fetch().catch((err: unknown) => {
+      container.logger.warn("[LumiClient] Failed to fetch Discord application info:", err);
+    });
+
     // Every shard executes fired task effects for the guilds it holds - this
     // is the event-bus relay, unrelated to which shard owns BullMQ itself.
     registerCoreFireHandlers();

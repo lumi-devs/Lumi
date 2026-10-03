@@ -35,6 +35,9 @@ manager.on("shardCreate", (shard) => {
       console.error(`[Manager] Shard ${shard.id} process died; discord.js will respawn it`);
     }
   });
+  shard.on("error", (err) => {
+    console.error(`[Manager] Shard ${shard.id} error:`, err);
+  });
 });
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
@@ -57,7 +60,11 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
           return;
         }
         proc.once("exit", () => resolve(true));
-        proc.kill(signal);
+        try {
+          proc.kill(signal);
+        } catch {
+          resolve(true);
+        }
       }),
   );
   const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 55_000));

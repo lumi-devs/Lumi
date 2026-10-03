@@ -143,6 +143,8 @@ export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
         // meant to reach the caller verbatim.
         const isPrismaError =
           err instanceof Prisma.PrismaClientKnownRequestError ||
+          err instanceof Prisma.PrismaClientUnknownRequestError ||
+          err instanceof Prisma.PrismaClientRustPanicError ||
           err instanceof Prisma.PrismaClientValidationError ||
           err instanceof Prisma.PrismaClientInitializationError;
         const safeErr = isPrismaError ? handlePrismaError(err) : errorFrom(err);

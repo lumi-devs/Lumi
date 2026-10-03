@@ -245,6 +245,15 @@ export async function startRpcHttpServer(
         fetch(req) {
           return handleRpcHttpRequest(req, internalToken);
         },
+        error(err) {
+          log("error", "[RpcHttp] Unhandled error during request processing:", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return Response.json(
+            { error: "Internal Server Error", code: RpcFailureCodes.Internal, retryable: false },
+            { status: 500, headers: { "Content-Type": "application/json" } },
+          );
+        },
       });
       log("info", "[RpcHttp] Internal RPC HTTP server listening", {
         host,

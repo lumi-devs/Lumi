@@ -184,6 +184,13 @@ export function isPrimaryShard(): boolean {
   try {
     const parsed: unknown = JSON.parse(raw);
     const ids = Array.isArray(parsed) ? parsed : [parsed];
+    const shardListRaw = process.env["SHARD_LIST"]?.trim();
+    if (shardListRaw && shardListRaw !== "auto") {
+      const configured = shardListRaw.split(",").map((s) => Number.parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n));
+      if (configured.length > 0) {
+        return ids.includes(configured[0]);
+      }
+    }
     return ids.includes(0);
   } catch {
     return true;
