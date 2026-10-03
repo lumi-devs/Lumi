@@ -79,7 +79,7 @@ describe("RegexWorkerHandler", () => {
   });
 
   it("recovers after a timeout - the worker is respawned", async () => {
-    const handler = makeHandler(500);
+    const handler = makeHandler(750);
     await expect(
       handler.test("evil:1", [EVIL], `${"a".repeat(40)}!`),
     ).rejects.toBeInstanceOf(RegexTimeoutError);
