@@ -37,7 +37,7 @@ system topology — treat it as source of truth for anything below.
   [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), published as the
   `ghcr.io/lumi-devs/lumi-dashboard` image. It talks to `apps/api` only over the internal HTTP
   RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
-  `@lumi-devs/observability` from GitHub Packages rather than importing this repo's source — see
+  `@lumi-devs/observability` from npm rather than importing this repo's source — see
   "Releasing contracts" below for how a contracts change reaches it.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
@@ -130,7 +130,7 @@ A dashboard-visible change to `packages/contracts` (or `packages/observability`)
 1. Bump the version in `packages/contracts/package.json` (and `packages/observability/package.json`
    if it changed too).
 2. Tag the release as `contracts-v<version>` and push the tag — `.github/workflows/publish-packages.yml`
-   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to GitHub Packages from that tag.
+   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to npm from that tag.
 3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
    open a PR there.
 

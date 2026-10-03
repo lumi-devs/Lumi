@@ -1,5 +1,5 @@
 {
-  "name": "@lumi/observability",
+  "name": "@lumi-devs/observability",
   "version": "0.6.0",
   "license": "GPL-3.0-only",
   "description": "Cross-service telemetry for Lumi: pino structured logging with trace/correlation propagation, OpenTelemetry tracing, and Prometheus metrics. Zero discord.js deps.",
@@ -30,7 +30,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",

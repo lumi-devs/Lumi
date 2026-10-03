@@ -108,7 +108,8 @@ async function writeSdkPackageJson(): Promise<void> {
       "@lumi-devs/contracts": `^${contracts.version}`,
     },
     publishConfig: {
-      registry: "https://npm.pkg.github.com",
+      access: "public",
+      registry: "https://registry.npmjs.org/",
     },
   };
 

@@ -1,5 +1,5 @@
 {
-  "name": "@lumi/contracts",
+  "name": "@lumi-devs/contracts",
   "version": "0.6.0",
   "license": "GPL-3.0-only",
   "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Lumi services.",
@@ -46,7 +46,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "peerDependencies": {
     "discord.js": "^14.20.0"
