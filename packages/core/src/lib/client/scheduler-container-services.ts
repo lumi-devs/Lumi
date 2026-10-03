@@ -3,13 +3,17 @@ import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
 } from "#lib/client/scheduled-tasks-queue.js";
-import { envParseString } from "#lib/env.js";
+import { envParseString, getConsumerId } from "#lib/env.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import type { RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { watchFailedJobs } from "#lib/scheduler-failed-jobs.js";
 import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
+import {
+  publishSchedulerHeartbeat,
+  type SchedulerHeartbeatWatcher,
+} from "#lib/scheduler-heartbeat.js";
 import { SapphireClient, container } from "@sapphire/framework";
 import { installContainerServices } from "./container-services.js";
 
@@ -19,6 +23,7 @@ export interface SchedulerContainerServices {
   schedulerLock: RedisLock;
   failedJobsWatcher: { close(): Promise<void> };
   queueDepthWatcher: { close(): Promise<void> };
+  heartbeatWatcher: SchedulerHeartbeatWatcher;
 }
 
 /**
@@ -87,6 +92,7 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
 
   const failedJobsWatcher = watchFailedJobs(container.tasks);
   const queueDepthWatcher = watchQueueDepth(container.tasks);
+  const heartbeatWatcher = publishSchedulerHeartbeat(container.redis, getConsumerId());
 
   return {
     client,
@@ -94,5 +100,6 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
     schedulerLock,
     failedJobsWatcher,
     queueDepthWatcher,
+    heartbeatWatcher,
   };
 }

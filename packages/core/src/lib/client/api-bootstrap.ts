@@ -1,5 +1,6 @@
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import { validateRequiredEnv } from "#lib/env.js";
+import { closeSystemStatusResources } from "#lib/rpc/system-rpc.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { container } from "@sapphire/framework";
@@ -59,6 +60,7 @@ export async function destroyApiContainerServices(
   const warnOnCleanupError = (what: string) => (err: unknown) =>
     container.logger.warn(`[Api] ${what} failed:`, err);
 
+  await closeSystemStatusResources().catch(warnOnCleanupError("System status queue close"));
   await services.ownedEventBus.close().catch(warnOnCleanupError("EventBus close"));
   await container.invalidation.close().catch(warnOnCleanupError("Invalidation close"));
   await container.signals.close().catch(warnOnCleanupError("Signals close"));
