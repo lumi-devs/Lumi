@@ -60,6 +60,9 @@ export async function destroySchedulerContainerServices(
   await services.queueDepthWatcher
     .close()
     .catch(warnOnCleanupError("Queue-depth watcher close"));
+  await services.heartbeatWatcher
+    .close()
+    .catch(warnOnCleanupError("Heartbeat watcher close"));
   if (container.tasks) {
     await container.tasks
       .close()

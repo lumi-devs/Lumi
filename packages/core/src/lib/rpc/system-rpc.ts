@@ -1,18 +1,112 @@
 import { container } from "@sapphire/framework";
-import { systemRpc } from "@lumi/contracts/rpc";
+import { systemRpc, type SystemStatusData } from "@lumi/contracts/rpc";
+import { streamConsumerLag, getEventLoopLagP99Ms } from "@lumi/observability";
+import { Queue } from "bullmq";
+import {
+  getScheduledTasksConnectionOptions,
+  SCHEDULED_TASKS_QUEUE_NAME,
+} from "#lib/client/scheduled-tasks-queue.js";
 import { getClusterName } from "#lib/env.js";
 import { authorize } from "#lib/permissions/authorize.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
+import { readSchedulerHeartbeat } from "#lib/scheduler-heartbeat.js";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,
   isShardStale,
   readClusterShards,
 } from "#lib/sharding/shard-telemetry.js";
+import { getSystemStatus, type SystemStatusDeps } from "#lib/rpc/system-status.js";
 
 /** A shard with no fresh row in 3 publish intervals is flagged stale in the fleet view. */
 const StaleAfterMs = DefaultPublishIntervalMs * 3;
+
+// A bare, read-only BullMQ `Queue` handle against the shared scheduled-tasks
+// queue - the same "producer-only" trick `scheduler-producer.ts` uses, since
+// this process (`apps/api` in practice) never runs `@sapphire/plugin-
+// scheduled-tasks`'s own `Queue`/`Worker` (see `api-container-services.ts`).
+// Lazily created and cached for the process lifetime rather than per-call.
+let scheduledTasksQueue: Queue | null = null;
+
+function getScheduledTasksQueue(): Queue {
+  scheduledTasksQueue ??= new Queue(SCHEDULED_TASKS_QUEUE_NAME, {
+    connection: getScheduledTasksConnectionOptions(),
+  });
+  return scheduledTasksQueue;
+}
+
+/** Closes the lazily-created read-only queue handle, if one was ever opened. Called from shutdown drain sequences. */
+export async function closeSystemStatusResources(): Promise<void> {
+  if (scheduledTasksQueue) {
+    await scheduledTasksQueue.close();
+    scheduledTasksQueue = null;
+  }
+}
+
+/** Sums the pending-entries gauge across every stream/group this process has sampled; null if it has sampled none. */
+async function readEventBusStats(): Promise<{ pending: number | null; lag: number | null }> {
+  const metric = await streamConsumerLag.get();
+  if (metric.values.length === 0) return { pending: null, lag: null };
+  const pending = metric.values.reduce((sum, v) => sum + v.value, 0);
+  return { pending, lag: null };
+}
+
+const StatusCacheMs = 3_000;
+let statusCache: { at: number; value: Promise<SystemStatusData> } | null = null;
+
+/** Clears the module-level status snapshot cache this file keeps, so a test can force a fresh aggregation. */
+export function resetSystemStatusCacheForTests(): void {
+  statusCache = null;
+}
+
+function buildSystemStatusDeps(): SystemStatusDeps {
+  return {
+    uptimeSec: () => Math.round(process.uptime()),
+    eventLoopLagP99Ms: () => getEventLoopLagP99Ms(),
+    probePostgresLatencyMs: () => container.db.probePrisma(),
+    pingRedis: () => container.redis.ping(),
+    readSchedulerHeartbeat: async () => {
+      const heartbeat = await readSchedulerHeartbeat(container.redis);
+      if (!heartbeat) return null;
+      return { holder: heartbeat.holder, ageMs: Date.now() - heartbeat.updatedAt };
+    },
+    readSchedulerQueueCounts: async () => {
+      const counts = await getScheduledTasksQueue().getJobCounts(
+        "waiting",
+        "active",
+        "failed",
+        "delayed",
+      );
+      return {
+        waiting: counts["waiting"] ?? 0,
+        active: counts["active"] ?? 0,
+        failed: counts["failed"] ?? 0,
+        delayed: counts["delayed"] ?? 0,
+      };
+    },
+    readShardsSnapshot: async () => {
+      const snapshot = await readClusterShards({
+        redis: container.redis,
+        clusterName: getClusterName() ?? DefaultClusterName,
+      });
+      const now = Date.now();
+      let up = 0;
+      let stale = 0;
+      let worstLagMs: number | null = null;
+      for (const shard of snapshot.shards) {
+        const shardStale = isShardStale(shard, now, StaleAfterMs);
+        if (shardStale) stale++;
+        else if (shard.status === "Ready") up++;
+        if (shard.eventLoopLagP99Ms !== null) {
+          worstLagMs = Math.max(worstLagMs ?? 0, shard.eventLoopLagP99Ms);
+        }
+      }
+      return { total: snapshot.shardCount, up, stale, worstLagMs };
+    },
+    readEventBusStats,
+  };
+}
 
 export const systemRpcHandlers = implementRpc(systemRpc, {
   "system.dashboard.get": async () => {
@@ -189,5 +283,24 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       })),
       missingShardIds: snapshot.missingShardIds,
     };
+  },
+
+  // Cached briefly: a status page gets polled, and every probe it fans out to
+  // (Postgres, Redis, the scheduler heartbeat/queue, shard telemetry) is a
+  // real round trip - a cache-stampede-free few seconds keeps that fan-out
+  // off the hot path without staling the page noticeably.
+  "system.status.get": () => {
+    const now = Date.now();
+    if (!statusCache || now - statusCache.at > StatusCacheMs) {
+      const entry = { at: now, value: getSystemStatus(buildSystemStatusDeps()) };
+      statusCache = entry;
+      // `getSystemStatus` itself never rejects (every probe is caught and
+      // mapped to a `down` component) - this only guards a bug in that
+      // contract so a thrown error doesn't poison the cache for `StatusCacheMs`.
+      entry.value.catch(() => {
+        if (statusCache === entry) statusCache = null;
+      });
+    }
+    return statusCache.value;
   },
 });
