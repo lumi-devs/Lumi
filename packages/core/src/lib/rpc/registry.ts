@@ -1,3 +1,4 @@
+import { rpcRouter } from "@lumi/contracts/rpc";
 import { container } from "@sapphire/framework";
 import { accountRpcHandlers } from "#lib/rpc/account-rpc.js";
 import type { RpcBoundHandler, RpcImplementation } from "#lib/rpc/implement.js";
@@ -31,6 +32,13 @@ const implementations: readonly RpcImplementation[] = [
 
 const handlers = new Map<string, RpcBoundHandler>();
 
+export function verifyRpcCompleteness(): { missing: string[]; extra: string[] } {
+  const routerActions = Object.keys(rpcRouter);
+  const missing = routerActions.filter((a) => !handlers.has(a));
+  const extra = [...handlers.keys()].filter((a) => !(a in rpcRouter));
+  return { missing, extra };
+}
+
 export function registerRpcHandlers(): void {
   handlers.clear();
   for (const implementation of implementations) {
@@ -38,7 +46,14 @@ export function registerRpcHandlers(): void {
       handlers.set(action, handler);
     }
   }
-  container.logger.info(`[Rpc] Registered ${handlers.size} RPC actions`);
+  const { missing, extra } = verifyRpcCompleteness();
+  if (missing.length > 0) {
+    container.logger?.warn(`[Rpc] Missing implementations for contract actions: ${missing.join(", ")}`);
+  }
+  if (extra.length > 0) {
+    container.logger?.warn(`[Rpc] Extra implementations not in contract router: ${extra.join(", ")}`);
+  }
+  container.logger?.info(`[Rpc] Registered ${handlers.size} RPC actions (completeness: ${handlers.size}/${Object.keys(rpcRouter).length})`);
 }
 
 export function getRpcHandler(action: string): RpcBoundHandler | undefined {
