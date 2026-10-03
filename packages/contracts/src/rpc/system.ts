@@ -2,8 +2,6 @@ import { s } from "@sapphire/shapeshift";
 import type {
   AuditListData,
   BlocklistListData,
-  FeatureFlagOverrideView,
-  FeatureFlagView,
   SystemDashboardData,
 } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
@@ -17,6 +15,7 @@ import {
   SnowflakeSchema,
 } from "./schemas.js";
 
+import type { FeatureFlagView, FeatureFlagOverrideView } from "../views.js";
 /** One reporting shard, as published by the process holding its WebSocket. */
 export interface ShardStateView {
   shardId: number;
@@ -57,6 +56,71 @@ export interface SystemShardsData {
   shards: ShardStateView[];
   /** Expected shard ids no process is reporting. */
   missingShardIds: number[];
+}
+
+/** `ok`/`degraded`/`down`, worst-status-wins at every aggregation level. */
+export type SystemComponentStatus = "ok" | "degraded" | "down";
+
+export interface SystemComponentHealth {
+  status: SystemComponentStatus;
+  /** Present when `status` is not `ok`. */
+  reason?: string;
+}
+
+export interface SystemQueueCounts {
+  waiting: number;
+  active: number;
+  failed: number;
+  delayed: number;
+}
+
+export interface SystemSchedulerHealth extends SystemComponentHealth {
+  /** `getConsumerId()` of the replica currently holding the scheduler lock; null if none has ever published. */
+  lockHolder: string | null;
+  /** Age of the last scheduler heartbeat, in ms; null if none has ever been observed. */
+  heartbeatAgeMs: number | null;
+  /** Shared scheduled-tasks BullMQ queue depth, by state; null if the probe failed. */
+  queue: SystemQueueCounts | null;
+}
+
+export interface SystemShardsHealth extends SystemComponentHealth {
+  /** Expected shard count the cluster believes it spans. */
+  total: number;
+  /** Shards reporting `Ready` and not stale. */
+  up: number;
+  /** Shards reporting but stale. */
+  stale: number;
+  /** Worst (highest) event-loop p99 lag across reporting shards, in ms; null if none reported one yet. */
+  worstLagMs: number | null;
+}
+
+export interface SystemEventBusHealth extends SystemComponentHealth {
+  /** Delivered-but-unacked entries on a consumer group this process actively consumes; null if not available here. */
+  pending: number | null;
+  /** Reserved for a future time-based lag metric; null today. */
+  lag: number | null;
+}
+
+export interface SystemApiHealth extends SystemComponentHealth {
+  uptimeSec: number;
+  eventLoopLagP99Ms: number | null;
+}
+
+export interface SystemLatencyHealth extends SystemComponentHealth {
+  latencyMs: number | null;
+}
+
+export interface SystemStatusData {
+  observedAt: string;
+  status: SystemComponentStatus;
+  components: {
+    api: SystemApiHealth;
+    postgres: SystemLatencyHealth;
+    redis: SystemLatencyHealth;
+    scheduler: SystemSchedulerHealth;
+    shards: SystemShardsHealth;
+    eventBus: SystemEventBusHealth;
+  };
 }
 
 export const systemRpc = {
@@ -185,5 +249,11 @@ export const systemRpc = {
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Remove a guild's override, returning it to the flag's rollout.",
+  }),
+  "system.status.get": rpcAction<SystemStatusData>()({
+    auth: "botOwner",
+    timeoutMs: RpcTimeouts.short,
+    summary: "Fleet-wide status page snapshot: api, postgres, redis, scheduler, shards, event bus.",
+    readOnly: true,
   }),
 };

@@ -99,6 +99,7 @@ export const RedisKeys = {
   auditLogsQueue: (bucket: number) => `lumi:queue:audit_logs:{${bucket}}`,
 
   schedulerLeader: () => "lumi:scheduler:leader",
+  schedulerHeartbeat: () => "lumi:scheduler:heartbeat",
 
   addonUpdateCheck: () => "lumi:addon:update-check",
 

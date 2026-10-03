@@ -357,6 +357,31 @@ model Blocklist {
   @@map("blocklist")
 }
 
+/** Global kill switch + percentage rollout for an experimental code path, with optional per-guild overrides. */
+model FeatureFlag {
+  key            String    @id @db.VarChar(100)
+  description    String?   @db.VarChar(500)
+  enabled        Boolean   @default(false)
+  rolloutPercent Int       @default(0) @map("rollout_percent")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy      String?   @map("updated_by") @db.VarChar(20)
+  overrides FeatureFlagOverride[]
+  @@map("feature_flags")
+}
+
+/** Forces a flag on/off for one guild regardless of its global rollout percentage. */
+model FeatureFlagOverride {
+  id        Int      @id @default(autoincrement())
+  flagKey   String   @map("flag_key") @db.VarChar(100)
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  enabled   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+  flag FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
+  @@unique([flagKey, guildId], name: "uq_feature_flag_override")
+  @@index([guildId])
+  @@map("feature_flag_overrides")
+}
+
 // Async GDPR export jobs (ADR: large exports move off the request path onto
 // the scheduled-tasks queue). Global like GlobalBlock - keyed on the
 // requesting user, no guild scope.
