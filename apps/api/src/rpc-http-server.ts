@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { container } from "@sapphire/framework";
 import {
   dispatchRpc,
+  findGdprExportJob,
   GdprExportSigningKeyUnavailable,
   handleSseRequest,
   logError,
@@ -103,7 +103,7 @@ async function handleGdprExportDownload(req: Request): Promise<Response> {
     return Response.json({ error: "Invalid or expired download link" }, { status: 401 });
   }
 
-  const job = await container.db.gdprExportJobs.findById(verification.jobId);
+  const job = await findGdprExportJob(verification.jobId);
   if (!job || job.status !== "done" || !job.filePath) {
     return Response.json({ error: "Export not found" }, { status: 404 });
   }
