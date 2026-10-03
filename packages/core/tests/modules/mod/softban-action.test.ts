@@ -2,22 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { SoftbanAction } from "#modules/mod/services/actions/SoftbanAction.js";
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    db: {
-      moderation: {
-        createModerationCase: vi.fn(),
-      },
+Object.assign(container, {
+  db: {
+    moderation: {
+      createModerationCase: vi.fn(),
     },
-    client: {
-      channels: {
-        cache: {
-          get: vi.fn(),
-        },
+  },
+  client: {
+    channels: {
+      cache: {
+        get: vi.fn(),
       },
     },
   },
-}));
+});
 
 vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn().mockResolvedValue(undefined),

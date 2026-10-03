@@ -16,74 +16,61 @@ import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.j
 import { KickAction } from '#modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { cancelTask, scheduleTask, QueuePriority } from '#lib/schedule-task.js';
+import { QueuePriority } from '#lib/schedule-task.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
 
-vi.mock('@sapphire/framework', () => ({
-  container: {
-    invalidation: {
-      invalidate: vi.fn().mockResolvedValue(undefined)
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  redis: {
+    get: vi.fn(),
+    setex: vi.fn(),
+    del: vi.fn(),
+    exists: vi.fn().mockResolvedValue(0),
+    set: vi.fn().mockResolvedValue('OK'),
+    pipeline: vi.fn(),
+    eval: vi.fn().mockResolvedValue(1)
+  },
+  db: {
+    config: {
+      getModuleConfig: vi.fn()
     },
-    redis: {
-      get: vi.fn(),
-      setex: vi.fn(),
-      del: vi.fn(),
-      exists: vi.fn().mockResolvedValue(0),
-      set: vi.fn().mockResolvedValue('OK'),
-      pipeline: vi.fn(),
-      eval: vi.fn().mockResolvedValue(1)
-    },
-    db: {
-      config: {
-        getModuleConfig: vi.fn()
-      },
-      moderation: {
-        getModerationCases: vi.fn(),
-        countModerationCases: vi.fn(),
-        createModerationCase: vi.fn(),
-        getActiveCases: vi.fn().mockResolvedValue([]),
-        liftModerationCase: vi.fn(),
-        liftModerationCases: vi.fn(),
-        getWarnThresholds: vi.fn(),
-        setWarnThreshold: vi.fn(),
-        removeWarnThreshold: vi.fn(),
-        resetWarnThresholds: vi.fn()
-      }
-    },
-    tasks: {
-      create: vi.fn().mockResolvedValue({})
-    },
-    logger: {
-      error: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn()
-    },
-    discordRest,
-    client: {
-      user: { id: 'bot-1' },
-      users: { fetch: vi.fn() },
-      guilds: {
-        cache: {
-          get: vi.fn()
-        }
+    moderation: {
+      getModerationCases: vi.fn(),
+      countModerationCases: vi.fn(),
+      createModerationCase: vi.fn(),
+      getActiveCases: vi.fn().mockResolvedValue([]),
+      liftModerationCase: vi.fn(),
+      liftModerationCases: vi.fn(),
+      getWarnThresholds: vi.fn(),
+      setWarnThreshold: vi.fn(),
+      removeWarnThreshold: vi.fn(),
+      resetWarnThresholds: vi.fn()
+    }
+  },
+  tasks: {
+    create: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(undefined)
+  },
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn()
+  },
+  discordRest,
+  client: {
+    user: { id: 'bot-1' },
+    users: { fetch: vi.fn() },
+    guilds: {
+      cache: {
+        get: vi.fn()
       }
     }
   }
-}));
-
-vi.mock('#lib/schedule-task.js', () => ({
-  scheduleTask: vi.fn().mockResolvedValue(undefined),
-  cancelTask: vi.fn().mockResolvedValue(undefined),
-  QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 }
-}));
-
-vi.mock('#lib/module-system/Utility.js', () => ({
-  tryGetUtility: vi.fn(() => ({
-    dispatch: vi.fn()
-  }))
-}));
+});
 
 describe('Mod Helpers & Duration Parsing', () => {
   it('parseDuration converts valid string to ms and invalid/negative to null', () => {
@@ -113,9 +100,9 @@ describe('Mod Helpers & Duration Parsing', () => {
   it('scheduleCaseLift schedules the lift job at CRITICAL priority', async () => {
     const mockCase = { id: 103, expiresAt: new Date(Date.now() + 5000) };
     await scheduleCaseLift(container, mockCase);
-    const call = (scheduleTask as any).mock.calls.at(-1);
-    expect(call[0]).toBe('mod-lift');
-    expect(call[2].customJobOptions.priority).toBe(QueuePriority.CRITICAL);
+    const call = (container.tasks.create as any).mock.calls.at(-1);
+    expect(call[0].name).toBe('mod-lift');
+    expect(call[1].customJobOptions.priority).toBe(QueuePriority.CRITICAL);
   });
 });
 
@@ -398,7 +385,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
-    expect(cancelTask).toHaveBeenCalledWith('mod-lift:55');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:55');
   });
 
   it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
@@ -472,7 +459,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
-    expect(cancelTask).toHaveBeenCalledWith('mod-lift:77');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:77');
   });
 
   it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {

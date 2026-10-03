@@ -5,38 +5,30 @@ import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
 
-vi.mock('@sapphire/framework', () => ({
-  container: {
-    invalidation: {
-      invalidate: vi.fn().mockResolvedValue(undefined)
-    },
-    redis: {
-      del: vi.fn(),
-      set: vi.fn().mockResolvedValue('OK'),
-      eval: vi.fn().mockResolvedValue(1)
-    },
-    db: {
-      moderation: {
-        getModerationCaseById: vi.fn(),
-        liftModerationCase: vi.fn()
-      }
-    },
-    tasks: {
-      create: vi.fn().mockResolvedValue({})
-    },
-    logger: {
-      error: vi.fn(),
-      debug: vi.fn()
-    },
-    discordRest
-  }
-}));
-
-vi.mock('#lib/module-system/Utility.js', () => ({
-  tryGetUtility: vi.fn(() => ({
-    dispatch: vi.fn()
-  }))
-}));
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  redis: {
+    del: vi.fn(),
+    set: vi.fn().mockResolvedValue('OK'),
+    eval: vi.fn().mockResolvedValue(1)
+  },
+  db: {
+    moderation: {
+      getModerationCaseById: vi.fn(),
+      liftModerationCase: vi.fn()
+    }
+  },
+  tasks: {
+    create: vi.fn().mockResolvedValue({})
+  },
+  logger: {
+    error: vi.fn(),
+    debug: vi.fn()
+  },
+  discordRest
+});
 
 describe('handleModLiftFire', () => {
   beforeEach(() => {

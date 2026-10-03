@@ -5,18 +5,6 @@ import {
   queueSend,
 } from "#lib/outbound/send-queue.js";
 
-// bun:test has no `vi.mocked` type-narrowing helper, so the mocks are kept as
-// named references here and handed to the factory, rather than cast at the
-// call site after importing `#lib/schedule-task.js` normally.
-const scheduleTask = vi.fn().mockResolvedValue(undefined);
-const cancelTask = vi.fn().mockResolvedValue(undefined);
-
-vi.mock("#lib/schedule-task.js", () => ({
-  scheduleTask,
-  cancelTask,
-  QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 },
-}));
-
 /** Records send start/finish order so overlap can be asserted. */
 const events: string[] = [];
 
@@ -51,19 +39,26 @@ beforeEach(() => {
       fetch: (id: string) => Promise.resolve(channels.get(id) ?? null),
     },
   } as never;
+
+  (container as any).tasks = {
+    create: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(undefined),
+  };
 });
 
 describe("queueSend", () => {
   it("hands the send to the scheduler and stamps the time", async () => {
     await queueSend({ channelId: "c1", content: "hello" });
 
-    expect(scheduleTask).toHaveBeenCalledWith(
-      "send-message",
-      expect.objectContaining({
-        channelId: "c1",
-        content: "hello",
-        at: expect.any(Number),
-      }),
+    expect(container.tasks.create).toHaveBeenCalledWith(
+      {
+        name: "send-message",
+        payload: expect.objectContaining({
+          channelId: "c1",
+          content: "hello",
+          at: expect.any(Number),
+        }),
+      },
       { customJobOptions: { priority: 5 } },
     );
   });
@@ -71,7 +66,7 @@ describe("queueSend", () => {
   it("sends inline when the queue is unreachable", async () => {
     const channel = makeChannel("c1", 0);
     channels.set("c1", channel);
-    scheduleTask.mockRejectedValueOnce(new Error("redis down"));
+    (container.tasks.create as any).mockRejectedValueOnce(new Error("redis down"));
 
     await queueSend({ channelId: "c1", content: "hello" });
 

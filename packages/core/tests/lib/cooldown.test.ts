@@ -2,14 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    redis: {
-      set: vi.fn(),
-      exists: vi.fn(),
-    },
+Object.assign(container, {
+  redis: {
+    set: vi.fn(),
+    exists: vi.fn(),
   },
-}));
+});
 
 describe("cooldown", () => {
   beforeEach(() => {
