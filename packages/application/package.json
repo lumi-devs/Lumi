@@ -5,14 +5,12 @@
   "description": "Application services and domain logic for Lumi.",
   "type": "module",
   "exports": {
-    ".": {
-      "bun": "./src/index.ts",
-      "types": "./dist/index.d.ts"
-    },
-    "./services/*": {
-      "bun": "./src/services/*",
-      "types": "./dist/services/*"
-    }
+    ".": "./src/index.ts",
+    "./services/*": "./src/services/*"
+  },
+  "imports": {
+    "#lib/*.js": "../core/src/lib/*.ts",
+    "#modules/*.js": "../core/src/modules/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -43,20 +41,5 @@
     "discord.js": "^14.27.0",
     "i18next": "^26.4.2",
     "ioredis": "^6.0.0"
-  },
-"dependencies": {
-    "@lumi/contracts": "workspace:*",
-    "@lumi/observability": "workspace:*",
-  },
-  "exports": {
-    ".": {
-      "bun": "./src/index.ts",
-    },
-    "./services/*": {
-      "bun": "./src/services/*",
-    },
-    "./interfaces/*": {
-      "bun": "./src/services/interfaces/*",
-    }
-  },
+  }
 }
