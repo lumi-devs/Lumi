@@ -12,27 +12,22 @@ import type { Guild } from "discord.js";
  * gateway/interaction runtime); the raw-array fallback (a partial/API member
  * shape, or a test double) has no position to sort by and is returned as-is.
  */
-export function memberRoleIds(member: unknown, guildId?: string): string[] {
-  if (!member || typeof member !== "object") return guildId ? [guildId] : [];
+export function memberRoleIds(member: unknown): string[] {
+  if (!member || typeof member !== "object") return [];
   const roles = (member as { roles?: unknown }).roles;
 
-  if (Array.isArray(roles)) {
-    const ids = roles as string[];
-    return guildId && !ids.includes(guildId) ? [...ids, guildId] : ids;
-  }
+  if (Array.isArray(roles)) return roles as string[];
 
   const cache = (roles as { cache?: unknown })?.cache;
   if (cache instanceof Map) {
-    const list = Array.from(cache as Map<string, { position?: number }>)
+    return Array.from(cache as Map<string, { position?: number }>)
       .sort(([, a], [, b]) => (b.position ?? -1) - (a.position ?? -1))
       .map(([id]) => id);
-    return guildId && !list.includes(guildId) ? [...list, guildId] : list;
   }
   if (cache && typeof cache === "object") {
-    const list = Object.keys(cache);
-    return guildId && !list.includes(guildId) ? [...list, guildId] : list;
+    return Object.keys(cache);
   }
-  return guildId ? [guildId] : [];
+  return [];
 }
 
 export interface PermitSubject {
@@ -53,7 +48,7 @@ export function permitSubject(
   return {
     guildId: guild.id,
     userId,
-    roleIds: memberRoleIds(member, guild.id),
+    roleIds: memberRoleIds(member),
     channelId: channelId ?? undefined,
     guildOwnerId: guild.ownerId,
   };
