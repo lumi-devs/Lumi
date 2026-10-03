@@ -11,7 +11,8 @@
     "./setup-api": "./src/lib/client/setup-api.ts",
     "./setup-scheduler": "./src/lib/client/setup-scheduler.ts",
     "./env": "./src/lib/env.ts",
-    "./doctor": "./src/lib/doctor/index.ts"
+    "./doctor": "./src/lib/doctor/index.ts",
+    "./addon-test-harness": "./src/lib/addon-sandbox/test-harness.ts"
   },
   "imports": {
     "#lib/*.js": "./src/lib/*.ts",
