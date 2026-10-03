@@ -79,10 +79,14 @@ describe("RegexWorkerHandler", () => {
   });
 
   it("recovers after a timeout - the worker is respawned", async () => {
-    const handler = makeHandler(750);
+    const handler = makeHandler(100);
+    // Give a short timeout so timeout triggers swiftly
     await expect(
       handler.test("evil:1", [EVIL], `${"a".repeat(40)}!`),
     ).rejects.toBeInstanceOf(RegexTimeoutError);
+
+    // Give the event loop a tick to ensure the dead worker termination and respawn
+    await new Promise((r) => setTimeout(r, 20));
 
     await expect(handler.test("good:1", ["spam"], "spam")).resolves.toBe(0);
   });
