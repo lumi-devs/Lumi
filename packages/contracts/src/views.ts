@@ -347,3 +347,20 @@ export interface SystemDashboardData {
   allModules: { name: string; displayName: string; emoji: string }[];
   guildCount: number;
 }
+
+export interface FeatureFlagView {
+  key: string;
+  description: string | null;
+  enabled: boolean;
+  rolloutPercent: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface FeatureFlagOverrideView {
+  id: number;
+  flagKey: string;
+  guildId: string;
+  enabled: boolean;
+  createdAt: string;
+}
