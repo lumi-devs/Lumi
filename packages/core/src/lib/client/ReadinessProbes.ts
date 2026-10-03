@@ -7,31 +7,9 @@ import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telem
  * Declares the `/readyz` probes a client replica answers with.
  *
  * @remarks
- *
- * {@linkcode register} runs once, at the tail of `login()`, so that every
- * dependency a probe reports on already exists. Every process holds a real
- * gateway shard now, so the `discord` probe always applies. `scheduler-tasks`
- * no longer applies to any worker shard at all - BullMQ scheduling moved to
- * the gateway-free `apps/scheduler` (see the scheduler extraction's Phase
- * S1), which registers that probe itself via
- * {@linkcode registerSchedulerReadinessProbe}. `rpc-server` only applies when
- * a caller supplies `isRpcReady` at all - `apps/api` is the only process
- * that does, since it's the only one that owns an RPC HTTP server (see the
- * API extraction's Phase C).
- *
- * Probes reach their dependency through the suppliers passed in rather than
- * capturing it, because the client releases those handles during shutdown and
- * a probe must observe that rather than a stale reference.
+ * Registers `/readyz` probes for gateway, infrastructure, and process-specific subsystems.
  */
-/**
- * Declares the `postgres`/`redis` probes shared by every process that holds
- * a direct connection to those backing services (both `apps/worker`, via
- * {@linkcode ReadinessProbes}, and the gateway-free `apps/api`, via
- * {@linkcode registerApiReadinessProbes}). Pulled out of the class so
- * neither caller has to duplicate the probe bodies (and their driver-error
- * handling) to get this subset without also picking up the gateway/
- * scheduler probes that don't apply to a gateway-free process.
- */
+/** Declares postgres and redis readiness probes for processes with backing service connections. */
 export function registerInfrastructureReadinessProbes(): void {
   // `/readyz` is reachable by anyone who can reach the metrics port, so probe
   // details are fixed classifications. Driver errors are logged instead:

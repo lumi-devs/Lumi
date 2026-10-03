@@ -20,26 +20,8 @@ function resolveTask(
 }
 
 /**
- * Producer-only stand-in for `@sapphire/plugin-scheduled-tasks`'s
- * `ScheduledTaskHandler`, installed on every shard in place of the real
- * plugin.
- *
- * @remarks
- *
- * `ScheduledTaskHandler`'s constructor builds a BullMQ `Queue` *and* `Worker`
- * unconditionally - read directly from the plugin's source, there is no
- * option to construct it producer-only. Only `apps/scheduler` may run that
- * `Worker` now (see `scheduler-container-services.ts`); every shard only
- * ever calls `.create()`/`.delete()` (`#lib/schedule-task.ts`) to enqueue a
- * job, never dispatches one. This wraps a bare `Queue` against the same
- * queue name/connection/job-option defaults `client-options.ts` already used
- * for the plugin's own `Queue`, so a job enqueued here lands exactly where
- * `apps/scheduler`'s real `ScheduledTaskHandler` drains it from.
- *
- * Only `create`/`delete`/`close` are implemented, matching the sole methods
- * anything outside this file calls on `container.tasks` on a shard
- * (`schedule-task.ts`, `LumiClient.destroy()`'s teardown) - confirmed by
- * grepping every `container.tasks.*` call site.
+ * Producer-only Queue stand-in for worker shards to enqueue scheduled tasks
+ * into BullMQ without spawning a worker.
  */
 export function installProducerOnlyTasks(): void {
   const queue = new Queue(SCHEDULED_TASKS_QUEUE_NAME, {

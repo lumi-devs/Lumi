@@ -16,10 +16,7 @@ export interface BootstrapApiAppOptions {
 let installedRejectionHandler: ((reason: unknown) => void) | null = null;
 let installedExceptionHandler: ((err: unknown) => void) | null = null;
 
-// Same shape as `registerProcessErrorHandlers` in `api-bootstrap.ts`'s worker
-// counterpart (`bootstrap.ts`) - kept as its own copy rather than a shared
-// export because the two apps' process lifecycles are meant to evolve
-// independently once Phase C lands the RPC server here.
+// Process-level unhandled rejection and uncaught exception handlers for API.
 function registerProcessErrorHandlers(): void {
   if (installedRejectionHandler) {
     process.off("unhandledRejection", installedRejectionHandler);
@@ -47,13 +44,7 @@ function registerProcessErrorHandlers(): void {
   process.on("uncaughtException", installedExceptionHandler);
 }
 
-/**
- * Tears down everything `installApiContainerServices()` opened, in reverse
- * order. Mirrors `LumiClient.destroy()`'s cleanup for the subset of
- * resources this process actually owns - no RPC HTTP server, no BullMQ
- * worker, no task-fire consumer, no scheduler lock, since none of those are
- * wired up until Phase C.
- */
+/** Tears down database, Redis, event bus, and status resources opened by the API process. */
 export async function destroyApiContainerServices(
   services: ApiContainerServices,
 ): Promise<void> {

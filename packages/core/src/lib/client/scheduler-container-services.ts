@@ -27,27 +27,8 @@ export interface SchedulerContainerServices {
 }
 
 /**
- * The `installContainerServices()` counterpart for the gateway-free process
- * that owns BullMQ scheduling exclusively.
- *
- * @remarks
- *
- * Builds a real `SapphireClient` carrying `@sapphire/plugin-scheduled-tasks`
- * (imported by `setup-scheduler.ts`) and never calls `login()`, the same
- * trick `api-container-services.ts` uses for RPC - `preGenericsInitialization`
- * and `postInitialization` (which is what actually constructs the BullMQ
- * `Queue`/`Worker` and registers the `ScheduledTaskStore`) both run inside the
- * `SapphireClient` constructor itself, independent of `login()` (confirmed by
- * reading `SapphireClient`'s own source - only `postLogin`, piece-loading and
- * the websocket connect are gated behind `login()`). Piece-loading is
- * replicated by hand below since it's the other half of what `login()` would
- * have done, and it's what makes `container.stores.get("scheduled-tasks")`
- * contain the actual `RelayTask` pieces the `Worker` dispatches to by name.
- *
- * `postLogin`'s repeatable-task registration (`container.tasks.createRepeated()`)
- * is likewise never triggered by a hook here, since `login()` never runs - it's
- * called explicitly after the scheduler lock is confirmed, so only the single
- * lock-holding replica ever re-registers the fleet's repeatable jobs.
+ * Installs container services for the gateway-free scheduler process.
+ * Initializes BullMQ tasks and loads scheduled-task stores without calling `client.login()`.
  */
 export async function installSchedulerContainerServices(): Promise<SchedulerContainerServices> {
   const client = new SapphireClient({

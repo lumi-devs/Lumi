@@ -21,21 +21,7 @@ import {
   type RpcRequest,
 } from "@lumi/contracts/rpc";
 
-/**
- * Internal-only HTTP entry point for the `dispatchRpc` pipeline — handler
- * lookup, dashboard-enabled check, tracing/error shape. Exists so the
- * dashboard can call the worker directly over the docker network, mirroring
- * how Skyra (`src/routes/`) and YAGPDB (`bot/botrest/`) expose their bot
- * process to their own dashboards.
- *
- * Reachability is not authorization: every container on the compose network
- * (and anything with an SSRF primitive pointed at it) can open a socket here,
- * and `actorId` in the request body is an unsigned claim the handlers act on
- * — the bot-owner check would happily accept the bot owner's public snowflake
- * from a stranger. So every `/rpc` request must carry the shared secret in
- * `RPC_INTERNAL_TOKEN`, checked here before the body ever reaches
- * `dispatchRpc`.
- */
+/** Internal HTTP server for dispatchRpc. Requires RPC_INTERNAL_TOKEN. */
 
 const AuthHeader = "authorization";
 const BearerPrefix = "Bearer ";
@@ -44,10 +30,7 @@ function digest(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
 }
 
-/**
- * Constant-time compare over SHA-256 digests rather than the raw strings, so
- * neither the byte values nor the token *length* leak through timing.
- */
+/** Constant-time comparison over SHA-256 digests to prevent timing leaks. */
 export function tokenMatches(expected: string, presented: string | null): boolean {
   if (!presented) return false;
   return timingSafeEqual(digest(expected), digest(presented));
@@ -66,9 +49,7 @@ export function readInternalToken(
   const token = getRpcInternalToken();
   if (token) return token;
 
-  // Refusing to boot is the only safe answer in production: starting without
-  // it would silently serve owner-gated actions to anyone who can reach the
-  // port.
+  // Refuse unauthenticated start in production.
   if (isProduction()) {
     throw new Error(
       "[ENV] Missing: RPC_INTERNAL_TOKEN — the internal RPC server refuses to " +
@@ -87,13 +68,7 @@ export function readInternalToken(
 
 const ContractVersionHeader = "x-lumi-contract-version";
 
-/**
- * Rejects a `/rpc` call whose caller built against an incompatible (or
- * absent) `@lumi/contracts` version — the dashboard and `apps/api` ship (and
- * version) independently, so this is the one place that can no longer
- * assume they match. A missing header is rejected exactly like a mismatch:
- * every caller is expected to send its contract version.
- */
+/** Validates contract compatibility using x-lumi-contract-version. */
 function checkContractVersion(req: Request): Response | null {
   const theirVersion = req.headers.get(ContractVersionHeader);
   if (theirVersion && contractVersionsCompatible(CONTRACT_VERSION, theirVersion)) return null;
@@ -107,15 +82,7 @@ function checkContractVersion(req: Request): Response | null {
 
 const GdprExportDownloadPath = "/gdpr-export";
 
-/**
- * Streams a finished GDPR export. Authenticated by the signed `token` query
- * param alone (not the `RPC_INTERNAL_TOKEN` bearer) - it's handed to a
- * browser as a plain download link, which can't attach an Authorization
- * header. The path streamed is always the `GdprExportJob` row's own
- * `filePath`, read fresh from the database here; the token only proves the
- * caller was handed this job id recently by `global.gdpr.export.status`, it
- * never carries a path itself.
- */
+/** Streams a completed GDPR export verified by signed download token. */
 async function handleGdprExportDownload(req: Request): Promise<Response> {
   const token = new URL(req.url).searchParams.get("token");
   if (!token) {

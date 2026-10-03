@@ -14,9 +14,7 @@ export interface BootstrapSchedulerAppOptions {
 let installedRejectionHandler: ((reason: unknown) => void) | null = null;
 let installedExceptionHandler: ((err: unknown) => void) | null = null;
 
-// Same shape as `bootstrap.ts`/`api-bootstrap.ts`'s own copies - kept
-// separate rather than shared since each app's process lifecycle is meant to
-// evolve independently (see `api-bootstrap.ts`'s identical note).
+// Process-level unhandled rejection and uncaught exception handlers for Scheduler.
 function registerProcessErrorHandlers(): void {
   if (installedRejectionHandler) {
     process.off("unhandledRejection", installedRejectionHandler);

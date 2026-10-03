@@ -76,19 +76,9 @@ export class PermitResolver {
   }
 
   /**
-   * Evaluates if a user possesses the required permit node in a guild.
-   *
-   * Precedence, most specific first: Owner Bypasses (Bot Owner, Guild Owner)
-   * > the user's own Enforced permits (system-tier, quarantine-immune) > the
-   * user's own Custom permits > the current channel's Custom permits > each
-   * of the user's roles' Custom permits, highest role position first. Within
-   * a tier, a Deny-polarity match wins over a Grant-polarity match at the
-   * same tier. The first tier with any match (deny or grant) decides the
-   * whole check; nothing matching anywhere falls through to deny.
-   *
-   * Anti-Nuke Quarantine strips Custom permits (both polarities, every tier)
-   * for the requesting user - Enforced permits still apply regardless, since
-   * they're the fixed system tiers a quarantine must not be able to bypass.
+   * Checks permit node match against hierarchy: Owner bypass > Enforced user permits
+   * > Custom user permits > Channel permits > Role permits (highest position first).
+   * Deny takes precedence within tier. Anti-nuke quarantine suppresses custom permits.
    */
   public async hasPermit(options: EvaluatePermitOptions): Promise<boolean> {
     const { guildId, userId, roleIds = [], channelId, permitNode, guildOwnerId } =

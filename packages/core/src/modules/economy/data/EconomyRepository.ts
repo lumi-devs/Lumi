@@ -47,15 +47,7 @@ export interface EconomyPaydayInput {
   startBank: number;
 }
 
-/**
- * Persistent state owned by the `economy` module: per-guild wallet/bank
- * balances plus the append-only audit ledger. Every balance mutation runs
- * inside a single interactive transaction that also writes its ledger row,
- * and every debit is a guarded conditional update (`wallet >= amount` in the
- * `WHERE` clause) so concurrent mutations serialize on the row instead of
- * overdrawing it. Balances are deliberately never cached in Redis - a stale
- * read here is a double-spend.
- */
+/** Economy repository: balances and audit ledger. */
 export class EconomyRepository extends Repository {
   public findAccount(
     guildId: string,
@@ -80,12 +72,7 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /**
-   * Applies a single-account wallet/bank delta and appends one ledger row in
-   * the same transaction. Negative deltas fail with an `InsufficientFunds`
-   * error (thrown as a plain `Error` with `code = "InsufficientFunds"`) when
-   * the guarded update matches no row.
-   */
+  /** Applies a balance delta and records a transaction row. */
   public async applyMutation(
     input: EconomyMutationInput,
   ): Promise<{ account: EconomyAccount; balanceAfter: number }> {
@@ -142,11 +129,7 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /**
-   * Moves `amount` wallet credits from one member to another, burning `fee`
-   * credits. Writes the debit/credit ledger pair in the same transaction and
-   * fails with `InsufficientFunds` when the sender cannot cover `amount`.
-   */
+  /** Moves wallet credits between members, burning fee, and writes ledger pair. */
   public async applyTransfer(
     input: EconomyTransferInput,
   ): Promise<{ from: EconomyAccount; to: EconomyAccount }> {

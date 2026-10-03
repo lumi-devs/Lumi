@@ -2,10 +2,7 @@ import { fileURLToPath } from "node:url";
 import { ShardingManager } from "discord.js";
 import { getBotToken, getTotalShards, getShardList } from "@lumi/core/env";
 
-// The manager process itself never opens a Discord connection or does
-// application work - only the children it spawns (shard-client.ts) do. No
-// telemetry/RPC HTTP surface is bound here, so there's nothing to gate or
-// conflict with the primary shard child's port.
+// Manager only spawns shards; gateway and service logic run in shard-client.ts.
 
 const token = getBotToken();
 const shardFile = fileURLToPath(new URL("./shard-client.ts", import.meta.url));
@@ -47,10 +44,7 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   const shards = [...manager.shards.values()];
   console.info(`[Manager] ${signal} received, forwarding to ${shards.length} shard(s)`);
 
-  // Forward the real OS signal to each child's process so its own
-  // registered SIGTERM/SIGINT drain sequence (bootstrapClientApp) runs
-  // unchanged - k8s only signals PID 1 (this manager), not the process
-  // group, so this has to happen explicitly.
+  // Explicitly forward signal to children so drain hooks run (k8s only signals PID 1).
   const exits = shards.map(
     (shard) =>
       new Promise<boolean>((resolve) => {

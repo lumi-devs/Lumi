@@ -94,11 +94,7 @@ function everyoneOverwrite(channel: APIChannel, everyoneId: string): APIOverwrit
   return channel.permission_overwrites?.find((ow: APIOverwrite) => ow.id === everyoneId);
 }
 
-/**
- * Activates panic mode: pauses invites and locks `@everyone` SendMessages
- * across the guild's text channels (or a configured subset), snapshotting
- * prior overwrites so `revertPanic` can restore them exactly.
- */
+/** Activates panic mode: pauses invites and locks SendMessages across text channels. */
 export async function enterPanic(
   guildId: string,
   actorId: string,
