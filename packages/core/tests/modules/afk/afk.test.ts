@@ -17,41 +17,39 @@ import {
 import { AfkKeys, AfkTTL } from "#modules/afk/constants.js";
 import { container } from "@sapphire/framework";
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    redis: {
-      get: vi.fn(),
-      setex: vi.fn(),
-      del: vi.fn(),
-      scan: vi.fn(),
-      pipeline: vi.fn().mockReturnThis(),
-      multi: vi.fn().mockReturnThis(),
-      lpush: vi.fn().mockReturnThis(),
-      ltrim: vi.fn().mockReturnThis(),
-      expire: vi.fn().mockReturnThis(),
-      exec: vi.fn(),
-      lrange: vi.fn(),
-      exists: vi.fn(),
-      set: vi.fn(),
-    },
-    db: {
-      afk: {
-        findEntry: vi.fn(),
-        upsertEntry: vi.fn(),
-        deleteEntry: vi.fn(),
-        deleteAllForUser: vi.fn(),
-        iterateAll: vi.fn(),
-        findForGuild: vi.fn(),
-        countAll: vi.fn(),
-      },
-    },
-    logger: {
-      error: vi.fn(),
-      warn: vi.fn(),
-    },
-    invalidation: undefined as any,
+Object.assign(container, {
+  redis: {
+    get: vi.fn(),
+    setex: vi.fn(),
+    del: vi.fn(),
+    scan: vi.fn(),
+    pipeline: vi.fn().mockReturnThis(),
+    multi: vi.fn().mockReturnThis(),
+    lpush: vi.fn().mockReturnThis(),
+    ltrim: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
+    lrange: vi.fn(),
+    exists: vi.fn(),
+    set: vi.fn(),
   },
-}));
+  db: {
+    afk: {
+      findEntry: vi.fn(),
+      upsertEntry: vi.fn(),
+      deleteEntry: vi.fn(),
+      deleteAllForUser: vi.fn(),
+      iterateAll: vi.fn(),
+      findForGuild: vi.fn(),
+      countAll: vi.fn(),
+    },
+  },
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+  invalidation: undefined as any,
+});
 
 vi.mock("#modules/afk/services/format.js", () => ({
   sanitizeReason: vi.fn((s) => s),

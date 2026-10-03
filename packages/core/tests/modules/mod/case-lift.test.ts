@@ -6,19 +6,17 @@ import type { ModerationCase } from '@prisma/client';
 
 const discordRest = new FakeDiscordRestPort();
 
-vi.mock('@sapphire/framework', () => ({
-  container: {
-    invalidation: {
-      invalidate: vi.fn().mockResolvedValue(undefined)
-    },
-    db: {
-      moderation: {
-        liftModerationCase: vi.fn().mockResolvedValue(undefined)
-      }
-    },
-    discordRest
-  }
-}));
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  db: {
+    moderation: {
+      liftModerationCase: vi.fn().mockResolvedValue(undefined)
+    }
+  },
+  discordRest
+});
 
 function makeCase(overrides: Partial<ModerationCase> = {}): ModerationCase {
   return {

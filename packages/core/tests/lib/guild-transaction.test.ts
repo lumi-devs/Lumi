@@ -2,16 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { createGuildTransaction } from "#lib/guild-transaction.js";
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
-    db: {
-      config: {
-        invalidateGuildSettings: vi.fn().mockResolvedValue(undefined),
-      },
+Object.assign(container, {
+  invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
+  db: {
+    config: {
+      invalidateGuildSettings: vi.fn().mockResolvedValue(undefined),
     },
   },
-}));
+});
 
 function mockRedis() {
   const store = new Map<string, string>();

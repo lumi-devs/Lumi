@@ -3,7 +3,9 @@ import { GuildDeleteEventBusListener } from "#modules/core/listeners/bus/guildDe
 import { container } from "@sapphire/framework";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 
+const __actualUtility = await import("#lib/module-system/Utility.js");
 vi.mock("#lib/module-system/Utility.js", () => ({
+  ...__actualUtility,
   tryGetUtility: vi.fn(),
 }));
 

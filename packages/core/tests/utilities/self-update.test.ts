@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { container } from "@sapphire/framework";
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 // bun:test's `vi.mock` isn't hoisted above imports the way vitest's is, so
@@ -16,9 +17,9 @@ vi.mock("node:fs", () => ({
   },
 }));
 
-vi.mock("@sapphire/framework", () => ({
-  container: { logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } },
-}));
+Object.assign(container, {
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+});
 
 import {
   getCoreUpdateStatus,
