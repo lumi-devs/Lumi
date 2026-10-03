@@ -22,6 +22,11 @@ export { dispatchRpc } from "./src/lib/rpc/dispatch.js";
 export { handleSseRequest, closeAllSseConnections } from "./src/lib/rpc/sse-server.js";
 export { logError } from "./src/lib/utilities/errors.js";
 export {
+  signGdprExportToken,
+  verifyGdprExportToken,
+  GdprExportSigningKeyUnavailable,
+} from "./src/lib/gdpr-export-token.js";
+export {
   registerInfrastructureReadinessProbes,
   registerRpcReadinessProbe,
   registerSchedulerReadinessProbe,

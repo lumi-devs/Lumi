@@ -187,6 +187,9 @@ const workerMeta: Record<string, EnvMeta> = {
   CONFIG_HISTORY_RETENTION_DAYS: { required: "no", fallback: "90", about: "How long module config history entries survive before the retention sweep purges them." },
   MODERATION_RETENTION_DAYS: { required: "no", fallback: "0 (keep forever)", about: "How long a lifted case and its resolved appeal survive before the retention sweep purges them. 0 keeps moderation history forever; active cases and pending appeals are never purged regardless of this setting." },
   AUDIT_ARCHIVE_DIR: { required: "no", fallback: "—", about: "Root directory the retention sweep writes a gzip-compressed JSONL archive to before deleting a batch, for any purged table (not just the audit ledger). Unset deletes with no backup." },
+  GDPR_EXPORT_DIR: { required: "no", fallback: "data/gdpr-exports", about: "Root directory the async gdpr-export scheduled task writes a user's gzipped JSON export to." },
+  GDPR_EXPORT_TTL_HOURS: { required: "no", fallback: "24", about: "How long a finished GDPR export's file and job row survive before the hourly cleanup sweep removes them." },
+  GDPR_EXPORT_SIGNING_SECRET: { required: "no", fallback: "derived from RPC_INTERNAL_TOKEN", about: "HMAC key signing the short-lived GDPR export download token served by GET /gdpr-export. Falls back to RPC_INTERNAL_TOKEN when unset." },
 };
 
 const dashboardMeta: Record<string, EnvMeta> = {
