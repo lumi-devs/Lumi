@@ -1,6 +1,6 @@
-import type { ReactionRoleMenuMode } from "./rpc/reactionroles";
-import type { ConfigField } from "./config";
-import type { MessageDocumentV2 } from "./message-blocks";
+import type { ReactionRoleMenuMode } from "./rpc/reactionroles.js";
+import type { ConfigField } from "./config.js";
+import type { MessageDocumentV2 } from "./message-blocks.js";
 
 export interface GuildSettings {
   prefix: string | null;
@@ -82,9 +82,11 @@ export interface ModerationCaseView {
 
 export interface CasesListData {
   cases: ModerationCaseView[];
-  total: number;
-  page: number;
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
+  total?: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface WarnThresholdView {
@@ -184,9 +186,11 @@ export interface AuditEntryView {
 
 export interface AuditListData {
   entries: AuditEntryView[];
-  total: number;
-  page: number;
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
+  total?: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface ConfigHistoryEntryView {
@@ -201,9 +205,11 @@ export interface ConfigHistoryEntryView {
 
 export interface ConfigHistoryListData {
   entries: ConfigHistoryEntryView[];
-  total: number;
-  page: number;
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
+  total?: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface ConfigOverrideView {
@@ -254,9 +260,11 @@ export interface AppealView {
 
 export interface AppealsListData {
   appeals: AppealView[];
-  total: number;
-  page: number;
+  /** Exact count on the first page (no `cursor` in the request); omitted when a `cursor` is supplied. */
+  total?: number;
   pageSize: number;
+  /** Opaque cursor for the next page, or `null` when this is the last page. */
+  nextCursor: string | null;
 }
 
 export interface AppealCaseSummary {
@@ -338,4 +346,21 @@ export interface SystemDashboardData {
   moduleStates: GlobalModuleStateView[];
   allModules: { name: string; displayName: string; emoji: string }[];
   guildCount: number;
+}
+
+export interface FeatureFlagView {
+  key: string;
+  description: string | null;
+  enabled: boolean;
+  rolloutPercent: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export interface FeatureFlagOverrideView {
+  id: number;
+  flagKey: string;
+  guildId: string;
+  enabled: boolean;
+  createdAt: string;
 }

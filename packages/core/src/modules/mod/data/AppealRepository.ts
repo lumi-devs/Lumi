@@ -1,5 +1,16 @@
 import type { Appeal } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "#lib/retention/archive.js";
+import {
+  createdAtIdKeysetWhere,
+  CreatedAtIdOrderBy,
+  decodeCreatedAtIdCursor,
+  encodeCreatedAtIdCursor,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 export type AppealStatus =
   | "pending"
@@ -44,24 +55,38 @@ export class AppealRepository extends Repository {
 
   public async listForGuild(
     guildId: string,
-    filter: { status?: AppealStatus; skip?: number; take?: number } = {},
-  ): Promise<{ appeals: Appeal[]; total: number }> {
-    const where = {
+    filter: {
+      status?: AppealStatus;
+      take?: number;
+      /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
+      cursor?: string;
+    } = {},
+  ): Promise<{ appeals: Appeal[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.status ? { status: filter.status } : {}),
     };
+    const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+        : baseWhere;
 
-    const [appeals, total] = await this.prisma.$transaction([
+    const [rows, total] = await Promise.all([
       this.prisma.appeal.findMany({
         where,
-        orderBy: { createdAt: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        orderBy: CreatedAtIdOrderBy,
+        take: take + 1,
       }),
-      this.prisma.appeal.count({ where }),
+      filter.cursor === undefined ? this.prisma.appeal.count({ where: baseWhere }) : undefined,
     ]);
-
-    return { appeals, total };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      appeals: page,
+      total,
+      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+    };
   }
 
   /**
@@ -82,5 +107,38 @@ export class AppealRepository extends Repository {
     });
     if (count === 0) return null;
     return this.prisma.appeal.findUnique({ where: { id } });
+  }
+
+  /**
+   * Purges resolved appeals (anything but `pending`) older than `date`. A
+   * pending appeal is never eligible regardless of age, mirroring
+   * `ModerationRepository.purgeOldCases` never touching an active case.
+   */
+  public async purgeOldAppeals(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "appeals",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.appeal.findMany({
+          where: {
+            createdAt: { lt: date },
+            status: { not: "pending" },
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.appeal.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
+      },
+    });
   }
 }

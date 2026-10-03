@@ -7,21 +7,19 @@ import { createGuildTransaction } from "#lib/guild-transaction.js";
 // the setInterval/setTimeout queue, so these wait on the real clock instead.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    logger: {
-      error: vi.fn(),
-      warn: vi.fn(),
-      info: vi.fn(),
-    },
-    invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
-    db: {
-      config: {
-        invalidateGuildSettings: vi.fn().mockResolvedValue(undefined),
-      },
+Object.assign(container, {
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+  },
+  invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
+  db: {
+    config: {
+      invalidateGuildSettings: vi.fn().mockResolvedValue(undefined),
     },
   },
-}));
+});
 
 interface SimulatedRedisState {
   store: Map<string, string>;

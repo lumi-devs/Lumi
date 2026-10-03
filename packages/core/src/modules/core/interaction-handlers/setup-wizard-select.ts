@@ -35,7 +35,7 @@ export class SetupWizardSelectHandler extends BaseInteractionHandler {
   ) {
     if (!interaction.inGuild()) return;
     await this.acknowledge(interaction);
-    if (!hasSetupAccess(interaction)) throw setupAccessDenied();
+    if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
 
     if (tail === "ch") {
       const logChannelId =

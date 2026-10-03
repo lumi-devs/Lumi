@@ -1,17 +1,52 @@
 {
   "name": "@lumi/contracts",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "license": "GPL-3.0-only",
   "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Lumi services.",
   "type": "module",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lumi-devs/Lumi.git",
+    "directory": "packages/contracts"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
   "exports": {
-    ".": "./src/index.ts",
-    "./views": "./src/views.ts",
-    "./rpc": "./src/rpc/index.ts"
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./views": {
+      "bun": "./src/views.ts",
+      "types": "./dist/views.d.ts",
+      "default": "./dist/views.js"
+    },
+    "./rpc": {
+      "bun": "./src/rpc/index.ts",
+      "types": "./dist/rpc/index.d.ts",
+      "default": "./dist/rpc/index.js"
+    },
+    "./rpc/client": {
+      "bun": "./src/rpc/client.ts",
+      "types": "./dist/rpc/client.d.ts",
+      "default": "./dist/rpc/client.js"
+    },
+    "./events": {
+      "bun": "./src/events.ts",
+      "types": "./dist/events.d.ts",
+      "default": "./dist/events.js"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "peerDependencies": {
     "discord.js": "^14.20.0"

@@ -20,6 +20,7 @@ type ModSpec = {
 	conflicts?: string[];
 	isCore?: boolean;
 	disableable?: boolean;
+	version?: string;
 };
 
 /**
@@ -67,7 +68,7 @@ describe('ModuleStore', () => {
 			displayName: m.name,
 			emoji: '',
 			description: '',
-			version: '0.0.0',
+			version: m.version ?? '0.0.0',
 			dependencies: m.dependencies ?? [],
 			conflicts: m.conflicts ?? [],
 			disableable: m.disableable
@@ -130,6 +131,43 @@ describe('ModuleStore', () => {
 		expect(store.getRecord('b').state).toBe('failed');
 		expect(store.getRecord('b').failureReason).toMatch(/missing dependency 'ghost'/);
 		expect(container.stores.registerPath).toHaveBeenCalledTimes(1);
+	});
+
+	it('loads a module whose ranged dependency is satisfied by the installed version', async () => {
+		setupModules({ a: { version: '1.5.0' }, b: { dependencies: ['a@^1.2.0'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(true);
+		expect(store.getRecord('b').state).not.toBe('failed');
+	});
+
+	it('disables a module whose ranged dependency is not satisfied by the installed version', async () => {
+		setupModules({ a: { version: '2.0.0' }, b: { dependencies: ['a@^1.2.0'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').state).toBe('failed');
+		expect(store.getRecord('b').failureReason).toMatch(
+			/requires 'a@\^1\.2\.0' but found version '2\.0\.0'/
+		);
+	});
+
+	it('disables only the module with a missing ranged dependency, keeping the "@range" parse correct', async () => {
+		setupModules({ b: { dependencies: ['ghost@^1.0.0'] } });
+		await store.discover();
+
+		expect(store.getRecord('b').enabled).toBe(false);
+		expect(store.getRecord('b').failureReason).toMatch(/missing dependency 'ghost'/);
+	});
+
+	it('still accepts a plain, rangeless dependency name regardless of the installed version', async () => {
+		setupModules({ a: { version: '9.9.9' }, b: { dependencies: ['a'] } });
+		await store.discover();
+
+		expect(store.getRecord('a').enabled).toBe(true);
+		expect(store.getRecord('b').enabled).toBe(true);
 	});
 
 	it('transitively disables modules that depend on a broken module', async () => {

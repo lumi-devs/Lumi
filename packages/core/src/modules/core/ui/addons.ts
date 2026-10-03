@@ -33,6 +33,7 @@ export interface AddonRepoRow {
   url: string;
   branch: string;
   installedCount: number;
+  commit: string | null;
 }
 
 export interface AddonInstalledRow {
@@ -147,7 +148,7 @@ export function buildAddonReposView(
   const sections = shown.map((repo) =>
     settingRow(
       [
-        `${Emojis.Repo} **${repo.name}** (\`${repo.branch}\`)`,
+        `${Emojis.Repo} **${repo.name}** (\`${repo.branch}\`)${repo.commit ? ` @ \`${repo.commit.slice(0, 7)}\`` : ""}`,
         `-# ${cutText(repo.url, 90)}`,
         `-# ${t ? t("panels:addonsInstalled") : "Installed Add-ons"}: **${repo.installedCount}**`,
       ],

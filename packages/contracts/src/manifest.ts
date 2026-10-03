@@ -1,5 +1,5 @@
-import type { AddonCapabilities } from "./addon-sandbox";
-import type { ConfigField } from "./config";
+import type { AddonCapabilities } from "./addon-sandbox.js";
+import type { ConfigField } from "./config.js";
 
 // Serializable module manifest contract for discovery and lifecycle metadata.
 
@@ -34,6 +34,11 @@ export interface ModuleManifest {
   description: string;
   version: string;
   disableable?: boolean;
+  /**
+   * Other modules this one requires, each either a plain name (`"economy"`)
+   * or a name with a semver range (`"leveling@^1.2.0"`) that the installed
+   * module's `version` must satisfy.
+   */
   dependencies?: string[];
   conflicts?: string[];
   configOverrides?: boolean;

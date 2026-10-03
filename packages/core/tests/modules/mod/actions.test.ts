@@ -16,73 +16,61 @@ import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.j
 import { KickAction } from '#modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { cancelTask } from '#lib/schedule-task.js';
+import { QueuePriority } from '#lib/schedule-task.js';
+import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
-vi.mock('@sapphire/framework', () => ({
-  container: {
-    invalidation: {
-      invalidate: vi.fn().mockResolvedValue(undefined)
+const discordRest = new FakeDiscordRestPort();
+
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  redis: {
+    get: vi.fn(),
+    setex: vi.fn(),
+    del: vi.fn(),
+    exists: vi.fn().mockResolvedValue(0),
+    set: vi.fn().mockResolvedValue('OK'),
+    pipeline: vi.fn(),
+    eval: vi.fn().mockResolvedValue(1)
+  },
+  db: {
+    config: {
+      getModuleConfig: vi.fn()
     },
-    redis: {
-      get: vi.fn(),
-      setex: vi.fn(),
-      del: vi.fn(),
-      exists: vi.fn().mockResolvedValue(0),
-      set: vi.fn().mockResolvedValue('OK'),
-      pipeline: vi.fn(),
-      eval: vi.fn().mockResolvedValue(1)
-    },
-    db: {
-      config: {
-        getModuleConfig: vi.fn()
-      },
-      moderation: {
-        getModerationCases: vi.fn(),
-        countModerationCases: vi.fn(),
-        createModerationCase: vi.fn(),
-        getActiveCases: vi.fn().mockResolvedValue([]),
-        liftModerationCase: vi.fn(),
-        liftModerationCases: vi.fn(),
-        getWarnThresholds: vi.fn(),
-        setWarnThreshold: vi.fn(),
-        removeWarnThreshold: vi.fn(),
-        resetWarnThresholds: vi.fn()
-      }
-    },
-    tasks: {
-      create: vi.fn().mockResolvedValue({})
-    },
-    logger: {
-      error: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn()
-    },
-    client: {
-      user: { id: 'bot-1' },
-      users: { fetch: vi.fn() },
-      guilds: {
-        cache: {
-          get: vi.fn()
-        }
-      },
-      rest: {
-        delete: vi.fn(),
-        patch: vi.fn()
+    moderation: {
+      getModerationCases: vi.fn(),
+      countModerationCases: vi.fn(),
+      createModerationCase: vi.fn(),
+      getActiveCases: vi.fn().mockResolvedValue([]),
+      liftModerationCase: vi.fn(),
+      liftModerationCases: vi.fn(),
+      getWarnThresholds: vi.fn(),
+      setWarnThreshold: vi.fn(),
+      removeWarnThreshold: vi.fn(),
+      resetWarnThresholds: vi.fn()
+    }
+  },
+  tasks: {
+    create: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(undefined)
+  },
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn()
+  },
+  discordRest,
+  client: {
+    user: { id: 'bot-1' },
+    users: { fetch: vi.fn() },
+    guilds: {
+      cache: {
+        get: vi.fn()
       }
     }
   }
-}));
-
-vi.mock('#lib/schedule-task.js', () => ({
-  scheduleTask: vi.fn().mockResolvedValue(undefined),
-  cancelTask: vi.fn().mockResolvedValue(undefined)
-}));
-
-vi.mock('#lib/module-system/Utility.js', () => ({
-  tryGetUtility: vi.fn(() => ({
-    dispatch: vi.fn()
-  }))
-}));
+});
 
 describe('Mod Helpers & Duration Parsing', () => {
   it('parseDuration converts valid string to ms and invalid/negative to null', () => {
@@ -107,6 +95,14 @@ describe('Mod Helpers & Duration Parsing', () => {
   it('scheduleCaseLift returns early if expiresAt is null', async () => {
     await scheduleCaseLift(container, { id: 102, expiresAt: null });
     expect(container.logger.error).not.toHaveBeenCalled();
+  });
+
+  it('scheduleCaseLift schedules the lift job at CRITICAL priority', async () => {
+    const mockCase = { id: 103, expiresAt: new Date(Date.now() + 5000) };
+    await scheduleCaseLift(container, mockCase);
+    const call = (container.tasks.create as any).mock.calls.at(-1);
+    expect(call[0].name).toBe('mod-lift');
+    expect(call[1].customJobOptions.priority).toBe(QueuePriority.CRITICAL);
   });
 });
 
@@ -325,12 +321,15 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockGuild.bans.remove).toHaveBeenCalled();
   });
 
-  it('BanAction.undoRaw handles 10026 and 50013 silently', async () => {
-    const err = new Error('Unknown Ban');
-    (err as any).code = 10026;
-    (container.client.rest.delete as any).mockRejectedValue(err);
-
+  it('BanAction.undoRaw delegates to the Discord REST port (which owns 10026 handling)', async () => {
     await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('BanAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('removeBan', err);
+
+    await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });
 
   it('MuteAction.apply applies timeout and creates moderation case', async () => {
@@ -386,15 +385,18 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
-    expect(cancelTask).toHaveBeenCalledWith('mod-lift:55');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:55');
   });
 
-  it('MuteAction.undoRaw handles 10007 silently', async () => {
-    const err = new Error('Unknown Member');
-    (err as any).code = 10007;
-    (container.client.rest.patch as any).mockRejectedValue(err);
-
+  it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
     await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('MuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearTimeout', err);
+
+    await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });
 
   it('VoiceMuteAction.apply still records the case when the target is not in voice', async () => {
@@ -457,7 +459,18 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
-    expect(cancelTask).toHaveBeenCalledWith('mod-lift:77');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:77');
+  });
+
+  it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
+    await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('VoiceMuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearVoiceMute', err);
+
+    await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
   });
 
   it('KickAction.apply sends DM, kicks member, and creates case', async () => {

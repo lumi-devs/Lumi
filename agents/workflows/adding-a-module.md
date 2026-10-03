@@ -84,8 +84,8 @@ Fields that matter and what happens if you omit them (`Module.ts:88-104`):
   explicitly anyway; every real module does.
 - `category` — used by the dashboard's module list grouping (`afk` uses
   `"Community"`; check existing categories before inventing a new one —
-  `apps/dashboard/src/lib/config-labels.ts` or the dashboard modules page is
-  where they render).
+  `src/lib/config-labels.ts` in the `lumi-dashboard` repo, or the dashboard
+  modules page there, is where they render).
 - `endUserDataStatement` — required for the GDPR export UI to show something
   meaningful. If the module genuinely stores nothing about end users, use the
   `NoEndUserData()` sentinel instead of leaving this undefined or writing a
@@ -153,7 +153,7 @@ brand-new module's first command:
 Most small modules (`afk`) don't gate anything — anyone can run `/afk`. If your
 module has a moderation-adjacent or destructive action, add a node: see
 `agents/domains/permissions.md` for the two-file (`packages/core/src/lib/permissions/permit-nodes.ts`
-+ `apps/dashboard/src/lib/permit-nodes.ts`) sync step, then set
+here + `src/lib/permit-nodes.ts` in the `lumi-dashboard` repo) sync step, then set
 `requiredPermit: "<yourModule>.<action>"` on the command.
 
 ## 6. `manifest.json`

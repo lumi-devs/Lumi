@@ -1,48 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
 import { handleModLiftFire } from '#modules/mod/services/lift-handler.js';
+import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
-vi.mock('@sapphire/framework', () => ({
-  container: {
-    invalidation: {
-      invalidate: vi.fn().mockResolvedValue(undefined)
-    },
-    redis: {
-      del: vi.fn(),
-      set: vi.fn().mockResolvedValue('OK'),
-      eval: vi.fn().mockResolvedValue(1)
-    },
-    db: {
-      moderation: {
-        getModerationCaseById: vi.fn(),
-        liftModerationCase: vi.fn()
-      }
-    },
-    tasks: {
-      create: vi.fn().mockResolvedValue({})
-    },
-    logger: {
-      error: vi.fn(),
-      debug: vi.fn()
-    },
-    client: {
-      rest: {
-        patch: vi.fn().mockResolvedValue(undefined),
-        delete: vi.fn().mockResolvedValue(undefined)
-      }
+const discordRest = new FakeDiscordRestPort();
+
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  redis: {
+    del: vi.fn(),
+    set: vi.fn().mockResolvedValue('OK'),
+    eval: vi.fn().mockResolvedValue(1)
+  },
+  db: {
+    moderation: {
+      getModerationCaseById: vi.fn(),
+      liftModerationCase: vi.fn()
     }
-  }
-}));
-
-vi.mock('#lib/module-system/Utility.js', () => ({
-  tryGetUtility: vi.fn(() => ({
-    dispatch: vi.fn()
-  }))
-}));
+  },
+  tasks: {
+    create: vi.fn().mockResolvedValue({})
+  },
+  logger: {
+    error: vi.fn(),
+    debug: vi.fn()
+  },
+  discordRest
+});
 
 describe('handleModLiftFire', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('does nothing when the case is missing or already inactive', async () => {
@@ -64,13 +55,11 @@ describe('handleModLiftFire', () => {
       action: 'voice_mute',
       active: true
     });
+    const clearVoiceMute = vi.spyOn(discordRest, 'clearVoiceMute');
 
     await handleModLiftFire({ caseId: 3 });
 
-    expect(container.client.rest.patch).toHaveBeenCalledWith(
-      expect.stringContaining('/guilds/g1/members/u1'),
-      expect.objectContaining({ body: { mute: false } })
-    );
+    expect(clearVoiceMute).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(3);
   });
 
@@ -83,10 +72,32 @@ describe('handleModLiftFire', () => {
       action: 'mute',
       active: true
     });
+    const clearTimeout = vi.spyOn(discordRest, 'clearTimeout');
 
     await handleModLiftFire({ caseId: 4 });
 
-    expect(container.client.rest.patch).toHaveBeenCalled();
+    expect(clearTimeout).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(4);
+  });
+
+  it('leaves the case active, logs, and rethrows when Discord denies the undo with 50013', async () => {
+    (container.db.moderation.getModerationCaseById as any).mockResolvedValue({
+      id: 5,
+      caseNumber: 5,
+      guildId: 'g1',
+      userId: 'u1',
+      action: 'mute',
+      active: true
+    });
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearTimeout', err);
+
+    await expect(handleModLiftFire({ caseId: 5 })).rejects.toThrow('Missing Permissions');
+
+    expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
+    expect(container.logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('lacks Discord permission'),
+      err,
+    );
   });
 });

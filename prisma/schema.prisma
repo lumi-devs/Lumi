@@ -71,6 +71,13 @@ enum AuditPlatform {
   web
 }
 
+enum GdprExportJobStatus {
+  pending
+  running
+  done
+  failed
+}
+
 enum EconomyTxnKind {
   deposit
   withdraw
@@ -268,6 +275,10 @@ model ModerationCase {
   // just to take one page.
   @@index([active, id])
   @@index([action, active, id])
+  // Cross-guild retention sweep: lifted cases (active = false) older than the
+  // configured window, paginated by id the same way the id-ordered sweeps
+  // above are.
+  @@index([active, createdAt, id])
   @@map("moderation_cases")
 }
 
@@ -290,8 +301,14 @@ model Appeal {
 
   @@index([guildId, status, createdAt])
   @@index([guildId, createdAt])
+  // Keyset pagination on `guild.appeals.list` orders by (createdAt, id) desc;
+  // the tie-break index isn't covered by the two above.
+  @@index([guildId, createdAt, id])
   @@index([userId])
   @@index([reviewedBy])
+  // Cross-guild retention sweep: resolved appeals (status != pending) older
+  // than the configured window, paginated by id.
+  @@index([status, createdAt, id])
   @@map("appeals")
 }
 
@@ -340,6 +357,51 @@ model Blocklist {
   @@map("blocklist")
 }
 
+/** Global kill switch + percentage rollout for an experimental code path, with optional per-guild overrides. */
+model FeatureFlag {
+  key            String    @id @db.VarChar(100)
+  description    String?   @db.VarChar(500)
+  enabled        Boolean   @default(false)
+  rolloutPercent Int       @default(0) @map("rollout_percent")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+  updatedBy      String?   @map("updated_by") @db.VarChar(20)
+  overrides FeatureFlagOverride[]
+  @@map("feature_flags")
+}
+
+/** Forces a flag on/off for one guild regardless of its global rollout percentage. */
+model FeatureFlagOverride {
+  id        Int      @id @default(autoincrement())
+  flagKey   String   @map("flag_key") @db.VarChar(100)
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  enabled   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+  flag FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
+  @@unique([flagKey, guildId], name: "uq_feature_flag_override")
+  @@index([guildId])
+  @@map("feature_flag_overrides")
+}
+
+// Async GDPR export jobs (ADR: large exports move off the request path onto
+// the scheduled-tasks queue). Global like GlobalBlock - keyed on the
+// requesting user, no guild scope.
+model GdprExportJob {
+  id          String              @id @default(uuid())
+  userId      String              @map("user_id") @db.VarChar(20)
+  requestedBy String              @map("requested_by") @db.VarChar(20)
+  status      GdprExportJobStatus @default(pending)
+  error       String?             @db.VarChar(1000)
+  filePath    String?             @map("file_path") @db.VarChar(500)
+  sizeBytes   Int?                @map("size_bytes")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  completedAt DateTime?           @map("completed_at")
+  expiresAt   DateTime?           @map("expires_at")
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("gdpr_export_jobs")
+}
+
 // Whole-guild ignore is Guild.ignored; every row here is one ignored channel.
 model IgnoreEntry {
   id        Int      @id @default(autoincrement())
@@ -383,6 +445,7 @@ model DownloaderRepo {
   url       String   @db.VarChar(200)
   branch    String   @default("master") @db.VarChar(64)
   commit    String?  @db.VarChar(40) // Pinned commit hash
+  signedBy  String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -396,6 +459,7 @@ model DownloaderModule {
   moduleName  String   @map("module_name") @db.VarChar(64)
   version     String?  @db.VarChar(32)
   commit      String?  @db.VarChar(40) // Commit at time of install
+  signedBy    String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
   pinned      Boolean  @default(false) // Frozen against ,module update / updateall
   installedAt DateTime @default(now()) @map("installed_at")
 
@@ -422,6 +486,11 @@ model AuditLedger {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
+  // Keyset pagination on `guild.audit.list` orders by (createdAt, id) desc to
+  // break ties between rows the batched flush inserts with the same
+  // createdAt - the plain (guildId, createdAt) index above can't serve that
+  // tie-break without a sort.
+  @@index([guildId, createdAt, id])
   @@index([guildId, userId])
   @@index([createdAt])
   // GDPR delete/export filter on userId across every guild.
@@ -465,8 +534,14 @@ model ModuleConfigHistory {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
+  // Keyset pagination on `guild.history.list` orders by (createdAt, id) desc;
+  // the tie-break index isn't covered by the two above.
+  @@index([guildId, createdAt, id])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
+  // Cross-guild retention sweep, paginated by id - mirrors AuditLedger's
+  // plain `createdAt` index.
+  @@index([createdAt])
   @@map("module_config_history")
 }
 

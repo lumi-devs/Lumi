@@ -2,19 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { runModerationAction } from "#modules/mod/services/runModerationAction.js";
 
-vi.mock("@sapphire/framework", () => ({
-  container: {
-    logger: {
-      warn: vi.fn(),
-    },
+Object.assign(container, {
+  logger: {
+    warn: vi.fn(),
   },
-}));
+});
 
 vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn(),
 }));
 
+const __actualHelpers = await import("#modules/mod/services/helpers.js");
 vi.mock("#modules/mod/services/helpers.js", () => ({
+  ...__actualHelpers,
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 

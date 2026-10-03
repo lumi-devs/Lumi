@@ -1,11 +1,11 @@
+import { authorize } from "#lib/permissions/authorize.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { UserError } from "@sapphire/framework";
-import {
-  PermissionFlagsBits,
-  type AnySelectMenuInteraction,
-  type ButtonInteraction,
-  type ModalSubmitInteraction,
+import type {
+  AnySelectMenuInteraction,
+  ButtonInteraction,
+  ModalSubmitInteraction,
 } from "discord.js";
 
 export interface SetupWizardState {
@@ -112,11 +112,11 @@ type SetupInteraction =
   | AnySelectMenuInteraction
   | ModalSubmitInteraction;
 
-export function hasSetupAccess(interaction: SetupInteraction): boolean {
+export async function hasSetupAccess(interaction: SetupInteraction): Promise<boolean> {
   if (!interaction.guild) return false;
-  return (
-    interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ??
-    false
+  return authorize(
+    { userId: interaction.user.id, guildId: interaction.guild.id, memberPermissions: interaction.memberPermissions },
+    { kind: "guildManager" },
   );
 }
 

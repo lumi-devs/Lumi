@@ -7,9 +7,10 @@ import {
   getRedisClusterNodes,
   getRedisClusterScaleReads,
 } from "#lib/env.js";
-import { Redis, Cluster, type RedisOptions } from "ioredis";
+import { Redis, Cluster, Command, type RedisOptions } from "ioredis";
 import { delSafe, type RedisClient } from "#lib/database/cluster-safe.js";
 import { logError } from "#lib/utilities/errors.js";
+import { redisCommandDuration } from "@lumi/observability";
 
 export const RedisKeys = {
   guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
@@ -98,8 +99,16 @@ export const RedisKeys = {
   auditLogsQueue: (bucket: number) => `lumi:queue:audit_logs:{${bucket}}`,
 
   schedulerLeader: () => "lumi:scheduler:leader",
+  schedulerHeartbeat: () => "lumi:scheduler:heartbeat",
 
   addonUpdateCheck: () => "lumi:addon:update-check",
+
+  rpcIdempotency: (action: string, guildId: string, hash: string) =>
+    `lumi:rpc:idem:${action}:${guildId}:${hash}`,
+
+  featureFlagEval: (key: string) => `lumi:flags:eval:${key}`,
+  featureFlagOverride: (key: string, guildId: string) =>
+    `lumi:flags:override:${key}:${guildId}`,
 } as const;
 
 export const RedisTTL = {
@@ -131,6 +140,15 @@ export const RedisTTL = {
   restGuildRoles: 20,
   restGuildChannels: 20,
   restGuildMembersSample: 20,
+
+  // Replay window after completion - long enough to catch a dashboard
+  // Server Action retry or a double-click's second request landing shortly
+  // after the first finished, short enough that a legitimate later retry
+  // (e.g. restoring a different backup) is never mistaken for a duplicate.
+  rpcIdempotencyDone: 5 * 60,
+
+  featureFlagEval: 30,
+  featureFlagOverride: 30,
 } as const;
 
 /**
@@ -183,6 +201,34 @@ export function redisConnectionOptions(): RedisOptions {
   };
 }
 
+/**
+ * Records `lumi_redis_command_duration_seconds` per command name by wrapping
+ * `sendCommand` once at client construction - every generated command method
+ * (get/set/xadd/...) funnels through it, so no per-call wrapping is needed.
+ *
+ * Blocking stream reads (XREAD/XREADGROUP with BLOCK) are excluded: their
+ * resolve time is however long the caller waited for new entries, not Redis
+ * round-trip latency, and would otherwise blow out the histogram's buckets.
+ */
+export function instrumentRedisLatency(client: RedisClient): RedisClient {
+  const sendCommand = client.sendCommand.bind(client);
+  client.sendCommand = (command: Command, stream?: unknown, node?: unknown) => {
+    if (Command.checkFlag("BLOCKING_COMMANDS", command.name)) {
+      return sendCommand(command, stream as never, node as never);
+    }
+    const start = performance.now();
+    const record = () => {
+      redisCommandDuration.observe(
+        { command: command.name },
+        (performance.now() - start) / 1000,
+      );
+    };
+    command.promise.then(record, record);
+    return sendCommand(command, stream as never, node as never);
+  };
+  return client;
+}
+
 export function createRedisClient(): RedisClient {
   const nodes = getRedisClusterNodes();
   const client: RedisClient = nodes
@@ -214,7 +260,7 @@ export function createRedisClient(): RedisClient {
     container.logger.warn("[Redis] Reconnecting..."),
   );
 
-  return client;
+  return instrumentRedisLatency(client);
 }
 
 /**

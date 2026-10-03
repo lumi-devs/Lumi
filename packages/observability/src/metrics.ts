@@ -8,7 +8,7 @@ import {
   Histogram,
   Registry,
 } from "prom-client";
-import { runReadinessProbes } from "./readiness";
+import { runReadinessProbes } from "./readiness.js";
 
 export const registry = new Registry();
 
@@ -111,6 +111,14 @@ export const failedJobsTotal = new Counter({
   registers: [registry],
 });
 
+/** Depth of the shared scheduled-tasks BullMQ queue, by job state. */
+export const scheduledJobsGauge = new Gauge({
+  name: "lumi_scheduled_jobs",
+  help: "BullMQ scheduled-tasks queue depth, by state",
+  labelNames: ["state"] as const,
+  registers: [registry],
+});
+
 // ── Gateway / shard ───────────────────────────────────────────────────────────
 
 export const shardLatency = new Gauge({
@@ -184,6 +192,36 @@ export const pgPoolWaiting = new Gauge({
   registers: [registry],
 });
 
+// ── Prisma query latency ────────────────────────────────────────────────────
+
+export const dbQueryDuration = new Histogram({
+  name: "lumi_db_query_duration_seconds",
+  help: "Prisma query duration in seconds, by model and operation",
+  labelNames: ["model", "operation"] as const,
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [registry],
+});
+
+export const dbSlowQueriesTotal = new Counter({
+  name: "lumi_db_slow_queries_total",
+  help: "Prisma queries exceeding DB_SLOW_QUERY_THRESHOLD_MS, by model and operation",
+  labelNames: ["model", "operation"] as const,
+  registers: [registry],
+});
+
+// ── Redis command latency ────────────────────────────────────────────────────
+
+// Command name only (bounded, ~200 possible values) - args/keys would be
+// unbounded cardinality. Blocking stream reads (XREAD/XREADGROUP with BLOCK)
+// are excluded by the caller since their wait time isn't latency.
+export const redisCommandDuration = new Histogram({
+  name: "lumi_redis_command_duration_seconds",
+  help: "ioredis command round-trip time in seconds, by command (excludes blocking reads)",
+  labelNames: ["command"] as const,
+  buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [registry],
+});
+
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
 export const cacheHits = new Counter({
@@ -197,6 +235,38 @@ export const cacheMisses = new Counter({
   name: "lumi_cache_misses_total",
   help: "Cache-aside misses, by cache",
   labelNames: ["cache"] as const,
+  registers: [registry],
+});
+
+// ── Bulkheads (Semaphore) ────────────────────────────────────────────────────
+
+export const semaphoreInFlight = new Gauge({
+  name: "lumi_semaphore_in_flight",
+  help: "Permits currently checked out of a named semaphore",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+export const semaphoreQueued = new Gauge({
+  name: "lumi_semaphore_queued",
+  help: "Callers waiting for a permit on a named semaphore",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+export const semaphoreRejectedTotal = new Counter({
+  name: "lumi_semaphore_rejected_total",
+  help: "Callers rejected because a named semaphore's queue was full",
+  labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+// ── Dashboard events (SSE) ───────────────────────────────────────────────────
+
+export const dashboardEventPublishFailures = new Counter({
+  name: "lumi_dashboard_event_publish_failures_total",
+  help: "Dashboard SSE events dropped or failed to publish, by reason",
+  labelNames: ["reason"] as const,
   registers: [registry],
 });
 

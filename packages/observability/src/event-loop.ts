@@ -4,7 +4,7 @@
 
 import { monitorEventLoopDelay, type ELDHistogram } from "node:perf_hooks";
 import { Gauge } from "prom-client";
-import { registry } from "./metrics";
+import { registry } from "./metrics.js";
 
 /** Sampling resolution; also the floor on what the histogram can report. */
 const ResolutionMs = 20;
@@ -25,6 +25,16 @@ export const eventLoopDelay = new Gauge({
 
 let histogram: ELDHistogram | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
+let lastP99Seconds: number | null = null;
+
+/**
+ * Last-reported p99 event-loop delay, in ms. Reads the gauge this module already
+ * maintains rather than standing up a second histogram - `null` before the first
+ * reporting window closes, or once the monitor is stopped.
+ */
+export function getEventLoopLagP99Ms(): number | null {
+  return lastP99Seconds === null ? null : lastP99Seconds * 1000;
+}
 
 /**
  * Start sampling event-loop delay. Idempotent; safe to call from any entrypoint.
@@ -42,9 +52,11 @@ export function startEventLoopMonitor(
 
   const report = () => {
     // Nanoseconds → seconds, matching Prometheus base-unit convention.
+    const p99 = h.percentile(99) / 1e9;
     eventLoopDelay.set({ quantile: "p50" }, h.percentile(50) / 1e9);
-    eventLoopDelay.set({ quantile: "p99" }, h.percentile(99) / 1e9);
+    eventLoopDelay.set({ quantile: "p99" }, p99);
     eventLoopDelay.set({ quantile: "max" }, h.max / 1e9);
+    lastP99Seconds = p99;
     // Reset so each window reports that window, not the process lifetime.
     h.reset();
   };
@@ -61,4 +73,5 @@ export function stopEventLoopMonitor(): void {
   }
   histogram?.disable();
   histogram = null;
+  lastP99Seconds = null;
 }

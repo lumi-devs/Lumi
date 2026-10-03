@@ -1,0 +1,75 @@
+name: Publish Packages
+
+on:
+  push:
+    tags:
+      - "contracts-v*"
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  publish:
+    name: Publish @lumi-devs/contracts + @lumi-devs/observability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#contracts-v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "dist_tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # GitHub Packages needs a .npmrc pointing at npm.pkg.github.com with the
+      # job token as the bearer credential; `npm publish` reads it from here,
+      # not from the registry URL alone.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@lumi-devs"
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build contracts
+        working-directory: packages/contracts
+        run: bun run build
+
+      - name: Build observability
+        working-directory: packages/observability
+        run: bun run build
+
+      - name: Publish contracts
+        working-directory: packages/contracts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # GitHub Packages requires the published package's scope to equal
+          # the repo owner — the in-repo name stays "@lumi/contracts" so bun
+          # workspace resolution and every `@lumi/contracts` import specifier
+          # in this monorepo are unaffected.
+          npm pkg set name=@lumi-devs/contracts
+          npm pkg set version=${{ steps.version.outputs.version }}
+          npm publish --tag ${{ steps.version.outputs.dist_tag }}
+
+      - name: Publish observability
+        working-directory: packages/observability
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Same scope rewrite as contracts, and published at the same tag's
+          # version so the two packages always move together.
+          npm pkg set name=@lumi-devs/observability
+          npm pkg set version=${{ steps.version.outputs.version }}
+          npm publish --tag ${{ steps.version.outputs.dist_tag }}

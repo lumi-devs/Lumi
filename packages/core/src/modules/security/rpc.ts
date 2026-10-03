@@ -9,6 +9,7 @@ import {
   grantVerified,
 } from "./services/verification.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
+import { withIdempotency } from "#lib/rpc/idempotency.js";
 
 export const securityRpcHandlers = implementRpc(securityRpc, {
   "guild.panic.get": async ({ guildId }) => {
@@ -34,17 +35,25 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
   },
 
   "guild.panic.set": async ({ guildId, actorId, input }) => {
-    if (!input.active) {
-      const reverted = await revertPanic(guildId);
-      if (!reverted) throw new Error("Panic mode is not active");
-      return { success: true, active: false, ...reverted };
-    }
+    return withIdempotency(
+      "guild.panic.set",
+      guildId,
+      securityRpc["guild.panic.set"].timeoutMs,
+      input,
+      async () => {
+        if (!input.active) {
+          const reverted = await revertPanic(guildId);
+          if (!reverted) throw new Error("Panic mode is not active");
+          return { success: true, active: false, ...reverted };
+        }
 
-    if (await container.db.security.getPanicState(guildId)) {
-      throw new Error("Panic mode is already active");
-    }
-    const result = await enterPanic(guildId, actorId, input.channelIds ?? []);
-    return { success: true, active: true, ...result };
+        if (await container.db.security.getPanicState(guildId)) {
+          throw new Error("Panic mode is already active");
+        }
+        const result = await enterPanic(guildId, actorId, input.channelIds ?? []);
+        return { success: true, active: true, ...result };
+      },
+    );
   },
 
   "guild.verificationPanel.get": async ({ guildId }) => {
@@ -64,13 +73,21 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     if (!input.channelId && !input.createChannel) {
       throw new Error("Pick a channel or choose to create a new one.");
     }
-    await container.db.ensureGuild(guildId);
-    const result = await postOrEditVerifyPanel(guildId, {
-      channelId: input.channelId,
-      createChannel: input.createChannel,
-      deleteOldMessage: input.deleteOldMessage,
-    });
-    return { success: true, ...result };
+    return withIdempotency(
+      "guild.verificationPanel.set",
+      guildId,
+      securityRpc["guild.verificationPanel.set"].timeoutMs,
+      input,
+      async () => {
+        await container.db.ensureGuild(guildId);
+        const result = await postOrEditVerifyPanel(guildId, {
+          channelId: input.channelId,
+          createChannel: input.createChannel,
+          deleteOldMessage: input.deleteOldMessage,
+        });
+        return { success: true, ...result };
+      },
+    );
   },
 
   "guild.verificationPanel.delete": async ({ guildId }) => {
@@ -111,9 +128,16 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
     };
   },
 
-  "guild.backups.restore": async ({ guildId, input }) => {
-    const result = await restoreGuildFromBackup(guildId, input.backupId);
-    if (!result) throw new Error("No backup found to restore");
-    return { success: true, ...result };
-  },
+  "guild.backups.restore": async ({ guildId, input }) =>
+    withIdempotency(
+      "guild.backups.restore",
+      guildId,
+      securityRpc["guild.backups.restore"].timeoutMs,
+      input,
+      async () => {
+        const result = await restoreGuildFromBackup(guildId, input.backupId);
+        if (!result) throw new Error("No backup found to restore");
+        return { success: true, ...result };
+      },
+    ),
 });

@@ -4,12 +4,32 @@ import { container } from "@sapphire/framework";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
 
+class MockRepoAlreadyInstalledError extends Error {
+  public sha: string | null;
+  public constructor(repoName: string, sha: string | null) {
+    super(`Repository ${repoName} is already installed`);
+    this.name = "RepoAlreadyInstalledError";
+    this.sha = sha;
+  }
+}
+
 vi.mock("#lib/downloader/resolver.js", () => ({
   resolver: {
-    addRepo: vi.fn().mockResolvedValue(undefined),
-    installModule: vi.fn().mockResolvedValue({ version: "1.0.0" }),
+    addRepo: vi.fn().mockResolvedValue({ sha: null, signedBy: null, signatureWarning: null }),
+    updateRepo: vi.fn().mockResolvedValue({
+      oldSha: "old",
+      newSha: "new",
+      changed: true,
+      diffStat: "",
+      recloned: false,
+      signedBy: null,
+      signatureWarning: null,
+    }),
+    installModule: vi.fn().mockResolvedValue({ version: "1.0.0", signedBy: null, signatureWarning: null }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
+    releasePinnedWorktreeIfUnused: vi.fn().mockResolvedValue(undefined),
   },
+  RepoAlreadyInstalledError: MockRepoAlreadyInstalledError,
   AddonModulesRoot: "/mock/addon_modules",
   ModuleRoot: "/mock/modules",
 }));
@@ -21,6 +41,7 @@ vi.mock("node:fs", () => ({
     rm: vi.fn().mockResolvedValue(undefined),
     symlink: vi.fn().mockResolvedValue(undefined),
     unlink: vi.fn().mockResolvedValue(undefined),
+    readlink: vi.fn().mockRejectedValue(new Error("ENOENT")),
   },
 }));
 
@@ -50,6 +71,7 @@ describe("DownloaderUtility", () => {
         writeInstalledDownloaderModule: vi.fn(),
         deleteInstalledDownloaderModule: vi.fn(),
         writeDownloaderRepo: vi.fn(),
+        updateDownloaderRepoCommit: vi.fn(),
         readAllDownloaderRepos: vi.fn(),
         readDownloaderRepoById: vi.fn(),
         updateInstalledDownloaderModuleCommit: vi.fn(),
@@ -199,7 +221,7 @@ describe("DownloaderUtility", () => {
       expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
       expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
-      expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0");
+      expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0", null);
     });
 
     it("unloads module and unlinks on failure during load/sync", async () => {
@@ -219,6 +241,8 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "abc1234",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       await service.installModule("r1", "m1", "abc1234");
@@ -228,6 +252,7 @@ describe("DownloaderUtility", () => {
         "r1-id",
         "m1",
         "abc1234",
+        null,
       );
     });
   });
@@ -267,10 +292,31 @@ describe("DownloaderUtility", () => {
   });
 
   describe("addRepo, updateRepo, listRepos, getModulesInRepo", () => {
-    it("addRepo adds repo via resolver and DB", async () => {
+    it("addRepo adds repo via resolver and DB, persisting the cloned commit", async () => {
+      (resolver.addRepo as any).mockResolvedValueOnce({
+        sha: "abc1234",
+        signedBy: null,
+        signatureWarning: null,
+      });
       await service.addRepo("r1", "https://url", "main");
       expect(resolver.addRepo).toHaveBeenCalledWith("r1", "https://url", "main");
-      expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith("r1", "https://url", "main");
+      expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith(
+        "r1",
+        "https://url",
+        "main",
+        "abc1234",
+        null,
+      );
+    });
+
+    it("addRepo surfaces a friendly already-installed error with the current SHA and does not touch the DB", async () => {
+      (resolver.addRepo as any).mockRejectedValueOnce(
+        new MockRepoAlreadyInstalledError("r1", "deadbeef"),
+      );
+      await expect(service.addRepo("r1", "https://url", "main")).rejects.toThrow(
+        /already installed at commit `deadbeef`.*,repo update r1/s,
+      );
+      expect(mockDb.downloader.writeDownloaderRepo).not.toHaveBeenCalled();
     });
 
     it("updateRepo throws error if repo missing in DB", async () => {
@@ -278,10 +324,32 @@ describe("DownloaderUtility", () => {
       await expect(service.updateRepo("r1")).rejects.toThrow("Repository **r1** not found");
     });
 
-    it("updateRepo updates repo via resolver", async () => {
-      mockDb.downloader.readDownloaderRepo.mockResolvedValue({ name: "r1", url: "http://url", branch: "dev" });
-      await service.updateRepo("r1");
-      expect(resolver.addRepo).toHaveBeenCalledWith("r1", "http://url", "dev");
+    it("updateRepo pulls via resolver.updateRepo and persists the new commit to the DB", async () => {
+      mockDb.downloader.readDownloaderRepo.mockResolvedValue({
+        id: "r1-id",
+        name: "r1",
+        url: "http://url",
+        branch: "dev",
+      });
+      (resolver.updateRepo as any).mockResolvedValueOnce({
+        oldSha: "old1234",
+        newSha: "new5678",
+        changed: true,
+        diffStat: "1 file changed",
+        recloned: false,
+        signedBy: null,
+        signatureWarning: null,
+      });
+
+      const result = await service.updateRepo("r1");
+
+      expect(resolver.updateRepo).toHaveBeenCalledWith("r1", "http://url", "dev");
+      expect(mockDb.downloader.updateDownloaderRepoCommit).toHaveBeenCalledWith(
+        "r1-id",
+        "new5678",
+        null,
+      );
+      expect(result.newSha).toBe("new5678");
     });
 
     it("listRepos delegates to DB", async () => {
@@ -433,16 +501,19 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "pinnedhash",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       const res = await service.updateModule("m1", "pinnedhash");
 
-      expect(res).toEqual({ updated: true, needsRestart: true });
+      expect(res).toEqual({ updated: true, needsRestart: true, signatureWarning: null });
       expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "pinnedhash");
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
         "r1-id",
         "m1",
         "pinnedhash",
+        null,
       );
     });
   });
@@ -469,6 +540,8 @@ describe("DownloaderUtility", () => {
       (resolver.installModule as any).mockResolvedValueOnce({
         version: "1.0.0",
         commit: "oldhash",
+        signedBy: null,
+        signatureWarning: null,
       });
 
       const res = await service.rollbackModule("m1", "oldhash");
@@ -480,8 +553,9 @@ describe("DownloaderUtility", () => {
         "r1-id",
         "m1",
         "oldhash",
+        null,
       );
-      expect(res).toEqual({ commit: "oldhash", needsRestart: true });
+      expect(res).toEqual({ commit: "oldhash", needsRestart: true, signatureWarning: null });
     });
   });
 

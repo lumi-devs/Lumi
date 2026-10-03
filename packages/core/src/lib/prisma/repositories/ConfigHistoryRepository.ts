@@ -1,5 +1,16 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "#lib/retention/archive.js";
+import {
+  createdAtIdKeysetWhere,
+  CreatedAtIdOrderBy,
+  decodeCreatedAtIdCursor,
+  encodeCreatedAtIdCursor,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 export interface ConfigHistoryEntry {
   id: number;
@@ -54,28 +65,40 @@ export class ConfigHistoryRepository extends Repository {
       moduleName?: string;
       key?: string;
       actorId?: string;
-      skip?: number;
       take?: number;
+      /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
+      cursor?: string;
     } = {},
-  ): Promise<{ entries: ConfigHistoryEntry[]; total: number }> {
-    const where = {
+  ): Promise<{ entries: ConfigHistoryEntry[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.moduleName ? { moduleName: filter.moduleName } : {}),
       ...(filter.key ? { key: filter.key } : {}),
       ...(filter.actorId ? { actorId: filter.actorId } : {}),
     };
+    const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+        : baseWhere;
 
-    const [entries, total] = await this.prisma.$transaction([
+    const [rows, total] = await Promise.all([
       this.prisma.moduleConfigHistory.findMany({
         where,
-        orderBy: { createdAt: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        orderBy: CreatedAtIdOrderBy,
+        take: take + 1,
       }),
-      this.prisma.moduleConfigHistory.count({ where }),
+      filter.cursor === undefined
+        ? this.prisma.moduleConfigHistory.count({ where: baseWhere })
+        : undefined,
     ]);
-
-    return { entries, total };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      entries: page,
+      total,
+      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+    };
   }
 
   public getConfigHistoryEntry(id: number): Promise<ConfigHistoryEntry | null> {
@@ -84,10 +107,30 @@ export class ConfigHistoryRepository extends Repository {
     });
   }
 
-  public async purgeOldEntries(date: Date): Promise<number> {
-    const { count } = await this.prisma.moduleConfigHistory.deleteMany({
-      where: { createdAt: { lt: date } },
+  public async purgeOldEntries(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "module_config_history",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.moduleConfigHistory.findMany({
+          where: {
+            createdAt: { lt: date },
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.moduleConfigHistory.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
+      },
     });
-    return count;
   }
 }

@@ -5,9 +5,9 @@ import type {
   CasesListData,
   ModNoteView,
   WarnThresholdView,
-} from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
-import { PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas";
+} from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { CursorSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
 
 export const WarnThresholdActions = [
   "mute",
@@ -67,12 +67,13 @@ export const modRpc = {
         .optional(),
       userId: SnowflakeSchema.optional(),
       moderatorId: SnowflakeSchema.optional(),
-      page: PageSchema,
       pageSize: PageSizeSchema,
+      cursor: CursorSchema,
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged moderation cases.",
+    readOnly: true,
   }),
   "guild.cases.revoke": rpcAction<{ success: boolean; caseNumber: number }>()({
     input: s.object({ caseNumber: s.number().int().greaterThanOrEqual(1) }),
@@ -86,6 +87,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List warn-count escalation rules.",
+    readOnly: true,
   }),
   "guild.warnThresholds.set": rpcAction<{
     success: boolean;
@@ -108,6 +110,7 @@ export const modRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Moderator notes for a user.",
+    readOnly: true,
   }),
   "guild.modNotes.add": rpcAction<{ success: boolean; note: ModNoteView }>()({
     input: s.object({
@@ -145,12 +148,13 @@ export const modRpc = {
   "guild.appeals.list": rpcAction<AppealsListData>()({
     input: s.object({
       status: s.enum(AppealStatuses).optional(),
-      page: PageSchema,
       pageSize: PageSizeSchema,
+      cursor: CursorSchema,
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged appeals for reviewers.",
+    readOnly: true,
   }),
   "guild.appeals.review": rpcAction<{
     success: boolean;

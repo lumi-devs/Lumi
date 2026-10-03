@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach, spyOn, jest } from "bun:test";
 import { initMetrics, registry, commandsTotal, cacheHits } from "../src/metrics.js";
 import { registerReadinessProbe, runReadinessProbes } from "../src/readiness.js";
 import { startTracing, shutdownTracing } from "../src/tracing.js";
+import {
+  getEventLoopLagP99Ms,
+  startEventLoopMonitor,
+  stopEventLoopMonitor,
+} from "../src/event-loop.js";
 
 describe("Observability package metrics & registry", () => {
   beforeEach(() => {
@@ -101,5 +106,36 @@ describe("Tracing auto-instrumentation unhandledRejection safety", () => {
     } finally {
       process.off("unhandledRejection", unhandledListener);
     }
+  });
+});
+
+describe("event-loop lag monitor", () => {
+  afterEach(() => {
+    stopEventLoopMonitor();
+    jest.useRealTimers();
+  });
+
+  it("is null before the monitor has ever reported", () => {
+    expect(getEventLoopLagP99Ms()).toBeNull();
+  });
+
+  it("reuses the existing histogram's p99 instead of a second one", () => {
+    jest.useFakeTimers();
+    startEventLoopMonitor(1_000);
+    jest.advanceTimersByTime(1_000);
+
+    const p99 = getEventLoopLagP99Ms();
+    expect(p99).not.toBeNull();
+    expect(typeof p99).toBe("number");
+  });
+
+  it("goes back to null once stopped", () => {
+    jest.useFakeTimers();
+    startEventLoopMonitor(1_000);
+    jest.advanceTimersByTime(1_000);
+    expect(getEventLoopLagP99Ms()).not.toBeNull();
+
+    stopEventLoopMonitor();
+    expect(getEventLoopLagP99Ms()).toBeNull();
   });
 });

@@ -1,13 +1,13 @@
 import { s } from "@sapphire/shapeshift";
-import type { BlocklistListData, IgnoredChannelView } from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
+import type { BlocklistListData, IgnoredChannelView } from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   BlocklistAddSchema,
   BlocklistRemoveSchema,
   boundedArray,
   PaginationSchema,
   SnowflakeSchema,
-} from "./schemas";
+} from "./schemas.js";
 
 export const PermitKinds = ["enforced", "custom"] as const;
 export type PermitKind = (typeof PermitKinds)[number];
@@ -57,6 +57,7 @@ export const coreRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List permits with assignments.",
+    readOnly: true,
   }),
   "guild.permits.create": rpcAction<{
     success: boolean;
@@ -107,6 +108,7 @@ export const coreRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged guild blocklist.",
+    readOnly: true,
   }),
   "guild.blocklist.add": rpcAction<{ success: boolean; userId: string }>()({
     input: BlocklistAddSchema,
@@ -124,6 +126,7 @@ export const coreRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List ignored channels.",
+    readOnly: true,
   }),
   "guild.ignored.add": rpcAction<{
     success: boolean;

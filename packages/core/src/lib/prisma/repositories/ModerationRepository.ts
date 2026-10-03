@@ -1,6 +1,16 @@
 import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "#lib/retention/archive.js";
+import {
+  decodeSingleKeyCursor,
+  encodeSingleKeyCursor,
+  singleKeyKeysetWhere,
+  splitPage,
+} from "#lib/prisma/cursor.js";
 
 /** Batch size for the cross-guild sweeps, which are unbounded by nature. */
 const SweepPageSize = 500;
@@ -84,28 +94,43 @@ export class ModerationRepository extends Repository {
       action?: CaseAction;
       userId?: string;
       moderatorId?: string;
-      skip?: number;
       take?: number;
+      /** Opaque `caseNumber` cursor. Omitted for the first page, where `total` is also returned. */
+      cursor?: string;
     } = {},
-  ): Promise<{ cases: ModerationCase[]; total: number }> {
-    const where = {
+  ): Promise<{ cases: ModerationCase[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
       guildId,
       ...(filter.action ? { action: filter.action } : {}),
       ...(filter.userId ? { userId: filter.userId } : {}),
       ...(filter.moderatorId ? { moderatorId: filter.moderatorId } : {}),
     };
+    const take = filter.take ?? 25;
+    const where =
+      filter.cursor !== undefined
+        ? {
+            ...baseWhere,
+            ...singleKeyKeysetWhere("caseNumber", decodeSingleKeyCursor(filter.cursor)),
+          }
+        : baseWhere;
 
-    const [cases, total] = await this.prisma.$transaction([
+    const [rows, total] = await Promise.all([
       this.prisma.moderationCase.findMany({
         where,
         orderBy: { caseNumber: "desc" },
-        skip: filter.skip ?? 0,
-        take: filter.take ?? 25,
+        take: take + 1,
       }),
-      this.prisma.moderationCase.count({ where }),
+      filter.cursor === undefined
+        ? this.prisma.moderationCase.count({ where: baseWhere })
+        : undefined,
     ]);
-
-    return { cases, total };
+    const { page, hasMore } = splitPage(rows, take);
+    const last = page.at(-1);
+    return {
+      cases: page,
+      total,
+      nextCursor: hasMore && last ? encodeSingleKeyCursor(last.caseNumber) : null,
+    };
   }
 
   /**
@@ -331,16 +356,37 @@ export class ModerationRepository extends Repository {
     });
   }
 
-  public async purgeOldCases(date: Date): Promise<number> {
-    const { count } = await this.prisma.moderationCase.deleteMany({
-      where: {
-        createdAt: { lt: date },
-        OR: [
-          { active: false },
-          { expiresAt: { lt: new Date() } }
-        ]
+  /**
+   * Purges lifted/inactive cases older than `date`. Never touches an active
+   * case regardless of age or `expiresAt` - moderation history is a
+   * legal/audit record an operator opts out of retaining, not the other way
+   * around (see `resolveModerationRetentionDays`).
+   */
+  public async purgeOldCases(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "moderation_cases",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.moderationCase.findMany({
+          where: {
+            createdAt: { lt: date },
+            active: false,
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.moderationCase.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
       },
     });
-    return count;
   }
 }

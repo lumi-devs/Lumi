@@ -10,8 +10,6 @@ import {
 import type { EconomyConfig } from "#modules/economy/config.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
-vi.mock("@sapphire/framework", () => ({ container: {} }));
-
 function makeConfig(overrides: Partial<EconomyConfig> = {}): EconomyConfig {
   return {
     currencyName: "credits",

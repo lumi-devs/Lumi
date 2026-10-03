@@ -16,7 +16,7 @@ body:
         - "@lumi/core (Framework, Event Bus, Sharding Telemetry)"
         - "New Core Module (packages/core/src/modules/)"
         - "@lumi/worker (Gateway, Commands, Scheduled Tasks)"
-        - "@lumi/dashboard (Web Management UI)"
+        - "lumi-dashboard (Web Management UI, separate repo)"
         - "Addon SDK (lumi/*, sandboxed addons)"
         - "CLI / Developer Tools"
     validations:

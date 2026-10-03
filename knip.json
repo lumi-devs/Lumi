@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["config/*.ts", "examples/**"],
+  "ignore": ["config/*.ts", "packages/core/tests/fixtures/addons/**"],
   "ignoreDependencies": [
     "postcss-load-config",
     "tailwindcss",
@@ -43,16 +43,6 @@
     "apps/worker": {
       "entry": ["src/main.ts", "src/shard-client.ts"],
       "project": ["src/**/*.ts"]
-    },
-    "apps/dashboard": {
-      "next": true,
-      "entry": ["tests/**/*.test.{ts,tsx}", "tests/setup.ts"],
-      "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"]
-    },
-    "apps/docs": {
-      "next": true,
-      "entry": ["scripts/*.ts"],
-      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"]
     }
   }
 }

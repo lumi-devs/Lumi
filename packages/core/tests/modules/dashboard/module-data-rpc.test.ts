@@ -4,6 +4,7 @@ import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
@@ -16,7 +17,6 @@ function everyoneRole(permissions = "0") {
 
 describe("dashboard module data inspector RPC handler", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let restGet: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -31,21 +31,10 @@ describe("dashboard module data inspector RPC handler", () => {
       debug: vi.fn(),
     } as any;
 
-    restGet = vi.fn().mockImplementation((route: string) => {
-      if (route === `/guilds/${GUILD_ID}`) {
-        return Promise.resolve({
-          id: GUILD_ID,
-          owner_id: OWNER_ID,
-          roles: [everyoneRole()],
-        });
-      }
-      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
-        return Promise.resolve({ roles: [] });
-      }
-      return Promise.reject(new Error(`Unexpected route: ${route}`));
-    });
-
-    container.client = { rest: { get: restGet } } as any;
+    const discordRest = new FakeDiscordRestPort();
+    discordRest.seedGuild({ id: GUILD_ID, owner_id: OWNER_ID, roles: [everyoneRole()] } as any);
+    discordRest.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: [] } as any);
+    (container as any).discordRest = discordRest;
 
     (container as any).invalidation = { invalidate: vi.fn() };
 

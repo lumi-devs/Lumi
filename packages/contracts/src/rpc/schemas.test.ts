@@ -1,7 +1,9 @@
 import { describe, it, expect } from "bun:test";
 import { s } from "@sapphire/shapeshift";
 import {
+  AuditFilterShape,
   boundedArray,
+  CursorSchema,
   PageSchema,
   PageSizeSchema,
   SnowflakeSchema,
@@ -60,6 +62,54 @@ describe("PageSchema and PageSizeSchema", () => {
 
   it.each([0, -5])("rejects page size %s", (value) => {
     expect(() => PageSizeSchema.parse(value)).toThrow();
+  });
+});
+
+describe("CursorSchema", () => {
+  it("treats an absent cursor as valid", () => {
+    expect(CursorSchema.parse(undefined)).toBeUndefined();
+  });
+
+  it("accepts a non-empty string", () => {
+    expect(CursorSchema.parse<string | undefined>("eyJhIjoxfQ")).toBe("eyJhIjoxfQ");
+  });
+
+  it("rejects an empty string", () => {
+    expect(() => CursorSchema.parse("")).toThrow();
+  });
+
+  it("rejects a cursor above the length cap", () => {
+    expect(() => CursorSchema.parse("a".repeat(513))).toThrow();
+  });
+
+  it("accepts a cursor at the length cap", () => {
+    const value = "a".repeat(512);
+    expect(CursorSchema.parse<string | undefined>(value)).toBe(value);
+  });
+
+  it("rejects a non-string cursor", () => {
+    expect(() => CursorSchema.parse(123)).toThrow();
+  });
+});
+
+describe("AuditFilterShape (cursor-only)", () => {
+  const AuditFilter = s.object(AuditFilterShape);
+
+  it("strips an unrecognized page field", () => {
+    const payload = { userId: "123456789012345678", page: 2, pageSize: 10 };
+    expect(AuditFilter.parse(payload)).toEqual({
+      userId: "123456789012345678",
+      pageSize: 10,
+    });
+  });
+
+  it("validates a bare pageSize payload", () => {
+    expect(AuditFilter.parse({})).toEqual({});
+  });
+
+  it("accepts a payload that sends a cursor", () => {
+    const payload = { cursor: "eyJhIjoxfQ" };
+    expect(AuditFilter.parse(payload)).toEqual(payload);
   });
 });
 

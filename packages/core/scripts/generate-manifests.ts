@@ -22,6 +22,9 @@ const RESET = "\x1b[0m";
 
 const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 
+/** `packages/core`'s own module directory - the one root every deployment always scans. */
+export const DefaultModuleRoot = path.join(ROOT, "src/modules");
+
 /** Roots to scan. Extra dirs (e.g. addon checkouts) may be passed as argv. */
 const ROOTS = [
   path.join(ROOT, "src/modules"),
@@ -54,7 +57,13 @@ function extractMeta(mod: Record<string, unknown>): ModuleMeta | ModuleDefinitio
   return null;
 }
 
-async function walk(dir: string, out: { dir: string; index: string }[]) {
+/**
+ * Recursively finds every module directory (one with an `index.ts`/`index.js`)
+ * under `dir`. Exported so `apps/cli` (`lumi module list`) can reuse the exact
+ * same discovery walk without duplicating it or importing module code (which
+ * `findIndex`/`extractMeta` below need to do, but `module list` doesn't).
+ */
+export async function walk(dir: string, out: { dir: string; index: string }[]) {
   const entries = await fs.readdir(dir).catch(() => [] as string[]);
   for (const name of entries) {
     if (name.startsWith("_") || name.startsWith(".")) continue;
@@ -103,7 +112,9 @@ async function main() {
   console.log(`${GREEN}[manifest] wrote ${written} manifest(s).${RESET}`);
 }
 
-main().catch((err) => {
-  console.error(`${RED}❌ Manifest generation failed:${RESET}`, err);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((err: unknown) => {
+    console.error(`${RED}❌ Manifest generation failed:${RESET}`, err);
+    process.exit(1);
+  });
+}

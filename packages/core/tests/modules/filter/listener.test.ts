@@ -4,7 +4,9 @@ import { container } from "@sapphire/framework";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
+const __actualUtility = await import("#lib/module-system/Utility.js");
 vi.mock("#lib/module-system/Utility.js", () => ({
+  ...__actualUtility,
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));

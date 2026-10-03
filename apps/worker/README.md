@@ -31,7 +31,7 @@ The worker application serves as the core processing engine at every deployment 
 - **Owns the Gateway Connection**: The worker opens its own Discord Gateway WebSocket and handles the resulting dispatches in-process. Gateway ingestion and command/interaction handling are never split across processes - discord.js's internal packet handling assumes single-process invariants.
 - **Sapphire Framework Foundation**: Built on Sapphire Framework v5, providing modular command registration, listener stores, argument parsing, and command execution pipelines.
 - **Dynamic Module Store**: Loads built-in feature modules (`afk`, `core`, `dashboard`, `economy`, `filter`, `logging`, `mod`, `reactionroles`, `security`, `sticky`, `tempvc`, `utility`, `welcome`) and dynamically mounts external third-party addons from `/lumi-addons` or custom development paths (`LUMI_DEV_PATHS`).
-- **No Dashboard RPC Handler**: dashboard RPC requests (`packages/core/src/lib/rpc/http-server.ts`) are served by the standalone `@lumi/api` process (`apps/api`), which holds no Discord gateway connection of its own — not by the worker.
+- **No Dashboard RPC Handler**: dashboard RPC requests (`apps/api/src/rpc-http-server.ts`) are served by the standalone `@lumi/api` process (`apps/api`), which holds no Discord gateway connection of its own — not by the worker.
 - **High-Performance Caching**: Integrates `RedisEntityCache` and an `InvalidationBus` to cache guild configurations and user states, reducing database load.
 - **Sharding via discord.js `ShardingManager`**: `apps/worker/src/main.ts` is a lightweight manager process - it constructs a `ShardingManager` and spawns one child process per shard it owns (`apps/worker/src/shard-client.ts`, where the actual `LumiClient` lives). `TOTAL_SHARDS`/`SHARD_LIST` control which shards this replica spawns; `CLUSTER_NAME` namespaces the shard telemetry each child publishes to Redis for the dashboard's fleet view. Replica count is a deliberate shards-per-replica decision, not a queue-lag autoscaler target.
 - **Zero-coordination primary shard**: exactly one process per pod - the one holding shard id `0` - binds `/metrics` and owns BullMQ job *scheduling* (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). Every shard, primary or not, still executes fired task effects for the guilds it holds. The RPC HTTP server used to live here too; it now runs in the separate `@lumi/api` process instead.
@@ -58,7 +58,7 @@ flowchart TD
     subgraph External Infrastructure
         DB[(PostgreSQL 17 / PgBouncer)]
         Discord[Discord REST API]
-        Dash[apps/dashboard]
+        Dash[lumi-dashboard]
         Api[apps/api]
     end
 

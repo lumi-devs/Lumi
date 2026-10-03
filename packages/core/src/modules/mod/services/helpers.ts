@@ -1,7 +1,7 @@
 import type { Container } from "@sapphire/framework";
 import type { Guild } from "discord.js";
 import type { CaseAction } from "@prisma/client";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
 import { cancelTask } from "#lib/schedule-task.js";
 
 
@@ -24,6 +24,7 @@ export async function scheduleCaseLift(
         jobId: liftJobId(c.id),
         removeOnComplete: true,
         removeOnFail: true,
+        priority: QueuePriority.CRITICAL,
       },
     },
   ).catch((err: unknown) =>

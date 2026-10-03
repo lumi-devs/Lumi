@@ -4,8 +4,9 @@
  *
  * Generates the minimal directory shape a real addon needs (`info.json`,
  * `index.ts` with `@DefineModule`/`cfg`, one command stub, a README) into
- * `./addons/<name>` by default - mirroring `examples/hello-world`,
- * the addon the Quick Start guide (docs/QUICK_START_ADDON.md) walks through.
+ * `./addons/<name>` by default - mirroring `hello-world` in
+ * lumi-devs/lumi-addons's `examples/`, the addon the Quick Start guide
+ * (docs/QUICK_START_ADDON.md) walks through.
  *
  * `./addons/` is a plain local scratch directory (gitignored), the same shape
  * `LUMI_DEV_PATHS` expects: point it at the directory *containing* one or more
@@ -32,6 +33,12 @@ interface Args {
   force: boolean;
 }
 
+export class CliExitError extends Error {
+  constructor(public readonly exitCode: number) {
+    super(`cli exited with code ${exitCode}`);
+  }
+}
+
 function usage(): never {
   console.error(
     [
@@ -47,7 +54,7 @@ function usage(): never {
       "  bun run addon:create welcome-messages",
     ].join("\n"),
   );
-  process.exit(2);
+  throw new CliExitError(2);
 }
 
 function titleCase(slug: string): string {
@@ -99,7 +106,7 @@ function parseArgs(argv: string[]): Args {
     console.error(
       `${RED}Invalid addon name "${name}"${RESET} - must match ${NAME_RE} (lowercase letters, digits, hyphens; must start with a letter or digit), since it also has to match the directory name.`,
     );
-    process.exit(2);
+    throw new CliExitError(2);
   }
 
   return { name, dir, displayName: displayName || titleCase(name), author, force };
@@ -229,8 +236,13 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2));
+/**
+ * Runs the scaffold generator against a raw argv (e.g. `process.argv.slice(2)`).
+ * Exported so both this script's own CLI entrypoint and `apps/cli` (`lumi addon create`)
+ * share the exact same generator - no duplicated scaffolding logic.
+ */
+export async function runCreateAddon(argv: string[]): Promise<number> {
+  const args = parseArgs(argv);
   const target = path.join(args.dir, args.name);
 
   if (await pathExists(target)) {
@@ -238,7 +250,7 @@ async function main() {
       console.error(
         `${RED}✗${RESET} ${path.relative(ROOT, target)} already exists. Pass ${BOLD}--force${RESET} to overwrite, or pick a different name.`,
       );
-      process.exit(1);
+      throw new CliExitError(1);
     }
     console.log(`${YELLOW}⚠${RESET}  Overwriting existing ${path.relative(ROOT, target)} (--force).`);
   }
@@ -270,6 +282,14 @@ async function main() {
   );
   console.log(`  3. Restart the worker, then ${DIM}/modules enable ${args.name}${RESET} in your test server.`);
   console.log(`  4. ${DIM}bun run validate ${path.relative(ROOT, target)}${RESET} before publishing.`);
+  return 0;
 }
 
-void main();
+if (import.meta.main) {
+  runCreateAddon(process.argv.slice(2))
+    .then((code) => process.exit(code))
+    .catch((err: unknown) => {
+      if (err instanceof CliExitError) process.exit(err.exitCode);
+      throw err;
+    });
+}

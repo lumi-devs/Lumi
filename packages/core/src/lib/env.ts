@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
   if (value !== undefined) return value;
@@ -153,6 +156,11 @@ export function resolvePgPoolSize(): number {
   return Math.max(2, Math.floor(total / getShardCount()));
 }
 
+/** Prisma queries slower than this log a warning and increment the slow-query counter. */
+export function resolveDbSlowQueryThresholdMs(): number {
+  return envParseInteger("DB_SLOW_QUERY_THRESHOLD_MS", 1000);
+}
+
 export function getConsumerId(): string {
   return (
     process.env["LUMI_CONSUMER_ID"] ??
@@ -282,6 +290,34 @@ export const getRpcInternalToken = (): string | null => {
   return token && token.length > 0 ? token : null;
 };
 
+/**
+ * Base URL of the `apps/api` RPC server (e.g. `http://worker:8091`), set on
+ * whatever deployment/operator surface needs to reach it - not read by the
+ * worker/api/scheduler processes themselves, only by tooling (the doctor
+ * diagnostics) that probes it from outside. Unset means the RPC surface
+ * hasn't been wired up for that caller yet, not a misconfiguration.
+ */
+export const getRpcHealthUrl = (): string | null => {
+  const raw = process.env["RPC_HTTP_URL"]?.trim();
+  return raw ? raw.replace(/\/+$/, "") : null;
+};
+
+/**
+ * Concurrent-in-flight cap for the RPC dispatch bulkhead gating
+ * `guildManager`-authorized actions (every such action's authorizer makes a
+ * Discord REST call before the handler even runs). Bounds how many can be
+ * mid-flight at once so a Discord REST stall queues those actions instead of
+ * starving DB-only RPC actions sharing the same process.
+ */
+export function resolveRpcDiscordBulkheadSize(): number {
+  return envParseInteger("RPC_DISCORD_BULKHEAD_SIZE", 16);
+}
+
+/** Callers queued behind {@linkcode resolveRpcDiscordBulkheadSize} before dispatch starts rejecting with a retryable error. */
+export function resolveRpcDiscordBulkheadQueueLimit(): number {
+  return envParseInteger("RPC_DISCORD_BULKHEAD_QUEUE_LIMIT", 64);
+}
+
 export const getBotToken = (): string => envParseString("BOT_TOKEN");
 
 export function getTotalShards(): number | "auto" {
@@ -293,6 +329,106 @@ export function getTotalShards(): number | "auto" {
   }
   return n;
 }
+
+export type AddonSignaturePolicy = "off" | "warn" | "require";
+
+/**
+ * How strictly the Downloader enforces git commit-signature verification
+ * (`#lib/downloader/signature.js`) against `ADDON_ALLOWED_SIGNERS_FILE` before
+ * an addon repo/module revision goes live. `off` preserves the pre-signing
+ * behavior.
+ */
+export function getAddonSignaturePolicy(): AddonSignaturePolicy {
+  const raw = process.env["ADDON_SIGNATURE_POLICY"]?.trim();
+  if (!raw || raw === "off") return "off";
+  if (raw === "warn" || raw === "require") return raw;
+  throw new Error(
+    `[ENV] Invalid ADDON_SIGNATURE_POLICY: "${raw}" (expected off, warn, or require)`,
+  );
+}
+
+/** Path to a git `allowed_signers` file (`man git-config` gpg.ssh.allowedSignersFile). */
+export function getAddonAllowedSignersFile(): string | null {
+  const raw = process.env["ADDON_ALLOWED_SIGNERS_FILE"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+}
+
+/**
+ * Fails fast at startup when `ADDON_SIGNATURE_POLICY=require` has no usable
+ * allowed-signers file - a require policy that can never verify anything
+ * would otherwise silently behave like `off` the first time a repo is added.
+ */
+export function validateAddonSignatureConfig(): void {
+  if (getAddonSignaturePolicy() !== "require") return;
+
+  const file = getAddonAllowedSignersFile();
+  if (!file) {
+    throw new Error(
+      "[ENV] ADDON_SIGNATURE_POLICY=require requires ADDON_ALLOWED_SIGNERS_FILE to be set.",
+    );
+  }
+  if (!existsSync(file)) {
+    throw new Error(
+      `[ENV] ADDON_ALLOWED_SIGNERS_FILE (${file}) does not exist.`,
+    );
+  }
+}
+
+/** How long `AuditLedger` rows survive before the retention sweep purges them. */
+export function resolveAuditRetentionDays(): number {
+  return envParseInteger("AUDIT_RETENTION_DAYS", 90);
+}
+
+/** How long `ModuleConfigHistory` rows survive before the retention sweep purges them. */
+export function resolveConfigHistoryRetentionDays(): number {
+  return envParseInteger("CONFIG_HISTORY_RETENTION_DAYS", 90);
+}
+
+/**
+ * How long a lifted/inactive moderation case (and its resolved appeal, if
+ * any) survives before the retention sweep purges it. Defaults to `0`, which
+ * means keep forever - moderation history has legal/audit value an operator
+ * has to opt out of, not into. An active case (or a pending appeal) is never
+ * eligible regardless of this setting or its age.
+ */
+export function resolveModerationRetentionDays(): number {
+  return envParseInteger("MODERATION_RETENTION_DAYS", 0);
+}
+
+/**
+ * Root directory the retention sweep writes a gzip-compressed JSONL archive
+ * to before deleting a batch of rows from any purged table (audit ledger,
+ * config history, moderation cases, appeals) - each table gets its own
+ * subdirectory. Unset skips archiving entirely: matching rows are deleted
+ * with no backup, the behavior before this setting existed.
+ */
+export const getAuditArchiveDir = (): string | null => {
+  const raw = process.env["AUDIT_ARCHIVE_DIR"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+};
+
+/** Root directory the `gdpr-export` scheduled task writes gzipped JSON exports to. */
+export function getGdprExportDir(): string {
+  return envParseString(
+    "GDPR_EXPORT_DIR",
+    path.join(process.cwd(), "data", "gdpr-exports"),
+  );
+}
+
+/** How long a finished export's file (and its `GdprExportJob` row) survives before the cleanup sweep removes it. */
+export function resolveGdprExportTtlHours(): number {
+  return envParseInteger("GDPR_EXPORT_TTL_HOURS", 24);
+}
+
+/**
+ * HMAC key for signing the short-lived GDPR export download token. Falls
+ * back to `RPC_INTERNAL_TOKEN` (also a shared secret already present on every
+ * replica) when unset, rather than requiring a second secret to provision.
+ */
+export const getGdprExportSigningSecret = (): string | null => {
+  const raw = process.env["GDPR_EXPORT_SIGNING_SECRET"]?.trim();
+  return raw && raw.length > 0 ? raw : null;
+};
 
 export function getShardList(): number[] | "auto" {
   const raw = process.env["SHARD_LIST"];

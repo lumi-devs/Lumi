@@ -8,9 +8,11 @@ import {
 } from "@lumi/contracts/rpc";
 import type { AppealVerifyResult } from "@lumi/contracts/views";
 import { verifyAppealToken } from "./services/appeal-token.js";
+import { liftModerationCaseWithUndo } from "./services/case-lift.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
-import { paginate } from "#lib/rpc/validation.js";
+import { resolvePageSize } from "#lib/rpc/validation.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
+import { errorCode } from "#lib/utilities/errors.js";
 import {
   removeThresholdRule,
   setThresholdRule,
@@ -76,13 +78,13 @@ async function verifyAppeal(
 
 export const modRpcHandlers = implementRpc(modRpc, {
   "guild.cases.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
-    const { cases, total } = await container.db.moderation.listCases(guildId, {
+    const { pageSize, take } = resolvePageSize(input);
+    const { cases, total, nextCursor } = await container.db.moderation.listCases(guildId, {
       action: input.action && isCaseAction(input.action) ? input.action : undefined,
       userId: input.userId,
       moderatorId: input.moderatorId,
-      skip,
       take,
+      cursor: input.cursor,
     });
     return {
       cases: cases.map((c) => ({
@@ -98,8 +100,8 @@ export const modRpcHandlers = implementRpc(modRpc, {
         createdAt: c.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
+      nextCursor,
     };
   },
 
@@ -114,7 +116,25 @@ export const modRpcHandlers = implementRpc(modRpc, {
       throw new Error(`Case #${caseNumber} is already revoked`);
     }
 
-    await container.db.moderation.liftModerationCase(moderationCase.id);
+    try {
+      await liftModerationCaseWithUndo(
+        moderationCase,
+        `[Revoked via dashboard] Case #${caseNumber}`,
+      );
+    } catch (err) {
+      container.logger.error(
+        `[RPC] Failed to revoke case #${caseNumber} (${guildId}/${moderationCase.userId}):`,
+        err,
+      );
+      const missingPermission = errorCode(err) === 50013;
+      const message = missingPermission
+        ? "Lumi lacks permission to undo this on Discord (needs Ban Members / Moderate Members). Grant it and try again."
+        : "Could not undo this action on Discord. Try again shortly.";
+      throw new CodedRpcError(RpcFailureCodes.HandlerError, message, {
+        retryable: !missingPermission,
+      });
+    }
+
     return { success: true, caseNumber };
   },
 
@@ -237,11 +257,11 @@ export const modRpcHandlers = implementRpc(modRpc, {
   },
 
   "guild.appeals.list": async ({ guildId, input }) => {
-    const { page, pageSize, skip, take } = paginate(input);
-    const { appeals, total } = await container.db.appeals.listForGuild(guildId, {
+    const { pageSize, take } = resolvePageSize(input);
+    const { appeals, total, nextCursor } = await container.db.appeals.listForGuild(guildId, {
       status: input.status,
-      skip,
       take,
+      cursor: input.cursor,
     });
     const cases = await container.db.moderation.getModerationCasesByIds(
       appeals.map((a) => a.caseId),
@@ -263,8 +283,8 @@ export const modRpcHandlers = implementRpc(modRpc, {
         createdAt: a.createdAt.toISOString(),
       })),
       total,
-      page,
       pageSize,
+      nextCursor,
     };
   },
 

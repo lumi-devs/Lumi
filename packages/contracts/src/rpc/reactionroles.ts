@@ -1,7 +1,7 @@
 import { s } from "@sapphire/shapeshift";
-import type { ReactionRoleMenuView } from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
-import { boundedArray, SnowflakeSchema } from "./schemas";
+import type { ReactionRoleMenuView } from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { boundedArray, SnowflakeSchema } from "./schemas.js";
 
 export const ReactionRoleMenuModes = ["buttons", "select", "reactions"] as const;
 
@@ -28,6 +28,7 @@ export const reactionrolesRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List role menus for a guild.",
+    readOnly: true,
   }),
   "guild.reactionroles.menus.set": rpcAction<{
     success: boolean;

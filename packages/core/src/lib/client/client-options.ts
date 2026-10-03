@@ -1,4 +1,7 @@
-import { parseRedisConnectionOption } from "#lib/database/redis.js";
+import {
+  getScheduledTasksConnectionOptions,
+  SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
+} from "#lib/client/scheduled-tasks-queue.js";
 import { buildRestOptions } from "#lib/discord-rest.js";
 import { envParseInteger, envParseString } from "#lib/env.js";
 import { buildI18nOptions } from "#lib/i18n/index.js";
@@ -101,16 +104,8 @@ export function buildClientOptions(): ClientOptions {
     i18n: buildI18nOptions(),
     tasks: {
       bull: {
-        connection: {
-          ...parseRedisConnectionOption(),
-          db: envParseInteger("REDIS_TASK_DB", 1),
-        },
-        defaultJobOptions: {
-          attempts: 5,
-          backoff: { type: "exponential", delay: 5_000 },
-          removeOnComplete: 1_000,
-          removeOnFail: 5_000,
-        },
+        connection: getScheduledTasksConnectionOptions(),
+        defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
       },
     },
     rest: buildRestOptions(),

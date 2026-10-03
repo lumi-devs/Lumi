@@ -1,5 +1,9 @@
 # Testing
 
+> The dashboard now lives in its own repo, [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard).
+> Paths below that used to be `apps/dashboard/...` in this repo are now repo-root-relative
+> there; `bun run test` in this repo no longer runs the dashboard's test suite.
+
 ## Where tests live
 
 Every package that has tests puts them under its own `tests/` directory, mirroring
@@ -29,58 +33,72 @@ exception noted below):
 - `packages/sharding/tests/shard-telemetry.test.ts`,
   `packages/observability/tests/observability.test.ts` — one file per package,
   small surface area.
-- `apps/dashboard/tests/components/*.test.tsx` for React component tests,
-  `apps/dashboard/tests/lib/*.test.ts` for plain TS (`rpc.ts`, `auth-guards.ts`,
-  `proxy.ts`, `client-ip.ts`, `guild-routes.ts`, `setup-issues.ts`,
-  `config-labels.ts`, `log-format.ts`). Same split as `src/components` vs `src/lib`.
+- The dashboard's own `tests/components/*.test.tsx` and `tests/lib/*.test.ts` now live in
+  the `lumi-dashboard` repo, with their own testing conventions — not covered here.
 
 Deciding where a new test goes: if you touched `packages/core/src/modules/<x>/...`,
 the test goes in `packages/core/tests/modules/<x>/`. If you touched
 `packages/core/src/lib/...`, it goes in `packages/core/tests/core/` (lib-level
 behavior is tested through the `core/` folder, not a separate `lib/` mirror — there
-is no `packages/core/tests/lib/`). If you touched `apps/dashboard/src/components/`
-or `apps/dashboard/src/lib/`, mirror into `apps/dashboard/tests/components/` or
-`apps/dashboard/tests/lib/` respectively.
+is no `packages/core/tests/lib/`).
 
 ## Running tests
 
-`bun run test` is `vitest run && bun run --cwd apps/dashboard test` — two separate
-Vitest invocations, not one shared run. The dashboard has its own `vitest` script
-(`apps/dashboard/package.json:14`, plain `vitest run`) and its own
-`vitest.config.ts` (`apps/dashboard/vitest.config.ts`), because it needs things the
-root config doesn't:
+`bun run test` in this repo is `bun test --parallel --path-ignore-patterns
+'**/tests/integration/**'`, globbing `packages/**` — it no longer runs the dashboard's own
+test suite, which lives and runs in the `lumi-dashboard` repo. `apps/worker` has no test
+suite of its own currently (worth flagging if you're about to write one: there is no
+established pattern for it yet). The `--path-ignore-patterns` flag keeps this suite fully
+offline: every file under a package's `tests/integration/` directory is excluded, so this
+command never needs a running Postgres or Redis. See the next section for that suite.
 
-- A `#` alias resolving to `apps/dashboard/src` — deliberately *not* registered in
-  the shared root config, because a bare `"#"` prefix-alias there would collide
-  with `packages/core`'s `#lib/*`, `#utilities/*` etc. subpath imports
-  (`apps/dashboard/vitest.config.ts:4-16`, comment explains the collision risk).
-- `oxc: { jsx: { runtime: "automatic" } }` — Vite's oxc transformer reads
-  `apps/dashboard/tsconfig.json`'s `"jsx": "preserve"` (needed for `next build`)
-  which otherwise leaves JSX untransformed under Vitest
-  (`apps/dashboard/vitest.config.ts:23-31`).
-- `environment: "node"` at the config level, same as root — but individual
-  component test files that render React opt into `jsdom` per-file with a
-  `// @vitest-environment jsdom` pragma comment on line 1 (every file under
-  `apps/dashboard/tests/components/*.test.tsx` does this, e.g.
-  `guild-picker.test.tsx:1`, `anti-nuke-card.test.tsx:1`). Plain-TS tests in
-  `tests/lib/` don't need it.
-- `setupFiles: ["./tests/setup.ts"]` — mocks the `server-only` package (which
-  throws outside Next's `react-server` condition), wires React Testing Library's
-  `cleanup()` into `afterEach` since `test.globals` isn't turned on, and stubs
-  `IntersectionObserver`/`ResizeObserver` for `jsdom`
-  (`apps/dashboard/tests/setup.ts`).
+## Real-service integration tests
 
-Root `vitest.config.ts` (repo root) is minimal: `environment: "node"`,
-`include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts']`, `tsconfigPaths: true`
-for resolving `#lib/*.js` etc. It only globs `packages/**` — `apps/worker` has no
-test suite of its own currently (worth flagging if you're about to write one: there
-is no established pattern for it yet).
+`packages/core/tests/integration/` holds tests that exercise real Postgres and Redis rather
+than the offline mock Prisma driver or a mocked `container.redis` — currently
+`withIdempotency` (`idempotency.test.ts`), the scheduler lease/generic Redis lock
+(`scheduler-lock.test.ts`), the Redis Streams event bus's publish/consume/ack path
+(`event-bus.test.ts`), and a Prisma round-trip through `ModerationRepository`
+(`moderation-repository.test.ts`). These are excluded from `bun run test` and instead run via
+`bun run test:integration` (`bun test packages/*/tests/integration`), a separate root script.
 
-`bun run test:coverage` runs both suites with `--coverage` and both report to a
-shared `coverage/` tree — the dashboard's `vitest.config.ts` explicitly points its
-`reportsDirectory` at `../../coverage/dashboard` instead of the default
-`apps/dashboard/coverage`, specifically so `bun run test:coverage`'s single
-`coverage/` output covers both invocations (`apps/dashboard/vitest.config.ts:39-44`).
+**Env vars, deliberately not the app's own names.** `packages/core/tests/integration/setup.ts`
+reads `LUMI_TEST_DATABASE_URL` and `LUMI_TEST_REDIS_URL` — never `DATABASE_URL`,
+`POSTGRES_URL`/`DIRECT_POSTGRES_URL`, or `REDIS_HOST`/`REDIS_PASSWORD` — so a developer's own
+`.env` (pointed at a real dev/prod database) can never be picked up here by accident. Every
+test file wraps its `describe` block in `integrationDescribe` from `setup.ts`, which calls
+through to a real `describe` when both vars are set and to `describe.skip` (with the missing-env
+reason baked into the skip name) otherwise — so `bun run test:integration` with the vars unset
+exits 0 having skipped everything, both locally and if the CI job's services ever fail to come
+up.
+
+**Running it locally**: start the Postgres/Redis containers from `docker-compose.yml` yourself
+(`docker compose up -d postgres redis` or equivalent — do **not** point these tests at your
+main dev database or dev Redis DB index). Create a separate database for it (e.g. `lumi_test`,
+via `docker compose exec postgres createdb -U lumi lumi_test`), apply the schema to it with
+Prisma pointed at that database (`POSTGRES_URL=postgresql://lumi:lumi@localhost:5432/lumi_test
+bunx prisma migrate deploy`), then export:
+
+```sh
+export LUMI_TEST_DATABASE_URL=postgresql://lumi:lumi@localhost:5432/lumi_test
+export LUMI_TEST_REDIS_URL=redis://:lumi@localhost:6379/1
+bun run test:integration
+```
+
+Use a Redis DB index other than `0` (the app's own default) in `LUMI_TEST_REDIS_URL` — the
+suite only ever `SCAN`s and deletes its own key prefixes (`lumi:rpc:idem:`,
+`lumi:test:int:*`) or exact known keys (`lumi:scheduler:leader`) it created itself, and never
+issues `FLUSHALL`/`FLUSHDB`, but a dedicated index keeps it fully isolated from anything else
+sharing that Redis regardless. The Prisma test similarly only ever deletes the exact `Guild`
+rows (and, via `onDelete: Cascade`, their `ModerationCase`/`GuildCaseCounter` rows) it created,
+keyed on randomly generated guild ids — never a table-wide delete.
+
+**In CI**, the `integration` job in `.github/workflows/ci.yml` runs this suite against GitHub
+Actions service containers (`postgres:18-alpine`, `redis:8-alpine` — matching
+`docker-compose.yml`'s major versions), applying `bunx prisma migrate deploy` against the
+service Postgres before running `bun run test:integration` with `LUMI_TEST_DATABASE_URL`/
+`LUMI_TEST_REDIS_URL` pointed at the services. It's a separate job from `test` (the offline
+suite) and is included in the `ci-status` aggregator's required job list.
 
 ## The mock Prisma driver
 

@@ -4,9 +4,10 @@ Operating spec for any AI coding agent working in this repository. This is a
 map, not a manual — for anything not covered here, see
 [`agents/`](agents/README.md) for deep-dive reference material grounded in the
 actual source (architecture, conventions, domain guides, step-by-step
-workflows), or [`apps/docs/`](apps/docs/src/app/) — the public, user-facing
-docs site (self-hosters and add-on authors), built from that directory on
-every push to `main`.
+workflows), or the public, user-facing docs site at
+https://lumi-devs.github.io/Lumi-docs (self-hosters and add-on authors) — its content lives
+in the separate [`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) repo. For why a given architectural shape was chosen, see
+[`docs/adr/`](docs/adr/README.md).
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
 discord.js v14, Prisma/PostgreSQL, Redis.
@@ -15,29 +16,36 @@ discord.js v14, Prisma/PostgreSQL, Redis.
 
 Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
 [`agents/architecture/`](agents/architecture/) and the
-[Architecture doc site page](apps/docs/content/docs/reference/architecture.mdx) for the full
+[Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture) for the full
 system topology — treat it as source of truth for anything below.
 
 - `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
   that spawns one identical child process per shard it owns (`shard-client.ts`); every process
   owns the Discord gateway connection(s) for its shards and runs every command, module, and
-  interaction handler. There is no separate scheduler role - exactly one shard per pod (the one
-  holding shard id `0`) is elected "primary" with zero coordination and owns BullMQ job
-  scheduling (`isPrimaryShard()` in `packages/core/src/lib/env.ts`). RPC serving is not part of
-  that primary-shard role — it's a separate `apps/api` process (see below), not gated by
-  shard/`isPrimaryShard()` at all.
+  interaction handler. `isPrimaryShard()` gates only the shared metrics port / cluster readiness
+  probes (see `apps/worker/src/telemetry.ts`); BullMQ job scheduling is owned by a separate
+  `apps/scheduler` process (see below). RPC serving is not part of any shard role — it's a
+  separate `apps/api` process (see below), not gated by shard/`isPrimaryShard()` at all.
 - `apps/api` — gateway-free RPC server for the dashboard. Boots a `SapphireClient` without
-  calling `.login()`, and owns `packages/core/src/lib/rpc/*` serving
-  (`registerRpcHandlers()`/`startRpcHttpServer()`). No BullMQ, no Discord gateway connection.
-- `apps/dashboard` — Next.js (App Router) web admin panel; talks to `apps/api` only over an
-  internal HTTP RPC bridge, never touches Postgres/Redis directly.
+  calling `.login()`, registers `packages/core/src/lib/rpc/*` handlers
+  (`registerRpcHandlers()`), and owns its own HTTP transport (`apps/api/src/rpc-http-server.ts`,
+  `startRpcHttpServer()`) that serves them. No BullMQ, no Discord gateway connection.
+- `apps/scheduler` — gateway-free BullMQ worker and scheduler. Owns job processing,
+  repeatable-job registration, and the cluster-wide scheduler lock. No Discord gateway
+  connection, no RPC serving.
+- The dashboard (Next.js App Router web admin panel) lives in its own repo,
+  [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), published as the
+  `ghcr.io/lumi-devs/lumi-dashboard` image. It talks to `apps/api` only over the internal HTTP
+  RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
+  `@lumi-devs/observability` from GitHub Packages rather than importing this repo's source — see
+  "Releasing contracts" below for how a contracts change reaches it.
 - `packages/core` — the framework itself: module loader, database service, command/permit
   system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
   event bus (`#lib/event-bus/`) and shard telemetry for the dashboard's fleet view
   (`#lib/sharding/`) — shard assignment itself is still discord.js's `ShardingManager`, not
   custom code.
 - `packages/contracts` — RPC schemas (the typed router) and shared type definitions used by
-  both `worker` and `dashboard`.
+  `worker` and, via the published `@lumi-devs/contracts` package, the dashboard repo.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
 
@@ -71,9 +79,12 @@ per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`)
 sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
 `scheduled-tasks/`). For the agent-facing deep dive (lifecycle hooks, config schema builders,
 real gotchas), see [`agents/architecture/module-system.md`](agents/architecture/module-system.md)
-and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md) — the public
-doc site has no addon-authoring walkthrough yet (`apps/docs/content/docs/addons/overview.mdx`
-explains why: it's deliberately withheld until the sandbox's addon-facing surface settles).
+and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md). The public doc
+site's addon-facing surface is the generated
+[SDK Reference](https://lumi-devs.github.io/Lumi-docs/addons/sdk-reference) (every export of
+`packages/core/src/lib/addon-sandbox/sdk/`, regenerated from source on every docs build) plus
+[Addons Overview](https://lumi-devs.github.io/Lumi-docs/addons/overview) for the
+sandbox's execution model.
 
 **Zero cross-module import law**: a module must never import directly from a sibling
 module. Shared code belongs under `#lib/*`.
@@ -88,10 +99,11 @@ Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk
 
 ## RPC bridge (dashboard ↔ api)
 
-`apps/dashboard` never opens a Postgres or Redis connection and never holds the bot token.
-Every read/write is proxied over an internal HTTP RPC bridge to `apps/api`
-(`apps/dashboard/src/lib/rpc.ts` calling `packages/core/src/lib/rpc/http-server.ts`, a
-`server-only` module reachable only from Server Components/Route Handlers/Server Actions).
+The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Redis
+connection and never holds the bot token. Every read/write is proxied over an internal HTTP RPC
+bridge to `apps/api` (the dashboard's own `src/lib/rpc.ts` calling into this repo's
+`apps/api/src/rpc-http-server.ts`, a `server-only` module reachable only from Server
+Components/Route Handlers/Server Actions).
 
 The action surface is a typed router, built from per-slice contract files under
 `packages/contracts/src/rpc/*.ts` (one per module: `afk.ts`, `mod.ts`, `dashboard.ts`, ...)
@@ -102,16 +114,54 @@ implementing it with `implementRpc()` (`packages/core/src/lib/rpc/implement.ts`)
 module's own `#modules/<name>/rpc.ts` (bot-owner/system-level actions instead live in
 `#lib/rpc/account-rpc.ts` / `#lib/rpc/system-rpc.ts`), and adding it to the static list in
 `packages/core/src/lib/rpc/registry.ts` so it's registered even while the module is disabled.
-The caller side is `apps/dashboard/src/lib/guild-reads.ts` (reads, cached with React's
-`cache()`) or `apps/dashboard/src/actions/*` (mutations, Server Actions) — never a direct
-database call from the dashboard.
+The caller side, in the dashboard repo, is `src/lib/guild-reads.ts` (reads, cached with React's
+`cache()`) or `src/actions/*` (mutations, Server Actions) — never a direct database call from
+the dashboard.
 Full walkthrough: [`agents/architecture/rpc-bridge.md`](agents/architecture/rpc-bridge.md) and
 [`agents/workflows/adding-an-rpc-action.md`](agents/workflows/adding-an-rpc-action.md) — both
 predate this typed-router layout and still describe the older hand-written contract, so treat
 them as directionally useful rather than literal.
 
-Full reference: [`dashboard.md`](apps/docs/content/docs/guides/dashboard.mdx). System-level view: the
-[Architecture doc site page](apps/docs/content/docs/reference/architecture.mdx).
+### Releasing contracts
+
+A dashboard-visible change to `packages/contracts` (or `packages/observability`) only reaches
+`lumi-dashboard` once it's published and re-pinned there:
+
+1. Bump the version in `packages/contracts/package.json` (and `packages/observability/package.json`
+   if it changed too).
+2. Tag the release as `contracts-v<version>` and push the tag — `.github/workflows/publish-packages.yml`
+   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to GitHub Packages from that tag.
+3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
+   open a PR there.
+
+`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it requires the same
+major version, and while the major version is `0`, the same minor version too — so a breaking
+contracts change and the dashboard's pin bump must land together.
+
+**The two packages are versioned and published in lockstep, not independently.** A single
+`contracts-v<version>` tag drives `publish-packages.yml`'s single `steps.version.outputs.version`,
+which is stamped onto *both* `@lumi-devs/contracts` and `@lumi-devs/observability` regardless of
+whether both actually changed — so their in-repo `package.json` versions are kept equal by hand
+(both currently `0.6.0`) rather than tracked separately. There is no `@changesets/cli`
+setup in this repo (no `.changeset/` directory, no `changeset` script); adding one was evaluated
+and rejected because Changesets' whole model is independent per-package versions/changelogs,
+which would fight this tag's one-version-for-both design rather than replace a manual step
+cleanly. Bump both `package.json` versions by hand together, as today.
+
+**Release channels**: the tag's version string picks the npm dist-tag, not a separate flag —
+`publish-packages.yml` parses `contracts-v<version>`, and if `<version>` contains a `-` (e.g.
+`contracts-v0.5.0-next.2`) it publishes under the `next` dist-tag, otherwise under `latest`.
+So:
+
+- `contracts-v0.5.0-next.N` → prerelease, installed only by `@lumi-devs/contracts@next` /
+  an explicit version pin — never picked up by a bare `^0.5.0` or `latest` install.
+- `contracts-v0.5.0` → stable, published as `latest`.
+
+Bump the prerelease's `-next.N` suffix for each iteration before it's ready to cut as a
+plain version tag.
+
+Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/dashboard). System-level view: the
+[Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture).
 
 ## Repo-specific anti-patterns
 
@@ -159,23 +209,36 @@ one-off commands as `nix develop --command <cmd>`.
 
 - `bun run typecheck` — `tsc --noEmit` over the root `tsconfig.json`, then `turbo run
   typecheck`, which fans out to every workspace package's own `typecheck` script
-  (`tsc --noEmit -p tsconfig.json` in each, including the dashboard's own `tsconfig`).
+  (`tsc --noEmit -p tsconfig.json` in each).
 - `bun run lint` — `turbo run lint:all`, a root-only turbo task (not a per-package fan-out)
   that runs the root's own `lint:all` script: `eslint packages/*/src packages/core/tests
-  apps/worker/src apps/dashboard/src apps/docs/src --fix`. Note it **auto-fixes**.
-  `apps/dashboard` also has its own `lint` script, `eslint src` — plain ESLint, not
-  `next lint`, which Next 16 removed.
-- `bun run test` — `bun test --parallel` at the root (globs `packages/**`) plus
-  `bun run --cwd apps/dashboard test` (also `bun test --parallel`, its own config for the
-  DOM-based component tests).
+  apps/*/src apps/*/tests`. Check-only, no `--fix` — this is what CI runs. For local
+  auto-fixing, use `bun run lint:fix` (`turbo run lint:all:fix`, the same eslint invocation
+  with `--fix`).
+- `bun run test` — the offline suite: `bun test --parallel` at the root (globs `packages/**`
+  per `bunfig.toml`'s `[test] root`, skipping `tests/integration/`), then `apps/api`'s and
+  `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Redis suite (see
+  [`agents/conventions/testing.md`](agents/conventions/testing.md)).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
+- `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start
+  <worker|api|scheduler|all>`, `migrate [status]`, `addon <create|validate>`, `module list`,
+  `config`, `doctor [--json]`. A thin wrapper over the same code these bullets already describe - see
+  the [CLI Reference](https://lumi-devs.github.io/Lumi-docs/reference/cli).
+
+The dashboard (its own repo, `lumi-devs/lumi-dashboard`) has its own `typecheck`/`lint`/`test`
+scripts, run there rather than from this repo.
 
 ## Testing conventions
 
 Tests live alongside or under a `tests/` directory per package: `packages/core/tests/`
 (mirrors `packages/core/src/lib/**`, including the former `event-bus`/`sharding` packages'
-tests at `tests/lib/event-bus/` and `tests/lib/sharding/`), `packages/observability/tests/`,
-and `apps/dashboard/tests/`. `packages/contracts` instead co-locates `*.test.ts` files next
+tests at `tests/lib/event-bus/` and `tests/lib/sharding/`), and `packages/observability/tests/`.
+`packages/contracts` instead co-locates `*.test.ts` files next
 to the source they cover (e.g. `packages/contracts/src/rpc/router.test.ts`). For
 database-touching unit tests, `packages/core/tests/mocks/prisma.ts` provides an offline
 in-memory mock Prisma driver so tests don't need a live Postgres instance.
+
+`apps/api` has its own `tests/` directory (its own `bunfig.toml`, `root = "tests"`) and its own
+`test` script, run separately from the root's package-scoped `bun test --parallel` (root
+`bunfig.toml` sets `root = "packages"`) — the root `test`/`test:coverage` scripts chain into it
+with `bun run --cwd apps/api test`, the same pattern the dashboard used before it moved out.

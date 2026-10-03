@@ -4,13 +4,8 @@ import TempVcUtility, {
 } from "#modules/tempvc/utilities/TempVcUtility.js";
 import { container } from "@sapphire/framework";
 import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
-import { scheduleTask } from "#lib/schedule-task.js";
 import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/services/voice-occupancy.js";
 import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data/tempvc.js";
-
-vi.mock("#lib/schedule-task.js", () => ({
-  scheduleTask: vi.fn().mockResolvedValue(undefined),
-}));
 
 vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
@@ -70,6 +65,9 @@ describe("TempVcUtility", () => {
         delete: vi.fn(),
       },
     } as any;
+    (container as any).tasks = {
+      create: vi.fn().mockResolvedValue({}),
+    };
 
     service = new TempVcUtility(
       { name: "tempvc", store: { name: "utilities" } } as any,
@@ -298,9 +296,8 @@ describe("TempVcUtility", () => {
   describe("scheduleCleanup", () => {
     it("schedules a tempvc-cleanup task", async () => {
       await service.scheduleCleanup("guild-1", "vc-123");
-      expect(scheduleTask).toHaveBeenCalledWith(
-        "tempvc-cleanup",
-        { guildId: "guild-1", channelId: "vc-123" },
+      expect(container.tasks.create).toHaveBeenCalledWith(
+        { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-123" } },
         expect.objectContaining({
           repeated: false,
           delay: expect.any(Number),
@@ -478,14 +475,12 @@ describe("TempVcUtility", () => {
 
       await service.reconcileGuild(mockGuild as any);
 
-      expect(scheduleTask).toHaveBeenCalledWith(
-        "tempvc-cleanup",
-        { guildId: "guild-1", channelId: "vc-1" },
+      expect(container.tasks.create).toHaveBeenCalledWith(
+        { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-1" } },
         expect.any(Object)
       );
-      expect(scheduleTask).toHaveBeenCalledWith(
-        "tempvc-cleanup",
-        { guildId: "guild-1", channelId: "vc-2" },
+      expect(container.tasks.create).toHaveBeenCalledWith(
+        { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-2" } },
         expect.any(Object)
       );
       expect(removeVcRecord).not.toHaveBeenCalled();
@@ -507,14 +502,12 @@ describe("TempVcUtility", () => {
       await service.reconcileGuild(mockGuild as any);
 
       expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-gone");
-      expect(scheduleTask).toHaveBeenCalledWith(
-        "tempvc-cleanup",
-        { guildId: "guild-1", channelId: "vc-1" },
+      expect(container.tasks.create).toHaveBeenCalledWith(
+        { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-1" } },
         expect.any(Object)
       );
-      expect(scheduleTask).not.toHaveBeenCalledWith(
-        "tempvc-cleanup",
-        { guildId: "guild-1", channelId: "vc-gone" },
+      expect(container.tasks.create).not.toHaveBeenCalledWith(
+        { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-gone" } },
         expect.any(Object)
       );
     });

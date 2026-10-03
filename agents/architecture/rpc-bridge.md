@@ -1,5 +1,10 @@
 # RPC bridge (dashboard ↔ worker)
 
+> The dashboard now lives in its own repo, [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard).
+> Paths below that used to be `apps/dashboard/...` in this repo are now repo-root-relative
+> there (e.g. `apps/dashboard/src/lib/rpc.ts` is now `src/lib/rpc.ts` in `lumi-dashboard`);
+> line numbers may have drifted since the move.
+
 The dashboard never opens a Postgres/Redis connection or holds the bot token. Every read and
 write goes over one internal HTTP endpoint on the worker: `POST /rpc`, a flat action-string
 dispatch table, not per-resource REST routes.
@@ -93,7 +98,7 @@ non-guild-scoped actions (GDPR, downloader/repo management, system panel) live d
 sequence instead, not from the `dashboard` module's lifecycle.
 
 **3. Caller** — this is a *mutation*, so it lives in a Server Action, not `dashboard-fetch.ts`
-(`apps/dashboard/src/actions/mod-notes-actions.ts:18-33`):
+(`src/actions/mod-notes-actions.ts:18-33`):
 
 ```ts
 "use server";
@@ -114,7 +119,7 @@ export async function addModNote(guildId: string, userId: string, message: strin
 
 `session.userId` — never a client-supplied `actorId` — becomes the wire `actorId`. This is
 the trust chain the whole bridge rests on: the dashboard authenticates the *human* via
-next-auth session (`requireGuild`, `apps/dashboard/src/lib/auth-guards.ts:20-24`, which 404s
+next-auth session (`requireGuild`, `src/lib/auth-guards.ts:20-24`, which 404s
 rather than 403s on an unauthorized guild to avoid confirming the guild exists) and only then
 attaches that session's own user id as `actorId` — the worker trusts `actorId` at all only
 because the transport itself is separately authenticated (next section).
@@ -125,15 +130,15 @@ to update elsewhere.
 
 ## Reads vs. mutations
 
-- **Reads** go through `apps/dashboard/src/lib/dashboard-fetch.ts`, wrapped in React's
+- **Reads** go through `src/lib/dashboard-fetch.ts`, wrapped in React's
   `cache()` (e.g. `getGuildDashboard`) so multiple Server
   Components rendering the same request-scoped data don't refetch. These are plain async
   functions, not Server Actions — no `"use server"`, no rate limiting, no
   `revalidatePath`. RPC timeouts are per-action (`guild.dashboard.get` and audit lists get
   12s, plain lists 8s, mutations 15s) and surface as typed `RpcError` with
   `TIMEOUT | WORKER_DOWN | RPC_ERROR | MALFORMED` codes — catch by `code`, not message match.
-- **Mutations** live under `apps/dashboard/src/actions/*.ts`, each file `"use server"`,
-  each exported function wrapped in `runAction` (`apps/dashboard/src/lib/action-result.ts:8-19`)
+- **Mutations** live under `src/actions/*.ts`, each file `"use server"`,
+  each exported function wrapped in `runAction` (`src/lib/action-result.ts:8-19`)
   which converts a thrown `Error` into `{ ok: false, error }` while still letting
   Next's `redirect()`/`notFound()` control-flow throws pass through via `unstable_rethrow`.
   Mutations also typically rate-limit via `isRateLimited` and call `revalidatePath` after a
@@ -141,24 +146,24 @@ to update elsewhere.
 
 ## Transport auth: `RPC_INTERNAL_TOKEN`
 
-`packages/core/src/lib/rpc/http-server.ts` is the actual HTTP surface — a raw `Bun.serve`,
+`apps/api/src/rpc-http-server.ts` is the actual HTTP surface — a raw `Bun.serve`,
 not Express/Fastify. Two routes only: unauthenticated `GET /healthz` (liveness/readiness
 probes have no way to hold a secret, and it discloses nothing beyond "process is up",
-`http-server.ts:81-85`) and `POST /rpc` for everything else.
+`rpc-http-server.ts:81-85`) and `POST /rpc` for everything else.
 
 Every `/rpc` call must carry `Authorization: Bearer <RPC_INTERNAL_TOKEN>`, checked with a
 constant-time comparison over SHA-256 digests of the token, not the raw strings
-(`tokenMatches`, `http-server.ts:39-42`) — deliberately so neither the byte values nor the
-token's *length* leak through response timing. `readInternalToken` (`http-server.ts:51-74`)
+(`tokenMatches`, `rpc-http-server.ts:39-42`) — deliberately so neither the byte values nor the
+token's *length* leak through response timing. `readInternalToken` (`rpc-http-server.ts:51-74`)
 refuses to boot in production if `RPC_INTERNAL_TOKEN` is unset; in development it logs a loud
 warning and runs unauthenticated instead. `startRpcHttpServer` additionally refuses to bind to
-any non-loopback host without a token set (`http-server.ts:131-137`) — binding
+any non-loopback host without a token set (`rpc-http-server.ts:131-137`) — binding
 `RPC_HTTP_HOST` beyond `127.0.0.1` with no token throws at startup rather than silently serving
-open. On the dashboard side, `RpcClient.call` (`apps/dashboard/src/lib/rpc.ts:34-100`) always
+open. On the dashboard side, `RpcClient.call` (`src/lib/rpc.ts:34-100`) always
 attaches the bearer header (`rpc.ts:66-69`) and is itself `server-only` — the module import
 throws if anything tries to pull it into a client bundle.
 
-Reachability is explicitly *not* treated as authorization — the `http-server.ts` file's own
+Reachability is explicitly *not* treated as authorization — the `rpc-http-server.ts` file's own
 top comment spells out that anything on the docker network (or with an SSRF primitive aimed at
 it) can open a socket to `/rpc`, and `actorId` in the body is an *unsigned claim* the handlers
 act on. The token check is what makes trusting `actorId` downstream (as `guild.modNotes.add`'s
@@ -166,14 +171,14 @@ handler does above) safe at all.
 
 ## `dispatchRpc` — the transport-agnostic core
 
-`packages/core/src/lib/rpc/dispatch.ts:34-89`. `http-server.ts` is presently the only caller,
+`packages/core/src/lib/rpc/dispatch.ts:34-89`. `rpc-http-server.ts` is presently the only caller,
 but the split exists so a future transport (the file comment mentions this) just needs its own
 auth before calling in. Two checks happen before the handler runs:
 
 1. Handler lookup by exact `action` string; unknown action returns `{ ok: false, error: ... }`
    with **no HTTP-level distinction** — this always comes back as HTTP 200 with `ok: false` in
    the JSON body, not a 404. Only auth failures (401) and malformed JSON/missing `action`
-   (400) get non-200 status codes (`http-server.ts:89-109`); everything else, including
+   (400) get non-200 status codes (`rpc-http-server.ts:89-109`); everything else, including
    "handler not found" and any handler-thrown error, is 200 with `ok: false`.
 2. `req.guildId && !(await container.db.config.isDashboardEnabled(req.guildId))` — a guild can
    opt out of the dashboard entirely; every guild-scoped action respects this uniformly at the

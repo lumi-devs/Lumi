@@ -1,6 +1,8 @@
 import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { promises as fs } from "node:fs";
+import { randomUUID } from "node:crypto";
+import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
@@ -13,6 +15,8 @@ import {
 } from "#lib/module-system/manifest.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy } from "#lib/env.js";
+import { verifyCommitSignature, type SignatureVerification } from "./signature.js";
 
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
@@ -27,6 +31,70 @@ const execError =
       const msg = (err.stderr || err.message || String(err)).trim();
       throw new Error(`${context}${msg ? `: ${msg}` : ""}`);
     };
+
+/**
+ * Thrown by {@linkcode DownloadResolver.addRepo} when the target repo is
+ * already cloned on disk. Callers must go through
+ * {@linkcode DownloadResolver.updateRepo} to pull - "add" never mutates an
+ * existing checkout.
+ */
+export class RepoAlreadyInstalledError extends Error {
+  public readonly repoName: string;
+  public readonly sha: string | null;
+  public constructor(repoName: string, sha: string | null) {
+    super(`Repository ${repoName} is already installed${sha ? ` at ${sha}` : ""}.`);
+    this.name = "RepoAlreadyInstalledError";
+    this.repoName = repoName;
+    this.sha = sha;
+  }
+}
+
+export interface RepoUpdateResult {
+  oldSha: string | null;
+  newSha: string;
+  changed: boolean;
+  diffStat: string;
+  recloned: boolean;
+  signedBy: string | null;
+  signatureWarning: string | null;
+}
+
+export interface AddRepoResult {
+  sha: string | null;
+  signedBy: string | null;
+  signatureWarning: string | null;
+}
+
+/**
+ * Thrown when `ADDON_SIGNATURE_POLICY=require` and a commit that is about to
+ * go live (a repo's HEAD, an update's target SHA, or a pinned install
+ * revision) fails signature verification against
+ * `ADDON_ALLOWED_SIGNERS_FILE`.
+ */
+export class AddonSignatureRejectedError extends Error {
+  public readonly sha: string;
+  public readonly verification: Exclude<SignatureVerification, { status: "valid" }>;
+
+  public constructor(sha: string, verification: Exclude<SignatureVerification, { status: "valid" }>) {
+    super(`Commit \`${sha.slice(0, 7)}\` was rejected: ${describeVerification(verification)}.`);
+    this.name = "AddonSignatureRejectedError";
+    this.sha = sha;
+    this.verification = verification;
+  }
+}
+
+function describeVerification(
+  verification: Exclude<SignatureVerification, { status: "valid" }>,
+): string {
+  switch (verification.status) {
+    case "unsigned":
+      return "the commit is not signed";
+    case "untrusted":
+      return `the signer is not in the trusted allowed-signers list (${verification.detail})`;
+    case "invalid":
+      return `signature verification failed (${verification.detail})`;
+  }
+}
 
 
 const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
@@ -77,18 +145,69 @@ export const AddonModulesRoot = path.join(
   "data",
   "installed-modules",
 );
+/**
+ * Where revision-pinned installs get their own checkout, keyed by
+ * `<repoName>/<sha>`. Kept as a sibling of the per-repo clones under
+ * `ModuleRoot` rather than nested inside them, so a pin's worktree never
+ * looks like part of the shared clone's own working tree to git or to
+ * {@linkcode DownloadResolver._revalidateInstalledModules}'s path-prefix
+ * check.
+ */
+export const PinRoot = path.join(ModuleRoot, ".lumi-pins");
 
 export class DownloadResolver {
+  /**
+   * Checks `sha` against `ADDON_SIGNATURE_POLICY` before it is allowed to go
+   * live. `off` (or `warn`/`require` with no allowed-signers file configured
+   * - `require` alone never reaches this state; {@linkcode
+   * validateAddonSignatureConfig} in `#lib/env.js` refuses to boot without
+   * one) is a no-op. `warn` logs and returns a warning string for the caller
+   * to surface. `require` throws {@linkcode AddonSignatureRejectedError}.
+   */
+  private async _checkSignaturePolicy(
+    repoPath: string,
+    sha: string,
+  ): Promise<{ signedBy: string | null; signatureWarning: string | null }> {
+    const policy = getAddonSignaturePolicy();
+    if (policy === "off") return { signedBy: null, signatureWarning: null };
+
+    const allowedSignersFile = getAddonAllowedSignersFile();
+    if (!allowedSignersFile) {
+      return { signedBy: null, signatureWarning: null };
+    }
+
+    const verification = await verifyCommitSignature(repoPath, sha, allowedSignersFile);
+    if (verification.status === "valid") {
+      return { signedBy: verification.signer, signatureWarning: null };
+    }
+
+    if (policy === "require") {
+      throw new AddonSignatureRejectedError(sha, verification);
+    }
+
+    const warning = describeVerification(verification);
+    container.logger?.warn?.(
+      `[Downloader] Signature warning for ${sha.slice(0, 7)}: ${warning}`,
+    );
+    return { signedBy: null, signatureWarning: warning };
+  }
+
+  /**
+   * Clones `name` if it isn't on disk yet. Never pulls an existing checkout -
+   * a repo that's already cloned must go through {@linkcode updateRepo}, so
+   * that pulling in new upstream commits is always an explicit, reviewable
+   * step rather than a side effect of re-running the "add" flow.
+   */
   public async addRepo(
     name: string,
     url: string,
     branch = "default",
-  ): Promise<void> {
+  ): Promise<AddRepoResult> {
     name = repoSchema.parse(name);
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    await withSerializedWork(name, async () => {
+    return withSerializedWork(name, async () => {
       const repoPath = path.join(ModuleRoot, name);
       const gitFolder = path.join(repoPath, ".git");
 
@@ -105,34 +224,191 @@ export class DownloadResolver {
         (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
       if (isExisting) {
-        container.logger?.info?.(`[Downloader] Updating repo: ${name}`);
-        const pullArgs =
-          branch === "default"
-            ? ["-C", repoPath, "pull"]
-            : ["-C", repoPath, "pull", "origin", branch];
-        await execGit(pullArgs).catch(async () => {
-          container.logger?.warn?.(
-            `[Downloader] Git pull failed for ${name}, attempting clean clone fallback...`,
-          );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-          await execGit(cloneArgs).catch(async (cloneErr) => {
-            await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-            execError("Git clone failed")(cloneErr);
-          });
-        });
-
-        await this._revalidateInstalledModules(name, repoPath);
-      } else {
-        container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-        await fs.mkdir(ModuleRoot, { recursive: true });
-        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-        await execGit(cloneArgs).catch(async () => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          throw new Error("Git clone failed");
-        });
+        const sha = await this._getHeadSha(repoPath);
+        throw new RepoAlreadyInstalledError(name, sha);
       }
+
+      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+      await fs.mkdir(ModuleRoot, { recursive: true });
+      const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+      await execGit(cloneArgs).catch(async () => {
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        throw new Error("Git clone failed");
+      });
+
+      const sha = await this._getHeadSha(repoPath);
+
+      if (sha) {
+        try {
+          const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, sha);
+          return { sha, signedBy, signatureWarning };
+        } catch (err) {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          throw err;
+        }
+      }
+
+      return { sha, signedBy: null, signatureWarning: null };
     });
+  }
+
+  /**
+   * Fetches the latest commit for an already-cloned repo, validates it in an
+   * isolated worktree BEFORE touching the live checkout, and only then fast
+   * -forwards. Unlike the old `addRepo`-does-both behavior (and unlike a
+   * plain "pull then validate"), the unvalidated revision is never on disk
+   * where a sandbox child respawn, a live reload, or dev-mode HMR could pick
+   * it up: if validation fails, the live checkout's HEAD was never moved.
+   */
+  public async updateRepo(
+    name: string,
+    url: string,
+    branch = "default",
+  ): Promise<RepoUpdateResult> {
+    name = repoSchema.parse(name);
+    url = parseUrl(url);
+    branch = branchSchema.parse(branch);
+
+    return withSerializedWork(name, async () => {
+      const repoPath = path.join(ModuleRoot, name);
+      const gitFolder = path.join(repoPath, ".git");
+
+      const isExisting =
+        (await this._exists(repoPath)) && (await this._exists(gitFolder));
+      if (!isExisting) {
+        throw new Error(
+          `Repository **${name}** is not cloned locally. Use \`,repo add\` first.`,
+        );
+      }
+
+      const oldSha = await this._getHeadSha(repoPath);
+
+      container.logger?.info?.(`[Downloader] Fetching updates for repo: ${name}`);
+      const fetchArgs =
+        branch === "default"
+          ? ["-C", repoPath, "fetch", "origin"]
+          : ["-C", repoPath, "fetch", "origin", branch];
+
+      let recloned = false;
+      await execGit(fetchArgs).catch(async () => {
+        container.logger?.warn?.(
+          `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
+        );
+        recloned = true;
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+        await execGit(cloneArgs).catch(async (cloneErr) => {
+          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          execError("Git clone failed")(cloneErr);
+        });
+      });
+
+      if (recloned) {
+        // The clone fallback already replaced the live tree wholesale - there's
+        // no pre-fetch checkout left to validate-before-switching, so this is
+        // the one case that still validates in place, same as before.
+        const newSha = await this._getHeadSha(repoPath);
+        if (!newSha) {
+          throw new Error(
+            `Repository **${name}** has no resolvable HEAD after re-cloning - the checkout may be corrupt.`,
+          );
+        }
+        try {
+          await this._revalidateInstalledModules(name, repoPath, repoPath);
+          const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, newSha);
+          return {
+            oldSha,
+            newSha,
+            changed: oldSha !== newSha,
+            diffStat: "",
+            recloned,
+            signedBy,
+            signatureWarning,
+          };
+        } catch (validationErr) {
+          if (validationErr instanceof AddonSignatureRejectedError) {
+            throw new Error(
+              `${validationErr.message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
+            );
+          }
+          throw new Error(
+            `${(validationErr as Error).message}\n\nThe previous commit could not be restored because the repo had to be freshly re-cloned. Run \`,repo remove ${name}\` and review it manually before adding it again.`,
+          );
+        }
+      }
+
+      const targetRef = await this._resolveFetchTarget(repoPath, branch);
+      const newSha = await execGit(["-C", repoPath, "rev-parse", targetRef])
+        .then(({ stdout }) => stdout.trim())
+        .catch(execError(`Could not resolve fetched revision for ${name}`));
+
+      const changed = oldSha !== newSha;
+      if (!changed) {
+        return {
+          oldSha,
+          newSha,
+          changed: false,
+          diffStat: "",
+          recloned: false,
+          signedBy: null,
+          signatureWarning: null,
+        };
+      }
+
+      const diffStat = oldSha
+        ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+            .then(({ stdout }) => stdout.trim())
+            .catch(() => "")
+        : "";
+
+      // Materialize the fetched revision into a throwaway worktree so the
+      // validator can run against it without ever checking it out live.
+      const tmpDir = path.join(
+        os.tmpdir(),
+        `lumi-repo-update-${name}-${randomUUID()}`,
+      );
+      let signedBy: string | null = null;
+      let signatureWarning: string | null = null;
+      try {
+        await execGit(["-C", repoPath, "worktree", "add", "--detach", tmpDir, newSha]).catch(
+          execError(`Failed to stage ${name}'s fetched revision for validation`),
+        );
+
+        await this._revalidateInstalledModules(name, repoPath, tmpDir);
+        ({ signedBy, signatureWarning } = await this._checkSignaturePolicy(tmpDir, newSha));
+
+        // Validation passed - now, and only now, move the live checkout.
+        await execGit(["-C", repoPath, "reset", "--hard", newSha]).catch(
+          execError(`Failed to fast-forward ${name} to the validated revision`),
+        );
+      } finally {
+        await execGit(["-C", repoPath, "worktree", "remove", "--force", tmpDir]).catch(
+          () => fs.rm(tmpDir, { recursive: true, force: true }).catch(() => { }),
+        );
+        await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
+      }
+
+      return { oldSha, newSha, changed: true, diffStat, recloned: false, signedBy, signatureWarning };
+    });
+  }
+
+  /** Resolves the ref that a just-completed `git fetch` landed on, without a checkout. */
+  private async _resolveFetchTarget(
+    repoPath: string,
+    branch: string,
+  ): Promise<string> {
+    if (branch === "default") {
+      const { stdout } = await execGit([
+        "-C",
+        repoPath,
+        "rev-parse",
+        "--abbrev-ref",
+        "@{u}",
+      ]).catch(() => ({ stdout: "" }));
+      const upstream = stdout.trim();
+      if (upstream && !upstream.includes("@{u}")) return upstream;
+    }
+    return "FETCH_HEAD";
   }
 
   public async getModulesInRepo(repoName: string): Promise<ModuleInfo[]> {
@@ -262,21 +538,34 @@ export class DownloadResolver {
     repoName: string,
     moduleName: string,
     revision?: string,
-  ): Promise<ModuleInfo & { commit: string | null }> {
+  ): Promise<
+    ModuleInfo & { commit: string | null; signedBy: string | null; signatureWarning: string | null }
+  > {
     repoName = repoSchema.parse(repoName);
     moduleName = repoSchema.parse(moduleName);
 
     const repoPath = path.join(ModuleRoot, repoName);
-    const sourcePath = path.join(ModuleRoot, repoName, moduleName);
     const targetPath = path.join(AddonModulesRoot, moduleName);
+
+    // A revision pin never touches the shared clone's working tree - that
+    // clone is symlinked into by every module the repo ships, so checking it
+    // out to a specific commit would silently change every sibling module's
+    // served code too. Instead the pin gets its own `git worktree`, keyed by
+    // sha, sharing objects with (but never mutating) the shared clone.
+    let commit: string | null = null;
+    let sourceRoot = repoPath;
+    let signedBy: string | null = null;
+    let signatureWarning: string | null = null;
+    if (revision) {
+      commit = await this.resolveRevision(repoPath, revision);
+      ({ signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, commit));
+      sourceRoot = await this._ensurePinWorktree(repoPath, repoName, commit);
+    }
+
+    const sourcePath = path.join(sourceRoot, moduleName);
 
     if (!(await this._exists(sourcePath))) {
       throw new Error(`Module ${moduleName} not found in repo ${repoName}`);
-    }
-
-    let commit: string | null = null;
-    if (revision) {
-      commit = await this.checkoutRevision(repoPath, revision);
     }
 
     const infoPath = path.join(sourcePath, "info.json");
@@ -353,11 +642,16 @@ export class DownloadResolver {
 
     // Two repos can each ship a module of the same name. Overwriting silently
     // would leave the DB claiming both are installed while only one is linked.
+    // A pinned reinstall of the *same* module legitimately moves the symlink
+    // from the shared clone (or a different sha's worktree) to a new pin
+    // worktree, so this compares repo identity rather than the exact path.
     const existingTarget = await fs.readlink(targetPath).catch(() => null);
-    if (
-      existingTarget !== null &&
-      path.resolve(path.dirname(targetPath), existingTarget) !== path.resolve(sourcePath)
-    ) {
+    const previousSourcePath =
+      existingTarget !== null
+        ? path.resolve(path.dirname(targetPath), existingTarget)
+        : null;
+
+    if (previousSourcePath !== null && !this._belongsToRepo(previousSourcePath, repoPath, repoName)) {
       throw new Error(
         `A module named "${moduleName}" is already installed from a different repository (${existingTarget}). Uninstall it before installing this one.`,
       );
@@ -366,16 +660,127 @@ export class DownloadResolver {
     await fs.rm(targetPath, { recursive: true, force: true }).catch(() => { });
     await fs.symlink(sourcePath, targetPath, "dir");
 
+    if (previousSourcePath !== null && previousSourcePath !== path.resolve(sourcePath)) {
+      await this._releasePinIfUnused(repoPath, previousSourcePath).catch((err: unknown) => {
+        container.logger?.warn?.(
+          `[Downloader] Failed to release stale pinned worktree for ${moduleName}: ${(err as Error).message}`,
+        );
+      });
+    }
+
     container.logger?.info?.(
       `[Downloader] Installed ${moduleName} from ${repoName}${commit ? ` @ ${commit}` : ""}`,
     );
 
-    return { ...info, commit };
+    return { ...info, commit, signedBy, signatureWarning };
   }
 
+  /**
+   * Whether `sourcePath` (an installed module's resolved symlink target) is
+   * served by `repoName`, either straight from its shared clone or from one
+   * of its own revision-pin worktrees under {@linkcode PinRoot}.
+   */
+  private _belongsToRepo(sourcePath: string, repoPath: string, repoName: string): boolean {
+    if (sourcePath === repoPath || sourcePath.startsWith(repoPath + path.sep)) return true;
+    const relative = path.relative(PinRoot, sourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return false;
+    return relative.split(path.sep)[0] === repoName;
+  }
+
+  /**
+   * Creates (or reuses) the `git worktree` a revision-pinned install is
+   * served from, keyed by sha under {@linkcode PinRoot} so modules pinned to
+   * the same commit - even across different module names in the same repo -
+   * share one checkout instead of each getting their own.
+   */
+  private async _ensurePinWorktree(
+    repoPath: string,
+    repoName: string,
+    sha: string,
+  ): Promise<string> {
+    const pinPath = path.join(PinRoot, repoName, sha);
+
+    if (await this._exists(path.join(pinPath, ".git"))) {
+      return pinPath;
+    }
+
+    await fs.rm(pinPath, { recursive: true, force: true }).catch(() => { });
+    await fs.mkdir(path.dirname(pinPath), { recursive: true });
+    await execGit(["-C", repoPath, "worktree", "add", "--detach", pinPath, sha]).catch(
+      execError(`Failed to create a pinned checkout of ${repoName}@${sha}`),
+    );
+
+    return pinPath;
+  }
+
+  /**
+   * Tears down a revision-pin worktree once nothing under
+   * {@linkcode AddonModulesRoot} resolves into it any more - called both when
+   * a pinned install moves to a different revision and when the last module
+   * using a pin is uninstalled. Safe to call speculatively: it no-ops if the
+   * path isn't a pin, is still in use, or is already gone.
+   */
+  private async _releasePinIfUnused(repoPath: string, sourcePath: string): Promise<void> {
+    const relative = path.relative(PinRoot, sourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return;
+    const [repoName, sha] = relative.split(path.sep);
+    if (!repoName || !sha) return;
+
+    const pinPath = path.join(PinRoot, repoName, sha);
+    if (!(await this._exists(pinPath))) return;
+
+    const stillUsed = await this._isPinStillUsed(pinPath);
+    if (stillUsed) return;
+
+    await execGit(["-C", repoPath, "worktree", "remove", "--force", pinPath]).catch(() =>
+      fs.rm(pinPath, { recursive: true, force: true }).catch(() => { }),
+    );
+    await execGit(["-C", repoPath, "worktree", "prune"]).catch(() => { });
+
+    const pinRepoDir = path.dirname(pinPath);
+    const remaining = await fs.readdir(pinRepoDir).catch(() => null);
+    if (remaining && remaining.length === 0) {
+      await fs.rmdir(pinRepoDir).catch(() => { });
+    }
+  }
+
+  private async _isPinStillUsed(pinPath: string): Promise<boolean> {
+    const entries = await fs.readdir(AddonModulesRoot, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const linkPath = path.join(AddonModulesRoot, entry.name);
+      const real = await fs.realpath(linkPath).catch(() => null);
+      if (real && (real === pinPath || real.startsWith(pinPath + path.sep))) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Public entry point for {@linkcode DownloaderUtility.uninstallModule}: once
+   * an installed module's symlink is gone, release its pin worktree if this
+   * was the last module using it. `previousSourcePath` is the module's
+   * resolved symlink target as it existed just before removal, or `null` if
+   * it had none.
+   */
+  public async releasePinnedWorktreeIfUnused(previousSourcePath: string | null): Promise<void> {
+    if (previousSourcePath === null) return;
+    const relative = path.relative(PinRoot, previousSourcePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return;
+    const repoName = relative.split(path.sep)[0];
+    if (!repoName) return;
+    const repoPath = path.join(ModuleRoot, repoName);
+    await this._releasePinIfUnused(repoPath, previousSourcePath);
+  }
+
+  /**
+   * Re-validates every module symlinked from `repoPath`, but reads the actual
+   * files from `validateRoot` instead - so callers can point this at a
+   * throwaway worktree holding the fetched-but-not-yet-live revision, rather
+   * than duplicating the validator's own module-discovery logic.
+   */
   private async _revalidateInstalledModules(
     repoName: string,
     repoPath: string,
+    validateRoot: string,
   ): Promise<void> {
     if (!(await this._exists(AddonModulesRoot))) return;
 
@@ -394,7 +799,10 @@ export class DownloadResolver {
       }
       if (real !== repoPath && !real.startsWith(repoPath + path.sep)) continue;
 
-      const { errors } = await validateAddon(real);
+      const relative = path.relative(repoPath, real);
+      const targetPath = relative ? path.join(validateRoot, relative) : validateRoot;
+
+      const { errors } = await validateAddon(targetPath);
       if (errors.length) {
         failures.push(
           `**${entry.name}**:\n${errors.map((e) => `• ${e}`).join("\n")}`,
@@ -407,6 +815,12 @@ export class DownloadResolver {
         `Repo **${repoName}** update pulled in changes that fail addon validation for already-installed module(s):\n${failures.join("\n\n")}`,
       );
     }
+  }
+
+  private async _getHeadSha(repoPath: string): Promise<string | null> {
+    return execGit(["-C", repoPath, "rev-parse", "HEAD"])
+      .then(({ stdout }) => stdout.trim())
+      .catch(() => null);
   }
 
   private async _exists(filePath: string): Promise<boolean> {

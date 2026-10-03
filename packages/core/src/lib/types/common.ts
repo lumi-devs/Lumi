@@ -4,6 +4,7 @@ import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import type { InvalidationBus, SignalBus } from "#lib/database/redis.js";
 import type { EventBus } from "#lib/event-bus/types.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
+import type { DiscordRestPort } from "#lib/discord/rest-port.js";
 import type { Message } from "discord.js";
 import "@sapphire/pieces";
 
@@ -59,6 +60,7 @@ declare module "@sapphire/pieces" {
     readonly invalidation: InvalidationBus;
     readonly signals: SignalBus;
     readonly db: DatabaseRepositories;
+    readonly discordRest: DiscordRestPort;
     readonly eventBus: EventBus;
     readonly moduleStore: ModuleStore;
     readonly permitResolver: import("#lib/permissions/PermitResolver.js").PermitResolver;

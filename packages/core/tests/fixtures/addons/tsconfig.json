@@ -1,0 +1,12 @@
+{
+  "extends": "../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "lumi": ["../../../src/lib/addon-sandbox/sdk/index.ts"],
+      "lumi/*": ["../../../src/lib/addon-sandbox/sdk/*.ts"]
+    }
+  },
+  "include": ["."]
+}

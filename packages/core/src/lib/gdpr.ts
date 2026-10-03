@@ -1,4 +1,5 @@
 import { container } from "@sapphire/framework";
+import { QueuePriority, scheduleTask } from "#lib/schedule-task.js";
 
 export interface GdprDeletionResult {
   /** Modules whose `deleteUserData` hook rejected; their data may still exist. */
@@ -66,4 +67,25 @@ export async function executeGdprExport(
   }
 
   return result;
+}
+
+/**
+ * Starts an async export: a `GdprExportJob` row is created up front (so the
+ * caller gets an id to poll immediately), then a `gdpr-export` job is
+ * enqueued to actually build it - large exports (many guilds, long
+ * moderation history) would otherwise hold the RPC/command request open for
+ * longer than its timeout. The synchronous `executeGdprExport()` above is
+ * unaffected and still backs `/mydata getmydata` and small dashboard exports.
+ */
+export async function startGdprExportJob(
+  userId: string,
+  requestedBy: string,
+): Promise<string> {
+  const job = await container.db.gdprExportJobs.create({ userId, requestedBy });
+  await scheduleTask(
+    "gdpr-export",
+    { jobId: job.id },
+    { customJobOptions: { priority: QueuePriority.UTILITY } },
+  );
+  return job.id;
 }

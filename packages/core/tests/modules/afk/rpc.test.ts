@@ -4,29 +4,24 @@ import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
-/** Wires `container.client.rest.get` to answer `checkGuildManagerRest`'s guild/member routes; denies any non-owner actor by default (empty roles + a permission-less `@everyone`). */
-function mockGuildManagerRest() {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      return Promise.resolve({
-        id: GUILD_ID,
-        owner_id: OWNER_ID,
-        roles: [{ id: GUILD_ID, permissions: "0" }],
-      });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      return Promise.resolve({ roles: [] });
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  container.client = { rest: { get } } as any;
-  return get;
+/** Wires `container.discordRest` to answer `checkGuildManagerRest`'s guild/member lookups; denies any non-owner actor by default (empty roles + a permission-less `@everyone`). */
+function mockGuildManagerRest(): void {
+  const fake = new FakeDiscordRestPort();
+  fake.seedGuild({
+    id: GUILD_ID,
+    owner_id: OWNER_ID,
+    roles: [{ id: GUILD_ID, permissions: "0" }],
+  } as any);
+  fake.seedMember(GUILD_ID, { user: { id: OWNER_ID }, roles: [] } as any);
+  fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: [] } as any);
+  (container as any).discordRest = fake;
 }
 
 describe("afk module RPC handlers", () => {

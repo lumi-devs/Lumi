@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { ChannelType, PermissionsBitField } from "discord.js";
+import { ChannelType, PermissionsBitField, RESTJSONErrorCodes } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {
   Routes,
@@ -10,6 +10,7 @@ import {
   type APIRole,
 } from "discord-api-types/v10";
 import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { authorize } from "#lib/permissions/authorize.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { swallow } from "#lib/utilities/errors.js";
 
@@ -50,19 +51,38 @@ async function fetchGuildMemberRest(
 }
 
 /**
+ * True only for a Discord response that confirms the resource genuinely
+ * doesn't exist (a 404, or the curated "Unknown Guild"/"Unknown Member" JSON
+ * error codes) - never for a 5xx, a network failure, or a rate limit, which
+ * must propagate instead of being silently treated as "not found". Checked
+ * structurally (`.code`/`.status`, the shape both `DiscordAPIError` and
+ * `HTTPError` from `@discordjs/rest` carry) rather than with `instanceof`,
+ * since `discord.js` re-exports those classes from its own module scope and
+ * a REST client swapped in for tests won't reject with that same identity.
+ */
+function isConfirmedAbsent(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const { code, status } = err as { code?: unknown; status?: unknown };
+  if (status === 404) return true;
+  return (
+    code === RESTJSONErrorCodes.UnknownGuild ||
+    code === RESTJSONErrorCodes.UnknownMember
+  );
+}
+
+/**
  * Uncached counterpart of {@linkcode fetchGuildRest}, for callers where the
  * 20s cache-aside TTL is actively wrong rather than merely stale-tolerant:
  * a read that then feeds a full-replace PATCH (lost-update risk) or an
  * authorization decision (a just-revoked permission staying valid for up to
  * 20s). Same shape as {@linkcode fetchChannelMessageRest}'s existing
- * uncached precedent.
+ * uncached precedent. Routed through `container.discordRest` (rather than
+ * `container.client.rest` directly) so this - and the `checkGuildManagerRest`
+ * authorizer it backs - can be tested against a fake instead of a mocked
+ * REST client.
  */
 async function fetchGuildRestUncached(guildId: string): Promise<APIGuild | null> {
-  return (
-    container.client.rest.get(Routes.guild(guildId), {
-      query: new URLSearchParams({ with_counts: "true" }),
-    }) as Promise<APIGuild>
-  ).catch(() => null);
+  return container.discordRest.fetchGuild(guildId);
 }
 
 /** Uncached counterpart of {@linkcode fetchGuildMemberRest} - see {@linkcode fetchGuildRestUncached}. */
@@ -70,11 +90,7 @@ async function fetchGuildMemberRestUncached(
   guildId: string,
   userId: string,
 ): Promise<APIGuildMember | null> {
-  return (
-    container.client.rest.get(
-      Routes.guildMember(guildId, userId),
-    ) as Promise<APIGuildMember>
-  ).catch(() => null);
+  return container.discordRest.fetchMember(guildId, userId);
 }
 
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {
@@ -143,7 +159,10 @@ export async function fetchGuildChannelsRest(guildId: string): Promise<APIChanne
 export async function fetchGuildRolesRestUncached(guildId: string): Promise<APIRole[] | null> {
   return (
     container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>
-  ).catch(() => null);
+  ).catch((err: unknown) => {
+    if (isConfirmedAbsent(err)) return null;
+    throw err;
+  });
 }
 
 export async function fetchGuildChannelsRestUncached(
@@ -151,7 +170,10 @@ export async function fetchGuildChannelsRestUncached(
 ): Promise<APIChannel[] | null> {
   return (
     container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>
-  ).catch(() => null);
+  ).catch((err: unknown) => {
+    if (isConfirmedAbsent(err)) return null;
+    throw err;
+  });
 }
 
 /**
@@ -194,6 +216,10 @@ function computeGuildPermissions(guild: APIGuild, member: APIGuildMember): Permi
   return new PermissionsBitField(bits);
 }
 
+async function isGuildManager(actorId: string, guildId: string, memberPermissions: PermissionsBitField): Promise<boolean> {
+  return authorize({ userId: actorId, guildId, memberPermissions }, { kind: "guildManager" });
+}
+
 export interface RestGuildManagerCheck {
   guild: APIGuild;
   isManager: boolean;
@@ -224,10 +250,7 @@ export async function checkGuildManagerRest(
   if (!member) return { guild, isManager: false };
 
   const permissions = computeGuildPermissions(guild, member);
-  const isManager =
-    permissions.has(PermissionsBitField.Flags.ManageGuild) ||
-    permissions.has(PermissionsBitField.Flags.Administrator);
-  return { guild, isManager };
+  return { guild, isManager: await isGuildManager(actorId, guildId, permissions) };
 }
 
 export function guildIconUrl(guild: Pick<APIGuild, "id" | "icon">): string | null {

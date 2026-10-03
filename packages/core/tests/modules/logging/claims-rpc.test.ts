@@ -5,6 +5,7 @@ import { LogClaimCodeTtlMs } from "#modules/logging/services/claims.js";
 import { RedisKeys } from "#lib/database/redis.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -18,24 +19,17 @@ function memberWith(roleIds: string[]) {
   return { roles: roleIds };
 }
 
+/** Wires a `DiscordRestPort` fake to answer `checkGuildManagerRest`'s guild/member lookups. */
 function mockRest(opts: {
   guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
   member?: unknown;
-}) {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      if (opts.guild === null || opts.guild === undefined) {
-        return Promise.reject(new Error("Unknown Guild"));
-      }
-      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
-      return Promise.resolve(opts.member);
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  return { rest: { get } };
+}): FakeDiscordRestPort {
+  const fake = new FakeDiscordRestPort();
+  if (opts.guild) fake.seedGuild({ id: GUILD_ID, ...opts.guild } as any);
+  if (opts.member !== undefined) {
+    fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, ...(opts.member as object) } as any);
+  }
+  return fake;
 }
 
 describe("logging module claim RPC handlers", () => {
@@ -53,10 +47,10 @@ describe("logging module claim RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = mockRest({
+    (container as any).discordRest = mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
       member: memberWith([]),
-    }) as any;
+    });
 
     (container as any).redis = {
       set: vi.fn((key: string, value: string, ...args: unknown[]) => {

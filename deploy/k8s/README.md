@@ -8,7 +8,9 @@
 
 <br />
 
-This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a shared Discord REST proxy. There is no separate scheduler component — job scheduling is owned by one shard within the worker fleet itself (see below).
+This directory contains production-ready **Kubernetes manifests** for deploying Lumi as a sharded worker fleet with a gateway-free scheduler and stateless RPC server. BullMQ job scheduling is owned by the `scheduler` Deployment (see below).
+
+This is the "cluster" tier of Lumi's three deployment tiers (single-node / production / cluster) — see [`deploy/docker/README.md`](../docker/README.md#-deployment-tiers) for the other two and how the Compose `scale` profile mirrors this setup for local testing.
 
 ---
 
@@ -25,21 +27,19 @@ This directory contains production-ready **Kubernetes manifests** for deploying 
 
 ## 🌟 Overview & Architecture
 
-Lumi runs as one bot application role plus supporting services. There is no separate gateway or
-scheduler process: each worker pod owns its own Discord WebSocket connection(s) and runs command,
-module, and interaction logic in the same process, and exactly one pod — whichever owns shard id
-`0` — is elected "primary" with zero coordination and additionally owns BullMQ job scheduling
-(`isPrimaryShard()` in `packages/core/src/lib/env.ts`). RPC serving is no longer part of that
-primary-shard role at all — it lives in a separate, gateway-free `api` Deployment (see below) that
-the dashboard talks to instead. Every worker pod, primary or not, still executes fired task effects
-for the shards it holds.
+Lumi runs as sharded worker fleet plus supporting stateless services. Each worker pod owns its own
+Discord WebSocket connection(s) and runs command, module, and interaction logic. Job scheduling,
+RPC serving, and the dashboard are separated into dedicated processes:
 
-- **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic, including — on
-  whichever pod owns shard 0 — job scheduling. StatefulSet, not Deployment, because each pod owns
-  per-shard state (WebSocket session, sequence number). Replica count is a shard-assignment
-  decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
-- **`api` (Deployment)**: Stateless RPC-serving process for the dashboard, extracted off shard 0 —
-  no Discord gateway connection, no BullMQ.
+- **`worker` (StatefulSet)**: Holds real Discord shards and runs all bot logic (commands, interactions,
+  listeners). Every shard executes fired task effects for the guilds it holds. StatefulSet, not
+  Deployment, because each pod owns per-shard state (WebSocket session, sequence number). Replica count
+  is a shard-assignment decision, not an autoscaler target — see [Scaling Workers](#-scaling-workers).
+- **`scheduler` (Deployment)**: Gateway-free BullMQ worker and scheduler process. Owns job processing,
+  repeatable-job registration, and the cluster-wide scheduler lock. `replicas: 1` since the lock
+  makes extra replicas idle standbys.
+- **`api` (Deployment)**: Stateless RPC-serving process for the dashboard — no Discord gateway connection,
+  no job scheduling.
 - **`dashboard` (Deployment)**: Next.js admin dashboard; talks to the `api` service only over the
   internal HTTP RPC bridge.
 - **`nirn-proxy` (Deployment)**: Stateless shared Discord REST proxy. Every worker replica routes its REST calls through it via `DISCORD_PROXY_URL` so per-route and global rate-limit buckets stay coordinated across pods.
@@ -65,6 +65,11 @@ flowchart TD
             WH[worker-headless Service<br/>Port 9090]
         end
 
+        subgraph Scheduler & Services
+            S[scheduler Deployment<br/>Service :9092]
+            API[api Deployment<br/>Service :8091]
+        end
+
         subgraph REST Layer
             NP[nirn-proxy Deployment<br/>Service :8080]
         end
@@ -85,9 +90,13 @@ flowchart TD
     W0 <-->|Queries| DB
     W1 <-->|Queries| DB
 
-    W0 <-->|BullMQ Tasks, primary shard only| Redis
+    S <-->|BullMQ Job Processing| Redis
+    S <-->|Queries| DB
 
-    Prometheus -->|Scrape /metrics| WH
+    API <-->|Queries| DB
+
+    Prometheus -->|Scrape :9090| WH
+    Prometheus -->|Scrape :9092| S
 
     W0 <-->|Data Mount| PVC
     W1 <-->|Data Mount| PVC
@@ -113,10 +122,14 @@ flowchart TD
 | [`secret.example.yaml`](./secret.example.yaml) | `Secret` | `lumi-secrets` | Sensitive credential placeholders (`BOT_TOKEN`, database passwords, secret keys). |
 | [`lumi-data-pvc.yaml`](./lumi-data-pvc.yaml) | `PersistentVolumeClaim` | `lumi-data` | Shared storage volume for persistent data and dynamic addons (`/app/data`). |
 | [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `migrate` | Database migration job executing `bunx prisma migrate deploy`. |
-| [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery and shard 0 primary role. |
-| [`api-deployment.yaml`](./api-deployment.yaml) | `Deployment` + `Service` | `api` | Stateless RPC-serving process for the dashboard, extracted off shard 0. |
+| [`worker-statefulset.yaml`](./worker-statefulset.yaml) | `StatefulSet` + `Service` | `worker`, `worker-headless` | Sharded worker fleet with headless service for metrics discovery. |
+| [`scheduler-deployment.yaml`](./scheduler-deployment.yaml) | `Deployment` | `scheduler` | Gateway-free BullMQ worker and job scheduler (`replicas: 1`, scheduler lock makes extras idle). |
+| [`api-deployment.yaml`](./api-deployment.yaml) | `Deployment` + `Service` | `api` | Stateless RPC-serving process for the dashboard. |
 | [`dashboard-deployment.yaml`](./dashboard-deployment.yaml) | `Deployment` + `Service` | `dashboard` | Next.js admin dashboard web application (reaches `api`'s ClusterIP service). |
 | [`nirn-proxy-deployment.yaml`](./nirn-proxy-deployment.yaml) | `Deployment` + `Service` | `nirn-proxy` | Shared Discord REST rate-limit proxy for the worker fleet. |
+| [`backup-configmap.yaml`](./backup-configmap.yaml) | `ConfigMap` | `lumi-backup-scripts` | `backup.sh`/`restore-test.sh`, mirrored verbatim from [`deploy/backup/`](../backup/). |
+| [`backup-pvc.yaml`](./backup-pvc.yaml) | `PersistentVolumeClaim` | `lumi-backup-data` | Dump storage for the backup CronJob. |
+| [`backup-cronjob.yaml`](./backup-cronjob.yaml) | `CronJob` | `backup` | Scheduled `pg_dump` against `postgres` directly (never PgBouncer), same retention/interval knobs as the Compose `backup` profile. |
 
 ---
 
@@ -150,13 +163,16 @@ kubectl -n lumi wait --for=condition=complete job/migrate --timeout=120s
 # 1. REST proxy first - workers read DISCORD_PROXY_URL at boot
 kubectl apply -f nirn-proxy-deployment.yaml
 
-# 2. Worker fleet (shard 0 assumes primary role for BullMQ)
+# 2. Scheduler process (workers and api may read scheduled tasks)
+kubectl apply -f scheduler-deployment.yaml
+
+# 3. Worker fleet
 kubectl apply -f worker-statefulset.yaml
 
-# 3. Stateless RPC-serving api process (dashboard depends on it)
+# 4. Stateless RPC-serving api process (dashboard depends on it)
 kubectl apply -f api-deployment.yaml
 
-# 4. Next.js Dashboard Frontend
+# 5. Next.js Dashboard Frontend
 kubectl apply -f dashboard-deployment.yaml
 ```
 
@@ -199,3 +215,45 @@ kubectl apply -f migrate-job.yaml
 ```bash
 kubectl -n lumi rollout restart statefulset/worker
 ```
+
+### Backups & Restore Testing
+
+```bash
+kubectl apply -f backup-configmap.yaml -f backup-pvc.yaml -f backup-cronjob.yaml
+```
+
+Runs `pg_dump -Fc` on the schedule in `backup-cronjob.yaml` (default: every 24h), straight
+against `postgres` (never PgBouncer), retaining the last `BACKUP_RETENTION` dumps on the
+`lumi-backup-data` PVC. To verify a dump restores cleanly, run the same image against the
+same PVC with `restore-test.sh` instead of `backup.sh`:
+
+```bash
+kubectl -n lumi run backup-restore-test --rm -it --restart=Never \
+  --image=docker.io/library/postgres:18-alpine \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "restore-test",
+        "image": "docker.io/library/postgres:18-alpine",
+        "command": ["/scripts/restore-test.sh"],
+        "envFrom": [{"secretRef": {"name": "lumi-secrets"}}],
+        "env": [
+          {"name": "POSTGRES_HOST", "value": "postgres.lumi.svc.cluster.local"},
+          {"name": "POSTGRES_USER", "value": "lumi"}
+        ],
+        "volumeMounts": [
+          {"name": "backup-scripts", "mountPath": "/scripts"},
+          {"name": "backup-data", "mountPath": "/backups"}
+        ]
+      }],
+      "volumes": [
+        {"name": "backup-scripts", "configMap": {"name": "lumi-backup-scripts", "defaultMode": 365}},
+        {"name": "backup-data", "persistentVolumeClaim": {"claimName": "lumi-backup-data"}}
+      ]
+    }
+  }'
+```
+
+It restores the latest dump into a throwaway `lumi_restore_test_<timestamp>` database, checks
+`_prisma_migrations` exists and has rows, prints the restored table count, and drops the
+temporary database on exit.

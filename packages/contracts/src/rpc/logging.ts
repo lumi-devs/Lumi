@@ -1,6 +1,6 @@
 import { s } from "@sapphire/shapeshift";
-import { rpcAction, RpcTimeouts } from "./define";
-import { SnowflakeSchema } from "./schemas";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { SnowflakeSchema } from "./schemas.js";
 
 /** One channel pending as a log destination, claimed by posting a claim code in Discord. */
 export interface LogClaimView {
@@ -19,6 +19,7 @@ export const loggingRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List channels pending as log destinations.",
+    readOnly: true,
   }),
   "guild.logClaims.issue": rpcAction<{ code: string; expiresIn: number }>()({
     auth: "guildManager",

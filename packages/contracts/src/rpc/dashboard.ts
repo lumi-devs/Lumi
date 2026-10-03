@@ -8,17 +8,18 @@ import type {
   GuildSettings,
   GuildShellData,
   ModuleDataListData,
-} from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
+} from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
 import {
   AuditFilterShape,
   boundedArray,
   ConfigKeySchema,
+  CursorSchema,
   ModuleNameSchema,
   PageSchema,
   PageSizeSchema,
   SnowflakeSchema,
-} from "./schemas";
+} from "./schemas.js";
 
 export const ConfigOverrideModelTypes = [
   "channel",
@@ -51,6 +52,7 @@ export const dashboardRpc = {
     timeoutMs: RpcTimeouts.medium,
     summary:
       "Guild layout shell: name, icon, member count, settings, module manifests and enabled states.",
+    readOnly: true,
   }),
   "guild.module.get": rpcAction<{ module: DashboardModuleView | null }>()({
     input: s.object({ module: ModuleNameSchema }),
@@ -58,11 +60,13 @@ export const dashboardRpc = {
     timeoutMs: RpcTimeouts.medium,
     summary:
       "One module's manifest, enabled state and config values; null when it isn't loaded.",
+    readOnly: true,
   }),
   "guild.entities.get": rpcAction<GuildEntitiesData>()({
     auth: "guildManager",
     timeoutMs: RpcTimeouts.medium,
     summary: "Roles, channels and a member sample for pickers and id lookups.",
+    readOnly: true,
   }),
   "guild.summaries.list": rpcAction<{ summaries: GuildSummaryView[] }>()({
     input: s.object({
@@ -72,6 +76,7 @@ export const dashboardRpc = {
     timeoutMs: RpcTimeouts.short,
     summary:
       "Decorative guild rows (icon, banner, member count); omits guilds the actor can't manage.",
+    readOnly: true,
   }),
   "guild.module.toggle": rpcAction<{ success: boolean; enabled: boolean }>()({
     input: s.object({
@@ -126,18 +131,20 @@ export const dashboardRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.medium,
     summary: "Paged guild audit log.",
+    readOnly: true,
   }),
   "guild.history.list": rpcAction<ConfigHistoryListData>()({
     input: s.object({
       moduleName: ModuleNameSchema.optional(),
       key: ConfigKeySchema.optional(),
       actorId: SnowflakeSchema.optional(),
-      page: PageSchema,
       pageSize: PageSizeSchema,
+      cursor: CursorSchema,
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Paged config change history.",
+    readOnly: true,
   }),
   "guild.history.rollback": rpcAction<{
     success: boolean;
@@ -157,6 +164,7 @@ export const dashboardRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List per-channel/role/user config overrides.",
+    readOnly: true,
   }),
   "guild.overrides.set": rpcAction<{ success: boolean; deleted: boolean }>()({
     input: s.object({
@@ -185,5 +193,6 @@ export const dashboardRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Inspect stored module data.",
+    readOnly: true,
   }),
 };

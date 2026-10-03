@@ -4,6 +4,10 @@ import type { Piece } from "@sapphire/framework";
 
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleDataRetentionFire } from "./services/data-retention.js";
+import {
+  handleGdprExportCleanupFire,
+  handleGdprExportFire,
+} from "./services/gdpr-export-task.js";
 
 @DefineModule({
   name: "core",
@@ -36,6 +40,12 @@ export class CoreModule extends Module {
       "data-retention-sweep",
       "unicast",
       handleDataRetentionFire,
+    );
+    registerTaskFireHandler("gdpr-export", "unicast", handleGdprExportFire);
+    registerTaskFireHandler(
+      "gdpr-export-cleanup",
+      "unicast",
+      handleGdprExportCleanupFire,
     );
   }
 }

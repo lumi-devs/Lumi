@@ -11,10 +11,13 @@
   "scripts": {
     "start": "bun src/main.ts",
     "dev": "bun --watch src/main.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test --parallel"
   },
   "dependencies": {
+    "@lumi/contracts": "workspace:*",
     "@lumi/core": "workspace:*",
-    "@lumi/observability": "workspace:*"
+    "@lumi/observability": "workspace:*",
+    "@sapphire/framework": "^5.5.1"
   }
 }

@@ -1,10 +1,9 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import nextPlugin from '@next/eslint-plugin-next';
 
 export default tseslint.config(
   {
-    ignores: ['scripts/**', 'dist/**', 'coverage/**', 'apps/dashboard/.next/**'],
+    ignores: ['scripts/**', 'dist/**', 'coverage/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -41,8 +40,7 @@ export default tseslint.config(
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parserOptions: {
-        // `project: true` resolves each file against its *nearest* tsconfig,
-        // so apps/dashboard's DOM/React project is used for its own files
+        // `project: true` resolves each file against its *nearest* tsconfig
         // rather than this root one.
         project: true,
         tsconfigRootDir: import.meta.dirname,
@@ -77,16 +75,46 @@ export default tseslint.config(
     },
   },
   {
-    // `next lint` was removed in Next 16, so the App Router rules it used to
-    // provide are wired up directly here.
-    files: ['apps/dashboard/src/**/*.{ts,tsx}'],
-    plugins: { '@next/next': nextPlugin },
+    // RPC, Sapphire preconditions and the addon sandbox make "what may you
+    // do" decisions through the single `authorize()` evaluator, not by
+    // reaching into PermitResolver's internals directly. Repeats the
+    // repo-wide `no-restricted-imports` entries above (flat config replaces,
+    // rather than merges, a rule's options per matching file) plus this
+    // directory-scoped addition.
+    files: [
+      'packages/core/src/lib/rpc/**/*.ts',
+      'packages/core/src/lib/permissions/preconditions/**/*.ts',
+      'packages/core/src/lib/addon-sandbox/**/*.ts',
+    ],
     rules: {
-      ...nextPlugin.configs.recommended.rules,
-      ...nextPlugin.configs['core-web-vitals'].rules,
-      // App Router only — the rule hunts for a `pages/` directory and warns
-      // on every run when it finds none.
-      '@next/next/no-html-link-for-pages': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/modules/*/**', '../**/modules/**', '../../**/modules/**'],
+              message:
+                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
+            },
+          ],
+          paths: [
+            {
+              name: 'discord.js',
+              importNames: ['EmbedBuilder'],
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+            },
+            {
+              name: '@discordjs/builders',
+              importNames: ['EmbedBuilder'],
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+            },
+            {
+              name: '#lib/permissions/PermitResolver.js',
+              message: 'Authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly.',
+            },
+          ],
+        },
+      ],
     },
   },
   {
@@ -126,7 +154,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/*/tests/**/*.ts', 'packages/*/src/**/*.test.ts', 'apps/dashboard/tests/**/*.{ts,tsx}'],
+    files: ['packages/*/tests/**/*.ts', 'packages/*/src/**/*.test.ts'],
     rules: {
       // bun:test types vi.mock/mock.module as returning a Promise, but module mocks are hoisted and never awaited.
       '@typescript-eslint/no-floating-promises': [

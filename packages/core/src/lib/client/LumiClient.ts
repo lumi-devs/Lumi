@@ -1,17 +1,10 @@
 import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
-import {
-  envParseString,
-  getConsumerId,
-  isPrimaryShard,
-} from "#lib/env.js";
+import { envParseString, getConsumerId } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import type { RedisLock } from "#lib/lock.js";
-import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import { failedJobsTotal } from "@lumi/observability";
 import {
   ApplicationCommandRegistries,
   RegisterBehavior,
@@ -22,6 +15,7 @@ import type { Message } from "discord.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { buildClientOptions } from "./client-options.js";
 import { installContainerServices } from "./container-services.js";
+import { installProducerOnlyTasks } from "./scheduler-producer.js";
 import { ReadinessProbes } from "./ReadinessProbes.js";
 
 // Teardown steps swallow their own failure so one unreachable resource can't strand the rest.
@@ -37,28 +31,28 @@ const warnOnCleanupError = (what: string) => (err: unknown) =>
  * building, container-service installation and readiness probes each live in
  * their own module. What stays here is the ordering contract between them.
  *
- * `login()` brings resources up in dependency order - database, scheduler
- * lock, module discovery - and only then hands over to Sapphire. The internal
- * RPC HTTP server is no longer part of this process; it's served by
- * `apps/api` instead (see `packages/core/src/lib/client/api-bootstrap.ts`).
- * `destroy()` unwinds what's left in reverse, and every step swallows its own
- * failure so one unreachable resource cannot strand the others.
+ * `login()` brings resources up in dependency order - database, module
+ * discovery - and only then hands over to Sapphire. The internal RPC HTTP
+ * server is no longer part of this process; it's served by `apps/api`
+ * instead (see `packages/core/src/lib/client/api-bootstrap.ts`). BullMQ
+ * scheduling (the scheduler lock, repeatable-job registration, the actual
+ * job `Worker`) is likewise no longer part of this process - it's served by
+ * `apps/scheduler` instead (see `scheduler-container-services.ts`); every
+ * shard only ever enqueues a job via the producer-only `container.tasks`
+ * stand-in installed below. `destroy()` unwinds what's left in reverse, and
+ * every step swallows its own failure so one unreachable resource cannot
+ * strand the others.
  */
 export class LumiClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _schedulerLock: RedisLock | null = null;
-  private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
-  private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
   private _repositoryCacheUnbind: (() => void) | null = null;
 
   public constructor(_options: LumiClient.Options = {}) {
     super(buildClientOptions());
 
-    if (!isPrimaryShard() && container.tasks) {
-      container.tasks.createRepeated = async () => {};
-    }
+    installProducerOnlyTasks();
 
     this._ownedEventBus = installContainerServices(this);
     this._repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
@@ -79,52 +73,9 @@ export class LumiClient extends SapphireClient {
     await container.invalidation.start();
     await container.signals.start();
 
-    // Only one process per pod runs BullMQ scheduling. Under ShardingManager
-    // that's whichever child holds shard 0; standalone (dev) it's always
-    // this process. RPC is no longer served from here at all - see
-    // apps/api, which owns registerRpcHandlers()/startRpcHttpServer() now.
-    if (isPrimaryShard()) {
-      this._schedulerLock = await acquireSchedulerLock(container.redis, () => {
-        container.logger.error("[Primary] Lost scheduler lock, exiting");
-        process.exit(1);
-      });
-    }
     await this.stores.get("modules").discover();
 
     const result = await super.login(token);
-
-    // container.tasks (BullMQ) is only wired up on the primary shard - see
-    // setup.ts. Registering this on a shard where it's absent would throw.
-    if (isPrimaryShard()) {
-      const bullWorker = (
-        container.tasks as unknown as {
-          worker?: {
-            on(event: string, fn: (...args: unknown[]) => void): void;
-            off(event: string, fn: (...args: unknown[]) => void): void;
-          };
-        }
-      ).worker;
-      if (bullWorker) {
-        this._bullWorker = bullWorker;
-        this._bullFailedHandler = (job: unknown, err: unknown) => {
-          const taskName =
-            (job as { name?: string } | undefined)?.name ?? "unknown";
-          const attemptsMade =
-            (job as { attemptsMade?: number } | undefined)?.attemptsMade ?? 0;
-          const maxAttempts =
-            (job as { opts?: { attempts?: number } } | undefined)?.opts
-              ?.attempts ?? 0;
-          if (attemptsMade >= maxAttempts) {
-            failedJobsTotal.inc({ task: taskName });
-            container.logger.error(
-              `[Scheduler] Job '${taskName}' failed after ${attemptsMade} attempt(s):`,
-              err,
-            );
-          }
-        };
-        bullWorker.on("failed", this._bullFailedHandler);
-      }
-    }
 
     // Every shard executes fired task effects for the guilds it holds - this
     // is the event-bus relay, unrelated to which shard owns BullMQ itself.
@@ -163,11 +114,6 @@ export class LumiClient extends SapphireClient {
         .close()
         .catch(warnOnCleanupError("ScheduledTasks (BullMQ) close"));
     }
-    if (this._bullWorker && this._bullFailedHandler) {
-      this._bullWorker.off("failed", this._bullFailedHandler);
-      this._bullWorker = null;
-      this._bullFailedHandler = null;
-    }
     if (this._taskFireConsumer) {
       await this._taskFireConsumer
         .stopConsuming()
@@ -182,12 +128,6 @@ export class LumiClient extends SapphireClient {
       ?.close()
       .catch(warnOnCleanupError("EventBus close"));
     this._ownedEventBus = null;
-    if (this._schedulerLock) {
-      await this._schedulerLock
-        .release()
-        .catch(warnOnCleanupError("Scheduler lock release"));
-      this._schedulerLock = null;
-    }
     await container.invalidation
       .close()
       .catch(warnOnCleanupError("Invalidation close"));

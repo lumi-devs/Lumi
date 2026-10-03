@@ -20,7 +20,7 @@
 import { AsyncQueue } from "@sapphire/async-queue";
 import { container } from "@sapphire/framework";
 import { queueDepth } from "@lumi/observability";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
 import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "./render.js";
 
 const QueueLabel = "outbound-send";
@@ -44,7 +44,9 @@ export interface OutboundSendPayload {
 export async function queueSend(payload: OutboundSendPayload): Promise<void> {
   payload.at ??= Date.now();
   try {
-    await scheduleTask("send-message", payload);
+    await scheduleTask("send-message", payload, {
+      customJobOptions: { priority: QueuePriority.UTILITY },
+    });
   } catch (err: unknown) {
     container.logger.warn(
       `[OutboundSend] Could not queue a send for channel ${payload.channelId}; sending inline:`,

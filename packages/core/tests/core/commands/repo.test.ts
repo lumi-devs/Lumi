@@ -36,9 +36,15 @@ describe("RepoCommand", () => {
     vi.clearAllMocks();
 
     downloader = {
-      addRepo: vi.fn().mockResolvedValue(undefined),
+      addRepo: vi.fn().mockResolvedValue({ sha: "abc123", signedBy: null, signatureWarning: null }),
       removeRepo: vi.fn().mockResolvedValue(undefined),
-      updateRepo: vi.fn().mockResolvedValue(undefined),
+      updateRepo: vi.fn().mockResolvedValue({
+        oldSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        newSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        changed: true,
+        diffStat: "1 file changed",
+        recloned: false,
+      }),
       listRepos: vi.fn().mockResolvedValue([]),
       getModulesInRepo: vi.fn().mockResolvedValue([]),
       getInstalledModules: vi.fn().mockResolvedValue([]),

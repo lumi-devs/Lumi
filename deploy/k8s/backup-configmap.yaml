@@ -1,0 +1,126 @@
+# Mirrors deploy/backup/backup.sh and deploy/backup/restore-test.sh verbatim.
+# Keep both copies in sync when editing either one.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lumi-backup-scripts
+  namespace: lumi
+data:
+  backup.sh: |
+    #!/bin/sh
+    set -eu
+
+    BACKUP_DIR="${BACKUP_DIR:-/backups}"
+    BACKUP_RETENTION="${BACKUP_RETENTION:-7}"
+    BACKUP_INTERVAL_HOURS="${BACKUP_INTERVAL_HOURS:-24}"
+    POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+    POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+    POSTGRES_DB="${POSTGRES_DB:-lumi}"
+    POSTGRES_USER="${POSTGRES_USER:-lumi}"
+
+    export PGPASSWORD="${POSTGRES_PASSWORD:-lumi}"
+
+    run_backup() {
+        ts="$(date -u +%Y%m%dT%H%M%SZ)"
+        dest="${BACKUP_DIR}/lumi-${ts}.dump"
+        tmp="${dest}.tmp"
+
+        echo "[backup] starting dump to ${dest}"
+        pg_dump -Fc \
+            -h "${POSTGRES_HOST}" \
+            -p "${POSTGRES_PORT}" \
+            -U "${POSTGRES_USER}" \
+            -d "${POSTGRES_DB}" \
+            -f "${tmp}" || { rm -f "${tmp}"; return 1; }
+        mv "${tmp}" "${dest}"
+        echo "[backup] wrote ${dest}"
+
+        prune_old
+    }
+
+    prune_old() {
+        count="$(find "${BACKUP_DIR}" -maxdepth 1 -name 'lumi-*.dump' -type f | wc -l)"
+        if [ "${count}" -le "${BACKUP_RETENTION}" ]; then
+            return 0
+        fi
+
+        excess="$((count - BACKUP_RETENTION))"
+        find "${BACKUP_DIR}" -maxdepth 1 -name 'lumi-*.dump' -type f | sort | head -n "${excess}" | while IFS= read -r old; do
+            echo "[backup] pruning ${old}"
+            rm -f "${old}"
+        done
+    }
+
+    mkdir -p "${BACKUP_DIR}"
+
+    case "${1:-loop}" in
+        once)
+            run_backup
+            ;;
+        loop)
+            while true; do
+                run_backup || echo "[backup] dump failed; retrying next interval" >&2
+                sleep "$((BACKUP_INTERVAL_HOURS * 3600))"
+            done
+            ;;
+        *)
+            echo "usage: $0 [once|loop]" >&2
+            exit 1
+            ;;
+    esac
+  restore-test.sh: |
+    #!/bin/sh
+    set -eu
+
+    BACKUP_DIR="${BACKUP_DIR:-/backups}"
+    POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+    POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+    POSTGRES_USER="${POSTGRES_USER:-lumi}"
+
+    export PGPASSWORD="${POSTGRES_PASSWORD:-lumi}"
+
+    DUMP_FILE="${1:-}"
+    if [ -z "${DUMP_FILE}" ]; then
+        DUMP_FILE="$(find "${BACKUP_DIR}" -maxdepth 1 -name 'lumi-*.dump' -type f | sort | tail -n 1)"
+    fi
+
+    if [ -z "${DUMP_FILE}" ] || [ ! -f "${DUMP_FILE}" ]; then
+        echo "[restore-test] no dump file found (looked in ${BACKUP_DIR})" >&2
+        exit 1
+    fi
+
+    TEST_DB="lumi_restore_test_$(date -u +%Y%m%dT%H%M%SZ)"
+
+    cleanup() {
+        echo "[restore-test] dropping ${TEST_DB}"
+        dropdb -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" --if-exists "${TEST_DB}" || true
+    }
+    trap cleanup EXIT
+
+    echo "[restore-test] restoring ${DUMP_FILE} into ${TEST_DB}"
+    createdb -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" "${TEST_DB}"
+
+    pg_restore --exit-on-error \
+        -h "${POSTGRES_HOST}" \
+        -p "${POSTGRES_PORT}" \
+        -U "${POSTGRES_USER}" \
+        -d "${TEST_DB}" \
+        "${DUMP_FILE}"
+
+    migration_rows="$(psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" -d "${TEST_DB}" -tAc \
+        "SELECT count(*) FROM _prisma_migrations" 2>/dev/null || echo "")"
+
+    if [ -z "${migration_rows}" ]; then
+        echo "[restore-test] FAILED: _prisma_migrations table not found in restored dump" >&2
+        exit 1
+    fi
+
+    if [ "${migration_rows}" -eq 0 ]; then
+        echo "[restore-test] FAILED: _prisma_migrations has no rows" >&2
+        exit 1
+    fi
+
+    table_count="$(psql -h "${POSTGRES_HOST}" -p "${POSTGRES_PORT}" -U "${POSTGRES_USER}" -d "${TEST_DB}" -tAc \
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")"
+
+    echo "[restore-test] OK: ${migration_rows} applied migrations, ${table_count} tables in public schema"

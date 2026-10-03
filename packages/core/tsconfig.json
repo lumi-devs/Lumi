@@ -4,5 +4,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["index.ts", "src", "tests"]
+  "include": ["index.ts", "src", "tests"],
+  // Imports the `lumi` SDK by its package name; checked by its own tsconfig, which maps it.
+  "exclude": ["tests/fixtures/addons"]
 }

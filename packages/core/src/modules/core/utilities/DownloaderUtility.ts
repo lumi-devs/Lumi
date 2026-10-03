@@ -5,6 +5,8 @@ import {
   resolver,
   AddonModulesRoot,
   ModuleRoot,
+  RepoAlreadyInstalledError,
+  type RepoUpdateResult,
 } from "#lib/downloader/resolver.js";
 import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
@@ -156,7 +158,7 @@ export class DownloaderUtility extends Utility {
     repoName: string,
     moduleName: string,
     revision?: string,
-  ) {
+  ): Promise<{ signatureWarning: string | null }> {
     const repo =
       await this.container.db.downloader.readDownloaderRepo(repoName);
     if (!repo) {
@@ -191,12 +193,14 @@ export class DownloaderUtility extends Utility {
         repo.id,
         moduleName,
         info.version,
+        info.signedBy,
       );
       if (info.commit) {
         await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
           repo.id,
           moduleName,
           info.commit,
+          info.signedBy,
         );
       }
     } catch (err: unknown) {
@@ -208,6 +212,8 @@ export class DownloaderUtility extends Utility {
         .catch(() => undefined);
       throw err;
     }
+
+    return { signatureWarning: info.signatureWarning };
   }
 
   public async uninstallModule(moduleName: string) {
@@ -231,6 +237,12 @@ export class DownloaderUtility extends Utility {
     }
 
     const targetPath = path.join(AddonModulesRoot, moduleName);
+    const previousLink = await fs.readlink(targetPath).catch(() => null);
+    const previousSourcePath =
+      previousLink !== null
+        ? path.resolve(path.dirname(targetPath), previousLink)
+        : null;
+
     await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
       this.container.logger.error(
         `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
@@ -242,21 +254,53 @@ export class DownloaderUtility extends Utility {
       installedCheck.repoId,
       moduleName,
     );
+
+    await resolver
+      .releasePinnedWorktreeIfUnused(previousSourcePath)
+      .catch((err: unknown) => {
+        this.container.logger.warn(
+          `[DownloaderUtility] Failed to release pinned worktree for ${moduleName}:`,
+          err,
+        );
+      });
   }
 
-  public async addRepo(name: string, url: string, branch: string) {
-    await resolver.addRepo(name, url, branch);
-    await this.container.db.downloader.writeDownloaderRepo(name, url, branch);
+  public async addRepo(
+    name: string,
+    url: string,
+    branch: string,
+  ): Promise<{ sha: string | null; signatureWarning: string | null }> {
+    let sha: string | null;
+    let signedBy: string | null;
+    let signatureWarning: string | null;
+    try {
+      ({ sha, signedBy, signatureWarning } = await resolver.addRepo(name, url, branch));
+    } catch (err: unknown) {
+      if (err instanceof RepoAlreadyInstalledError) {
+        throw new Error(
+          `Repository **${name}** is already installed${err.sha ? ` at commit \`${err.sha}\`` : ""}. Use \`,repo update ${name}\` to pull and validate the latest changes.`,
+        );
+      }
+      throw err;
+    }
+    await this.container.db.downloader.writeDownloaderRepo(name, url, branch, sha, signedBy);
+    return { sha, signatureWarning };
   }
 
-  public async updateRepo(name: string) {
+  public async updateRepo(name: string): Promise<RepoUpdateResult> {
     const repo = await this.container.db.downloader.readDownloaderRepo(name);
     if (!repo) {
       throw new Error(
         `Repository **${name}** not found. Add it first using \`,repo add\`.`,
       );
     }
-    await resolver.addRepo(repo.name, repo.url, repo.branch);
+    const result = await resolver.updateRepo(repo.name, repo.url, repo.branch);
+    await this.container.db.downloader.updateDownloaderRepoCommit(
+      repo.id,
+      result.newSha,
+      result.signedBy,
+    );
+    return result;
   }
 
   /** Read-only check: fetches and compares the repo's local HEAD against its remote branch, never pulls. */
@@ -369,7 +413,10 @@ export class DownloaderUtility extends Utility {
     try {
       await fs.access(repoPath);
     } catch {
-      await this.updateRepo(repo.name);
+      // Directory is missing entirely, not just stale - this is a repair
+      // clone, not a pull of new upstream commits, so it goes through
+      // addRepo() rather than updateRepo().
+      await this.addRepo(repo.name, repo.url, branch);
     }
 
     const fetchFailed = await execFileAsync("git", [
@@ -458,6 +505,7 @@ export class DownloaderUtility extends Utility {
     changelog?: string;
     needsRestart?: boolean;
     pinned?: boolean;
+    signatureWarning?: string | null;
   }> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
@@ -496,13 +544,14 @@ export class DownloaderUtility extends Utility {
           repo.id,
           moduleName,
           info.commit,
+          info.signedBy,
         );
       }
 
       this.container.logger.info(
         `[DownloaderUtility] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
       );
-      return { updated: true, needsRestart: true };
+      return { updated: true, needsRestart: true, signatureWarning: info.signatureWarning };
     }
 
     const check = await this.checkForModuleUpdate(moduleName);
@@ -546,7 +595,7 @@ export class DownloaderUtility extends Utility {
   public async rollbackModule(
     moduleName: string,
     revision: string,
-  ): Promise<{ commit: string | null; needsRestart: true }> {
+  ): Promise<{ commit: string | null; needsRestart: true; signatureWarning: string | null }> {
     const installed =
       await this.container.db.downloader.readInstalledDownloaderModule(
         moduleName,
@@ -579,13 +628,14 @@ export class DownloaderUtility extends Utility {
         repo.id,
         moduleName,
         info.commit,
+        info.signedBy,
       );
     }
 
     this.container.logger.info(
       `[DownloaderUtility] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
     );
-    return { commit: info.commit, needsRestart: true };
+    return { commit: info.commit, needsRestart: true, signatureWarning: info.signatureWarning };
   }
 
   /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */

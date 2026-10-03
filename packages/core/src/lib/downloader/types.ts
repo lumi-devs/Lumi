@@ -9,6 +9,11 @@ export interface ModuleInfo {
   short?: string;
   version: string;
   emoji?: string;
+  /**
+   * Other modules this one requires, each either a plain name (`"economy"`)
+   * or a name with a semver range (`"leveling@^1.2.0"`) that the installed
+   * module's `version` must satisfy.
+   */
   dependencies?: string[];
   conflicts?: string[];
   requirements?: string[];

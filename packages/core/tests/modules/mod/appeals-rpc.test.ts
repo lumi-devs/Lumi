@@ -7,6 +7,7 @@ import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
@@ -23,24 +24,17 @@ function memberWith(roleIds: string[]) {
   return { roles: roleIds };
 }
 
+/** Wires a `DiscordRestPort` fake to answer `checkGuildManagerRest`'s guild/member lookups. */
 function mockRest(opts: {
   guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
   member?: unknown;
-}) {
-  const get = vi.fn().mockImplementation((route: string) => {
-    if (route === `/guilds/${GUILD_ID}`) {
-      if (opts.guild === null || opts.guild === undefined) {
-        return Promise.reject(new Error("Unknown Guild"));
-      }
-      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
-    }
-    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
-      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
-      return Promise.resolve(opts.member);
-    }
-    return Promise.reject(new Error(`Unexpected route: ${route}`));
-  });
-  return { rest: { get } };
+}): FakeDiscordRestPort {
+  const fake = new FakeDiscordRestPort();
+  if (opts.guild) fake.seedGuild({ id: GUILD_ID, ...opts.guild } as any);
+  if (opts.member !== undefined) {
+    fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, ...(opts.member as object) } as any);
+  }
+  return fake;
 }
 
 function makeCase(overrides: Record<string, unknown> = {}) {
@@ -84,10 +78,10 @@ describe("mod module appeals RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = mockRest({
+    (container as any).discordRest = mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
       member: memberWith([]),
-    }) as any;
+    });
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
@@ -385,6 +379,46 @@ describe("mod module appeals RPC handlers", () => {
       })) as any;
 
       expect(res.total).toBe(0);
+    });
+
+    it("pages by cursor, omitting total and returning nextCursor", async () => {
+      prisma.$seed(
+        "moderationCase",
+        Array.from({ length: 3 }, (_, i) => makeCase({ id: i + 1, caseNumber: i + 1 })),
+      );
+      prisma.$seed(
+        "appeal",
+        Array.from({ length: 3 }, (_, i) => ({
+          id: i + 1,
+          guildId: GUILD_ID,
+          userId: TARGET_ID,
+          caseId: i + 1,
+          status: "pending",
+          message: "please",
+          reviewedBy: null,
+          reviewedAt: null,
+          createdAt: new Date(2026, 0, i + 1),
+        })),
+      );
+
+      const first = (await callAuthed("guild.appeals.list", { pageSize: 2 })) as any;
+      expect(first.total).toBe(3);
+      expect(first.appeals.map((a: any) => a.id)).toEqual([3, 2]);
+      expect(first.nextCursor).toBeTruthy();
+
+      const second = (await callAuthed("guild.appeals.list", {
+        pageSize: 2,
+        cursor: first.nextCursor,
+      })) as any;
+      expect(second.total).toBeUndefined();
+      expect(second.appeals.map((a: any) => a.id)).toEqual([1]);
+      expect(second.nextCursor).toBeNull();
+    });
+
+    it("rejects an invalid cursor", async () => {
+      await expect(
+        callAuthed("guild.appeals.list", { cursor: "not-a-real-cursor" }),
+      ).rejects.toThrow("Invalid pagination cursor");
     });
   });
 

@@ -13,7 +13,7 @@ import {
 import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#lib/utilities/errors.js";
 import { renderTemplate } from "#lib/utilities/template.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
 import { claimCooldown } from "#lib/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
@@ -240,6 +240,7 @@ export default class TempVcUtility extends Utility {
           jobId: cleanupJobId(guildId, channelId),
           removeOnComplete: true,
           removeOnFail: true,
+          priority: QueuePriority.CLEANUP,
         },
       },
     ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));

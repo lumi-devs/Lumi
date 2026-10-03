@@ -1,6 +1,6 @@
 import { chunk } from "@sapphire/utilities";
 import type { LumiT } from "#lib/i18n/index.js";
-import { sectionsOf } from "@lumi/contracts";
+import { resolveChannelTypeIds, sectionsOf } from "@lumi/contracts";
 import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
 import type { ModuleMeta } from "#lib/module-system/meta.js";
 import {
@@ -422,7 +422,7 @@ export function buildFeatureDetailView(
 }
 
 const resolveChannelTypes = (f: ConfigField): ChannelType[] =>
-  f.channelTypes?.length ? f.channelTypes : [ChannelType.GuildText];
+  resolveChannelTypeIds(f) as ChannelType[];
 
 /**
  * Per-field edit subpanel hosting the single native picker for the field, or

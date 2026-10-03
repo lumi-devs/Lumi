@@ -52,8 +52,8 @@ called out in the changeset body instead (see below), not the commit header.
 
 `.github/workflows/changeset-check.yml` fails a PR if it touches any non-`.md`
 file under `packages/` or `apps/` and doesn't add a new file under `.changeset/`
-(excluding `.changeset/README.md`). Exemptions: bot-authored PRs (Dependabot,
-Renovate) and PRs labeled `docs-only`, `area:docs`, `area:ci`, or `area:deps`.
+(excluding `.changeset/README.md`). Exemptions: bot-authored PRs (Dependabot)
+and PRs labeled `docs-only`, `area:docs`, `area:ci`, or `area:deps`.
 Generate one with `bun changeset` (aliased `bun run changeset`), which prompts for
 affected packages and bump type, then commit the resulting markdown file. Real
 examples:
@@ -116,7 +116,9 @@ when only docs changed; the required jobs when code under `apps/**` or
 
 - **lint** — `bun run lint:all` (or, on a PR, `turbo run lint:all --filter
   [origin/$BASE_REF...HEAD]` first, falling back to the full `bun run lint` if
-  that fails)
+  that fails); this is check-only (no `--fix`) — the fix variant is
+  `bun run lint:fix` (`turbo run lint:all:fix`), for local use only, never run
+  in CI
 - **typecheck** — same filtered/full pattern, `bun run typecheck`
 - **test** — `bun run test:coverage` (both root vitest and dashboard vitest,
   with coverage), uploads `coverage/lcov.info` +
@@ -124,16 +126,17 @@ when only docs changed; the required jobs when code under `apps/**` or
   (`continue-on-error: true` on the Codecov step specifically — a Codecov
   failure doesn't fail CI, a test failure does)
 - **build** — `bun turbo run build` across the monorepo
-- **validate-examples** — only when `examples/**`, `scripts/validate-addon.ts`,
-  or the downloader/addon-sdk source changed; runs `bun run validate examples`
-  against the Downloader's structural rules
 - **nix-check** — only when `flake.nix`/`flake.lock` changed; `nix flake check`
 
 A final `ci-status` job aggregates all of the above and is the one actually
 required for merge (`needs: [changes, lint, typecheck, test, build,
-validate-examples, nix-check]`, fails if any upstream job failed or was
+nix-check]`, fails if any upstream job failed or was
 cancelled) — branch protection should point at this job, not the individual ones,
 since several of them conditionally skip.
+
+The example addons (`hello-world`, `tag-manager`, `giveaway`) that this validator used to run
+against in-repo now live in [`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s
+`examples/`, validated by that repo's own CI.
 
 Separately, `.github/workflows/changeset-check.yml` (a different workflow, see
 above) blocks the PR independently if a changeset is missing.

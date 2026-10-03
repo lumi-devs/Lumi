@@ -2,9 +2,8 @@ import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
 import { acquireRedisLock } from "#lib/lock.js";
 import type { ModLiftPayload } from "../scheduled-tasks/modLift.js";
-import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
-import { BanAction } from "#modules/mod/services/actions/BanAction.js";
-import { VoiceMuteAction } from "#modules/mod/services/actions/VoiceMuteAction.js";
+import { liftModerationCaseWithUndo } from "#modules/mod/services/case-lift.js";
+import { errorCode } from "#lib/utilities/errors.js";
 
 const ActionLabels: Record<string, string> = {
   mute: "Mute",
@@ -37,21 +36,16 @@ async function liftCase(payload: ModLiftPayload): Promise<void> {
   const reason = `[AutoLift] ${ActionLabels[c.action] ?? c.action} case #${c.caseNumber} expired`;
 
   try {
-    if (c.action === "mute") {
-      await MuteAction.undoRaw(c.guildId, c.userId, reason);
-    } else if (c.action === "ban") {
-      await BanAction.undoRaw(c.guildId, c.userId, reason);
-    } else if (c.action === "voice_mute") {
-      await VoiceMuteAction.undoRaw(c.guildId, c.userId, reason);
-    }
-
-    await container.db.moderation.liftModerationCase(c.id);
+    await liftModerationCaseWithUndo(c, reason);
     container.logger.debug(
       `[ModLiftTask] Lifted case #${c.caseNumber} (${c.guildId}/${c.userId}).`,
     );
   } catch (err: unknown) {
+    const missingPermission = errorCode(err) === 50013;
     container.logger.error(
-      `[ModLiftTask] Failed to lift case #${c.caseNumber} (${c.guildId}/${c.userId}):`,
+      missingPermission
+        ? `[ModLiftTask] Lumi lacks Discord permission to auto-lift case #${c.caseNumber} (${c.guildId}/${c.userId}). The case stays active; grant the bot the permission and retry from the dashboard.`
+        : `[ModLiftTask] Failed to lift case #${c.caseNumber} (${c.guildId}/${c.userId}):`,
       err,
     );
     throw err;

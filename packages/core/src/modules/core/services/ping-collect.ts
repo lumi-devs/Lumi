@@ -174,6 +174,7 @@ async function getGatewayNode(): Promise<string> {
         "User-Agent":
           "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
+      signal: AbortSignal.timeout(3000),
     });
     const text = response.ok ? await response.text() : "";
     cachedGatewayNode = text.match(/colo=([A-Z0-9]+)/)?.[1] ?? "Unknown";
@@ -425,6 +426,12 @@ export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
   const data = await collectPingDataFresh();
   lastCollect = { at: Date.now(), data };
   return data;
+}
+
+/** Clears the module-level TTL caches this file keeps (gateway node, collect result) so a test can force a fresh collect. */
+export function resetPingCachesForTests(): void {
+  cachedGatewayNode = null;
+  lastCollect = null;
 }
 
 async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {

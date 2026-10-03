@@ -1,7 +1,7 @@
 import { s } from "@sapphire/shapeshift";
-import type { TempVcGeneratorView, TempVcRecordView } from "../views";
-import { rpcAction, RpcTimeouts } from "./define";
-import { SnowflakeSchema } from "./schemas";
+import type { TempVcGeneratorView, TempVcRecordView } from "../views.js";
+import { rpcAction, RpcTimeouts } from "./define.js";
+import { SnowflakeSchema } from "./schemas.js";
 
 export const tempvcRpc = {
   "guild.tempvc.generators.list": rpcAction<{
@@ -10,6 +10,7 @@ export const tempvcRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List temporary-voice generator channels.",
+    readOnly: true,
   }),
   "guild.tempvc.generators.set": rpcAction<{
     success: boolean;
@@ -35,5 +36,6 @@ export const tempvcRpc = {
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List temporary-voice records.",
+    readOnly: true,
   }),
 };

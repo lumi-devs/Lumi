@@ -1,5 +1,9 @@
 # Adding an RPC action (dashboard ↔ worker)
 
+> The dashboard-side steps below (`src/...` paths) happen in its own repo,
+> [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard) — only the
+> contract slice, `implementRpc()`, and `registry.ts` steps live in this repo.
+
 Full mechanics: `agents/architecture/rpc-bridge.md` — read that first, this is
 the condensed step-by-step using the same real action it walks through end to
 end: `guild.modNotes.add` (a mutation) and its sibling `guild.modNotes.list`
@@ -114,7 +118,7 @@ registration.
 
 ## 3. Caller — read vs. mutation
 
-**Read** → `apps/dashboard/src/lib/dashboard-fetch.ts`, a plain async function,
+**Read** → `src/lib/dashboard-fetch.ts`, a plain async function,
 optionally wrapped in React's `cache()` if multiple Server Components might
 request the same data in one render:
 
@@ -131,9 +135,9 @@ export async function getGuildModNotes(
 
 No `"use server"`, no rate limiting, no `revalidatePath` — reads never do
 either. Add the return-shape type (`ModNoteView` here) to
-`apps/dashboard/src/lib/dashboard-data.ts` if it's new.
+`src/lib/dashboard-data.ts` if it's new.
 
-**Mutation** → a new or existing file under `apps/dashboard/src/actions/*.ts`,
+**Mutation** → a new or existing file under `src/actions/*.ts`,
 `"use server"` at the top, each export wrapped in `runAction`:
 
 ```ts
@@ -166,7 +170,7 @@ export async function addModNote(guildId: string, userId: string, message: strin
 ```
 
 `session.userId` becomes the wire `actorId` — never take an `actorId` as a
-parameter from the client. `runAction` (`apps/dashboard/src/lib/action-result.ts:8-19`)
+parameter from the client. `runAction` (`src/lib/action-result.ts:8-19`)
 converts a thrown `Error` into `{ ok: false, error }` while still letting
 Next's `redirect()`/`notFound()` throws pass through. `revalidatePath` after a
 successful write is what makes the dashboard page reflect the change without a
@@ -175,7 +179,7 @@ full reload; reads never call it because they don't mutate anything.
 ## That's the whole change
 
 No code generation, no schema registry to update elsewhere, no need to touch
-`dispatchRpc`/`http-server.ts` — those are transport-level and already handle
+`dispatchRpc`/`rpc-http-server.ts` — those are transport-level and already handle
 any action string generically. If the new action needs a permission check
 beyond plain guild-manager (bot-owner-only, a specific permit node), that's a
 handler-level decision (see the "gotchas" in `agents/architecture/rpc-bridge.md`),

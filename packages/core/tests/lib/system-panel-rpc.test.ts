@@ -103,7 +103,6 @@ describe("system panel RPC handlers", () => {
       const res = (await call("system.audit.list", {})) as any;
 
       expect(res.total).toBe(2);
-      expect(res.page).toBe(1);
       expect(res.pageSize).toBe(25);
       expect(res.entries[0].createdAt).toBe("2026-01-01T00:00:00.000Z");
     });
@@ -122,7 +121,7 @@ describe("system panel RPC handlers", () => {
       expect(res.entries[0].id).toBe(1);
     });
 
-    it("paginates and reports the unpaginated total", async () => {
+    it("pages via cursor and reports the exact total only on the first page", async () => {
       prisma.$seed(
         "auditLedger",
         Array.from({ length: 5 }, (_, i) =>
@@ -130,13 +129,17 @@ describe("system panel RPC handlers", () => {
         ),
       );
 
-      const res = (await call("system.audit.list", {
-        page: 2,
-        pageSize: 2,
-      })) as any;
+      const firstPage = (await call("system.audit.list", { pageSize: 2 })) as any;
+      expect(firstPage.total).toBe(5);
+      expect(firstPage.entries.map((e: any) => e.id)).toEqual([5, 4]);
+      expect(firstPage.nextCursor).not.toBeNull();
 
-      expect(res.total).toBe(5);
-      expect(res.entries.map((e: any) => e.id)).toEqual([3, 2]);
+      const secondPage = (await call("system.audit.list", {
+        pageSize: 2,
+        cursor: firstPage.nextCursor,
+      })) as any;
+      expect(secondPage.total).toBeUndefined();
+      expect(secondPage.entries.map((e: any) => e.id)).toEqual([3, 2]);
     });
 
     it("rejects a non-owner", async () => {

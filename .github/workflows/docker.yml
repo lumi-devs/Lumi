@@ -55,13 +55,15 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         target:
           - name: worker
           - name: api
-          - name: dashboard
+          - name: scheduler
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -76,10 +78,10 @@ jobs:
         id: image_meta
         run: |
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          if [ "${{ matrix.target.name }}" = "dashboard" ]; then
-            echo "image=ghcr.io/${REPO_LOWER}-dashboard" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.target.name }}" = "api" ]; then
+          if [ "${{ matrix.target.name }}" = "api" ]; then
             echo "image=ghcr.io/${REPO_LOWER}-api" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.target.name }}" = "scheduler" ]; then
+            echo "image=ghcr.io/${REPO_LOWER}-scheduler" >> $GITHUB_OUTPUT
           else
             echo "image=ghcr.io/${REPO_LOWER}" >> $GITHUB_OUTPUT
           fi
@@ -103,14 +105,61 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
 
-      - name: Build and push Docker image
+      - name: Build image (push on non-PR, local load on PR)
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
           target: ${{ matrix.target.name }}
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: ${{ github.event_name != 'pull_request' && 'mode=max' || false }}
+
+      - name: Determine image reference to scan
+        id: scan_ref
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            REF=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          else
+            REF="${{ steps.image_meta.outputs.image }}@${{ steps.build.outputs.digest }}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy vulnerability scan
+        id: trivy
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ steps.scan_ref.outputs.ref }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload Trivy scan results to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-${{ matrix.target.name }}
+
+      - name: Fail build on Trivy findings
+        if: steps.trivy.outcome == 'failure'
+        run: |
+          echo "Trivy found CRITICAL or fixable HIGH vulnerabilities in ${{ matrix.target.name }} image." >&2
+          exit 1
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v4
+
+      - name: Sign pushed image with cosign (keyless)
+        if: github.event_name != 'pull_request'
+        run: cosign sign --yes "${{ steps.image_meta.outputs.image }}@${{ steps.build.outputs.digest }}"
