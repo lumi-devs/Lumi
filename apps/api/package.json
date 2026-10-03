@@ -15,9 +15,9 @@
     "test": "bun test --parallel"
   },
   "dependencies": {
-    "@lumi/contracts": "workspace:*",
+    "@lumi/contracts": "npm:@lumi-devs/contracts@latest",
     "@lumi/core": "workspace:*",
-    "@lumi/observability": "workspace:*",
+    "@lumi/observability": "npm:@lumi-devs/observability@latest",
     "@sapphire/framework": "^5.5.1"
   }
 }
