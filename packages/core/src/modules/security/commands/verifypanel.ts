@@ -5,7 +5,7 @@ import { ChannelType, type GuildTextBasedChannel } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { logError } from "#lib/utilities/errors.js";
-import { loadVerificationConfig } from "../services/verification.js";
+import { loadVerificationConfig } from "@lumi/application/services/security/verification.js";
 import { buildVerifyPanel } from "../ui/verify-panel.js";
 
 @ApplyOptions<BaseCommand.Options>({

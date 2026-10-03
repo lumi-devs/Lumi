@@ -8,9 +8,10 @@ import {
   registerRpcHandlers,
   registerRpcReadinessProbe,
 } from "@lumi/core";
-import { container } from "@sapphire/framework";
+import { createPinoLogger } from "@lumi/observability";
 import { startRpcHttpServer } from "./rpc-http-server.js";
 
+const logger = createPinoLogger({ service: "lumi-api" });
 let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 
 // Stop RPC server before closing database and redis connections.
@@ -38,15 +39,15 @@ registerInfrastructureReadinessProbes();
 
 registerRpcHandlers();
 rpcServer = await startRpcHttpServer((level, msg, meta) =>
-  container.logger[level](msg, meta),
+  logger[level](meta ?? {}, msg),
 );
 registerRpcReadinessProbe(() => rpcServer !== null);
 
 if (!rpcServer) {
   // api process only serves RPC; exit immediately on bind failure.
-  container.logger.fatal("[Api] Failed to start RPC HTTP server - exiting");
+  logger.fatal("[Api] Failed to start RPC HTTP server - exiting");
   await destroyApiContainerServices(services);
   process.exit(1);
 }
 
-container.logger.info("[Api] Bootstrap successful - serving RPC");
+logger.info("[Api] Bootstrap successful - serving RPC");

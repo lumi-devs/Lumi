@@ -6,12 +6,12 @@ import { fetchTyped } from "#lib/commands.js";
 import { logError } from "#lib/utilities/errors.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { TempvcCreateCooldownMs } from "../constants.js";
-import { tempVcRegistry } from "../services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import type TempVcUtility from "../utilities/TempVcUtility.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
-} from "../services/voice-occupancy.js";
+} from "@lumi/application/services/tempvc/voice-occupancy.js";
 
 @ApplyOptions<Listener.Options>({
   name: "tempvcVoiceStateUpdate",

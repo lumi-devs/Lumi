@@ -4,8 +4,8 @@ import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { isSuspiciousAccount } from "../services/suspicious.js";
-import { loadVerificationConfig, assignPending } from "../services/verification.js";
+import { isSuspiciousAccount } from "@lumi/application/services/security/suspicious.js";
+import { loadVerificationConfig, assignPending } from "@lumi/application/services/security/verification.js";
 import {
   loadJoinGateConfig,
   evaluateJoinFilters,
@@ -14,7 +14,7 @@ import {
   isRaidActive,
   isSuspiciousJoiner,
   recordRecentJoiner,
-} from "../services/join-gate.js";
+} from "@lumi/application/services/security/join-gate.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityMemberJoin",

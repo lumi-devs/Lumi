@@ -22,9 +22,9 @@ import {
   unpinModule,
   updateAllModules,
   updateModule,
-} from "../services/module-command/operations.js";
-import { getModulePiecesInfo } from "../services/module-command/pieces.js";
-import { registerModuleCommand } from "../services/module-command/registry.js";
+} from "@lumi/application/services/core/module-command/operations.js";
+import { getModulePiecesInfo } from "@lumi/application/services/core/module-command/pieces.js";
+import { registerModuleCommand } from "@lumi/application/services/core/module-command/registry.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";

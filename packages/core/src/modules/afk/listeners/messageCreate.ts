@@ -23,7 +23,7 @@ import {
   AfkWelcomeCooldownMs,
   NickPrefix,
 } from "../constants.js";
-import { afkDurationSince, sanitizeReason } from "../services/format.js";
+import { afkDurationSince, sanitizeReason } from "@lumi/application/services/afk/format.js";
 import {
   getAfkEntry,
   getAfkEntriesBatch,

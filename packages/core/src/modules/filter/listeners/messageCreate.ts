@@ -6,7 +6,7 @@ import { channelMention } from "@discordjs/formatters";
 import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
-import { enforceHit, runRules, shouldScreen } from "../services/enforce.js";
+import { enforceHit, runRules, shouldScreen } from "@lumi/application/services/filter/enforce.js";
 import {
   containsLink,
   countEmoji,
@@ -14,7 +14,7 @@ import {
   heatAction,
   isZalgo,
   type HeatConfig,
-} from "../services/heat.js";
+} from "@lumi/application/services/filter/heat.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { lockAllTextChannels } from "#lib/moderation/lockdown.js";

@@ -1,0 +1,278 @@
+import type { Container } from "@sapphire/framework";
+import { pipelineBySlot } from "#lib/database/cluster-safe.js";
+import { tryParseJSON } from "@sapphire/utilities";
+import { type WarnThresholdAction } from "@lumi/contracts/rpc";
+import { Time } from "@sapphire/time-utilities";
+import { thresholdKey } from "./threshold-rules.js";
+import { BanAction } from "#modules/mod/services/actions/BanAction.js";
+import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
+import { KickAction } from "#modules/mod/services/actions/KickAction.js";
+import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
+import { VoiceMuteAction } from "#modules/mod/services/actions/VoiceMuteAction.js";
+import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
+
+/** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */
+type ThresholdAction = WarnThresholdAction;
+
+interface ThresholdEntry {
+  action: ThresholdAction;
+  /** Seconds, mirroring the `WarnThreshold.duration` storage column. */
+  duration?: number;
+}
+
+export type WarnThresholds = Record<string, ThresholdEntry>;
+
+const warnCountKey = (guildId: string, userId: string) =>
+  `lumi:mod:${guildId}:warns:${userId}`;
+const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
+  `lumi:mod:${guildId}:threshold-fired:${userId}:${count}`;
+
+/** How long a fired threshold stays claimed - long enough to cover a retry storm. */
+const ThresholdFiredTtl = 60;
+
+const ThresholdTtl = 300;
+
+export async function getThresholds(
+  container: Container,
+  guildId: string,
+): Promise<WarnThresholds> {
+  const cached = await container.redis.get(thresholdKey(guildId));
+  if (cached) {
+    const parsedCache = tryParseJSON(cached) as WarnThresholds | null;
+    if (parsedCache) return parsedCache;
+  }
+
+  const rows = await container.db.moderation.getWarnThresholds(guildId);
+  const parsed: WarnThresholds = {};
+  for (const row of rows) {
+    parsed[String(row.warnCount)] = {
+      action: row.action as ThresholdAction,
+      duration: row.duration ?? undefined,
+    };
+  }
+
+  await container.redis.setex(
+    thresholdKey(guildId),
+    ThresholdTtl,
+    JSON.stringify(parsed),
+  );
+  return parsed;
+}
+
+const WarnCountTtl = 365 * 24 * 3600;
+
+export async function incrementWarnCount(
+  container: Container,
+  guildId: string,
+  userId: string,
+): Promise<number> {
+  const key = warnCountKey(guildId, userId);
+  const exists = await container.redis.exists(key);
+
+  if (!exists) {
+    const count = await container.db.moderation.countModerationCases(
+      guildId,
+      userId,
+      "warn",
+    );
+    await container.redis.set(key, String(count), "EX", WarnCountTtl);
+    return count;
+  }
+
+  const pipe = container.redis.pipeline();
+  pipe.incr(key);
+  pipe.expire(key, WarnCountTtl);
+  const results = await pipe.exec();
+  if (!results || results[0]?.[0]) {
+    container.logger.error("[Thresholds] Redis pipeline execution failed:", results?.[0]?.[0]);
+    return 0;
+  }
+  return (results?.[0]?.[1] as number | null) ?? 0;
+}
+
+const DecrementWarnCountScript =
+  "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0";
+
+export async function decrementWarnCount(
+  container: Container,
+  guildId: string,
+  userId: string,
+): Promise<void> {
+  await container.redis.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
+}
+
+/** Batched variant of {@linkcode decrementWarnCount} - one pipeline instead of N round trips. */
+export async function decrementWarnCounts(
+  container: Container,
+  entries: { guildId: string; userId: string }[],
+): Promise<void> {
+  if (entries.length === 0) return;
+  await pipelineBySlot(
+    container.redis,
+    entries,
+    ({ guildId, userId }) => warnCountKey(guildId, userId),
+    (pipe, { guildId, userId }) => {
+      pipe.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
+    },
+  );
+}
+
+export async function resetWarnCount(
+  container: Container,
+  guildId: string,
+  userId: string,
+): Promise<void> {
+  await container.invalidation.invalidate(warnCountKey(guildId, userId));
+}
+
+/**
+ * Falls back to the hour both editors offer as their default rather than
+ * dropping the rule: rows written before the write path validated durations
+ * still describe an intended punishment, and a Discord timeout cannot be
+ * permanent, so there is no "no duration" reading of the rule to honour.
+ */
+const FallbackThresholdDurationMs = Time.Hour;
+
+function resolveThresholdDuration(
+  container: Container,
+  guildId: string,
+  targetCount: number,
+  entry: ThresholdEntry,
+): number {
+  const ms = entry.duration ? entry.duration * 1000 : null;
+  if (ms) return ms;
+
+  container.logger.warn(
+    `[Thresholds] Guild ${guildId}: the ${entry.action} rule at ${targetCount} warns has an unusable duration (${
+      entry.duration ? `"${entry.duration}"` : "none set"
+    }) - applying ${FallbackThresholdDurationMs / Time.Minute}m instead. Save the rule again with a valid duration.`,
+  );
+  return FallbackThresholdDurationMs;
+}
+
+export async function checkThresholds(
+  container: Container,
+  guildId: string,
+  userId: string,
+  warnCount: number,
+): Promise<void> {
+  const thresholds = await getThresholds(container, guildId);
+  const matchingKeys = Object.keys(thresholds)
+    .map(Number)
+    .filter((count) => count <= warnCount)
+    .sort((a, b) => b - a);
+
+  if (matchingKeys.length === 0) return;
+  const targetCount = matchingKeys[0]!;
+  const entry = thresholds[String(targetCount)];
+  if (!entry) return;
+
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) return;
+
+  const botUser = container.client.user;
+  if (!botUser) return;
+
+  // Two warns landing at once can both resolve to the same threshold (and a
+  // cold warn counter makes them resolve to the same count outright), which
+  // would apply the punishment twice. First one through wins. Claimed only
+  // after the guild/bot lookups above so an un-actionable run doesn't burn
+  // the claim and eat the firing.
+  const claimed = await container.redis.set(
+    thresholdFiredKey(guildId, userId, targetCount),
+    "1",
+    "EX",
+    ThresholdFiredTtl,
+    "NX",
+  );
+  if (claimed !== "OK") return;
+
+  const reason = `Auto: ${warnCount} warn${warnCount === 1 ? "" : "s"} reached threshold (${targetCount}).`;
+
+  if (entry.action === "mute") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
+    const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
+    await MuteAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+      durationMs: ms,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-mute failed for ${userId}:`,
+        err,
+      );
+    });
+  } else if (entry.action === "kick") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
+    await KickAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-kick failed for ${userId}:`,
+        err,
+      );
+    });
+  } else if (entry.action === "ban") {
+    const user = await container.client.users.fetch(userId).catch(() => null);
+    if (!user) return;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (member && (await isImmuneToAutomatedAction(container, guildId, member)))
+      return;
+    await BanAction.apply({
+      guild,
+      targetUser: user,
+      moderator: botUser,
+      reason,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-ban failed for ${userId}:`,
+        err,
+      );
+    });
+  } else if (entry.action === "quarantine") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
+    await QuarantineAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-quarantine failed for ${userId}:`,
+        err,
+      );
+    });
+  } else if (entry.action === "voice_mute") {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
+    if (await isImmuneToAutomatedAction(container, guildId, member)) return;
+    const ms = resolveThresholdDuration(container, guildId, targetCount, entry);
+    await VoiceMuteAction.apply({
+      guild,
+      targetMember: member,
+      moderator: botUser,
+      reason,
+      durationMs: ms,
+    }).catch((err) => {
+      container.logger.error(
+        `[Thresholds] Auto-voice-mute failed for ${userId}:`,
+        err,
+      );
+    });
+  } else {
+    container.logger.error(
+      `[Thresholds] Guild ${guildId} has a rule at ${targetCount} warns with unknown action "${entry.action as string}" - nothing was applied.`,
+    );
+  }
+}

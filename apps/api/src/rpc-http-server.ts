@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { container } from "@sapphire/framework";
 import {
   dispatchRpc,
+  findGdprExportJob,
   GdprExportSigningKeyUnavailable,
   handleSseRequest,
   logError,
@@ -103,7 +103,7 @@ async function handleGdprExportDownload(req: Request): Promise<Response> {
     return Response.json({ error: "Invalid or expired download link" }, { status: 401 });
   }
 
-  const job = await container.db.gdprExportJobs.findById(verification.jobId);
+  const job = await findGdprExportJob(verification.jobId);
   if (!job || job.status !== "done" || !job.filePath) {
     return Response.json({ error: "Export not found" }, { status: 404 });
   }
@@ -149,7 +149,7 @@ export async function handleRpcHttpRequest(
   if (req.method === "GET" && pathname === GdprExportDownloadPath) {
     return handleGdprExportDownload(req);
   }
-  if (req.method !== "POST" || pathname !== "/rpc") {
+  if (req.method !== "POST" || (pathname !== "/rpc" && pathname !== "/rpc/batch")) {
     return new Response("not found", { status: 404 });
   }
   if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
@@ -159,6 +159,37 @@ export async function handleRpcHttpRequest(
   }
   const contractMismatch = checkContractVersion(req);
   if (contractMismatch) return contractMismatch;
+
+  if (pathname === "/rpc/batch") {
+    let batchBody: { requests?: RpcRequest<unknown>[] };
+    try {
+      batchBody = (await req.json()) as { requests?: RpcRequest<unknown>[] };
+    } catch {
+      return Response.json(makeRpcFailure("", "Malformed JSON body", RpcFailureCodes.BadRequest), {
+        status: 400,
+      });
+    }
+    if (!Array.isArray(batchBody?.requests)) {
+      return Response.json(
+        makeRpcFailure("", "Missing or invalid requests array in batch payload", RpcFailureCodes.BadRequest),
+        { status: 400 },
+      );
+    }
+    const responses = await Promise.all(
+      batchBody.requests.map(async (r) => {
+        if (!r?.action) {
+          return makeRpcFailure(r?.id ?? "", "Missing action", RpcFailureCodes.BadRequest);
+        }
+        try {
+          return await dispatchRpc(r);
+        } catch {
+          return makeRpcFailure(r?.id ?? "", "Internal error", RpcFailureCodes.Internal);
+        }
+      }),
+    );
+    return Response.json({ responses });
+  }
+
   let body: RpcRequest<unknown>;
   try {
     body = (await req.json()) as RpcRequest<unknown>;

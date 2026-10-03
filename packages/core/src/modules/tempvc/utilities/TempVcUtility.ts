@@ -18,7 +18,7 @@ import { claimCooldown } from "#lib/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
-} from "../services/voice-occupancy.js";
+} from "@lumi/application/services/tempvc/voice-occupancy.js";
 import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "../constants.js";
 import { getCreateCooldownMs, getMaxGenerators } from "../config.js";
 import {
@@ -33,7 +33,7 @@ import {
   type GeneratorConfig,
   type VcRecord,
 } from "../data/tempvc.js";
-import { tempVcRegistry } from "../services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import { buildPanel } from "../ui/panel.js";
 
 const creationQueues = new Collection<string, AsyncQueue>();

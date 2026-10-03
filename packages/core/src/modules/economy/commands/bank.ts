@@ -3,9 +3,9 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import { BankService } from "../services/BankService.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
 type Vault = "wallet" | "bank";
 

@@ -7,8 +7,8 @@ import {
 } from "discord.js";
 import { isNullish } from "@sapphire/utilities";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { evaluateNukeEvent, type NukeKind } from "../services/anti-nuke.js";
-import { flagRestorePending } from "../services/backup.js";
+import { evaluateNukeEvent, type NukeKind } from "@lumi/application/services/security/anti-nuke.js";
+import { flagRestorePending } from "@lumi/application/services/security/backup.js";
 
 const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",

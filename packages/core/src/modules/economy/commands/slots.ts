@@ -3,15 +3,15 @@ import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { claimCooldown } from "#lib/cooldown.js";
 import { formatDuration } from "#lib/utilities/time.js";
-import { BankService } from "../services/BankService.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import {
   formatAmount,
   getEconomyConfig,
   type EconomyConfig,
 } from "../config.js";
 import { EconomyKeys } from "../constants.js";
-import { SlotPayoutLabels, renderSlotGrid } from "../services/slots.js";
-import { reportEconomyError } from "../services/respond.js";
+import { SlotPayoutLabels, renderSlotGrid } from "@lumi/application/services/economy/slots.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
 async function claimSlotCooldown(config: EconomyConfig, guildId: string, userId: string): Promise<boolean> {
   if (config.slotCooldownMs <= 0) return true;

@@ -9,7 +9,7 @@ import type {
   ScheduledTasksResolvable,
   ScheduledTasksTaskOptions,
 } from "@sapphire/plugin-scheduled-tasks";
-import { Queue, type JobsOptions } from "bullmq";
+import { JobQueue, type QueueJobOptions } from "@lumi/infrastructure/queues";
 
 function resolveTask(
   task: ScheduledTasksResolvable,
@@ -24,7 +24,7 @@ function resolveTask(
  * into BullMQ without spawning a worker.
  */
 export function installProducerOnlyTasks(): void {
-  const queue = new Queue(SCHEDULED_TASKS_QUEUE_NAME, {
+  const queue = new JobQueue(SCHEDULED_TASKS_QUEUE_NAME, {
     connection: getScheduledTasksConnectionOptions(),
     defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   });
@@ -42,7 +42,7 @@ export function installProducerOnlyTasks(): void {
       }
       const { repeated, pattern, interval, delay, customJobOptions, timezone } =
         options;
-      let jobOptions: JobsOptions = { delay, ...customJobOptions };
+      let jobOptions: QueueJobOptions = { delay, ...customJobOptions };
       if (repeated) {
         jobOptions = {
           ...jobOptions,
@@ -52,8 +52,7 @@ export function installProducerOnlyTasks(): void {
       return queue.add(name, payload, jobOptions);
     },
     async delete(id: string) {
-      const job = await queue.getJob(id);
-      await job?.remove();
+      await queue.delete(id);
     },
     async close() {
       await queue.close();

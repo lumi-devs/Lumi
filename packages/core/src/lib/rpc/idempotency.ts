@@ -32,7 +32,7 @@ interface IdempotencyRecord {
 const DefaultMarginMs = 10_000;
 
 /**
- * Deduplicates mutating RPC calls by (action, guildId, hashed input) using Redis locks.
+ * Deduplicates mutating RPC calls by (action, guildId, key/hashed input) using Redis locks.
  * Replays completed results or throws Conflict if execution is currently in progress.
  */
 export async function withIdempotency<T>(
@@ -42,8 +42,10 @@ export async function withIdempotency<T>(
   input: unknown,
   fn: () => Promise<T>,
   marginMs = DefaultMarginMs,
+  idempotencyKey?: string,
 ): Promise<T> {
-  const key = RedisKeys.rpcIdempotency(action, guildId, hashInput(input));
+  const token = idempotencyKey ? `key:${idempotencyKey}` : hashInput(input);
+  const key = RedisKeys.rpcIdempotency(action, guildId, token);
   const pendingTtlMs = timeoutMs + marginMs;
   const pending: IdempotencyRecord = { status: "pending" };
   const acquired = await container.redis.set(

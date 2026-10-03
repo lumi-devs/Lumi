@@ -39,19 +39,15 @@ system topology — treat it as source of truth for anything below.
   RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
   `@lumi-devs/observability` from npm rather than importing this repo's source — see
   "Releasing contracts" below for how a contracts change reaches it.
-- `packages/core` — the framework itself: module loader, database service, command/permit
-  system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
-  event bus (`#lib/event-bus/`) and shard telemetry for the dashboard's fleet view
-  (`#lib/sharding/`) — shard assignment itself is still discord.js's `ShardingManager`, not
-  custom code.
-- `packages/contracts` — RPC schemas (the typed router) and shared type definitions used by
-  `worker` and, via the published `@lumi-devs/contracts` package, the dashboard repo.
+- `packages/core` — the bot framework and runtime: module loader, command/permit
+  system, addon sandbox/SDK, event bus (`#lib/event-bus/`), and shard telemetry (`#lib/sharding/`).
+- `packages/application` — business logic layer: extracted module services and application interfaces.
+- `packages/infrastructure` — data & infrastructure abstractions: database repositories, Redis cache/mutexes,
+  and BullMQ job queue abstractions.
+- `packages/contracts` — RPC schemas (the typed router), domain events, and shared type definitions used by
+  `worker`, `api`, and, via the published `@lumi-devs/contracts` package, the dashboard repo.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
-
-Only three workspace packages exist under `packages/*` today (`contracts`, `core`,
-`observability`) — ESLint config and `tsconfig` bases were likewise consolidated to the repo
-root (`eslint.config.mjs`, `tsconfig.base.json`) rather than their own packages.
 
 ## Import path aliases
 

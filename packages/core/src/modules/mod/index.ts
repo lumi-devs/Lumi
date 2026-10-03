@@ -1,10 +1,10 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { invalidateThresholds } from "./services/threshold-rules.js";
-import { scheduleCaseLift } from "./services/helpers.js";
-import { handleModLiftFire } from "./services/lift-handler.js";
-import { handleWarnDecayFire } from "./services/warn-decay-handler.js";
+import { invalidateThresholds } from "@lumi/application/services/mod/threshold-rules.js";
+import { scheduleCaseLift } from "@lumi/application/services/mod/helpers.js";
+import { handleModLiftFire } from "@lumi/application/services/mod/lift-handler.js";
+import { handleWarnDecayFire } from "@lumi/application/services/mod/warn-decay-handler.js";
 
 @DefineModule({
   name: "mod",

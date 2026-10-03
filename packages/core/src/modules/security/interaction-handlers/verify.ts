@@ -10,7 +10,7 @@ import {
   grantVerified,
   startChallenge,
   advanceChallenge,
-} from "../services/verification.js";
+} from "@lumi/application/services/security/verification.js";
 import { getDashboardPublicUrl } from "#lib/env.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { CaptchaButtonId } from "../constants.js";

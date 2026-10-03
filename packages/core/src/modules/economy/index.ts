@@ -1,6 +1,6 @@
 import { Module, DefineModule } from "#lib/module-system/Module.js";
 import { cfg } from "#lib/module-system/config-schema.js";
-import { defaultSlotPayoutEntries } from "./services/slots.js";
+import { defaultSlotPayoutEntries } from "@lumi/application/services/economy/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
 @DefineModule({

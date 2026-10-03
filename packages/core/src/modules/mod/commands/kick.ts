@@ -7,8 +7,8 @@ import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { KickAction } from "#modules/mod/services/actions/KickAction.js";
-import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
+import { KickAction } from "@lumi/application/services/mod/actions/KickAction.js";
+import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
 

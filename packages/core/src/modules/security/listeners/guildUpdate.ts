@@ -2,8 +2,8 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type Guild } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { resolveAuditLogExecutor } from "../services/audit.js";
-import { evaluateNukeEvent } from "../services/anti-nuke.js";
+import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
+import { evaluateNukeEvent } from "@lumi/application/services/security/anti-nuke.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "securityGuildUpdate",

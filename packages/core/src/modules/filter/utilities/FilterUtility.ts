@@ -11,8 +11,8 @@ import {
   type CompiledRules,
   type FilterHit,
   type RuleConfig,
-} from "../services/rules.js";
-import { type HeatConfig } from "../services/heat.js";
+} from "@lumi/application/services/filter/rules.js";
+import { type HeatConfig } from "@lumi/application/services/filter/heat.js";
 import {
   getRegexWorker,
   RegexTimeoutError,

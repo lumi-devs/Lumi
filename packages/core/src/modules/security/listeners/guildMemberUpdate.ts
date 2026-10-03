@@ -3,8 +3,8 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { AuditLogEvent, type GuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { resolveAuditLogExecutor } from "../services/audit.js";
-import { evaluateNukeEvent, isQuarantined } from "../services/anti-nuke.js";
+import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
+import { evaluateNukeEvent, isQuarantined } from "@lumi/application/services/security/anti-nuke.js";
 
 function roleSet(member: GuildMember): Set<string> {
   return new Set(member.roles.cache.keys());

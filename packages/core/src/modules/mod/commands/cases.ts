@@ -6,7 +6,7 @@ import { chunk } from "@sapphire/utilities";
 import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { makeInfoCard } from "#lib/ui/cards.js";
-import { decrementWarnCount } from "../services/thresholds.js";
+import { decrementWarnCount } from "@lumi/application/services/mod/thresholds.js";
 import { CaseAction, type $Enums } from "@prisma/client";
 
 function isCaseAction(value: string): value is $Enums.CaseAction {

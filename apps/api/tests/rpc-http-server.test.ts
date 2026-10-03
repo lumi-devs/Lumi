@@ -516,4 +516,54 @@ describe("RPC HTTP Server & Auth Verification", () => {
       );
     });
   });
+
+  describe("POST /rpc/batch", () => {
+    it("returns 400 when batch payload is malformed", async () => {
+      const res = await handleRpcHttpRequest(
+        new Request("http://127.0.0.1:8091/rpc/batch", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer test-internal-token",
+            "x-lumi-contract-version": CONTRACT_VERSION,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ requests: "not-an-array" }),
+        }),
+        "test-internal-token",
+      );
+      expect(res.status).toBe(400);
+      const json = (await res.json()) as { ok: boolean; code: string };
+      expect(json.ok).toBe(false);
+      expect(json.code).toBe("BAD_REQUEST");
+    });
+
+    it("processes multiple requests in a batch", async () => {
+      const res = await handleRpcHttpRequest(
+        new Request("http://127.0.0.1:8091/rpc/batch", {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer test-internal-token",
+            "x-lumi-contract-version": CONTRACT_VERSION,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            requests: [
+              { id: "req-1" },
+              { id: "req-2", action: "nonexistent.action" },
+            ],
+          }),
+        }),
+        "test-internal-token",
+      );
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as { responses: any[] };
+      expect(json.responses).toHaveLength(2);
+      expect(json.responses[0].id).toBe("req-1");
+      expect(json.responses[0].ok).toBe(false);
+      expect(json.responses[0].code).toBe("BAD_REQUEST");
+      expect(json.responses[1].id).toBe("req-2");
+      expect(json.responses[1].ok).toBe(false);
+      expect(json.responses[1].code).toBe("UNKNOWN_ACTION");
+    });
+  });
 });

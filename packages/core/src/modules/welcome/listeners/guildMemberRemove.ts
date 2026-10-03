@@ -2,9 +2,9 @@ import { Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, PartialGuildMember } from "discord.js";
 import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { loadWelcomeConfig } from "../services/welcome.js";
-import { sendWelcomeCard } from "../services/welcome.js";
-import { renderGoodbyeCard, templateVarsFor } from "../services/welcome.js";
+import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
+import { renderGoodbyeCard, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";
 
 @ApplyOptions<ModuleListener.Options>({
   name: "welcomeMemberRemove",

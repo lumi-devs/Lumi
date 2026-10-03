@@ -1,0 +1,44 @@
+{
+  "name": "@lumi/infrastructure",
+  "version": "0.6.0",
+  "license": "AGPL-3.0-only",
+  "description": "Lumi infrastructure layer: database, cache, and queue abstractions.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./database": {
+      "bun": "./src/database/index.ts",
+      "types": "./src/database/index.ts",
+      "default": "./src/database/index.ts"
+    },
+    "./cache": {
+      "bun": "./src/cache/index.ts",
+      "types": "./src/cache/index.ts",
+      "default": "./src/cache/index.ts"
+    },
+    "./queues": {
+      "bun": "./src/queues/index.ts",
+      "types": "./src/queues/index.ts",
+      "default": "./src/queues/index.ts"
+    },
+    "./services": {
+      "bun": "./src/services/index.ts",
+      "types": "./src/services/index.ts",
+      "default": "./src/services/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@prisma/client": "^7.10.0",
+    "bullmq": "^5.58.7",
+    "cluster-key-slot": "^1.1.2",
+    "ioredis": "^6.0.0"
+  }
+}

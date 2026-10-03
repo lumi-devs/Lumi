@@ -72,3 +72,19 @@ export function verifyGdprExportToken(
   }
   return { valid: true, jobId };
 }
+
+export interface GdprExportJobRecord {
+  id: string;
+  userId: string;
+  status: string;
+  filePath: string | null;
+  expiresAt: Date | null;
+}
+
+export async function findGdprExportJob(
+  jobId: string,
+): Promise<GdprExportJobRecord | null> {
+  const { container } = await import("@sapphire/framework");
+  return (await container.db?.gdprExportJobs.findById(jobId)) ?? null;
+}
+

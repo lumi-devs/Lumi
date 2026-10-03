@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src",
+    "../core/src/lib/types/common.ts",
+    "../core/src/lib/permissions/preconditions/*.ts",
+    "../core/src/modules/**/utilities/*.ts",
+    "../core/src/modules/**/scheduled-tasks/*.ts"
+  ]
+}

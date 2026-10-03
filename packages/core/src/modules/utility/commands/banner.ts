@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import { Args, Command } from "@sapphire/framework";
 import { Message, type ChatInputCommandInteraction } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
-import { handleMediaRequest } from "../services/media-utils.js";
+import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "banner",

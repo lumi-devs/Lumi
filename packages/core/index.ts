@@ -24,6 +24,8 @@ export { logError } from "./src/lib/utilities/errors.js";
 export {
   signGdprExportToken,
   verifyGdprExportToken,
+  findGdprExportJob,
+  type GdprExportJobRecord,
   GdprExportSigningKeyUnavailable,
 } from "./src/lib/gdpr-export-token.js";
 export {

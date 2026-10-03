@@ -3,8 +3,8 @@ import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { WarnAction } from "#modules/mod/services/actions/WarnAction.js";
-import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
+import { WarnAction } from "@lumi/application/services/mod/actions/WarnAction.js";
+import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
 
