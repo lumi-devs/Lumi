@@ -6,7 +6,7 @@ on:
       - "sdk-v*"
 
 permissions:
-  packages: write
+  id-token: write
   contents: read
 
 jobs:
@@ -31,14 +31,10 @@ jobs:
         with:
           bun-version: latest
 
-      # GitHub Packages needs a .npmrc pointing at npm.pkg.github.com with the
-      # job token as the bearer credential; `npm publish` reads it from here,
-      # not from the registry URL alone.
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@lumi-devs"
+          registry-url: "https://registry.npmjs.org"
 
       - run: bun install --frozen-lockfile
 
@@ -47,10 +43,6 @@ jobs:
 
       - name: Publish @lumi-devs/sdk
         working-directory: dist/sdk
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # The build script already writes name "@lumi-devs/sdk"; only the
-          # version is stamped from the tag, same as publish-packages.yml.
           npm pkg set version=${{ steps.version.outputs.version }}
-          npm publish --tag ${{ steps.version.outputs.dist_tag }}
+          npm publish --access public --tag ${{ steps.version.outputs.dist_tag }}
