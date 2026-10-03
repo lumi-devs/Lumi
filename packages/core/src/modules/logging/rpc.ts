@@ -1,5 +1,6 @@
 import { container } from "@sapphire/framework";
 import { loggingRpc } from "@lumi/contracts/rpc";
+import { Routes } from "discord-api-types/v10";
 import {
   dismissLogClaim,
   issueLogClaimCode,
@@ -7,6 +8,10 @@ import {
   LogClaimCodeTtlMs,
 } from "./services/claims.js";
 import { implementRpc } from "#lib/rpc/implement.js";
+import {
+  fetchChannelRest,
+  GuildTextBasedChannelTypes,
+} from "#lib/rpc/discord-rest-lookup.js";
 
 export const loggingRpcHandlers = implementRpc(loggingRpc, {
   "guild.logClaims.list": async ({ guildId }) => ({
@@ -36,11 +41,11 @@ export const loggingRpcHandlers = implementRpc(loggingRpc, {
     // has resolved it, and left in place it just reads as stale noise.
     if (claim?.replyMessageId) {
       const replyChannelId = claim.replyChannelId ?? claim.channelId;
-      const channel =
-        container.client.channels.cache.get(replyChannelId) ??
-        (await container.client.channels.fetch(replyChannelId).catch(() => null));
-      if (channel?.isTextBased() && "messages" in channel) {
-        await channel.messages.delete(claim.replyMessageId).catch(() => null);
+      const channel = await fetchChannelRest(replyChannelId);
+      if (channel && GuildTextBasedChannelTypes.has(channel.type)) {
+        await container.client.rest
+          .delete(Routes.channelMessage(replyChannelId, claim.replyMessageId))
+          .catch(() => null);
       }
     }
 

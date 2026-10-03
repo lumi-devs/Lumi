@@ -3,9 +3,9 @@ networks:
     driver: bridge
   # Grafana proxies datasource queries on behalf of its users, which makes any
   # service it can route to reachable from the browser. Keeping it off lumi-net
-  # is what stops that proxy from being pointed at the worker's internal RPC
-  # port; it reaches Prometheus/Tempo over this network instead, and they are
-  # the only services attached to both.
+  # is what stops that proxy from being pointed at the api process's internal
+  # RPC port; it reaches Prometheus/Tempo over this network instead, and they
+  # are the only services attached to both.
   lumi-obs-net:
     driver: bridge
 
@@ -29,14 +29,6 @@ x-lumi-service: &lumi-service
     REDIS_HOST: redis
     POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-    # No RPC_HTTP_HOST here on purpose: the default is 127.0.0.1, and only the
-    # services that actually serve RPC to the dashboard widen it to 0.0.0.0.
-    RPC_HTTP_PORT: "8091"
-    # Shared secret authenticating the dashboard -> worker RPC calls. Unset is
-    # a hard failure rather than an insecure default: `actorId` in an RPC body
-    # is unsigned, so anything that can reach port 8091 without this token can
-    # claim to be the bot owner. Generate with `openssl rand -hex 32`.
-    RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env - generate with: openssl rand -hex 32}"
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -74,15 +66,7 @@ services:
     container_name: lumi-worker
     environment:
       <<: *lumi-env
-      # Serves the dashboard's RPC client from another container, so it has to
-      # bind beyond loopback. Authentication is RPC_INTERNAL_TOKEN, not the
-      # network boundary.
-      RPC_HTTP_HOST: "0.0.0.0"
       METRICS_HOST: "0.0.0.0"
-    # Not published to the host - reachable only from other containers on
-    # lumi-net (the dashboard's internal RPC client).
-    expose:
-      - "8091"
 
   lumi-dev:
     build:
@@ -97,10 +81,6 @@ services:
       REDIS_HOST: redis
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
       DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-      # Loopback: nothing calls into the dev container's RPC server.
-      RPC_HTTP_HOST: "127.0.0.1"
-      RPC_HTTP_PORT: "8091"
-      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:-}"
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -131,13 +111,35 @@ services:
     environment:
       <<: *lumi-env
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
-      # Stays on loopback: nothing routes RPC to this replica (the dashboard's
-      # RPC_HTTP_URL points at `worker`). Widen it only alongside a load
-      # balancer that actually fans out to it.
-      RPC_HTTP_HOST: "127.0.0.1"
       METRICS_HOST: "0.0.0.0"
     profiles:
       - scale
+
+  api:
+    <<: *lumi-service
+    container_name: lumi-api
+    image: ghcr.io/lumi-devs/lumi-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    environment:
+      <<: *lumi-env
+      # Serves the dashboard's RPC client from another container, so it has to
+      # bind beyond loopback. Authentication is RPC_INTERNAL_TOKEN, not the
+      # network boundary.
+      RPC_HTTP_HOST: "0.0.0.0"
+      RPC_HTTP_PORT: "8091"
+      # Shared secret authenticating the dashboard -> api RPC calls. Unset is
+      # a hard failure rather than an insecure default: `actorId` in an RPC body
+      # is unsigned, so anything that can reach port 8091 without this token can
+      # claim to be the bot owner. Generate with `openssl rand -hex 32`.
+      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env - generate with: openssl rand -hex 32}"
+      METRICS_HOST: "0.0.0.0"
+    # Not published to the host - reachable only from other containers on
+    # lumi-net (the dashboard's internal RPC client).
+    expose:
+      - "8091"
 
   dashboard:
     image: ghcr.io/lumi-devs/lumi-dashboard:latest
@@ -153,10 +155,10 @@ services:
       # Doubles as NextAuth's session JWT encryption secret — see
       # apps/dashboard/src/lib/env.ts.
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env - generate with: openssl rand -hex 32}"
-      # Internal-only HTTP RPC bridge to the worker (see
+      # Internal-only HTTP RPC bridge to the api process (see
       # packages/core/src/lib/rpc/http-server.ts) - reachable over lumi-net,
       # never published to the host.
-      RPC_HTTP_URL: "http://worker:8091"
+      RPC_HTTP_URL: "http://api:8091"
       # No BOT_OWNERS here: the dashboard reads no such variable. Bot-owner
       # detection goes through the `auth.whoami` RPC, which defers to the
       # worker's PermitResolver.isBotOwner (OWNER_IDS, or the Discord
@@ -164,7 +166,7 @@ services:
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
     depends_on:
-      worker:
+      api:
         condition: service_started
     ports:
       - "${DASHBOARD_PORT:-8080}:8080"

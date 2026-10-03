@@ -76,7 +76,7 @@ export class RestoreCommand extends BaseSubcommand {
     await ctx.defer();
     const guild = ctx.guild!;
 
-    const result = await restoreFromBackup(guild);
+    const result = await restoreFromBackup(guild.id);
     if (!result) {
       return ctx.replyError(
         "No Backups Yet",

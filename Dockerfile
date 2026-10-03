@@ -8,6 +8,7 @@ COPY packages/core/package.json packages/core/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY apps/worker/package.json apps/worker/package.json
+COPY apps/api/package.json apps/api/package.json
 COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY apps/docs/package.json apps/docs/package.json
 RUN bun install --frozen-lockfile
@@ -24,6 +25,14 @@ RUN bunx prisma generate && mkdir -p /app/data && chown -R bun:bun /app
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "bunx prisma migrate deploy && exec bun apps/worker/src/main.ts"]
+
+FROM source AS api
+ENV NODE_ENV=production
+COPY apps/api/ apps/api/
+RUN bunx prisma generate && chown -R bun:bun /app
+USER bun
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["sh", "-c", "exec bun apps/api/src/main.ts"]
 
 FROM source AS dashboard-build
 ENV NODE_ENV=production \

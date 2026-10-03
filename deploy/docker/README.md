@@ -28,7 +28,7 @@ This directory documents the containerization strategy, **Dockerfile multi-stage
 
 Lumi's container setup provides complete flexibility: run a single bot container against the core data plane, or launch a fully orchestrated stack with extra worker replicas, a dashboard, and OpenTelemetry tracing.
 
-Every worker process is identical: `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns, each child holding a real Discord WebSocket connection and running all command, module, and interaction logic in-process. There is no separate scheduler or gateway container - exactly one child per pod, the one holding shard id `0`, is elected "primary" (zero-coordination, via `isPrimaryShard()`) and is the sole owner of BullMQ job scheduling and the RPC/metrics HTTP surface. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
+Every worker process is identical: `apps/worker/src/main.ts` is a lightweight discord.js `ShardingManager` that spawns one child process per shard it owns, each child holding a real Discord WebSocket connection and running all command, module, and interaction logic in-process. There is no separate scheduler or gateway container - exactly one child per pod, the one holding shard id `0`, is elected "primary" (zero-coordination, via `isPrimaryShard()`) and is the sole owner of BullMQ job scheduling. RPC serving is not part of that primary-shard role - it lives in a separate, gateway-free `api` service (default compose service, like `worker`) that the dashboard talks to instead. A single worker tracks its own Discord REST rate-limit buckets; once you run more than one, the `scale` profile adds **nirn-proxy** as a shared REST proxy so those buckets stay coordinated across processes (`DISCORD_PROXY_URL`).
 
 ### Docker Compose Architecture Diagram
 
@@ -46,6 +46,7 @@ flowchart TD
     subgraph Lumi Application Nodes
         W[lumi-worker<br/>Default]
         WS[lumi-worker-scale<br/>Profile: scale]
+        Api[lumi-api<br/>Default]
         Dev[lumi-dev<br/>Profile: development]
     end
 
@@ -75,7 +76,9 @@ flowchart TD
     W <-->|PgBouncer Pool| PGB
     PGB <-->|Scram-SHA-256| PG
 
-    Dash <-->|Internal HTTP RPC :8091| W
+    Dash <-->|Internal HTTP RPC :8091| Api
+    Api <-->|Queries| PGB
+    Api <-->|Cache & pub/sub| Redis
 
     W <-->|BullMQ Tasks, primary shard only| Redis
 
@@ -128,7 +131,8 @@ Services are organized into distinct Compose **profiles** so you only run what y
 
 | Service Name | Profile | Ports / Interfaces | Description |
 |---|---|---|---|
-| `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ and the RPC/metrics surface. |
+| `worker` | *(default)* | - | Default Lumi bot process. `ShardingManager` spawns one child per shard; the primary shard (id `0`) owns BullMQ job scheduling. |
+| `api` | *(default)* | - | Stateless internal RPC server for the dashboard - no Discord gateway connection, no BullMQ. |
 | `lumi-dev` | `development` | - | Interactive development container with live volume mounts and watch mode. |
 | `worker-scale` | `scale` | - | Additional worker replica claiming its own shard range. |
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, built from the `dashboard` Dockerfile target (Next.js standalone output). |
@@ -159,8 +163,8 @@ cp .env.example .env
 | `POSTGRES_USER` | `lumi` | PostgreSQL database username. |
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
 | `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
-| `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the worker binds - never published to the host. |
-| `RPC_HTTP_URL` | `http://worker:8091` | Internal RPC bridge URL the dashboard calls into the worker over. |
+| `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the api service binds - never published to the host. |
+| `RPC_HTTP_URL` | `http://api:8091` | Internal RPC bridge URL the dashboard calls into the api service over. |
 | `DASHBOARD_SESSION_SECRET` | - | NextAuth session JWT signing/encryption secret. |
 | `DISCORD_OAUTH2_CLIENT_ID` | - | OAuth2 Client ID for dashboard authentication. |
 | `DISCORD_OAUTH2_CLIENT_SECRET` | - | OAuth2 Client Secret for dashboard authentication. |

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
@@ -9,20 +10,19 @@ const OTHER_GUILD_ID = "999999999999999999";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
 describe("dashboard module data inspector RPC handler", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
+  let restGet: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    repositoryCache.clear();
 
     prisma = createMockPrismaClient();
-
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
 
     container.logger = {
       info: vi.fn(),
@@ -31,9 +31,21 @@ describe("dashboard module data inspector RPC handler", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    restGet = vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [everyoneRole()],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    });
+
+    container.client = { rest: { get: restGet } } as any;
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
@@ -43,6 +55,8 @@ describe("dashboard module data inspector RPC handler", () => {
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
+
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
     db.guildKV = new GuildKVRepository(prisma as any, redis as any, container.logger, db);
@@ -125,10 +139,6 @@ describe("dashboard module data inspector RPC handler", () => {
   });
 
   it("rejects an actor without ManageGuild", async () => {
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
-    });
-
     await expect(call({}, INTRUDER_ID)).rejects.toThrow(
       "Missing ManageGuild permission",
     );

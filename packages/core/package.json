@@ -8,6 +8,7 @@
   "exports": {
     ".": "./index.ts",
     "./setup": "./src/lib/client/setup.ts",
+    "./setup-api": "./src/lib/client/setup-api.ts",
     "./env": "./src/lib/env.ts"
   },
   "imports": {

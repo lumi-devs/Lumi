@@ -79,7 +79,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         return;
       }
       if (config.mode === "none") {
-        await grantVerified(guild, userId);
+        await grantVerified(guild.id, userId);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(t("panels:verifyOkTitle"), t("panels:verifyOk")),
@@ -126,7 +126,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
     const { state, outcome } = result;
     switch (outcome) {
       case "solved":
-        await grantVerified(guild, userId);
+        await grantVerified(guild.id, userId);
         await interaction.editReply(
           makeSuccessCard(t("panels:verifyOkTitle"), t("panels:verifyOk")),
         );

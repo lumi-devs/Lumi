@@ -5,6 +5,7 @@ import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
@@ -12,6 +13,10 @@ const OTHER_GUILD_ID = "999999999999999999";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const CHANNEL_ID = "444444444444444444";
+
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
 
 function makeAudit(overrides: Record<string, unknown> = {}) {
   return {
@@ -42,19 +47,14 @@ function makeHistory(overrides: Record<string, unknown> = {}) {
 
 describe("dashboard module audit + history + override RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
+  let restGet: ReturnType<typeof vi.fn>;
   let config: { setConfig: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    repositoryCache.clear();
 
     prisma = createMockPrismaClient();
-
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
 
     container.logger = {
       info: vi.fn(),
@@ -63,9 +63,22 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    restGet = vi.fn().mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [everyoneRole()],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
+    });
+
+    container.client = { rest: { get: restGet } } as any;
+    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
@@ -109,8 +122,18 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     handlerFor(action)({ id: "req", action, guildId: GUILD_ID, actorId, data });
 
   const denyPermissions = () =>
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
+    restGet.mockImplementation((route: string) => {
+      if (route === `/guilds/${GUILD_ID}`) {
+        return Promise.resolve({
+          id: GUILD_ID,
+          owner_id: OWNER_ID,
+          roles: [everyoneRole()],
+        });
+      }
+      if (route === `/guilds/${GUILD_ID}/members/${INTRUDER_ID}`) {
+        return Promise.resolve({ roles: [] });
+      }
+      return Promise.reject(new Error(`Unexpected route: ${route}`));
     });
 
   describe("guild.audit.list", () => {

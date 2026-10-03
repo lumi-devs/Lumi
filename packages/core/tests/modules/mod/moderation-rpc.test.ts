@@ -4,12 +4,41 @@ import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const TARGET_ID = "444444444444444444";
 const MOD_ID = "555555555555555555";
+
+function everyoneRole(permissions = "0") {
+  return { id: GUILD_ID, permissions };
+}
+
+function memberWith(roleIds: string[]) {
+  return { roles: roleIds };
+}
+
+function mockRest(opts: {
+  guild?: { owner_id: string; roles: { id: string; permissions: string }[] } | null;
+  member?: unknown;
+}) {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      if (opts.guild === null || opts.guild === undefined) {
+        return Promise.reject(new Error("Unknown Guild"));
+      }
+      return Promise.resolve({ id: GUILD_ID, ...opts.guild });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      if (opts.member === undefined) return Promise.reject(new Error("Unknown Member"));
+      return Promise.resolve(opts.member);
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  return { rest: { get } };
+}
 
 function makeCase(overrides: Record<string, unknown> = {}) {
   return {
@@ -31,18 +60,13 @@ function makeCase(overrides: Record<string, unknown> = {}) {
 
 describe("mod module cases and warn-threshold RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
 
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
+    repositoryCache.clear();
 
     container.logger = {
       info: vi.fn(),
@@ -51,13 +75,14 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    container.client = mockRest({
+      guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+      member: memberWith([]),
+    }) as any;
 
     (container as any).redis = {
       get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
+      setex: vi.fn().mockResolvedValue(undefined),
       del: vi.fn(),
     } as any;
 
@@ -94,9 +119,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
 
   describe("guild.cases.list", () => {
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         call("guild.cases.list", {}, INTRUDER_ID),
@@ -218,9 +244,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
       prisma.$seed("moderationCase", [makeCase({ id: 7, caseNumber: 3 })]);
 
       await expect(
@@ -247,9 +274,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         call("guild.warnThresholds.list", undefined, INTRUDER_ID),
@@ -338,9 +366,10 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
     });
 
     it("rejects an actor without ManageGuild", async () => {
-      guild.members.fetch.mockResolvedValue({
-        permissions: { has: vi.fn().mockReturnValue(false) },
-      });
+      container.client = mockRest({
+        guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
+        member: memberWith([]),
+      }) as any;
 
       await expect(
         call("guild.warnThresholds.set", { warnCount: 3, action: "mute" }, INTRUDER_ID),

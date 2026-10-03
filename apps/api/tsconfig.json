@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  // Sapphire loads core's pieces by directory, and their registry augmentations live in those files.
+  "include": ["src", "../../packages/core/src"]
+}

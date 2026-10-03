@@ -9,8 +9,6 @@ import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import type { RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
-import { registerRpcHandlers } from "#lib/rpc/registry.js";
-import { startRpcHttpServer } from "#lib/rpc/http-server.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { failedJobsTotal } from "@lumi/observability";
@@ -39,16 +37,17 @@ const warnOnCleanupError = (what: string) => (err: unknown) =>
  * building, container-service installation and readiness probes each live in
  * their own module. What stays here is the ordering contract between them.
  *
- * `login()` brings resources up in dependency order - database, internal RPC
- * server, module discovery - and only then hands over to Sapphire.
- * `destroy()` unwinds that in reverse, and every step swallows its own
+ * `login()` brings resources up in dependency order - database, scheduler
+ * lock, module discovery - and only then hands over to Sapphire. The internal
+ * RPC HTTP server is no longer part of this process; it's served by
+ * `apps/api` instead (see `packages/core/src/lib/client/api-bootstrap.ts`).
+ * `destroy()` unwinds what's left in reverse, and every step swallows its own
  * failure so one unreachable resource cannot strand the others.
  */
 export class LumiClient extends SapphireClient {
   private _livenessInterval: ReturnType<typeof setInterval> | null = null;
   private _ownedEventBus: OwnedEventBus | null = null;
   private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
   private _schedulerLock: RedisLock | null = null;
   private _bullWorker: { on(e: string, fn: (...a: unknown[]) => void): void; off(e: string, fn: (...a: unknown[]) => void): void } | null = null;
   private _bullFailedHandler: ((job: unknown, err: unknown) => void) | null = null;
@@ -80,18 +79,15 @@ export class LumiClient extends SapphireClient {
     await container.invalidation.start();
     await container.signals.start();
 
-    // Only one process per pod may bind RPC_HTTP_PORT. Under ShardingManager
+    // Only one process per pod runs BullMQ scheduling. Under ShardingManager
     // that's whichever child holds shard 0; standalone (dev) it's always
-    // this process.
+    // this process. RPC is no longer served from here at all - see
+    // apps/api, which owns registerRpcHandlers()/startRpcHttpServer() now.
     if (isPrimaryShard()) {
       this._schedulerLock = await acquireSchedulerLock(container.redis, () => {
         container.logger.error("[Primary] Lost scheduler lock, exiting");
         process.exit(1);
       });
-      registerRpcHandlers();
-      this._rpcServer = await startRpcHttpServer((level, msg, meta) =>
-        container.logger[level](msg, meta),
-      );
     }
     await this.stores.get("modules").discover();
 
@@ -148,7 +144,6 @@ export class LumiClient extends SapphireClient {
 
     new ReadinessProbes({
       isReady: () => this.isReady(),
-      isRpcReady: () => !isPrimaryShard() || this._rpcServer !== null,
     }).register();
 
     return result;
@@ -187,12 +182,6 @@ export class LumiClient extends SapphireClient {
       ?.close()
       .catch(warnOnCleanupError("EventBus close"));
     this._ownedEventBus = null;
-    if (this._rpcServer) {
-      await this._rpcServer
-        .stop()
-        .catch(warnOnCleanupError("RPC HTTP server stop"));
-      this._rpcServer = null;
-    }
     if (this._schedulerLock) {
       await this._schedulerLock
         .release()

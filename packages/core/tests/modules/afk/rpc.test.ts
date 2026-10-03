@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";
@@ -9,20 +10,32 @@ const OTHER_GUILD_ID = "999999999999999999";
 const OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 
+/** Wires `container.client.rest.get` to answer `checkGuildManagerRest`'s guild/member routes; denies any non-owner actor by default (empty roles + a permission-less `@everyone`). */
+function mockGuildManagerRest() {
+  const get = vi.fn().mockImplementation((route: string) => {
+    if (route === `/guilds/${GUILD_ID}`) {
+      return Promise.resolve({
+        id: GUILD_ID,
+        owner_id: OWNER_ID,
+        roles: [{ id: GUILD_ID, permissions: "0" }],
+      });
+    }
+    if (route.startsWith(`/guilds/${GUILD_ID}/members/`)) {
+      return Promise.resolve({ roles: [] });
+    }
+    return Promise.reject(new Error(`Unexpected route: ${route}`));
+  });
+  container.client = { rest: { get } } as any;
+  return get;
+}
+
 describe("afk module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let guild: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     prisma = createMockPrismaClient();
-
-    guild = {
-      id: GUILD_ID,
-      ownerId: OWNER_ID,
-      members: { fetch: vi.fn() },
-    };
 
     container.logger = {
       info: vi.fn(),
@@ -31,9 +44,8 @@ describe("afk module RPC handlers", () => {
       debug: vi.fn(),
     } as any;
 
-    container.client = {
-      guilds: { cache: new Map([[GUILD_ID, guild]]) },
-    } as any;
+    mockGuildManagerRest();
+    repositoryCache.clear();
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
@@ -43,6 +55,7 @@ describe("afk module RPC handlers", () => {
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
     db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
@@ -89,10 +102,6 @@ describe("afk module RPC handlers", () => {
   });
 
   it("rejects an actor without ManageGuild", async () => {
-    guild.members.fetch.mockResolvedValue({
-      permissions: { has: vi.fn().mockReturnValue(false) },
-    });
-
     await expect(call(INTRUDER_ID)).rejects.toThrow("Missing ManageGuild permission");
   });
 });

@@ -48,7 +48,7 @@ export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
       return;
     }
 
-    const result = await revertPanic(guild);
+    const result = await revertPanic(guild.id);
     if (!result) {
       await interaction.editReply(
         makeErrorCard(t("panels:panicNotActiveTitle"), t("panels:panicNotActive")),

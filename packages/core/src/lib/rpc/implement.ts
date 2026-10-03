@@ -10,11 +10,11 @@ import {
   type RpcRequest,
   type RpcSliceEntry,
 } from "@lumi/contracts/rpc";
-import type { Guild } from "discord.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
 
 interface RpcAuthContexts {
-  guildManager: { guildId: string; actorId: string; guild: Guild };
+  guildManager: { guildId: string; actorId: string };
   botOwner: { actorId: string };
   session: { actorId: string; guildId: string | undefined };
   public: { actorId: string | undefined; guildId: string | undefined };
@@ -50,32 +50,26 @@ export function requireGuildId(guildId: string | null | undefined): string {
   );
 }
 
-export function cachedGuild(guildId: string): Guild {
-  const guild = container.client.guilds.cache.get(guildId);
-  if (!guild) {
-    throw new CodedRpcError(
-      RpcFailureCodes.GuildNotFound,
-      "Guild not found in bot cache",
-    );
-  }
-  return guild;
-}
-
 // Re-checked live against the guild rather than trusted from the dashboard
 // session, whose cached guild list can be up to `SESSION_TTL_MS` stale.
+//
+// This goes over REST (`checkGuildManagerRest`), not a gateway cache: the
+// gateway only caches guilds the current shard actually owns, so a
+// guild-existence/ManageGuild check sourced from it would silently fail for
+// any guild on another shard (or on a gateway-less `apps/api` process).
 export async function requireGuildManager(
   guildId: string,
   actorId: string | undefined,
 ): Promise<string> {
   if (!actorId) throw forbidden("actorId is required");
-  const guild = cachedGuild(guildId);
-  if (guild.ownerId === actorId) return actorId;
-
-  const member = await guild.members.fetch(actorId).catch(() => null);
-  if (
-    !member?.permissions.has("ManageGuild") &&
-    !member?.permissions.has("Administrator")
-  ) {
+  const check = await checkGuildManagerRest(guildId, actorId);
+  if (!check) {
+    throw new CodedRpcError(
+      RpcFailureCodes.GuildNotFound,
+      "Guild not found in bot cache",
+    );
+  }
+  if (!check.isManager) {
     throw forbidden("Missing ManageGuild permission");
   }
   return actorId;
@@ -91,7 +85,7 @@ const authorizers: RpcAuthorizers = {
   guildManager: async (req) => {
     const guildId = requireGuildId(req.guildId);
     const actorId = await requireGuildManager(guildId, req.actorId);
-    return { guildId, actorId, guild: cachedGuild(guildId) };
+    return { guildId, actorId };
   },
   botOwner: (req) => {
     if (!req.actorId || !PermitResolver.isBotOwner(req.actorId)) {
@@ -127,6 +121,10 @@ function requireModuleLoaded(name: string): void {
   }
 }
 
+function withInput<T extends object, I>(auth: T, input: I): T & { input: I } {
+  return { ...auth, input };
+}
+
 // Generic over the auth level itself (not an entry type) so indexing
 // `authorizers` by it keeps the context type tied to that level.
 function bindAction<A extends RpcAuth, I, O>(
@@ -144,7 +142,7 @@ function bindAction<A extends RpcAuth, I, O>(
     if (entry.requiresEnabled !== undefined) {
       requireModuleLoaded(entry.requiresEnabled);
     }
-    return handler({ ...auth, input });
+    return handler(withInput(auth, input));
   };
 }
 
