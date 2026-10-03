@@ -5,10 +5,20 @@ export interface RpcRequest<T = unknown> {
   action: string;
   guildId?: string;
   actorId?: string;
+  /** Explicit idempotency key for mutations. If omitted, deduplication falls back to hashing. */
+  idempotencyKey?: string;
   /** W3C `traceparent` (+ optional `tracestate`) so the handler can continue the caller's trace. */
   traceparent?: string;
   tracestate?: string;
   data?: T;
+}
+
+export interface RpcBatchRequest {
+  requests: RpcRequest<unknown>[];
+}
+
+export interface RpcBatchResponse {
+  responses: RpcResponse<unknown>[];
 }
 
 /**
