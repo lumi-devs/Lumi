@@ -12,11 +12,9 @@ The core framework, module system, command handler, and database service for Lum
 
 ## Path Aliases
 
-Imports within `@lumi/core` and 3rd-party addons use explicit path aliases (always requiring `.js` extensions):
+Internal imports within `@lumi/core` use explicit path aliases (always requiring `.js` extensions):
 
 | Alias | Target |
 | :--- | :--- |
 | `#lib/*.js` | `./src/lib/*.ts` |
-| `#database/*.js` | `./src/lib/database/*.ts` |
-| `#utilities/*.js` | `./src/lib/utilities/*.ts` |
-| `#core/module-system/*.js` | `./src/lib/module-system/*.ts` |
+| `#modules/*.js` | `./src/modules/*.ts` |

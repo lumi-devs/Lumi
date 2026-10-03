@@ -1,11 +1,6 @@
 networks:
   lumi-net:
     driver: bridge
-  # Grafana proxies datasource queries on behalf of its users, which makes any
-  # service it can route to reachable from the browser. Keeping it off lumi-net
-  # is what stops that proxy from being pointed at the api process's internal
-  # RPC port; it reaches Prometheus/Tempo over this network instead, and they
-  # are the only services attached to both.
   lumi-obs-net:
     driver: bridge
 
@@ -28,9 +23,6 @@ x-lumi-service: &lumi-service
       required: false
   environment: &lumi-env
     REDIS_HOST: redis
-    # Points straight at postgres by default (single-node tier, no pooler).
-    # Production/cluster tiers enable the `pgbouncer` profile and set this to
-    # postgresql://...@pgbouncer:6432/lumi in .env - see deploy/docker/README.md.
     POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
@@ -68,13 +60,6 @@ x-lumi-service: &lumi-service
       max-file: "3"
 
 services:
-  # One-shot: applies pending Prisma migrations, then exits. worker/worker-scale/api
-  # wait on `service_completed_successfully` instead of each running migrate deploy
-  # on their own startup (that raced on every scaled replica before this). Reuses the
-  # worker image/build (same tag, same `target: worker`) rather than a separate image -
-  # a distinct `migrate` tag would race the worker image for ownership of the same name
-  # on `compose build`, and pull-based users (CI only publishes worker/api/scheduler
-  # images) would get the worker image with no command override, i.e. it never exits.
   migrate:
     <<: *lumi-service
     container_name: lumi-migrate
@@ -138,9 +123,6 @@ services:
       <<: *lumi-env
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
       METRICS_HOST: "0.0.0.0"
-      # Extra replicas mean extra DB connections - route through the pooler
-      # that the `scale` profile also starts, rather than the single-node
-      # POSTGRES_URL default.
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
     profiles:
       - scale
@@ -155,19 +137,10 @@ services:
       target: api
     environment:
       <<: *lumi-env
-      # Serves the dashboard's RPC client from another container, so it has to
-      # bind beyond loopback. Authentication is RPC_INTERNAL_TOKEN, not the
-      # network boundary.
       RPC_HTTP_HOST: "0.0.0.0"
       RPC_HTTP_PORT: "8091"
-      # Shared secret authenticating the dashboard -> api RPC calls. Unset is
-      # a hard failure rather than an insecure default: `actorId` in an RPC body
-      # is unsigned, so anything that can reach port 8091 without this token can
-      # claim to be the bot owner. Generate with `openssl rand -hex 32`.
-      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env - generate with: openssl rand -hex 32}"
+      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}"
       METRICS_HOST: "0.0.0.0"
-    # Not published to the host - reachable only from other containers on
-    # lumi-net (the dashboard's internal RPC client).
     expose:
       - "8091"
 
@@ -190,17 +163,8 @@ services:
       <<: *lumi-env
       DASHBOARD_HOST: "0.0.0.0"
       DASHBOARD_PORT: "8080"
-      # Doubles as NextAuth's session JWT encryption secret — see
-      # src/lib/env.ts in the lumi-dashboard repo.
-      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env - generate with: openssl rand -hex 32}"
-      # Internal-only HTTP RPC bridge to the api process (see
-      # packages/core/src/lib/rpc/http-server.ts) - reachable over lumi-net,
-      # never published to the host.
+      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env}"
       RPC_HTTP_URL: "http://api:8091"
-      # No BOT_OWNERS here: the dashboard reads no such variable. Bot-owner
-      # detection goes through the `auth.whoami` RPC, which defers to the
-      # worker's PermitResolver.isBotOwner (OWNER_IDS, or the Discord
-      # application's actual owner). Setting it here would be a silent no-op.
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
     depends_on:
@@ -264,13 +228,6 @@ services:
       resources:
         limits:
           memory: 128m
-    # Opt-in: talks straight to postgres (not pgbouncer - pg_dump/pg_restore
-    # need a direct, non-pooled connection). Default command loops on
-    # BACKUP_INTERVAL_HOURS. Run a one-off dump with
-    # `docker compose --profile backup run --rm backup /scripts/backup.sh once`,
-    # or verify the latest dump restores cleanly with
-    # `docker compose --profile backup run --rm backup /scripts/restore-test.sh`
-    # - see deploy/docker/README.md#-backups--restore-testing.
     profiles:
       - backup
 
@@ -306,9 +263,6 @@ services:
           memory: 64m
     ports:
       - "127.0.0.1:6432:6432"
-    # Opt-in: single-node tier talks to postgres directly. Enabling this
-    # profile only starts the pooler - point POSTGRES_URL at pgbouncer:6432
-    # in .env to actually use it (see deploy/docker/README.md).
     profiles:
       - pgbouncer
       - scale
@@ -389,7 +343,6 @@ services:
       - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo-data:/var/tempo
     networks:
-      # lumi-net for otel-collector's OTLP push, lumi-obs-net for Grafana's queries.
       - lumi-net
       - lumi-obs-net
     restart: unless-stopped
@@ -412,7 +365,6 @@ services:
       - ./config/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     networks:
-      # lumi-net to scrape the app services, lumi-obs-net for Grafana's queries.
       - lumi-net
       - lumi-obs-net
     restart: unless-stopped
@@ -430,10 +382,7 @@ services:
     container_name: lumi-grafana
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      # No default. Grafana's admin can add datasources and proxy requests
-      # through the server, so `admin`/`admin` is a foothold, not a
-      # convenience. Generate with `openssl rand -base64 24`.
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env - generate with openssl rand -base64 24}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env}"
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./config/observability/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -442,9 +391,6 @@ services:
     depends_on:
       - prometheus
       - tempo
-    # Deliberately NOT on lumi-net: Grafana's datasource proxy is a
-    # server-side request primitive reachable by any logged-in Grafana user,
-    # and lumi-net is where the worker's internal RPC port lives.
     networks:
       - lumi-obs-net
     restart: unless-stopped

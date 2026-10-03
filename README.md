@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/banner.png" alt="Lumi" width="800">
 
-  <h3>The self-hosted, modular Discord bot for communities that want control.</h3>
+  <h3>Modular, self-hosted Discord bot platform for communities that want full control.</h3>
 
   <p>
     <a href="https://github.com/lumi-devs/Lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/Lumi/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
@@ -12,210 +12,145 @@
   </p>
 
   <p>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
+    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-18-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
+    <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
-    <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js"></a>
-  </p>
-
-  <p>
-    <a href="#quickstart">Quickstart</a>
-    •
-    <a href="https://lumi-devs.github.io/Lumi-docs/">Documentation</a>
-    •
-    <a href="#addons">Addons</a>
-    •
-    <a href="#architecture">Architecture</a>
-    •
-    <a href="#privacy--gdpr">Privacy</a>
-    •
-    <a href="#license">License</a>
   </p>
 </div>
 
 ---
 
-**Lumi** is a self-hosted, fully modular Discord bot built with [Bun](https://bun.sh), the [Sapphire Framework](https://sapphirejs.dev), and [Redis Streams](https://redis.io).
+Lumi is a modular Discord bot built with Bun, TypeScript, Sapphire Framework, Prisma, and Redis. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
 
-Every feature in Lumi is an independent module that can be enabled or disabled per server from `/module` or the web dashboard. Community addons can be installed from Git repositories via an in-chat Downloader or authored with the typed `lumi` SDK. An optional Next.js web dashboard talks to the worker over an internal RPC bridge without requiring direct database access.
-
-See the [documentation site](https://lumi-devs.github.io/Lumi-docs/) for the full list of modules and what each one does.
-
----
-
-## Quickstart
-
-### Docker Compose (Recommended)
-
-The fastest way to deploy a complete instance (bot worker, PostgreSQL 18, PgBouncer, Redis, and dashboard):
-
-```sh
-mkdir lumi && cd lumi
-curl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/docker-compose.yml -o docker-compose.yml
-curl -fsSL https://raw.githubusercontent.com/lumi-devs/Lumi/main/.env.example -o .env
-
-# Edit .env and configure your BOT_TOKEN and CLIENT_ID
-# Generate secrets with: openssl rand -hex 32
-$EDITOR .env
-
-docker compose up -d
-```
-
-The bot connects to Discord, and the web admin dashboard will be available at `http://localhost:8080`.
-
-For step-by-step guidance on reverse proxies, TLS, and shard scaling, see the [Self-Hosting Guide](https://lumi-devs.github.io/Lumi-docs/guides/self-hosting).
-
----
-
-### Running from Source
-
-Requires [Bun 1.3+](https://bun.sh) and running PostgreSQL and Redis instances:
-
-```sh
-git clone https://github.com/lumi-devs/Lumi.git
-cd Lumi
-
-cp .env.example .env && $EDITOR .env
-
-bun install
-bun run db:generate
-bun run db:migrate
-bun run dev
-```
-
-If you use [Nix](https://nixos.org), run `nix develop` to enter a development shell with Bun, PostgreSQL, Redis, and tools preconfigured.
-
----
-
-## Addons
-
-Lumi includes a Downloader system for installing third-party addons directly from Git repositories:
-
-```sh
-# Register a repository
-,repo add lumi-addons https://github.com/lumi-devs/lumi-addons.git
-
-# Install an addon
-,download install lumi-addons custom-roles
-
-# Enable it in your server
-/module enable custom-roles
-```
-
-### Authoring an Addon
-
-Addons are authored in TypeScript using the `lumi` SDK. Scaffold a new module in seconds:
-
-```sh
-bun run addon:create my-addon --dir ./addons
-```
-
-Addons define their configuration schema with Zod, listen to Redis Streams, and register slash commands:
-
-```typescript
-import { DefineModule, Module, type ModuleContext } from "lumi";
-import { z } from "zod";
-
-const ConfigSchema = z.object({
-  greeting: z.string().default("Welcome to the server!"),
-});
-
-export default DefineModule({
-  name: "custom-greeter",
-  displayName: "Custom Greeter",
-  version: "1.0.0",
-  configSchema: ConfigSchema,
-  requiredPermissions: ["MANAGE_MESSAGES"],
-
-  async onLoad(ctx: ModuleContext) {
-    ctx.logger.info("Custom greeter loaded on shard", ctx.shardId);
-  },
-});
-```
-
-Validate your addon before distributing:
-
-```sh
-bun run validate ./addons/my-addon
-```
-
-Read the [Module Creation Guide](https://lumi-devs.github.io/Lumi-docs/guides/module-creation) and [API Reference](https://lumi-devs.github.io/Lumi-docs/api-reference) for complete documentation.
+Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
 ---
 
 ## Architecture
 
-```
-                       Discord Gateway (WebSocket)
-                                   │
-                                   ▼
-                   ┌──────────────────────────────┐
-                   │ apps/worker (ShardingManager)│
-                   │   Shard #0 ─── Shard #1 ...  │
-                   └──────────────┬───────────────┘
-                                  │
-          ┌───────────────────────┼──────────────────────┐
-          ▼                       ▼                      ▼
-┌──────────────────┐   ┌────────────────────┐  ┌────────────────────┐
-│   Redis 7 / 8    │   │  PgBouncer (6432)  │  │  Next.js 16 App    │
-│  - Event Streams │   │        │           │  │  - Web Dashboard   │
-│  - BullMQ Tasks  │   │  PostgreSQL 18     │  │  - Token RPC (8091)│
-│  - L1/L2 Cache   │   │  - Durable Storage │  │  - Permit RBAC     │
-└──────────────────┘   └────────────────────┘  └────────────────────┘
-```
+Lumi is organized as a Bun workspace monorepo:
 
-- **Process Model**: `apps/worker` is a `ShardingManager` that spawns child processes per assigned shard. Shard child processes connect to the Discord Gateway and execute command logic in-process.
-- **Primary Shard**: Shard `0` binds the HTTP RPC server (port `8091`) and Prometheus `/metrics` scraper (port `9090`).
-- **Web Dashboard**: Built with Next.js 16 App Router. Holds no bot tokens and opens no database connections; all reads and writes flow through the authenticated RPC bridge.
-- **Concurrency & Caching**: Single-flight L1 prefix caching and distributed Redis mutexes prevent database stampedes during high-volume events.
-
-See the full [Architecture Reference](https://lumi-devs.github.io/Lumi-docs/architecture) for detailed system specifications.
+| Path | Purpose |
+| :--- | :--- |
+| `apps/worker` | Bot gateway runner. Uses `ShardingManager` to spawn shard processes handling Discord events, slash commands, and interaction routing. |
+| `apps/scheduler` | Dedicated BullMQ worker and scheduler. Handles recurring tasks, cron schedules, and background worker queues. |
+| `apps/api` | Gateway-free HTTP RPC server. Serves typed RPC actions over an internal HTTP bridge. |
+| `apps/cli` | Command-line tool (`lumi`) for operations, migrations, addon creation, doctor diagnostics, and service orchestration. |
+| `packages/core` | Core framework: database access layer, permit evaluation, sandboxed addon SDK, event bus, and internal modules. |
+| `packages/contracts` | Strongly-typed RPC router, schemas, and shared contracts. |
+| `packages/observability` | OpenTelemetry tracing, Prometheus metrics exporter, and health probes. |
 
 ---
 
-## Privacy & GDPR
+## Features
 
-Lumi is built for self-hosters who prioritize data sovereignty:
-
-- **Zero Telemetry**: Lumi collects no analytics and never phones home. All data stays inside your database.
-- **Right of Access (Article 15)**: Users can export all stored data associated with their account via `/mydata getmydata` or through the dashboard.
-- **Right to Erasure (Article 17)**: Users can purge and anonymize their profile, notes, and records with `/mydata forgetme`.
-- **Automated Retention Sweeps**: Scheduled daily cron tasks purge stale audit logs and expired moderation cases.
+- **Decoupled Topology**: Discord gateway (`worker`), background queues (`scheduler`), and RPC endpoints (`api`) run in isolated processes.
+- **Sandboxed Addon SDK**: Extend bot capabilities through sandboxed addons (`lumi` SDK) with permission checks and signature validation.
+- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution.
+- **Observability Built-in**: Unified OpenTelemetry distributed tracing and Prometheus metrics endpoints on every service.
+- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Redis for distributed caching, lock leases, and streams.
 
 ---
 
-## Testing
+## Quickstart
 
-The test suite runs with 100% offline mock drivers and requires no running services:
+### Prerequisites
 
-```sh
-# Run all unit and integration tests
-bun run test
+- [Bun](https://bun.sh) (v1.4+) or [Nix](https://nixos.org) with flakes enabled
+- [PostgreSQL](https://www.postgresql.org) 16+
+- [Redis](https://redis.io) 7+
+- Discord Bot Application & Bot Token
 
-# Run type checks across all packages
+### Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/lumi-devs/Lumi.git
+   cd Lumi
+   ```
+
+2. **Enter development environment:**
+   ```bash
+   nix develop
+   # or ensure bun is installed locally
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   bun install
+   ```
+
+4. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your DISCORD_TOKEN, DATABASE_URL, and REDIS_URL
+   ```
+
+5. **Initialize database schema:**
+   ```bash
+   bun run db:generate
+   bun run db:deploy
+   ```
+
+6. **Run diagnostic checks:**
+   ```bash
+   bun run doctor
+   ```
+
+7. **Start services:**
+   ```bash
+   # Run all processes concurrently
+   bun run dev
+
+   # Or start individual services
+   bun run start:worker
+   bun run start:scheduler
+   bun run start:api
+   ```
+
+---
+
+## Development
+
+```bash
+# Typecheck root and all workspace packages
 bun run typecheck
 
-# Run linter (check-only)
+# Run linter
 bun run lint
-
-# Run linter with auto-fixes
 bun run lint:fix
+
+# Run offline unit test suites
+bun run test
+
+# Run integration tests against real databases
+bun run test:integration
+
+# Build published SDK bundle
+bun run sdk:build
 ```
 
 ---
 
-## Translations
+## Addons & CLI
 
-Translations are managed with [Crowdin](https://crowdin.com). All locale strings live under `packages/core/src/languages/{locale}/`.
+Lumi includes a command-line tool `lumi` (`apps/cli`):
 
-Contributions for new languages and corrections are welcome.
+```bash
+# Check service health and environment connectivity
+bun run doctor
+
+# Scaffold a new addon module
+bun apps/cli/src/main.ts addon create my-addon
+
+# Validate and test an addon
+bun apps/cli/src/main.ts addon test my-addon
+```
 
 ---
 
 ## License
 
 Lumi is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
-
-Third-party addons written with the public `lumi` SDK may be licensed independently under the author's choice of terms when distributed outside the core repository.

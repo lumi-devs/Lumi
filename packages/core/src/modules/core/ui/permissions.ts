@@ -136,7 +136,7 @@ export function buildPermitPickerView(
       `${Emojis.Shield} ${t ? t("panels:permsPickPermit") : "Pick a Permit"}`,
       t
         ? t("panels:permsNoPermits")
-        : "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
+        : "No permits of this kind exist yet. Create one from the dashboard.",
       { breadcrumbs: ["Hub", "Permissions", `Pick ${kindLabel} Permit`], actionRows: [backToPermissionsRow(t)] },
     );
   }

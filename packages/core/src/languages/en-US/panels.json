@@ -34,7 +34,7 @@
 	"permsGrantEnforced": "Assign Enforced…",
 	"permsPickTarget": "Pick who to assign this permit to.",
 	"permsPickPermit": "Pick a permit…",
-	"permsNoPermits": "No permits of this kind exist yet. Create one with `/permit create` or from the dashboard.",
+	"permsNoPermits": "No permits of this kind exist yet. Create one from the dashboard.",
 	"addonsTitle": "Add-ons & Updates",
 	"addonsIntro": "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
 	"addonsRepos": "Tracked Repositories",

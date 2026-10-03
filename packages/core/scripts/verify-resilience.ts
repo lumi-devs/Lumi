@@ -74,7 +74,6 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - basic publish & consume round-trip",
     async run() {
       const { bus, close } = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       await bus.publish("verify.guild_create", { guildId: "resilience-test-1" });
@@ -95,7 +94,6 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - sequential message ordering under queue load",
     async run() {
       const { bus, close } = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       const itemCount = 10;
@@ -119,7 +117,6 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - consumer group isolation & fanout",
     async run() {
       const { bus, close } = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       await bus.publish("verify.broadcast", { broadcastId: "fanout-100" });
@@ -150,7 +147,6 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - high-throughput burst load (100 parallel dispatches)",
     async run() {
       const { bus, close } = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       const TOTAL_BURST = 100;
@@ -180,7 +176,6 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - lifecycle initialization and graceful shutdown",
     async run() {
       const { close } = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       await close();
@@ -190,13 +185,11 @@ const redisScenarios: Scenario[] = [
     name: "Redis Streams - bus re-initialization after connection termination",
     async run() {
       const busInstanceA = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       await busInstanceA.close();
 
       const busInstanceB = createEventBus({
-        transport: "streams",
         redis: redisConfig,
       });
       await busInstanceB.bus.publish("verify.lifecycle_reopen", { active: true });
