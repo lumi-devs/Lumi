@@ -83,7 +83,8 @@ export class PermissionRepository extends Repository {
     const quarantineKey = RedisKeys.quarantineState(guildId, userId);
 
     const rawResults = await mgetSafe(this.redis, [...keys, quarantineKey]);
-    const isQuarantined = rawResults[rawResults.length - 1] != null;
+    const rawQuarantine = rawResults[rawResults.length - 1];
+    const isQuarantined = rawQuarantine != null && rawQuarantine !== "0";
     const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
 
     const missingIndexes: number[] = [];

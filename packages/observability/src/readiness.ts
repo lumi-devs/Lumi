@@ -62,10 +62,15 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
       );
       timer.unref?.();
     });
-    const result = await Promise.race<ProbeResult>([
-      Promise.resolve().then(() => probe.fn()),
-      timeoutPromise,
-    ]);
+    const probePromise = Promise.resolve()
+      .then(() => probe.fn())
+      .catch((err: unknown) => {
+        process.stderr.write(
+          `[observability] readiness probe "${probe.name}" threw: ${String(err)}\n`,
+        );
+        return { status: "fail" as const, detail: "probe error" };
+      });
+    const result = await Promise.race<ProbeResult>([probePromise, timeoutPromise]);
     return result;
   } catch (err) {
     // `/readyz` is unauthenticated, so the response carries only a fixed

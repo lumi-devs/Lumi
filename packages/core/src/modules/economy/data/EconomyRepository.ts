@@ -152,27 +152,20 @@ export class EconomyRepository extends Repository {
   ): Promise<{ from: EconomyAccount; to: EconomyAccount }> {
     const { guildId, fromUserId, toUserId } = input;
     await this.db.ensureGuild(guildId);
+    const sortedUserIds = [fromUserId, toUserId].sort();
     return this.prisma.$transaction(async (tx) => {
-      await tx.economyAccount.upsert({
-        where: { guildId_userId: { guildId, userId: toUserId } },
-        update: {},
-        create: {
-          guildId,
-          userId: toUserId,
-          wallet: input.startWallet,
-          bank: input.startBank,
-        },
-      });
-      await tx.economyAccount.upsert({
-        where: { guildId_userId: { guildId, userId: fromUserId } },
-        update: {},
-        create: {
-          guildId,
-          userId: fromUserId,
-          wallet: input.startWallet,
-          bank: input.startBank,
-        },
-      });
+      for (const uId of sortedUserIds) {
+        await tx.economyAccount.upsert({
+          where: { guildId_userId: { guildId, userId: uId } },
+          update: {},
+          create: {
+            guildId,
+            userId: uId,
+            wallet: input.startWallet,
+            bank: input.startBank,
+          },
+        });
+      }
 
       const { count } = await tx.economyAccount.updateMany({
         where: {

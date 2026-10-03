@@ -178,10 +178,19 @@ export async function handleSseRequest(req: Request): Promise<Response> {
   let closed = false;
   let connection: Connection | null = null;
 
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
   const close = async () => {
     if (closed) return;
     closed = true;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (streamController) {
+      try {
+        streamController.close();
+      } catch {
+        // Stream may already be closed by consumer
+      }
+      streamController = null;
+    }
     if (connection) {
       allConnections.delete(connection);
       const guildSet = connectionsByGuild.get(guildId);
@@ -193,10 +202,17 @@ export async function handleSseRequest(req: Request): Promise<Response> {
 
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
+      streamController = controller;
       connection = {
         guildId,
         queued: 0,
-        send: (chunk) => controller.enqueue(encoder.encode(chunk)),
+        send: (chunk) => {
+          if (controller.desiredSize !== null && controller.desiredSize <= 0) {
+            void close();
+            return;
+          }
+          controller.enqueue(encoder.encode(chunk));
+        },
         close,
       };
       allConnections.add(connection);

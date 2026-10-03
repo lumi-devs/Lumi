@@ -102,6 +102,7 @@ export async function acquireRedisLock(
       redis
         .eval(RedisExtendScript, 1, key, token, opts.ttlMs.toString())
         .then((res: unknown) => {
+          if (released) return;
           if (res === 1) {
             consecutiveRenewFailures = 0;
           } else {
@@ -118,6 +119,7 @@ export async function acquireRedisLock(
           }
         })
         .catch((err: unknown) => {
+          if (released) return;
           consecutiveRenewFailures++;
           const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
           if (container.logger) {

@@ -29,6 +29,10 @@ export function watchFailedJobs(
     connection: handler.options.connection,
   });
 
+  events.on("error", (err: unknown) => {
+    container.logger.warn("[Scheduler] QueueEvents connection error:", err);
+  });
+
   events.on("failed", ({ jobId }) => {
     void (async () => {
       try {
