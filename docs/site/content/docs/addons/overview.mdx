@@ -27,6 +27,17 @@ This is an early-stage sandbox boundary, not a hardened security sandbox — tre
 as code you've chosen to trust (verified via [signed commits](/docs/addons/distribution) if you
 enable that), not as isolation against a malicious author.
 
+## Testing an add-on while developing it
+
+`lumi addon test <dir>` (see the [CLI reference](/docs/reference/cli#lumi-addon-createvalidatetestdev))
+boots your addon in the exact same sandbox child process the host uses, with a fake host that
+no-ops every RPC call, and reports whether it loaded, its commands, interaction-handler
+prefixes, and scheduled-task names - optionally invoking one command with `--invoke` and
+printing the RPC calls it made. `lumi addon dev <dir>` re-runs that smoke check on every file
+change. Neither talks to a real Discord/Postgres/Redis connection, and neither hot-reloads into
+a running bot - they catch load and registration errors quickly while editing, before you
+restart the worker to try the addon for real.
+
 ## Managing add-ons
 
 Installing, browsing, and managing add-ons — as an admin, through `/repo` and `/download` — is

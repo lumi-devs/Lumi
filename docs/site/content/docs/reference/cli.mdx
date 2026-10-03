@@ -52,7 +52,7 @@ one-shot service runs before worker/api/scheduler start.
 - `lumi migrate` → `bunx prisma migrate deploy`
 - `lumi migrate status` → `bunx prisma migrate status`
 
-## `lumi addon <create|validate>`
+## `lumi addon <create|validate|test|dev>`
 
 - `lumi addon create <name> [options]` - scaffolds a new addon. Same generator as
   `bun run addon:create`, called through the same exported function
@@ -60,6 +60,28 @@ one-shot service runs before worker/api/scheduler start.
 - `lumi addon validate <addon-dir|repo-dir>` - runs the same structural checks the Downloader
   applies before loading an addon. Same function as `bun run validate`
   (`packages/core/scripts/validate-addon.ts`'s `runValidateAddon`).
+- `lumi addon test <dir> [--invoke <command>] [--guild-id <id>] [--timeout <ms>]` - a smoke
+  harness, not a test framework: boots the addon at `<dir>` in the real sandbox child process
+  (`packages/core/src/runtime/addon-child.ts`), the same one `AddonHost` spawns in production,
+  with a fake host (`packages/core/src/lib/addon-sandbox/test-harness.ts`'s `FakeAddonHost`)
+  that answers every RPC request with a no-op success instead of touching Discord/Postgres/
+  Redis. Reports whether the addon loaded, and if so its commands, interaction-handler
+  prefixes, and scheduled-task names. With `--invoke <command>`, also runs that command through
+  a synthetic invocation and prints every RPC call it made (`config.get`, `ctx.reply`, ...) -
+  useful for confirming an addon reaches the capabilities it declares without wiring up a real
+  guild. Exits non-zero on load failure, an unknown `--invoke` command, or a timeout.
+  `packages/core/src/lib/addon-sandbox/child.test.ts` drives the same `FakeAddonHost`, so the
+  fake-host protocol has one implementation, not two.
+- `lumi addon dev <dir> [options]` - watches `<dir>` (`fs.watch`, debounced) and re-runs
+  `addon test <dir> [options]` on every change. A smoke-test loop for catching load/registration
+  errors while editing, not hot-reload - it never touches a running bot process; restart the
+  worker yourself to pick up changes there.
+
+There is no `lumi addon pack`: the Downloader (`packages/core/src/lib/downloader/`) installs
+addons by cloning a git repository and verifying commit signatures
+(`packages/core/src/lib/downloader/signature.ts`), never by downloading or checksumming a
+tarball - there is no consumer anywhere in the repo that would verify one, so packaging an
+addon into a `.tar.gz` would produce an artifact nothing reads.
 
 ## `lumi module list`
 
