@@ -6,9 +6,7 @@ map, not a manual — for anything not covered here, see
 actual source (architecture, conventions, domain guides, step-by-step
 workflows), or the public, user-facing docs site at
 https://lumi-devs.github.io/Lumi-docs (self-hosters and add-on authors) — its content lives
-under [`docs/site/`](docs/site/content/docs/) in this repo and is built by the separate
-[`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) site repo, synced via
-`scripts/docs/sync.sh`. For why a given architectural shape was chosen, see
+in the separate [`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) repo. For why a given architectural shape was chosen, see
 [`docs/adr/`](docs/adr/README.md).
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
@@ -18,7 +16,7 @@ discord.js v14, Prisma/PostgreSQL, Redis.
 
 Bun workspace monorepo (`workspaces: ["packages/*", "apps/*"]`). See
 [`agents/architecture/`](agents/architecture/) and the
-[Architecture doc site page](docs/site/content/docs/reference/architecture.mdx) for the full
+[Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture) for the full
 system topology — treat it as source of truth for anything below.
 
 - `apps/worker` — the one bot entrypoint. `main.ts` is a thin discord.js `ShardingManager`
@@ -83,9 +81,9 @@ sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-hand
 real gotchas), see [`agents/architecture/module-system.md`](agents/architecture/module-system.md)
 and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md). The public doc
 site's addon-facing surface is the generated
-[SDK Reference](docs/site/content/docs/addons/sdk-reference.mdx) (every export of
+[SDK Reference](https://lumi-devs.github.io/Lumi-docs/addons/sdk-reference) (every export of
 `packages/core/src/lib/addon-sandbox/sdk/`, regenerated from source on every docs build) plus
-[`docs/site/content/docs/addons/overview.mdx`](docs/site/content/docs/addons/overview.mdx) for the
+[Addons Overview](https://lumi-devs.github.io/Lumi-docs/addons/overview) for the
 sandbox's execution model.
 
 **Zero cross-module import law**: a module must never import directly from a sibling
@@ -162,8 +160,8 @@ So:
 Bump the prerelease's `-next.N` suffix for each iteration before it's ready to cut as a
 plain version tag.
 
-Full reference: [`dashboard.md`](docs/site/content/docs/guides/dashboard.mdx). System-level view: the
-[Architecture doc site page](docs/site/content/docs/reference/architecture.mdx).
+Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/dashboard). System-level view: the
+[Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture).
 
 ## Repo-specific anti-patterns
 
@@ -222,16 +220,10 @@ one-off commands as `nix develop --command <cmd>`.
   `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Redis suite (see
   [`agents/conventions/testing.md`](agents/conventions/testing.md)).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
-- `bun run docs:export -- --out <dir>` — writes self-contained JSON data (modules, commands,
-  permits, RPC actions, env vars, data-privacy statements, addon SDK reference) for the
-  `lumi-devs/Lumi-docs` site build to `<dir>`. `bun run docs:check` runs just the env-var
-  drift check with no `--out` and fails the build on drift; both live in `scripts/docs/`.
-  `scripts/docs/sync.sh [site-root]` copies `docs/site/` content and runs `docs:export` into
-  a `Lumi-docs` checkout, the same shape as noctalia-dev's `tools/sync-docs.sh`.
 - `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start
   <worker|api|scheduler|all>`, `migrate [status]`, `addon <create|validate>`, `module list`,
   `config`, `doctor [--json]`. A thin wrapper over the same code these bullets already describe - see
-  [`docs/site/content/docs/reference/cli.mdx`](docs/site/content/docs/reference/cli.mdx).
+  the [CLI Reference](https://lumi-devs.github.io/Lumi-docs/reference/cli).
 
 The dashboard (its own repo, `lumi-devs/lumi-dashboard`) has its own `typecheck`/`lint`/`test`
 scripts, run there rather than from this repo.

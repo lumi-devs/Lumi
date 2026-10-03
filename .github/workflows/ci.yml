@@ -83,8 +83,6 @@ jobs:
             ${{ runner.os }}-turbo-
       - run: bun install --frozen-lockfile
       - run: bun run db:generate
-      - name: Docs env var drift check
-        run: bun run docs:check
       - name: Turbo Filtered Lint
         env:
           EVENT_NAME: ${{ github.event_name }}

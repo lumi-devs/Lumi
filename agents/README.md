@@ -27,7 +27,7 @@ Starting a task that touches one of these areas? Read the relevant
 `conventions/` background it actually needs, so you don't have to read
 everything up front.
 
-This is distinct from `docs/site/` (built by the separate `lumi-devs/Lumi-docs` repo), the
+This is distinct from the public doc site (built by the separate `lumi-devs/Lumi-docs` repo), the
 public, user-facing documentation site (self-hosters and third-party addon authors) — that
 content is written for humans running the bot, not for an agent editing its source.
 

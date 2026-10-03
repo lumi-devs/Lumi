@@ -11,8 +11,8 @@
   ],
   "workspaces": {
     ".": {
-      "entry": ["prisma.config.ts", "scripts/docs/export.ts", "scripts/docs/check.ts"],
-      "project": ["prisma.config.ts", "scripts/docs/**/*.ts"]
+      "entry": ["prisma.config.ts"],
+      "project": ["prisma.config.ts"]
     },
     "packages/core": {
       "entry": [
