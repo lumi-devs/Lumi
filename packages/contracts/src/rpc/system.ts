@@ -2,6 +2,8 @@ import { s } from "@sapphire/shapeshift";
 import type {
   AuditListData,
   BlocklistListData,
+  FeatureFlagOverrideView,
+  FeatureFlagView,
   SystemDashboardData,
 } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
@@ -9,7 +11,9 @@ import {
   AuditFilterShape,
   BlocklistAddSchema,
   BlocklistRemoveSchema,
+  FeatureFlagKeySchema,
   PaginationSchema,
+  RolloutPercentSchema,
   SnowflakeSchema,
 } from "./schemas.js";
 
@@ -142,5 +146,44 @@ export const systemRpc = {
     timeoutMs: RpcTimeouts.short,
     summary: "Shard telemetry: replicas, shard states, missing ids.",
     readOnly: true,
+  }),
+  "system.flags.list": rpcAction<{ flags: FeatureFlagView[] }>()({
+    auth: "botOwner",
+    timeoutMs: RpcTimeouts.short,
+    summary: "List all feature flags.",
+    readOnly: true,
+  }),
+  "system.flags.set": rpcAction<{ success: boolean; flag: FeatureFlagView }>()({
+    input: s.object({
+      key: FeatureFlagKeySchema,
+      description: s.string().lengthLessThanOrEqual(500).nullable().optional(),
+      enabled: s.boolean(),
+      rolloutPercent: RolloutPercentSchema,
+    }),
+    auth: "botOwner",
+    timeoutMs: RpcTimeouts.long,
+    summary: "Create or update a feature flag.",
+  }),
+  "system.flags.override.set": rpcAction<{
+    success: boolean;
+    override: FeatureFlagOverrideView;
+  }>()({
+    input: s.object({
+      flagKey: FeatureFlagKeySchema,
+      guildId: SnowflakeSchema,
+      enabled: s.boolean(),
+    }),
+    auth: "botOwner",
+    timeoutMs: RpcTimeouts.long,
+    summary: "Force a feature flag on/off for one guild.",
+  }),
+  "system.flags.override.delete": rpcAction<{ success: boolean }>()({
+    input: s.object({
+      flagKey: FeatureFlagKeySchema,
+      guildId: SnowflakeSchema,
+    }),
+    auth: "botOwner",
+    timeoutMs: RpcTimeouts.long,
+    summary: "Remove a guild's override, returning it to the flag's rollout.",
   }),
 };

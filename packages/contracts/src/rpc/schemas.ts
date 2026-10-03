@@ -76,3 +76,13 @@ export const BlocklistAddSchema = s.object({
 export const BlocklistRemoveSchema = s.object({
   userId: SnowflakeSchema,
 });
+
+export const FeatureFlagKeySchema = s
+  .string()
+  .regex(/^[a-z0-9](?:[a-z0-9_-]{0,98}[a-z0-9])?$/);
+
+export const RolloutPercentSchema = s
+  .number()
+  .int()
+  .greaterThanOrEqual(0)
+  .lessThanOrEqual(100);

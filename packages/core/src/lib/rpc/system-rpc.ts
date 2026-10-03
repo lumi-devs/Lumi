@@ -190,4 +190,61 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       missingShardIds: snapshot.missingShardIds,
     };
   },
+
+  "system.flags.list": async () => {
+    const flags = await container.db.featureFlags.listFlags();
+    return {
+      flags: flags.map((flag) => ({
+        key: flag.key,
+        description: flag.description,
+        enabled: flag.enabled,
+        rolloutPercent: flag.rolloutPercent,
+        updatedAt: (flag.updatedAt instanceof Date ? flag.updatedAt : new Date(flag.updatedAt ?? Date.now())).toISOString(),
+        updatedBy: flag.updatedBy,
+      })),
+    };
+  },
+
+  "system.flags.set": async ({ actorId, input }) => {
+    const flag = await container.db.featureFlags.setFlag({
+      key: input.key,
+      description: input.description,
+      enabled: input.enabled,
+      rolloutPercent: input.rolloutPercent,
+      updatedBy: actorId,
+    });
+    return {
+      success: true,
+      flag: {
+        key: flag.key,
+        description: flag.description,
+        enabled: flag.enabled,
+        rolloutPercent: flag.rolloutPercent,
+        updatedAt: (flag.updatedAt instanceof Date ? flag.updatedAt : new Date(flag.updatedAt ?? Date.now())).toISOString(),
+        updatedBy: flag.updatedBy,
+      },
+    };
+  },
+
+  "system.flags.override.set": async ({ input }) => {
+    const override = await container.db.featureFlags.setOverride(input);
+    return {
+      success: true,
+      override: {
+        id: override.id,
+        flagKey: override.flagKey,
+        guildId: override.guildId,
+        enabled: override.enabled,
+        createdAt: (override.createdAt instanceof Date ? override.createdAt : new Date(override.createdAt ?? Date.now())).toISOString(),
+      },
+    };
+  },
+
+  "system.flags.override.delete": async ({ input }) => {
+    const deleted = await container.db.featureFlags.deleteOverride(
+      input.flagKey,
+      input.guildId,
+    );
+    return { success: deleted };
+  },
 });

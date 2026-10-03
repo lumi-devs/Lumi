@@ -104,6 +104,10 @@ export const RedisKeys = {
 
   rpcIdempotency: (action: string, guildId: string, hash: string) =>
     `lumi:rpc:idem:${action}:${guildId}:${hash}`,
+
+  featureFlagEval: (key: string) => `lumi:flags:eval:${key}`,
+  featureFlagOverride: (key: string, guildId: string) =>
+    `lumi:flags:override:${key}:${guildId}`,
 } as const;
 
 export const RedisTTL = {
@@ -141,6 +145,9 @@ export const RedisTTL = {
   // after the first finished, short enough that a legitimate later retry
   // (e.g. restoring a different backup) is never mistaken for a duplicate.
   rpcIdempotencyDone: 5 * 60,
+
+  featureFlagEval: 30,
+  featureFlagOverride: 30,
 } as const;
 
 /**

@@ -1,0 +1,58 @@
+---
+title: Feature Flags
+description: Global kill switches and percentage rollouts for experimental code paths.
+---
+
+Feature flags let a bot owner ship an experimental code path disabled, turn it on for a
+percentage of guilds, and force it on or off for one guild without touching the global
+percentage. They are bot-owner only - there is no self-serve dashboard toggle for guild admins,
+and no flag is evaluated unless a code path explicitly checks it.
+
+## Model
+
+A flag (`FeatureFlag`, `packages/core` via `container.db.featureFlags`) has:
+
+- `key` - a stable string id, e.g. `new-ui`.
+- `enabled` - the flag's own kill switch. `false` always resolves to off, regardless of
+  `rolloutPercent`.
+- `rolloutPercent` - `0`-`100`. The percentage of guilds that see the flag on when `enabled` is
+  `true`.
+- `description`, `updatedAt`, `updatedBy` - for the system panel, not evaluated.
+
+A `FeatureFlagOverride` pins one guild's result to `true` or `false`, independent of
+`rolloutPercent`. A guild override always wins over the global rollout.
+
+## Evaluation
+
+`isFlagEnabled(key, guildId?)` (`#lib/feature-flags/index.js`) is the one evaluation entry point:
+
+1. If `guildId` is given and an override exists for `(key, guildId)`, return its `enabled` value.
+2. Otherwise, look the flag up. An unknown key always resolves `false` - there is no implicit
+   "undeclared flags default on" behavior.
+3. If the flag is disabled, return `false`.
+4. If `rolloutPercent` is `0` or `100`, short-circuit to `false`/`true`.
+5. Otherwise, hash `` `${key}:${guildId ?? "global"}` `` with FNV-1a (`fnv1aHash`,
+   `#lib/feature-flags/hash.js`) into a bucket in `[0, 100)` and compare it against
+   `rolloutPercent`. The hash is a stable, non-cryptographic function of the pair, so the same
+   guild always lands in the same bucket for a given key - no shared state or sticky session is
+   needed to keep a guild's result consistent across requests or processes.
+
+Both the flag row and any override are cached per-key in Redis (`lumi:flags:eval:<key>`,
+`lumi:flags:override:<key>:<guildId>`, each repository-owned and invalidated through
+`container.invalidation` on write - see
+[ADR 0006](https://github.com/lumi-devs/lumi/blob/main/docs/adr/0006-explicit-cache-invalidation-not-event-driven.md)),
+the same cache-aside pattern every other `container.db.*` repository uses.
+
+## Managing flags
+
+Bot-owner only, over RPC (`auth: "botOwner"` - see the [RPC reference](/docs/reference/rpc)):
+
+- `system.flags.list` - every flag.
+- `system.flags.set` - create or update a flag (`key`, `description?`, `enabled`,
+  `rolloutPercent`). Stamps `updatedBy` with the calling bot owner's id.
+- `system.flags.override.set` - force a flag on/off for one guild.
+- `system.flags.override.delete` - remove a guild's override, returning it to the flag's global
+  rollout.
+
+There is no bot command surface for flags, matching the permit system's dashboard-only
+management model.

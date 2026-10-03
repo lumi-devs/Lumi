@@ -26,6 +26,7 @@ is the doc" don't need an ADR.
 | [0009](0009-no-changesets-lockstep-contracts-release.md) | No Changesets: contracts and observability release in lockstep | Accepted |
 | [0010](0010-single-process-install-is-a-supervisor.md) | Single-process install is a supervisor, not one address space | Accepted |
 | [0011](0011-single-authorization-evaluator.md) | One `authorize()` evaluator for commands, RPC and the addon SDK | Accepted |
+| [0012](0012-feature-flags-hash-rollout-not-sticky-bucketing.md) | Feature-flag rollout buckets a stable hash, not a stored assignment | Accepted |
 
 ## Adding a new ADR
 
