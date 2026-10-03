@@ -137,6 +137,8 @@ jobs:
           else
             bun run typecheck
           fi
+      - name: Build SDK type declarations
+        run: bun run sdk:build
 
   test:
     name: Test
