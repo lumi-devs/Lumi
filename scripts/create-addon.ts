@@ -6,7 +6,7 @@
  * `index.ts` with `@DefineModule`/`cfg`, one command stub, a README) into
  * `./addons/<name>` by default - mirroring `hello-world` in
  * lumi-devs/lumi-addons's `examples/`, the addon the Quick Start guide
- * (docs/QUICK_START_ADDON.md) walks through.
+ * the addon https://lumi-devs.github.io/Lumi-docs/addons/overview walks through.
  *
  * `./addons/` is a plain local scratch directory (gitignored), the same shape
  * `LUMI_DEV_PATHS` expects: point it at the directory *containing* one or more
@@ -152,7 +152,7 @@ export class ${className} extends Module {
   public override async deleteUserData(): Promise<void> {
     // TODO: if this addon ever persists anything keyed by a user ID (via
     // container.db.guildKV or container.redis), delete it here. Until then,
-    // this no-op is the GDPR-compliant default - see docs/GUIDE_ADDON_PUBLISHING.md.
+    // this no-op is the GDPR-compliant default - see https://lumi-devs.github.io/Lumi-docs/addons/overview.
   }
 }
 `;
@@ -219,7 +219,7 @@ LUMI_DEV_PATHS=${path.relative(ROOT, path.dirname(path.join(args.dir, args.name)
 
 Restart the worker, then \`/modules enable ${args.name}\`.
 
-Before publishing, see the [Addon Publishing Guide](../../docs/GUIDE_ADDON_PUBLISHING.md) and run:
+Before publishing, see the [Addon Publishing Guide](https://lumi-devs.github.io/Lumi-docs/addons/distribution) and run:
 
 \`\`\`sh
 bun run validate ${path.join(path.relative(ROOT, args.dir) || "addons", args.name)}
@@ -278,7 +278,7 @@ export async function runCreateAddon(argv: string[]): Promise<number> {
   console.log(`\n${BOLD}Next steps${RESET}`);
   console.log(`  1. Edit ${DIM}${path.relative(ROOT, target)}/index.ts${RESET} and the command stub.`);
   console.log(
-    `  2. Add ${DIM}LUMI_DEV_PATHS=${path.relative(ROOT, args.dir) || "./addons"}${RESET} to .env (see docs/QUICK_START_ADDON.md).`,
+    `  2. Add ${DIM}LUMI_DEV_PATHS=${path.relative(ROOT, args.dir) || "./addons"}${RESET} to .env (see https://lumi-devs.github.io/Lumi-docs/addons/overview).`,
   );
   console.log(`  3. Restart the worker, then ${DIM}/modules enable ${args.name}${RESET} in your test server.`);
   console.log(`  4. ${DIM}bun run validate ${path.relative(ROOT, target)}${RESET} before publishing.`);

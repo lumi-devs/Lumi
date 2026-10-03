@@ -25,7 +25,7 @@ wrapper, not a second copy. Run "lumi addon <subcommand> --help" for
 subcommand-specific options.
 `;
 
-export const testHelp = `Usage: lumi addon test <dir> [options]
+const testHelp = `Usage: lumi addon test <dir> [options]
 
 Boots the addon at <dir> in the real sandbox child process
 (packages/core/src/runtime/addon-child.ts) with a fake host that answers
@@ -46,7 +46,7 @@ Exit code is 1 if the addon fails to load, errors during --invoke, or times
 out; 0 otherwise.
 `;
 
-export const devHelp = `Usage: lumi addon dev <dir> [options]
+const devHelp = `Usage: lumi addon dev <dir> [options]
 
 Watches <dir> and re-runs \`lumi addon test <dir> [options]\` (debounced)
 every time a file under it changes. Options are the same as \`addon test\`
@@ -84,7 +84,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   });
 }
 
-export async function runAddonTest(argv: string[]): Promise<number> {
+async function runAddonTest(argv: string[]): Promise<number> {
   let values: { invoke?: string; "guild-id"?: string; timeout?: string; help?: boolean };
   let positionals: string[];
   try {
@@ -180,7 +180,7 @@ export async function runAddonTest(argv: string[]): Promise<number> {
   }
 }
 
-export async function runAddonDev(argv: string[]): Promise<number> {
+async function runAddonDev(argv: string[]): Promise<number> {
   if (argv[0] === "--help" || argv[0] === "-h") {
     console.log(devHelp);
     return 0;
