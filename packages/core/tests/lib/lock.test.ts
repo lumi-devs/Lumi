@@ -170,6 +170,9 @@ describe("redis-lock", () => {
     }, 10_000);
 
     it("calls onLostLock on the first renewal failure only, not on subsequent failures", async () => {
+      const errorLogger = vi.fn();
+      (container as any).logger = { error: errorLogger };
+
       const onLostLock = vi.fn();
       const lock = await acquireRedisLock(redis as any, "lock:renew:stolen:callback", {
         ttlMs: 4000,
@@ -188,6 +191,7 @@ describe("redis-lock", () => {
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
       await lock.release();
+      delete (container as any).logger;
     }, 10_000);
 
     it("renews after temporary Redis failure that recovers", async () => {
