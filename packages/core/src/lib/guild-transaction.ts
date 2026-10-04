@@ -72,10 +72,7 @@ export class GuildWriteTransaction {
         data: this.#changes,
       });
 
-      await container.db.config.invalidateGuildSettings(
-        this.guildId,
-        "prefix" in this.#changes,
-      );
+      await container.db.config.invalidateGuildSettings(this.guildId);
 
       this.#hasChanges = false;
     } finally {

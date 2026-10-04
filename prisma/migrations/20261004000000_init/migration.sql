@@ -1,3 +1,14 @@
+=========================================
+  Lumi Multi-Platform Dev Shell (Flake)  
+=========================================
+  Bun:        1.4.2
+  Node:       v24.20.0
+  Git:        git version 2.55.0
+  GitHub CLI: gh version 2.101.0 (nixpkgs)
+  jq:         jq-1.8.2
+  Turbo:      2.11.3
+=========================================
+◇ injected env (45) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -21,6 +32,9 @@ CREATE TYPE "OverrideTargetType" AS ENUM ('channel', 'category', 'role', 'user')
 
 -- CreateEnum
 CREATE TYPE "AuditPlatform" AS ENUM ('discord', 'web');
+
+-- CreateEnum
+CREATE TYPE "GdprExportJobStatus" AS ENUM ('pending', 'running', 'done', 'failed');
 
 -- CreateEnum
 CREATE TYPE "EconomyTxnKind" AS ENUM ('deposit', 'withdraw', 'transfer_out', 'transfer_in', 'slots_bid', 'slots_win', 'payday', 'admin_add', 'admin_remove', 'admin_set');
@@ -191,6 +205,45 @@ CREATE TABLE "blocklist" (
 );
 
 -- CreateTable
+CREATE TABLE "feature_flags" (
+    "key" VARCHAR(100) NOT NULL,
+    "description" VARCHAR(500),
+    "enabled" BOOLEAN NOT NULL DEFAULT false,
+    "rollout_percent" INTEGER NOT NULL DEFAULT 0,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_by" VARCHAR(20),
+
+    CONSTRAINT "feature_flags_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateTable
+CREATE TABLE "feature_flag_overrides" (
+    "id" SERIAL NOT NULL,
+    "flag_key" VARCHAR(100) NOT NULL,
+    "guild_id" VARCHAR(20) NOT NULL,
+    "enabled" BOOLEAN NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "feature_flag_overrides_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "gdpr_export_jobs" (
+    "id" TEXT NOT NULL,
+    "user_id" VARCHAR(20) NOT NULL,
+    "requested_by" VARCHAR(20) NOT NULL,
+    "status" "GdprExportJobStatus" NOT NULL DEFAULT 'pending',
+    "error" VARCHAR(1000),
+    "file_path" VARCHAR(500),
+    "size_bytes" INTEGER,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completed_at" TIMESTAMP(3),
+    "expires_at" TIMESTAMP(3),
+
+    CONSTRAINT "gdpr_export_jobs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ignore_list" (
     "id" SERIAL NOT NULL,
     "guild_id" VARCHAR(20) NOT NULL,
@@ -217,6 +270,7 @@ CREATE TABLE "downloader_repos" (
     "url" VARCHAR(200) NOT NULL,
     "branch" VARCHAR(64) NOT NULL DEFAULT 'master',
     "commit" VARCHAR(40),
+    "signed_by" VARCHAR(255),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -229,6 +283,7 @@ CREATE TABLE "downloader_modules" (
     "module_name" VARCHAR(64) NOT NULL,
     "version" VARCHAR(32),
     "commit" VARCHAR(40),
+    "signed_by" VARCHAR(255),
     "pinned" BOOLEAN NOT NULL DEFAULT false,
     "installed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -479,6 +534,9 @@ CREATE INDEX "moderation_cases_active_id_idx" ON "moderation_cases"("active", "i
 CREATE INDEX "moderation_cases_action_active_id_idx" ON "moderation_cases"("action", "active", "id");
 
 -- CreateIndex
+CREATE INDEX "moderation_cases_active_created_at_id_idx" ON "moderation_cases"("active", "created_at", "id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "moderation_cases_guild_id_case_number_key" ON "moderation_cases"("guild_id", "case_number");
 
 -- CreateIndex
@@ -491,10 +549,16 @@ CREATE INDEX "appeals_guild_id_status_created_at_idx" ON "appeals"("guild_id", "
 CREATE INDEX "appeals_guild_id_created_at_idx" ON "appeals"("guild_id", "created_at");
 
 -- CreateIndex
+CREATE INDEX "appeals_guild_id_created_at_id_idx" ON "appeals"("guild_id", "created_at", "id");
+
+-- CreateIndex
 CREATE INDEX "appeals_user_id_idx" ON "appeals"("user_id");
 
 -- CreateIndex
 CREATE INDEX "appeals_reviewed_by_idx" ON "appeals"("reviewed_by");
+
+-- CreateIndex
+CREATE INDEX "appeals_status_created_at_id_idx" ON "appeals"("status", "created_at", "id");
 
 -- CreateIndex
 CREATE INDEX "mod_notes_guild_id_user_id_created_at_idx" ON "mod_notes"("guild_id", "user_id", "created_at");
@@ -518,6 +582,18 @@ CREATE INDEX "blocklist_blocked_by_idx" ON "blocklist"("blocked_by");
 CREATE UNIQUE INDEX "blocklist_user_id_guild_id_key" ON "blocklist"("user_id", "guild_id");
 
 -- CreateIndex
+CREATE INDEX "feature_flag_overrides_guild_id_idx" ON "feature_flag_overrides"("guild_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "feature_flag_overrides_flag_key_guild_id_key" ON "feature_flag_overrides"("flag_key", "guild_id");
+
+-- CreateIndex
+CREATE INDEX "gdpr_export_jobs_user_id_created_at_idx" ON "gdpr_export_jobs"("user_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "gdpr_export_jobs_expires_at_idx" ON "gdpr_export_jobs"("expires_at");
+
+-- CreateIndex
 CREATE INDEX "ignore_list_guild_id_idx" ON "ignore_list"("guild_id");
 
 -- CreateIndex
@@ -534,6 +610,9 @@ CREATE INDEX "downloader_modules_module_name_idx" ON "downloader_modules"("modul
 
 -- CreateIndex
 CREATE INDEX "audit_ledger_guild_id_created_at_idx" ON "audit_ledger"("guild_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "audit_ledger_guild_id_created_at_id_idx" ON "audit_ledger"("guild_id", "created_at", "id");
 
 -- CreateIndex
 CREATE INDEX "audit_ledger_guild_id_user_id_idx" ON "audit_ledger"("guild_id", "user_id");
@@ -554,10 +633,16 @@ CREATE INDEX "module_dynamic_data_target_id_idx" ON "module_dynamic_data"("targe
 CREATE INDEX "module_config_history_guild_id_created_at_idx" ON "module_config_history"("guild_id", "created_at");
 
 -- CreateIndex
+CREATE INDEX "module_config_history_guild_id_created_at_id_idx" ON "module_config_history"("guild_id", "created_at", "id");
+
+-- CreateIndex
 CREATE INDEX "module_config_history_guild_id_module_name_created_at_idx" ON "module_config_history"("guild_id", "module_name", "created_at");
 
 -- CreateIndex
 CREATE INDEX "module_config_history_actor_id_idx" ON "module_config_history"("actor_id");
+
+-- CreateIndex
+CREATE INDEX "module_config_history_created_at_idx" ON "module_config_history"("created_at");
 
 -- CreateIndex
 CREATE INDEX "module_config_overrides_guild_id_module_name_idx" ON "module_config_overrides"("guild_id", "module_name");
@@ -633,6 +718,9 @@ ALTER TABLE "mod_notes" ADD CONSTRAINT "mod_notes_guild_id_fkey" FOREIGN KEY ("g
 
 -- AddForeignKey
 ALTER TABLE "blocklist" ADD CONSTRAINT "blocklist_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "feature_flag_overrides" ADD CONSTRAINT "feature_flag_overrides_flag_key_fkey" FOREIGN KEY ("flag_key") REFERENCES "feature_flags"("key") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ignore_list" ADD CONSTRAINT "ignore_list_guild_id_fkey" FOREIGN KEY ("guild_id") REFERENCES "guilds"("guild_id") ON DELETE CASCADE ON UPDATE CASCADE;
