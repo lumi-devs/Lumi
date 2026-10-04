@@ -273,6 +273,7 @@ export const dashboardEventPublishFailures = new Counter({
 /** Start a tiny /metrics HTTP server. No-op (returns null) if METRICS_ENABLED=false. */
 export function startMetricsServer(port: number): ReturnType<typeof Bun.serve> | null {
   if (process.env["METRICS_ENABLED"] === "false") return null;
+  if (typeof Bun === "undefined" || !Bun?.serve) return null;
 
   // `/metrics`, `/healthz` and `/readyz` are unauthenticated, so the server
   // binds to loopback unless a host is set explicitly. Deployments where the

@@ -176,7 +176,13 @@ describe("DownloadResolver - revision resolution & checkout", () => {
       await fs
         .rm(path.join(AddonModulesRoot, siblingModuleName), { recursive: true, force: true })
         .catch(() => {});
-      execFileSync("git", ["-C", repoPath, "worktree", "prune"], { encoding: "utf8" });
+      try {
+        if (await fs.stat(repoPath).then(() => true).catch(() => false)) {
+          execFileSync("git", ["-C", repoPath, "worktree", "prune"], { encoding: "utf8" });
+        }
+      } catch {
+        // Ignore prune failures during cleanup
+      }
       await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       await fs
         .rm(path.join(ModuleRoot, ".lumi-pins", repoName), { recursive: true, force: true })
