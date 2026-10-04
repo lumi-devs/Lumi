@@ -9,6 +9,7 @@
     "lumi": "./src/main.ts"
   },
   "scripts": {
+    "test": "bun test --parallel",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src tests --fix"
   },

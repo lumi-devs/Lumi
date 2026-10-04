@@ -164,7 +164,8 @@ jobs:
           name: coverage-report
           path: |
             coverage/lcov.info
-            coverage/dashboard/lcov.info
+            coverage/api/lcov.info
+            coverage/cli/lcov.info
           retention-days: 1
           if-no-files-found: error
       - name: Codecov Upload
@@ -172,7 +173,7 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info,./coverage/dashboard/lcov.info
+          files: ./coverage/lcov.info,./coverage/api/lcov.info,./coverage/cli/lcov.info
           fail_ci_if_error: false
 
   integration:
