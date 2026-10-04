@@ -40,6 +40,8 @@ export interface ShardStateView {
   lastReadyAt?: string | null;
   /** True once `lastHeartbeatAt` is older than the fleet's staleness threshold. */
   stale?: boolean;
+  /** Recent in-memory/Redis buffered log entries for this shard. */
+  logs?: Array<{ timestamp: string; level: string; message: string }>;
 }
 
 /** One gateway process in the cluster. */
