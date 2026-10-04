@@ -91,7 +91,7 @@ export class PinoSapphireLogger implements ILogger {
       typeof values[0] === "string"
         ? values[0]
         : typeof values[0] === "object" && values[0] !== null && "msg" in values[0]
-          ? String((values[0] as { msg: unknown }).msg)
+          ? String(values[0].msg)
           : JSON.stringify(values[0]);
     const entry: ShardLogEntry = {
       timestamp: new Date().toISOString(),
