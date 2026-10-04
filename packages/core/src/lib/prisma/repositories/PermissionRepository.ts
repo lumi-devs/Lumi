@@ -252,13 +252,13 @@ export class PermissionRepository extends Repository {
   }
 
   private async invalidateAssignments(
-    assignments: Array<{
+    assignments?: Array<{
       guildId: string;
       targetType: string;
       targetId: string;
     }>,
   ): Promise<void> {
-    if (assignments.length === 0) return;
+    if (!assignments || assignments.length === 0) return;
     const keys = assignments.map((a) =>
       RedisKeys.targetPermits(
         a.guildId,

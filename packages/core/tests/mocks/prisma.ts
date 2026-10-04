@@ -325,7 +325,11 @@ export class MockModelDelegate {
 
   public create = async (args: { data: Rec; select?: Rec }) => {
     await tick();
-    const id = (args.data as any)?.id ?? `mock-${Math.random().toString(36).slice(2, 9)}`;
+    const id =
+      (args.data as any)?.id ??
+      (this.modelName.toLowerCase().includes("permit")
+        ? this.rows.length + 1
+        : `mock-${Math.random().toString(36).slice(2, 9)}`);
     const record = { id, ...args.data };
     this.rows.push(record);
     return applySelect({ ...record }, args.select);
@@ -360,7 +364,12 @@ export class MockModelDelegate {
     await tick();
     const idx = this.rows.findIndex((r) => matches(r, args.where));
     if (idx === -1) {
-      const record = { ...args.create };
+      const id =
+        (args.create as any)?.id ??
+        (this.modelName.toLowerCase().includes("permit")
+          ? this.rows.length + 1
+          : `mock-${Math.random().toString(36).slice(2, 9)}`);
+      const record = { id, ...args.create };
       this.rows.push(record);
       return applySelect({ ...record }, args.select);
     }
