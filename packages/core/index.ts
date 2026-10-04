@@ -33,3 +33,4 @@ export {
   registerRpcReadinessProbe,
   registerSchedulerReadinessProbe,
 } from "./src/lib/client/ReadinessProbes.js";
+export { container } from "@sapphire/framework";

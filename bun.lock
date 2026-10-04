@@ -31,6 +31,8 @@
         "@lumi/contracts": "workspace:*",
         "@lumi/core": "workspace:*",
         "@lumi/observability": "workspace:*",
+      },
+      "devDependencies": {
         "@sapphire/framework": "^5.5.1",
       },
     },

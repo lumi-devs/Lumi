@@ -10,15 +10,16 @@ export interface OutboxStorage {
 export class MemoryOutboxStorage implements OutboxStorage {
   readonly #messages: OutboxMessage[] = [];
 
-  public async insert(message: OutboxMessage): Promise<void> {
+  public insert(message: OutboxMessage): Promise<void> {
     this.#messages.push(message);
+    return Promise.resolve();
   }
 
-  public async fetchUnpublished(limit = 100): Promise<OutboxMessage[]> {
-    return this.#messages.filter((m) => !m.published).slice(0, limit);
+  public fetchUnpublished(limit = 100): Promise<OutboxMessage[]> {
+    return Promise.resolve(this.#messages.filter((m) => !m.published).slice(0, limit));
   }
 
-  public async markPublished(ids: string[]): Promise<void> {
+  public markPublished(ids: string[]): Promise<void> {
     const idSet = new Set(ids);
     const now = new Date();
     for (const m of this.#messages) {
@@ -27,6 +28,7 @@ export class MemoryOutboxStorage implements OutboxStorage {
         m.publishedAt = now;
       }
     }
+    return Promise.resolve();
   }
 }
 

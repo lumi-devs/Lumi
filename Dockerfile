@@ -5,6 +5,8 @@ RUN apk upgrade --no-cache && apk add --no-cache dumb-init
 FROM base AS deps
 COPY package.json bun.lock ./
 COPY packages/core/package.json packages/core/package.json
+COPY packages/application/package.json packages/application/package.json
+COPY packages/infrastructure/package.json packages/infrastructure/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/observability/package.json packages/observability/package.json
 COPY apps/worker/package.json apps/worker/package.json

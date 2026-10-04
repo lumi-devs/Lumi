@@ -24,10 +24,10 @@ export class QueueService {
         connection: this.#connection,
         defaultJobOptions: this.#defaultJobOptions,
         logger: this.#logger,
-      }) as unknown as JobQueue;
+      });
       this.#queues.set(name, queue);
     }
-    return queue as unknown as IJobQueue<T>;
+    return queue;
   }
 
   public async closeAll(): Promise<void> {

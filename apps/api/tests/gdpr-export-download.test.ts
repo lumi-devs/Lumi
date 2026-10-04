@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { container } from "@sapphire/framework";
 import { handleRpcHttpRequest } from "../src/rpc-http-server.js";
-import { signGdprExportToken } from "@lumi/core";
+import { container, signGdprExportToken } from "@lumi/core";
 
 const USER_ID = "111111111111111111";
 

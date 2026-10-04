@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
 import {
   startRpcHttpServer,
   handleRpcHttpRequest,
@@ -7,7 +6,7 @@ import {
   presentedToken,
   readInternalToken,
 } from "../src/rpc-http-server.js";
-import { registerRpcHandlers } from "@lumi/core";
+import { container, registerRpcHandlers } from "@lumi/core";
 import { CONTRACT_VERSION } from "@lumi/contracts/rpc";
 
 describe("RPC HTTP Server & Auth Verification", () => {

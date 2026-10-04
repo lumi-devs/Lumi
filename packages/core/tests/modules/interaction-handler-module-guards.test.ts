@@ -14,6 +14,10 @@ vi.mock("#modules/utility/services/media-utils.js", () => ({
   handleMediaRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@lumi/application/services/utility/media-utils.js", () => ({
+  handleMediaRequest: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("#modules/afk/data/afk.js", () => ({
   getAfkMentions: vi.fn().mockResolvedValue([]),
 }));

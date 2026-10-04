@@ -103,8 +103,8 @@ export function watchFailedJobs(
       if ("client" in queue && queue.client) {
         return (queue.client as any).getJob(id);
       }
-      if ("getJob" in queue && typeof (queue as Queue).getJob === "function") {
-        return (queue as Queue).getJob(id);
+      if ("getJob" in queue && typeof (queue).getJob === "function") {
+        return (queue).getJob(id);
       }
       return null;
     },

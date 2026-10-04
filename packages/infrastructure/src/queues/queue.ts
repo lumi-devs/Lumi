@@ -38,7 +38,7 @@ export class JobQueue<T = unknown> implements IJobQueue<T> {
   public async addBulk(
     jobs: Array<{ name: string; data: T; opts?: QueueJobOptions }>,
   ): Promise<any[]> {
-    return this.#queue.addBulk(jobs as any);
+    return this.#queue.addBulk(jobs);
   }
 
   public async getJob(id: string): Promise<any> {
