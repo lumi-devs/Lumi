@@ -24,10 +24,30 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
     const { client, redis, logger } = this.container;
 
     const cluster = getClusterName() ?? DefaultClusterName;
+    const shardIds = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
+
+    // Push pre-ready buffered startup logs to each shard's Redis log ring
+    const initialLogs = PinoSapphireLogger.getBufferedLogs();
+    for (const id of shardIds) {
+      const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+      for (const entry of initialLogs) {
+        void redis.rpush(key, JSON.stringify(entry));
+      }
+      const shard = client.ws.shards.get(id);
+      const readyMsg = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "info",
+        message: `[Shard ${id}] Gateway connected and ready (status: ${shard ? Status[shard.status] : "Ready"}, ${client.guilds.cache.size} guilds cached)`,
+      });
+      void redis.rpush(key, readyMsg);
+      void redis.ltrim(key, -100, -1);
+      void redis.expire(key, 86400);
+    }
+
     this.#removeLogListener = PinoSapphireLogger.addListener((entry) => {
-      const shardIds = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
+      const currentShards = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
       const raw = JSON.stringify(entry);
-      for (const id of shardIds) {
+      for (const id of currentShards) {
         const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
         void redis
           .rpush(key, raw)
@@ -37,6 +57,58 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
           })
           .catch(() => {});
       }
+    });
+
+    client.on("shardDisconnect", (event, id) => {
+      const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+      void redis.rpush(
+        key,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: "warn",
+          message: `[Shard ${id}] Disconnected from Discord gateway (code: ${event.code}, reason: ${event.reason || "unknown"})`,
+        }),
+      );
+      void redis.ltrim(key, -100, -1);
+    });
+
+    client.on("shardReconnecting", (id) => {
+      const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+      void redis.rpush(
+        key,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: "info",
+          message: `[Shard ${id}] Reconnecting to Discord gateway...`,
+        }),
+      );
+      void redis.ltrim(key, -100, -1);
+    });
+
+    client.on("shardResume", (id, replayedEvents) => {
+      const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+      void redis.rpush(
+        key,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: "info",
+          message: `[Shard ${id}] Resumed gateway session (${replayedEvents} events replayed)`,
+        }),
+      );
+      void redis.ltrim(key, -100, -1);
+    });
+
+    client.on("shardError", (error, id) => {
+      const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+      void redis.rpush(
+        key,
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          level: "error",
+          message: `[Shard ${id}] Gateway error: ${error.message || String(error)}`,
+        }),
+      );
+      void redis.ltrim(key, -100, -1);
     });
 
     const sample = (): ShardTelemetrySample[] => {
