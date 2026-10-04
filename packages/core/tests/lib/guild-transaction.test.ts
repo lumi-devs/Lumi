@@ -65,7 +65,6 @@ describe("GuildWriteTransaction", () => {
     });
     expect(container.db.config.invalidateGuildSettings).toHaveBeenCalledWith(
       "g-1",
-      true,
     );
     expect(txn.locking).toBe(false);
   });

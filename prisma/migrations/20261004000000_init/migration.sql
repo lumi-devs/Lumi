@@ -1,14 +1,3 @@
-=========================================
-  Lumi Multi-Platform Dev Shell (Flake)  
-=========================================
-  Bun:        1.4.2
-  Node:       v24.20.0
-  Git:        git version 2.55.0
-  GitHub CLI: gh version 2.101.0 (nixpkgs)
-  jq:         jq-1.8.2
-  Turbo:      2.11.3
-=========================================
-◇ injected env (45) from .env // tip: ⌁ auth for agents [www.vestauth.com]
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
