@@ -207,10 +207,6 @@ export async function handleSseRequest(req: Request): Promise<Response> {
         guildId,
         queued: 0,
         send: (chunk) => {
-          if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-            void close();
-            return;
-          }
           controller.enqueue(encoder.encode(chunk));
         },
         close,

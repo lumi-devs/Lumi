@@ -325,7 +325,8 @@ export class MockModelDelegate {
 
   public create = async (args: { data: Rec; select?: Rec }) => {
     await tick();
-    const record = { ...args.data };
+    const id = (args.data as any)?.id ?? `mock-${Math.random().toString(36).slice(2, 9)}`;
+    const record = { id, ...args.data };
     this.rows.push(record);
     return applySelect({ ...record }, args.select);
   };

@@ -133,4 +133,46 @@ describe("withIdempotency", () => {
     await sleep(50);
     expect(redis.pexpire.mock.calls.length).toBe(callsAtCompletion);
   });
+
+  it("uses explicit idempotencyKey when provided instead of hashing input", async () => {
+    const fn = vi.fn().mockResolvedValue({ status: "saved" });
+
+    const first = await withIdempotency(
+      "test.mutation",
+      GUILD_ID,
+      TIMEOUT_MS,
+      { title: "Version 1" },
+      fn,
+      undefined,
+      "custom-idem-uuid-1",
+    );
+    expect(first).toEqual({ status: "saved" });
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    // Call again with DIFFERENT input but SAME idempotencyKey
+    const second = await withIdempotency(
+      "test.mutation",
+      GUILD_ID,
+      TIMEOUT_MS,
+      { title: "Version 2 (modified)" },
+      fn,
+      undefined,
+      "custom-idem-uuid-1",
+    );
+    expect(second).toEqual({ status: "saved" });
+    // Handled via cached result; function not called again
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    // Different idempotencyKey invokes the function again
+    await withIdempotency(
+      "test.mutation",
+      GUILD_ID,
+      TIMEOUT_MS,
+      { title: "Version 3" },
+      fn,
+      undefined,
+      "custom-idem-uuid-2",
+    );
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });
