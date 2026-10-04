@@ -51,6 +51,8 @@ interface ShardTelemetry {
   pid: number;
   /** Wall-clock of this shard's last Ready/Resume event (ms); null if it hasn't happened yet. */
   lastReadyAt: number | null;
+  /** Recent in-memory/Redis buffered log entries for this shard. */
+  logs?: Array<{ timestamp: string; level: string; message: string }>;
 }
 
 /** Publish interval (ms) callers default to when they don't override it. */
@@ -223,6 +225,32 @@ export async function readClusterShards(
     }
   }
   rows.sort((a, b) => a.shardId - b.shardId);
+
+  if (rows.length > 0) {
+    try {
+      const rawLogs = await Promise.all(
+        rows.map((r) =>
+          redis.lrange(`lumi:cluster:${clusterName}:shardlogs:${r.shardId}`, -50, -1),
+        ),
+      );
+      for (let i = 0; i < rows.length; i++) {
+        const list = rawLogs[i] ?? [];
+        rows[i]!.logs = list.map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return {
+              timestamp: new Date().toISOString(),
+              level: "info",
+              message: line,
+            };
+          }
+        });
+      }
+    } catch {
+      // Redis lrange failure shouldn't prevent shard telemetry from returning
+    }
+  }
 
   const shardCount = rows.reduce((max, r) => Math.max(max, r.shardCount ?? 0), 0);
 

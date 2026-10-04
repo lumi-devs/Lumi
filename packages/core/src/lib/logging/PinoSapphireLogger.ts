@@ -37,7 +37,20 @@ function resolveFormat(): "pretty" | "json" {
   throw new Error(`[ENV] Invalid LOG_FORMAT=${raw} (expected pretty, json)`);
 }
 
+export type ShardLogEntry = {
+  timestamp: string;
+  level: "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+  message: string;
+};
+
 export class PinoSapphireLogger implements ILogger {
+  public static readonly listeners = new Set<(entry: ShardLogEntry) => void>();
+
+  public static addListener(listener: (entry: ShardLogEntry) => void): () => void {
+    PinoSapphireLogger.listeners.add(listener);
+    return () => PinoSapphireLogger.listeners.delete(listener);
+  }
+
   public readonly pino: PinoLogger;
   public level: LogLevel;
 
@@ -67,6 +80,25 @@ export class PinoSapphireLogger implements ILogger {
       this.pino[method](values[0]);
     } else {
       this.pino[method]({ values });
+    }
+
+    if (PinoSapphireLogger.listeners.size > 0) {
+      const rawMsg =
+        typeof values[0] === "string"
+          ? values[0]
+          : typeof values[0] === "object" && values[0] !== null && "msg" in values[0]
+            ? String((values[0] as { msg: unknown }).msg)
+            : JSON.stringify(values[0]);
+      const entry: ShardLogEntry = {
+        timestamp: new Date().toISOString(),
+        level: method,
+        message: rawMsg,
+      };
+      for (const listener of PinoSapphireLogger.listeners) {
+        try {
+          listener(entry);
+        } catch {}
+      }
     }
   }
 

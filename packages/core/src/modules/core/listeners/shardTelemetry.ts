@@ -9,6 +9,7 @@ import {
   getLastReadyAt,
   type ShardTelemetrySample,
 } from "#lib/sharding/shard-telemetry.js";
+import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import { getClusterName, getConsumerId } from "#lib/env.js";
 
 const BytesPerMb = 1024 * 1024;
@@ -16,10 +17,27 @@ const BytesPerMb = 1024 * 1024;
 @ApplyOptions<Listener.Options>({ event: Events.ClientReady })
 export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> {
   #publisher?: ShardTelemetryPublisher;
+  #removeLogListener?: () => void;
 
   public run() {
     if (this.#publisher) return;
     const { client, redis, logger } = this.container;
+
+    const cluster = getClusterName() ?? DefaultClusterName;
+    this.#removeLogListener = PinoSapphireLogger.addListener((entry) => {
+      const shardIds = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
+      const raw = JSON.stringify(entry);
+      for (const id of shardIds) {
+        const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
+        void redis
+          .rpush(key, raw)
+          .then(() => {
+            void redis.ltrim(key, -100, -1);
+            void redis.expire(key, 86400);
+          })
+          .catch(() => {});
+      }
+    });
 
     const sample = (): ShardTelemetrySample[] => {
       const guildsByShard = new Map<number, number>();
@@ -64,6 +82,7 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
   }
 
   public override onUnload() {
+    this.#removeLogListener?.();
     void this.#publisher?.stop();
     return super.onUnload();
   }

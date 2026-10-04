@@ -280,6 +280,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
         pid: s.pid,
         lastReadyAt: s.lastReadyAt === null ? null : new Date(s.lastReadyAt).toISOString(),
         stale: isShardStale(s, now, StaleAfterMs),
+        logs: s.logs ?? [],
       })),
       missingShardIds: snapshot.missingShardIds,
     };
