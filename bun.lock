@@ -135,7 +135,6 @@
         "discord-api-types": "^0.38.55",
         "discord.js": "^14.27.0",
         "i18next": "^26.4.2",
-        "i18next": "^26.4.2",
         "iovalkey": "^0.4.0",
         "pg": "^8.23.0",
         "semver": "^7.8.5",
