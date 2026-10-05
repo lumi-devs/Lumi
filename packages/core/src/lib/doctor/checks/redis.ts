@@ -1,14 +1,14 @@
-import { Redis, Cluster } from "ioredis";
+import Valkey, { Cluster } from "iovalkey";
 import { redisConnectionOptions } from "#lib/database/redis.js";
 import type { RedisClient as RedisConnection } from "#lib/database/cluster-safe.js";
 import { getRedisClusterNodes, getRedisClusterScaleReads } from "#lib/env.js";
 import { runCheck } from "#lib/doctor/util.js";
 import type { DoctorCheckResult } from "#lib/doctor/types.js";
 
-export const RedisCheckName = "redis";
+export const RedisCheckName = "valkey";
 
 /**
- * No minimum Redis version is documented anywhere in this codebase (no
+ * No minimum Valkey/Redis version is documented anywhere in this codebase (no
  * `agents/` doc, no comment near `#lib/database/redis.js` pins one) - the
  * version is reported for visibility only, never used to warn/fail.
  */
@@ -36,7 +36,7 @@ function defaultGetClient(): RedisProbeClient {
         scaleReads: getRedisClusterScaleReads(),
         redisOptions: { ...redisConnectionOptions(), maxRetriesPerRequest: 1 },
       })
-    : new Redis({
+    : new Valkey({
         ...redisConnectionOptions(),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
@@ -67,17 +67,23 @@ export async function checkRedis(
         name: RedisCheckName,
         status: "fail",
         detail: `PING failed: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Check REDIS_HOST/REDIS_PORT (or REDIS_SENTINELS) and that Redis is reachable.",
+        hint: "Check VALKEY_URL/VALKEY_HOST/VALKEY_PORT (or VALKEY_SENTINELS) and that Valkey is reachable.",
       };
     }
 
     let version = "unknown";
     try {
       const info = await client.info("server");
-      version = parseInfoField(info, "redis_version") ?? "unknown";
+      const valkeyVersion = parseInfoField(info, "valkey_version");
+      const redisVersion = parseInfoField(info, "redis_version");
+      if (valkeyVersion) {
+        version = `Valkey ${valkeyVersion}`;
+      } else if (redisVersion) {
+        version = `Redis ${redisVersion}`;
+      }
     } catch {
       // PING already succeeded - INFO failing (e.g. a restricted ACL) is
-      // worth surfacing but shouldn't turn a reachable Redis into a failure.
+      // worth surfacing but shouldn't turn a reachable server into a failure.
       return {
         name: RedisCheckName,
         status: "warn",
@@ -90,7 +96,7 @@ export async function checkRedis(
     return {
       name: RedisCheckName,
       status: "ok",
-      detail: `Connected to Redis ${version}.`,
+      detail: `Connected to ${version}.`,
     };
   });
 }

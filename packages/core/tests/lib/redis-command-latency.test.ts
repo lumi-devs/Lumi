@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { Command } from "ioredis";
+import { Command } from "iovalkey";
 import { redisCommandDuration } from "@lumi/observability";
 import { instrumentRedisLatency } from "#lib/database/redis.js";
 

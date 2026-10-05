@@ -20,7 +20,7 @@ export const SCHEDULED_TASKS_QUEUE_NAME = "scheduled-tasks";
 export function getScheduledTasksConnectionOptions(): ConnectionOptions {
   return {
     ...parseRedisConnectionOption(),
-    db: envParseInteger("REDIS_TASK_DB", 1),
+    db: envParseInteger("VALKEY_TASK_DB", 1),
   };
 }
 

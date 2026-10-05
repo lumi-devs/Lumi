@@ -1,4 +1,4 @@
-import { Redis, Cluster, Command, type RedisOptions } from "ioredis";
+import Valkey, { Cluster, Command, type RedisOptions } from "iovalkey";
 import { delSafe, type RedisClient } from "../database/cluster-safe.js";
 import type { CacheLogger, RedisConnectionConfig, ResyncContext } from "./types.js";
 
@@ -141,8 +141,33 @@ export const RedisTTL = {
 export function redisConnectionOptions(
   config?: RedisConnectionConfig,
 ): RedisOptions {
-  const envSentinels = config?.sentinels ?? process.env.REDIS_SENTINELS;
-  const envPassword = config?.password ?? process.env.REDIS_PASSWORD ?? "";
+  const url = config?.url ?? process.env.VALKEY_URL;
+  if (url && (url.startsWith("redis://") || url.startsWith("rediss://"))) {
+    try {
+      const parsed = new URL(url);
+      const isTls = parsed.protocol === "rediss:";
+      const host = parsed.hostname || "localhost";
+      const port = parsed.port ? parseInt(parsed.port, 10) : 6379;
+      const username = parsed.username ? decodeURIComponent(parsed.username) : undefined;
+      const password = parsed.password ? decodeURIComponent(parsed.password) : undefined;
+      const dbMatch = parsed.pathname.match(/^\/(\d+)$/);
+      const db = dbMatch ? parseInt(dbMatch[1]!, 10) : undefined;
+
+      return {
+        host,
+        port,
+        ...(username && { username }),
+        ...(password && { password }),
+        ...(db !== undefined && { db }),
+        ...(isTls && { tls: {} }),
+      };
+    } catch {
+      // Fall through to standard option parsing if URL parsing fails
+    }
+  }
+
+  const envSentinels = config?.sentinels ?? process.env.VALKEY_SENTINELS;
+  const envPassword = config?.password ?? process.env.VALKEY_PASSWORD ?? "";
   const password = envPassword.length > 0 ? envPassword : undefined;
 
   if (envSentinels) {
@@ -153,32 +178,33 @@ export function redisConnectionOptions(
       .map((entry) => {
         const [host, port] = entry.split(":");
         if (!host || !port) {
-          throw new Error(`[Redis] Invalid REDIS_SENTINELS entry: ${entry}`);
+          throw new Error(`[Valkey] Invalid VALKEY_SENTINELS entry: ${entry}`);
         }
         const portNum = Number(port);
         if (!Number.isFinite(portNum)) {
-          throw new Error(`[Redis] Invalid REDIS_SENTINELS port: ${entry}`);
+          throw new Error(`[Valkey] Invalid VALKEY_SENTINELS port: ${entry}`);
         }
         return { host, port: portNum };
       });
     if (sentinels.length === 0) {
-      throw new Error("[Redis] REDIS_SENTINELS is empty");
+      throw new Error("[Valkey] VALKEY_SENTINELS is empty");
     }
     const sentinelPassword =
-      config?.sentinelPassword ?? process.env.REDIS_SENTINEL_PASSWORD ?? undefined;
+      config?.sentinelPassword ?? process.env.VALKEY_SENTINEL_PASSWORD ?? undefined;
     return {
       sentinels,
-      name:
-        config?.sentinelName ?? process.env.REDIS_SENTINEL_NAME ?? "mymaster",
+      name: config?.sentinelName ?? process.env.VALKEY_SENTINEL_NAME ?? "mymaster",
       ...(password && { password }),
       ...(sentinelPassword && { sentinelPassword }),
     };
   }
 
-  const portVal = config?.port ?? (process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379);
+  const portVal =
+    config?.port ??
+    (process.env.VALKEY_PORT ? parseInt(process.env.VALKEY_PORT, 10) : 6379);
 
   return {
-    host: config?.host ?? process.env.REDIS_HOST ?? "localhost",
+    host: config?.host ?? process.env.VALKEY_HOST ?? "localhost",
     port: Number.isFinite(portVal) ? portVal : 6379,
     ...(password && { password }),
   };
@@ -194,6 +220,18 @@ export function parseRedisConnectionOption(
   };
 }
 
+const BLOCKING_COMMANDS = new Set([
+  "blpop",
+  "brpop",
+  "brpoplpush",
+  "blmove",
+  "bzpopmin",
+  "bzpopmax",
+  "xread",
+  "xreadgroup",
+  "wait",
+]);
+
 export function instrumentRedisLatency(
   client: RedisClient,
   onDuration?: (command: string, seconds: number) => void,
@@ -202,7 +240,7 @@ export function instrumentRedisLatency(
 
   const sendCommand = client.sendCommand.bind(client);
   client.sendCommand = (command: Command, stream?: unknown, node?: unknown) => {
-    if (Command.checkFlag("BLOCKING_COMMANDS", command.name)) {
+    if (command.name && BLOCKING_COMMANDS.has(command.name.toLowerCase())) {
       return sendCommand(command, stream as never, node as never);
     }
     const start = performance.now();
@@ -225,7 +263,7 @@ export function createRedisClient(
   options: CreateRedisClientOptions = {},
 ): RedisClient {
   const { config, logger, onDuration } = options;
-  const clusterNodesEnv = config?.clusterNodes ?? process.env.REDIS_CLUSTER_NODES;
+  const clusterNodesEnv = config?.clusterNodes ?? process.env.VALKEY_CLUSTER_NODES;
   const nodes = clusterNodesEnv
     ? clusterNodesEnv
         .split(",")
@@ -237,12 +275,17 @@ export function createRedisClient(
         })
     : null;
 
-  const cacheDbVal = config?.cacheDb ?? (process.env.REDIS_CACHE_DB ? parseInt(process.env.REDIS_CACHE_DB, 10) : 0);
+  const cacheDbVal =
+    config?.cacheDb ??
+    (process.env.VALKEY_CACHE_DB ? parseInt(process.env.VALKEY_CACHE_DB, 10) : 0);
 
   const client: RedisClient = nodes && nodes.length > 0
     ? new Cluster(nodes, {
         lazyConnect: true,
-        scaleReads: config?.clusterScaleReads ?? (process.env.REDIS_CLUSTER_SCALE_READS as "master" | "slave" | "all" | undefined) ?? "master",
+        scaleReads:
+          config?.clusterScaleReads ??
+          (process.env.VALKEY_CLUSTER_SCALE_READS as "master" | "slave" | "all" | undefined) ??
+          "master",
         slotsRefreshTimeout: 2000,
         clusterRetryStrategy: (times: number) =>
           Math.min(100 * Math.pow(2, times), 2000),
@@ -251,7 +294,7 @@ export function createRedisClient(
           maxRetriesPerRequest: 3,
         },
       })
-    : new Redis({
+    : new Valkey({
         ...redisConnectionOptions(config),
         db: Number.isFinite(cacheDbVal) ? cacheDbVal : 0,
         lazyConnect: true,
@@ -259,9 +302,9 @@ export function createRedisClient(
         enableReadyCheck: true,
       });
 
-  client.on("error", (err: unknown) => logger?.error?.("[Redis] Error:", err));
-  client.on("connect", () => logger?.debug?.("[Redis] Connected"));
-  client.on("reconnecting", () => logger?.warn?.("[Redis] Reconnecting..."));
+  client.on("error", (err: unknown) => logger?.error?.("[Valkey] Error:", err));
+  client.on("connect", () => logger?.debug?.("[Valkey] Connected"));
+  client.on("reconnecting", () => logger?.warn?.("[Valkey] Reconnecting..."));
 
   return instrumentRedisLatency(client, onDuration);
 }

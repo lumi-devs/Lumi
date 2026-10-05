@@ -7,10 +7,10 @@
 // rather than lingering as a stale "Ready", so a shard with no row is unambiguously
 // a shard nobody is running.
 
-import type { Cluster, Redis } from "ioredis";
+import type { Cluster, Redis, Valkey } from "iovalkey";
 
-/** Either topology - callers may run Redis standalone, Sentinel, or Cluster. */
-type RedisClient = Redis | Cluster;
+/** Either topology - callers may run Valkey/Redis standalone, Sentinel, or Cluster. */
+type RedisClient = Valkey | Redis | Cluster;
 import { tryParseJSON } from "@sapphire/utilities";
 
 function isClusterClient(redis: RedisClient): boolean {

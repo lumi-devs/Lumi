@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
 import { container } from "@sapphire/framework";
-import type { Redis } from "ioredis";
+import type Valkey from "iovalkey";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { withIdempotency } from "#lib/rpc/idempotency.js";
 import { RedisTTL } from "#lib/database/redis.js";
@@ -13,11 +13,11 @@ function uniqueGuildId(): string {
 }
 
 integrationDescribe("withIdempotency (real Redis)", () => {
-  let redis: Redis;
+  let redis: Valkey;
 
   beforeAll(() => {
     redis = createTestRedis();
-    (container as unknown as { redis: Redis }).redis = redis;
+    (container as unknown as { redis: Valkey }).redis = redis;
   });
 
   afterEach(async () => {

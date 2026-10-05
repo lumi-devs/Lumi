@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import type { Redis } from "ioredis";
+import type Valkey from "iovalkey";
 import { acquireRedisLock, type RedisLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { RedisKeys } from "#lib/database/redis.js";
@@ -8,11 +8,11 @@ import { createTestRedis, deleteByPrefix, integrationDescribe } from "./setup.js
 const TestLockPrefix = "lumi:test:int:lock:";
 
 function uniqueLockKey(): string {
-  return `${TestLockPrefix}${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
+  return `${TestLockPrefix}${Date.now()}:${Math.random().toString(36).slice(2)}:`;
 }
 
-integrationDescribe("scheduler-lock (real Redis)", () => {
-  let redis: Redis;
+integrationDescribe("scheduler-lock (real redis)", () => {
+  let redis: Valkey;
   let held: RedisLock[] = [];
 
   beforeAll(() => {

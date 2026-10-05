@@ -1,15 +1,15 @@
-import { Cluster, type ChainableCommander, type Redis } from "ioredis";
+import Valkey, { Cluster, type ChainableCommander } from "iovalkey";
 import calculateSlot from "cluster-key-slot";
 
 /**
- * Either topology. Redis Cluster rejects any single command spanning hash
+ * Either topology. Valkey/Redis Cluster rejects any single command spanning hash
  * slots, so multi-key operations must be grouped before they are issued -
  * the helpers below do that and degrade to a single round trip on standalone.
  */
-export type RedisClient = Redis | Cluster;
+export type RedisClient = Valkey | Cluster;
 
-export function isCluster(redis: RedisClient): redis is Cluster {
-  return redis instanceof Cluster;
+export function isCluster(client: RedisClient): client is Cluster {
+  return client instanceof Cluster;
 }
 
 function groupBySlot(keys: readonly string[]): Map<number, string[]> {
@@ -58,7 +58,7 @@ export async function scanKeysSafe(
   pattern: string,
   count = 100,
 ): Promise<string[]> {
-  const scanNode = async (node: Redis): Promise<string[]> => {
+  const scanNode = async (node: Valkey): Promise<string[]> => {
     const found: string[] = [];
     let cursor = "0";
     do {

@@ -50,7 +50,7 @@ export function installContainerServices(
   const ownedEventBus = createEventBus({
     redis: {
       ...redisConnectionOptions(),
-      db: envParseInteger("REDIS_CACHE_DB", 0),
+      db: envParseInteger("VALKEY_CACHE_DB", 0),
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
     maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),

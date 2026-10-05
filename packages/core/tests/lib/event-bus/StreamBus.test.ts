@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
+import { StreamBus } from "#lib/event-bus/StreamBus.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now),
 // not the setInterval/setTimeout queue, so there's no advanceTimersByTimeAsync
 // equivalent here — waits below use the real clock instead.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe("RedisStreamsBus", () => {
+describe("StreamBus", () => {
   let publisherMock: any;
   let subscriberMock: any;
   let logSpy: any;
@@ -39,7 +39,7 @@ describe("RedisStreamsBus", () => {
 
 
   const createBus = (opts = {}) => {
-    return new RedisStreamsBus({
+    return new StreamBus({
       publisher: publisherMock,
       subscriber: subscriberMock,
       log: logSpy,
@@ -92,7 +92,7 @@ describe("RedisStreamsBus", () => {
       await bus.close();
 
       await expect(bus.publish("test-stream", {})).rejects.toThrow(
-        "RedisStreamsBus closed",
+        "StreamBus closed",
       );
     });
 
@@ -425,7 +425,7 @@ describe("RedisStreamsBus", () => {
         expect.objectContaining({
           stream: "stream-1",
           id: "4000-0",
-          err: "Error: RedisStreamsBus: message missing `b` field",
+          err: "Error: StreamBus: message missing `b` field",
         }),
       );
     });

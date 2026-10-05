@@ -4,7 +4,7 @@ import { createEventBus } from '#lib/event-bus/factory.js';
 const mockQuit = vi.fn().mockResolvedValue('OK');
 const mockInstances: any[] = [];
 
-vi.mock('ioredis', () => {
+vi.mock('iovalkey', () => {
   class MockRedis {
     opts: any;
     xadd = vi.fn().mockResolvedValue('1-0');
@@ -20,16 +20,16 @@ vi.mock('ioredis', () => {
       mockInstances.push(this);
     }
   }
-  return { Redis: MockRedis, default: MockRedis };
+  return { Valkey: MockRedis, Redis: MockRedis, default: MockRedis };
 });
 
-describe('RedisStreamsBus & createEventBus Tests', () => {
+describe('StreamBus & createEventBus Tests', () => {
   beforeEach(() => {
     mockInstances.length = 0;
     mockQuit.mockClear();
   });
 
-  it('createEventBus initializes RedisStreamsBus with dedicated publisher/subscriber connections', () => {
+  it('createEventBus initializes StreamBus with dedicated publisher/subscriber connections', () => {
     const owned = createEventBus({
       redis: { host: 'localhost', port: 6379, lazyConnect: true },
     });

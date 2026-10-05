@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { createEventBus } from "#lib/event-bus/factory.js";
-import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
+import { StreamBus } from "#lib/event-bus/StreamBus.js";
 
 const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockInstances: any[] = [];
 
-vi.mock("ioredis", () => {
+vi.mock("iovalkey", () => {
   class MockRedis {
     opts: any;
     xadd = vi.fn().mockResolvedValue("1-0");
@@ -21,7 +21,7 @@ vi.mock("ioredis", () => {
       mockInstances.push(this);
     }
   }
-  return { Redis: MockRedis, default: MockRedis };
+  return { Valkey: MockRedis, Redis: MockRedis, default: MockRedis };
 });
 
 describe("createEventBus", () => {
@@ -38,7 +38,7 @@ describe("createEventBus", () => {
     );
   });
 
-  it("initializes OwnedEventBus with RedisStreamsBus and dedicated ioredis connections", () => {
+  it("initializes OwnedEventBus with StreamBus and dedicated Valkey connections", () => {
     mockInstances.length = 0;
     const onStatsSpy = vi.fn();
     const logSpy = vi.fn();
@@ -54,7 +54,7 @@ describe("createEventBus", () => {
       log: logSpy,
     });
 
-    expect(owned.bus).toBeInstanceOf(RedisStreamsBus);
+    expect(owned.bus).toBeInstanceOf(StreamBus);
     expect(owned.publisher).toBeDefined();
 
     expect(mockInstances).toHaveLength(2);

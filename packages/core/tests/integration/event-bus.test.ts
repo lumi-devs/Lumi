@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import type { Redis } from "ioredis";
+import type Valkey from "iovalkey";
 import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
 import type { BusMessage } from "#lib/event-bus/types.js";
 import { createTestRedis, integrationDescribe, parseTestRedisOptions } from "./setup.js";
@@ -12,7 +12,7 @@ function uniqueStream(): string {
 
 integrationDescribe("RedisStreamsBus (real Redis)", () => {
   let owned: OwnedEventBus;
-  let redis: Redis;
+  let redis: Valkey;
   const streams: string[] = [];
   const stops: Array<() => Promise<void>> = [];
 

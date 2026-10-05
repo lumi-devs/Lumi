@@ -19,6 +19,7 @@ export interface ICacheStore {
 }
 
 export interface RedisConnectionConfig {
+  url?: string;
   host?: string;
   port?: number;
   password?: string;

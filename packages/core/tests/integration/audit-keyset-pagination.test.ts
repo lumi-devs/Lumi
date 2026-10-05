@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import type { Redis } from "ioredis";
+import type Valkey from "iovalkey";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import { createTestRedis, integrationDescribe, requireTestDatabaseUrl } from "./setup.js";
@@ -26,7 +26,7 @@ function uniqueGuildId(): string {
 integrationDescribe("Audit log keyset pagination (real Postgres)", () => {
   let pool: Pool;
   let prisma: DatabaseClient;
-  let redis: Redis;
+  let redis: Valkey;
   let db: DatabaseService;
   const guildIds: string[] = [];
 

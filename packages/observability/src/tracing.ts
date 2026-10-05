@@ -83,7 +83,11 @@ export function startTracing(opts: TracingOptions): boolean {
           instrumentations: [
             new http.HttpInstrumentation(),
             new pg.PgInstrumentation(),
-            new ioredis.IORedisInstrumentation(),
+            new ioredis.IORedisInstrumentation({
+              requestHook: (span) => {
+                span.setAttribute("db.system.name", "valkey");
+              },
+            }),
           ],
         });
       })

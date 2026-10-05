@@ -39,6 +39,6 @@
     "@prisma/client": "^7.10.0",
     "bullmq": "^5.58.7",
     "cluster-key-slot": "^1.1.2",
-    "ioredis": "^6.0.0"
+    "iovalkey": "^0.4.0"
   }
 }

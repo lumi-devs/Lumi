@@ -16,7 +16,7 @@
 // idempotent handlers - handlers must dedupe on a payload-level identifier, not the
 // stream id (redelivery yields a new one).
 
-import type { Redis } from "ioredis";
+import type Valkey from "iovalkey";
 import type {
   BusMessage,
   ConsumeOptions,
@@ -37,11 +37,11 @@ export interface StreamStats {
   dlqLength: number;
 }
 
-export interface RedisStreamsBusOptions {
-  /** Dedicated ioredis connection for *publishes*. Must NOT be shared with the consumer connection. */
-  publisher: Redis;
-  /** Dedicated ioredis connection for *blocking reads*. ioredis multiplexes commands, but XREADGROUP BLOCK blocks the socket. */
-  subscriber: Redis;
+export interface StreamBusOptions {
+  /** Dedicated Valkey connection for *publishes*. Must NOT be shared with the consumer connection. */
+  publisher: Valkey;
+  /** Dedicated Valkey connection for *blocking reads*. iovalkey multiplexes commands, but XREADGROUP BLOCK blocks the socket. */
+  subscriber: Valkey;
   /** Default per-stream cap. ~ is approximate (cheap); use 100k unless told otherwise. */
   defaultMaxLen?: number;
   /** Optional structured logger. */
@@ -71,34 +71,34 @@ export interface RedisStreamsBusOptions {
   statsIntervalMs?: number;
 }
 
-// ioredis types the stream commands (XREADGROUP/XAUTOCLAIM/XPENDING) with a
+// iovalkey types the stream commands (XREADGROUP/XAUTOCLAIM/XPENDING) with a
 // pile of overloads that don't accept a spread `unknown[]`, so calling them
 // dynamically needs a cast. Centralize that one unsafe shape here and cast each
 // connection exactly once (pubStream/subStream) instead of at every call site.
-interface RedisStreamCommands {
+interface StreamCommands {
   xreadgroup(...args: unknown[]): Promise<unknown>;
   xautoclaim(...args: unknown[]): Promise<unknown>;
   xpending(...args: unknown[]): Promise<unknown>;
 }
 
-export class RedisStreamsBus implements EventBus {
-  private readonly publisher: Redis;
-  private readonly subscriber: Redis;
+export class StreamBus implements EventBus {
+  private readonly publisher: Valkey;
+  private readonly subscriber: Valkey;
   /** Typed view of the publisher connection for the awkwardly-overloaded stream commands. */
-  private readonly pubStream: RedisStreamCommands;
+  private readonly pubStream: StreamCommands;
   private readonly defaultMaxLen: number;
   private readonly knownGroups = new Set<string>();
-  private readonly log: NonNullable<RedisStreamsBusOptions["log"]>;
+  private readonly log: NonNullable<StreamBusOptions["log"]>;
   private readonly maxDeliveries: number;
   private readonly claimMinIdleMs: number;
   private readonly claimIntervalMs: number;
-  private readonly onStats: RedisStreamsBusOptions["onStats"];
+  private readonly onStats: StreamBusOptions["onStats"];
   private readonly statsIntervalMs: number;
   private readonly timers = new Set<NodeJS.Timeout>();
   private readonly inFlight = new Set<string>();
   private closed = false;
 
-  public constructor(opts: RedisStreamsBusOptions) {
+  public constructor(opts: StreamBusOptions) {
     this.publisher = opts.publisher;
     this.subscriber = opts.subscriber;
     this.pubStream = this.publisher;
@@ -116,7 +116,7 @@ export class RedisStreamsBus implements EventBus {
     body: T,
     opts?: PublishOptions,
   ): Promise<string> {
-    if (this.closed) throw new Error("RedisStreamsBus closed");
+    if (this.closed) throw new Error("StreamBus closed");
     const maxLen = opts?.maxLen ?? this.defaultMaxLen;
     const id = await this.publisher.xadd(
       stream,
@@ -145,7 +145,7 @@ export class RedisStreamsBus implements EventBus {
     // Each consume() call gets its own connection - XREADGROUP BLOCK holds
     // the socket, and sharing one across concurrent consume() loops would
     // serialize them behind each other.
-    const readConn = this.subscriber.duplicate() as unknown as RedisStreamCommands & {
+    const readConn = this.subscriber.duplicate() as unknown as StreamCommands & {
       quit(): Promise<string>;
       disconnect(): void;
     };
@@ -550,5 +550,5 @@ function decodeBody<T>(fields: string[]): T {
   for (let i = 0; i < fields.length; i += 2) {
     if (fields[i] === "b") return JSON.parse(fields[i + 1]!) as T;
   }
-  throw new Error("RedisStreamsBus: message missing `b` field");
+  throw new Error("StreamBus: message missing `b` field");
 }

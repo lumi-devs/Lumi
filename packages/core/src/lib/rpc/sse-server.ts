@@ -47,13 +47,13 @@ interface SharedSubscription {
 
 /**
  * One shared consumer group per apps/api process, not one per SSE
- * connection: `RedisStreamsBus.consume()` opens a dedicated blocking Redis
- * connection per call (see `RedisStreamsBus.ts`'s `readConn = this.subscriber.duplicate()`),
- * so a per-connection group would mean one Redis connection per open
+ * connection: `StreamBus.consume()` opens a dedicated blocking Valkey
+ * connection per call (see `StreamBus.ts`'s `readConn = this.subscriber.duplicate()`),
+ * so a per-connection group would mean one connection per open
  * dashboard tab. Started lazily on the first connection
  * (`ensureSubscriptionStarted`) and torn down once the last one closes
  * (`releaseSubscriptionIfIdle`), with events fanned out in-memory via
- * `connectionsByGuild` instead of one Redis read per tab.
+ * `connectionsByGuild` instead of one read per tab.
  */
 let subscription: SharedSubscription | null = null;
 let starting: Promise<void> | null = null;

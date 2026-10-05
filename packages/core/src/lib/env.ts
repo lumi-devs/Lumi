@@ -262,7 +262,7 @@ export const getPostgresAppName = (): string =>
   `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
 
 export function getRedisClusterNodes(): { host: string; port: number }[] | null {
-  const raw = process.env["REDIS_CLUSTER_NODES"];
+  const raw = process.env["VALKEY_CLUSTER_NODES"];
   if (!raw) return null;
   const nodes = raw
     .split(",")
@@ -276,7 +276,7 @@ export function getRedisClusterNodes(): { host: string; port: number }[] | null 
 }
 
 export const getRedisClusterScaleReads = (): "all" | "slave" | "master" =>
-  (process.env["REDIS_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
+  (process.env["VALKEY_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
 
 export function getWriteBucket(streamBuckets = 16): number {
   const shards = process.env["SHARDS"];

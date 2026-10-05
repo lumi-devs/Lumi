@@ -11,7 +11,7 @@ import {
   type ResyncContext,
 } from "@lumi/infrastructure/cache";
 import type { RedisClient } from "@lumi/infrastructure/database";
-import type { RedisOptions } from "ioredis";
+import type { RedisOptions } from "iovalkey";
 import { redisCommandDuration } from "@lumi/observability";
 
 export {

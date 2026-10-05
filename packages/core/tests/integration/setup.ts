@@ -1,5 +1,5 @@
 import { describe } from "bun:test";
-import { Redis, type RedisOptions } from "ioredis";
+import Valkey, { type RedisOptions } from "iovalkey";
 
 /**
  * Real-service integration suite guard.
@@ -42,9 +42,9 @@ export function requireTestRedisUrl(): string {
   return testRedisUrl;
 }
 
-/** Dedicated ioredis connection to the throwaway test Redis (its own DB index, per the connection URL). */
-export function createTestRedis(): Redis {
-  return new Redis(requireTestRedisUrl(), { maxRetriesPerRequest: 2 });
+/** Dedicated iovalkey connection to the throwaway test Redis (its own DB index, per the connection URL). */
+export function createTestRedis(): Valkey {
+  return new Valkey(requireTestRedisUrl(), { maxRetriesPerRequest: 2 });
 }
 
 /** `RedisOptions` form of the same URL, for APIs (e.g. `createEventBus`) that take options rather than a client. */
@@ -67,7 +67,7 @@ export function parseTestRedisOptions(): RedisOptions {
  * against a shared test Redis DB since it only ever touches keys this suite
  * itself could have written.
  */
-export async function scanKeys(redis: Redis, pattern: string): Promise<string[]> {
+export async function scanKeys(redis: Valkey, pattern: string): Promise<string[]> {
   const found: string[] = [];
   let cursor = "0";
   do {
@@ -79,7 +79,7 @@ export async function scanKeys(redis: Redis, pattern: string): Promise<string[]>
 }
 
 /** Deletes every key under `prefix` (see `scanKeys`). */
-export async function deleteByPrefix(redis: Redis, prefix: string): Promise<void> {
+export async function deleteByPrefix(redis: Valkey, prefix: string): Promise<void> {
   const keys = await scanKeys(redis, `${prefix}*`);
   if (keys.length) await redis.del(...keys);
 }
