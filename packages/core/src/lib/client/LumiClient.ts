@@ -1,6 +1,6 @@
 import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
-import { envParseString, getConsumerId } from "#lib/env.js";
+import { envParseString, getConsumerId, getDefaultPrefix } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
@@ -155,14 +155,14 @@ export class LumiClient extends SapphireClient {
       const globalConfig = await container.db.global
         .getGlobalConfig()
         .catch(() => null);
-      const envFallback = envParseString("DEFAULT_PREFIX", ".");
+      const envFallback = getDefaultPrefix();
       return [globalConfig?.defaultPrefix ?? envFallback];
     }
 
     const globalConfig = await container.db.global
       .getGlobalConfig()
       .catch(() => null);
-    const envFallback = envParseString("DEFAULT_PREFIX", ".");
+    const envFallback = getDefaultPrefix();
     return globalConfig?.defaultPrefix ?? envFallback;
   };
 

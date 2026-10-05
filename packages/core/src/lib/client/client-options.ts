@@ -3,7 +3,7 @@ import {
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
 } from "#lib/client/scheduled-tasks-queue.js";
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { envParseInteger, envParseString } from "#lib/env.js";
+import { envParseInteger, envParseString, getDefaultPrefix } from "#lib/env.js";
 import { buildI18nOptions } from "#lib/i18n/index.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import { BotConfig } from "#lib/utilities/config.js";
@@ -93,7 +93,7 @@ export function buildClientOptions(): ClientOptions {
     loadDefaultErrorListeners: false,
     loadScheduledTaskErrorListeners: false,
     baseUserDirectory: new URL("../../", import.meta.url),
-    defaultPrefix: envParseString("DEFAULT_PREFIX", "."),
+    defaultPrefix: getDefaultPrefix(),
     logger: {
       instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi")),
     },

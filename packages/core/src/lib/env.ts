@@ -27,6 +27,12 @@ export const getNodeEnv = (): string => process.env["NODE_ENV"] || "development"
 export const isDevelopment = (): boolean => getNodeEnv() === "development";
 export const isProduction = (): boolean => getNodeEnv() === "production";
 
+export const DEFAULT_BOT_PREFIX = ".";
+
+export function getDefaultPrefix(): string {
+  return envParseString("DEFAULT_PREFIX", DEFAULT_BOT_PREFIX);
+}
+
 /**
  * Fails fast on every missing key at once, instead of the first caller of
  * `envParseString`/`envParseInteger` for that key surfacing it mid-request.
