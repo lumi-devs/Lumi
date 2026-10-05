@@ -155,14 +155,14 @@ export class LumiClient extends SapphireClient {
       const globalConfig = await container.db.global
         .getGlobalConfig()
         .catch(() => null);
-      const envFallback = envParseString("DEFAULT_PREFIX", ",");
+      const envFallback = envParseString("DEFAULT_PREFIX", ".");
       return [globalConfig?.defaultPrefix ?? envFallback];
     }
 
     const globalConfig = await container.db.global
       .getGlobalConfig()
       .catch(() => null);
-    const envFallback = envParseString("DEFAULT_PREFIX", ",");
+    const envFallback = envParseString("DEFAULT_PREFIX", ".");
     return globalConfig?.defaultPrefix ?? envFallback;
   };
 

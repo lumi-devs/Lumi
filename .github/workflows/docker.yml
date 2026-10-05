@@ -112,6 +112,7 @@ jobs:
           context: .
           file: ./Dockerfile
           target: ${{ matrix.target.name }}
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}

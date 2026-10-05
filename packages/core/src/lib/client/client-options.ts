@@ -93,7 +93,7 @@ export function buildClientOptions(): ClientOptions {
     loadDefaultErrorListeners: false,
     loadScheduledTaskErrorListeners: false,
     baseUserDirectory: new URL("../../", import.meta.url),
-    defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
+    defaultPrefix: envParseString("DEFAULT_PREFIX", "."),
     logger: {
       instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi")),
     },
