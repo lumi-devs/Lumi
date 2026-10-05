@@ -1,7 +1,7 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
 import { type ILogger } from "@sapphire/framework";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
@@ -11,12 +11,12 @@ import type { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHis
 export class ConfigRepository extends Repository {
   public constructor(
     prisma: DatabaseClient,
-    redis: RedisClient,
+    valkey: ValkeyClient,
     logger: ILogger,
     db: DatabaseService,
     private readonly configHistory: ConfigHistoryRepository,
   ) {
-    super(prisma, redis, logger, db);
+    super(prisma, valkey, logger, db);
   }
 
   public async isDashboardEnabled(guildId: string): Promise<boolean> {
@@ -30,8 +30,8 @@ export class ConfigRepository extends Repository {
 
   public getGuildSettings(guildId: string): Promise<Readonly<Guild>> {
     return this.getOrSet(
-      RedisKeys.guildSettings(guildId),
-      RedisTTL.guildConfig,
+      ValkeyKeys.guildSettings(guildId),
+      ValkeyTTL.guildConfig,
       () => {
         return this.prisma.guild.upsert({
           where: { id: guildId },
@@ -54,7 +54,7 @@ export class ConfigRepository extends Repository {
    * Invalidates the guild settings cache.
    */
   public async invalidateGuildSettings(guildId: string): Promise<void> {
-    await this.invalidate(RedisKeys.guildSettings(guildId));
+    await this.invalidate(ValkeyKeys.guildSettings(guildId));
   }
 
   public async getModuleConfig(
@@ -70,8 +70,8 @@ export class ConfigRepository extends Repository {
     guildId: string,
     moduleName: string,
   ): Promise<Record<string, unknown>> {
-    const cacheKey = RedisKeys.guildConfig(moduleName, guildId);
-    return this.getOrSet(cacheKey, RedisTTL.guildConfig, async () => {
+    const cacheKey = ValkeyKeys.guildConfig(moduleName, guildId);
+    return this.getOrSet(cacheKey, ValkeyTTL.guildConfig, async () => {
       const configs = await this.prisma.guildModuleConfig.findMany({
         where: { guildId, moduleName },
       });
@@ -82,10 +82,10 @@ export class ConfigRepository extends Repository {
   public getAllModuleConfigsForGuild(
     guildId: string,
   ): Promise<Map<string, Record<string, unknown>>> {
-    const cacheKey = RedisKeys.guildAllModuleConfigs(guildId);
+    const cacheKey = ValkeyKeys.guildAllModuleConfigs(guildId);
     return this.getOrSet(
       cacheKey,
-      RedisTTL.guildAllModuleConfigs,
+      ValkeyTTL.guildAllModuleConfigs,
       async () => {
         const configs = await this.prisma.guildModuleConfig.findMany({
           where: { guildId },
@@ -150,8 +150,8 @@ export class ConfigRepository extends Repository {
     moduleName: string,
   ): Promise<void> {
     await this.invalidate(
-      RedisKeys.guildConfig(moduleName, guildId),
-      RedisKeys.guildAllModuleConfigs(guildId),
+      ValkeyKeys.guildConfig(moduleName, guildId),
+      ValkeyKeys.guildAllModuleConfigs(guildId),
     );
   }
 

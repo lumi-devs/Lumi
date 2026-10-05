@@ -18,7 +18,7 @@ describe("addon child environment", () => {
     const secrets = {
       BOT_TOKEN: "token",
       DATABASE_URL: "postgres://user:pw@host/db",
-      REDIS_URL: "redis://host",
+      VALKEY_URL: "rediss://host",
       RPC_INTERNAL_TOKEN: "internal",
       AUTH_SECRET: "secret",
     };
@@ -54,7 +54,7 @@ describe("capability gate", () => {
     expect(isMethodAllowed("ctx.reply", caps)).toBe(true);
     expect(isMethodAllowed("kv.set", caps)).toBe(true);
     expect(isMethodAllowed("discord.channels.send", caps)).toBe(false);
-    expect(isMethodAllowed("redis.sadd", caps)).toBe(false);
+    expect(isMethodAllowed("valkey.sadd", caps)).toBe(false);
     expect(isMethodAllowed("schedule.add", caps)).toBe(false);
   });
 
@@ -66,10 +66,10 @@ describe("capability gate", () => {
   });
 
   it("grants exactly what the manifest declares, and nothing adjacent", () => {
-    const caps = parseCapabilities({ discord: ["sendMessage"], redis: true });
+    const caps = parseCapabilities({ discord: ["sendMessage"], valkey: true });
     expect(isMethodAllowed("discord.channels.send", caps)).toBe(true);
     expect(isMethodAllowed("discord.messages.edit", caps)).toBe(false);
-    expect(isMethodAllowed("redis.smembers", caps)).toBe(true);
+    expect(isMethodAllowed("valkey.smembers", caps)).toBe(true);
     expect(isMethodAllowed("schedule.add", caps)).toBe(false);
   });
 
@@ -97,7 +97,7 @@ describe("addon GDPR erasure", () => {
 
   function installHost() {
     (container as any).db = { guildKV: kv };
-    (container as any).redis = { pipeline: () => pipeline, scan: vi.fn() };
+    (container as any).valkey = { pipeline: () => pipeline, scan: vi.fn() };
     (container as any).logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
   }
 

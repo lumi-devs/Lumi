@@ -77,7 +77,7 @@ export function heatAction(heat: number, config: HeatConfig): HeatAction {
   return "none";
 }
 
-/** Seconds until `heat` fully decays to zero — used to auto-expire the Redis key. */
+/** Seconds until `heat` fully decays to zero — used to auto-expire the Valkey key. */
 export function secondsUntilCool(heat: number, decayPerMinute: number): number {
   if (decayPerMinute <= 0) return 3600;
   return Math.ceil((heat / decayPerMinute) * 60) + 60;

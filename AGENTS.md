@@ -10,7 +10,7 @@ in the separate [`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) 
 [`docs/adr/`](docs/adr/README.md).
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
-discord.js v14, Prisma/PostgreSQL, Redis.
+discord.js v14, Prisma/PostgreSQL, Valkey.
 
 ## Repo shape
 
@@ -36,13 +36,13 @@ system topology — treat it as source of truth for anything below.
 - The dashboard (Next.js App Router web admin panel) lives in its own repo,
   [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), published as the
   `ghcr.io/lumi-devs/lumi-dashboard` image. It talks to `apps/api` only over the internal HTTP
-  RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
+  RPC bridge, never touches Postgres/Valkey directly, and consumes `@lumi-devs/contracts` /
   `@lumi-devs/observability` from npm rather than importing this repo's source — see
   "Releasing contracts" below for how a contracts change reaches it.
 - `packages/core` — the bot framework and runtime: module loader, command/permit
   system, addon sandbox/SDK, event bus (`#lib/event-bus/`), and shard telemetry (`#lib/sharding/`).
 - `packages/application` — business logic layer: extracted module services and application interfaces.
-- `packages/infrastructure` — data & infrastructure abstractions: database repositories, Redis cache/mutexes,
+- `packages/infrastructure` — data & infrastructure abstractions: database repositories, Valkey cache/mutexes,
   and BullMQ job queue abstractions.
 - `packages/contracts` — RPC schemas (the typed router), domain events, and shared type definitions used by
   `worker`, `api`, and, via the published `@lumi-devs/contracts` package, the dashboard repo.
@@ -62,7 +62,7 @@ specifier even though the source is `.ts`:
 | `#modules/*.js` | `packages/core/src/modules/*.ts` |
 
 Everything that used to have its own prefix (`#database/*`, `#utilities/*`, `#core/*`,
-`#root/*`) now imports through `#lib/*.js` at its real path instead — e.g. Redis primitives
+`#root/*`) now imports through `#lib/*.js` at its real path instead — e.g. Valkey primitives
 are `#lib/database/*.js`, card/panel builders are `#lib/ui/*.js`, generic helpers are
 `#lib/utilities/*.js`. Cross-*package* imports (e.g. `packages/core` → `packages/contracts`)
 must use the `@lumi/*` specifier, never a relative path across a package boundary.
@@ -90,12 +90,12 @@ from `data/3rd-party-modules/`) should not reach into `#lib`/`#modules` at all �
 stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sandbox/sdk/`, exported via the root `package.json` `"exports"`
 map: `lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/interactions`, `lumi/kv`,
-`lumi/permissions`, `lumi/redis`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
+`lumi/permissions`, `lumi/valkey`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
 Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk.md).
 
 ## RPC bridge (dashboard ↔ api)
 
-The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Redis
+The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Valkey
 connection and never holds the bot token. Every read/write is proxied over an internal HTTP RPC
 bridge to `apps/api` (the dashboard's own `src/lib/rpc.ts` calling into this repo's
 `apps/api/src/rpc-http-server.ts`, a `server-only` module reachable only from Server
@@ -165,8 +165,8 @@ Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/d
   `container.prisma` directly. (The only legitimate direct `container.prisma` uses are
   client bootstrap in `packages/core/src/lib/client/LumiClient.ts`; addon code touching it
   is flagged by the addon validator as an error.)
-- **Cache invalidation**: shared Redis keys are invalidated via `container.invalidation`
-  (`InvalidationBus`), never a raw `redis.del`.
+- **Cache invalidation**: shared Valkey keys are invalidated via `container.invalidation`
+  (`InvalidationBus`), never a raw `valkey.del`.
 - **Discord embeds**: never construct `new EmbedBuilder()` directly in a command/service —
   use the card builders in `#lib/ui/cards.js` (`makeInfoCard`, `makeSuccessCard`,
   `makeErrorCard`, `makeWarningCard`, `makeListCard`, ...) or, inside a command, the reply
@@ -213,7 +213,7 @@ one-off commands as `nix develop --command <cmd>`.
   with `--fix`).
 - `bun run test` — the offline suite: `bun test --parallel` at the root (globs `packages/**`
   per `bunfig.toml`'s `[test] root`, skipping `tests/integration/`), then `apps/api`'s and
-  `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Redis suite (see
+  `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Valkey suite (see
   [`agents/conventions/testing.md`](agents/conventions/testing.md)).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 - `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start

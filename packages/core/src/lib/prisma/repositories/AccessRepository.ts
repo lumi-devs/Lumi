@@ -1,5 +1,5 @@
 import type { Blocklist, GlobalBlock, IgnoreEntry } from "@prisma/client";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**
@@ -13,15 +13,15 @@ export class AccessRepository extends Repository {
     guildId: string | null,
   ): Promise<boolean> {
     const [gBlocked, sBlocked] = await Promise.all([
-      this.getOrSet(RedisKeys.blocked(null, userId), RedisTTL.blockedCache, () =>
+      this.getOrSet(ValkeyKeys.blocked(null, userId), ValkeyTTL.blockedCache, () =>
         this.prisma.globalBlock
           .findUnique({ where: { userId } })
           .then((r) => r !== null),
       ),
       guildId
         ? this.getOrSet(
-            RedisKeys.blocked(guildId, userId),
-            RedisTTL.blockedCache,
+            ValkeyKeys.blocked(guildId, userId),
+            ValkeyTTL.blockedCache,
             () =>
               this.prisma.blocklist
                 .findFirst({ where: { userId, guildId } })
@@ -36,8 +36,8 @@ export class AccessRepository extends Repository {
   /** Whole-guild ignore flag (`Guild.ignored`), cached on its own key. */
   public isGuildIgnored(guildId: string): Promise<boolean> {
     return this.getOrSet(
-      RedisKeys.guildIgnored(guildId),
-      RedisTTL.ignoreCache,
+      ValkeyKeys.guildIgnored(guildId),
+      ValkeyTTL.ignoreCache,
       () =>
         this.prisma.guild
           .findUnique({ where: { id: guildId }, select: { ignored: true } })
@@ -49,8 +49,8 @@ export class AccessRepository extends Repository {
     const [guild, channel] = await Promise.all([
       this.isGuildIgnored(guildId),
       this.getOrSet(
-        RedisKeys.channelIgnored(guildId, channelId),
-        RedisTTL.ignoreCache,
+        ValkeyKeys.channelIgnored(guildId, channelId),
+        ValkeyTTL.ignoreCache,
         () =>
           this.prisma.ignoreEntry
             .findUnique({
@@ -98,7 +98,7 @@ export class AccessRepository extends Repository {
         create: { userId, blockedBy, reason },
         update: { blockedBy, reason },
       });
-      await this.invalidate(RedisKeys.blocked(null, userId));
+      await this.invalidate(ValkeyKeys.blocked(null, userId));
       return entry;
     }
     await this.db.ensureGuild(guildId);
@@ -107,7 +107,7 @@ export class AccessRepository extends Repository {
       create: { userId, blockedBy, reason, guildId },
       update: { blockedBy, reason },
     });
-    await this.invalidate(RedisKeys.blocked(guildId, userId));
+    await this.invalidate(ValkeyKeys.blocked(guildId, userId));
     return entry;
   }
 
@@ -117,11 +117,11 @@ export class AccessRepository extends Repository {
   ): Promise<void> {
     if (!guildId) {
       await this.prisma.globalBlock.deleteMany({ where: { userId } });
-      await this.invalidate(RedisKeys.blocked(null, userId));
+      await this.invalidate(ValkeyKeys.blocked(null, userId));
       return;
     }
     await this.prisma.blocklist.deleteMany({ where: { userId, guildId } });
-    await this.invalidate(RedisKeys.blocked(guildId, userId));
+    await this.invalidate(ValkeyKeys.blocked(guildId, userId));
   }
 
   // `guildId` is required rather than optional because `null` is a meaningful
@@ -177,14 +177,14 @@ export class AccessRepository extends Repository {
         create: { id: guildId, ignored: true },
         update: { ignored: true },
       });
-      await this.invalidate(RedisKeys.guildIgnored(guildId));
+      await this.invalidate(ValkeyKeys.guildIgnored(guildId));
       return null;
     }
     await this.db.ensureGuild(guildId);
     const entry = await this.prisma.ignoreEntry.create({
       data: { guildId, channelId },
     });
-    await this.invalidate(RedisKeys.channelIgnored(guildId, channelId));
+    await this.invalidate(ValkeyKeys.channelIgnored(guildId, channelId));
     return entry;
   }
 
@@ -198,12 +198,12 @@ export class AccessRepository extends Repository {
         create: { id: guildId, ignored: false },
         update: { ignored: false },
       });
-      await this.invalidate(RedisKeys.guildIgnored(guildId));
+      await this.invalidate(ValkeyKeys.guildIgnored(guildId));
       return;
     }
     await this.prisma.ignoreEntry.deleteMany({
       where: { guildId, channelId },
     });
-    await this.invalidate(RedisKeys.channelIgnored(guildId, channelId));
+    await this.invalidate(ValkeyKeys.channelIgnored(guildId, channelId));
   }
 }

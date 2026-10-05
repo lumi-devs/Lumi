@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { Time } from "@sapphire/time-utilities";
-import { acquireRedisLock } from "#lib/lock.js";
+import { acquireValkeyLock } from "#lib/lock.js";
 import type { ModLiftPayload } from "#modules/mod/scheduled-tasks/modLift.js";
 import { liftModerationCaseWithUndo } from "./case-lift.js";
 import { errorCode } from "#lib/utilities/errors.js";
@@ -17,8 +17,8 @@ export async function handleModLiftFire(
   // The fire stream is at-least-once (XAUTOCLAIM can redeliver a fire that is
   // still running elsewhere), so the active-check and the lift have to be
   // mutually exclusive across processes - otherwise the same case unbans twice.
-  const { release } = await acquireRedisLock(
-    container.redis,
+  const { release } = await acquireValkeyLock(
+    container.valkey,
     `lumi:lock:mod-lift:${payload.caseId}`,
     { ttlMs: Time.Second * 30, acquireTimeoutMs: Time.Minute },
   );

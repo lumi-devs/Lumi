@@ -80,11 +80,11 @@ export const queueDepth = new Gauge({
   registers: [registry],
 });
 
-// Redis Streams transport - fed by RedisStreamsBus.onStats (XLEN + XPENDING).
+// Valkey Streams transport - fed by StreamBus.onStats (XLEN + XPENDING).
 
 export const streamLength = new Gauge({
   name: "lumi_stream_length",
-  help: "Length of a Redis stream (XLEN)",
+  help: "Length of a Valkey stream (XLEN)",
   labelNames: ["stream"] as const,
   registers: [registry],
 });
@@ -209,14 +209,14 @@ export const dbSlowQueriesTotal = new Counter({
   registers: [registry],
 });
 
-// ── Redis command latency ────────────────────────────────────────────────────
+// ── Valkey command latency ───────────────────────────────────────────────────
 
 // Command name only (bounded, ~200 possible values) - args/keys would be
 // unbounded cardinality. Blocking stream reads (XREAD/XREADGROUP with BLOCK)
 // are excluded by the caller since their wait time isn't latency.
-export const redisCommandDuration = new Histogram({
-  name: "lumi_redis_command_duration_seconds",
-  help: "ioredis command round-trip time in seconds, by command (excludes blocking reads)",
+export const valkeyCommandDuration = new Histogram({
+  name: "lumi_valkey_command_duration_seconds",
+  help: "iovalkey command round-trip time in seconds, by command (excludes blocking reads)",
   labelNames: ["command"] as const,
   buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [registry],

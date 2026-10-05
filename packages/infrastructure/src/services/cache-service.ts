@@ -1,25 +1,25 @@
-import type { RedisClient } from "../database/cluster-safe.js";
-import { InvalidationBus } from "../cache/redis.js";
-import { acquireRedisLock, verifyRedisLock, type RedisLock, type RedisLockOptions } from "../cache/lock.js";
+import type { ValkeyClient } from "../database/cluster-safe.js";
+import { InvalidationBus } from "../cache/valkey.js";
+import { acquireValkeyLock, verifyValkeyLock, type ValkeyLock, type ValkeyLockOptions } from "../cache/lock.js";
 import type { CacheLogger, ICacheStore } from "../cache/types.js";
 
 export class CacheService implements ICacheStore {
-  readonly #redis: RedisClient;
+  readonly #valkey: ValkeyClient;
   readonly #invalidation?: InvalidationBus;
   readonly #logger?: CacheLogger;
 
   public constructor(options: {
-    redis: RedisClient;
+    valkey: ValkeyClient;
     invalidation?: InvalidationBus;
     logger?: CacheLogger;
   }) {
-    this.#redis = options.redis;
+    this.#valkey = options.valkey;
     this.#invalidation = options.invalidation;
     this.#logger = options.logger;
   }
 
-  public get redis(): RedisClient {
-    return this.#redis;
+  public get valkey(): ValkeyClient {
+    return this.#valkey;
   }
 
   public get invalidation(): InvalidationBus | undefined {
@@ -28,7 +28,7 @@ export class CacheService implements ICacheStore {
 
   public async get<T>(key: string): Promise<T | null> {
     try {
-      const raw = await this.#redis.get(key);
+      const raw = await this.#valkey.get(key);
       if (raw === null) return null;
       return JSON.parse(raw) as T;
     } catch (err) {
@@ -41,9 +41,9 @@ export class CacheService implements ICacheStore {
     try {
       const raw = JSON.stringify(value);
       if (ttlSeconds && ttlSeconds > 0) {
-        await this.#redis.set(key, raw, "EX", ttlSeconds);
+        await this.#valkey.set(key, raw, "EX", ttlSeconds);
       } else {
-        await this.#redis.set(key, raw);
+        await this.#valkey.set(key, raw);
       }
     } catch (err) {
       this.#logger?.warn?.(`[CacheService] Failed to write key "${key}":`, err);
@@ -56,7 +56,7 @@ export class CacheService implements ICacheStore {
       if (this.#invalidation) {
         await this.#invalidation.invalidate(...keys);
       } else {
-        await this.#redis.del(...keys);
+        await this.#valkey.del(...keys);
       }
     } catch (err) {
       this.#logger?.warn?.(`[CacheService] Failed to delete keys:`, err);
@@ -65,7 +65,7 @@ export class CacheService implements ICacheStore {
 
   public async has(key: string): Promise<boolean> {
     try {
-      const count = await this.#redis.exists(key);
+      const count = await this.#valkey.exists(key);
       return count > 0;
     } catch {
       return false;
@@ -89,15 +89,15 @@ export class CacheService implements ICacheStore {
 
   public async acquireLock(
     key: string,
-    options?: RedisLockOptions,
-  ): Promise<RedisLock> {
-    return acquireRedisLock(this.#redis, key, {
+    options?: ValkeyLockOptions,
+  ): Promise<ValkeyLock> {
+    return acquireValkeyLock(this.#valkey, key, {
       ...options,
       logger: options?.logger ?? this.#logger,
     });
   }
 
   public async verifyLock(key: string, token: string): Promise<boolean> {
-    return verifyRedisLock(this.#redis, key, token);
+    return verifyValkeyLock(this.#valkey, key, token);
   }
 }

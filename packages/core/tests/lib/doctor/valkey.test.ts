@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test";
-import { checkRedis } from "#lib/doctor/checks/redis.js";
+import { checkValkey } from "#lib/doctor/checks/valkey.js";
 
-describe("checkRedis", () => {
+describe("checkValkey", () => {
   it("fails when PING fails", async () => {
-    const result = await checkRedis({
+    const result = await checkValkey({
       getClient: () => ({
         ping: () => Promise.reject(new Error("ECONNREFUSED")),
         info: () => Promise.resolve(""),
@@ -15,7 +15,7 @@ describe("checkRedis", () => {
   });
 
   it("warns when PING succeeds but INFO fails", async () => {
-    const result = await checkRedis({
+    const result = await checkValkey({
       getClient: () => ({
         ping: () => Promise.resolve("PONG"),
         info: () => Promise.reject(new Error("NOPERM")),
@@ -25,15 +25,15 @@ describe("checkRedis", () => {
     expect(result.status).toBe("warn");
   });
 
-  it("reports the Redis version on success", async () => {
-    const result = await checkRedis({
+  it("reports the Valkey version on success", async () => {
+    const result = await checkValkey({
       getClient: () => ({
         ping: () => Promise.resolve("PONG"),
-        info: () => Promise.resolve("redis_version:7.2.4\r\nuptime_in_seconds:10\r\n"),
+        info: () => Promise.resolve("valkey_version:9.0.5\r\nuptime_in_seconds:10\r\n"),
         quit: () => Promise.resolve(),
       }),
     });
     expect(result.status).toBe("ok");
-    expect(result.detail).toMatch(/7\.2\.4/);
+    expect(result.detail).toMatch(/9\.0\.5/);
   });
 });

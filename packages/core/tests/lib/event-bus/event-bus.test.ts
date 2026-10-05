@@ -5,7 +5,7 @@ const mockQuit = vi.fn().mockResolvedValue('OK');
 const mockInstances: any[] = [];
 
 vi.mock('iovalkey', () => {
-  class MockRedis {
+  class MockValkey {
     opts: any;
     xadd = vi.fn().mockResolvedValue('1-0');
     xack = vi.fn().mockResolvedValue(1);
@@ -20,7 +20,7 @@ vi.mock('iovalkey', () => {
       mockInstances.push(this);
     }
   }
-  return { Valkey: MockRedis, Redis: MockRedis, default: MockRedis };
+  return { Valkey: MockValkey, default: MockValkey };
 });
 
 describe('StreamBus & createEventBus Tests', () => {
@@ -31,7 +31,7 @@ describe('StreamBus & createEventBus Tests', () => {
 
   it('createEventBus initializes StreamBus with dedicated publisher/subscriber connections', () => {
     const owned = createEventBus({
-      redis: { host: 'localhost', port: 6379, lazyConnect: true },
+      valkey: { host: 'localhost', port: 6379, lazyConnect: true },
     });
     expect(owned.publisher).not.toBeNull();
     expect(typeof owned.close).toBe('function');
@@ -39,13 +39,13 @@ describe('StreamBus & createEventBus Tests', () => {
     expect(mockInstances[0]).toBe(owned.publisher);
   });
 
-  it('createEventBus throws error when redis config is missing', () => {
-    expect(() => createEventBus()).toThrow(/`redis` options required/);
+  it('createEventBus throws error when valkey config is missing', () => {
+    expect(() => createEventBus()).toThrow(/`valkey` options required/);
   });
 
-  it('close() quits both the publisher and subscriber Redis clients', async () => {
+  it('close() quits both the publisher and subscriber Valkey clients', async () => {
     const owned = createEventBus({
-      redis: { host: 'localhost', port: 6379, lazyConnect: true },
+      valkey: { host: 'localhost', port: 6379, lazyConnect: true },
     });
 
     const busCloseSpy = vi.spyOn(owned.bus, 'close');

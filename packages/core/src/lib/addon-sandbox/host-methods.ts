@@ -61,7 +61,7 @@ type OptionGetter = "getString" | "getInteger" | "getNumber" | "getBoolean";
 
 // Validated once here, at the boundary where an addon subprocess's JSON crosses
 // into the host - request.data's TypeScript annotations below only ever described
-// the shape at compile time. Every field that flows into a Redis/DB key or a
+// the shape at compile time. Every field that flows into a Valkey/DB key or a
 // Discord API call is checked at runtime; free-form payloads (Discord message/
 // modal builders) are left as s.unknown() since discord.js itself validates them.
 const ParamSchemas: Record<string, BaseValidator<unknown>> = {
@@ -127,25 +127,25 @@ const ParamSchemas: Record<string, BaseValidator<unknown>> = {
     guildId: s.string().optional(),
   }),
 
-  "redis.sadd": s.object({
+  "valkey.sadd": s.object({
     key: s.string(),
     members: s.string().array(),
   }),
 
-  "redis.srem": s.object({
+  "valkey.srem": s.object({
     key: s.string(),
     members: s.string().array(),
   }),
 
-  "redis.scard": s.object({
+  "valkey.scard": s.object({
     key: s.string(),
   }),
 
-  "redis.smembers": s.object({
+  "valkey.smembers": s.object({
     key: s.string(),
   }),
 
-  "redis.del": s.object({
+  "valkey.del": s.object({
     key: s.string(),
   }),
 
@@ -284,24 +284,24 @@ const Methods = {
     await interaction.showModal(modal as never);
   },
 
-  async "redis.sadd"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
-    return container.redis.sadd(addonKey(scope, key), ...members);
+  async "valkey.sadd"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
+    return container.valkey.sadd(addonKey(scope, key), ...members);
   },
 
-  async "redis.srem"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
-    return container.redis.srem(addonKey(scope, key), ...members);
+  async "valkey.srem"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
+    return container.valkey.srem(addonKey(scope, key), ...members);
   },
 
-  async "redis.scard"({ key }: { key: string }, scope: HostCallScope) {
-    return container.redis.scard(addonKey(scope, key));
+  async "valkey.scard"({ key }: { key: string }, scope: HostCallScope) {
+    return container.valkey.scard(addonKey(scope, key));
   },
 
-  async "redis.smembers"({ key }: { key: string }, scope: HostCallScope) {
-    return container.redis.smembers(addonKey(scope, key));
+  async "valkey.smembers"({ key }: { key: string }, scope: HostCallScope) {
+    return container.valkey.smembers(addonKey(scope, key));
   },
 
-  async "redis.del"({ key }: { key: string }, scope: HostCallScope) {
-    return container.redis.del(addonKey(scope, key));
+  async "valkey.del"({ key }: { key: string }, scope: HostCallScope) {
+    return container.valkey.del(addonKey(scope, key));
   },
 
   async "schedule.add"(

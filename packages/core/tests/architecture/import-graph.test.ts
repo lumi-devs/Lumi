@@ -137,7 +137,7 @@ describe("package dependency direction", () => {
     const violations: string[] = [];
     // Presentational/formatting-only surfaces the SDK re-exports as `lumi/ui`
     // and `lumi/utils`. Everything else under #lib/ (database, client, rpc,
-    // permissions, redis, ...) stays off-limits — the SDK reaches the host
+    // permissions, valkey, ...) stays off-limits — the SDK reaches the host
     // only through rpc.ts's call().
     const ALLOWED_LIB_PREFIXES = ["#lib/ui/", "#lib/module-system/", "#lib/utilities/", "#lib/branding/"];
     const ALLOWED_EXTERNAL = new Set(["@discordjs/builders"]);

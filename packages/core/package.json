@@ -2,7 +2,7 @@
   "name": "@lumi/core",
   "version": "0.6.0",
   "license": "AGPL-3.0-only",
-  "description": "Lumi core - the full bot library (framework glue, module system, DB/Redis layers, core commands).",
+  "description": "Lumi core - the full bot library (framework glue, module system, DB/Valkey layers, core commands).",
   "private": true,
   "type": "module",
   "exports": {

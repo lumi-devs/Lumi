@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { PermissionRepository } from "#lib/prisma/repositories/PermissionRepository.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({
@@ -12,7 +12,7 @@ vi.mock("@lumi/observability", () => ({
 describe("PermissionRepository", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let repo: PermissionRepository;
-  let mockRedis: any;
+  let mockValkey: any;
   let store: Map<string, string>;
 
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe("PermissionRepository", () => {
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
-    mockRedis = {
+    mockValkey = {
       get: vi.fn(async (k: string) => store.get(k) ?? null),
       mget: vi.fn(async (...args: any[]) => {
         const keys = Array.isArray(args[0]) ? args[0] : args;
@@ -51,7 +51,7 @@ describe("PermissionRepository", () => {
       error: vi.fn(),
       debug: vi.fn(),
     };
-    repo = new PermissionRepository(prisma as any, mockRedis, mockLogger as any, mockDb as any);
+    repo = new PermissionRepository(prisma as any, mockValkey, mockLogger as any, mockDb as any);
   });
 
   it("ensureBuiltinPermits creates standard builtin permits for a guild", async () => {
@@ -111,7 +111,7 @@ describe("PermissionRepository", () => {
   });
 
   it("resolves permit chains with quarantine detection", async () => {
-    store.set(RedisKeys.quarantineState("guild-1", "user-bad"), "1");
+    store.set(ValkeyKeys.quarantineState("guild-1", "user-bad"), "1");
 
     const result = await repo.getPermitChain("guild-1", "user-bad", [
       { targetType: "user", targetId: "user-bad" },

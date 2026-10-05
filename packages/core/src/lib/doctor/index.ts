@@ -12,7 +12,7 @@ export {
   PrivilegedIntentsCheckName,
 } from "#lib/doctor/checks/privileged-intents.js";
 export { checkPostgres, PostgresCheckName } from "#lib/doctor/checks/postgres.js";
-export { checkRedis, RedisCheckName } from "#lib/doctor/checks/redis.js";
+export { checkValkey, ValkeyCheckName } from "#lib/doctor/checks/valkey.js";
 export { checkRpc, RpcCheckName } from "#lib/doctor/checks/rpc.js";
 export {
   checkDashboardOAuth,

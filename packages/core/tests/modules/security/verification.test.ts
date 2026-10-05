@@ -24,10 +24,10 @@ function makeMultiMock(count: number) {
 }
 
 function setContainer(overrides: {
-  redis?: Record<string, unknown>;
+  valkey?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).redis = {
+  (container as any).valkey = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
@@ -35,7 +35,7 @@ function setContainer(overrides: {
     multi: vi.fn(() => makeMultiMock(1)),
     get: vi.fn().mockResolvedValue(null),
     setex: vi.fn(),
-    ...overrides.redis,
+    ...overrides.valkey,
   };
   (container as any).db = {
     ...overrides.db,
@@ -102,7 +102,7 @@ describe("grantVerified", () => {
 });
 
 describe("advanceChallenge", () => {
-  function makeChallengeRedis(initial: CaptchaState) {
+  function makeChallengeValkey(initial: CaptchaState) {
     let stored: string | null = JSON.stringify(initial);
     const get = vi.fn(async () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -127,8 +127,8 @@ describe("advanceChallenge", () => {
       attempts: MaxAttempts,
       expiresAt: Date.now() + 60_000,
     };
-    const redis = makeChallengeRedis(initial);
-    setContainer({ redis });
+    const valkey = makeChallengeValkey(initial);
+    setContainer({ valkey });
 
     const [r1, r2] = await Promise.all([
       advanceChallenge("g1", "u1", 7),
@@ -137,12 +137,12 @@ describe("advanceChallenge", () => {
 
     expect(r1?.outcome).toBe("wrong");
     expect(r2?.outcome).toBe("wrong");
-    expect(redis.read()?.attempts).toBe(MaxAttempts - 2);
+    expect(valkey.read()?.attempts).toBe(MaxAttempts - 2);
   });
 
   it("returns null when there is no active challenge to advance", async () => {
     const get = vi.fn().mockResolvedValue(null);
-    setContainer({ redis: { get } });
+    setContainer({ valkey: { get } });
 
     const result = await advanceChallenge("g1", "u1", 0);
 

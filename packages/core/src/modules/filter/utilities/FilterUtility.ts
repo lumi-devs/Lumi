@@ -1,7 +1,7 @@
 import { Utility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Piece } from "@sapphire/framework";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   compileRules,
@@ -52,7 +52,7 @@ redis.call('EXPIRE', KEYS[1], string.format('%d', ttl))
 return value
 `;
 
-/** Content is capped before storage/comparison to bound Redis memory and CPU cost. */
+/** Content is capped before storage/comparison to bound Valkey memory and CPU cost. */
 const DuplicateContentCap = 300;
 /** Levenshtein is O(n*m); cap the compared length separately, tighter than storage. */
 const SimilarityCompareCap = 200;
@@ -98,7 +98,7 @@ export class FilterUtility extends Utility {
 
   public async loadGuild(guildId: string): Promise<void> {
     // getModuleConfig resolves through getAllModuleConfig, so reading each key
-    // separately meant one Redis round trip per key against the same cache
+    // separately meant one Valkey round trip per key against the same cache
     // entry. Read the module's config once and derive every field from it.
     const raw = await this.container.db.config.getAllModuleConfig(
       guildId,
@@ -290,10 +290,10 @@ export class FilterUtility extends Utility {
     points: number,
     config: HeatConfig,
   ): Promise<number> {
-    const key = RedisKeys.filterHeat(guildId, userId);
+    const key = ValkeyKeys.filterHeat(guildId, userId);
     const now = Date.now();
     const next = Number.parseFloat(
-      (await this.redis.eval(
+      (await this.valkey.eval(
         AddHeatScript,
         1,
         key,
@@ -306,7 +306,7 @@ export class FilterUtility extends Utility {
   }
 
   public async clearHeat(guildId: string, userId: string): Promise<void> {
-    await this.container.invalidation.invalidate(RedisKeys.filterHeat(guildId, userId));
+    await this.container.invalidation.invalidate(ValkeyKeys.filterHeat(guildId, userId));
   }
 
   /**
@@ -322,9 +322,9 @@ export class FilterUtility extends Utility {
     const trimmed = content.trim();
     if (trimmed.length === 0) return { exact: false, similarity: 0 };
     const capped = trimmed.slice(0, DuplicateContentCap);
-    const key = RedisKeys.filterLastMsg(guildId, userId);
-    const prev = await this.redis.getset(key, capped);
-    await this.redis.expire(key, DuplicateWindowSeconds);
+    const key = ValkeyKeys.filterLastMsg(guildId, userId);
+    const prev = await this.valkey.getset(key, capped);
+    await this.valkey.expire(key, DuplicateWindowSeconds);
     if (prev === null) return { exact: false, similarity: 0 };
     if (prev === capped) return { exact: true, similarity: 1 };
     return { exact: false, similarity: similarityRatio(prev, capped) };
@@ -340,8 +340,8 @@ export class FilterUtility extends Utility {
     userId: string,
     action: string,
   ): Promise<boolean> {
-    const set = await this.redis.set(
-      `${RedisKeys.filterHeatActed(guildId, userId)}:${action}`,
+    const set = await this.valkey.set(
+      `${ValkeyKeys.filterHeatActed(guildId, userId)}:${action}`,
       "1",
       "EX",
       WarnCooldownSeconds,
@@ -360,8 +360,8 @@ export class FilterUtility extends Utility {
    * offending for `VIOLATION_RESET_SECONDS` starts over at the base duration.
    */
   public async recordViolation(guildId: string, userId: string): Promise<number> {
-    const key = RedisKeys.filterHeatViolations(guildId, userId);
-    const results = await this.redis
+    const key = ValkeyKeys.filterHeatViolations(guildId, userId);
+    const results = await this.valkey
       .multi()
       .incr(key)
       .expire(key, FilterUtility.VIOLATION_RESET_SECONDS)
@@ -382,8 +382,8 @@ export class FilterUtility extends Utility {
     config: Pick<HeatConfig, "panicWindowSeconds" | "panicRaiderCount">,
   ): Promise<boolean> {
     if (config.panicRaiderCount <= 0) return false;
-    const key = RedisKeys.filterHeatPanicRaiders(guildId);
-    const results = await this.redis
+    const key = ValkeyKeys.filterHeatPanicRaiders(guildId);
+    const results = await this.valkey
       .multi()
       .sadd(key, userId)
       .expire(key, config.panicWindowSeconds)
@@ -392,14 +392,14 @@ export class FilterUtility extends Utility {
     const distinct = (results?.[2]?.[1] as number) ?? 0;
     if (distinct < config.panicRaiderCount) return false;
 
-    await this.redis.set(
-      RedisKeys.filterHeatPanicFlagged(guildId, userId),
+    await this.valkey.set(
+      ValkeyKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
       "EX",
       FilterUtility.HEAT_PANIC_FLAG_SECONDS,
     );
-    const activated = await this.redis.set(
-      RedisKeys.filterHeatPanicActive(guildId),
+    const activated = await this.valkey.set(
+      ValkeyKeys.filterHeatPanicActive(guildId),
       String(Date.now()),
       "EX",
       FilterUtility.HEAT_PANIC_FLAG_SECONDS,
@@ -410,8 +410,8 @@ export class FilterUtility extends Utility {
 
   /** Flags a member as an active-panic raider so their next message is actioned instantly. */
   public async flagHeatPanicRaider(guildId: string, userId: string): Promise<void> {
-    await this.redis.set(
-      RedisKeys.filterHeatPanicFlagged(guildId, userId),
+    await this.valkey.set(
+      ValkeyKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
       "EX",
       FilterUtility.HEAT_PANIC_FLAG_SECONDS,
@@ -419,12 +419,12 @@ export class FilterUtility extends Utility {
   }
 
   public async isHeatPanicActive(guildId: string): Promise<boolean> {
-    return (await this.redis.exists(RedisKeys.filterHeatPanicActive(guildId))) === 1;
+    return (await this.valkey.exists(ValkeyKeys.filterHeatPanicActive(guildId))) === 1;
   }
 
   public async isFlaggedRaider(guildId: string, userId: string): Promise<boolean> {
     return (
-      (await this.redis.exists(RedisKeys.filterHeatPanicFlagged(guildId, userId))) === 1
+      (await this.valkey.exists(ValkeyKeys.filterHeatPanicFlagged(guildId, userId))) === 1
     );
   }
 
@@ -439,8 +439,8 @@ export class FilterUtility extends Utility {
     windowSeconds: number,
   ): Promise<number> {
     if (count <= 0) return 0;
-    const key = RedisKeys.filterMentionWindow(guildId);
-    const results = await this.redis
+    const key = ValkeyKeys.filterMentionWindow(guildId);
+    const results = await this.valkey
       .multi()
       .incrby(key, count)
       .expire(
@@ -457,8 +457,8 @@ export class FilterUtility extends Utility {
     guildId: string,
     durationMinutes: number,
   ): Promise<boolean> {
-    const activated = await this.redis.set(
-      RedisKeys.filterAutoLockdown(guildId),
+    const activated = await this.valkey.set(
+      ValkeyKeys.filterAutoLockdown(guildId),
       String(Date.now()),
       "EX",
       Math.max(60, durationMinutes * 60),
@@ -469,7 +469,7 @@ export class FilterUtility extends Utility {
 
   /** Undo `activateAutoLockdown` when the lockdown could not actually be carried out. */
   public async releaseAutoLockdown(guildId: string): Promise<void> {
-    await this.container.invalidation.invalidate(RedisKeys.filterAutoLockdown(guildId));
+    await this.container.invalidation.invalidate(ValkeyKeys.filterAutoLockdown(guildId));
   }
 
   /** Mark a guild as most-recently-used and return its rule set. */

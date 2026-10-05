@@ -108,7 +108,7 @@ describe("dashboard module guild read RPC handlers", () => {
     vi.spyOn(discordRest, "fetchMember");
     (container as any).discordRest = discordRest;
 
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     (container as any).db = {
       config: {

@@ -15,7 +15,7 @@ export interface AfkMention {
 }
 
 function scanKeys(pattern: string) {
-  return scanKeysSafe(container.redis, pattern);
+  return scanKeysSafe(container.valkey, pattern);
 }
 
 async function invalidateKeys(keys: string[]) {
@@ -35,7 +35,7 @@ async function getOrSet<T>(
 ): Promise<T> {
   const neg = negativeUntil.get(key);
   if (neg !== undefined && neg > Date.now()) return null as T;
-  const cached = await container.redis.get(key);
+  const cached = await container.valkey.get(key);
   if (cached) return parser(cached);
 
   const pending = inflight.get(key);
@@ -47,7 +47,7 @@ async function getOrSet<T>(
       negativeUntil.set(key, Date.now() + NegativeTtlMs);
     } else {
       negativeUntil.delete(key);
-      await container.redis.setex(key, ttl, JSON.stringify(data));
+      await container.valkey.setex(key, ttl, JSON.stringify(data));
     }
     return data;
   })();
@@ -84,7 +84,7 @@ export async function getAfkEntriesBatch(
 
   const now = Date.now();
   const keys = userIds.map((userId) => AfkKeys.afk(guildId, userId));
-  const rawValues = await mgetSafe(container.redis, keys);
+  const rawValues = await mgetSafe(container.valkey, keys);
 
   const missingUserIds: string[] = [];
   rawValues.forEach((raw, i) => {
@@ -114,7 +114,7 @@ export async function getAfkEntriesBatch(
       }
     }
     await pipelineBySlot(
-      container.redis,
+      container.valkey,
       dbEntries,
       (entry) => AfkKeys.afk(guildId, entry.userId),
       (pipe, entry) => {
@@ -141,7 +141,7 @@ export async function setAfkEntry(
     sanitizeReason(reason),
   );
   negativeUntil.delete(AfkKeys.afk(guildId, userId));
-  await container.redis.setex(
+  await container.valkey.setex(
     AfkKeys.afk(guildId, userId),
     AfkTTL.entry,
     JSON.stringify(entry),
@@ -200,7 +200,7 @@ export async function getAfkMentions(
   guildId: string,
   userId: string,
 ): Promise<AfkMention[]> {
-  const raw = await container.redis.lrange(
+  const raw = await container.valkey.lrange(
     AfkKeys.mentions(guildId, userId),
     0,
     -1,
@@ -216,7 +216,7 @@ export async function addAfkMention(
   mention: AfkMention,
 ): Promise<void> {
   const key = AfkKeys.mentions(guildId, userId);
-  await container.redis
+  await container.valkey
     .multi()
     .lpush(key, JSON.stringify(mention))
     .ltrim(key, 0, 24)
@@ -236,7 +236,7 @@ export async function isAfkOnCooldown(key: string): Promise<boolean> {
 }
 
 export async function setAfkCooldown(key: string, ms: number): Promise<void> {
-  await container.redis.set(key, "1", "PX", ms);
+  await container.valkey.set(key, "1", "PX", ms);
 }
 
 /**
@@ -252,7 +252,7 @@ export async function claimAfkCooldown(
 }
 
 /**
- * Batch-writes multiple AFK mentions for different users in a single Redis
+ * Batch-writes multiple AFK mentions for different users in a single Valkey
  * multi/exec transaction instead of one round-trip per mentioned user.
  */
 export async function addAfkMentionsBatch(
@@ -261,7 +261,7 @@ export async function addAfkMentionsBatch(
 ): Promise<void> {
   if (!mentions.length) return;
   await pipelineBySlot(
-    container.redis,
+    container.valkey,
     mentions,
     ({ userId }) => AfkKeys.mentions(guildId, userId),
     (pipe, { userId, mention }) => {

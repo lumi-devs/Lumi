@@ -13,7 +13,7 @@ const Subpaths: Record<string, string> = {
   "./interactions": "interactions.ts",
   "./kv": "kv.ts",
   "./permissions": "permissions.ts",
-  "./redis": "redis.ts",
+  "./valkey": "valkey.ts",
   "./scheduling": "scheduling.ts",
   "./ui": "ui.ts",
   "./utils": "utils.ts",

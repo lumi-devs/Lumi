@@ -18,7 +18,7 @@ export interface ICacheStore {
   getOrSet<T>(key: string, ttlSeconds: number, producer: () => Promise<T>): Promise<T>;
 }
 
-export interface RedisConnectionConfig {
+export interface ValkeyConnectionConfig {
   url?: string;
   host?: string;
   port?: number;

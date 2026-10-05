@@ -1,23 +1,23 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
 import { scanKeysSafe } from "#lib/database/cluster-safe.js";
-import { RedisKeys, type InvalidationBus } from "#lib/database/redis.js";
+import { ValkeyKeys, type InvalidationBus } from "#lib/database/valkey.js";
 import type { ILogger } from "@sapphire/framework";
 
 /**
- * Evicts every Redis key a guild's config/module-enabled cache can occupy.
+ * Evicts every Valkey key a guild's config/module-enabled cache can occupy.
  * Shared by the real-time `guildDelete` listener and the retention sweep's
  * defensive re-eviction, so the key/pattern list only lives in one place.
  */
-export async function evictGuildRedisState(
-  redis: RedisClient,
+export async function evictGuildValkeyState(
+  valkey: ValkeyClient,
   invalidation: InvalidationBus,
   logger: ILogger,
   guildId: string,
   logPrefix: string,
 ): Promise<void> {
   const staticKeys = [
-    RedisKeys.guildSettings(guildId),
-    RedisKeys.guildIgnored(guildId),
+    ValkeyKeys.guildSettings(guildId),
+    ValkeyKeys.guildIgnored(guildId),
   ];
 
   const patterns = [
@@ -28,9 +28,9 @@ export async function evictGuildRedisState(
   const dynamicKeys: string[] = [];
   for (const pattern of patterns) {
     try {
-      dynamicKeys.push(...(await scanKeysSafe(redis, pattern)));
+      dynamicKeys.push(...(await scanKeysSafe(valkey, pattern)));
     } catch (err: unknown) {
-      logger.warn(`[${logPrefix}] Redis SCAN failed for pattern ${pattern}:`, err);
+      logger.warn(`[${logPrefix}] Valkey SCAN failed for pattern ${pattern}:`, err);
     }
   }
 
@@ -39,7 +39,10 @@ export async function evictGuildRedisState(
     await invalidation
       .invalidate(...allKeys)
       .catch((err: unknown) =>
-        logger.warn(`[${logPrefix}] Redis eviction failed:`, err),
+        logger.warn(`[${logPrefix}] Valkey eviction failed:`, err),
       );
   }
 }
+
+// Deprecated alias — remove after callers migrate.
+

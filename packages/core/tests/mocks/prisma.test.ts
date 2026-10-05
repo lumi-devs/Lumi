@@ -103,7 +103,7 @@ describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
   });
 
   it("drives a real repository end-to-end with no live Postgres involved", async () => {
-    const mockRedis = {
+    const mockValkey = {
       get: () => Promise.resolve(null),
       setex: () => Promise.resolve("OK"),
     } as never;
@@ -116,7 +116,7 @@ describe("MockPrismaClient (offline in-memory Postgres test driver)", () => {
           update: {},
         }),
     } as never;
-    const repo = new AfkRepository(prisma as never, mockRedis, mockLogger, mockDb);
+    const repo = new AfkRepository(prisma as never, mockValkey, mockLogger, mockDb);
 
     const upserted = await repo.upsertEntry("g1", "u1", "brb");
     expect(upserted).toMatchObject({ guildId: "g1", userId: "u1", reason: "brb" });

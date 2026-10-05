@@ -124,7 +124,7 @@ export class TaskFireConsumer {
 
     // A broadcast group is named after this replica and re-created at `$` on
     // the next boot, so leaving it behind strands a dead group (and its pending
-    // list) in Redis for every restart the process ever makes.
+    // list) in Valkey for every restart the process ever makes.
     const groups = this.ephemeralGroups.splice(0);
     await Promise.allSettled(
       groups.map((g) => this.bus.destroyGroup(g.stream, g.group)),

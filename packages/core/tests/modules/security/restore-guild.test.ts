@@ -37,7 +37,7 @@ function mockContainer(overrides: {
       patch: overrides.restPatch ?? vi.fn(),
     },
   };
-  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+  (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
   (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() };
 }
 

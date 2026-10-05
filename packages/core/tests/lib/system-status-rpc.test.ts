@@ -26,7 +26,7 @@ describe("system.status.get RPC handler", () => {
   // Deliberately does not exercise a successful call: the real handler reads
   // the shared scheduled-tasks BullMQ queue through its own connection (see
   // `system-rpc.ts`'s `getScheduledTasksQueue()`), which isn't something this
-  // offline suite can fake without a live Redis - `getSystemStatus` itself
+  // offline suite can fake without a live Valkey - `getSystemStatus` itself
   // (the aggregation this handler delegates to) is covered directly with
   // fakes in `system-status.test.ts`. This only proves the action is wired
   // into the registry with the right auth gate.

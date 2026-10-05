@@ -36,7 +36,7 @@ export async function getThresholds(
   container: Container,
   guildId: string,
 ): Promise<WarnThresholds> {
-  const cached = await container.redis.get(thresholdKey(guildId));
+  const cached = await container.valkey.get(thresholdKey(guildId));
   if (cached) {
     const parsedCache = tryParseJSON(cached) as WarnThresholds | null;
     if (parsedCache) return parsedCache;
@@ -51,7 +51,7 @@ export async function getThresholds(
     };
   }
 
-  await container.redis.setex(
+  await container.valkey.setex(
     thresholdKey(guildId),
     ThresholdTtl,
     JSON.stringify(parsed),
@@ -67,7 +67,7 @@ export async function incrementWarnCount(
   userId: string,
 ): Promise<number> {
   const key = warnCountKey(guildId, userId);
-  const exists = await container.redis.exists(key);
+  const exists = await container.valkey.exists(key);
 
   if (!exists) {
     const count = await container.db.moderation.countModerationCases(
@@ -75,16 +75,16 @@ export async function incrementWarnCount(
       userId,
       "warn",
     );
-    await container.redis.set(key, String(count), "EX", WarnCountTtl);
+    await container.valkey.set(key, String(count), "EX", WarnCountTtl);
     return count;
   }
 
-  const pipe = container.redis.pipeline();
+  const pipe = container.valkey.pipeline();
   pipe.incr(key);
   pipe.expire(key, WarnCountTtl);
   const results = await pipe.exec();
   if (!results || results[0]?.[0]) {
-    container.logger.error("[Thresholds] Redis pipeline execution failed:", results?.[0]?.[0]);
+    container.logger.error("[Thresholds] Valkey pipeline execution failed:", results?.[0]?.[0]);
     return 0;
   }
   return (results?.[0]?.[1] as number | null) ?? 0;
@@ -98,7 +98,7 @@ export async function decrementWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
+  await container.valkey.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
 }
 
 /** Batched variant of {@linkcode decrementWarnCount} - one pipeline instead of N round trips. */
@@ -108,7 +108,7 @@ export async function decrementWarnCounts(
 ): Promise<void> {
   if (entries.length === 0) return;
   await pipelineBySlot(
-    container.redis,
+    container.valkey,
     entries,
     ({ guildId, userId }) => warnCountKey(guildId, userId),
     (pipe, { guildId, userId }) => {
@@ -178,7 +178,7 @@ export async function checkThresholds(
   // would apply the punishment twice. First one through wins. Claimed only
   // after the guild/bot lookups above so an un-actionable run doesn't burn
   // the claim and eat the firing.
-  const claimed = await container.redis.set(
+  const claimed = await container.valkey.set(
     thresholdFiredKey(guildId, userId, targetCount),
     "1",
     "EX",

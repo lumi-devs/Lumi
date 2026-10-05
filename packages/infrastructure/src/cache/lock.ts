@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { RedisClient } from "../database/cluster-safe.js";
+import type { ValkeyClient } from "../database/cluster-safe.js";
 import type { CacheLogger } from "./types.js";
 
-export const RedisReleaseScript = `
+export const ValkeyReleaseScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 else
@@ -10,7 +10,7 @@ else
 end
 `;
 
-export const RedisExtendScript = `
+export const ValkeyExtendScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('PEXPIRE', KEYS[1], ARGV[2])
 else
@@ -18,7 +18,7 @@ else
 end
 `;
 
-export const RedisVerifyScript = `
+export const ValkeyVerifyScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return 1
 else
@@ -27,16 +27,16 @@ end
 `;
 
 /** Checks a lock is still held by `token` - detects a stale holder before a guarded write. */
-export async function verifyRedisLock(
-  redis: RedisClient,
+export async function verifyValkeyLock(
+  valkey: ValkeyClient,
   key: string,
   token: string,
 ): Promise<boolean> {
-  const held = await redis.eval(RedisVerifyScript, 1, key, token);
+  const held = await valkey.eval(ValkeyVerifyScript, 1, key, token);
   return held === 1;
 }
 
-export interface RedisLockOptions {
+export interface ValkeyLockOptions {
   /** Lock lease in ms. Auto-renewed at lease/2 while held. */
   ttlMs?: number;
   /** Max wait before giving up. */
@@ -51,7 +51,7 @@ export interface RedisLockOptions {
   logger?: CacheLogger;
 }
 
-const Defaults: Required<Omit<RedisLockOptions, "logger">> = {
+const Defaults: Required<Omit<ValkeyLockOptions, "logger">> = {
   ttlMs: 15_000,
   acquireTimeoutMs: 30_000,
   retryDelayMs: 25,
@@ -59,28 +59,29 @@ const Defaults: Required<Omit<RedisLockOptions, "logger">> = {
   onLostLock: () => undefined,
 };
 
-export interface RedisLock {
+export interface ValkeyLock {
   /** Releases the lock. Safe to call more than once. */
   release: () => Promise<void>;
   /** Fencing token identifying this acquisition. */
   token: string;
 }
 
-export async function acquireRedisLock(
-  redis: RedisClient,
+export async function acquireValkeyLock(
+  valkey: ValkeyClient,
   key: string,
-  options: RedisLockOptions = {},
-): Promise<RedisLock> {
+  options: ValkeyLockOptions = {},
+): Promise<ValkeyLock> {
   const opts = { ...Defaults, ...options };
+  const log = options.logger ?? console;
   const token = randomUUID();
   const deadline = Date.now() + opts.acquireTimeoutMs;
   let delay = opts.retryDelayMs;
 
   while (true) {
-    const ok = await redis.set(key, token, "PX", opts.ttlMs, "NX");
+    const ok = await valkey.set(key, token, "PX", opts.ttlMs, "NX");
     if (ok === "OK") break;
     if (Date.now() >= deadline) {
-      throw new Error(`Timeout acquiring Redis lock: ${key}`);
+      throw new Error(`Timeout acquiring Valkey lock: ${key}`);
     }
     await Bun.sleep(delay);
     delay = Math.min(delay * 2, opts.maxRetryDelayMs);
@@ -91,20 +92,16 @@ export async function acquireRedisLock(
   const renew = setInterval(
     () => {
       if (released) return;
-      redis
-        .eval(RedisExtendScript, 1, key, token, opts.ttlMs.toString())
+      valkey
+        .eval(ValkeyExtendScript, 1, key, token, opts.ttlMs.toString())
         .then((res: unknown) => {
           if (released) return;
           if (res === 1) {
             consecutiveRenewFailures = 0;
           } else {
             consecutiveRenewFailures++;
-            const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
-            if (options.logger?.error) {
-              options.logger.error(message);
-            } else {
-              console.error(message);
-            }
+            const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
+            log.error(message);
             if (consecutiveRenewFailures === 1) {
               opts.onLostLock();
             }
@@ -113,12 +110,8 @@ export async function acquireRedisLock(
         .catch((err: unknown) => {
           if (released) return;
           consecutiveRenewFailures++;
-          const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
-          if (options.logger?.error) {
-            options.logger.error(message, err);
-          } else {
-            console.error(message, err);
-          }
+          const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
+          log.error(message, err);
           if (consecutiveRenewFailures === 1) {
             opts.onLostLock();
           }
@@ -132,7 +125,7 @@ export async function acquireRedisLock(
     if (released) return;
     released = true;
     clearInterval(renew);
-    await redis.eval(RedisReleaseScript, 1, key, token).catch(() => null);
+    await valkey.eval(ValkeyReleaseScript, 1, key, token).catch(() => null);
   };
 
   return { release, token };

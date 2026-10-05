@@ -3,7 +3,7 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**
  * AFK entries (`AfkEntry`), owned by the `afk` module.  Pure persistence - the
- * module's `data/afk.ts` layers its own Redis cache (AfkKeys/AfkTTL) on top.
+ * module's `data/afk.ts` layers its own Valkey cache (AfkKeys/AfkTTL) on top.
  */
 export class AfkRepository extends Repository {
   public findEntry(guildId: string, userId: string): Promise<AfkEntry | null> {

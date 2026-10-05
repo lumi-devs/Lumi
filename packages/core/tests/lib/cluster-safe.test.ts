@@ -6,28 +6,28 @@ import {
   pipelineBySlot,
   scanKeysSafe,
 } from "../../src/lib/database/cluster-safe.js";
-import type { RedisClient } from "../../src/lib/database/cluster-safe.js";
+import type { ValkeyClient } from "../../src/lib/database/cluster-safe.js";
 
-// A stand-in for ioredis' Cluster: every multi-key call asserts that all its
+// A stand-in for iovalkey' Cluster: every multi-key call asserts that all its
 // keys share a slot, which is exactly what a real cluster enforces.
 
 // isCluster() uses instanceof, so a fake is treated as standalone. These tests
 // therefore exercise the standalone path plus the grouping logic directly.
-const asClient = (c: unknown) => c as RedisClient;
+const asClient = (c: unknown) => c as ValkeyClient;
 
 describe("mgetSafe", () => {
   it("returns values in the order the keys were given", async () => {
-    const redis = {
+    const valkey = {
       mget: vi.fn().mockResolvedValue(["a", null, "c"]),
     };
-    const out = await mgetSafe(asClient(redis), ["k1", "k2", "k3"]);
+    const out = await mgetSafe(asClient(valkey), ["k1", "k2", "k3"]);
     expect(out).toEqual(["a", null, "c"]);
   });
 
   it("issues no call for an empty key list", async () => {
-    const redis = { mget: vi.fn() };
-    expect(await mgetSafe(asClient(redis), [])).toEqual([]);
-    expect(redis.mget).not.toHaveBeenCalled();
+    const valkey = { mget: vi.fn() };
+    expect(await mgetSafe(asClient(valkey), [])).toEqual([]);
+    expect(valkey.mget).not.toHaveBeenCalled();
   });
 });
 
@@ -50,9 +50,9 @@ describe("pipelineBySlot", () => {
   it("applies every item exactly once on standalone", async () => {
     const applied: string[] = [];
     const chain = { set: (k: string) => { applied.push(k); return chain; }, exec: vi.fn().mockResolvedValue([]) };
-    const redis = { pipeline: () => chain };
+    const valkey = { pipeline: () => chain };
 
-    await pipelineBySlot(asClient(redis), ["a", "b", "c"], (k) => k, (p, k) => {
+    await pipelineBySlot(asClient(valkey), ["a", "b", "c"], (k) => k, (p, k) => {
       (p as unknown as typeof chain).set(k);
     });
 
@@ -61,9 +61,9 @@ describe("pipelineBySlot", () => {
   });
 
   it("does nothing for an empty list", async () => {
-    const redis = { pipeline: vi.fn() };
-    await pipelineBySlot(asClient(redis), [], (k: string) => k, () => {});
-    expect(redis.pipeline).not.toHaveBeenCalled();
+    const valkey = { pipeline: vi.fn() };
+    await pipelineBySlot(asClient(valkey), [], (k: string) => k, () => {});
+    expect(valkey.pipeline).not.toHaveBeenCalled();
   });
 
   it("throws instead of silently dropping a failed pipeline", async () => {
@@ -72,10 +72,10 @@ describe("pipelineBySlot", () => {
       set: (_key: string) => chain,
       exec: vi.fn().mockResolvedValue([[failure, null]]),
     };
-    const redis = { pipeline: () => chain };
+    const valkey = { pipeline: () => chain };
 
     await expect(
-      pipelineBySlot(asClient(redis), ["a"], (k) => k, (p) => {
+      pipelineBySlot(asClient(valkey), ["a"], (k) => k, (p) => {
         (p as unknown as typeof chain).set("a");
       }),
     ).rejects.toBe(failure);
@@ -84,21 +84,21 @@ describe("pipelineBySlot", () => {
 
 describe("scanKeysSafe", () => {
   it("walks the cursor to completion", async () => {
-    const redis = {
+    const valkey = {
       scan: vi
         .fn()
         .mockResolvedValueOnce(["7", ["k1", "k2"]])
         .mockResolvedValueOnce(["0", ["k3"]]),
     };
-    expect(await scanKeysSafe(asClient(redis), "lumi:*")).toEqual(["k1", "k2", "k3"]);
-    expect(redis.scan).toHaveBeenCalledTimes(2);
+    expect(await scanKeysSafe(asClient(valkey), "lumi:*")).toEqual(["k1", "k2", "k3"]);
+    expect(valkey.scan).toHaveBeenCalledTimes(2);
   });
 });
 
 describe("delSafe", () => {
   it("skips the call entirely when there is nothing to delete", async () => {
-    const redis = { del: vi.fn() };
-    await delSafe(asClient(redis), []);
-    expect(redis.del).not.toHaveBeenCalled();
+    const valkey = { del: vi.fn() };
+    await delSafe(asClient(valkey), []);
+    expect(valkey.del).not.toHaveBeenCalled();
   });
 });

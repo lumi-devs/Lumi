@@ -2,7 +2,7 @@
 
 Worked example: `afk` (`packages/core/src/modules/afk/`) — one of the smallest real
 modules in the repo, but it exercises every piece a new module needs: config schema,
-a command, a listener, an interaction handler, a scheduled task, Redis-backed data, and
+a command, a listener, an interaction handler, a scheduled task, Valkey-backed data, and
 both GDPR hooks. Background on the mechanics referenced below: `agents/architecture/module-system.md`.
 
 ## 1. Scaffold the directory
@@ -11,8 +11,8 @@ both GDPR hooks. Background on the mechanics referenced below: `agents/architect
 packages/core/src/modules/<name>/
   index.ts                     # the @DefineModule class itself
   manifest.json                # generated/kept in sync, see step 6
-  keys.ts                      # Redis key builders + TTLs, if the module touches Redis
-  data/<name>.ts                # Redis/Prisma read-write functions, imported by commands/utilities
+  keys.ts                      # Valkey key builders + TTLs, if the module touches Valkey
+  data/<name>.ts                # Valkey/Prisma read-write functions, imported by commands/utilities
   commands/<name>.ts
   listeners/<event>.ts          # optional
   interaction-handlers/<x>.ts   # optional, only if the module has buttons/selects/modals
@@ -139,7 +139,7 @@ brand-new module's first command:
   paired with the `ModuleEnabled` precondition (`afk.ts:37`), this is what makes
   the command actually respect the per-guild module on/off toggle. A command
   with no `module` field runs even if nothing ever "enables" it.
-- If the command needs shared logic beyond simple Redis/Prisma calls (state,
+- If the command needs shared logic beyond simple Valkey/Prisma calls (state,
   multi-step orchestration), put it in a `utilities/<Name>Utility.ts` class
   extending `Utility` (`#lib/module-system/Utility.js`) and access it via
   `getUtility("afk")` (`afk.ts:54-56`, `AfkUtility.ts:23-24`) rather than
@@ -223,10 +223,10 @@ structure loosely (one file per concern, not one-per-source-file). `afk`'s
 tests live in `packages/core/tests/modules/afk/afk.test.ts` and cover:
 
 - Key-builder correctness (`AfkKeys.afk("g1","u1") === "lumi:afk:g1:u1"` etc.) —
-  cheap, high-value, catches a typo'd Redis key format immediately.
+  cheap, high-value, catches a typo'd Valkey key format immediately.
 - The data-layer functions (`setAfkEntry`, `getAfkEntry`, `clearAllAfkForUser`, ...)
-  with `@sapphire/framework`'s `container` mocked wholesale (`redis`, `db`,
-  `logger`, `invalidation` all as `vi.fn()` stubs) — no real Redis/Postgres
+  with `@sapphire/framework`'s `container` mocked wholesale (`valkey`, `db`,
+  `logger`, `invalidation` all as `vi.fn()` stubs) — no real Valkey/Postgres
   connection, per the repo's mocking convention.
 - `vi.clearAllMocks()` in a `beforeEach`, `describe`/`it` imported explicitly
   from `"vitest"` (no globals).
@@ -234,7 +234,7 @@ tests live in `packages/core/tests/modules/afk/afk.test.ts` and cover:
 Write one `it` per actual behavior with a full-sentence description
 (`'should generate correct key strings and TTL values'`, not `'works'`). If the
 module touches `container.prisma`/`container.db` through a repository class
-rather than plain redis calls, use the in-memory mock Prisma driver at
+rather than plain valkey calls, use the in-memory mock Prisma driver at
 `packages/core/tests/mocks/prisma.ts` instead of hand-rolling stub objects.
 
 ## Order that actually works end to end

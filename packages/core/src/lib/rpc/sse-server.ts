@@ -35,7 +35,7 @@ interface Connection {
  * Every open connection, keyed by the guild it's scoped to, for in-memory
  * fan-out. All state below is process-local - `apps/api` runs single-
  * threaded per replica, so no cross-process coordination is needed beyond
- * the one shared Redis subscription itself.
+ * the one shared Valkey subscription itself.
  */
 const connectionsByGuild = new Map<string, Set<Connection>>();
 const allConnections = new Set<Connection>();
@@ -256,9 +256,9 @@ export async function handleSseRequest(req: Request): Promise<Response> {
 
 /**
  * Closes every open SSE connection. Called from `apps/api`'s drain sequence
- * ahead of the event-bus/redis teardown (`api-bootstrap.ts`'s
+ * ahead of the event-bus/valkey teardown (`api-bootstrap.ts`'s
  * `extraDrainSteps`), so each connection's own cleanup runs, and the last
- * one to go tears down the shared subscription, while Redis is still
+ * one to go tears down the shared subscription, while Valkey is still
  * reachable, instead of racing a hard connection close.
  */
 export async function closeAllSseConnections(): Promise<void> {

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import {
-  acquireRedisLock,
-  verifyRedisLock,
-  RedisExtendScript,
+  acquireValkeyLock,
+  verifyValkeyLock,
+  ValkeyExtendScript,
 } from "#lib/lock.js";
 
-function mockRedis() {
+function mockValkey() {
   const store = new Map<string, string>();
   return {
     store,
@@ -34,14 +34,14 @@ function mockRedis() {
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
 // the setInterval/setTimeout queue, so these wait on the real clock instead —
-// acquireRedisLock's renewal interval and retry backoff are real timers.
+// acquireValkeyLock's renewal interval and retry backoff are real timers.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe("redis-lock", () => {
-  let redis: ReturnType<typeof mockRedis>;
+describe("valkey-lock", () => {
+  let valkey: ReturnType<typeof mockValkey>;
 
   beforeEach(() => {
-    redis = mockRedis();
+    valkey = mockValkey();
   });
 
   afterEach(() => {
@@ -50,7 +50,7 @@ describe("redis-lock", () => {
 
   describe("fencing token and verification", () => {
     it("returns a release closure and a valid fencing token", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:guild:1", { ttlMs: 5000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:1", { ttlMs: 5000 });
       expect(typeof lock.release).toBe("function");
       expect(typeof lock.token).toBe("string");
       expect(lock.token.length).toBeGreaterThan(0);
@@ -58,32 +58,32 @@ describe("redis-lock", () => {
     });
 
     it("verifies lock holder while held and returns false after release", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:guild:2", { ttlMs: 5000 });
-      await expect(verifyRedisLock(redis as any, "lock:guild:2", lock.token)).resolves.toBe(true);
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:2", { ttlMs: 5000 });
+      await expect(verifyValkeyLock(valkey as any, "lock:guild:2", lock.token)).resolves.toBe(true);
       await lock.release();
-      await expect(verifyRedisLock(redis as any, "lock:guild:2", lock.token)).resolves.toBe(false);
+      await expect(verifyValkeyLock(valkey as any, "lock:guild:2", lock.token)).resolves.toBe(false);
     });
 
     it("rejects stale token verification when token does not match", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:guild:3", { ttlMs: 5000 });
-      await expect(verifyRedisLock(redis as any, "lock:guild:3", "stale-token-123")).resolves.toBe(false);
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:3", { ttlMs: 5000 });
+      await expect(verifyValkeyLock(valkey as any, "lock:guild:3", "stale-token-123")).resolves.toBe(false);
       await lock.release();
     });
 
     it("returns false for nonexistent key", async () => {
-      await expect(verifyRedisLock(redis as any, "lock:nonexistent", "some-token")).resolves.toBe(false);
+      await expect(verifyValkeyLock(valkey as any, "lock:nonexistent", "some-token")).resolves.toBe(false);
     });
 
     it("throws error when acquire times out", async () => {
-      redis.set.mockResolvedValue(null);
-      const acquirePromise = acquireRedisLock(redis as any, "lock:busy", {
+      valkey.set.mockResolvedValue(null);
+      const acquirePromise = acquireValkeyLock(valkey as any, "lock:busy", {
         acquireTimeoutMs: 100,
         retryDelayMs: 20,
         maxRetryDelayMs: 50,
       });
 
       const assertionPromise = expect(acquirePromise).rejects.toThrow(
-        "Timeout acquiring Redis lock: lock:busy",
+        "Timeout acquiring Valkey lock: lock:busy",
       );
 
       await sleep(200);
@@ -93,12 +93,12 @@ describe("redis-lock", () => {
 
   describe("lock renewal", () => {
     it("renews lock automatically at half ttl intervals when held", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:renew:1", { ttlMs: 4000 });
-      const evalSpy = redis.eval;
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:1", { ttlMs: 4000 });
+      const evalSpy = valkey.eval;
 
       await sleep(2000);
       expect(evalSpy).toHaveBeenCalledWith(
-        RedisExtendScript,
+        ValkeyExtendScript,
         1,
         "lock:renew:1",
         lock.token,
@@ -112,56 +112,57 @@ describe("redis-lock", () => {
       const errorLogger = vi.fn();
       (container as any).logger = { error: errorLogger };
 
-      const lock = await acquireRedisLock(redis as any, "lock:renew:stolen", { ttlMs: 4000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:stolen", { ttlMs: 4000, logger: { error: errorLogger } });
 
-      redis.store.delete("lock:renew:stolen");
+      valkey.store.delete("lock:renew:stolen");
 
       await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
+        '[valkey-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
       );
 
       await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:stolen" (2 consecutive failures)',
+        '[valkey-lock] Failed to renew lock "lock:renew:stolen" (2 consecutive failures)',
       );
 
-      redis.store.set("lock:renew:stolen", lock.token);
+      valkey.store.set("lock:renew:stolen", lock.token);
       await sleep(2000);
 
-      redis.store.delete("lock:renew:stolen");
+      valkey.store.delete("lock:renew:stolen");
       await sleep(2000);
       expect(errorLogger).toHaveBeenLastCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
+        '[valkey-lock] Failed to renew lock "lock:renew:stolen" (1 consecutive failure)',
       );
 
       await lock.release();
       delete (container as any).logger;
     }, 12_000);
 
-    it("handles Redis connection failure during renewal and notifies onLostLock once", async () => {
+    it("handles Valkey connection failure during renewal and notifies onLostLock once", async () => {
       const errorLogger = vi.fn();
       const onLostLock = vi.fn();
       (container as any).logger = { error: errorLogger };
 
-      const lock = await acquireRedisLock(redis as any, "lock:renew:err", {
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:err", {
         ttlMs: 4000,
         onLostLock,
+        logger: { error: errorLogger },
       });
 
-      const redisErr = new Error("Connection reset by peer");
-      redis.eval.mockRejectedValueOnce(redisErr);
+      const valkeyErr = new Error("Connection reset by peer");
+      valkey.eval.mockRejectedValueOnce(valkeyErr);
 
       await sleep(2000);
 
       expect(errorLogger).toHaveBeenCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:err" (1 consecutive failure)',
-        redisErr,
+        '[valkey-lock] Failed to renew lock "lock:renew:err" (1 consecutive failure)',
+        valkeyErr,
       );
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
       // Subsequent failure should not trigger onLostLock again
-      redis.eval.mockRejectedValueOnce(new Error("Still down"));
+      valkey.eval.mockRejectedValueOnce(new Error("Still down"));
       await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
 
@@ -174,12 +175,13 @@ describe("redis-lock", () => {
       (container as any).logger = { error: errorLogger };
 
       const onLostLock = vi.fn();
-      const lock = await acquireRedisLock(redis as any, "lock:renew:stolen:callback", {
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:stolen:callback", {
         ttlMs: 4000,
         onLostLock,
+        logger: { error: errorLogger },
       });
 
-      redis.store.delete("lock:renew:stolen:callback");
+      valkey.store.delete("lock:renew:stolen:callback");
 
       await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);
@@ -194,28 +196,31 @@ describe("redis-lock", () => {
       delete (container as any).logger;
     }, 10_000);
 
-    it("renews after temporary Redis failure that recovers", async () => {
+    it("renews after temporary Valkey failure that recovers", async () => {
       const errorLogger = vi.fn();
       (container as any).logger = { error: errorLogger };
 
-      const lock = await acquireRedisLock(redis as any, "lock:renew:recover", { ttlMs: 4000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:recover", {
+        ttlMs: 4000,
+        logger: { error: errorLogger },
+      });
 
-      const redisErr = new Error("Temporary network timeout");
-      redis.eval.mockRejectedValueOnce(redisErr);
+      const valkeyErr = new Error("Temporary network timeout");
+      valkey.eval.mockRejectedValueOnce(valkeyErr);
 
       await sleep(2000);
       expect(errorLogger).toHaveBeenCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
-        redisErr,
+        '[valkey-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
+        valkeyErr,
       );
 
       await sleep(2000);
 
-      redis.eval.mockRejectedValueOnce(redisErr);
+      valkey.eval.mockRejectedValueOnce(valkeyErr);
       await sleep(2000);
       expect(errorLogger).toHaveBeenLastCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
-        redisErr,
+        '[valkey-lock] Failed to renew lock "lock:renew:recover" (1 consecutive failure)',
+        valkeyErr,
       );
 
       await lock.release();
@@ -227,13 +232,13 @@ describe("redis-lock", () => {
       delete (container as any).logger;
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const lock = await acquireRedisLock(redis as any, "lock:renew:console", { ttlMs: 4000 });
-      redis.store.delete("lock:renew:console");
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:console", { ttlMs: 4000 });
+      valkey.store.delete("lock:renew:console");
 
       await sleep(2000);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[redis-lock] Failed to renew lock "lock:renew:console" (1 consecutive failure)',
+        '[valkey-lock] Failed to renew lock "lock:renew:console" (1 consecutive failure)',
       );
 
       await lock.release();
@@ -246,41 +251,41 @@ describe("redis-lock", () => {
 
   describe("release idempotency", () => {
     it("releases lock once and subsequent calls are no-op", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:release:1", { ttlMs: 5000 });
-      expect(redis.store.has("lock:release:1")).toBe(true);
+      const lock = await acquireValkeyLock(valkey as any, "lock:release:1", { ttlMs: 5000 });
+      expect(valkey.store.has("lock:release:1")).toBe(true);
 
       await lock.release();
-      expect(redis.store.has("lock:release:1")).toBe(false);
+      expect(valkey.store.has("lock:release:1")).toBe(false);
 
-      const evalCallsBefore = redis.eval.mock.calls.length;
+      const evalCallsBefore = valkey.eval.mock.calls.length;
       await expect(lock.release()).resolves.toBeUndefined();
-      expect(redis.eval.mock.calls.length).toBe(evalCallsBefore);
+      expect(valkey.eval.mock.calls.length).toBe(evalCallsBefore);
     });
 
     it("stops renewal interval upon release", async () => {
-      const lock = await acquireRedisLock(redis as any, "lock:release:2", { ttlMs: 4000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:release:2", { ttlMs: 4000 });
       await lock.release();
 
-      const evalCount = redis.eval.mock.calls.length;
+      const evalCount = valkey.eval.mock.calls.length;
       await sleep(10000);
 
-      expect(redis.eval.mock.calls.length).toBe(evalCount);
+      expect(valkey.eval.mock.calls.length).toBe(evalCount);
     }, 12_000);
   });
 
   describe("concurrency and mutual exclusion", () => {
     it("allows only one concurrent acquirer for the same lock key", async () => {
-      const lock1 = await acquireRedisLock(redis as any, "lock:concurrent", {
+      const lock1 = await acquireValkeyLock(valkey as any, "lock:concurrent", {
         acquireTimeoutMs: 50,
       });
-      expect(redis.store.get("lock:concurrent")).toBe(lock1.token);
+      expect(valkey.store.get("lock:concurrent")).toBe(lock1.token);
 
-      const acquire2 = acquireRedisLock(redis as any, "lock:concurrent", {
+      const acquire2 = acquireValkeyLock(valkey as any, "lock:concurrent", {
         acquireTimeoutMs: 50,
       });
 
       const assertion = expect(acquire2).rejects.toThrow(
-        "Timeout acquiring Redis lock: lock:concurrent",
+        "Timeout acquiring Valkey lock: lock:concurrent",
       );
 
       await sleep(100);
@@ -290,7 +295,7 @@ describe("redis-lock", () => {
     });
 
     it("allows immediate acquisition after lock released before TTL expiry", async () => {
-      const lock1 = await acquireRedisLock(redis as any, "lock:handoff", {
+      const lock1 = await acquireValkeyLock(valkey as any, "lock:handoff", {
         ttlMs: 30_000,
         acquireTimeoutMs: 1_000,
       });
@@ -298,12 +303,12 @@ describe("redis-lock", () => {
       await sleep(5_000);
       await lock1.release();
 
-      const lock2 = await acquireRedisLock(redis as any, "lock:handoff", {
+      const lock2 = await acquireValkeyLock(valkey as any, "lock:handoff", {
         acquireTimeoutMs: 50,
       });
       expect(lock2.token).toBeDefined();
       expect(lock2.token).not.toBe(lock1.token);
-      expect(redis.store.get("lock:handoff")).toBe(lock2.token);
+      expect(valkey.store.get("lock:handoff")).toBe(lock2.token);
 
       await lock2.release();
     }, 8000);

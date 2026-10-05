@@ -64,12 +64,12 @@ last six are literally one-line pass-throughs to the same core functions (see
 
 `lumi/utils` (`addon-sdk/utils.ts`):
 `BotConfig`, `relativeTimestamp`, `shortTimestamp`, `parseDuration`, `formatDuration`,
-`errorFrom`, `swallow`, `logError`, `acquireRedisLock`, `verifyRedisLock`, `RedisLock`,
-`RedisLockOptions`, `GuildMessage`.
+`errorFrom`, `swallow`, `logError`, `acquireValkeyLock`, `verifyValkeyLock`, `ValkeyLock`,
+`ValkeyLockOptions`, `GuildMessage`.
 
-Notably absent from every subpath: `container.db`/`container.prisma`, `container.redis`
+Notably absent from every subpath: `container.db`/`container.prisma`, `container.valkey`
 directly, `container.invalidation`. Addons get no Prisma schema of their own — persistence is
-`container.db.guildKV` or `container.redis` per the validator's own error message
+`container.db.guildKV` or `container.valkey` per the validator's own error message
 (`validate.ts:330-333`).
 
 ## Symlink mechanism (`downloader/resolver.ts`)

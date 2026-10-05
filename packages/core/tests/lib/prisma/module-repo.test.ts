@@ -12,14 +12,14 @@ vi.mock("@lumi/observability", () => ({
 describe("ModuleRepository", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let repo: ModuleRepository;
-  let mockRedis: any;
+  let mockValkey: any;
   let store: Map<string, string>;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
     store = new Map();
     repositoryCache.clear();
-    mockRedis = {
+    mockValkey = {
       get: vi.fn(async (k: string) => store.get(k) ?? null),
       set: vi.fn(async (k: string, v: string) => {
         store.set(k, v);
@@ -34,7 +34,7 @@ describe("ModuleRepository", () => {
         return 1;
       }),
     };
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     (container as any).invalidation = {
       invalidate: vi.fn(async (...keys: string[]) => {
         for (const k of keys) {
@@ -45,7 +45,7 @@ describe("ModuleRepository", () => {
     };
     const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     const mockLogger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
-    repo = new ModuleRepository(prisma as any, mockRedis, mockLogger as any, mockDb as any, prisma as any);
+    repo = new ModuleRepository(prisma as any, mockValkey, mockLogger as any, mockDb as any, prisma as any);
   });
 
   it("manages global module state overrides", async () => {

@@ -4,20 +4,20 @@ import Valkey, { type RedisOptions } from "iovalkey";
 /**
  * Real-service integration suite guard.
  *
- * Deliberately reads `LUMI_TEST_DATABASE_URL` / `LUMI_TEST_REDIS_URL` rather
- * than the app's own `DATABASE_URL`/`REDIS_URL`/`POSTGRES_URL` names, so a
+ * Deliberately reads `LUMI_TEST_DATABASE_URL` / `LUMI_TEST_VALKEY_URL` rather
+ * than the app's own `DATABASE_URL`/`VALKEY_URL`/`POSTGRES_URL` names, so a
  * developer's `.env` (pointed at their real dev/prod database) can never be
  * picked up here by accident - these tests only run when a value is
  * deliberately supplied under these dedicated names.
  */
 export const testDatabaseUrl = process.env.LUMI_TEST_DATABASE_URL;
-export const testRedisUrl = process.env.LUMI_TEST_REDIS_URL;
+export const testValkeyUrl = process.env.LUMI_TEST_VALKEY_URL;
 
-export const hasIntegrationEnv = Boolean(testDatabaseUrl && testRedisUrl);
+export const hasIntegrationEnv = Boolean(testDatabaseUrl && testValkeyUrl);
 
 const SkipMessage =
-  "[integration] Skipping - set LUMI_TEST_DATABASE_URL and LUMI_TEST_REDIS_URL " +
-  "to a throwaway Postgres/Redis to run this suite (see agents/conventions/testing.md).";
+  "[integration] Skipping - set LUMI_TEST_DATABASE_URL and LUMI_TEST_VALKEY_URL " +
+  "to a throwaway Postgres/Valkey to run this suite (see agents/conventions/testing.md).";
 
 if (!hasIntegrationEnv) {
   console.warn(SkipMessage);
@@ -37,20 +37,20 @@ export function requireTestDatabaseUrl(): string {
   return testDatabaseUrl;
 }
 
-export function requireTestRedisUrl(): string {
-  if (!testRedisUrl) throw new Error("LUMI_TEST_REDIS_URL is not set");
-  return testRedisUrl;
+export function requireTestValkeyUrl(): string {
+  if (!testValkeyUrl) throw new Error("LUMI_TEST_VALKEY_URL is not set");
+  return testValkeyUrl;
 }
 
-/** Dedicated iovalkey connection to the throwaway test Redis (its own DB index, per the connection URL). */
-export function createTestRedis(): Valkey {
-  return new Valkey(requireTestRedisUrl(), { maxRetriesPerRequest: 2 });
+/** Dedicated iovalkey connection to the throwaway test Valkey (its own DB index, per the connection URL). */
+export function createTestValkey(): Valkey {
+  return new Valkey(requireTestValkeyUrl(), { maxRetriesPerRequest: 2 });
 }
 
-/** `RedisOptions` form of the same URL, for APIs (e.g. `createEventBus`) that take options rather than a client. */
-export function parseTestRedisOptions(): RedisOptions {
-  const url = new URL(requireTestRedisUrl());
-  const opts: RedisOptions = {
+/** `ValkeyOptions` form of the same URL, for APIs (e.g. `createEventBus`) that take options rather than a client. */
+export function parseTestValkeyOptions(): ValkeyOptions {
+  const url = new URL(requireTestValkeyUrl());
+  const opts: ValkeyOptions = {
     host: url.hostname,
     port: url.port ? Number(url.port) : 6379,
   };
@@ -64,14 +64,14 @@ export function parseTestRedisOptions(): RedisOptions {
 
 /**
  * Keys matching `pattern` via SCAN (never KEYS/FLUSHALL/FLUSHDB) - safe to run
- * against a shared test Redis DB since it only ever touches keys this suite
+ * against a shared test Valkey DB since it only ever touches keys this suite
  * itself could have written.
  */
-export async function scanKeys(redis: Valkey, pattern: string): Promise<string[]> {
+export async function scanKeys(valkey: Valkey, pattern: string): Promise<string[]> {
   const found: string[] = [];
   let cursor = "0";
   do {
-    const [next, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 200);
+    const [next, keys] = await valkey.scan(cursor, "MATCH", pattern, "COUNT", 200);
     cursor = next;
     found.push(...keys);
   } while (cursor !== "0");
@@ -79,7 +79,7 @@ export async function scanKeys(redis: Valkey, pattern: string): Promise<string[]
 }
 
 /** Deletes every key under `prefix` (see `scanKeys`). */
-export async function deleteByPrefix(redis: Valkey, prefix: string): Promise<void> {
-  const keys = await scanKeys(redis, `${prefix}*`);
-  if (keys.length) await redis.del(...keys);
+export async function deleteByPrefix(valkey: Valkey, prefix: string): Promise<void> {
+  const keys = await scanKeys(valkey, `${prefix}*`);
+  if (keys.length) await valkey.del(...keys);
 }

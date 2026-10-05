@@ -46,7 +46,7 @@ describe("TempVcUtility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    (container as any).redis = {
+    (container as any).valkey = {
       set: vi.fn(),
     } as any;
     (container as any).db = {
@@ -78,13 +78,13 @@ describe("TempVcUtility", () => {
 
   describe("onCreateCooldown", () => {
     it("returns false if NX set succeeds (no cooldown)", async () => {
-      (container.redis.set as any).mockResolvedValue("OK");
+      (container.valkey.set as any).mockResolvedValue("OK");
       const result = await service.onCreateCooldown("guild-1", "user-1");
       expect(result).toBe(false);
     });
 
     it("returns true if NX set returns null (cooldown active)", async () => {
-      (container.redis.set as any).mockResolvedValue(null);
+      (container.valkey.set as any).mockResolvedValue(null);
       const result = await service.onCreateCooldown("guild-1", "user-1");
       expect(result).toBe(true);
     });

@@ -12,7 +12,7 @@ import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { errorFrom } from "#lib/utilities/errors.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
 
@@ -638,10 +638,10 @@ export class DownloaderUtility extends Utility {
     return { commit: info.commit, needsRestart: true, signatureWarning: info.signatureWarning };
   }
 
-  /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */
+  /** Read-only sweep across every installed module; Valkey-cached to avoid hammering git on repeated calls. */
   public async checkForUpdates(): Promise<string[]> {
-    const cacheKey = RedisKeys.addonUpdateCheck();
-    const cached = await this.container.redis.get(cacheKey);
+    const cacheKey = ValkeyKeys.addonUpdateCheck();
+    const cached = await this.container.valkey.get(cacheKey);
     if (cached) {
       try {
         return JSON.parse(cached) as string[];
@@ -665,9 +665,9 @@ export class DownloaderUtility extends Utility {
       }
     }
 
-    await this.container.redis.setex(
+    await this.container.valkey.setex(
       cacheKey,
-      RedisTTL.addonUpdateCheck,
+      ValkeyTTL.addonUpdateCheck,
       JSON.stringify(pending),
     );
     return pending;

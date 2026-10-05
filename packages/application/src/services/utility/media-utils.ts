@@ -56,7 +56,7 @@ export async function handleMediaRequest({
     const claimed = await claimCooldown(cooldownKey, cooldownMs);
 
     if (!claimed) {
-      const remainingMs = await container.redis.pttl(cooldownKey);
+      const remainingMs = await container.valkey.pttl(cooldownKey);
       const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
       const title = t("commands:mediaCooldownTitle");
       const reply = t("commands:mediaCooldown", { timeLeft });

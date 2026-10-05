@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { container } from "@sapphire/framework";
 
@@ -12,7 +12,7 @@ vi.mock("@lumi/observability", () => ({
 describe("ConfigRepository", () => {
   let repo: ConfigRepository;
   let mockPrisma: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let mockConfigHistory: any;
 
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe("ConfigRepository", () => {
       $transaction: vi.fn().mockImplementation((promises) => Promise.all(promises)),
     };
 
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
@@ -38,7 +38,7 @@ describe("ConfigRepository", () => {
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     repositoryCache.clear();
 
     const mockDb: any = {
@@ -53,7 +53,7 @@ describe("ConfigRepository", () => {
 
     repo = new ConfigRepository(
       mockPrisma,
-      mockRedis,
+      mockValkey,
       mockLogger,
       mockDb,
       mockConfigHistory,
@@ -82,8 +82,8 @@ describe("ConfigRepository", () => {
       });
 
       expect((container as any).invalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.guildConfig("core", "123"),
-        RedisKeys.guildAllModuleConfigs("123"),
+        ValkeyKeys.guildConfig("core", "123"),
+        ValkeyKeys.guildAllModuleConfigs("123"),
       );
 
       expect(mockConfigHistory.logConfigChange).not.toHaveBeenCalled();

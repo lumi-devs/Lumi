@@ -30,7 +30,7 @@ export interface FakeAddonHostOptions {
 /**
  * Drives a real addon child process (`packages/core/src/runtime/addon-child.ts`)
  * over its IPC protocol with a fake host that answers `rpc-request`s instead of
- * touching Discord/Postgres/Redis - the harness `child.test.ts` and `lumi addon
+ * touching Discord/Postgres/Valkey - the harness `child.test.ts` and `lumi addon
  * test` both drive, so the protocol only has one implementation.
  */
 export class FakeAddonHost {

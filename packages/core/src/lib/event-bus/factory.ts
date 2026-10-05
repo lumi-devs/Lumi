@@ -1,6 +1,6 @@
-// Build the Redis Streams event bus and own the dedicated ioredis connections it needs.
+// Build the Valkey Streams event bus and own the dedicated iovalkey connections it needs.
 //
-// We require TWO Redis connections: ioredis serializes commands per
+// We require TWO Valkey connections: iovalkey serializes commands per
 // connection, and XREADGROUP BLOCK holds the socket. Sharing one connection
 // would stall publishes behind blocking reads.
 
@@ -8,9 +8,11 @@ import Valkey, { type RedisOptions } from "iovalkey";
 import { StreamBus, type StreamStats } from "./StreamBus.js";
 import type { EventBus } from "./types.js";
 
+export type ValkeyOptions = RedisOptions;
+
 export interface CreateEventBusOptions {
   /** Connection options for Valkey Streams. Required when creating an event bus. */
-  redis?: RedisOptions;
+  valkey?: ValkeyOptions;
   /** Default per-stream MAXLEN cap. */
   defaultMaxLen?: number;
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
@@ -41,13 +43,14 @@ export interface OwnedEventBus {
 export function createEventBus(
   opts: CreateEventBusOptions = {},
 ): OwnedEventBus {
-  if (!opts.redis) {
-    throw new Error("createEventBus(): `redis` options required");
+  const connectionOpts = opts.valkey;
+  if (!connectionOpts) {
+    throw new Error("createEventBus(): `valkey` options required");
   }
 
-  const publisher = new Valkey({ ...opts.redis, lazyConnect: true });
+  const publisher = new Valkey({ ...connectionOpts, lazyConnect: true });
   const subscriber = new Valkey({
-    ...opts.redis,
+    ...connectionOpts,
     lazyConnect: true,
     // Blocking XREADGROUP commands must be tolerated by the retry layer.
     maxRetriesPerRequest: null,

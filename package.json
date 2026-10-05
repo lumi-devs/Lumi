@@ -20,7 +20,7 @@
     "./interactions": "./packages/core/src/lib/addon-sandbox/sdk/interactions.ts",
     "./kv": "./packages/core/src/lib/addon-sandbox/sdk/kv.ts",
     "./permissions": "./packages/core/src/lib/addon-sandbox/sdk/permissions.ts",
-    "./redis": "./packages/core/src/lib/addon-sandbox/sdk/redis.ts",
+    "./valkey": "./packages/core/src/lib/addon-sandbox/sdk/valkey.ts",
     "./scheduling": "./packages/core/src/lib/addon-sandbox/sdk/scheduling.ts",
     "./ui": "./packages/core/src/lib/addon-sandbox/sdk/ui.ts",
     "./utils": "./packages/core/src/lib/addon-sandbox/sdk/utils.ts"

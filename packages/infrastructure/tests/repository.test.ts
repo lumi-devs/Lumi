@@ -4,11 +4,11 @@ import { BaseRepository } from "../src/database/repository.js";
 class TestRepository extends BaseRepository {
   public constructor(
     db: any,
-    redis?: any,
+    valkey?: any,
     invalidation?: any,
     logger?: any,
   ) {
-    super(db, redis, invalidation, logger);
+    super(db, valkey, invalidation, logger);
   }
 
   public async getCachedValue<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
@@ -22,7 +22,7 @@ class TestRepository extends BaseRepository {
 
 describe("BaseRepository", () => {
   let mockDb: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let mockInvalidation: any;
   let mockLogger: any;
   let store: Map<string, string>;
@@ -30,7 +30,7 @@ describe("BaseRepository", () => {
   beforeEach(() => {
     store = new Map();
     mockDb = {};
-    mockRedis = {
+    mockValkey = {
       get: vi.fn(async (key: string) => store.get(key) ?? null),
       set: vi.fn(async (key: string, val: string) => {
         store.set(key, val);
@@ -51,7 +51,7 @@ describe("BaseRepository", () => {
     };
   });
 
-  it("fetches directly from source when redis is unavailable", async () => {
+  it("fetches directly from source when valkey is unavailable", async () => {
     const repo = new TestRepository(mockDb);
     const fetcher = vi.fn().mockResolvedValue({ id: "1" });
 
@@ -60,25 +60,25 @@ describe("BaseRepository", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("caches and serves subsequent calls from redis", async () => {
-    const repo = new TestRepository(mockDb, mockRedis, mockInvalidation, mockLogger);
+  it("caches and serves subsequent calls from valkey", async () => {
+    const repo = new TestRepository(mockDb, mockValkey, mockInvalidation, mockLogger);
     const fetcher = vi.fn().mockResolvedValue({ counter: 42 });
 
     const first = await repo.getCachedValue("counter:key", 60, fetcher);
     expect(first).toEqual({ counter: 42 });
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(mockRedis.set).toHaveBeenCalledWith("counter:key", JSON.stringify({ counter: 42 }), "EX", 60);
+    expect(mockValkey.set).toHaveBeenCalledWith("counter:key", JSON.stringify({ counter: 42 }), "EX", 60);
 
     const second = await repo.getCachedValue("counter:key", 60, fetcher);
     expect(second).toEqual({ counter: 42 });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
-  it("handles redis read/write errors gracefully by falling back to fetcher", async () => {
-    mockRedis.get.mockRejectedValueOnce(new Error("Redis read timeout"));
-    mockRedis.set.mockRejectedValueOnce(new Error("Redis write timeout"));
+  it("handles valkey read/write errors gracefully by falling back to fetcher", async () => {
+    mockValkey.get.mockRejectedValueOnce(new Error("Valkey read timeout"));
+    mockValkey.set.mockRejectedValueOnce(new Error("Valkey write timeout"));
 
-    const repo = new TestRepository(mockDb, mockRedis, mockInvalidation, mockLogger);
+    const repo = new TestRepository(mockDb, mockValkey, mockInvalidation, mockLogger);
     const fetcher = vi.fn().mockResolvedValue({ fallback: true });
 
     const result = await repo.getCachedValue("err:key", 60, fetcher);
@@ -86,13 +86,13 @@ describe("BaseRepository", () => {
     expect(mockLogger.warn).toHaveBeenCalledTimes(2);
   });
 
-  it("invalidates keys via invalidation bus or redis", async () => {
-    const repoWithBus = new TestRepository(mockDb, mockRedis, mockInvalidation);
+  it("invalidates keys via invalidation bus or valkey", async () => {
+    const repoWithBus = new TestRepository(mockDb, mockValkey, mockInvalidation);
     await repoWithBus.invalidate("k1", "k2");
     expect(mockInvalidation.invalidate).toHaveBeenCalledWith("k1", "k2");
 
-    const repoWithoutBus = new TestRepository(mockDb, mockRedis);
+    const repoWithoutBus = new TestRepository(mockDb, mockValkey);
     await repoWithoutBus.invalidate("k3");
-    expect(mockRedis.del).toHaveBeenCalledWith("k3");
+    expect(mockValkey.del).toHaveBeenCalledWith("k3");
   });
 });

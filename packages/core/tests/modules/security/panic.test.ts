@@ -16,7 +16,7 @@ function setContainer(overrides: {
   discordRest?: FakeDiscordRestPort;
 }) {
   (container as any).discordRest = overrides.discordRest ?? new FakeDiscordRestPort();
-  (container as any).redis = {
+  (container as any).valkey = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),

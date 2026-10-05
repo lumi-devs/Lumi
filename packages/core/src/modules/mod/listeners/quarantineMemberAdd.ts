@@ -1,6 +1,6 @@
 import { Listener, container } from "@sapphire/framework";
 import type { GuildMember } from "discord.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 
 export class QuarantineMemberAddListener extends Listener {
   public constructor(
@@ -17,8 +17,8 @@ export class QuarantineMemberAddListener extends Listener {
     const guildId = member.guild.id;
     const userId = member.id;
 
-    const quarantineState = await container.redis.get(
-      RedisKeys.quarantineState(guildId, userId),
+    const quarantineState = await container.valkey.get(
+      ValkeyKeys.quarantineState(guildId, userId),
     );
 
     // "0" is a negative-cache sentinel written below when we confirm no active
@@ -40,9 +40,9 @@ export class QuarantineMemberAddListener extends Listener {
         // Cache the negative result for 60 s. The quarantine-application path
         // writes a positive value that overwrites this, so there is no
         // window where a user could evade re-quarantine on rejoin.
-        await container.redis.setex(
-          RedisKeys.quarantineState(guildId, userId),
-          RedisTTL.quarantineNegative,
+        await container.valkey.setex(
+          ValkeyKeys.quarantineState(guildId, userId),
+          ValkeyTTL.quarantineNegative,
           "0",
         );
       }

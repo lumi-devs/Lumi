@@ -58,7 +58,7 @@ describe("validateAddon - lumi SDK import boundary", () => {
     "#core/module-system/Module.js",
     "#lib/commands.js",
     "#lib/ui/cards.js",
-    "#lib/database/redis.js",
+    "#lib/database/valkey.js",
     "#root/foo.js",
   ])("hard-errors when the addon imports Lumi's internal path %s directly", async (internalPath) => {
     const dir = path.join(tmpRoot, "my-addon");

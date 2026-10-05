@@ -66,7 +66,7 @@ describe("queueSend", () => {
   it("sends inline when the queue is unreachable", async () => {
     const channel = makeChannel("c1", 0);
     channels.set("c1", channel);
-    (container.tasks.create as any).mockRejectedValueOnce(new Error("redis down"));
+    (container.tasks.create as any).mockRejectedValueOnce(new Error("valkey down"));
 
     await queueSend({ channelId: "c1", content: "hello" });
 

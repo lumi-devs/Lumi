@@ -29,7 +29,7 @@ describe("lumi addon SDK resolution", () => {
     "interactions",
     "kv",
     "permissions",
-    "redis",
+    "valkey",
     "scheduling",
     "ui",
     "utils",
@@ -41,7 +41,7 @@ describe("lumi addon SDK resolution", () => {
   it.each([
     "#lib/env.js",
     "#lib/commands.js",
-    "#lib/database/redis.js",
+    "#lib/database/valkey.js",
     "#lib/utilities/misc.js",
     "#modules/mod/index.js",
     "#root/main.js",
@@ -74,13 +74,13 @@ describe("lumi addon SDK resolution", () => {
     expect(ui.Emojis).toBeDefined();
   });
 
-  it("hands out no Discord client, database or Redis handle", async () => {
+  it("hands out no Discord client, database or Valkey handle", async () => {
     const sdk = await import("./sdk/index.js");
     const surface = Object.keys(sdk);
     expect(surface).not.toContain("container");
     expect(surface).not.toContain("Utility");
     expect(surface).not.toContain("getUtility");
     const utils = await import("./sdk/utils.js");
-    expect(Object.keys(utils)).not.toContain("acquireRedisLock");
+    expect(Object.keys(utils)).not.toContain("acquireValkeyLock");
   });
 });

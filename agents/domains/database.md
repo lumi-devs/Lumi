@@ -23,7 +23,7 @@ There is no `packages/core` production code path that reaches `container.prisma`
 actual query — grep confirms the only other hit is `downloader/validate.ts:330-333`, which
 *bans* it: the addon validator flags any third-party module source file that references
 `container.prisma`, since addons get no schema access and must persist through
-`container.db.guildKV` or `container.redis` instead.
+`container.db.guildKV` or `container.valkey` instead.
 
 `DatabaseService` also owns a few cross-repository operations directly, because they touch
 tables owned by more than one repository: `ensureGuild`, `deleteUserData` (GDPR erasure —
@@ -35,7 +35,7 @@ spans `PermitAssignment`, `Blocklist`, `AuditLedger`, `User`), `exportUserData`,
 
 One class per domain under `packages/core/src/lib/prisma/repositories/`, each extending the
 abstract `Repository` base (`Repository.ts:10`). The base class constructor takes
-`(prisma, redis, logger, db, reader = prisma)` — every repository gets a back-reference to
+`(prisma, valkey, logger, db, reader = prisma)` — every repository gets a back-reference to
 the owning `DatabaseService` (`this.db`) so it can call across into a sibling repository
 (e.g. `ConfigRepository.setModuleConfig` calls `this.db.configHistory?.logConfigChange(...)`,
 `ConfigRepository.ts:128`), and an optional `reader` client for fleet-wide sweeps that can
@@ -49,7 +49,7 @@ tolerate replication lag (used by `ModerationRepository` and `AfkRepository`,
 - `getOrSet(key, ttl, fetcher, parser?, serializer?)` (`Repository.ts:29`) — cache-aside read
   with request coalescing: concurrent callers for the same key share one in-flight promise
   (module-level `inflight` map, `Repository.ts:7`), and cache hit/miss counters
-  (`cacheHits`/`cacheMisses` from `@lumi/observability`) are tagged with the Redis key's
+  (`cacheHits`/`cacheMisses` from `@lumi/observability`) are tagged with the Valkey key's
   second colon-segment as the `cache` label (`Repository.ts:36`).
 
 Method naming is consistent across repositories: `get*`/`list*`/`find*` for reads,
@@ -61,12 +61,12 @@ see `EconomyRepository.applyMutation` (`EconomyRepository.ts:85`), which upserts
 runs a guarded conditional `updateMany` (`wallet: { gte: -delta }` in the `WHERE` clause so
 concurrent debits serialize on the row instead of overdrawing it), and appends the ledger row,
 all inside one interactive transaction. The class doc at `EconomyRepository.ts:46-54` is
-explicit that balances are "deliberately never cached in Redis - a stale read here is a
+explicit that balances are "deliberately never cached in Valkey - a stale read here is a
 double-spend" — economy is the one domain repository with zero `getOrSet` calls.
 
 `AuditRepository` is architecturally different from the rest: writes don't hit Postgres at
 all on the hot path. `queueAuditLog`/`queueAuditLogsBatch` (`AuditRepository.ts:63,75`) XADD
-into one of 16 fixed Redis Streams (`auditLogsQueue:<bucket>`, bucket picked once per process
+into one of 16 fixed Valkey Streams (`auditLogsQueue:<bucket>`, bucket picked once per process
 via `getWriteBucket`, `AuditRepository.ts:39`), and a separate scheduled task calls
 `flushAuditLogsToPostgres` (`AuditRepository.ts:97`) which drains every bucket concurrently
 (4 at a time via `mapWithConcurrency`), using `XAUTOCLAIM` first to reclaim any
@@ -91,7 +91,7 @@ Guild-scoped module config lives across three tables, each owned by its own repo
 declares (`config-schema.ts` — `cfg.boolean`, `cfg.channel`, `cfg.multiRole`, etc. all persist
 as the same generic `Json`). `ConfigRepository.getAllModuleConfig` (`ConfigRepository.ts:70`)
 reads every row for a `(guildId, moduleName)` pair and folds it into a flat
-`Record<configKey, value>`, cached at `RedisKeys.guildConfig(moduleName, guildId)`.
+`Record<configKey, value>`, cached at `ValkeyKeys.guildConfig(moduleName, guildId)`.
 `setModuleConfig` (`ConfigRepository.ts:108`) upserts on the compound key and, when an
 `actorId` is passed, fires an unawaited (`.catch`-guarded) call into
 `configHistory.logConfigChange` so a slow audit write never blocks the config write itself.
@@ -118,39 +118,39 @@ append-only and purely for the dashboard's audit trail — nothing reads it back
 config resolution.
 
 `ConfigRepository.mutateModuleConfig` (`ConfigRepository.ts:269`) is the one atomic
-read-modify-write primitive: it takes a Redis lock scoped to
-`lock:config-mutate:<moduleName>:<guildId>:<key>` via `acquireRedisLock`, then get-then-set
+read-modify-write primitive: it takes a Valkey lock scoped to
+`lock:config-mutate:<moduleName>:<guildId>:<key>` via `acquireValkeyLock`, then get-then-set
 under that lock — the documented alternative to addon authors hand-rolling a racy
 get-then-set (the doc comment explicitly compares it to Red-DiscordBot's
 `async with config.guild(g).some_list() as l:`).
 
 ## `InvalidationBus` (`container.invalidation`)
 
-Defined in `packages/core/src/lib/database/redis.ts:227` (`class InvalidationBus`), installed
+Defined in `packages/core/src/lib/database/valkey.ts:227` (`class InvalidationBus`), installed
 onto the container in `container-services.ts:73` as
-`new InvalidationBus(createRedisClient())` — a dedicated Redis connection used only as a
-pub/sub subscriber on channel `"lumi:cache:invalidate"` (`redis.ts:216`).
+`new InvalidationBus(createRedisClient())` — a dedicated Valkey connection used only as a
+pub/sub subscriber on channel `"lumi:cache:invalidate"` (`valkey.ts:216`).
 
 The real method every repository calls is `invalidate(...keys: string[])`
-(`redis.ts:260`): it deletes the keys on *this* process's Redis view (`delSafe`) and publishes
+(`valkey.ts:260`): it deletes the keys on *this* process's Valkey view (`delSafe`) and publishes
 `{ keys, time: Date.now() }` on the invalidation channel so every other shard/process in the
 fleet also evicts those keys from its own cache — this is what makes `getOrSet`'s cache-aside
 reads safe across a multi-shard fleet where each process could otherwise keep serving a stale
 cached value after another shard's write.
 
-`start()`/`stop()`/`close()` manage the subscription lifecycle (`redis.ts:251,274,283`) —
+`start()`/`stop()`/`close()` manage the subscription lifecycle (`valkey.ts:251,274,283`) —
 `start()` is called once from `LumiClient.login()` right after `container.prisma.$connect()`.
-`onInvalidate(fn)` and `onResync(fn)` (`redis.ts:241,246`) are the two extension points: any
+`onInvalidate(fn)` and `onResync(fn)` (`valkey.ts:241,246`) are the two extension points: any
 in-process cache that isn't backed by `getOrSet` (e.g. `PrefixCache`, wired up in
 `LumiClient.ts:61` via `attachToInvalidationBus`) registers an `onInvalidate` listener to purge
 its own state, and `onResync` listeners fire when the subscriber connection drops and
-reconnects (`#onReady`, `redis.ts:333`) — the `ResyncContext.cutoff` timestamp tells listeners
+reconnects (`#onReady`, `valkey.ts:333`) — the `ResyncContext.cutoff` timestamp tells listeners
 how far back they may have missed invalidations while disconnected, so they know whether a
 full resync is warranted.
 
 What actually triggers an invalidation: every repository write path that has a cached read
 counterpart calls `this.invalidate(...)` right after the Prisma write — e.g.
-`ModuleRepository.setModuleGlobalEnabled` invalidates `RedisKeys.moduleGlobalEnabled(name)`
+`ModuleRepository.setModuleGlobalEnabled` invalidates `ValkeyKeys.moduleGlobalEnabled(name)`
 right after the upsert (`ModuleRepository.ts:37-43`), and
 `ConfigRepository.invalidateModuleConfig` (private, `ConfigRepository.ts:148`) invalidates
 both the per-module and the all-modules-for-guild cache keys together, since

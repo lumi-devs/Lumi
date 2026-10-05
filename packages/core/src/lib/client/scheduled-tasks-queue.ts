@@ -1,4 +1,4 @@
-import { parseRedisConnectionOption } from "#lib/database/redis.js";
+import { parseValkeyConnectionOption } from "#lib/database/valkey.js";
 import { envParseInteger } from "#lib/env.js";
 import { QueuePriority } from "#lib/schedule-task.js";
 import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastructure/queues";
@@ -12,14 +12,14 @@ import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastr
 export const SCHEDULED_TASKS_QUEUE_NAME = "scheduled-tasks";
 
 /**
- * The Redis connection every scheduled-tasks BullMQ `Queue`/`Worker` in the
+ * The Valkey connection every scheduled-tasks BullMQ `Queue`/`Worker` in the
  * fleet must share, kept in one place so `client-options.ts`,
  * `api-container-services.ts`, `scheduler-container-services.ts` and
  * `scheduler-producer.ts` can't drift from each other.
  */
 export function getScheduledTasksConnectionOptions(): ConnectionOptions {
   return {
-    ...parseRedisConnectionOption(),
+    ...parseValkeyConnectionOption(),
     db: envParseInteger("VALKEY_TASK_DB", 1),
   };
 }

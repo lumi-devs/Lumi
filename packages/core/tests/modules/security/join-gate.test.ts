@@ -17,16 +17,16 @@ vi.mock("#lib/moderation/log.js", () => ({
 }));
 
 function setContainer(overrides: {
-  redis?: Record<string, unknown>;
+  valkey?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).redis = {
+  (container as any).valkey = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
     multi: vi.fn(),
-    ...overrides.redis,
+    ...overrides.valkey,
   };
   (container as any).db = {
     config: { getModuleConfig: vi.fn().mockResolvedValue(null) },

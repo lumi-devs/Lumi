@@ -1,5 +1,5 @@
 import os from "node:os";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -71,19 +71,19 @@ export interface PingData {
   dbRollbacks: number | null;
   txRate: number;
 
-  redisReadMs: number | null;
-  redisWriteMs: number | null;
-  redisVersion: string;
-  redisUptimeSecs: number;
-  redisMemUsedBytes: number;
-  redisMemPeakBytes: number;
-  redisFragRatio: number;
-  redisHitRatio: number;
-  redisHits: number;
-  redisMisses: number;
-  redisEvicted: number;
-  redisClients: number;
-  redisTotalKeys: number;
+  valkeyReadMs: number | null;
+  valkeyWriteMs: number | null;
+  valkeyVersion: string;
+  valkeyUptimeSecs: number;
+  valkeyMemUsedBytes: number;
+  valkeyMemPeakBytes: number;
+  valkeyFragRatio: number;
+  valkeyHitRatio: number;
+  valkeyHits: number;
+  valkeyMisses: number;
+  valkeyEvicted: number;
+  valkeyClients: number;
+  valkeyTotalKeys: number;
 
   uptime: number;
   guilds: number;
@@ -184,7 +184,7 @@ async function getGatewayNode(): Promise<string> {
   return cachedGatewayNode;
 }
 
-function parseRedisInfo(raw: string) {
+function parseValkeyInfo(raw: string) {
   const result: Record<string, string> = {};
   for (const line of raw.split("\r\n")) {
     if (line.startsWith("#") || !line.includes(":")) continue;
@@ -194,15 +194,15 @@ function parseRedisInfo(raw: string) {
   return result;
 }
 
-async function probeRedisRead(redis: RedisClient) {
+async function probeValkeyRead(valkey: ValkeyClient) {
   const start = performance.now();
-  await redis.get("lumi:ping:probe");
+  await valkey.get("lumi:ping:probe");
   return performance.now() - start;
 }
 
-async function probeRedisWrite(redis: RedisClient) {
+async function probeValkeyWrite(valkey: ValkeyClient) {
   const start = performance.now();
-  await redis.set("lumi:ping:probe", "1", "EX", 30);
+  await valkey.set("lumi:ping:probe", "1", "EX", 30);
   return performance.now() - start;
 }
 
@@ -227,7 +227,7 @@ const pgStat: TtlCache<ReturnType<typeof postgresStats>> = {
   value: null,
   at: 0,
 };
-const rdStat: TtlCache<ReturnType<typeof redisStats>> = {
+const rdStat: TtlCache<ReturnType<typeof valkeyStats>> = {
   value: null,
   at: 0,
 };
@@ -273,41 +273,41 @@ async function postgresStats() {
   }
 }
 
-async function redisStats(redis: RedisClient) {
+async function valkeyStats(valkey: ValkeyClient) {
   try {
-    const raw = await redis.info();
-    const info = parseRedisInfo(raw);
+    const raw = await valkey.info();
+    const info = parseValkeyInfo(raw);
     const hits = parseInt(info.keyspace_hits ?? "0", 10);
     const misses = parseInt(info.keyspace_misses ?? "0", 10);
     const total = hits + misses;
-    const dbSize = await redis.dbsize().catch(() => 0);
+    const dbSize = await valkey.dbsize().catch(() => 0);
     return {
-      redisVersion: info.redis_version ?? "unknown",
-      redisUptimeSecs: parseInt(info.uptime_in_seconds ?? "0", 10),
-      redisMemUsedBytes: parseInt(info.used_memory ?? "0", 10),
-      redisMemPeakBytes: parseInt(info.used_memory_peak ?? "0", 10),
-      redisFragRatio: parseFloat(info.mem_fragmentation_ratio ?? "1"),
-      redisHitRatio: total > 0 ? (hits / total) * 100 : 0,
-      redisHits: hits,
-      redisMisses: misses,
-      redisEvicted: parseInt(info.evicted_keys ?? "0", 10),
-      redisClients: parseInt(info.connected_clients ?? "0", 10),
-      redisTotalKeys: dbSize,
+      valkeyVersion: info.valkey_version ?? "unknown",
+      valkeyUptimeSecs: parseInt(info.uptime_in_seconds ?? "0", 10),
+      valkeyMemUsedBytes: parseInt(info.used_memory ?? "0", 10),
+      valkeyMemPeakBytes: parseInt(info.used_memory_peak ?? "0", 10),
+      valkeyFragRatio: parseFloat(info.mem_fragmentation_ratio ?? "1"),
+      valkeyHitRatio: total > 0 ? (hits / total) * 100 : 0,
+      valkeyHits: hits,
+      valkeyMisses: misses,
+      valkeyEvicted: parseInt(info.evicted_keys ?? "0", 10),
+      valkeyClients: parseInt(info.connected_clients ?? "0", 10),
+      valkeyTotalKeys: dbSize,
     };
   } catch (err: unknown) {
-    logError("Ping: RedisClient stats failed", err);
+    logError("Ping: ValkeyClient stats failed", err);
     return {
-      redisVersion: "unknown",
-      redisUptimeSecs: 0,
-      redisMemUsedBytes: 0,
-      redisMemPeakBytes: 0,
-      redisFragRatio: 1,
-      redisHitRatio: 0,
-      redisHits: 0,
-      redisMisses: 0,
-      redisEvicted: 0,
-      redisClients: 0,
-      redisTotalKeys: 0,
+      valkeyVersion: "unknown",
+      valkeyUptimeSecs: 0,
+      valkeyMemUsedBytes: 0,
+      valkeyMemPeakBytes: 0,
+      valkeyFragRatio: 1,
+      valkeyHitRatio: 0,
+      valkeyHits: 0,
+      valkeyMisses: 0,
+      valkeyEvicted: 0,
+      valkeyClients: 0,
+      valkeyTotalKeys: 0,
     };
   }
 }
@@ -435,7 +435,7 @@ export function resetPingCachesForTests(): void {
 }
 
 async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
-  const { client, redis, moduleStore, stats } = container;
+  const { client, valkey, moduleStore, stats } = container;
   const wsPing = client.ws.ping ?? 0;
 
   recordInvocation(wsPing);
@@ -446,8 +446,8 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
   const [
     loopLagMs,
     prismaMs,
-    redisReadMs,
-    redisWriteMs,
+    valkeyReadMs,
+    valkeyWriteMs,
     pgStats,
     rdStats,
     hostData,
@@ -457,10 +457,10 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
   ] = await Promise.all([
     measureLoopLag(),
     probePrisma().catch(() => null),
-    probeRedisRead(redis).catch(() => null),
-    probeRedisWrite(redis).catch(() => null),
+    probeValkeyRead(valkey).catch(() => null),
+    probeValkeyWrite(valkey).catch(() => null),
     ttlCached(pgStat, postgresStats),
-    ttlCached(rdStat, () => redisStats(redis)),
+    ttlCached(rdStat, () => valkeyStats(valkey)),
     hostStats(),
     countDeps(),
     countCodeLines(),
@@ -524,8 +524,8 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     prismaMs,
     ...pgStats,
 
-    redisReadMs,
-    redisWriteMs,
+    valkeyReadMs,
+    valkeyWriteMs,
     ...rdStats,
 
     uptime: client.uptime ?? 0,

@@ -1,6 +1,6 @@
 import { Time } from "@sapphire/time-utilities";
 import { disconnectDatabase } from "#lib/prisma/client.js";
-import { envParseString, getConsumerId, getDefaultPrefix } from "#lib/env.js";
+import { getConsumerId, getDefaultPrefix } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
@@ -138,7 +138,7 @@ export class LumiClient extends SapphireClient {
     await container.signals
       .close()
       .catch(warnOnCleanupError("Signals close"));
-    await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
+    await container.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
     // $disconnect alone leaves the pg Pool open: the adapter is constructed from
     // a pool we own, so Prisma never ends it. Both pools drain here.
     await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));

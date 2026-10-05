@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 
 /**
  * Separate from `lumi:scheduler:leader` (the mutex `scheduler-lock.ts`
@@ -28,13 +28,13 @@ export interface SchedulerHeartbeatWatcher {
 
 /** Publishes a TTL'd heartbeat row on an interval, for as long as the scheduler lock is held. */
 export function publishSchedulerHeartbeat(
-  redis: RedisClient,
+  valkey: ValkeyClient,
   holder: string,
 ): SchedulerHeartbeatWatcher {
   const publish = async () => {
     try {
-      await redis.set(
-        RedisKeys.schedulerHeartbeat(),
+      await valkey.set(
+        ValkeyKeys.schedulerHeartbeat(),
         JSON.stringify({ holder, updatedAt: Date.now() } satisfies SchedulerHeartbeat),
         "PX",
         TtlMs,
@@ -58,9 +58,9 @@ export function publishSchedulerHeartbeat(
 
 /** Reads the current heartbeat row, or `null` if the scheduler has never published or its row expired. */
 export async function readSchedulerHeartbeat(
-  redis: RedisClient,
+  valkey: ValkeyClient,
 ): Promise<SchedulerHeartbeat | null> {
-  const raw = await redis.get(RedisKeys.schedulerHeartbeat());
+  const raw = await valkey.get(ValkeyKeys.schedulerHeartbeat());
   if (!raw) return null;
   const parsed = tryParseJSON(raw) as SchedulerHeartbeat | null;
   if (!parsed || typeof parsed.updatedAt !== "number" || typeof parsed.holder !== "string") {

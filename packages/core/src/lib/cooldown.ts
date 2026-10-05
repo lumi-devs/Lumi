@@ -6,11 +6,11 @@ import { container } from "@sapphire/framework";
  * every cooldown call site should use to claim a slot.
  */
 export async function claimCooldown(key: string, ms: number): Promise<boolean> {
-  const set = await container.redis.set(key, "1", "PX", ms, "NX");
+  const set = await container.valkey.set(key, "1", "PX", ms, "NX");
   return set === "OK";
 }
 
 /** Read-only cooldown check - does not claim a slot. */
 export async function isOnCooldown(key: string): Promise<boolean> {
-  return (await container.redis.exists(key)) === 1;
+  return (await container.valkey.exists(key)) === 1;
 }

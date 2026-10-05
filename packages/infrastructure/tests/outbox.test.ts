@@ -83,7 +83,7 @@ describe("OutboxService & MemoryOutboxStorage", () => {
     const count = await service.dispatchPending(async (msg) => {
       calls++;
       if (msg.eventId === "evt-2") {
-        throw new Error("Redis connection dropped");
+        throw new Error("Valkey connection dropped");
       }
     });
 

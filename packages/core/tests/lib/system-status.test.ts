@@ -12,7 +12,7 @@ function baseDeps(overrides: Partial<SystemStatusDeps> = {}): SystemStatusDeps {
     uptimeSec: () => 3_600,
     eventLoopLagP99Ms: () => 5,
     probePostgresLatencyMs: async () => 10,
-    pingRedis: async () => "PONG",
+    pingValkey: async () => "PONG",
     readSchedulerHeartbeat: async () => ({ holder: "scheduler-a", ageMs: 1_000 }),
     readSchedulerQueueCounts: async () => ({
       waiting: 0,
@@ -34,7 +34,7 @@ describe("getSystemStatus", () => {
     expect(result.status).toBe("ok");
     expect(result.components.api).toMatchObject({ status: "ok", uptimeSec: 3_600 });
     expect(result.components.postgres).toMatchObject({ status: "ok", latencyMs: 10 });
-    expect(result.components.redis).toMatchObject({ status: "ok" });
+    expect(result.components.valkey).toMatchObject({ status: "ok" });
     expect(result.components.scheduler).toMatchObject({
       status: "ok",
       lockHolder: "scheduler-a",
@@ -83,13 +83,13 @@ describe("getSystemStatus", () => {
     expect(result.components.postgres.reason).toMatch(/timed out after 10ms/);
   });
 
-  it("marks redis down on a bad PING reply even if it resolves", async () => {
+  it("marks valkey down on a bad PING reply even if it resolves", async () => {
     const result = await getSystemStatus(
-      baseDeps({ pingRedis: async () => "WRONG" }),
+      baseDeps({ pingValkey: async () => "WRONG" }),
     );
 
-    expect(result.components.redis).toMatchObject({ status: "down" });
-    expect(result.components.redis.reason).toMatch(/unexpected reply/);
+    expect(result.components.valkey).toMatchObject({ status: "down" });
+    expect(result.components.valkey.reason).toMatch(/unexpected reply/);
   });
 
   it("marks the scheduler down when no heartbeat has ever been observed", async () => {

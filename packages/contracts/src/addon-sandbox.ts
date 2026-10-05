@@ -15,7 +15,7 @@ export interface AddonCapabilities {
   discord?: AddonDiscordCapability[];
   scheduling?: boolean;
   kv?: boolean;
-  redis?: boolean;
+  valkey?: boolean;
 }
 
 export const DefaultAddonCapabilities: AddonCapabilities = {
@@ -36,11 +36,11 @@ export type AddonRpcMethod =
   | "kv.set"
   | "kv.delete"
   | "kv.list"
-  | "redis.sadd"
-  | "redis.srem"
-  | "redis.scard"
-  | "redis.smembers"
-  | "redis.del"
+  | "valkey.sadd"
+  | "valkey.srem"
+  | "valkey.scard"
+  | "valkey.smembers"
+  | "valkey.del"
   | "schedule.add"
   | "discord.channels.send"
   | "discord.messages.fetch"

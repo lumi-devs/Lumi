@@ -1,5 +1,5 @@
 import { Listener, Events } from "@sapphire/framework";
-import { evictGuildRedisState } from "#lib/database/guild-eviction.js";
+import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
@@ -17,8 +17,8 @@ export class GuildDeleteEventBusListener extends Listener<
 
     await this.container.db.markGuildLeft(guild.id);
 
-    await evictGuildRedisState(
-      this.container.redis,
+    await evictGuildValkeyState(
+      this.container.valkey,
       this.container.invalidation,
       this.container.logger,
       guild.id,

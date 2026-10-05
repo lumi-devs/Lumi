@@ -65,9 +65,9 @@ function buildSystemStatusDeps(): SystemStatusDeps {
     uptimeSec: () => Math.round(process.uptime()),
     eventLoopLagP99Ms: () => getEventLoopLagP99Ms(),
     probePostgresLatencyMs: () => container.db.probePrisma(),
-    pingRedis: () => container.redis.ping(),
+    pingValkey: () => container.valkey.ping(),
     readSchedulerHeartbeat: async () => {
-      const heartbeat = await readSchedulerHeartbeat(container.redis);
+      const heartbeat = await readSchedulerHeartbeat(container.valkey);
       if (!heartbeat) return null;
       return { holder: heartbeat.holder, ageMs: Date.now() - heartbeat.updatedAt };
     },
@@ -87,7 +87,7 @@ function buildSystemStatusDeps(): SystemStatusDeps {
     },
     readShardsSnapshot: async () => {
       const snapshot = await readClusterShards({
-        redis: container.redis,
+        valkey: container.valkey,
         clusterName: getClusterName() ?? DefaultClusterName,
       });
       const now = Date.now();
@@ -114,7 +114,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
       readClusterShards({
-        redis: container.redis,
+        valkey: container.valkey,
         clusterName: getClusterName() ?? DefaultClusterName,
       }),
     ]);
@@ -249,12 +249,12 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
     return { success: true, userId: input.userId };
   },
 
-  // Answered from shared Redis rather than this process's own `client.ws`: the
+  // Answered from shared Valkey rather than this process's own `client.ws`: the
   // RPC lands on whichever worker picks it up, which owns at most its own slice
   // of the shard range.
   "system.shards.get": async () => {
     const snapshot = await readClusterShards({
-      redis: container.redis,
+      valkey: container.valkey,
       clusterName: getClusterName() ?? DefaultClusterName,
     });
     const now = Date.now();
@@ -341,7 +341,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
   },
 
   // Cached briefly: a status page gets polled, and every probe it fans out to
-  // (Postgres, Redis, the scheduler heartbeat/queue, shard telemetry) is a
+  // (Postgres, Valkey, the scheduler heartbeat/queue, shard telemetry) is a
   // real round trip - a cache-stampede-free few seconds keeps that fan-out
   // off the hot path without staling the page noticeably.
   "system.status.get": () => {

@@ -70,15 +70,15 @@ describe("system panel RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
 
     const db = {} as any;
-    db.audit = new AuditRepository(prisma as any, redis as any, container.logger, db);
-    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
+    db.audit = new AuditRepository(prisma as any, valkey as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();

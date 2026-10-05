@@ -4,13 +4,13 @@
 set -eu
 
 MASTER_NAME="${SENTINEL_MASTER_NAME:-mymaster}"
-MASTER_HOST="${SENTINEL_MASTER_HOST:-redis}"
+MASTER_HOST="${SENTINEL_MASTER_HOST:-valkey}"
 MASTER_PORT="${SENTINEL_MASTER_PORT:-6379}"
 QUORUM="${SENTINEL_QUORUM:-2}"
 DOWN_AFTER_MS="${SENTINEL_DOWN_AFTER_MS:-5000}"
 FAILOVER_TIMEOUT_MS="${SENTINEL_FAILOVER_TIMEOUT_MS:-30000}"
 PARALLEL_SYNCS="${SENTINEL_PARALLEL_SYNCS:-1}"
-AUTH_PASS="${REDIS_PASSWORD:-lumi}"
+AUTH_PASS="${VALKEY_PASSWORD:-lumi}"
 
 cat >/data/sentinel.conf <<EOF
 port 26379
@@ -24,4 +24,4 @@ sentinel parallel-syncs ${MASTER_NAME} ${PARALLEL_SYNCS}
 sentinel auth-pass ${MASTER_NAME} ${AUTH_PASS}
 EOF
 
-exec redis-sentinel /data/sentinel.conf
+exec valkey-sentinel /data/sentinel.conf

@@ -56,7 +56,7 @@ describe("StreamBus", () => {
   };
 
   describe("publish", () => {
-    it("publishes JSON-encoded message to Redis stream with MAXLEN ~ cap", async () => {
+    it("publishes JSON-encoded message to Valkey stream with MAXLEN ~ cap", async () => {
       const bus = createBus({ defaultMaxLen: 5000 });
       const id = await bus.publish("test-stream", { hello: "world" });
 
@@ -769,7 +769,7 @@ describe("StreamBus", () => {
         statsIntervalMs: 2000,
       });
 
-      publisherMock.xlen.mockRejectedValue(new Error("Redis error"));
+      publisherMock.xlen.mockRejectedValue(new Error("Valkey error"));
       publisherMock.xpending.mockRejectedValue(new Error("Pending error"));
 
       const stop = await bus.consume(

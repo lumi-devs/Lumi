@@ -8,7 +8,7 @@ import {
 
 const CLUSTER = "test";
 
-function fakeRedis() {
+function fakeValkey() {
   const store = new Map<string, string>();
   const commands: { cmd: string; args: unknown[] }[] = [];
 
@@ -54,11 +54,11 @@ function sample(shardId: number, over: Partial<ShardTelemetrySample> = {}): Shar
 }
 
 describe("ShardTelemetryPublisher", () => {
-  let redis: ReturnType<typeof fakeRedis>;
+  let valkey: ReturnType<typeof fakeValkey>;
 
   beforeEach(() => {
     jest.useFakeTimers();
-    redis = fakeRedis();
+    valkey = fakeValkey();
   });
 
   afterEach(() => {
@@ -67,7 +67,7 @@ describe("ShardTelemetryPublisher", () => {
 
   it("writes one TTL'd row per owned shard, stamped with the replica id", async () => {
     const publisher = new ShardTelemetryPublisher({
-      redis,
+      valkey: valkey,
       clusterName: CLUSTER,
       replicaId: "gw-a",
       sample: () => [sample(0), sample(1)],
@@ -75,7 +75,7 @@ describe("ShardTelemetryPublisher", () => {
 
     await publisher.publish();
 
-    const row = JSON.parse(redis.store.get(`lumi:cluster:${CLUSTER}:shard:1`));
+    const row = JSON.parse(valkey.store.get(`lumi:cluster:${CLUSTER}:shard:1`));
     expect(row).toMatchObject({ shardId: 1, replicaId: "gw-a", ping: 42 });
     expect(typeof row.updatedAt).toBe("number");
     expect(row).toMatchObject({
@@ -87,7 +87,7 @@ describe("ShardTelemetryPublisher", () => {
       lastReadyAt: null,
     });
 
-    const write = redis.commands.find(
+    const write = valkey.commands.find(
       (c: { cmd: string; args: unknown[] }) =>
         c.cmd === "set" && c.args[0] === `lumi:cluster:${CLUSTER}:shard:0`,
     );
@@ -97,7 +97,7 @@ describe("ShardTelemetryPublisher", () => {
   it("drops rows for shards it no longer owns instead of waiting out the TTL", async () => {
     let owned = [sample(0), sample(1)];
     const publisher = new ShardTelemetryPublisher({
-      redis,
+      valkey: valkey,
       clusterName: CLUSTER,
       replicaId: "gw-a",
       sample: () => owned,
@@ -107,13 +107,13 @@ describe("ShardTelemetryPublisher", () => {
     owned = [sample(0)];
     await publisher.publish();
 
-    expect(redis.store.has(`lumi:cluster:${CLUSTER}:shard:0`)).toBe(true);
-    expect(redis.store.has(`lumi:cluster:${CLUSTER}:shard:1`)).toBe(false);
+    expect(valkey.store.has(`lumi:cluster:${CLUSTER}:shard:0`)).toBe(true);
+    expect(valkey.store.has(`lumi:cluster:${CLUSTER}:shard:1`)).toBe(false);
   });
 
   it("clears its rows on stop so a graceful shutdown does not read as healthy", async () => {
     const publisher = new ShardTelemetryPublisher({
-      redis,
+      valkey: valkey,
       clusterName: CLUSTER,
       replicaId: "gw-a",
       sample: () => [sample(0)],
@@ -122,20 +122,20 @@ describe("ShardTelemetryPublisher", () => {
     await publisher.publish();
     await publisher.stop();
 
-    expect(redis.store.has(`lumi:cluster:${CLUSTER}:shard:0`)).toBe(false);
+    expect(valkey.store.has(`lumi:cluster:${CLUSTER}:shard:0`)).toBe(false);
   });
 });
 
 describe("readClusterShards", () => {
-  let redis: ReturnType<typeof fakeRedis>;
+  let valkey: ReturnType<typeof fakeValkey>;
 
   beforeEach(() => {
-    redis = fakeRedis();
+    valkey = fakeValkey();
   });
 
   async function publish(replicaId: string, samples: ShardTelemetrySample[]) {
     await new ShardTelemetryPublisher({
-      redis,
+      valkey: valkey,
       clusterName: CLUSTER,
       replicaId,
       sample: () => samples,
@@ -146,7 +146,7 @@ describe("readClusterShards", () => {
     await publish("gw-a", [sample(0), sample(1)]);
     await publish("gw-b", [sample(2, { shardCount: 4 })]);
 
-    const snapshot = await readClusterShards({ redis, clusterName: CLUSTER });
+    const snapshot = await readClusterShards({ valkey: valkey, clusterName: CLUSTER });
 
     expect(snapshot.shardCount).toBe(4);
     expect(snapshot.missingShardIds).toEqual([3]);
@@ -159,7 +159,7 @@ describe("readClusterShards", () => {
   });
 
   it("returns an empty topology when nothing has ever reported", async () => {
-    const snapshot = await readClusterShards({ redis, clusterName: CLUSTER });
+    const snapshot = await readClusterShards({ valkey: valkey, clusterName: CLUSTER });
 
     expect(snapshot.shardCount).toBe(0);
     expect(snapshot.shards).toEqual([]);
@@ -184,7 +184,7 @@ describe("readClusterShards", () => {
       del: vi.fn(async () => 1),
     } as any;
 
-    const snapshot = await readClusterShards({ redis: cluster, clusterName: CLUSTER });
+    const snapshot = await readClusterShards({ valkey: cluster, clusterName: CLUSTER });
 
     expect(cluster.nodes).toHaveBeenCalledWith("master");
     expect(snapshot.shards.map((s) => s.shardId)).toEqual([0, 1]);

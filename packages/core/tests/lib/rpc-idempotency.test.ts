@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { withIdempotency } from "#lib/rpc/idempotency.js";
-import { createMemoryRedis } from "../mocks/memory-redis.js";
+import { createMemoryValkey } from "../mocks/memory-valkey.js";
 
 const GUILD_ID = "123456789012345678";
 const TIMEOUT_MS = 10_000;
@@ -10,11 +10,11 @@ const TIMEOUT_MS = 10_000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("withIdempotency", () => {
-  let redis: ReturnType<typeof createMemoryRedis>;
+  let valkey: ReturnType<typeof createMemoryValkey>;
 
   beforeEach(() => {
-    redis = createMemoryRedis();
-    (container as any).redis = redis;
+    valkey = createMemoryValkey();
+    (container as any).valkey = valkey;
   });
 
   it("runs the handler once and returns its result", async () => {
@@ -108,7 +108,7 @@ describe("withIdempotency", () => {
 
     await withIdempotency("test.action", GUILD_ID, 5_000, { a: 1 }, fn, 2_000);
 
-    expect(redis.set).toHaveBeenCalledWith(
+    expect(valkey.set).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       "PX",
@@ -124,14 +124,14 @@ describe("withIdempotency", () => {
 
     await withIdempotency("test.action", GUILD_ID, 10, { a: 1 }, fn, 10);
 
-    expect(redis.pexpire).toHaveBeenCalled();
-    for (const call of redis.pexpire.mock.calls) {
+    expect(valkey.pexpire).toHaveBeenCalled();
+    for (const call of valkey.pexpire.mock.calls) {
       expect(call[1]).toBe(20);
     }
 
-    const callsAtCompletion = redis.pexpire.mock.calls.length;
+    const callsAtCompletion = valkey.pexpire.mock.calls.length;
     await sleep(50);
-    expect(redis.pexpire.mock.calls.length).toBe(callsAtCompletion);
+    expect(valkey.pexpire.mock.calls.length).toBe(callsAtCompletion);
   });
 
   it("uses explicit idempotencyKey when provided instead of hashing input", async () => {

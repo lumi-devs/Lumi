@@ -6,7 +6,7 @@ import {
   resolveConfigHistoryRetentionDays,
   resolveModerationRetentionDays,
 } from "#lib/env.js";
-import { evictGuildRedisState } from "#lib/database/guild-eviction.js";
+import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
 import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
 import { container } from "@sapphire/framework";
 
@@ -66,7 +66,7 @@ export async function handleDataRetentionFire(): Promise<void> {
 async function purgeDepartedGuilds(cutoffDate: Date): Promise<number | null> {
   const clusterName = getClusterName() ?? DefaultClusterName;
   const { missingShardIds, shards, shardCount } = await readClusterShards({
-    redis: container.redis,
+    valkey: container.valkey,
     clusterName,
   });
 
@@ -80,8 +80,8 @@ async function purgeDepartedGuilds(cutoffDate: Date): Promise<number | null> {
   const purgedGuildIds = await container.db.purgeDepartedGuilds(cutoffDate);
 
   for (const guildId of purgedGuildIds) {
-    await evictGuildRedisState(
-      container.redis,
+    await evictGuildValkeyState(
+      container.valkey,
       container.invalidation,
       container.logger,
       guildId,

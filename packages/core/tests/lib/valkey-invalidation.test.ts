@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { InvalidationBus } from "#lib/database/redis.js";
+import { InvalidationBus } from "#lib/database/valkey.js";
 
 const CHANNEL = "lumi:cache:invalidate";
 
-/** Minimal stand-in for the dedicated ioredis subscriber connection the bus owns. */
+/** Minimal stand-in for the dedicated iovalkey subscriber connection the bus owns. */
 function createMockSubscriber() {
   const handlers = new Map<string, (...args: any[]) => void>();
   return {
@@ -36,7 +36,7 @@ describe("InvalidationBus", () => {
       debug: vi.fn(),
     } as any;
 
-    (container as any).redis = {
+    (container as any).valkey = {
       del: vi.fn().mockResolvedValue(1),
       publish: vi.fn().mockResolvedValue(1),
     };
@@ -49,12 +49,12 @@ describe("InvalidationBus", () => {
     it("deletes the keys locally and broadcasts them to peers", async () => {
       await bus.invalidate("lumi:cfg:mod:guild:1", "lumi:settings:guild:1");
 
-      expect(container.redis.del).toHaveBeenCalledWith(
+      expect(container.valkey.del).toHaveBeenCalledWith(
         "lumi:cfg:mod:guild:1",
         "lumi:settings:guild:1",
       );
 
-      const [channel, payload] = (container.redis.publish as any).mock.calls[0];
+      const [channel, payload] = (container.valkey.publish as any).mock.calls[0];
       expect(channel).toBe(CHANNEL);
       expect(JSON.parse(payload).keys).toEqual([
         "lumi:cfg:mod:guild:1",
@@ -64,11 +64,11 @@ describe("InvalidationBus", () => {
 
     it("deletes before publishing so peers never read a stale local value", async () => {
       const order: string[] = [];
-      (container.redis.del as any).mockImplementation(() => {
+      (container.valkey.del as any).mockImplementation(() => {
         order.push("del");
         return Promise.resolve(1);
       });
-      (container.redis.publish as any).mockImplementation(() => {
+      (container.valkey.publish as any).mockImplementation(() => {
         order.push("publish");
         return Promise.resolve(1);
       });
@@ -84,7 +84,7 @@ describe("InvalidationBus", () => {
       await bus.invalidate("k");
 
       const payload = JSON.parse(
-        (container.redis.publish as any).mock.calls[0][1],
+        (container.valkey.publish as any).mock.calls[0][1],
       );
       expect(payload.time).toBeGreaterThanOrEqual(before);
     });
@@ -92,15 +92,15 @@ describe("InvalidationBus", () => {
     it("is a no-op when given no keys", async () => {
       await bus.invalidate();
 
-      expect(container.redis.del).not.toHaveBeenCalled();
-      expect(container.redis.publish).not.toHaveBeenCalled();
+      expect(container.valkey.del).not.toHaveBeenCalled();
+      expect(container.valkey.publish).not.toHaveBeenCalled();
     });
 
     it("never rewrites a key in place", async () => {
       await bus.invalidate("lumi:cfg:mod:guild:1");
 
-      expect((container.redis as any).set).toBeUndefined();
-      expect(container.redis.del).toHaveBeenCalledTimes(1);
+      expect((container.valkey as any).set).toBeUndefined();
+      expect(container.valkey.del).toHaveBeenCalledTimes(1);
     });
   });
 

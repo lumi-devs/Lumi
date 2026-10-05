@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { CacheService } from "../src/services/cache-service.js";
 
 describe("CacheService", () => {
-  let mockRedis: any;
+  let mockValkey: any;
   let mockInvalidation: any;
   let mockLogger: any;
   let store: Map<string, string>;
 
   beforeEach(() => {
     store = new Map();
-    mockRedis = {
+    mockValkey = {
       get: vi.fn(async (key: string) => store.get(key) ?? null),
       set: vi.fn(async (key: string, val: string) => {
         store.set(key, val);
@@ -34,10 +34,10 @@ describe("CacheService", () => {
   });
 
   it("handles basic get, set with TTL, and has operations", async () => {
-    const cache = new CacheService({ redis: mockRedis, logger: mockLogger });
+    const cache = new CacheService({ valkey: mockValkey, logger: mockLogger });
 
     await cache.set("user:123", { name: "Alice" }, 300);
-    expect(mockRedis.set).toHaveBeenCalledWith(
+    expect(mockValkey.set).toHaveBeenCalledWith(
       "user:123",
       JSON.stringify({ name: "Alice" }),
       "EX",
@@ -52,7 +52,7 @@ describe("CacheService", () => {
   });
 
   it("returns null on cache miss or corrupted json without throwing", async () => {
-    const cache = new CacheService({ redis: mockRedis, logger: mockLogger });
+    const cache = new CacheService({ valkey: mockValkey, logger: mockLogger });
 
     const miss = await cache.get("missing");
     expect(miss).toBeNull();
@@ -64,7 +64,7 @@ describe("CacheService", () => {
   });
 
   it("implements cache-aside getOrSet pattern", async () => {
-    const cache = new CacheService({ redis: mockRedis });
+    const cache = new CacheService({ valkey: mockValkey });
 
     const producer = vi.fn().mockResolvedValue({ role: "admin" });
 
@@ -79,24 +79,24 @@ describe("CacheService", () => {
     expect(producer).toHaveBeenCalledTimes(1);
   });
 
-  it("invalidates through InvalidationBus when provided, otherwise falls back to redis.del", async () => {
+  it("invalidates through InvalidationBus when provided, otherwise falls back to valkey.del", async () => {
     const busCache = new CacheService({
-      redis: mockRedis,
+      valkey: mockValkey,
       invalidation: mockInvalidation,
     });
     await busCache.del("key1", "key2");
     expect(mockInvalidation.invalidate).toHaveBeenCalledWith("key1", "key2");
-    expect(mockRedis.del).not.toHaveBeenCalled();
+    expect(mockValkey.del).not.toHaveBeenCalled();
 
-    const plainCache = new CacheService({ redis: mockRedis });
+    const plainCache = new CacheService({ valkey: mockValkey });
     await plainCache.del("key3");
-    expect(mockRedis.del).toHaveBeenCalledWith("key3");
+    expect(mockValkey.del).toHaveBeenCalledWith("key3");
   });
 
-  it("delegates verifyLock to Redis", async () => {
-    const cache = new CacheService({ redis: mockRedis });
+  it("delegates verifyLock to Valkey", async () => {
+    const cache = new CacheService({ valkey: mockValkey });
     const isOwner = await cache.verifyLock("mutex:job", "token-abc");
     expect(isOwner).toBe(true);
-    expect(mockRedis.eval).toHaveBeenCalled();
+    expect(mockValkey.eval).toHaveBeenCalled();
   });
 });

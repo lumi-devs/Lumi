@@ -37,7 +37,7 @@ describe("core module permit RPC handlers", () => {
     discordRest = new FakeDiscordRestPort();
     seedGuildManager();
     (container as any).discordRest = discordRest;
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     permissionsUtility = {
       listPermits: vi.fn().mockResolvedValue([]),

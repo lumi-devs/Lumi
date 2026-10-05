@@ -4,8 +4,8 @@ import { TimeoutError, withTimeout } from "#lib/utilities/resilience.js";
  * Aggregates every backing dependency `system.status.get` reports on into one
  * snapshot, worst-status-wins. Pure and container-free by design - every
  * dependency is a fetcher the caller (`system-rpc.ts`) wires to the real
- * `container.db`/`container.redis`/etc, so this module (and its tests) never
- * touch a real database or Redis connection, and a probe that hangs forever
+ * `container.db`/`container.valkey`/etc, so this module (and its tests) never
+ * touch a real database or Valkey connection, and a probe that hangs forever
  * is bounded here rather than by whatever called it.
  */
 
@@ -56,7 +56,7 @@ export interface SystemStatusSnapshot {
   components: {
     api: ApiHealth;
     postgres: LatencyHealth;
-    redis: LatencyHealth;
+    valkey: LatencyHealth;
     scheduler: SchedulerHealth;
     shards: ShardsHealth;
     eventBus: EventBusHealth;
@@ -84,8 +84,8 @@ export interface SchedulerHeartbeatInfo {
 export const StatusThresholds = {
   /** `probePostgres` latency beyond this is `degraded`, not `ok`. */
   postgresSlowMs: 500,
-  /** `pingRedis` latency beyond this is `degraded`, not `ok`. */
-  redisSlowMs: 200,
+  /** `pingValkey` latency beyond this is `degraded`, not `ok`. */
+  valkeySlowMs: 200,
   /** A heartbeat row older than this (ms) is treated as the scheduler being gone. */
   schedulerHeartbeatStaleMs: 30_000,
   /** Failed jobs at or above this count mark the scheduler `degraded`. */
@@ -105,7 +105,7 @@ export interface SystemStatusDeps {
   uptimeSec: () => number;
   eventLoopLagP99Ms: () => number | null;
   probePostgresLatencyMs: () => Promise<number>;
-  pingRedis: () => Promise<string>;
+  pingValkey: () => Promise<string>;
   readSchedulerHeartbeat: () => Promise<SchedulerHeartbeatInfo | null>;
   readSchedulerQueueCounts: () => Promise<QueueCounts | null>;
   readShardsSnapshot: () => Promise<ShardsSnapshot>;
@@ -149,18 +149,18 @@ async function buildPostgresHealth(
   };
 }
 
-async function buildRedisHealth(
+async function buildValkeyHealth(
   deps: SystemStatusDeps,
   timeoutMs: number,
 ): Promise<LatencyHealth> {
   const start = (deps.now ?? Date.now)();
-  const result = await probe(() => deps.pingRedis(), timeoutMs);
+  const result = await probe(() => deps.pingValkey(), timeoutMs);
   if (!result.ok) return { status: "down", reason: result.reason, latencyMs: null };
   if (result.value !== "PONG") {
     return { status: "down", reason: `unexpected reply: ${result.value}`, latencyMs: null };
   }
   const latencyMs = (deps.now ?? Date.now)() - start;
-  const status: ComponentStatus = latencyMs > StatusThresholds.redisSlowMs ? "degraded" : "ok";
+  const status: ComponentStatus = latencyMs > StatusThresholds.valkeySlowMs ? "degraded" : "ok";
   return {
     status,
     latencyMs,
@@ -305,16 +305,16 @@ export async function getSystemStatus(
   const timeoutMs = deps.probeTimeoutMs ?? DefaultProbeTimeoutMs;
   const now = deps.now ?? Date.now;
 
-  const [api, postgres, redis, scheduler, shards, eventBus] = await Promise.all([
+  const [api, postgres, valkey, scheduler, shards, eventBus] = await Promise.all([
     Promise.resolve(buildApiHealth(deps)),
     buildPostgresHealth(deps, timeoutMs),
-    buildRedisHealth(deps, timeoutMs),
+    buildValkeyHealth(deps, timeoutMs),
     buildSchedulerHealth(deps, timeoutMs),
     buildShardsHealth(deps, timeoutMs),
     buildEventBusHealth(deps),
   ]);
 
-  const status = [api, postgres, redis, scheduler, shards, eventBus].reduce(
+  const status = [api, postgres, valkey, scheduler, shards, eventBus].reduce(
     (acc, component) => worse(acc, component.status),
     "ok" as ComponentStatus,
   );
@@ -322,6 +322,6 @@ export async function getSystemStatus(
   return {
     observedAt: new Date(now()).toISOString(),
     status,
-    components: { api, postgres, redis, scheduler, shards, eventBus },
+    components: { api, postgres, valkey, scheduler, shards, eventBus },
   };
 }

@@ -72,7 +72,7 @@ export async function destroySchedulerContainerServices(
   await services.ownedEventBus.close().catch(warnOnCleanupError("EventBus close"));
   await container.invalidation.close().catch(warnOnCleanupError("Invalidation close"));
   await container.signals.close().catch(warnOnCleanupError("Signals close"));
-  await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
+  await container.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
   await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
 }
 

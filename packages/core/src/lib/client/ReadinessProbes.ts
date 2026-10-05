@@ -9,7 +9,7 @@ import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telem
  * @remarks
  * Registers `/readyz` probes for gateway, infrastructure, and process-specific subsystems.
  */
-/** Declares postgres and redis readiness probes for processes with backing service connections. */
+/** Declares postgres and valkey readiness probes for processes with backing service connections. */
 export function registerInfrastructureReadinessProbes(): void {
   // `/readyz` is reachable by anyone who can reach the metrics port, so probe
   // details are fixed classifications. Driver errors are logged instead:
@@ -25,17 +25,17 @@ export function registerInfrastructureReadinessProbes(): void {
     }
   });
 
-  registerReadinessProbe("redis", async () => {
+  registerReadinessProbe("valkey", async () => {
     try {
-      const pong = await container.redis.ping();
+      const pong = await container.valkey.ping();
       if (pong === "PONG") return { status: "ok" };
       container.logger?.error(
-        `[Readiness] redis probe returned unexpected reply: ${pong}`,
+        `[Readiness] valkey probe returned unexpected reply: ${pong}`,
       );
-      return { status: "fail", detail: "redis unreachable" };
+      return { status: "fail", detail: "valkey unreachable" };
     } catch (err) {
-      container.logger?.error("[Readiness] redis probe failed:", err);
-      return { status: "fail", detail: "redis unreachable" };
+      container.logger?.error("[Readiness] valkey probe failed:", err);
+      return { status: "fail", detail: "valkey unreachable" };
     }
   });
 }
@@ -102,7 +102,7 @@ export class ReadinessProbes {
       if (!isPrimaryShard()) return { status: "ok" };
       try {
         const snapshot = await readClusterShards({
-          redis: container.redis,
+          valkey: container.valkey,
           clusterName: getClusterName() ?? DefaultClusterName,
         });
         if (snapshot.shards.length === 0) {

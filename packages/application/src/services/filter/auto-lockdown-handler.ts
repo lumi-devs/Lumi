@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
@@ -9,7 +9,7 @@ export async function handleAutoLockdownUnlockFire(
   payload: AutoLockdownUnlockPayload,
 ): Promise<void> {
   const { guildId } = payload;
-  const active = await container.redis.exists(RedisKeys.filterAutoLockdown(guildId));
+  const active = await container.valkey.exists(ValkeyKeys.filterAutoLockdown(guildId));
   if (!active) return;
 
   const guild = await container.client.guilds
@@ -18,7 +18,7 @@ export async function handleAutoLockdownUnlockFire(
   if (!guild) return;
 
   await unlockAllTextChannels(guild);
-  await container.invalidation.invalidate(RedisKeys.filterAutoLockdown(guildId));
+  await container.invalidation.invalidate(ValkeyKeys.filterAutoLockdown(guildId));
 
   const logService = tryGetUtility("guild-log");
   await logService?.dispatch({

@@ -83,7 +83,7 @@ export class AboutCommand extends BaseCommand {
       `### ${Emojis.Gear} ${coreArchHeader}\n` +
         `**${t("core:lumiVersion")}:** v${LumiInfo.version}  •  **${t("core:runtimeEnvironment")}:** ${data.runtime}\n` +
         `**${t("core:coreLibraries")}:** discord.js v${data.djsVersion} · Sapphire v${data.sapphireVersion}\n` +
-        `**${t("core:storageCache")}:** Prisma v${data.prismaVersion} · Redis v${data.redisVersion}\n` +
+        `**${t("core:storageCache")}:** Prisma v${data.prismaVersion} · Valkey v${data.valkeyVersion}\n` +
         `**${t("core:eventPipeline")}:** BullMQ`,
 
       `### ${Emojis.Repo} Codebase\n` +

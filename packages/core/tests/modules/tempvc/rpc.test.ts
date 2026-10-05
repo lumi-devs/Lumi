@@ -64,7 +64,7 @@ describe("tempvc module RPC handlers", () => {
     (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),

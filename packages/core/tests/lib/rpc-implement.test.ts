@@ -93,8 +93,8 @@ function ownerOnlyRest(guildId: string, ownerId: string): FakeDiscordRestPort {
   return fake;
 }
 
-function mockRedisCacheMiss() {
-  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+function mockValkeyCacheMiss() {
+  (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 }
 
 describe("RPC guild access under Discord API failures", () => {
@@ -102,7 +102,7 @@ describe("RPC guild access under Discord API failures", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
@@ -268,7 +268,7 @@ describe("dispatchRpc error shaping", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     container.client = {
       application: { owner: { id: OWNER_ID } },
@@ -439,7 +439,7 @@ describe("implementRpc input parsing", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
@@ -583,7 +583,7 @@ describe("static RPC registry", () => {
 
   it("keeps serving a module's reads while that module is not loaded", async () => {
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
@@ -609,7 +609,7 @@ describe("static RPC registry", () => {
 
   it("refuses a write that needs a module which is not loaded", async () => {
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },

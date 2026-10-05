@@ -6,7 +6,7 @@ import {
 import { envParseString, getConsumerId } from "#lib/env.js";
 import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import type { RedisLock } from "#lib/lock.js";
+import type { ValkeyLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { watchFailedJobs } from "#lib/scheduler-failed-jobs.js";
 import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
@@ -20,7 +20,7 @@ import { installContainerServices } from "./container-services.js";
 export interface SchedulerContainerServices {
   client: SapphireClient;
   ownedEventBus: OwnedEventBus;
-  schedulerLock: RedisLock;
+  schedulerLock: ValkeyLock;
   failedJobsWatcher: { close(): Promise<void> };
   queueDepthWatcher: { close(): Promise<void> };
   heartbeatWatcher: SchedulerHeartbeatWatcher;
@@ -64,7 +64,7 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
   // registration. A second replica racing this fails fast (`onLostLock`/the
   // rejected promise below both `process.exit(1)`), same semantics
   // `LumiClient.ts` had.
-  const schedulerLock = await acquireSchedulerLock(container.redis, () => {
+  const schedulerLock = await acquireSchedulerLock(container.valkey, () => {
     container.logger.error("[Scheduler] Lost scheduler lock, exiting");
     process.exit(1);
   });
@@ -73,7 +73,7 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
 
   const failedJobsWatcher = watchFailedJobs(container.tasks);
   const queueDepthWatcher = watchQueueDepth(container.tasks);
-  const heartbeatWatcher = publishSchedulerHeartbeat(container.redis, getConsumerId());
+  const heartbeatWatcher = publishSchedulerHeartbeat(container.valkey, getConsumerId());
 
   return {
     client,

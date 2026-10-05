@@ -13,7 +13,7 @@ export async function getStickyMessageId(
   guildId: string,
   channelId: string,
 ): Promise<string | null> {
-  return container.redis.get(stickyKey(guildId, channelId));
+  return container.valkey.get(stickyKey(guildId, channelId));
 }
 
 export async function setStickyMessageId(
@@ -21,7 +21,7 @@ export async function setStickyMessageId(
   channelId: string,
   messageId: string,
 ): Promise<void> {
-  await container.redis.set(stickyKey(guildId, channelId), messageId);
+  await container.valkey.set(stickyKey(guildId, channelId), messageId);
 }
 
 export async function delStickyMessageId(
@@ -31,7 +31,7 @@ export async function delStickyMessageId(
   if (container.invalidation) {
     await container.invalidation.invalidate(stickyKey(guildId, channelId));
   } else {
-    await container.redis.del(stickyKey(guildId, channelId));
+    await container.valkey.del(stickyKey(guildId, channelId));
   }
 }
 

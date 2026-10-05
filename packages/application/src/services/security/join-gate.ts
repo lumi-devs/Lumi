@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { Colors, type Guild, type GuildMember } from "discord.js";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
@@ -147,8 +147,8 @@ export function evaluateJoinFilters(
 
 /** Tracks a joiner for the short-lived recent-joiners window used by the raid/similarity heuristics. */
 export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
-  const key = RedisKeys.recentJoiners(guildId);
-  await container.redis
+  const key = ValkeyKeys.recentJoiners(guildId);
+  await container.valkey
     .multi()
     .lpush(key, JSON.stringify(joiner))
     .ltrim(key, 0, RecentJoinersCap - 1)
@@ -157,7 +157,7 @@ export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner):
 }
 
 async function getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
-  const raw = await container.redis.lrange(RedisKeys.recentJoiners(guildId), 0, -1);
+  const raw = await container.valkey.lrange(ValkeyKeys.recentJoiners(guildId), 0, -1);
   return raw
     .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
     .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
@@ -191,8 +191,8 @@ export async function recordJoin(
   guildId: string,
   config: JoinGateConfig,
 ): Promise<boolean> {
-  const key = RedisKeys.joinBurst(guildId);
-  const results = await container.redis
+  const key = ValkeyKeys.joinBurst(guildId);
+  const results = await container.valkey
     .multi()
     .incr(key)
     .expire(key, config.raidWindowSeconds, "NX")
@@ -200,8 +200,8 @@ export async function recordJoin(
   const count = results?.[0]?.[1] as number;
   if (count < config.raidJoinCount) return false;
 
-  const started = await container.redis.set(
-    RedisKeys.raidMode(guildId),
+  const started = await container.valkey.set(
+    ValkeyKeys.raidMode(guildId),
     String(Date.now()),
     "EX",
     RaidModeSeconds,
@@ -211,7 +211,7 @@ export async function recordJoin(
 }
 
 export async function isRaidActive(guildId: string): Promise<boolean> {
-  return (await container.redis.exists(RedisKeys.raidMode(guildId))) === 1;
+  return (await container.valkey.exists(ValkeyKeys.raidMode(guildId))) === 1;
 }
 
 export async function applyGateAction(

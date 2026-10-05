@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import type { Guild } from "discord.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { snapshotGuild } from "./backup-types.js";
 import { restoreGuildFromBackup } from "./restore-guild.js";
 import { getConfigNumber } from "./config-helpers.js";
@@ -25,8 +25,8 @@ export async function createBackup(guild: Guild, keepCount: number): Promise<num
 
 /** Marks the guild as having lost structure during the current panic window, for auto-restore on revert. */
 export async function flagRestorePending(guildId: string): Promise<void> {
-  await container.redis.set(
-    RedisKeys.securityRestorePending(guildId),
+  await container.valkey.set(
+    ValkeyKeys.securityRestorePending(guildId),
     "1",
     "EX",
     24 * 60 * 60,
@@ -35,13 +35,13 @@ export async function flagRestorePending(guildId: string): Promise<void> {
 
 export async function isRestorePending(guildId: string): Promise<boolean> {
   return (
-    (await container.redis.exists(RedisKeys.securityRestorePending(guildId))) === 1
+    (await container.valkey.exists(ValkeyKeys.securityRestorePending(guildId))) === 1
   );
 }
 
 export async function clearRestorePending(guildId: string): Promise<void> {
   await container.invalidation.invalidate(
-    RedisKeys.securityRestorePending(guildId),
+    ValkeyKeys.securityRestorePending(guildId),
   );
 }
 

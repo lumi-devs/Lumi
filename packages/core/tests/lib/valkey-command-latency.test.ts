@@ -1,22 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Command } from "iovalkey";
-import { redisCommandDuration } from "@lumi/observability";
-import { instrumentRedisLatency } from "#lib/database/redis.js";
+import { valkeyCommandDuration } from "@lumi/observability";
+import { instrumentValkeyLatency } from "#lib/database/valkey.js";
 
-/** Minimal stand-in for a Redis/Cluster instance - only `sendCommand` is used. */
+/** Minimal stand-in for a Valkey/Cluster instance - only `sendCommand` is used. */
 function makeFakeClient(resolveValue: unknown = "OK") {
   const sendCommand = (command: Command) => {
     command.resolve(resolveValue);
     return command.promise;
   };
-  return { sendCommand } as unknown as Parameters<typeof instrumentRedisLatency>[0];
+  return { sendCommand } as unknown as Parameters<typeof instrumentValkeyLatency>[0];
 }
 
-describe("instrumentRedisLatency", () => {
+describe("instrumentValkeyLatency", () => {
   let observeSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
-    observeSpy = spyOn(redisCommandDuration, "observe").mockImplementation(() => {});
+    observeSpy = spyOn(valkeyCommandDuration, "observe").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -25,7 +25,7 @@ describe("instrumentRedisLatency", () => {
 
   it("records latency for a non-blocking command, labelled by command name", async () => {
     const client = makeFakeClient();
-    const instrumented = instrumentRedisLatency(client);
+    const instrumented = instrumentValkeyLatency(client);
 
     const command = new Command("get", ["foo"]);
     const result = await instrumented.sendCommand(command);
@@ -38,7 +38,7 @@ describe("instrumentRedisLatency", () => {
 
   it("does not record latency for a blocking stream read (XREAD)", async () => {
     const client = makeFakeClient(null);
-    const instrumented = instrumentRedisLatency(client);
+    const instrumented = instrumentValkeyLatency(client);
 
     const command = new Command("xread", ["BLOCK", "0", "STREAMS", "s", "$"]);
     await instrumented.sendCommand(command);
@@ -48,7 +48,7 @@ describe("instrumentRedisLatency", () => {
 
   it("does not record latency for a blocking stream read (XREADGROUP)", async () => {
     const client = makeFakeClient(null);
-    const instrumented = instrumentRedisLatency(client);
+    const instrumented = instrumentValkeyLatency(client);
 
     const command = new Command("xreadgroup", [
       "GROUP",
@@ -71,9 +71,9 @@ describe("instrumentRedisLatency", () => {
       return command.promise;
     };
     const client = { sendCommand } as unknown as Parameters<
-      typeof instrumentRedisLatency
+      typeof instrumentValkeyLatency
     >[0];
-    const instrumented = instrumentRedisLatency(client);
+    const instrumented = instrumentValkeyLatency(client);
 
     const command = new Command("set", ["foo", "bar"]);
     await expect(instrumented.sendCommand(command)).rejects.toThrow("boom");

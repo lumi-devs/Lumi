@@ -8,7 +8,7 @@ import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
 import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";
 import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
-import { createMemoryRedis } from "../../mocks/memory-redis.js";
+import { createMemoryValkey } from "../../mocks/memory-valkey.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 vi.mock("#modules/security/services/panic.js", () => ({
@@ -75,7 +75,7 @@ describe("security module RPC handlers", () => {
     (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
-    (container as any).redis = createMemoryRedis();
+    (container as any).valkey = createMemoryValkey();
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),

@@ -1,4 +1,4 @@
-import type { InvalidationBus } from "#lib/database/redis.js";
+import type { InvalidationBus } from "#lib/database/valkey.js";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import { container } from "@sapphire/framework";
 
@@ -16,7 +16,7 @@ const DefaultMaxEntries = 5_000;
 const DefaultNegativeTtlMs = 15_000;
 
 /**
- * A process-local, bounded L1 cache in front of Redis (L2), with negative
+ * A process-local, bounded L1 cache in front of Valkey (L2), with negative
  * caching for confirmed-absent values and a generation check that discards
  * (without caching) any load that resolves after the key was invalidated or
  * overwritten while that load was in flight.
@@ -67,7 +67,7 @@ export class CacheStore {
     this.#negativeUntil.delete(key);
     this.#writeL1(key, value, ttlMs);
     if (!opts?.l1Only) {
-      container.redis
+      container.valkey
         .setex(key, Math.ceil(ttlMs / 1000), JSON.stringify(value))
         .catch(() => {});
     }
@@ -127,7 +127,7 @@ export class CacheStore {
 
     const flight = (async (): Promise<T> => {
       try {
-        const cached = await container.redis.get(key);
+        const cached = await container.valkey.get(key);
         if (cached) {
           try {
             const value = parser(cached);
@@ -137,7 +137,7 @@ export class CacheStore {
             cacheHits.inc({ cache });
             return value;
           } catch {
-            // Unparseable Redis entry: fall through and treat as a miss.
+            // Unparseable Valkey entry: fall through and treat as a miss.
           }
         }
 
@@ -153,7 +153,7 @@ export class CacheStore {
           this.#writeL1(key, data, ttlMs);
           const serialized = serializer(data);
           if (serialized !== undefined) {
-            await container.redis.setex(key, Math.ceil(ttlMs / 1000), serialized);
+            await container.valkey.setex(key, Math.ceil(ttlMs / 1000), serialized);
           }
         }
         return data as T;

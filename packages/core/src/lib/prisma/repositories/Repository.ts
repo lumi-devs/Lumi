@@ -1,4 +1,4 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
 import { CacheStore } from "#lib/cache/CacheStore.js";
 import { type ILogger, container } from "@sapphire/framework";
 import type { DatabaseClient } from "#lib/prisma/client.js";
@@ -10,7 +10,7 @@ export const repositoryCache = new CacheStore();
 export abstract class Repository {
   public constructor(
     protected readonly prisma: DatabaseClient,
-    protected readonly redis: RedisClient,
+    protected readonly valkey: ValkeyClient,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,
     /**

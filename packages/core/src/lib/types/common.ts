@@ -1,7 +1,7 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import type { InvalidationBus, SignalBus } from "#lib/database/redis.js";
+import type { InvalidationBus, SignalBus } from "#lib/database/valkey.js";
 import type { EventBus } from "#lib/event-bus/types.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { DiscordRestPort } from "#lib/discord/rest-port.js";
@@ -56,7 +56,7 @@ type ConfigValueValidator = (
 declare module "@sapphire/pieces" {
   interface Container {
     readonly prisma: DatabaseClient;
-    readonly redis: RedisClient;
+    readonly valkey: ValkeyClient;
     readonly invalidation: InvalidationBus;
     readonly signals: SignalBus;
     readonly db: DatabaseRepositories;

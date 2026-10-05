@@ -10,11 +10,11 @@ vi.mock("@lumi/observability", () => ({
 describe("AuditRepository", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let repo: AuditRepository;
-  let mockRedis: any;
+  let mockValkey: any;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    mockRedis = {
+    mockValkey = {
       xadd: vi.fn().mockResolvedValue("1-0"),
       xgroup: vi.fn().mockResolvedValue("OK"),
       xautoclaim: vi.fn().mockResolvedValue(["0-0", []]),
@@ -24,10 +24,10 @@ describe("AuditRepository", () => {
     };
     const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     const mockLogger = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    repo = new AuditRepository(prisma as any, mockRedis, mockLogger as any, mockDb as any);
+    repo = new AuditRepository(prisma as any, mockValkey, mockLogger as any, mockDb as any);
   });
 
-  it("queueAuditLog appends payload to redis stream", async () => {
+  it("queueAuditLog appends payload to valkey stream", async () => {
     await repo.queueAuditLog({
       guildId: "guild-1",
       userId: "user-1",
@@ -36,7 +36,7 @@ describe("AuditRepository", () => {
       details: { field: "prefix" },
     });
 
-    expect(mockRedis.xadd).toHaveBeenCalled();
+    expect(mockValkey.xadd).toHaveBeenCalled();
   });
 
   it("listAuditLogs supports filtering, pagination, and cursor generation", async () => {

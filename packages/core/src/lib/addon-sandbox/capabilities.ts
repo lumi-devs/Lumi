@@ -6,7 +6,7 @@ import {
   type AddonRpcMethod,
 } from "@lumi/contracts";
 
-type Requirement = AddonDiscordCapability | "kv" | "redis" | "scheduling" | null;
+type Requirement = AddonDiscordCapability | "kv" | "valkey" | "scheduling" | null;
 
 const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "ctx.option": null,
@@ -21,11 +21,11 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "kv.set": "kv",
   "kv.delete": "kv",
   "kv.list": "kv",
-  "redis.sadd": "redis",
-  "redis.srem": "redis",
-  "redis.scard": "redis",
-  "redis.smembers": "redis",
-  "redis.del": "redis",
+  "valkey.sadd": "valkey",
+  "valkey.srem": "valkey",
+  "valkey.scard": "valkey",
+  "valkey.smembers": "valkey",
+  "valkey.del": "valkey",
   "schedule.add": "scheduling",
   "discord.channels.send": "sendMessage",
   // A read must not ride on a write capability.
@@ -43,7 +43,7 @@ export function parseCapabilities(raw: unknown): AddonCapabilities {
     discord,
     scheduling: block.scheduling === true,
     kv: block.kv !== false,
-    redis: block.redis === true,
+    valkey: block.valkey === true,
   };
 }
 
@@ -64,7 +64,7 @@ export function isMethodAllowed(
   if (required === undefined) return false;
   if (required === null) return true;
   if (required === "kv") return granted.kv === true;
-  if (required === "redis") return granted.redis === true;
+  if (required === "valkey") return granted.valkey === true;
   if (required === "scheduling") return granted.scheduling === true;
   return granted.discord?.includes(required) === true;
 }

@@ -1,5 +1,5 @@
 import type { IDatabaseClient } from "./types.js";
-import type { RedisClient } from "./cluster-safe.js";
+import type { ValkeyClient } from "./cluster-safe.js";
 
 export interface RepositoryLogger {
   debug?(message: string, ...args: unknown[]): void;
@@ -15,7 +15,7 @@ export interface InvalidationEmitter {
 export abstract class BaseRepository {
   protected constructor(
     protected readonly db: IDatabaseClient,
-    protected readonly redis?: RedisClient,
+    protected readonly valkey?: ValkeyClient,
     protected readonly invalidation?: InvalidationEmitter,
     protected readonly logger?: RepositoryLogger,
   ) {}
@@ -25,10 +25,10 @@ export abstract class BaseRepository {
     ttlSeconds: number,
     fetcher: () => Promise<V>,
   ): Promise<V> {
-    if (!this.redis) return fetcher();
+    if (!this.valkey) return fetcher();
 
     try {
-      const cached = await this.redis.get(key);
+      const cached = await this.valkey.get(key);
       if (cached !== null) {
         return JSON.parse(cached) as V;
       }
@@ -40,7 +40,7 @@ export abstract class BaseRepository {
 
     if (value !== undefined && value !== null) {
       try {
-        await this.redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+        await this.valkey.set(key, JSON.stringify(value), "EX", ttlSeconds);
       } catch (err) {
         this.logger?.warn?.(`[Repository] Cache write failed for key ${key}`, err);
       }
@@ -53,8 +53,8 @@ export abstract class BaseRepository {
     if (keys.length === 0) return;
     if (this.invalidation) {
       await this.invalidation.invalidate(...keys);
-    } else if (this.redis) {
-      await this.redis.del(...keys);
+    } else if (this.valkey) {
+      await this.valkey.del(...keys);
     }
   }
 }

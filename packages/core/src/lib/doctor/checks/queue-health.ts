@@ -59,7 +59,7 @@ export async function checkQueueHealth(
         name: QueueHealthCheckName,
         status: "fail",
         detail: `Could not read "${SCHEDULED_TASKS_QUEUE_NAME}" queue counts: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Check Redis is reachable and REDIS_TASK_DB matches the scheduler's.",
+        hint: "Check Valkey is reachable and VALKEY_TASK_DB matches the scheduler's.",
       };
     }
 

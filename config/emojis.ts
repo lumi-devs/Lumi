@@ -59,6 +59,6 @@ export default {
   // Position: "📈",
   // Servers: "🏰",
   // Members: "👥",
-  // Redis: "🔴",
+  // Valkey: "🔴",
   // Sql: "🐘",
 };

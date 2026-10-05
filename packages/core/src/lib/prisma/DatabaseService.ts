@@ -1,7 +1,7 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
 import { scanKeysSafe } from "#lib/database/cluster-safe.js";
 import { type ILogger, container } from "@sapphire/framework";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,
@@ -34,7 +34,7 @@ export type { ConfigOverrideEntry } from "#lib/prisma/repositories/ConfigOverrid
 
 /**
  * Thin facade over the per-domain repositories.  Each repo owns its tables +
- * Redis keys/TTLs and shares the cache-aside `getOrSet` / `InvalidationBus`
+ * Valkey keys/TTLs and shares the cache-aside `getOrSet` / `InvalidationBus`
  * primitives from the `Repository` base class.  `container.db.<repo>.<method>`
  * is the only sanctioned data-access path for features - never touch
  * `container.prisma` from a module.
@@ -66,53 +66,53 @@ export class DatabaseService {
 
   public constructor(
     private readonly prisma: DatabaseClient,
-    private readonly redis: RedisClient,
+    private readonly valkey: ValkeyClient,
     logger: ILogger,
     /** Optional read replica; only the fleet-wide sweeps are routed to it. */
     reader: DatabaseClient = prisma,
   ) {
-    this.global = new GlobalRepository(prisma, redis, logger, this);
+    this.global = new GlobalRepository(prisma, valkey, logger, this);
     this.configHistory = new ConfigHistoryRepository(
       prisma,
-      redis,
+      valkey,
       logger,
       this,
     );
     this.config = new ConfigRepository(
       prisma,
-      redis,
+      valkey,
       logger,
       this,
       this.configHistory,
     );
     this.modules = new ModuleRepository(
       prisma,
-      redis,
+      valkey,
       logger,
       this,
       this.config,
     );
-    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
-    this.access = new AccessRepository(prisma, redis, logger, this);
-    this.permissions = new PermissionRepository(prisma, redis, logger, this);
-    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
-    this.audit = new AuditRepository(prisma, redis, logger, this);
-    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
+    this.guildKV = new GuildKVRepository(prisma, valkey, logger, this);
+    this.access = new AccessRepository(prisma, valkey, logger, this);
+    this.permissions = new PermissionRepository(prisma, valkey, logger, this);
+    this.downloader = new DownloaderRepository(prisma, valkey, logger, this);
+    this.audit = new AuditRepository(prisma, valkey, logger, this);
+    this.moderation = new ModerationRepository(prisma, valkey, logger, this, reader);
     this.configOverrides = new ConfigOverrideRepository(
       prisma,
-      redis,
+      valkey,
       logger,
       this,
     );
-    this.afk = new AfkRepository(prisma, redis, logger, this, reader);
-    this.modNotes = new ModNoteRepository(prisma, redis, logger, this);
-    this.appeals = new AppealRepository(prisma, redis, logger, this);
-    this.security = new SecurityRepository(prisma, redis, logger, this);
-    this.tempvc = new TempVcRepository(prisma, redis, logger, this);
-    this.economy = new EconomyRepository(prisma, redis, logger, this);
-    this.reactionRoles = new ReactionRoleRepository(prisma, redis, logger, this);
-    this.gdprExportJobs = new GdprExportJobRepository(prisma, redis, logger, this);
-    this.featureFlags = new FeatureFlagRepository(prisma, redis, logger, this);
+    this.afk = new AfkRepository(prisma, valkey, logger, this, reader);
+    this.modNotes = new ModNoteRepository(prisma, valkey, logger, this);
+    this.appeals = new AppealRepository(prisma, valkey, logger, this);
+    this.security = new SecurityRepository(prisma, valkey, logger, this);
+    this.tempvc = new TempVcRepository(prisma, valkey, logger, this);
+    this.economy = new EconomyRepository(prisma, valkey, logger, this);
+    this.reactionRoles = new ReactionRoleRepository(prisma, valkey, logger, this);
+    this.gdprExportJobs = new GdprExportJobRepository(prisma, valkey, logger, this);
+    this.featureFlags = new FeatureFlagRepository(prisma, valkey, logger, this);
   }
 
   /** Ensures a Guild row exists so dependent rows can satisfy their FK. */
@@ -166,7 +166,7 @@ export class DatabaseService {
 
   /**
    * Deletes every Guild row whose departure grace period has elapsed and
-   * returns the purged ids, so the caller can also evict their Redis state.
+   * returns the purged ids, so the caller can also evict their Valkey state.
    * Every child table's FK to Guild is `onDelete: Cascade`, so nothing else
    * needs a manual delete.
    */
@@ -185,9 +185,9 @@ export class DatabaseService {
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
-    await this.redis.setex(
-      RedisKeys.botStats(),
-      RedisTTL.botStats,
+    await this.valkey.setex(
+      ValkeyKeys.botStats(),
+      ValkeyTTL.botStats,
       JSON.stringify(stats),
     );
   }
@@ -203,7 +203,7 @@ export class DatabaseService {
    * IgnoreEntry has no userId column.  AfkEntry is handled by the AFK module
    * hook.  ModerationCase anonymization is handled by the mod module hook
    * (ModerationRepository.anonymizeUser) - do not duplicate it here.
-   * Blocklist Redis keys are scanned and invalidated, then the entity-cache
+   * Blocklist Valkey keys are scanned and invalidated, then the entity-cache
    * user projection is purged last.
    */
   public async deleteUserData(userId: string): Promise<void> {
@@ -217,8 +217,8 @@ export class DatabaseService {
     ]);
 
     const keys = await scanKeysSafe(
-      this.redis,
-      RedisKeys.blockedPattern(userId),
+      this.valkey,
+      ValkeyKeys.blockedPattern(userId),
     );
 
     if (keys.length) {
@@ -244,7 +244,7 @@ export class DatabaseService {
   }
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {
-    return createGuildTransaction(guildId, this.redis, this.prisma);
+    return createGuildTransaction(guildId, this.valkey, this.prisma);
   }
 
   public async probePrisma(): Promise<number> {

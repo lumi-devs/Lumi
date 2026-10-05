@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { liftAllActiveCases } from "../helpers.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { runModerationAction } from "../runModerationAction.js";
 
 export interface VoiceMuteApplyOptions {
@@ -37,7 +37,7 @@ export class VoiceMuteAction {
         }
 
         await container.invalidation.invalidate(
-          RedisKeys.voiceMuteState(guild.id, targetMember.id),
+          ValkeyKeys.voiceMuteState(guild.id, targetMember.id),
         );
 
         return container.db.moderation.createModerationCase({
@@ -65,7 +65,7 @@ export class VoiceMuteAction {
 
   public static async undo(options: VoiceMuteUndoOptions) {
     const { guild, targetMember, moderator, reason } = options;
-    const key = RedisKeys.voiceMuteState(guild.id, targetMember.id);
+    const key = ValkeyKeys.voiceMuteState(guild.id, targetMember.id);
     await container.invalidation.invalidate(key);
     const auditReason = formatAuditReason(moderator, reason);
 
@@ -105,7 +105,7 @@ export class VoiceMuteAction {
     targetId: string,
     reason: string,
   ): Promise<void> {
-    const key = RedisKeys.voiceMuteState(guildId, targetId);
+    const key = ValkeyKeys.voiceMuteState(guildId, targetId);
     await container.invalidation.invalidate(key);
     await container.discordRest.clearVoiceMute(guildId, targetId, reason);
   }

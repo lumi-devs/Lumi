@@ -107,16 +107,16 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     (container as any).invalidation = { invalidate: vi.fn() };
     repositoryCache.clear();
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
+    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
     db.modules = {
       getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),
       isModuleGlobalEnabled: vi.fn(),

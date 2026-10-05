@@ -23,7 +23,7 @@ export const EmojiPool = [
 export const SequenceLength = 4;
 export const MaxAttempts = 3;
 
-/** Persisted per-member challenge state (Redis JSON). */
+/** Persisted per-member challenge state (Valkey JSON). */
 export interface CaptchaState {
   /** Indices into EmojiPool, in the order they must be clicked. */
   sequence: number[];

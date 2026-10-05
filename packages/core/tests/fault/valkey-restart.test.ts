@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { acquireRedisLock, verifyRedisLock } from "#lib/lock.js";
+import { acquireValkeyLock, verifyValkeyLock } from "#lib/lock.js";
 import { createGuildTransaction } from "#lib/guild-transaction.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
@@ -21,24 +21,24 @@ Object.assign(container, {
   },
 });
 
-interface SimulatedRedisState {
+interface SimulatedValkeyState {
   store: Map<string, string>;
   isOnline: boolean;
   rejectAll: boolean;
 }
 
-function createChaosRedis() {
-  const state: SimulatedRedisState = {
+function createChaosValkey() {
+  const state: SimulatedValkeyState = {
     store: new Map<string, string>(),
     isOnline: true,
     rejectAll: false,
   };
 
-  const redis = {
+  const valkey = {
     _state: state,
     set: vi.fn(async (k: string, v: string, ..._rest: unknown[]) => {
       if (!state.isOnline || state.rejectAll) {
-        throw new Error("ECONNREFUSED: Connection refused by Redis server");
+        throw new Error("ECONNREFUSED: Connection refused by Valkey server");
       }
       if (state.store.has(k)) return null;
       state.store.set(k, v);
@@ -46,7 +46,7 @@ function createChaosRedis() {
     }),
     get: vi.fn(async (k: string) => {
       if (!state.isOnline || state.rejectAll) {
-        throw new Error("ECONNREFUSED: Connection refused by Redis server");
+        throw new Error("ECONNREFUSED: Connection refused by Valkey server");
       }
       return state.store.get(k) ?? null;
     }),
@@ -85,7 +85,7 @@ function createChaosRedis() {
     },
   };
 
-  return redis;
+  return valkey;
 }
 
 function mockPrisma() {
@@ -98,75 +98,76 @@ function mockPrisma() {
   };
 }
 
-describe("Chaos Suite: Redis Restart & Lock Loss", () => {
-  let redis: ReturnType<typeof createChaosRedis>;
+describe("Chaos Suite: Valkey Restart & Lock Loss", () => {
+  let valkey: ReturnType<typeof createChaosValkey>;
   let prisma: ReturnType<typeof mockPrisma>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = createChaosRedis();
+    valkey = createChaosValkey();
     prisma = mockPrisma();
   });
 
-  it("aborts GuildWriteTransaction cleanly when Redis restarts and flushes keys mid-transaction", async () => {
-    const txn = await createGuildTransaction("guild-chaos-1", redis as any, prisma as any);
+  it("aborts GuildWriteTransaction cleanly when Valkey restarts and flushes keys mid-transaction", async () => {
+    const txn = await createGuildTransaction("guild-chaos-1", valkey as any, prisma as any);
     txn.write({ prefix: "?" });
 
-    redis.simulateRestart();
+    valkey.simulateRestart();
 
     await expect(txn.submit()).rejects.toThrow(/Lock lost before write/);
     expect(prisma.guild.update).not.toHaveBeenCalled();
     expect(txn.locking).toBe(false);
   });
 
-  it("prevents database write when Redis experiences a network partition during submit", async () => {
-    const txn = await createGuildTransaction("guild-chaos-1", redis as any, prisma as any);
+  it("prevents database write when Valkey experiences a network partition during submit", async () => {
+    const txn = await createGuildTransaction("guild-chaos-1", valkey as any, prisma as any);
     txn.write({ prefix: "?" });
 
-    redis.simulateNetworkPartition();
+    valkey.simulateNetworkPartition();
 
     await expect(txn.submit()).rejects.toThrow(/ECONNRESET|ECONNREFUSED/);
     expect(prisma.guild.update).not.toHaveBeenCalled();
   });
 
-  it("re-acquires locks successfully after Redis heals from a restart", async () => {
-    redis.simulateCrash();
+  it("re-acquires locks successfully after Valkey heals from a restart", async () => {
+    valkey.simulateCrash();
     await expect(
-      acquireRedisLock(redis as any, "lock:guild:healed", {
+      acquireValkeyLock(valkey as any, "lock:guild:healed", {
         ttlMs: 2000,
         acquireTimeoutMs: 100,
       }),
     ).rejects.toThrow(/ECONNREFUSED|Timeout/);
 
-    redis.simulateRestart();
+    valkey.simulateRestart();
 
-    const lock = await acquireRedisLock(redis as any, "lock:guild:healed", {
+    const lock = await acquireValkeyLock(valkey as any, "lock:guild:healed", {
       ttlMs: 5000,
       acquireTimeoutMs: 500,
     });
     expect(lock.token).toBeDefined();
-    expect(await verifyRedisLock(redis as any, "lock:guild:healed", lock.token)).toBe(true);
+    expect(await verifyValkeyLock(valkey as any, "lock:guild:healed", lock.token)).toBe(true);
 
     await lock.release();
-    expect(await verifyRedisLock(redis as any, "lock:guild:healed", lock.token)).toBe(false);
+    expect(await verifyValkeyLock(valkey as any, "lock:guild:healed", lock.token)).toBe(false);
   });
 
-  it("logs consecutive renewal failures during prolonged Redis outage without crashing the process", async () => {
-    const lock = await acquireRedisLock(redis as any, "lock:guild:outage", {
+  it("logs consecutive renewal failures during prolonged Valkey outage without crashing the process", async () => {
+    const lock = await acquireValkeyLock(valkey as any, "lock:guild:outage", {
       ttlMs: 1000,
+      logger: container.logger,
     });
 
-    redis.simulateCrash();
+    valkey.simulateCrash();
 
     await sleep(500);
     expect(container.logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('[redis-lock] Failed to renew lock "lock:guild:outage" (1 consecutive failure)'),
+      expect.stringContaining('[valkey-lock] Failed to renew lock "lock:guild:outage" (1 consecutive failure)'),
       expect.any(Error),
     );
 
     await sleep(500);
     expect(container.logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('[redis-lock] Failed to renew lock "lock:guild:outage" (2 consecutive failures)'),
+      expect.stringContaining('[valkey-lock] Failed to renew lock "lock:guild:outage" (2 consecutive failures)'),
       expect.any(Error),
     );
 

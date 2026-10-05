@@ -28,7 +28,7 @@ describe("Sticky Module", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (container as any).redis = {
+    (container as any).valkey = {
       get: vi.fn(),
       set: vi.fn().mockResolvedValue("OK"),
       del: vi.fn(),
@@ -66,12 +66,12 @@ describe("Sticky Module", () => {
 
   describe("sticky store", () => {
     it("should get, set and delete through the sticky key", async () => {
-      (container.redis.get as any).mockResolvedValue("msg-9");
+      (container.valkey.get as any).mockResolvedValue("msg-9");
       expect(await getStickyMessageId("g1", "c1")).toBe("msg-9");
-      expect(container.redis.get).toHaveBeenCalledWith("lumi:sticky:g1:c1");
+      expect(container.valkey.get).toHaveBeenCalledWith("lumi:sticky:g1:c1");
 
       await setStickyMessageId("g1", "c1", "msg-10");
-      expect(container.redis.set).toHaveBeenCalledWith(
+      expect(container.valkey.set).toHaveBeenCalledWith(
         "lumi:sticky:g1:c1",
         "msg-10",
       );
@@ -85,13 +85,13 @@ describe("Sticky Module", () => {
 
   describe("isStickyOnCooldown", () => {
     it("should allow the first post then block a repost within the cooldown window", async () => {
-      (container.redis.set as any)
+      (container.valkey.set as any)
         .mockResolvedValueOnce("OK")
         .mockResolvedValueOnce(null);
 
       expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(false);
       expect(await isStickyOnCooldown("g-cd", "c-cd")).toBe(true);
-      expect(container.redis.set).toHaveBeenCalledWith(
+      expect(container.valkey.set).toHaveBeenCalledWith(
         "lumi:sticky:cd:g-cd:c-cd",
         "1",
         "PX",
@@ -113,7 +113,7 @@ describe("Sticky Module", () => {
       (container.db.config.getModuleConfig as any).mockResolvedValue([
         { channel_id: "channel-1", message: "stay", enabled: true },
       ]);
-      (container.redis.get as any).mockResolvedValue("old-1");
+      (container.valkey.get as any).mockResolvedValue("old-1");
       const message = makeMessage();
       await (listener as any).handle(message);
       expect(message.channel.messages.delete).toHaveBeenCalledWith("old-1");
@@ -121,17 +121,17 @@ describe("Sticky Module", () => {
       expect(
         JSON.stringify(message.channel.send.mock.calls[0]![0]),
       ).toContain("stay");
-      expect(container.redis.set).toHaveBeenCalledWith(
+      expect(container.valkey.set).toHaveBeenCalledWith(
         "lumi:sticky:guild-1:channel-1",
         "new-1",
       );
     });
 
     it("should check the cooldown before reading config, and skip the config read entirely when on cooldown", async () => {
-      (container.redis.set as any).mockResolvedValueOnce(null);
+      (container.valkey.set as any).mockResolvedValueOnce(null);
       const message = makeMessage();
       await (listener as any).handle(message);
-      expect(container.redis.set).toHaveBeenCalledTimes(1);
+      expect(container.valkey.set).toHaveBeenCalledTimes(1);
       expect(container.db.config.getModuleConfig).not.toHaveBeenCalled();
       expect(message.channel.send).not.toHaveBeenCalled();
     });
@@ -164,7 +164,7 @@ describe("Sticky Module", () => {
           imageUrls: ["https://example.com/a.png"],
         },
       ]);
-      (container.redis.get as any).mockResolvedValue(null);
+      (container.valkey.get as any).mockResolvedValue(null);
       const message = makeMessage({ channelId: "channel-rich" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);
@@ -183,7 +183,7 @@ describe("Sticky Module", () => {
           accentColor: "not-a-color",
         },
       ]);
-      (container.redis.get as any).mockResolvedValue(null);
+      (container.valkey.get as any).mockResolvedValue(null);
       const message = makeMessage({ channelId: "channel-badhex" });
       await (listener as any).handle(message);
       expect(message.channel.send).toHaveBeenCalledTimes(1);

@@ -4,7 +4,7 @@
 > Paths below that used to be `apps/dashboard/...` in this repo are now repo-root-relative
 > there (e.g. `src/lib/rpc.ts` in `lumi-dashboard`).
 
-The dashboard never opens a Postgres/Redis connection or holds the bot token. Every read and
+The dashboard never opens a Postgres/Valkey connection or holds the bot token. Every read and
 write goes over internal HTTP endpoints served by the headless `apps/api` process (`POST /rpc` and `POST /rpc/batch`),
 dispatching to a typed router backed by `@lumi/contracts`.
 
@@ -113,5 +113,5 @@ request does not fail the entire batch.
 
 ## Idempotency
 
-Mutations can pass `idempotencyKey` in `RpcRequest`. `withIdempotency()` acquires a distributed Redis lock,
+Mutations can pass `idempotencyKey` in `RpcRequest`. `withIdempotency()` acquires a distributed Valkey lock,
 returning cached results on replay or rejecting concurrent duplicates with `CONFLICT`.

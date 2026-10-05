@@ -2,13 +2,13 @@ import Valkey, { Cluster, type ChainableCommander } from "iovalkey";
 import calculateSlot from "cluster-key-slot";
 
 /**
- * Either topology. Valkey/Redis Cluster rejects any single command spanning hash
+ * Either topology. Valkey Cluster rejects any single command spanning hash
  * slots, so multi-key operations must be grouped before they are issued -
  * the helpers below do that and degrade to a single round trip on standalone.
  */
-export type RedisClient = Valkey | Cluster;
+export type ValkeyClient = Valkey | Cluster;
 
-export function isCluster(client: RedisClient): client is Cluster {
+export function isCluster(client: ValkeyClient): client is Cluster {
   return client instanceof Cluster;
 }
 
@@ -31,16 +31,16 @@ function groupBySlot(keys: readonly string[]): Map<number, string[]> {
  * cannot be left to fail at runtime.
  */
 export async function mgetSafe(
-  redis: RedisClient,
+  client: ValkeyClient,
   keys: readonly string[],
 ): Promise<(string | null)[]> {
   if (keys.length === 0) return [];
-  if (!isCluster(redis)) return redis.mget(...keys);
+  if (!isCluster(client)) return client.mget(...keys);
 
   const byKey = new Map<string, string | null>();
   await Promise.all(
     [...groupBySlot(keys).values()].map(async (group) => {
-      const values = await redis.mget(...group);
+      const values = await client.mget(...group);
       group.forEach((key, i) => byKey.set(key, values[i] ?? null));
     }),
   );
@@ -54,7 +54,7 @@ export async function mgetSafe(
  * sweep silently misses most of the keys it was meant to find.
  */
 export async function scanKeysSafe(
-  redis: RedisClient,
+  client: ValkeyClient,
   pattern: string,
   count = 100,
 ): Promise<string[]> {
@@ -75,9 +75,9 @@ export async function scanKeysSafe(
     return found;
   };
 
-  if (!isCluster(redis)) return scanNode(redis);
+  if (!isCluster(client)) return scanNode(client);
 
-  const perNode = await Promise.all(redis.nodes("master").map(scanNode));
+  const perNode = await Promise.all(client.nodes("master").map(scanNode));
   return perNode.flat();
 }
 
@@ -86,15 +86,15 @@ export async function scanKeysSafe(
  * target the same node, so a bulk write over unrelated keys has to be split.
  */
 export async function pipelineBySlot<T>(
-  redis: RedisClient,
+  client: ValkeyClient,
   items: readonly T[],
   keyOf: (item: T) => string,
   apply: (pipe: ChainableCommander, item: T) => void,
 ): Promise<void> {
   if (items.length === 0) return;
 
-  if (!isCluster(redis)) {
-    const pipe = redis.pipeline();
+  if (!isCluster(client)) {
+    const pipe = client.pipeline();
     for (const item of items) apply(pipe, item);
     assertExecResults(await pipe.exec());
     return;
@@ -110,7 +110,7 @@ export async function pipelineBySlot<T>(
 
   await Promise.all(
     [...groups.values()].map(async (group) => {
-      const pipe = redis.pipeline();
+      const pipe = client.pipeline();
       for (const item of group) apply(pipe, item);
       assertExecResults(await pipe.exec());
     }),
@@ -118,7 +118,7 @@ export async function pipelineBySlot<T>(
 }
 
 function assertExecResults(results: unknown): void {
-  if (results === null) throw new Error("Redis pipeline was discarded");
+  if (results === null) throw new Error("Valkey pipeline was discarded");
   if (!Array.isArray(results)) return;
   const failure = results.find(
     (entry) => Array.isArray(entry) && entry[0] != null,
@@ -128,15 +128,15 @@ function assertExecResults(results: unknown): void {
 
 /** DEL over keys that may span slots. */
 export async function delSafe(
-  redis: RedisClient,
+  client: ValkeyClient,
   keys: readonly string[],
 ): Promise<void> {
   if (keys.length === 0) return;
-  if (!isCluster(redis)) {
-    await redis.del(...keys);
+  if (!isCluster(client)) {
+    await client.del(...keys);
     return;
   }
   await Promise.all(
-    [...groupBySlot(keys).values()].map((group) => redis.del(...group)),
+    [...groupBySlot(keys).values()].map((group) => client.del(...group)),
   );
 }

@@ -34,7 +34,7 @@ describe("publishDashboardEvent", () => {
 
   it("swallows publish errors instead of throwing, and counts the failure", async () => {
     (container as any).eventBus = {
-      publish: vi.fn().mockRejectedValue(new Error("redis down")),
+      publish: vi.fn().mockRejectedValue(new Error("valkey down")),
     };
 
     await expect(

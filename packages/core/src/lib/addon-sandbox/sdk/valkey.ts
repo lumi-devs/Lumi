@@ -1,21 +1,21 @@
 import { call } from "./rpc.js";
 
 export function sadd(key: string, ...members: string[]): Promise<number> {
-  return call("redis.sadd", { key, members });
+  return call("valkey.sadd", { key, members });
 }
 
 export function srem(key: string, ...members: string[]): Promise<number> {
-  return call("redis.srem", { key, members });
+  return call("valkey.srem", { key, members });
 }
 
 export function scard(key: string): Promise<number> {
-  return call("redis.scard", { key });
+  return call("valkey.scard", { key });
 }
 
 export function smembers(key: string): Promise<string[]> {
-  return call("redis.smembers", { key });
+  return call("valkey.smembers", { key });
 }
 
 export function del(key: string): Promise<number> {
-  return call("redis.del", { key });
+  return call("valkey.del", { key });
 }

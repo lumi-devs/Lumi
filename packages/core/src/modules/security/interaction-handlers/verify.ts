@@ -52,7 +52,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
 
     // "start" is a fresh ephemeral reply (the Verify button lives on a
     // shared public panel); "step" edits that per-user ephemeral challenge
-    // message in place. Defer immediately, before any DB/Redis lookups, to
+    // message in place. Defer immediately, before any DB/Valkey lookups, to
     // beat Discord's 3s ack window.
     if (parsed.kind === "start") {
       await interaction.deferReply({

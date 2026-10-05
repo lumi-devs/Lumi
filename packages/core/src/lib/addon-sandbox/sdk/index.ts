@@ -36,7 +36,7 @@ export function DefineModule(options: ModuleOptions) {
 }
 
 // No deleteUserData/exportUserData hooks: an addon persists only through lumi/kv
-// and lumi/redis, which the host owns and sweeps itself. Key per-user records by
+// and lumi/valkey, which the host owns and sweeps itself. Key per-user records by
 // the user id and erasure finds them.
 export abstract class Module {
   get meta(): ModuleMeta | undefined {

@@ -16,7 +16,7 @@ Ensure the following prerequisites are installed on your workstation:
 | **[Bun](https://bun.sh)** | `1.3.0+` | <code>curl -fsSL https://bun.sh/install &#124; bash</code> | Primary JavaScript runtime, package manager, and test runner |
 | **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
 | **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
-| **Redis** | `7.0+` | Docker / Native | High-speed cache, rate limiting, and Redis Streams event bus |
+| **Valkey** | `8.0+` | Docker / Native | High-speed cache, rate limiting, and Valkey Streams event bus |
 | **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix-shell` |
 
 ---
@@ -40,10 +40,10 @@ nix-shell -p bun nodejs --run "bun install"
 
 ### 2. Infrastructure Backends (Docker Compose)
 
-Start PostgreSQL, PgBouncer, and Redis containerized services:
+Start PostgreSQL, PgBouncer, and Valkey containerized services:
 
 ```bash
-docker compose up -d postgres pgbouncer redis
+docker compose up -d postgres pgbouncer valkey
 ```
 
 ### 3. Database Schema Provisioning
@@ -176,7 +176,7 @@ bun run verify:resilience
 | `bun run lint:fix` | `eslint --fix` | Same checks, with auto-fixes applied locally |
 | `bun run test` | `vitest` | Fast unit and integration tests across packages |
 | `bun run test:e2e` | `vitest` | Black-box E2E tests executing full bot flows |
-| `bun run verify:resilience` | Bun TS | Redis Streams event bus fault tolerance test suite |
+| `bun run verify:resilience` | Bun TS | Valkey Streams event bus fault tolerance test suite |
 
 ---
 

@@ -8,9 +8,9 @@ export class ProxyModule extends Module {
   // a user id inside another row's value stays, since that row is shared.
   public override async deleteUserData(userId: string): Promise<void> {
     const rows = await container.db.guildKV.deleteModuleDataForTarget(this.name, userId);
-    const members = await this.#forgetRedisMember(userId);
+    const members = await this.#forgetValkeyMember(userId);
     container.logger.info(
-      `[GDPR] Addon '${this.name}': removed ${rows} KV row(s) and ${members} Redis membership(s) for ${userId}`,
+      `[GDPR] Addon '${this.name}': removed ${rows} KV row(s) and ${members} Valkey membership(s) for ${userId}`,
     );
   }
 
@@ -19,11 +19,11 @@ export class ProxyModule extends Module {
     return rows.length > 0 ? { moduleData: rows } : null;
   }
 
-  async #forgetRedisMember(userId: string): Promise<number> {
-    const keys = await scanKeysSafe(container.redis, `lumi:addon:${this.name}:*`);
+  async #forgetValkeyMember(userId: string): Promise<number> {
+    const keys = await scanKeysSafe(container.valkey, `lumi:addon:${this.name}:*`);
     if (keys.length === 0) return 0;
 
-    const pipeline = container.redis.pipeline();
+    const pipeline = container.valkey.pipeline();
     for (const key of keys) pipeline.srem(key, userId);
     const results = await pipeline.exec();
 

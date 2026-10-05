@@ -11,12 +11,12 @@ vi.mock("@lumi/observability", () => ({
 describe("GdprExportJobRepository & GlobalRepository via DatabaseService", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let db: DatabaseService;
-  let mockRedis: any;
+  let mockValkey: any;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
     const store = new Map<string, string>();
-    mockRedis = {
+    mockValkey = {
       get: vi.fn(async (key: string) => store.get(key) ?? null),
       set: vi.fn(async (key: string, val: string) => {
         store.set(key, val);
@@ -31,14 +31,14 @@ describe("GdprExportJobRepository & GlobalRepository via DatabaseService", () =>
         return 1;
       }),
     };
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     (container as any).invalidation = {
       invalidate: vi.fn(async (...keys: string[]) => {
         for (const k of keys) store.delete(k);
       }),
     };
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() };
-    db = new DatabaseService(prisma as any, mockRedis, mockLogger);
+    db = new DatabaseService(prisma as any, mockValkey, mockLogger);
   });
 
   describe("GdprExportJobRepository", () => {

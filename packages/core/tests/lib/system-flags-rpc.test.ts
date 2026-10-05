@@ -31,7 +31,7 @@ describe("system.flags RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
     };
@@ -39,7 +39,7 @@ describe("system.flags RPC handlers", () => {
     const db = {} as any;
     db.featureFlags = new FeatureFlagRepository(
       prisma as any,
-      redis as any,
+      valkey as any,
       container.logger,
       db,
     );

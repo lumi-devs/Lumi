@@ -52,7 +52,7 @@ flowchart TD
     subgraph External Services
         Discord[Discord Gateway / REST API]
         DB[(PostgreSQL 17 / PgBouncer)]
-        Redis[(Redis 7)]
+        Valkey[(Valkey 8)]
         Prometheus[Prometheus Server]
     end
 
@@ -84,13 +84,13 @@ flowchart TD
     W0 -->|REST via DISCORD_PROXY_URL| NP
     W1 -->|REST via DISCORD_PROXY_URL| NP
 
-    W0 <-->|Shard telemetry & session state| Redis
-    W1 <-->|Shard telemetry & session state| Redis
+    W0 <-->|Shard telemetry & session state| V
+    W1 <-->|Shard telemetry & session state| V
 
     W0 <-->|Queries| DB
     W1 <-->|Queries| DB
 
-    S <-->|BullMQ Job Processing| Redis
+    S <-->|BullMQ Job Processing| V
     S <-->|Queries| DB
 
     API <-->|Queries| DB
@@ -109,7 +109,7 @@ flowchart TD
 1. **Kubernetes Cluster**: Version `1.28` or higher.
 2. **`kubectl` CLI**: Installed and configured with cluster admin permissions.
 3. **Prometheus Operator / Server**: Configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
-4. **External Data Plane**: PostgreSQL 17 (or PgBouncer) and Redis 7 deployed and reachable from inside the cluster. The dashboard talks to the `api` service directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) — no message broker involved.
+4. **External Data Plane**: PostgreSQL 17 (or PgBouncer) and Valkey 8 deployed and reachable from inside the cluster. The dashboard talks to the `api` service directly over an internal HTTP RPC port (`RPC_HTTP_PORT`, default 8091) — no message broker involved.
 
 ---
 
@@ -118,7 +118,7 @@ flowchart TD
 | Manifest File | Kind | Name | Purpose |
 |---|---|---|---|
 | [`namespace.yaml`](./namespace.yaml) | `Namespace` | `lumi` | Isolated Kubernetes namespace for all Lumi components. |
-| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`, Redis cluster / replica options). |
+| [`configmap.yaml`](./configmap.yaml) | `ConfigMap` | `lumi-env` | Non-sensitive environment configuration (endpoints, ports, log settings, `DISCORD_PROXY_URL`, `CLUSTER_NAME`, Valkey cluster / replica options). |
 | [`secret.example.yaml`](./secret.example.yaml) | `Secret` | `lumi-secrets` | Sensitive credential placeholders (`BOT_TOKEN`, database passwords, secret keys). |
 | [`lumi-data-pvc.yaml`](./lumi-data-pvc.yaml) | `PersistentVolumeClaim` | `lumi-data` | Shared storage volume for persistent data and dynamic addons (`/app/data`). |
 | [`migrate-job.yaml`](./migrate-job.yaml) | `Job` | `migrate` | Database migration job executing `bunx prisma migrate deploy`. |

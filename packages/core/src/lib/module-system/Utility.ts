@@ -57,9 +57,9 @@ export class Utility extends SapphireUtility {
     return this.container.db;
   }
 
-  /** Quick accessor for the global Redis client. */
-  public get redis() {
-    return this.container.redis;
+  /** Quick accessor for the global Valkey client. */
+  public get valkey() {
+    return this.container.valkey;
   }
 
   /**

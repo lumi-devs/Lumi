@@ -1,12 +1,12 @@
 import { vi } from "bun:test";
 
 /**
- * Minimal in-memory stand-in for the subset of ioredis's API `withIdempotency`
+ * Minimal in-memory stand-in for the subset of iovalkey's API `withIdempotency`
  * (and anything else doing a plain SET NX / GET / DEL) needs. No TTL
  * expiry - tests that care about expiry assert against the stored value
  * directly rather than waiting on a timer.
  */
-export function createMemoryRedis() {
+export function createMemoryValkey() {
   const store = new Map<string, string>();
   return {
     get: vi.fn(async (key: string) => (store.has(key) ? (store.get(key) as string) : null)),

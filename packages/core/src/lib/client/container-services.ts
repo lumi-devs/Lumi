@@ -1,9 +1,9 @@
 import {
-  createRedisClient,
-  redisConnectionOptions,
+  createValkeyClient,
+  valkeyConnectionOptions,
   InvalidationBus,
   SignalBus,
-} from "#lib/database/redis.js";
+} from "#lib/database/valkey.js";
 import { AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
 import { envParseInteger, getDevModulePaths } from "#lib/env.js";
@@ -46,10 +46,10 @@ export function installContainerServices(
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
 
-  const redis = createRedisClient();
+  const valkey = createValkeyClient();
   const ownedEventBus = createEventBus({
-    redis: {
-      ...redisConnectionOptions(),
+    valkey: {
+      ...valkeyConnectionOptions(),
       db: envParseInteger("VALKEY_CACHE_DB", 0),
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
@@ -68,10 +68,10 @@ export function installContainerServices(
 
   Object.assign(container, {
     prisma,
-    redis,
-    invalidation: new InvalidationBus(createRedisClient()),
-    signals: new SignalBus(createRedisClient()),
-    db: new DatabaseService(prisma, redis, container.logger, prismaReader),
+    valkey,
+    invalidation: new InvalidationBus(createValkeyClient()),
+    signals: new SignalBus(createValkeyClient()),
+    db: new DatabaseService(prisma, valkey, container.logger, prismaReader),
     discordRest: new DiscordRestAdapter(),
     eventBus: ownedEventBus.bus,
     moduleStore,

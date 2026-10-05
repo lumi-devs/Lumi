@@ -1,6 +1,6 @@
 import type { FeatureFlag } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 
 export interface SetFeatureFlagInput {
   key: string;
@@ -58,15 +58,15 @@ export class FeatureFlagRepository extends Repository {
         updatedBy,
       },
     });
-    await this.invalidate(RedisKeys.featureFlagEval(key));
+    await this.invalidate(ValkeyKeys.featureFlagEval(key));
     return flag;
   }
 
   /** Cached `{ enabled, rolloutPercent }` projection - the only shape `isFlagEnabled` needs. */
   public getFlagForEvaluation(key: string): Promise<FeatureFlagEvalShape | null> {
     return this.getOrSet(
-      RedisKeys.featureFlagEval(key),
-      RedisTTL.featureFlagEval,
+      ValkeyKeys.featureFlagEval(key),
+      ValkeyTTL.featureFlagEval,
       async () => {
         const flag = await this.prisma.featureFlag.findUnique({
           where: { key },
@@ -93,7 +93,7 @@ export class FeatureFlagRepository extends Repository {
       create: { flagKey, guildId, enabled },
       update: { enabled },
     });
-    await this.invalidate(RedisKeys.featureFlagOverride(flagKey, guildId));
+    await this.invalidate(ValkeyKeys.featureFlagOverride(flagKey, guildId));
     return override;
   }
 
@@ -102,7 +102,7 @@ export class FeatureFlagRepository extends Repository {
       where: { flagKey, guildId },
     });
     if (count > 0) {
-      await this.invalidate(RedisKeys.featureFlagOverride(flagKey, guildId));
+      await this.invalidate(ValkeyKeys.featureFlagOverride(flagKey, guildId));
     }
     return count > 0;
   }
@@ -112,8 +112,8 @@ export class FeatureFlagRepository extends Repository {
     guildId: string,
   ): Promise<{ enabled: boolean } | null> {
     return this.getOrSet(
-      RedisKeys.featureFlagOverride(flagKey, guildId),
-      RedisTTL.featureFlagOverride,
+      ValkeyKeys.featureFlagOverride(flagKey, guildId),
+      ValkeyTTL.featureFlagOverride,
       async () => {
         const override = await this.prisma.featureFlagOverride.findUnique({
           where: { uq_feature_flag_override: { flagKey, guildId } },

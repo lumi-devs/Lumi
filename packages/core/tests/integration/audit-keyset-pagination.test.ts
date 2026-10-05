@@ -5,7 +5,7 @@ import { Pool } from "pg";
 import type Valkey from "iovalkey";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import { createTestRedis, integrationDescribe, requireTestDatabaseUrl } from "./setup.js";
+import { createTestValkey, integrationDescribe, requireTestDatabaseUrl } from "./setup.js";
 
 const noopLogger = {
   info: () => undefined,
@@ -26,15 +26,15 @@ function uniqueGuildId(): string {
 integrationDescribe("Audit log keyset pagination (real Postgres)", () => {
   let pool: Pool;
   let prisma: DatabaseClient;
-  let redis: Valkey;
+  let valkey: Valkey;
   let db: DatabaseService;
   const guildIds: string[] = [];
 
   beforeAll(() => {
     pool = new Pool({ connectionString: requireTestDatabaseUrl() });
     prisma = new PrismaClient({ adapter: new PrismaPg(pool) }) as unknown as DatabaseClient;
-    redis = createTestRedis();
-    db = new DatabaseService(prisma, redis, noopLogger);
+    valkey = createTestValkey();
+    db = new DatabaseService(prisma, valkey, noopLogger);
   });
 
   afterEach(async () => {
@@ -47,7 +47,7 @@ integrationDescribe("Audit log keyset pagination (real Postgres)", () => {
   afterAll(async () => {
     await prisma.$disconnect().catch(() => undefined);
     await pool.end().catch(() => undefined);
-    await redis.quit();
+    await valkey.quit();
   });
 
   function trackedGuildId(): string {

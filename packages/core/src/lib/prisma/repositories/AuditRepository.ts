@@ -1,7 +1,7 @@
 import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 import {
@@ -69,13 +69,13 @@ export interface AuditLedgerFilter {
 }
 
 /**
- * Buffered audit log - writes land in a Redis Stream (`auditLogsQueue`) and are
+ * Buffered audit log - writes land in a Valkey Stream (`auditLogsQueue`) and are
  * drained to the `AuditLedger` Postgres table in batches via a consumer group.
  */
 export class AuditRepository extends Repository {
   public async queueAuditLog(payload: AuditLogPayload) {
-    await this.redis.xadd(
-      RedisKeys.auditLogsQueue(WriteBucket),
+    await this.valkey.xadd(
+      ValkeyKeys.auditLogsQueue(WriteBucket),
       "MAXLEN",
       "~",
       AuditStreamMaxlen,
@@ -105,7 +105,7 @@ export class AuditRepository extends Repository {
   }
 
   async #flushBucket(bucket: number, batchSize: number) {
-    const key = RedisKeys.auditLogsQueue(bucket);
+    const key = ValkeyKeys.auditLogsQueue(bucket);
     await this.#ensureGroup(key);
 
     type XReadGroupReply = [string, [string, string[]][]][] | null;
@@ -115,7 +115,7 @@ export class AuditRepository extends Repository {
     // overlapping deploy - before taking anything new. XAUTOCLAIM is used
     // rather than a pending read against our own name because the consumer name
     // is per-process, so the stranded entries belong to a name we no longer use.
-    const claimed = (await this.redis.xautoclaim(
+    const claimed = (await this.valkey.xautoclaim(
       key,
       "audit_workers",
       AuditConsumer,
@@ -128,7 +128,7 @@ export class AuditRepository extends Repository {
     let messages = claimed?.[1] ?? [];
 
     if (!messages.length) {
-      const results = (await this.redis.xreadgroup(
+      const results = (await this.valkey.xreadgroup(
         "GROUP",
         "audit_workers",
         AuditConsumer,
@@ -223,8 +223,8 @@ export class AuditRepository extends Repository {
     }
 
     if (persistedIds.length) {
-      await this.redis.xack(key, "audit_workers", ...persistedIds);
-      await this.redis.xdel(key, ...persistedIds);
+      await this.valkey.xack(key, "audit_workers", ...persistedIds);
+      await this.valkey.xdel(key, ...persistedIds);
     }
 
     return persistedEntryCount;
@@ -267,7 +267,7 @@ export class AuditRepository extends Repository {
 
   async #ensureGroup(key: string) {
     try {
-      await this.redis.xgroup("CREATE", key, "audit_workers", "0", "MKSTREAM");
+      await this.valkey.xgroup("CREATE", key, "audit_workers", "0", "MKSTREAM");
     } catch (err: unknown) {
       if (!(err instanceof Error) || !err.message.includes("BUSYGROUP"))
         throw err;

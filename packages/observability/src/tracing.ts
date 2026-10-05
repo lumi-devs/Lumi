@@ -78,12 +78,12 @@ export function startTracing(opts: TracingOptions): boolean {
       import("@opentelemetry/instrumentation-pg"),
       import("@opentelemetry/instrumentation-ioredis"),
     ])
-      .then(([http, pg, ioredis]) => {
+      .then(([http, pg, valkey]) => {
         registerInstrumentations({
           instrumentations: [
             new http.HttpInstrumentation(),
             new pg.PgInstrumentation(),
-            new ioredis.IORedisInstrumentation({
+            new valkey.IORedisInstrumentation({
               requestHook: (span) => {
                 span.setAttribute("db.system.name", "valkey");
               },

@@ -114,29 +114,29 @@ function createChaosPrisma() {
 
 describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
   let prisma: ReturnType<typeof createChaosPrisma>;
-  let redis: any;
+  let valkey: any;
   let configRepo: ConfigRepository;
   let modRepo: ModerationRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
     prisma = createChaosPrisma();
-    redis = {
+    valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
     repositoryCache.clear();
     const db = {
       ensureGuild: async (guildId: string) => {
         await prisma.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
       },
     } as any;
-    configRepo = new ConfigRepository(prisma as any, redis, {} as any, db, {
+    configRepo = new ConfigRepository(prisma as any, valkey, {} as any, db, {
       logConfigChange: async () => {},
     } as any);
-    modRepo = new ModerationRepository(prisma as any, redis, {} as any, db);
+    modRepo = new ModerationRepository(prisma as any, valkey, {} as any, db);
   });
 
   it("handles transient database drop gracefully without unhandled crashes", async () => {

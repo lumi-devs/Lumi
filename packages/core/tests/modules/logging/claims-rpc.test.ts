@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { LogClaimCodeTtlMs } from "#modules/logging/services/claims.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
@@ -52,7 +52,7 @@ describe("logging module claim RPC handlers", () => {
       member: memberWith([]),
     });
 
-    (container as any).redis = {
+    (container as any).valkey = {
       set: vi.fn((key: string, value: string, ...args: unknown[]) => {
         if (args.includes("NX") && strings.has(key)) return Promise.resolve(null);
         strings.set(key, value);
@@ -91,7 +91,7 @@ describe("logging module claim RPC handlers", () => {
 
       expect(res.code).toMatch(/^[A-Z2-9]{6}$/);
       expect(res.expiresIn).toBe(LogClaimCodeTtlMs);
-      expect(strings.get(RedisKeys.logClaimCode(GUILD_ID, res.code))).toBe(
+      expect(strings.get(ValkeyKeys.logClaimCode(GUILD_ID, res.code))).toBe(
         OWNER_ID,
       );
     });

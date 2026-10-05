@@ -14,7 +14,7 @@ import { startRpcHttpServer } from "./rpc-http-server.js";
 const logger = createPinoLogger({ service: "lumi-api" });
 let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 
-// Stop RPC server before closing database and redis connections.
+// Stop RPC server before closing database and valkey connections.
 const services = await bootstrapApiApp({
   extraDrainSteps: [
     {
@@ -28,7 +28,7 @@ const services = await bootstrapApiApp({
       },
     },
     {
-      // Drain SSE connections before Redis connection closes.
+      // Drain SSE connections before Valkey connection closes.
       name: "sse-connections",
       run: () => closeAllSseConnections(),
     },

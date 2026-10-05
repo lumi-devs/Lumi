@@ -44,7 +44,7 @@ function registerProcessErrorHandlers(): void {
   process.on("uncaughtException", installedExceptionHandler);
 }
 
-/** Tears down database, Redis, event bus, and status resources opened by the API process. */
+/** Tears down database, Valkey, event bus, and status resources opened by the API process. */
 export async function destroyApiContainerServices(
   services: ApiContainerServices,
 ): Promise<void> {
@@ -55,7 +55,7 @@ export async function destroyApiContainerServices(
   await services.ownedEventBus.close().catch(warnOnCleanupError("EventBus close"));
   await container.invalidation.close().catch(warnOnCleanupError("Invalidation close"));
   await container.signals.close().catch(warnOnCleanupError("Signals close"));
-  await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
+  await container.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
   await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
 }
 
@@ -99,7 +99,7 @@ export async function bootstrapApiApp(
       log("info", `${sig} received`);
       const drainSteps = [
         // Stop accepting/draining external traffic (e.g. the RPC HTTP
-        // server) before tearing down the redis/db/event-bus connections it
+        // server) before tearing down the valkey/db/event-bus connections it
         // depends on - otherwise an in-flight request can hit a connection
         // that's already been closed. `runDrainSequence` runs these strictly
         // sequentially, so order here is the actual shutdown order.

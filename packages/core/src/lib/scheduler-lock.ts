@@ -1,7 +1,7 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { getConsumerId } from "#lib/env.js";
-import { acquireRedisLock, type RedisLock } from "#lib/lock.js";
+import { acquireValkeyLock, type ValkeyLock } from "#lib/lock.js";
 
 /**
  * Exclusive fleet-wide lease on the scheduler role.
@@ -15,10 +15,10 @@ import { acquireRedisLock, type RedisLock } from "#lib/lock.js";
 const LeaseMs = 30_000;
 
 export function acquireSchedulerLock(
-  redis: RedisClient,
+  valkey: ValkeyClient,
   onLost: () => void,
-): Promise<RedisLock> {
-  return acquireRedisLock(redis, RedisKeys.schedulerLeader(), {
+): Promise<ValkeyLock> {
+  return acquireValkeyLock(valkey, ValkeyKeys.schedulerLeader(), {
     ttlMs: LeaseMs,
     acquireTimeoutMs: 0,
     onLostLock: onLost,

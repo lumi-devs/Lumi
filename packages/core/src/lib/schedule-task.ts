@@ -41,7 +41,7 @@ export type ScheduleOptions =
 /**
  * Enqueue a BullMQ job. Every role that boots a client owns a BullMQ worker
  * against the shared queue, so the enqueue is always local: the job is durable
- * in Redis the moment this resolves, and whichever replica BullMQ hands it to
+ * in Valkey the moment this resolves, and whichever replica BullMQ hands it to
  * relays the fire onto the bus for a worker to execute.
  */
 export async function scheduleTask<N extends keyof ScheduledTasks>(

@@ -166,7 +166,7 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
   GlobalLetRe.lastIndex = 0;
   while ((m = GlobalLetRe.exec(src)) !== null) {
     warnings.push(
-      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.redis) over an in-memory module-level variable.`,
+      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.valkey) over an in-memory module-level variable.`,
     );
   }
 

@@ -9,7 +9,7 @@ function mockLogger(): import("@sapphire/framework").ILogger {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@sapphire/framework").ILogger;
 }
 
-function mockRedis() {
+function mockValkey() {
   return {} as any;
 }
 
@@ -35,7 +35,7 @@ describe("AuditRepository.purgeOldEntries", () => {
         createdAt: OLD,
       })),
     );
-    const repo = new AuditRepository(prisma as any, mockRedis(), mockLogger(), mockDb());
+    const repo = new AuditRepository(prisma as any, mockValkey(), mockLogger(), mockDb());
 
     const deleted = await repo.purgeOldEntries(CUTOFF, { batchSize: 2 });
 
@@ -49,7 +49,7 @@ describe("AuditRepository.purgeOldEntries", () => {
       { id: 1, guildId: "g", userId: "u", action: "a", platform: "discord", details: null, createdAt: OLD },
       { id: 2, guildId: "g", userId: "u", action: "a", platform: "discord", details: null, createdAt: RECENT },
     ]);
-    const repo = new AuditRepository(prisma as any, mockRedis(), mockLogger(), mockDb());
+    const repo = new AuditRepository(prisma as any, mockValkey(), mockLogger(), mockDb());
 
     const deleted = await repo.purgeOldEntries(CUTOFF);
 
@@ -66,7 +66,7 @@ describe("ConfigHistoryRepository.purgeOldEntries", () => {
       { id: 2, guildId: "g", moduleName: "m", key: "k", oldValue: null, newValue: {}, actorId: "a", createdAt: OLD },
       { id: 3, guildId: "g", moduleName: "m", key: "k", oldValue: null, newValue: {}, actorId: "a", createdAt: RECENT },
     ]);
-    const repo = new ConfigHistoryRepository(prisma as any, mockRedis(), mockLogger(), mockDb());
+    const repo = new ConfigHistoryRepository(prisma as any, mockValkey(), mockLogger(), mockDb());
 
     const deleted = await repo.purgeOldEntries(CUTOFF, { batchSize: 1 });
 
@@ -81,7 +81,7 @@ describe("ModerationRepository.purgeOldCases", () => {
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    repo = new ModerationRepository(prisma as any, mockRedis(), mockLogger(), mockDb());
+    repo = new ModerationRepository(prisma as any, mockValkey(), mockLogger(), mockDb());
   });
 
   it("never purges an active case, no matter how old", async () => {
@@ -119,7 +119,7 @@ describe("AppealRepository.purgeOldAppeals", () => {
       { id: 2, guildId: "g", userId: "u", caseId: 2, status: "approved", message: "m", createdAt: OLD },
       { id: 3, guildId: "g", userId: "u", caseId: 3, status: "denied", message: "m", createdAt: RECENT },
     ]);
-    const repo = new AppealRepository(prisma as any, mockRedis(), mockLogger(), mockDb());
+    const repo = new AppealRepository(prisma as any, mockValkey(), mockLogger(), mockDb());
 
     const deleted = await repo.purgeOldAppeals(CUTOFF);
 

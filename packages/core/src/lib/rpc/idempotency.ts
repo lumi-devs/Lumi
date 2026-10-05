@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { container } from "@sapphire/framework";
 import { tryParseJSON } from "@sapphire/utilities";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -32,7 +32,7 @@ interface IdempotencyRecord {
 const DefaultMarginMs = 10_000;
 
 /**
- * Deduplicates mutating RPC calls by (action, guildId, key/hashed input) using Redis locks.
+ * Deduplicates mutating RPC calls by (action, guildId, key/hashed input) using Valkey locks.
  * Replays completed results or throws Conflict if execution is currently in progress.
  */
 export async function withIdempotency<T>(
@@ -45,10 +45,10 @@ export async function withIdempotency<T>(
   idempotencyKey?: string,
 ): Promise<T> {
   const token = idempotencyKey ? `key:${idempotencyKey}` : hashInput(input);
-  const key = RedisKeys.rpcIdempotency(action, guildId, token);
+  const key = ValkeyKeys.rpcIdempotency(action, guildId, token);
   const pendingTtlMs = timeoutMs + marginMs;
   const pending: IdempotencyRecord = { status: "pending" };
-  const acquired = await container.redis.set(
+  const acquired = await container.valkey.set(
     key,
     JSON.stringify(pending),
     "PX",
@@ -57,7 +57,7 @@ export async function withIdempotency<T>(
   );
 
   if (acquired !== "OK") {
-    const raw = await container.redis.get(key);
+    const raw = await container.valkey.get(key);
     const record = raw
       ? (tryParseJSON(raw) as IdempotencyRecord | null)
       : null;
@@ -70,7 +70,7 @@ export async function withIdempotency<T>(
 
   const refresh = setInterval(
     () => {
-      container.redis.pexpire(key, pendingTtlMs).catch(() => undefined);
+      container.valkey.pexpire(key, pendingTtlMs).catch(() => undefined);
     },
     Math.max(1, Math.floor(pendingTtlMs / 2)),
   );
@@ -79,15 +79,15 @@ export async function withIdempotency<T>(
   try {
     const result = await fn();
     const done: IdempotencyRecord = { status: "done", result };
-    await container.redis.set(
+    await container.valkey.set(
       key,
       JSON.stringify(done),
       "PX",
-      RedisTTL.rpcIdempotencyDone * 1000,
+      ValkeyTTL.rpcIdempotencyDone * 1000,
     );
     return result;
   } catch (err) {
-    await container.redis.del(key).catch(() => null);
+    await container.valkey.del(key).catch(() => null);
     throw err;
   } finally {
     clearInterval(refresh);

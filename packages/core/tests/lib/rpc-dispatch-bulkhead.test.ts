@@ -39,7 +39,7 @@ describe("RPC dispatch: Discord bulkhead", () => {
       error: vi.fn(),
       debug: vi.fn(),
     } as any;
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
     (container as any).db = {
       config: { isDashboardEnabled: vi.fn().mockResolvedValue(true) },
       security: { getPanicState: vi.fn().mockResolvedValue(null) },

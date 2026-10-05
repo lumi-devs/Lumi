@@ -41,5 +41,5 @@ We take the security of Lumi very seriously. If you suspect or discover a securi
 ## Security Best Practices for Operators
 
 - Store all secrets (tokens, DB credentials) in environment variables or standard `.env` files with restricted file permissions (`600`).
-- Ensure Redis and PostgreSQL instances require authentication and are network-isolated.
+- Ensure Valkey and PostgreSQL instances require authentication and are network-isolated.
 - Keep dependencies updated via Dependabot alerts.

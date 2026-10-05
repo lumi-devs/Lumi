@@ -25,7 +25,7 @@ describe("GuildDeleteEventBusListener", () => {
     );
 
     (container as any).db = mockDb;
-    (container as any).redis = {
+    (container as any).valkey = {
       scan: vi.fn().mockResolvedValue(["0", []]),
     };
     (container as any).invalidation = {
@@ -49,7 +49,7 @@ describe("GuildDeleteEventBusListener", () => {
     );
   });
 
-  it("marks the guild left and evicts its Redis state when it is a real departure", async () => {
+  it("marks the guild left and evicts its Valkey state when it is a real departure", async () => {
     const guild = { id: "g1", available: true } as any;
 
     await listener.run(guild);

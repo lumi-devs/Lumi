@@ -1,13 +1,13 @@
 import { container } from "@sapphire/framework";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "#lib/database/cluster-safe.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import { acquireRedisLock, verifyRedisLock } from "#lib/lock.js";
+import { acquireValkeyLock, verifyValkeyLock } from "#lib/lock.js";
 
 const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
 
 export async function configLock(guildId: string): Promise<() => void> {
-  const { release } = await acquireRedisLock(container.redis, GuildLock(guildId), {
+  const { release } = await acquireValkeyLock(container.valkey, GuildLock(guildId), {
     ttlMs: 10_000,
     acquireTimeoutMs: 20_000,
   });
@@ -27,7 +27,7 @@ export class GuildWriteTransaction {
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
     private readonly prisma: DatabaseClient,
-    private readonly redis: RedisClient,
+    private readonly valkey: ValkeyClient,
     private readonly lockToken: string,
   ) {}
 
@@ -60,7 +60,7 @@ export class GuildWriteTransaction {
 
     try {
       const key = GuildLock(this.guildId);
-      const stillHeld = await verifyRedisLock(this.redis, key, this.lockToken);
+      const stillHeld = await verifyValkeyLock(this.valkey, key, this.lockToken);
       if (!stillHeld) {
         throw new Error(
           `Lock lost before write for guild ${this.guildId}; refusing to write unlocked`,
@@ -103,10 +103,10 @@ export class GuildWriteTransaction {
 
 export async function createGuildTransaction(
   guildId: string,
-  redis: RedisClient,
+  valkey: ValkeyClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
-  const { release, token } = await acquireRedisLock(redis, GuildLock(guildId), {
+  const { release, token } = await acquireValkeyLock(valkey, GuildLock(guildId), {
     ttlMs: 15_000,
     acquireTimeoutMs: 30_000,
   });
@@ -117,7 +117,7 @@ export async function createGuildTransaction(
       settings = await prisma.guild.create({ data: { id: guildId } });
     }
 
-    return new GuildWriteTransaction(settings, release, guildId, prisma, redis, token);
+    return new GuildWriteTransaction(settings, release, guildId, prisma, valkey, token);
   } catch (err) {
     await release();
     throw err;

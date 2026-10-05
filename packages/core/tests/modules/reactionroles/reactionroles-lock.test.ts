@@ -6,7 +6,7 @@ import ReactionRolesUtility, {
 import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
-function mockRedis() {
+function mockValkey() {
   const store = new Map<string, string>();
   return {
     store,
@@ -55,12 +55,12 @@ function installMockDb() {
 
 describe("ReactionRolesUtility menu-write locking", () => {
   let service: ReactionRolesUtility;
-  let redis: ReturnType<typeof mockRedis>;
+  let valkey: ReturnType<typeof mockValkey>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = mockRedis();
-    (container as any).redis = redis;
+    valkey = mockValkey();
+    (container as any).valkey = valkey;
     (container as any).signals = {
       publish: vi.fn().mockResolvedValue(undefined),
     };
@@ -147,7 +147,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // bun:test has no setTimeout-queue virtualization (only a Date.now() mock),
     // so this can't fast-forward the lock's internal retry backoff — it just
     // waits for the real ~30s acquire timeout to elapse on its own.
-    redis.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
+    valkey.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
 
     const pending = service.updateMenu("guild-1", "game-night", { title: "Renamed" });
     await expect(pending).rejects.toBeInstanceOf(ReactionRoleMenuLockedError);

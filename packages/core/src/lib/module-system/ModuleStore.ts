@@ -503,7 +503,7 @@ export class ModuleStore extends Store<Module> {
 
   /**
    * Addons never load into this process. Their code runs in a child process
-   * that holds no bot token, database URL or Redis URL; what lands here is a
+   * that holds no bot token, database URL or Valkey URL; what lands here is a
    * set of proxy command pieces that forward invocations across the boundary.
    */
   async #loadAddon(record: ModuleRecord) {

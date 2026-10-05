@@ -1,5 +1,5 @@
 import { CacheStore } from "#lib/cache/CacheStore.js";
-import { InvalidationBus } from "#lib/database/redis.js";
+import { InvalidationBus } from "#lib/database/valkey.js";
 import { container } from "@sapphire/framework";
 import { describe, expect, test, vi, beforeEach } from "bun:test";
 
@@ -9,27 +9,27 @@ vi.mock("@lumi/observability", () => ({
 }));
 
 describe("CacheStore", () => {
-  let mockRedis: any;
+  let mockValkey: any;
 
   beforeEach(() => {
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
     };
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
   });
 
-  test("L1 hit avoids a second redis.get call", async () => {
+  test("L1 hit avoids a second valkey.get call", async () => {
     const cache = new CacheStore();
     const loader = vi.fn().mockResolvedValue({ n: 1 });
 
     const first = await cache.getOrLoad("prefix:key:1", 60_000, loader);
     expect(first).toEqual({ n: 1 });
-    expect(mockRedis.get).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).toHaveBeenCalledTimes(1);
 
     const second = await cache.getOrLoad("prefix:key:1", 60_000, loader);
     expect(second).toEqual({ n: 1 });
-    expect(mockRedis.get).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).toHaveBeenCalledTimes(1);
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -80,7 +80,7 @@ describe("CacheStore", () => {
     const result = await flight;
     expect(result).toEqual({ n: 7 });
     expect(cache.peek("prefix:race:1")).toBeUndefined();
-    expect(mockRedis.setex).not.toHaveBeenCalledWith(
+    expect(mockValkey.setex).not.toHaveBeenCalledWith(
       "prefix:race:1",
       expect.anything(),
       expect.stringContaining("7"),

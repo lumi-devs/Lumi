@@ -9,7 +9,7 @@ Object.assign(container, {
   invalidation: {
     invalidate: vi.fn().mockResolvedValue(undefined)
   },
-  redis: {
+  valkey: {
     del: vi.fn(),
     set: vi.fn().mockResolvedValue('OK'),
     eval: vi.fn().mockResolvedValue(1)

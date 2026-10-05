@@ -206,7 +206,7 @@ export function isPrimaryShard(): boolean {
 
 /**
  * Cluster name namespaces the shard telemetry each replica publishes to
- * Redis for the dashboard's fleet view. Shard ownership itself is static,
+ * Valkey for the dashboard's fleet view. Shard ownership itself is static,
  * set per replica via SHARD_LIST - this has no effect on assignment,
  * session resumption, or IDENTIFY throttling. Unset → telemetry reports
  * under the shared "default" namespace.
@@ -267,7 +267,7 @@ export const getPostgresAppName = (): string =>
   process.env["POSTGRES_APP_NAME"] ||
   `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
 
-export function getRedisClusterNodes(): { host: string; port: number }[] | null {
+export function getValkeyClusterNodes(): { host: string; port: number }[] | null {
   const raw = process.env["VALKEY_CLUSTER_NODES"];
   if (!raw) return null;
   const nodes = raw
@@ -281,7 +281,7 @@ export function getRedisClusterNodes(): { host: string; port: number }[] | null 
   return nodes.length > 0 ? nodes : null;
 }
 
-export const getRedisClusterScaleReads = (): "all" | "slave" | "master" =>
+export const getValkeyClusterScaleReads = (): "all" | "slave" | "master" =>
   (process.env["VALKEY_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
 
 export function getWriteBucket(streamBuckets = 16): number {

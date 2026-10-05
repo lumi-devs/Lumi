@@ -26,7 +26,7 @@ export const EphemeralFlags =
   MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
 
 export type PingCategory =
-  "gateway" | "engine" | "host" | "postgres" | "redis" | "bot";
+  "gateway" | "engine" | "host" | "postgres" | "valkey" | "bot";
 
 function fmtMs(n: number | null): string {
   if (n === null || n < 0) return "Analyzing…";
@@ -111,7 +111,7 @@ export function buildOverviewCard(
     position: Emojis.Position,
     servers: Emojis.Servers,
     members: Emojis.Members,
-    redis: Emojis.Redis,
+    valkey: Emojis.Valkey,
     sql: Emojis.Sql,
   };
 
@@ -137,7 +137,7 @@ export function buildOverviewCard(
   }
 
   content += `### __External Services__\n`;
-  content += `${E.redis} **Redis Cache**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
+  content += `${E.valkey} **Valkey Cache**: ${fmtMs(data.valkeyReadMs)} | Hit Ratio: ${data.valkeyHitRatio.toFixed(1)}%\n`;
   content += `${E.sql} **Database**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
 
   c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
@@ -346,7 +346,7 @@ function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildValkeyCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `${Emojis.Cache} ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
     data,
@@ -356,24 +356,24 @@ function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
     new TextDisplayBuilder().setContent(
       [
         executiveSection("Memory Usage", [
-          ["Current Usage", fmtMB(data.redisMemUsedBytes)],
-          ["Peak Usage", fmtMB(data.redisMemPeakBytes)],
+          ["Current Usage", fmtMB(data.valkeyMemUsedBytes)],
+          ["Peak Usage", fmtMB(data.valkeyMemPeakBytes)],
         ]),
         executiveSection(
           "Cache Hits & Efficiency",
           [
-            ["Hit Ratio", `${data.redisHitRatio.toFixed(2)}%`],
-            ["Tracked Keys", `${data.redisTotalKeys.toLocaleString()}`],
+            ["Hit Ratio", `${data.valkeyHitRatio.toFixed(2)}%`],
+            ["Tracked Keys", `${data.valkeyTotalKeys.toLocaleString()}`],
           ],
-          `Hits: ${data.redisHits.toLocaleString()} | Misses: ${data.redisMisses.toLocaleString()}`,
+          `Hits: ${data.valkeyHits.toLocaleString()} | Misses: ${data.valkeyMisses.toLocaleString()}`,
         ),
         executiveSection(
           "Connection",
           [
-            ["Redis Version", `v${data.redisVersion}`],
-            ["Active Clients", `${data.redisClients} connected`],
+            ["Valkey Version", `v${data.valkeyVersion}`],
+            ["Active Clients", `${data.valkeyClients} connected`],
           ],
-          `Latency: ${fmtMs(data.redisReadMs)} read / ${fmtMs(data.redisWriteMs)} write`,
+          `Latency: ${fmtMs(data.valkeyReadMs)} read / ${fmtMs(data.valkeyWriteMs)} write`,
         ),
       ].join("\n"),
     ),
@@ -440,8 +440,8 @@ export function buildDetailCard(
         return buildHostCard(data, t);
       case "postgres":
         return buildPostgresCard(data, t);
-      case "redis":
-        return buildRedisCard(data, t);
+      case "valkey":
+        return buildValkeyCard(data, t);
       case "bot":
         return buildBotCard(data, t);
     }

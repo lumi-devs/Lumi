@@ -40,7 +40,7 @@ export interface ShardStateView {
   lastReadyAt?: string | null;
   /** True once `lastHeartbeatAt` is older than the fleet's staleness threshold. */
   stale?: boolean;
-  /** Recent in-memory/Redis buffered log entries for this shard. */
+  /** Recent in-memory/Valkey buffered log entries for this shard. */
   logs?: Array<{ timestamp: string; level: string; message: string }>;
 }
 
@@ -118,7 +118,7 @@ export interface SystemStatusData {
   components: {
     api: SystemApiHealth;
     postgres: SystemLatencyHealth;
-    redis: SystemLatencyHealth;
+    valkey: SystemLatencyHealth;
     scheduler: SystemSchedulerHealth;
     shards: SystemShardsHealth;
     eventBus: SystemEventBusHealth;
@@ -255,7 +255,7 @@ export const systemRpc = {
   "system.status.get": rpcAction<SystemStatusData>()({
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
-    summary: "Fleet-wide status page snapshot: api, postgres, redis, scheduler, shards, event bus.",
+    summary: "Fleet-wide status page snapshot: api, postgres, valkey, scheduler, shards, event bus.",
     readOnly: true,
   }),
 };

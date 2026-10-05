@@ -9,7 +9,7 @@ class DummyUtility extends Utility {
     return {
       logger: this.logger,
       db: this.db,
-      redis: this.redis,
+      valkey: this.valkey,
     };
   }
 }
@@ -47,7 +47,7 @@ describe("module-system Utility and Module", () => {
     } as any;
 
     (container as any).db = { dummyDb: true } as any;
-    (container as any).redis = { dummyRedis: true } as any;
+    (container as any).valkey = { dummyValkey: true } as any;
 
     const mockUtilitiesStore = new Map();
     container.stores = {
@@ -65,7 +65,7 @@ describe("module-system Utility and Module", () => {
 
       expect(accessors.logger).toBe(container.logger);
       expect(accessors.db).toBe(container.db);
-      expect(accessors.redis).toBe(container.redis);
+      expect(accessors.valkey).toBe(container.valkey);
     });
 
     it("fetches utility with tryGetUtility and throws on getUtility if missing", () => {

@@ -147,7 +147,7 @@ section (`// ---- Helpers ----`) — split the file or trust the reader instead.
   ```
   (`packages/core/src/lib/module-system/manifest.ts`). The same commit touched
   `container-services.ts`, `resolver.ts`, `i18n/index.ts`, `PermitResolver.ts`,
-  `PermissionRepository.ts`, `redis-lock.ts`, `regex-worker/validate.ts`,
+  `PermissionRepository.ts`, `lock.ts`, `regex-worker/validate.ts`,
   `rpc/validation.ts`, `scheduled-tasks.ts`, `types/common.ts`,
   `utilities/command-response.ts`, and every reference in `packages/core/tests` and
   `src`. Only the identifier changed — the underlying string values
@@ -162,7 +162,7 @@ section (`// ---- Helpers ----`) — split the file or trust the reader instead.
   mirror the actual shell env var name (`process.env["BOT_TOKEN"]`,
   `.env.example`, deploy configs, Nix). See the `Env` interface augmentation in
   `packages/core/src/lib/types/common.ts` (`BOT_TOKEN`, `POSTGRES_URL`,
-  `REDIS_HOST`, `RPC_INTERNAL_TOKEN`, etc.). `envParseString("BOT_TOKEN")`
+  `VALKEY_HOST`, `RPC_INTERNAL_TOKEN`, etc.). `envParseString("BOT_TOKEN")`
   (`packages/core/src/lib/env.ts`, used by `getBotToken()`) takes the literal env var name as its
   argument — that string has to match the real shell variable, so it can't be
   camelCased. This is the one place SCREAMING_SNAKE_CASE is correct; everywhere

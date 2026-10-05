@@ -6,7 +6,7 @@ const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockInstances: any[] = [];
 
 vi.mock("iovalkey", () => {
-  class MockRedis {
+  class MockValkey {
     opts: any;
     xadd = vi.fn().mockResolvedValue("1-0");
     xack = vi.fn().mockResolvedValue(1);
@@ -21,7 +21,7 @@ vi.mock("iovalkey", () => {
       mockInstances.push(this);
     }
   }
-  return { Valkey: MockRedis, Redis: MockRedis, default: MockRedis };
+  return { Valkey: MockValkey, default: MockValkey };
 });
 
 describe("createEventBus", () => {
@@ -29,12 +29,12 @@ describe("createEventBus", () => {
     mockInstances.length = 0;
     mockQuit.mockClear();
   });
-  it("throws error when redis options are missing", () => {
+  it("throws error when valkey options are missing", () => {
     expect(() => createEventBus()).toThrow(
-      "createEventBus(): `redis` options required",
+      "createEventBus(): `valkey` options required",
     );
     expect(() => createEventBus({} as any)).toThrow(
-      "createEventBus(): `redis` options required",
+      "createEventBus(): `valkey` options required",
     );
   });
 
@@ -44,7 +44,7 @@ describe("createEventBus", () => {
     const logSpy = vi.fn();
 
     const owned = createEventBus({
-      redis: { host: "localhost", port: 6379 },
+      valkey: { host: "localhost", port: 6379 },
       defaultMaxLen: 50000,
       maxDeliveries: 3,
       claimMinIdleMs: 45000,
@@ -85,7 +85,7 @@ describe("createEventBus", () => {
 
   it("passes claimMinIdleMs through to the bus", () => {
     const owned = createEventBus({
-      redis: { host: "localhost" },
+      valkey: { host: "localhost" },
       claimMinIdleMs: 30000,
     });
 
@@ -93,10 +93,10 @@ describe("createEventBus", () => {
     expect(bus.claimMinIdleMs).toBe(30000);
   });
 
-  it("closes both the bus and Redis clients when close() is invoked", async () => {
+  it("closes both the bus and Valkey clients when close() is invoked", async () => {
     mockQuit.mockClear();
     const owned = createEventBus({
-      redis: { host: "localhost", port: 6379 },
+      valkey: { host: "localhost", port: 6379 },
     });
 
     const busCloseSpy = vi.spyOn(owned.bus, "close");

@@ -1,43 +1,37 @@
 import Valkey, { Cluster } from "iovalkey";
-import { redisConnectionOptions } from "#lib/database/redis.js";
-import type { RedisClient as RedisConnection } from "#lib/database/cluster-safe.js";
-import { getRedisClusterNodes, getRedisClusterScaleReads } from "#lib/env.js";
+import { valkeyConnectionOptions } from "#lib/database/valkey.js";
+import type { ValkeyClient as ValkeyConnection } from "#lib/database/cluster-safe.js";
+import { getValkeyClusterNodes, getValkeyClusterScaleReads } from "#lib/env.js";
 import { runCheck } from "#lib/doctor/util.js";
 import type { DoctorCheckResult } from "#lib/doctor/types.js";
 
-export const RedisCheckName = "valkey";
+export const ValkeyCheckName = "valkey";
 
-/**
- * No minimum Valkey/Redis version is documented anywhere in this codebase (no
- * `agents/` doc, no comment near `#lib/database/redis.js` pins one) - the
- * version is reported for visibility only, never used to warn/fail.
- */
-
-export interface RedisProbeClient {
+export interface ValkeyProbeClient {
   ping: () => Promise<string>;
   info: (section?: string) => Promise<string>;
   quit: () => Promise<unknown>;
 }
 
-export interface RedisCheckDeps {
+export interface ValkeyCheckDeps {
   /**
    * Override for tests. Real implementation opens a short-lived connection
-   * using the same `redisConnectionOptions()`/cluster-detection helpers the
+   * using the same `valkeyConnectionOptions()`/cluster-detection helpers the
    * long-lived client uses, closed again after the probe.
    */
-  getClient?: () => RedisProbeClient;
+  getClient?: () => ValkeyProbeClient;
 }
 
-function defaultGetClient(): RedisProbeClient {
-  const nodes = getRedisClusterNodes();
-  const client: RedisConnection = nodes
+function defaultGetClient(): ValkeyProbeClient {
+  const nodes = getValkeyClusterNodes();
+  const client: ValkeyConnection = nodes
     ? new Cluster(nodes, {
         lazyConnect: true,
-        scaleReads: getRedisClusterScaleReads(),
-        redisOptions: { ...redisConnectionOptions(), maxRetriesPerRequest: 1 },
+        scaleReads: getValkeyClusterScaleReads(),
+        redisOptions: { ...valkeyConnectionOptions(), maxRetriesPerRequest: 1 },
       })
     : new Valkey({
-        ...redisConnectionOptions(),
+        ...valkeyConnectionOptions(),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
       });
@@ -54,17 +48,17 @@ function parseInfoField(raw: string, field: string): string | null {
   return match ? match[1]!.trim() : null;
 }
 
-export async function checkRedis(
-  deps: RedisCheckDeps = {},
+export async function checkValkey(
+  deps: ValkeyCheckDeps = {},
   timeoutMs = 5_000,
 ): Promise<DoctorCheckResult> {
-  return runCheck(RedisCheckName, timeoutMs, async () => {
+  return runCheck(ValkeyCheckName, timeoutMs, async () => {
     const client = (deps.getClient ?? defaultGetClient)();
     try {
       await client.ping();
     } catch (err) {
       return {
-        name: RedisCheckName,
+        name: ValkeyCheckName,
         status: "fail",
         detail: `PING failed: ${err instanceof Error ? err.message : String(err)}`,
         hint: "Check VALKEY_URL/VALKEY_HOST/VALKEY_PORT (or VALKEY_SENTINELS) and that Valkey is reachable.",
@@ -75,17 +69,14 @@ export async function checkRedis(
     try {
       const info = await client.info("server");
       const valkeyVersion = parseInfoField(info, "valkey_version");
-      const redisVersion = parseInfoField(info, "redis_version");
       if (valkeyVersion) {
         version = `Valkey ${valkeyVersion}`;
-      } else if (redisVersion) {
-        version = `Redis ${redisVersion}`;
       }
     } catch {
       // PING already succeeded - INFO failing (e.g. a restricted ACL) is
       // worth surfacing but shouldn't turn a reachable server into a failure.
       return {
-        name: RedisCheckName,
+        name: ValkeyCheckName,
         status: "warn",
         detail: "PING succeeded, but INFO failed - version could not be determined.",
       };
@@ -94,7 +85,7 @@ export async function checkRedis(
     }
 
     return {
-      name: RedisCheckName,
+      name: ValkeyCheckName,
       status: "ok",
       detail: `Connected to ${version}.`,
     };

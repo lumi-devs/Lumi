@@ -1,4 +1,4 @@
-// Redis Streams transport: consumer groups give at-least-once delivery, horizontal
+// Valkey Streams transport: consumer groups give at-least-once delivery, horizontal
 // worker scaling (each consumer claims a partition of the pending list), and bounded
 // memory via MAXLEN ~. There is one stream per event type for per-event
 // backpressure, independent MAXLEN and
@@ -248,7 +248,7 @@ export class StreamBus implements EventBus {
       // Wait for the read loop to actually exit. The current XREADGROUP BLOCK
       // returns within `blockMs`, and any in-flight `deliver()` (handler +
       // XACK) finishes its iteration before the loop re-checks `stopped`.
-      // Without this await, callers can close the underlying Redis connection
+      // Without this await, callers can close the underlying Valkey connection
       // mid-XACK and leak pending entries until XAUTOCLAIM picks them up.
       await loopDone.catch(() => undefined);
       await readConn.quit().catch(() => readConn.disconnect());

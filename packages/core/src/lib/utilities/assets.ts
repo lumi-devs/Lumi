@@ -72,7 +72,7 @@ const defaultEmojis = {
   Position: "📈",
   Servers: "🏰",
   Members: "👥",
-  Redis: "🔴",
+  Valkey: "🔴",
   Sql: "🐘",
 };
 

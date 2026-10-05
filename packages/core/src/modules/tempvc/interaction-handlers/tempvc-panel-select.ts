@@ -97,7 +97,7 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
 
     // showModal() must be the interaction's first response, so a "panelmenu"
     // pick of "name"/"limit" can't defer first; everything else defers
-    // immediately to beat Discord's 3s ack window before the Redis/i18n
+    // immediately to beat Discord's 3s ack window before the Valkey/i18n
     // lookups below. `interaction.values` is available synchronously.
     const selected = action === "panelmenu" ? interaction.values[0] : undefined;
     const opensModal = selected === "name" || selected === "limit";

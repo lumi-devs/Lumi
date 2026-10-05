@@ -37,7 +37,7 @@ export async function trackVoiceState(
   userId: string,
   newChannelId: string | null,
 ): Promise<{ prevChannelId: string | null }> {
-  const prev = (await container.redis.eval(
+  const prev = (await container.valkey.eval(
     TrackScript,
     1,
     userKey(userId),
@@ -50,7 +50,7 @@ export async function trackVoiceState(
 }
 
 export async function isVoiceChannelEmpty(channelId: string): Promise<boolean> {
-  const n = await container.redis.scard(occKey(channelId));
+  const n = await container.valkey.scard(occKey(channelId));
   return n === 0;
 }
 
@@ -68,7 +68,7 @@ export async function seedVoiceStates(
   }>,
 ): Promise<void> {
   if (voiceStates.length === 0) return;
-  const { redis } = container;
+  const { valkey } = container;
   // Each voice state writes an occupancy-set key and a user key that hash to
   // different slots, so the writes are flattened per key rather than issued as
   // one transaction.
@@ -94,7 +94,7 @@ export async function seedVoiceStates(
   }
 
   await pipelineBySlot(
-    redis,
+    valkey,
     writes,
     (w) => w.key,
     (pipe, w) => {

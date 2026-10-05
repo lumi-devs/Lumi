@@ -3,8 +3,8 @@
 // `/readyz` (readiness) is 200 only when every registered probe passes; k8s gates
 // on it, so a failing probe pulls the replica out of the pool without killing it.
 //
-// Each app registers the probes it needs: worker - postgres, redis, Discord;
-// scheduler - postgres, redis, BullMQ, leader-lock (if enabled); dashboard - rpc.
+// Each app registers the probes it needs: worker - postgres, valkey, Discord;
+// scheduler - postgres, valkey, BullMQ, leader-lock (if enabled); dashboard - rpc.
 
 export type ProbeStatus = "ok" | "fail" | "skip";
 

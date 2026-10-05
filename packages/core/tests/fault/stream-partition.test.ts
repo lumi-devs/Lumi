@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 
-describe("Chaos Suite: Redis Network Partition & Stream Consumer Reconnect", () => {
+describe("Chaos Suite: Valkey Network Partition & Stream Consumer Reconnect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("recovers stream consumer loop after transient Redis stream read partition", async () => {
+  it("recovers stream consumer loop after transient Valkey stream read partition", async () => {
     let callCount = 0;
     let isPartitioned = true;
 

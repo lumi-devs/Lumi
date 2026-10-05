@@ -73,7 +73,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     discordRest = new FakeDiscordRestPort();
     seedGuildManager();
     (container as any).discordRest = discordRest;
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),

@@ -74,7 +74,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       member: memberWith([]),
     });
 
-    (container as any).redis = {
+    (container as any).valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue(undefined),
       del: vi.fn(),

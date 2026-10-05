@@ -85,18 +85,18 @@ describe("mod module appeals RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue(undefined),
       del: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     } as any;
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db: any = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
-    db.moderation = new ModerationRepository(prisma as any, redis, container.logger, db);
-    db.appeals = new AppealRepository(prisma as any, redis, container.logger, db);
-    db.access = new AccessRepository(prisma as any, redis, container.logger, db);
+    db.moderation = new ModerationRepository(prisma as any, valkey, container.logger, db);
+    db.appeals = new AppealRepository(prisma as any, valkey, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey, container.logger, db);
     (container as any).db = db;
 
     container.stores = {

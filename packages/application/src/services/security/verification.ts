@@ -3,7 +3,7 @@ import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "@sapphire/utilities";
 import { fetchTyped } from "#lib/commands.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
@@ -235,15 +235,15 @@ export async function startChallenge(
     attempts: MaxAttempts,
     expiresAt,
   };
-  await container.redis
+  await container.valkey
     .multi()
     .set(
-      RedisKeys.verifyChallenge(guildId, userId),
+      ValkeyKeys.verifyChallenge(guildId, userId),
       JSON.stringify(state),
       "EXAT",
       Math.floor(expiresAt / 1000),
     )
-    .zadd(RedisKeys.verifyPending(guildId), expiresAt, userId)
+    .zadd(ValkeyKeys.verifyPending(guildId), expiresAt, userId)
     .exec();
   return state;
 }
@@ -252,7 +252,7 @@ async function getChallenge(
   guildId: string,
   userId: string,
 ): Promise<CaptchaState | null> {
-  const raw = await container.redis.get(RedisKeys.verifyChallenge(guildId, userId));
+  const raw = await container.valkey.get(ValkeyKeys.verifyChallenge(guildId, userId));
   if (isNullish(raw)) return null;
   return tryParseJSON(raw) as CaptchaState | null;
 }
@@ -262,8 +262,8 @@ async function saveChallenge(
   userId: string,
   state: CaptchaState,
 ): Promise<void> {
-  await container.redis.set(
-    RedisKeys.verifyChallenge(guildId, userId),
+  await container.valkey.set(
+    ValkeyKeys.verifyChallenge(guildId, userId),
     JSON.stringify(state),
     "EXAT",
     Math.floor(state.expiresAt / 1000),
@@ -292,9 +292,9 @@ export async function advanceChallenge(
 /** Drops all pending state for a member (on success or failure). */
 async function clearChallenge(guildId: string, userId: string): Promise<void> {
   await container.invalidation.invalidate(
-    RedisKeys.verifyChallenge(guildId, userId),
+    ValkeyKeys.verifyChallenge(guildId, userId),
   );
-  await container.redis.zrem(RedisKeys.verifyPending(guildId), userId);
+  await container.valkey.zrem(ValkeyKeys.verifyPending(guildId), userId);
 }
 
 /**
@@ -347,8 +347,8 @@ export async function assignPending(
       .catch(() => null);
   }
   const expiresAt = Date.now() + config.timeoutMinutes * 60 * 1000;
-  await container.redis.zadd(
-    RedisKeys.verifyPending(member.guild.id),
+  await container.valkey.zadd(
+    ValkeyKeys.verifyPending(member.guild.id),
     expiresAt,
     member.id,
   );
@@ -361,8 +361,8 @@ export async function assignPending(
 export async function sweepExpiredPending(guild: Guild): Promise<void> {
   const config = await loadVerificationConfig(guild.id);
   if (!config.enabled) return;
-  const expired = await container.redis.zrangebyscore(
-    RedisKeys.verifyPending(guild.id),
+  const expired = await container.valkey.zrangebyscore(
+    ValkeyKeys.verifyPending(guild.id),
     0,
     Date.now(),
   );

@@ -68,15 +68,15 @@ describe("core module guild blocklist RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
 
     container.stores = {

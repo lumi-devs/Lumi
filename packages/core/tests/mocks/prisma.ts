@@ -1,7 +1,7 @@
 /**
  * Offline in-memory Prisma mock for `bun test`.
  *
- * Mirrors the role `MockRedis` plays for `ioredis` in
+ * Mirrors the role `MockValkey` plays for `iovalkey` in
  * `packages/core/tests/lib/event-bus/{event-bus,factory}.test.ts`:
  * a small class that stands in for the real client so tests never need a live
  * backing service (here, a real Postgres instance via docker-compose).
@@ -26,12 +26,12 @@
  * const prisma = createMockPrismaClient();
  * prisma.$seed("afkEntry", [{ userId: "1", guildId: "g", reason: "AFK", since: new Date() }]);
  *
- * const repo = new AfkRepository(prisma as any, mockRedis, mockLogger, mockDb);
+ * const repo = new AfkRepository(prisma as any, mockValkey, mockLogger, mockDb);
  * await repo.findEntry("g", "1"); // reads the seeded row, no real Postgres involved
  * ```
  *
  * Or swap the whole `@prisma/client` module in a test file, the same way
- * `event-bus.test.ts` swaps `ioredis`:
+ * `event-bus.test.ts` swaps `iovalkey`:
  *
  * ```ts
  * import { vi } from "bun:test";

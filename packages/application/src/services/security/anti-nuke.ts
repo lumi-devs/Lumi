@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
 import { isNullish, type Awaitable } from "@sapphire/utilities";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/database/valkey.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -129,8 +129,8 @@ export async function recordAction(
   kind: NukeKind,
   config: AntiNukeConfig,
 ): Promise<number | null> {
-  const key = RedisKeys.securityWindow(guild.id, executorId, kind);
-  const results = await container.redis
+  const key = ValkeyKeys.securityWindow(guild.id, executorId, kind);
+  const results = await container.valkey
     .multi()
     .incr(key)
     .expire(key, config.windowSeconds, "NX")
@@ -138,8 +138,8 @@ export async function recordAction(
   const count = results?.[0]?.[1] as number;
   if (count <= config.limits[kind]) return null;
 
-  const tripped = await container.redis.set(
-    RedisKeys.securityTripped(guild.id, executorId, kind),
+  const tripped = await container.valkey.set(
+    ValkeyKeys.securityTripped(guild.id, executorId, kind),
     String(Date.now()),
     "EX",
     TrippedCooldownSeconds,
@@ -278,6 +278,6 @@ export async function evaluateNukeEvent(
 
 export async function isQuarantined(guildId: string, userId: string): Promise<boolean> {
   return (
-    (await container.redis.exists(RedisKeys.quarantineState(guildId, userId))) === 1
+    (await container.valkey.exists(ValkeyKeys.quarantineState(guildId, userId))) === 1
   );
 }

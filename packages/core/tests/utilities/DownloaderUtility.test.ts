@@ -54,7 +54,7 @@ describe("DownloaderUtility", () => {
   let mockLogger: any;
   let mockClient: any;
   let mockCommandStore: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let spawnSpy: { mockImplementation: (fn: (cmd: string[]) => unknown) => void };
 
   beforeEach(() => {
@@ -89,7 +89,7 @@ describe("DownloaderUtility", () => {
       setEnabled: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue(undefined),
     };
@@ -115,7 +115,7 @@ describe("DownloaderUtility", () => {
     (container as any).moduleStore = mockModuleStore;
     container.logger = mockLogger;
     container.client = mockClient;
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     container.stores = {
       get: vi.fn().mockReturnValue(mockCommandStore),
     } as any;
@@ -560,18 +560,18 @@ describe("DownloaderUtility", () => {
   });
 
   describe("checkForUpdates", () => {
-    it("returns the cached result from Redis without hitting the DB or git", async () => {
-      mockRedis.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
+    it("returns the cached result from Valkey without hitting the DB or git", async () => {
+      mockValkey.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
 
       const res = await service.checkForUpdates();
 
       expect(res).toEqual(["cached-mod"]);
       expect(mockDb.downloader.readAllInstalledDownloaderModules).not.toHaveBeenCalled();
-      expect(mockRedis.setex).not.toHaveBeenCalled();
+      expect(mockValkey.setex).not.toHaveBeenCalled();
     });
 
     it("swallows a per-module failure with a warning and still caches the modules that succeeded", async () => {
-      mockRedis.get.mockResolvedValue(null);
+      mockValkey.get.mockResolvedValue(null);
       mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue([
         { moduleName: "modA" },
         { moduleName: "modB" },
@@ -602,7 +602,7 @@ describe("DownloaderUtility", () => {
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining("[DownloaderUtility] Update check failed for modB:")
       );
-      expect(mockRedis.setex).toHaveBeenCalledWith(
+      expect(mockValkey.setex).toHaveBeenCalledWith(
         "lumi:addon:update-check",
         300,
         JSON.stringify(["modA"])

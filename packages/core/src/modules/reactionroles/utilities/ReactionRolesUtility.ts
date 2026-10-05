@@ -8,7 +8,7 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { acquireRedisLock } from "#lib/lock.js";
+import { acquireValkeyLock } from "#lib/lock.js";
 import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
   deleteMenu,
@@ -57,8 +57,8 @@ export default class ReactionRolesUtility extends Utility {
   ): Promise<T> {
     let lock;
     try {
-      lock = await acquireRedisLock(
-        container.redis,
+      lock = await acquireValkeyLock(
+        container.valkey,
         ReactionRoleKeys.menuWrite(guildId, menuId),
       );
     } catch {

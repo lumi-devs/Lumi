@@ -44,7 +44,7 @@ describe("scheduler-queue-metrics", () => {
   });
 
   it("warns instead of throwing when the queue read fails", async () => {
-    const getJobCounts = vi.fn().mockRejectedValue(new Error("redis down"));
+    const getJobCounts = vi.fn().mockRejectedValue(new Error("valkey down"));
     const fakeHandler = { client: { getJobCounts } } as any;
 
     const watcher = watchQueueDepth(fakeHandler);

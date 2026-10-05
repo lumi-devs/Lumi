@@ -64,7 +64,7 @@ export class TempVcPanelButtonHandler extends ModuleInteractionHandler<
 
     // showModal() must be the interaction's first response, so "name"/"limit"
     // can't defer first; every other action defers immediately to beat
-    // Discord's 3s ack window before the i18n/Redis lookups below.
+    // Discord's 3s ack window before the i18n/Valkey lookups below.
     const opensModal = action === "name" || action === "limit";
     if (!opensModal) await this.acknowledge(interaction);
 
@@ -210,7 +210,7 @@ export class TempVcPanelButtonHandler extends ModuleInteractionHandler<
       });
     }
 
-    const guard = await this.service.redis.set(
+    const guard = await this.service.valkey.set(
       TempVcKeys.claimGuard(channel.id),
       member.id,
       "PX",

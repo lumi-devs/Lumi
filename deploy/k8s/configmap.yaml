@@ -4,12 +4,12 @@ metadata:
   name: lumi-env
   namespace: lumi
 data:
-  REDIS_HOST: "redis.lumi.svc.cluster.local"
-  REDIS_PORT: "6379"
-  REDIS_CACHE_DB: "0"
-  # For Redis Cluster (multi-master):
-  # REDIS_CLUSTER_NODES: "redis-node-1:6379,redis-node-2:6379,redis-node-3:6379"
-  # REDIS_CLUSTER_SCALE_READS: "slave"
+  VALKEY_HOST: "valkey.lumi.svc.cluster.local"
+  VALKEY_PORT: "6379"
+  VALKEY_CACHE_DB: "0"
+  # For Valkey Cluster (multi-master):
+  # VALKEY_CLUSTER_NODES: "valkey-node-1:6379,valkey-node-2:6379,valkey-node-3:6379"
+  # VALKEY_CLUSTER_SCALE_READS: "slave"
 
   POSTGRES_URL: "postgresql://lumi@pgbouncer.lumi.svc.cluster.local:6432/lumi"
   # Optional Read-Replica for cross-guild queries:

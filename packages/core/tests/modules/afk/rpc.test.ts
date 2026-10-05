@@ -44,16 +44,16 @@ describe("afk module RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
+    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
 
     container.stores = {

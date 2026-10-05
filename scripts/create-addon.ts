@@ -151,7 +151,7 @@ function indexTs(args: Args): string {
 export class ${className} extends Module {
   public override async deleteUserData(): Promise<void> {
     // TODO: if this addon ever persists anything keyed by a user ID (via
-    // container.db.guildKV or container.redis), delete it here. Until then,
+    // container.db.guildKV or container.valkey), delete it here. Until then,
     // this no-op is the GDPR-compliant default - see https://lumi-devs.github.io/Lumi-docs/addons/overview.
   }
 }

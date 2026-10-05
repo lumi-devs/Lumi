@@ -15,7 +15,7 @@ vi.mock("#lib/sharding/shard-telemetry.js", () => ({
 }));
 
 vi.mock("#lib/database/guild-eviction.js", () => ({
-  evictGuildRedisState: vi.fn().mockResolvedValue(undefined),
+  evictGuildValkeyState: vi.fn().mockResolvedValue(undefined),
 }));
 
 const baseShard = {
@@ -69,7 +69,7 @@ describe("core data retention sweep", () => {
       debug: vi.fn(),
       warn: vi.fn(),
     };
-    (container as any).redis = {};
+    (container as any).valkey = {};
     (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
     asMock(readClusterShards).mockResolvedValue(fleetReady);
   });
