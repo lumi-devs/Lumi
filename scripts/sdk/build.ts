@@ -18,7 +18,7 @@ const ENTRYPOINTS = [
   "interactions",
   "kv",
   "permissions",
-  "redis",
+  "valkey",
   "scheduling",
   "ui",
   "utils",
