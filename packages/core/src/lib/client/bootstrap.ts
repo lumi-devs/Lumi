@@ -77,7 +77,11 @@ export async function bootstrapClientApp(
     process.exit(1);
   }
 
-  await initializeShardLease(container.valkey);
+  if (container.valkey) {
+    await initializeShardLease(container.valkey).catch((err) => {
+      container.logger?.warn?.("[ShardLease] Failed to initialize shard lease:", err);
+    });
+  }
 
   let shuttingDown = false;
   ["SIGINT", "SIGTERM"].forEach((sig) => {
