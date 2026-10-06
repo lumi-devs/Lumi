@@ -120,15 +120,18 @@ them as directionally useful rather than literal.
 
 ### Releasing contracts
 
+Versions are managed with [Changesets](https://github.com/changesets/changesets) (`.changeset/`,
+`bun run changeset`). Every PR that touches `packages/` or `apps/` must include a changeset file
+(CI enforces this); docs-only PRs are exempt.
+
 A dashboard-visible change to `packages/contracts` (or `packages/observability`) only reaches
 `lumi-dashboard` once it's published and re-pinned there:
 
-1. Bump the version in `packages/contracts/package.json` (and `packages/observability/package.json`
-   if it changed too).
-2. Tag the release as `contracts-v<version>` and push the tag — `.github/workflows/publish-packages.yml`
-   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to npm from that tag.
-3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
-   open a PR there.
+1. Add a changeset: `bun run changeset`, bump type `patch`/`minor`/`major` for the changed package(s).
+2. Merge to `main` — the Changesets workflow opens a `chore: version packages` PR; merging it
+   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to npm automatically.
+3. `lumi-dashboard` picks up `minor`/`patch` releases via its weekly dependabot group; a `major`
+   needs a manual PR there (see compatibility below).
 
 `apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it uses npm-style
 semver range resolution via `contractVersionsCompatible()`. Callers within `COMPATIBLE_CONTRACT_RANGE`
@@ -136,27 +139,18 @@ semver range resolution via `contractVersionsCompatible()`. Callers within `COMP
 dashboard releases to talk to newer API releases without breaking. Only bump `MIN_COMPATIBLE_CONTRACT_VERSION`
 when wire contracts introduce an incompatible breaking change.
 
-**The two packages are versioned and published in lockstep, not independently.** A single
-`contracts-v<version>` tag drives `publish-packages.yml`'s single `steps.version.outputs.version`,
-which is stamped onto *both* `@lumi-devs/contracts` and `@lumi-devs/observability` regardless of
-whether both actually changed — so their in-repo `package.json` versions are kept equal by hand
-(both currently `0.6.0`) rather than tracked separately. There is no `@changesets/cli`
-setup in this repo (no `.changeset/` directory, no `changeset` script); adding one was evaluated
-and rejected because Changesets' whole model is independent per-package versions/changelogs,
-which would fight this tag's one-version-for-both design rather than replace a manual step
-cleanly. Bump both `package.json` versions by hand together, as today.
+**The two public packages are versioned and published in lockstep, not independently.**
+`.changeset/config.json` declares them `linked`, so one changeset minor/major moves both together,
+and the Changesets workflow publishes both in the same run. Private workspace packages are
+versioned together too (`privatePackages.version`), but never published.
 
-**Release channels**: the tag's version string picks the npm dist-tag, not a separate flag —
-`publish-packages.yml` parses `contracts-v<version>`, and if `<version>` contains a `-` (e.g.
-`contracts-v0.5.0-next.2`) it publishes under the `next` dist-tag, otherwise under `latest`.
-So:
+**Release channels**: prereleases go through the `next` dist-tag — `bunx changeset pre enter next`,
+merge the resulting `Version Packages` PRs while prereleases are needed, then
+`bunx changeset pre exit next` to return to `latest`. So:
 
-- `contracts-v0.5.0-next.N` → prerelease, installed only by `@lumi-devs/contracts@next` /
-  an explicit version pin — never picked up by a bare `^0.5.0` or `latest` install.
-- `contracts-v0.5.0` → stable, published as `latest`.
-
-Bump the prerelease's `-next.N` suffix for each iteration before it's ready to cut as a
-plain version tag.
+- `0.7.1-next.0` → prerelease, installed only by `@lumi-devs/contracts@next` /
+  an explicit version pin — never picked up by a bare `^0.7.0` or `latest` install.
+- `0.7.1` → stable, published as `latest`.
 
 Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/dashboard). System-level view: the
 [Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture).

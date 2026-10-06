@@ -81,7 +81,13 @@ bun run dev
 
 ## Releases & Release Notes
 
-Every workspace package is private and ships together, so there is no per-package versioning. Pushing a `v*` tag runs `.github/workflows/release.yml`, which publishes a GitHub Release with notes generated from the merged pull requests since the previous tag.
+Versions are managed with Changesets. If your PR touches `packages/` or `apps/`, run
+`bun run changeset` and include the generated file — CI fails the PR without one.
+`@lumi-devs/contracts` and `@lumi-devs/observability` are versioned/published in lockstep
+and reach npm automatically when the `chore: version packages` PR merges; everything else
+is private and versioned together but never published. Pushing a `v*` tag still runs
+`.github/workflows/release.yml`, which publishes a GitHub Release with notes generated
+from the merged pull requests since the previous tag.
 
 Because the notes are built from PR titles, give your PR a clear, specific title (for example `fix(mod): warn count ignores decayed cases`), and add the relevant `area:*` label.
 

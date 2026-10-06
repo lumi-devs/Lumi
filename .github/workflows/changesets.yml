@@ -1,0 +1,74 @@
+name: Changesets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - '!packages/**/*.md'
+      - 'apps/**'
+      - '!apps/**/*.md'
+      - '.changeset/**'
+      - 'package.json'
+      - 'bun.lock'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - '!packages/**/*.md'
+      - 'apps/**'
+      - '!apps/**/*.md'
+      - '.changeset/**'
+      - 'package.json'
+      - 'bun.lock'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  status:
+    name: Changeset required
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-bun
+      - name: Require a changeset for versioned changes
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(packages|apps)/'; then
+            bunx changeset status --since="origin/${{ github.base_ref }}"
+          else
+            echo "No package changes, skipping changeset check."
+          fi
+
+  version:
+    name: Version and publish
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-bun
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Create version PR or publish
+        uses: changesets/action@v1
+        with:
+          version: bun run version-packages
+          publish: bun run release-packages
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

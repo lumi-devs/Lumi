@@ -18,3 +18,11 @@ tests/
 *.tsbuildinfo
 *.md
 LICENSE
+# Runtime / scratch data, never part of the image (no COPY references these).
+/data/
+/addons/
+/.lumi-0.4/
+/.lumi-0.5/
+logs/
+/deploy/
+/config/

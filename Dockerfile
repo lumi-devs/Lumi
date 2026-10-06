@@ -1,6 +1,6 @@
 FROM docker.io/oven/bun:1-alpine AS base
 WORKDIR /app
-RUN apk upgrade --no-cache && apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init
 
 FROM base AS deps
 COPY package.json bun.lock ./
@@ -13,7 +13,8 @@ COPY apps/worker/package.json apps/worker/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/scheduler/package.json apps/scheduler/package.json
 COPY apps/cli/package.json apps/cli/package.json
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 FROM deps AS source
 COPY --chown=bun:bun tsconfig.base.json tsconfig.json prisma.config.ts ./
@@ -25,7 +26,7 @@ COPY --chown=bun:bun prisma/ prisma/
 # per-target copy that could drift.
 COPY --chown=bun:bun scripts/ scripts/
 COPY --chown=bun:bun apps/cli/ apps/cli/
-RUN mkdir -p /app/data && chown -R bun:bun /app/data && bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache /tmp/*
+RUN mkdir -p /app/data && chown -R bun:bun /app/data && bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /tmp/*
 
 FROM source AS worker
 ENV NODE_ENV=production

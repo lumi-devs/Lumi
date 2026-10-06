@@ -47,10 +47,16 @@
     "test": "bun test --parallel --path-ignore-patterns '**/tests/integration/**' && bun run --cwd apps/api test && bun run --cwd apps/cli test",
     "test:coverage": "bun test --parallel --coverage --path-ignore-patterns '**/tests/integration/**' && bun run --cwd apps/api test -- --coverage && bun run --cwd apps/cli test -- --coverage",
     "test:integration": "bun test packages/*/tests/integration",
+    "changeset": "changeset",
+    "changeset:status": "changeset status --since main",
+    "version-packages": "changeset version",
+    "release-packages": "changeset publish",
     "verify:resilience": "bun packages/core/scripts/verify-resilience.ts",
     "bench": "bun packages/core/scripts/benchmark.ts"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@discordjs/builders": "^1.14.1",
     "@discordjs/formatters": "^0.6.2",
     "@eslint/js": "^10.0.1",
