@@ -145,10 +145,15 @@ function buildContainer(
     c.addMediaGalleryComponents(opts.mediaGallery);
   }
 
-  if (opts.separatorAboveActionRows && opts.actionRows?.length) {
+  const actionRows = opts.actionRows ?? [];
+  if (opts.separatorAboveActionRows && actionRows.length > 0) {
     c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
   }
-  for (const row of opts.actionRows ?? []) {
+  for (let r = 0; r < actionRows.length; r++) {
+    if (r > 0) {
+      c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+    }
+    const row = actionRows[r]!;
     c.addActionRowComponents((builder) => {
       builder.addComponents(...row.components);
       return builder;

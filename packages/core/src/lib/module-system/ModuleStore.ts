@@ -408,8 +408,8 @@ export class ModuleStore extends Store<Module> {
     return super.construct(Ctor, record ? { ...data, name: record.name } : data);
   }
 
-  /** Loads a module and sequentially loads all of its child pieces across all registered Sapphire stores. */
-  public async loadModule(name: string) {
+  /** Loads a module and its pieces via Sapphire's store system. */
+  public async loadModule(name: string): Promise<void> {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
 
@@ -419,33 +419,41 @@ export class ModuleStore extends Store<Module> {
 
     for (const store of container.stores.values()) {
       if (store === this) continue;
+
       const storePath = path.join(record.dir, store.name);
       if (!(await this.#exists(storePath))) continue;
 
-      const files = await this.#walkStoreFiles(storePath);
-      for (const file of files) {
-        try {
-          await store.load(storePath, file);
-        } catch (err: unknown) {
-          const error = err instanceof Error ? err : new Error(String(err));
-          failures.push(error);
-          container.logger.error(
-            `[ModuleStore] Failed to load piece ${file} for module ${name}:`,
-            err,
-          );
-        }
-      }
+      store.registerPath(storePath);
     }
 
-    const indexPath = await this.#findIndex(record.dir);
     try {
-      if (indexPath) await this.load(record.dir, path.basename(indexPath));
+      await container.stores.load();
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      failures.push(error);
+      container.logger.error(
+        `[ModuleStore] Failed to load pieces for module ${name}:`,
+        error,
+      );
+    }
+
+    try {
+      const mod = await import(record.indexUrl);
+      const meta = extractModuleMeta(mod);
+      if (meta?.configSchema) {
+        this.#schemaCache.set(name, meta.configSchema);
+      }
+      this.set(
+        name,
+        new mod.default({ name: record.name, root: record.dir, store: this }, meta),
+      );
+      record.meta = meta ?? record.meta;
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       failures.push(error);
       container.logger.error(
         `[ModuleStore] Failed to load module index for ${name}:`,
-        err,
+        error,
       );
     }
 

@@ -16,7 +16,6 @@ import { BotConfig } from "#lib/utilities/config.js";
 import { collectPingData } from "../services/ping-collect.js";
 import { fmtMB } from "../ui/ping-cards.js";
 import { makeCard, ephemeralCard } from "#lib/ui/cards.js";
-import { formatStatusBadge } from "#lib/ui/layout.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 
 @ApplyOptions<Command.Options>({
@@ -62,16 +61,13 @@ export class AboutCommand extends BaseCommand {
     const instanceStatsHeader = t("commands:aboutInstanceStats");
     const coreArchHeader = t("commands:aboutCoreArch");
 
-    const pingStatus =
-      data.wsPing < 150 ? "success" : data.wsPing < 300 ? "warning" : "error";
-
     const body = [
       "Lumi is a powerful, self-hosted Discord administration platform designed for communities that demand full control and rock-solid reliability. Powered by TypeScript, Bun, and an isolated microservices topology, Lumi guarantees instant command responses, modular capability scaling, and enterprise-grade uptime for your server.",
 
       `### 📊 ${instanceStatsHeader}\n` +
         `**${t("core:servers")}:** ${fmtCount(serverCount)}  •  **${t("core:members")}:** ${fmtCount(userCount)}  •  **${t("core:channels")}:** ${fmtCount(channelCount)}\n` +
         `**${t("core:uptime")}:** ${time(bootTime, TimestampStyles.RelativeTime)}  •  **${t("core:hostUptime")}:** ${time(hostBootTime, TimestampStyles.RelativeTime)}\n` +
-        `**Gateway:** ${formatStatusBadge(pingStatus, `${Math.round(data.wsPing)}ms`)}  •  **Memory:** ${fmtMB(data.rss)}  •  **CPU:** ${data.cpuPercent.toFixed(1)}%`,
+        `**Gateway:** \`${Math.round(data.wsPing)}ms\`  •  **Memory:** ${fmtMB(data.rss)}  •  **CPU:** ${data.cpuPercent.toFixed(1)}%`,
 
       `### ⚙️ ${coreArchHeader}\n` +
         `**Core:** discord.js v${data.djsVersion} · Sapphire v${data.sapphireVersion}\n` +
