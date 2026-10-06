@@ -101,7 +101,7 @@ export async function acquireValkeyLock(
           } else {
             consecutiveRenewFailures++;
             const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
-            log.error(message);
+            log.error?.(message);
             if (consecutiveRenewFailures === 1) {
               opts.onLostLock();
             }
@@ -111,7 +111,7 @@ export async function acquireValkeyLock(
           if (released) return;
           consecutiveRenewFailures++;
           const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${consecutiveRenewFailures === 1 ? "" : "s"})`;
-          log.error(message, err);
+          log.error?.(message, err);
           if (consecutiveRenewFailures === 1) {
             opts.onLostLock();
           }

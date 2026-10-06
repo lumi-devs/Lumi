@@ -21,6 +21,7 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "kv.set": "kv",
   "kv.delete": "kv",
   "kv.list": "kv",
+  "kv.incr": "kv",
   "valkey.sadd": "valkey",
   "valkey.srem": "valkey",
   "valkey.scard": "valkey",

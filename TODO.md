@@ -73,6 +73,21 @@ YAGPDB scales across 1,000,000+ servers using targeted Go primitives. Lumi can a
 - [ ] **4.1 Dynamic Shard Lease Coordinator in Valkey**
   - Instead of hardcoding `SHARDS` per container, workers register their node IDs in a Valkey sorted set (`lumi:cluster:nodes`) with TTL-based heartbeats.
   - A coordinator leases shard ranges dynamically (e.g. Node A gets shards 0–15, Node B gets 16–31).
+  - *Reference Pattern (discord.js multi-host ShardingManager):*
+    ```typescript
+    // Node.js implementation pattern: dynamic shard list per process
+    import { ShardingManager } from "discord.js";
+    const assignedShards: number[] = await shardLeaseClient.claimShards(nodeId);
+    const totalShards: number = await shardLeaseClient.getTotalClusterShards();
+
+    const manager = new ShardingManager("./dist/apps/worker/src/main.js", {
+      totalShards,
+      shardList: assignedShards, // explicit shard array leased via Valkey
+      mode: "process",
+      token: process.env.BOT_TOKEN,
+    });
+    await manager.spawn();
+    ```
 - [ ] **4.2 Zero-Downtime Shard State Hand-off**
   - Implement YAGPDB's rolling shard hand-off: when a node shuts down for updates, it signals the peer node via Valkey to take over the shard connection and state before terminating the old WebSocket, avoiding reconnect storms.
 
@@ -80,12 +95,56 @@ YAGPDB scales across 1,000,000+ servers using targeted Go primitives. Lumi can a
 - [ ] **4.3 Sparse Guild State Mode**
   - Cache only essential guild routing attributes (IDs, roles, channel structures, permissions).
   - Strip offline member identities and message histories completely after a short configurable lifetime (YAGPDB `RemoveOfflineMembersAfter` pattern).
+  - *Reference Pattern (discord.js cacheWithLimits & Sweepers API):*
+    ```typescript
+    import { Options, Sweepers, type ClientOptions } from "discord.js";
+
+    export const sparseClientOptions: Partial<ClientOptions> = {
+      makeCache: Options.cacheWithLimits({
+        MessageManager: 0, // no message memory cache
+        GuildMemberManager: {
+          maxSize: 50,
+          keepOverLimit: (m) => m.id === m.client.user.id,
+        },
+        PresenceManager: 0, // strip presence state entirely
+        VoiceStateManager: 0,
+        GuildEmojiManager: 0,
+        ReactionManager: 0,
+      }),
+      sweepers: {
+        ...Options.DefaultSweeperSettings,
+        guildMembers: {
+          interval: 900,
+          filter: Sweepers.filterByLifetime({
+            lifetime: 1800,
+            excludeFromSweep: (m) => m.id === m.client.user.id,
+          }),
+        },
+      },
+    };
+    ```
 - [ ] **4.4 Per-Shard Isolated Memory Buckets**
   - Ensure guild caches are isolated per shard rather than stored in a shared global JavaScript map, avoiding cross-shard V8 GC lock contention.
 
 ### 3. Dedicated Guild & Member Fetch Batching
 - [ ] **4.5 Coalesced Member Fetcher Queue**
   - Adopt YAGPDB's `shardmemberfetcher`: batch individual member fetch calls occurring across commands or events within a 50ms window into single batched Discord Gateway requests (`REQUEST_GUILD_MEMBERS` chunking) or REST queries, avoiding HTTP 429 rate limit exhaustion.
+  - *Reference Pattern (Node.js DataLoader Batching Queue):*
+    ```typescript
+    import DataLoader from "dataloader";
+    import type { Guild, GuildMember } from "discord.js";
+
+    export function createMemberBatcher(guild: Guild) {
+      return new DataLoader<string, GuildMember | null>(
+        async (userIds) => {
+          // Coalesces multiple member fetches into a single gateway chunk request
+          const fetched = await guild.members.fetch({ user: userIds as string[] });
+          return userIds.map((id) => fetched.get(id) ?? null);
+        },
+        { maxBatchSize: 100, batchScheduleFn: (callback) => setTimeout(callback, 50) }
+      );
+    }
+    ```
 
 ---
 

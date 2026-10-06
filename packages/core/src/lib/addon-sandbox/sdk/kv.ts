@@ -27,3 +27,12 @@ export function list<T = unknown>(
 ): Promise<{ guildId: string; targetId: string; value: T }[]> {
   return call("kv.list", { key, guildId });
 }
+
+export function incr(
+  guildId: string,
+  targetId: string,
+  key: string,
+  delta = 1,
+): Promise<number> {
+  return call("kv.incr", { guildId, targetId, key, delta });
+}

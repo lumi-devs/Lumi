@@ -14,6 +14,7 @@ import {
   isProduction,
 } from "@lumi/core/env";
 import {
+  COMPATIBLE_CONTRACT_RANGE,
   CONTRACT_VERSION,
   contractVersionsCompatible,
   makeRpcFailure,
@@ -69,14 +70,32 @@ export function readInternalToken(
 const ContractVersionHeader = "x-lumi-contract-version";
 
 /** Validates contract compatibility using x-lumi-contract-version. */
-function checkContractVersion(req: Request): Response | null {
+function checkContractVersion(
+  req: Request,
+  log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
+): Response | null {
   const theirVersion = req.headers.get(ContractVersionHeader);
   if (theirVersion && contractVersionsCompatible(CONTRACT_VERSION, theirVersion)) return null;
   const error = theirVersion
-    ? `Contract version mismatch: caller is on @lumi/contracts@${theirVersion}, this server is on @lumi/contracts@${CONTRACT_VERSION}. Update one side to match.`
-    : `Missing ${ContractVersionHeader} header: this server is on @lumi/contracts@${CONTRACT_VERSION} and requires callers to report their contract version.`;
+    ? `Contract version mismatch: caller is on @lumi/contracts@${theirVersion}, this server requires compatible @lumi/contracts (${COMPATIBLE_CONTRACT_RANGE}, server is on ${CONTRACT_VERSION}). Update one side to match.`
+    : `Missing ${ContractVersionHeader} header: this server is on @lumi/contracts@${CONTRACT_VERSION} and requires callers to report their contract version (${COMPATIBLE_CONTRACT_RANGE}).`;
+
+  if (log) {
+    log("warn", `[RpcHttp] Contract version check failed: ${error}`, {
+      clientVersion: theirVersion ?? null,
+      serverVersion: CONTRACT_VERSION,
+      supportedRange: COMPATIBLE_CONTRACT_RANGE,
+    });
+  } else {
+    logError("[RpcHttp] Contract version check failed", new Error(error));
+  }
+
   return Response.json(makeRpcFailure("", error, RpcFailureCodes.ContractMismatch), {
     status: 409,
+    headers: {
+      "x-lumi-contract-version": CONTRACT_VERSION,
+      "x-lumi-contract-range": COMPATIBLE_CONTRACT_RANGE,
+    },
   });
 }
 
@@ -127,6 +146,7 @@ async function handleGdprExportDownload(req: Request): Promise<Response> {
 export async function handleRpcHttpRequest(
   req: Request,
   internalToken: string | null,
+  log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
 ): Promise<Response> {
   const { pathname } = new URL(req.url);
   // Unauthenticated on purpose: liveness/readiness probes have no way to
@@ -157,7 +177,7 @@ export async function handleRpcHttpRequest(
       status: 401,
     });
   }
-  const contractMismatch = checkContractVersion(req);
+  const contractMismatch = checkContractVersion(req, log);
   if (contractMismatch) return contractMismatch;
 
   if (pathname === "/rpc/batch") {
@@ -241,7 +261,7 @@ export async function startRpcHttpServer(
         hostname: host,
         port,
         fetch(req) {
-          return handleRpcHttpRequest(req, internalToken);
+          return handleRpcHttpRequest(req, internalToken, log);
         },
         error(err) {
           log("error", "[RpcHttp] Unhandled error during request processing:", {

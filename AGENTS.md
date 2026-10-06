@@ -130,9 +130,11 @@ A dashboard-visible change to `packages/contracts` (or `packages/observability`)
 3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
    open a PR there.
 
-`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it requires the same
-major version, and while the major version is `0`, the same minor version too — so a breaking
-contracts change and the dashboard's pin bump must land together.
+`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it uses npm-style
+semver range resolution via `contractVersionsCompatible()`. Callers within `COMPATIBLE_CONTRACT_RANGE`
+(`>=MIN_COMPATIBLE_CONTRACT_VERSION <=CONTRACT_VERSION`) are accepted, allowing older deployed
+dashboard releases to talk to newer API releases without breaking. Only bump `MIN_COMPATIBLE_CONTRACT_VERSION`
+when wire contracts introduce an incompatible breaking change.
 
 **The two packages are versioned and published in lockstep, not independently.** A single
 `contracts-v<version>` tag drives `publish-packages.yml`'s single `steps.version.outputs.version`,

@@ -8,15 +8,17 @@ vi.mock("@lumi/observability", () => ({
 }));
 
 describe("GuildKVRepository", () => {
-  let prisma: ReturnType<typeof createMockPrismaClient>;
+  let prisma: any;
   let repo: GuildKVRepository;
   let mockDb: any;
+  let mockValkey: any;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
     mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
+    mockValkey = { hincrby: vi.fn().mockResolvedValue(1) };
     const mockLogger = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    repo = new GuildKVRepository(prisma as any, {} as any, mockLogger as any, mockDb);
+    repo = new GuildKVRepository(prisma as any, mockValkey, mockLogger as any, mockDb);
   });
 
   it("stores, retrieves, and checks single module data entries", async () => {
@@ -69,5 +71,27 @@ describe("GuildKVRepository", () => {
 
     const paged = await repo.listGuildModuleData("guild-1", { moduleName: "mod", take: 10 });
     expect(paged.entries.length).toBeGreaterThan(0);
+  });
+
+  it("atomically increments a counter and persists to DB", async () => {
+    mockValkey.hincrby.mockResolvedValueOnce(5);
+
+    const result = await repo.incrModuleData("g1", "mod", "t1", "counter", 2);
+
+    expect(result).toBe(5);
+    expect(mockValkey.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 2);
+    const stored = await repo.getModuleData("g1", "mod", "t1", "counter");
+    expect(stored).toBe(5);
+  });
+
+  it("defaults delta to 1", async () => {
+    mockValkey.hincrby.mockResolvedValueOnce(1);
+
+    const result = await repo.incrModuleData("g1", "mod", "t1", "counter");
+
+    expect(result).toBe(1);
+    expect(mockValkey.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 1);
+    const stored = await repo.getModuleData("g1", "mod", "t1", "counter");
+    expect(stored).toBe(1);
   });
 });

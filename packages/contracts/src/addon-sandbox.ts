@@ -36,6 +36,7 @@ export type AddonRpcMethod =
   | "kv.set"
   | "kv.delete"
   | "kv.list"
+  | "kv.incr"
   | "valkey.sadd"
   | "valkey.srem"
   | "valkey.scard"

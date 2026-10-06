@@ -127,6 +127,13 @@ const ParamSchemas: Record<string, BaseValidator<unknown>> = {
     guildId: s.string().optional(),
   }),
 
+  "kv.incr": s.object({
+    guildId: s.string(),
+    targetId: s.string(),
+    key: s.string(),
+    delta: s.number().optional(),
+  }),
+
   "valkey.sadd": s.object({
     key: s.string(),
     members: s.string().array(),
@@ -274,6 +281,19 @@ const Methods = {
       key,
       guildId: scopedGuild(scope, guildId),
     });
+  },
+
+  async "kv.incr"(
+    { guildId, targetId, key, delta = 1 }: { guildId: string; targetId: string; key: string; delta?: number },
+    scope: HostCallScope,
+  ) {
+    return container.db.guildKV.incrModuleData(
+      scopedGuild(scope, guildId),
+      scope.moduleName,
+      targetId,
+      key,
+      delta,
+    );
   },
 
   async "ctx.showModal"({ modal }: { modal: unknown }, scope: HostCallScope) {

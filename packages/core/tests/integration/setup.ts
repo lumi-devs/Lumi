@@ -1,5 +1,5 @@
 import { describe } from "bun:test";
-import Valkey, { type RedisOptions } from "iovalkey";
+import Valkey, { type RedisOptions as ValkeyOptions } from "iovalkey";
 
 /**
  * Real-service integration suite guard.

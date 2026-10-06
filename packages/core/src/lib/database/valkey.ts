@@ -13,7 +13,7 @@ import {
 import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { RedisOptions } from "iovalkey";
 
-export type ValkeyOptions = RedisOptions;
+type ValkeyOptions = RedisOptions;
 import { valkeyCommandDuration } from "@lumi/observability";
 
 export {

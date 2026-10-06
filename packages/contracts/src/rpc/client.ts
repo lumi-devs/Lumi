@@ -336,6 +336,9 @@ export class RpcClient {
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
     if (!response.ok) {
+      if (response.code === RpcFailureCodes.ContractMismatch) {
+        this.log(`[RpcClient] Contract version mismatch for action "${action}": ${response.error}`);
+      }
       throw new RpcError(response.code, action, response.error, {
         retryable: response.retryable,
         retryAfterMs: response.retryAfterMs,

@@ -14,8 +14,21 @@ describe("contractVersionsCompatible", () => {
     expect(contractVersionsCompatible("1.0.0", "2.0.0")).toBe(false);
   });
 
-  it("rejects a differing minor while major is 0", () => {
+  it("rejects a caller newer than the server", () => {
     expect(contractVersionsCompatible("0.5.0", "0.6.0")).toBe(false);
+    expect(contractVersionsCompatible("0.7.0", "0.8.0")).toBe(false);
+  });
+
+  it("accepts backwards-compatible callers down to minSupportedVersion", () => {
+    expect(contractVersionsCompatible("0.7.0", "0.6.0")).toBe(true);
+    expect(contractVersionsCompatible("0.7.0", "0.7.0")).toBe(true);
+    expect(contractVersionsCompatible("0.7.0", "0.5.0")).toBe(false);
+  });
+
+  it("accepts semver range strings matching the compatible range", () => {
+    expect(contractVersionsCompatible("0.7.0", "^0.6.0")).toBe(true);
+    expect(contractVersionsCompatible("0.7.0", ">=0.6.0 <=0.7.0")).toBe(true);
+    expect(contractVersionsCompatible("0.7.0", "^0.8.0")).toBe(false);
   });
 
   it("ignores prerelease/build metadata suffixes", () => {

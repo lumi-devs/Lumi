@@ -26,6 +26,8 @@ export const ValkeyKeys = {
     `lumi:module:enabled:${module}:${guildId}`,
   moduleGlobalEnabled: (module: string) =>
     `lumi:module:global:enabled:${module}`,
+  moduleData: (guildId: string, module: string, targetId: string, key: string) =>
+    `lumi:kv:${guildId}:${module}:${targetId}:${key}`,
 
   permOverrides: (commandPath: string, guildId: string) =>
     `lumi:perms:${commandPath}:${guildId}`,

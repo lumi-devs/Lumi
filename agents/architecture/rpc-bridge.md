@@ -115,3 +115,23 @@ request does not fail the entire batch.
 
 Mutations can pass `idempotencyKey` in `RpcRequest`. `withIdempotency()` acquires a distributed Valkey lock,
 returning cached results on replay or rejecting concurrent duplicates with `CONFLICT`.
+
+## Contract Versioning & Compatibility Handshake
+
+The dashboard and `apps/api` are deployed independently and cross network boundaries. To ensure stability
+without breaking during independent release cadences, `apps/api` validates callers using an npm-style
+semver range handshake:
+
+1. **Wire Handshake**: Every request carries the caller's contract version in `x-lumi-contract-version` (`packages/contracts/src/rpc/client.ts`).
+2. **Compatibility Resolution (`packages/contracts/src/rpc/contract-version.ts`)**:
+   - `CONTRACT_VERSION`: The package's current release version.
+   - `MIN_COMPATIBLE_CONTRACT_VERSION`: The backwards-compatibility floor (e.g. `0.6.0`).
+   - `COMPATIBLE_CONTRACT_RANGE`: Formatted semver range (e.g. `>=0.6.0 <=0.7.0`).
+   - Callers reporting concrete versions or semver ranges within this range are admitted.
+   - Differing major versions are always rejected.
+   - In 0.x, bumping minor versions no longer breaks existing callers unless `MIN_COMPATIBLE_CONTRACT_VERSION` is explicitly raised.
+3. **Structured Failure & Logging**:
+   - Incompatible or missing versions yield HTTP `409` with code `CONTRACT_MISMATCH`.
+   - The response includes headers `x-lumi-contract-version` and `x-lumi-contract-range` so clients can inspect server compatibility.
+   - Failures are logged with structured metadata (`clientVersion`, `serverVersion`, `supportedRange`) on both server (`apps/api`) and client (`RpcClient`).
+
