@@ -64,14 +64,6 @@ jobs:
         with:
           fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
       - uses: ./.github/actions/setup-bun
         with:
           db-generate: "true"
@@ -235,5 +227,24 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require green upstream
-        run: exit ${{ (contains(join(needs.*.result, ','), 'failure') || contains(join(needs.*.result, ','), 'cancelled')) && 1 || 0 }}
+      - name: Evaluate status of upstream jobs
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "Evaluating CI Results: $results"
+
+          failed=0
+          for job in changes lint typecheck test integration build nix-check; do
+            result=$(echo "$results" | jq -r --arg job "$job" '.[$job].result // empty')
+            echo "Job $job: $result"
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "Job $job failed or was cancelled."
+              failed=1
+            fi
+          done
+
+          if [ $failed -ne 0 ]; then
+            echo "One or more required CI jobs failed."
+            exit 1
+          fi
+
+          echo "All CI checks passed or skipped successfully."
