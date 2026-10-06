@@ -58,9 +58,7 @@ describe("afk mentions button repro", () => {
     await h.handle(interaction, { userId: "111", page: "0" });
     expect(interaction.deferReply).toHaveBeenCalledTimes(1);
     expect(interaction.editReply).toHaveBeenCalledTimes(1);
-    const payload = interaction.editReply.mock.calls[0]![0] as any;
-    // eslint-disable-next-line no-console
-    console.log("EDIT PAYLOAD FLAGS:", payload.flags, "keys:", Object.keys(payload));
+    const payload = interaction.editReply.mock.calls[0]![0];
     expect(payload.flags & 32768).toBe(32768); // IsComponentsV2 kept
   });
 });
