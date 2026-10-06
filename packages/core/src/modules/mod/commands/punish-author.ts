@@ -28,7 +28,7 @@ export class PunishAuthorCommand extends BaseCommand {
         .setName("Punish Author")
         .setType(ApplicationCommandType.Message),
       {
-        idHints: ["1556911536419905536"],
+        idHints: ["1556913110923878441", "1556911536419905536"],
       },
     );
   }
