@@ -27,9 +27,16 @@ export class ApplicationCommandRegistriesRegisteredListener extends Listener {
 
     const globalCommands = await client.application?.commands.fetch();
     if (globalCommands) {
-      const registeredNames = new Set(
-        [...registries.values()].map((r) => r.commandName),
-      );
+      const registeredNames = new Set<string>();
+      for (const registry of registries.values()) {
+        registeredNames.add(registry.commandName);
+        for (const name of registry.chatInputCommands ?? []) {
+          registeredNames.add(name);
+        }
+        for (const name of registry.contextMenuCommands ?? []) {
+          registeredNames.add(name);
+        }
+      }
 
       const redundant = globalCommands.filter(
         (cmd) => !registeredNames.has(cmd.name),
