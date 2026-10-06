@@ -24,6 +24,18 @@ import { swallow } from "#lib/utilities/errors.js";
  */
 
 async function fetchGuildRest(guildId: string): Promise<APIGuild | null> {
+  const cached = container.client?.guilds?.cache?.get(guildId);
+  if (cached) {
+    return {
+      id: cached.id,
+      name: cached.name,
+      icon: cached.icon,
+      banner: cached.banner,
+      approximate_member_count: cached.memberCount ?? 0,
+      roles: Array.from(cached.roles?.cache?.values() ?? []).map((r) => ("toJSON" in r ? (r as any).toJSON() : r)),
+    } as unknown as APIGuild;
+  }
+
   return repositoryCache.getOrLoad<APIGuild | null>(
     ValkeyKeys.restGuild(guildId),
     ValkeyTTL.restGuild * 1000,
@@ -39,6 +51,11 @@ async function fetchGuildMemberRest(
   guildId: string,
   userId: string,
 ): Promise<APIGuildMember | null> {
+  const cachedMember = container.client?.guilds?.cache?.get(guildId)?.members?.cache?.get(userId);
+  if (cachedMember && "toJSON" in cachedMember) {
+    return (cachedMember as any).toJSON() as APIGuildMember;
+  }
+
   return repositoryCache.getOrLoad<APIGuildMember | null>(
     ValkeyKeys.restMember(guildId, userId),
     ValkeyTTL.restMember * 1000,

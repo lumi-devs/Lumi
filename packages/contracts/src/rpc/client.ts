@@ -276,6 +276,7 @@ export class RpcClient {
         method: "POST",
         headers: {
           "content-type": "application/json",
+          "connection": "keep-alive",
           "x-lumi-contract-version": CONTRACT_VERSION,
           ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         },
