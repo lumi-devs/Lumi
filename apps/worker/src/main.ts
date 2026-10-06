@@ -1,8 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { ShardingManager } from "discord.js";
 import { getBotToken, getTotalShards, getShardList } from "@lumi/core/env";
-
-// Manager only spawns shards; gateway and service logic run in shard-client.ts.
+import { initializeShardLease, getMyShards, getMyNodeId } from "@lumi/core/cluster";
 
 const token = getBotToken();
 const shardFile = fileURLToPath(new URL("./shard-client.ts", import.meta.url));
@@ -21,6 +20,7 @@ const manager = new ShardingManager(shardFile, {
   totalShards,
   shardList,
   respawn: true,
+  execArgv: ["--no-warnings"],
 });
 
 let shuttingDown = false;
@@ -44,7 +44,6 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   const shards = [...manager.shards.values()];
   console.info(`[Manager] ${signal} received, forwarding to ${shards.length} shard(s)`);
 
-  // Explicitly forward signal to children so drain hooks run (k8s only signals PID 1).
   const exits = shards.map(
     (shard) =>
       new Promise<boolean>((resolve) => {
@@ -54,35 +53,16 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
           return;
         }
         proc.once("exit", () => resolve(true));
-        try {
-          proc.kill(signal);
-        } catch {
-          resolve(true);
-        }
+        proc.kill(signal);
       }),
   );
-  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 55_000));
-  const drained = await Promise.race([
-    Promise.all(exits).then(() => true),
-    timeout,
-  ]);
-  process.exit(drained ? 0 : 1);
-}
-process.once("SIGINT", () => void shutdown("SIGINT"));
-process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
-process.on("unhandledRejection", (reason) =>
-  console.error("[Manager] Unhandled promise rejection:", reason),
-);
-process.on("uncaughtException", (err) => {
-  console.error("[Manager] Uncaught exception - initiating shutdown:", err);
-  void shutdown("SIGTERM");
-});
-
-try {
-  await manager.spawn({ timeout: -1 });
-  console.info(`[Manager] All ${manager.totalShards} shard(s) spawned`);
-} catch (err) {
-  console.error("[Manager] Failed to spawn shards:", err);
-  await shutdown("SIGTERM");
+  await Promise.all(exits);
+  process.exit(0);
 }
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+await manager.spawn();
+console.info(`[Manager] All ${manager.shards.size} shard(s) spawned`);

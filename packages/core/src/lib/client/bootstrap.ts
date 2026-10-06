@@ -6,6 +6,7 @@ import {
   validateAddonSignatureConfig,
   validateRequiredEnv,
 } from "#lib/env.js";
+import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#lib/cluster/index.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 
 export interface BootstrapAppOptions extends LumiClient.Options {
@@ -76,6 +77,8 @@ export async function bootstrapClientApp(
     process.exit(1);
   }
 
+  await initializeShardLease(container.valkey);
+
   let shuttingDown = false;
   ["SIGINT", "SIGTERM"].forEach((sig) => {
     process.once(sig, async () => {
@@ -87,6 +90,7 @@ export async function bootstrapClientApp(
         meta?: object,
       ) => container.logger[level](`[Shutdown] ${msg}`, meta ?? "");
       log("info", `${sig} received`);
+      await clusterGracefulShutdown();
       const drainSteps = [
         { name: "addon-shutdown", run: () => (client.stores.get("modules") as any)?.stopAddonProcesses() },
         { name: "client-destroy", run: () => client.destroy() },
