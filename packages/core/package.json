@@ -13,7 +13,10 @@
     "./env": "./src/lib/env.ts",
     "./cluster": "./src/lib/cluster/index.ts",
     "./doctor": "./src/lib/doctor/index.ts",
-    "./addon-test-harness": "./src/lib/addon-sandbox/test-harness.ts"
+    "./addon-test-harness": "./src/lib/addon-sandbox/test-harness.ts",
+    "./manifest": "./src/lib/module-system/manifest.ts",
+    "./validate-addon": "./scripts/validate-addon.ts",
+    "./generate-manifests": "./scripts/generate-manifests.ts"
   },
   "imports": {
     "#lib/*.js": "./src/lib/*.ts",
