@@ -27,6 +27,9 @@ export class PunishAuthorCommand extends BaseCommand {
       new ContextMenuCommandBuilder()
         .setName("Punish Author")
         .setType(ApplicationCommandType.Message),
+      {
+        idHints: ["1556911536419905536"],
+      },
     );
   }
 

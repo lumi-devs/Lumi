@@ -25,28 +25,26 @@ COPY prisma/ prisma/
 # per-target copy that could drift.
 COPY scripts/ scripts/
 COPY apps/cli/ apps/cli/
-RUN ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi
+RUN bunx prisma generate && chown -R bun:bun /app && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache
 
 FROM source AS worker
 ENV NODE_ENV=production
-COPY apps/worker/ apps/worker/
-RUN bunx prisma generate && mkdir -p /app/data && chown -R bun:bun /app
+COPY --chown=bun:bun apps/worker/ apps/worker/
+RUN mkdir -p /app/data && chown bun:bun /app/data
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/worker/src/main.ts"]
 
 FROM source AS api
 ENV NODE_ENV=production
-COPY apps/api/ apps/api/
-RUN bunx prisma generate && chown -R bun:bun /app
+COPY --chown=bun:bun apps/api/ apps/api/
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/api/src/main.ts"]
 
 FROM source AS scheduler
 ENV NODE_ENV=production
-COPY apps/scheduler/ apps/scheduler/
-RUN bunx prisma generate && chown -R bun:bun /app
+COPY --chown=bun:bun apps/scheduler/ apps/scheduler/
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/scheduler/src/main.ts"]
