@@ -25,12 +25,11 @@ COPY --chown=bun:bun prisma/ prisma/
 # per-target copy that could drift.
 COPY --chown=bun:bun scripts/ scripts/
 COPY --chown=bun:bun apps/cli/ apps/cli/
-RUN bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache /tmp/*
+RUN mkdir -p /app/data && chown -R bun:bun /app/data && bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache /tmp/*
 
 FROM source AS worker
 ENV NODE_ENV=production
 COPY --chown=bun:bun apps/worker/ apps/worker/
-RUN mkdir -p /app/data && chown bun:bun /app/data
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "exec bun apps/worker/src/main.ts"]
