@@ -15,7 +15,6 @@ export interface FeatureDetail {
   guildEnabled: boolean;
 }
 
-/** Every guild-toggleable module with its current per-guild enabled flag. */
 export async function loadFeatures(
   guildId: string,
 ): Promise<FeatureListEntry[]> {

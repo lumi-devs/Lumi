@@ -15,7 +15,6 @@ export async function loadBackupConfig(
   };
 }
 
-/** Snapshots the guild's role/channel structure and prunes old backups past `keepCount`. */
 export async function createBackup(guild: Guild, keepCount: number): Promise<number> {
   const data = snapshotGuild(guild);
   const backup = await container.db.security.createBackup(guild.id, data);

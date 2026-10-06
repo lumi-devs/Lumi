@@ -42,7 +42,6 @@ export class AfkRepository extends Repository {
     });
   }
 
-  /** Deletes every entry for a user across all guilds; returns the count. */
   public async deleteAllForUser(userId: string): Promise<number> {
     const { count } = await this.prisma.afkEntry.deleteMany({
       where: { userId },

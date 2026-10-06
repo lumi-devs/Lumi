@@ -1,8 +1,5 @@
 import type { ChannelType } from "discord.js";
 
-// Module configuration schema contracts.
-
-
 export enum FieldType {
   Boolean = "BOOLEAN",
   Number = "NUMBER",

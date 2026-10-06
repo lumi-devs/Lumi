@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { MessageFlags } from "discord.js";
 import { getCategories, HelpCommand } from "#modules/core/commands/help.js";
+import { TimeoutCommand } from "#modules/mod/commands/timeout.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
 vi.mock("#lib/utilities/pagination.js", () => ({
@@ -229,6 +230,31 @@ describe("HelpCommand", () => {
     });
 
     expect(texts.join("\n")).toContain("**`,help`**");
+  });
+
+  it("lists a group's subcommands from its dispatch mapping", async () => {
+    const group = new TimeoutCommand(
+      {
+        name: "timeout",
+        path: "/path/to/commands/timeout.ts",
+        root: "/path/to/commands",
+        store: { name: "commands" } as any,
+      },
+      {},
+    );
+    setCommands([group]);
+    const message = { guildId: null, author: { id: "u-1" } } as any;
+
+    await command.messageRun(message);
+
+    const opts = (paginateContainer as any).mock.calls[0][0];
+    const texts: string[] = [];
+    opts.render(0, {
+      addTextDisplayComponents: (c: any) => texts.push(c.data.content),
+      addSeparatorComponents: () => undefined,
+    });
+
+    expect(texts.join("\n")).toContain("**`/timeout`** (add, remove)");
   });
 
   it("falls back to the default prefix when the guild has none configured", async () => {

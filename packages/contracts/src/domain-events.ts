@@ -1,8 +1,3 @@
-/**
- * First-class Domain Events for Lumi.
- * Represents core state transitions across the platform.
- */
-
 export interface DomainEvent<P = unknown> {
   eventId: string;
   type: string;

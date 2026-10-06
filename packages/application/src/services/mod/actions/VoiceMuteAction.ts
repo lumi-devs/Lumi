@@ -71,9 +71,6 @@ export class VoiceMuteAction {
 
     return runModerationAction({
       perform: async () => {
-        // Clears a server mute an earlier version of this action (or a
-        // moderator by hand) may have left on them; lifting is otherwise just
-        // the case rows.
         if (targetMember.voice.channel) {
           await targetMember.voice.setMute(false, auditReason);
         }

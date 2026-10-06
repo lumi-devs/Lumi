@@ -1,5 +1,4 @@
-// Event-loop delay monitoring. The single number that says whether a Node
-// process is keeping up: every handler shares one loop, so lag here is lag on
+// Every handler shares one loop, so lag here is lag on
 // commands, heartbeats and gateway acks alike.
 
 import { monitorEventLoopDelay, type IntervalHistogram } from "node:perf_hooks";

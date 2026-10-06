@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
-import { stickyIndex } from "#modules/sticky/services/sticky-index.js";
+import { stickyIndex } from "@lumi/application/services/sticky/sticky-index.js";
 
 describe("stickyIndex", () => {
   let onResyncHandlers: Array<() => void>;

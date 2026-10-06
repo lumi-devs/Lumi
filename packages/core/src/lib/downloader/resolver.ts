@@ -306,7 +306,7 @@ export class DownloadResolver {
       if (recloned) {
         // The clone fallback already replaced the live tree wholesale - there's
         // no pre-fetch checkout left to validate-before-switching, so this is
-        // the one case that still validates in place, same as before.
+        // the one case that still validates in place.
         const newSha = await this._getHeadSha(repoPath);
         if (!newSha) {
           throw new Error(

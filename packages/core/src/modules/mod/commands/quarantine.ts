@@ -83,8 +83,8 @@ const QuarantineRemove: Flow = {
   requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
-    { name: "add", run: "add", default: true },
-    { name: "remove", run: "remove" },
+    { name: "add", run: "add", default: true, requiredPermit: "mod.quarantine" },
+    { name: "remove", run: "remove", requiredPermit: "mod.quarantine" },
   ],
 })
 export class QuarantineCommand extends ModerationSubcommand {

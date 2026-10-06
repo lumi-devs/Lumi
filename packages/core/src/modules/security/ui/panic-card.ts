@@ -25,7 +25,6 @@ export function buildPanicCancelledCard(t: LumiT): CardReply {
   );
 }
 
-/** Status card shown after activation, with a one-button revert. */
 export function buildPanicStatusCard(
   t: LumiT,
   status: { invitesPaused: boolean; lockedCount: number; skippedCount: number },
@@ -45,7 +44,6 @@ export function buildPanicStatusCard(
   );
 }
 
-/** Recovery view when `/panic` is re-run while already active. */
 export function buildPanicAlreadyActiveCard(
   t: LumiT,
   startedAt: Date,

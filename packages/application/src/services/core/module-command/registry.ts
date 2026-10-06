@@ -1,12 +1,8 @@
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 
 /**
- * Registers `/module` and its eleven subcommands.
- *
- * @param registry - The registry handed to the command piece.
  * @param name - The piece's own name, so the slash command never drifts from
  * the prefix command.
- * @param description - The piece's own description.
  */
 export function registerModuleCommand(
   registry: ApplicationCommandRegistry,

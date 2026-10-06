@@ -7,12 +7,9 @@ import {
 import { BanCommand } from "#modules/mod/commands/ban.js";
 import { KickCommand } from "#modules/mod/commands/kick.js";
 import { TimeoutCommand } from "#modules/mod/commands/timeout.js";
-import { UntimeoutCommand } from "#modules/mod/commands/untimeout.js";
 import { WarnCommand } from "#modules/mod/commands/warn.js";
 import { SoftbanCommand } from "#modules/mod/commands/softban.js";
-import { UnbanCommand } from "#modules/mod/commands/unban.js";
 import { QuarantineCommand } from "#modules/mod/commands/quarantine.js";
-import { UnquarantineCommand } from "#modules/mod/commands/unquarantine.js";
 import { LockdownCommand } from "#modules/mod/commands/lockdown.js";
 import { LockCommand } from "#modules/mod/commands/lock.js";
 import { SayCommand } from "#modules/mod/commands/say.js";
@@ -21,7 +18,6 @@ import { NotesCommand } from "#modules/mod/commands/notes.js";
 import { CasesCommand } from "#modules/mod/commands/cases.js";
 import { SanitizeCommand } from "#modules/mod/commands/sanitize.js";
 import { VcMuteCommand } from "#modules/mod/commands/vcmute.js";
-import { VcUnmuteCommand } from "#modules/mod/commands/vcunmute.js";
 import { LumiCommand } from "#modules/core/commands/lumi.js";
 import { RepoCommand } from "#modules/core/commands/repo.js";
 import { DownloadCommand } from "#modules/core/commands/download.js";
@@ -32,12 +28,9 @@ const destructiveModCommands = [
   { name: "ban", Ctor: BanCommand, permit: "mod.*" },
   { name: "kick", Ctor: KickCommand, permit: "mod.*" },
   { name: "timeout", Ctor: TimeoutCommand, permit: "mod.*" },
-  { name: "untimeout", Ctor: UntimeoutCommand, permit: "mod.*" },
   { name: "warn", Ctor: WarnCommand, permit: "mod.*" },
   { name: "softban", Ctor: SoftbanCommand, permit: "mod.softBan" },
-  { name: "unban", Ctor: UnbanCommand, permit: "mod.*" },
   { name: "quarantine", Ctor: QuarantineCommand, permit: "mod.*" },
-  { name: "unquarantine", Ctor: UnquarantineCommand, permit: "mod.*" },
   { name: "lockdown", Ctor: LockdownCommand, permit: "mod.lockdown" },
   { name: "lock", Ctor: LockCommand, permit: "mod.lockdown" },
   { name: "say", Ctor: SayCommand, permit: "mod.say" },
@@ -46,7 +39,6 @@ const destructiveModCommands = [
   { name: "cases", Ctor: CasesCommand, permit: "mod.*" },
   { name: "sanitize", Ctor: SanitizeCommand, permit: "mod.*" },
   { name: "vcmute", Ctor: VcMuteCommand, permit: "mod.voiceMute" },
-  { name: "vcunmute", Ctor: VcUnmuteCommand, permit: "mod.voiceMute" },
 ];
 
 const adminCommands = [
@@ -97,9 +89,9 @@ describe("command permission enforcement", () => {
         expect(construct(Ctor, name).requiredPermit).toBe(permit);
       });
 
-      it("carries the RequirePermit precondition", () => {
+      it("carries the LumiPermission precondition", () => {
         expect(preconditionNames(construct(Ctor, name))).toContain(
-          "RequirePermit",
+          "LumiPermission",
         );
       });
 
@@ -122,9 +114,9 @@ describe("command permission enforcement", () => {
       expect(construct(Ctor, name).requiredPermit).toBe(permit);
     });
 
-    it("carries the RequirePermit precondition", () => {
+    it("carries the LumiPermission precondition", () => {
       expect(preconditionNames(construct(Ctor, name))).toContain(
-        "RequirePermit",
+        "LumiPermission",
       );
     });
 
@@ -141,8 +133,33 @@ describe("command permission enforcement", () => {
     });
   });
 
-  describe("bot-owner commands", () => {
-    it.each([
+  describe("per-subcommand permits", () => {
+    function entryGates(command: any): Record<string, { name: string; context: unknown }> {
+      const out: Record<string, { name: string; context: unknown }> = {};
+      for (const [key, containers] of command.subcommandPreconditions as Map<string, { entries: any[] }>) {
+        const single = containers.entries.at(0);
+        if (single) out[key] = { name: single.name, context: single.context };
+      }
+      return out;
+    }
+
+    it("ban add/remove carry granular LumiPermission gates", () => {
+      expect(entryGates(construct(BanCommand, "ban"))).toEqual({
+        add: { name: "LumiPermission", context: "mod.ban" },
+        remove: { name: "LumiPermission", context: "mod.unban" },
+      });
+    });
+
+    it("cases entries share the mod.cases gate", () => {
+      const gates = entryGates(construct(CasesCommand, "cases"));
+      expect(Object.keys(gates).sort()).toEqual(["delete", "modify", "view"]);
+      for (const gate of Object.values(gates)) {
+        expect(gate).toEqual({ name: "LumiPermission", context: "mod.cases" });
+      }
+    });
+  });
+
+  describe("bot-owner commands", () => {    it.each([
       { name: "repo", Ctor: RepoCommand },
       { name: "download", Ctor: DownloadCommand },
     ])("$name is gated by the BotOwner precondition", ({ name, Ctor }) => {
@@ -163,7 +180,7 @@ describe("command permission enforcement", () => {
     ])("$name requires no permit", ({ name, Ctor }) => {
       const command = construct(Ctor, name);
       expect(command.requiredPermit).toBeUndefined();
-      expect(preconditionNames(command)).not.toContain("RequirePermit");
+      expect(preconditionNames(command)).not.toContain("LumiPermission");
     });
 
     it.each([

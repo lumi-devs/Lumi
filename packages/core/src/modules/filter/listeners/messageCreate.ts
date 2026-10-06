@@ -108,7 +108,6 @@ export class FilterMessageListener extends GuildMessageListener {
     );
   }
 
-  /** Accrues heat from this message's signals and escalates once thresholds trip. */
   async #heat(
     message: GuildMessage,
     mentionCount: number,

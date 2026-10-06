@@ -7,7 +7,6 @@ import { ModuleUpdateId } from "../constants.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 
-/** Maps a module's runtime state to its status indicator emoji. */
 function stateEmoji(state: string | undefined): string {
   if (state === "loaded") return Emojis.Success;
   if (state === "failed") return Emojis.Warning;
@@ -18,10 +17,6 @@ export function noModulesDiscoveredCard(): CardReply {
   return makeInfoCard("Modules", "No modules discovered.");
 }
 
-/**
- * Renders one paginator entry per module, sorted by name. Each entry is two
- * markdown lines: the heading and the status line.
- */
 export function moduleListEntries(records: readonly ModuleRecord[]): string[] {
   return [...records]
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -38,7 +33,6 @@ export function moduleNotFoundCard(name: string): CardReply {
   return makeErrorCard("Not Found", `Module **${name}** was not discovered.`);
 }
 
-/** The `/module info` detail card: metadata, config fields and loaded pieces. */
 export function moduleInfoCard(
   record: ModuleRecord,
   pieces: ModulePiecesInfo,
@@ -235,7 +229,6 @@ export function multiUpdateReportCard(
   });
 }
 
-/** The `/module help` overview, with shortcuts into the hub panel tabs. */
 export function moduleHelpCard(): CardReply {
   const panelRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()

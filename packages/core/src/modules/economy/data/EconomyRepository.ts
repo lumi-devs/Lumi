@@ -47,7 +47,6 @@ export interface EconomyPaydayInput {
   startBank: number;
 }
 
-/** Economy repository: balances and audit ledger. */
 export class EconomyRepository extends Repository {
   public findAccount(
     guildId: string,
@@ -72,7 +71,6 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /** Applies a balance delta and records a transaction row. */
   public async applyMutation(
     input: EconomyMutationInput,
   ): Promise<{ account: EconomyAccount; balanceAfter: number }> {
@@ -129,7 +127,6 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /** Moves wallet credits between members, burning fee, and writes ledger pair. */
   public async applyTransfer(
     input: EconomyTransferInput,
   ): Promise<{ from: EconomyAccount; to: EconomyAccount }> {

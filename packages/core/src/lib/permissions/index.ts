@@ -1,3 +1,4 @@
+import "../preconditions/LumiPermissionPrecondition.js";
 import "./preconditions/Administrator.js";
 import "./preconditions/BotOwner.js";
 import "./preconditions/GuildOwner.js";
@@ -6,7 +7,6 @@ import "./preconditions/Moderator.js";
 import "./preconditions/ModuleEnabled.js";
 import "./preconditions/NotBlocked.js";
 import "./preconditions/NotIgnored.js";
-import "./preconditions/RequirePermit.js";
 import { authorize } from "./authorize.js";
 import { memberRoleIds } from "./subject.js";
 
@@ -15,7 +15,7 @@ export * from "./authorize.js";
 
 /**
  * Granular permit-node check for interaction handlers, which (unlike
- * Command pieces) never run through RequirePermitPrecondition. Mirrors
+ * Command pieces) never run through LumiPermissionPrecondition. Mirrors
  * that precondition's guild/user/role extraction against `target`.
  */
 export async function hasRequiredPermit(

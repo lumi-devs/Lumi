@@ -9,7 +9,7 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#modules/logging/services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 
 const GUILD_ID = "123456789012345678";
 const ISSUER_ID = "111111111111111111";

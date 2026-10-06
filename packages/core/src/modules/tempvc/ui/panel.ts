@@ -238,7 +238,6 @@ const backToPanelRow = (channelId: string, t?: LumiT) =>
     ),
   );
 
-/** Standalone "back to panel" row, for cards that carry no other controls. */
 export function buildBackRows(channelId: string) {
   return buildSafeActionRows([backToPanelRow(channelId)]);
 }
@@ -416,7 +415,6 @@ export function buildTransferView(
   );
 }
 
-/** Builds the confirmation card for channel deletion. */
 export function buildDeleteConfirmView(
   channel: VoiceBasedChannel,
   t?: LumiT,

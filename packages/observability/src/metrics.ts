@@ -1,6 +1,3 @@
-// Prometheus metrics registry and HTTP server for telemetry scraping.
-
-
 import {
   collectDefaultMetrics,
   Counter,
@@ -22,8 +19,6 @@ export function initMetrics(service: string): void {
   }
 }
 
-// ── RED: command handling ─────────────────────────────────────────────────────
-
 export const commandsTotal = new Counter({
   name: "lumi_commands_total",
   help: "Commands handled, by command/type/status",
@@ -38,8 +33,6 @@ export const commandDuration = new Histogram({
   buckets: [0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
   registers: [registry],
 });
-
-// ── RED: utility piece execution ───────────────────────────────────────────────
 
 export const utilitiesTotal = new Counter({
   name: "lumi_utilities_total",
@@ -56,8 +49,6 @@ export const utilityDuration = new Histogram({
   registers: [registry],
 });
 
-// ── Event bus / queue ─────────────────────────────────────────────────────────
-
 export const busEventsPublished = new Counter({
   name: "lumi_bus_events_published_total",
   help: "Fanout events published to the bus, by event",
@@ -72,7 +63,6 @@ export const busEventsConsumed = new Counter({
   registers: [registry],
 });
 
-/** Depth/lag of a named queue (set from a collect callback or on enqueue/dequeue). */
 export const queueDepth = new Gauge({
   name: "lumi_queue_depth",
   help: "Pending items in a named queue",
@@ -103,7 +93,6 @@ export const streamDlqLength = new Gauge({
   registers: [registry],
 });
 
-/** Counts BullMQ jobs that exhausted all retry attempts, labelled by task name. */
 export const failedJobsTotal = new Counter({
   name: "lumi_scheduled_jobs_failed_total",
   help: "BullMQ scheduled jobs that exhausted all retry attempts",
@@ -111,15 +100,12 @@ export const failedJobsTotal = new Counter({
   registers: [registry],
 });
 
-/** Depth of the shared scheduled-tasks BullMQ queue, by job state. */
 export const scheduledJobsGauge = new Gauge({
   name: "lumi_scheduled_jobs",
   help: "BullMQ scheduled-tasks queue depth, by state",
   labelNames: ["state"] as const,
   registers: [registry],
 });
-
-// ── Gateway / shard ───────────────────────────────────────────────────────────
 
 export const shardLatency = new Gauge({
   name: "lumi_shard_latency_ms",
@@ -140,8 +126,6 @@ export const guildCount = new Gauge({
   help: "Guilds currently cached by this process",
   registers: [registry],
 });
-
-// ── Discord REST ──────────────────────────────────────────────────────────────
 
 export const rest429Total = new Counter({
   name: "lumi_rest_429_total",
@@ -172,8 +156,6 @@ export const restInvalidRequestWarnings = new Counter({
   registers: [registry],
 });
 
-// ── Postgres pool ───────────────────────────────────────────────────────────
-
 export const pgPoolSize = new Gauge({
   name: "lumi_pg_pool_size",
   help: "Configured max connections for the pg pool",
@@ -192,8 +174,6 @@ export const pgPoolWaiting = new Gauge({
   registers: [registry],
 });
 
-// ── Prisma query latency ────────────────────────────────────────────────────
-
 export const dbQueryDuration = new Histogram({
   name: "lumi_db_query_duration_seconds",
   help: "Prisma query duration in seconds, by model and operation",
@@ -209,8 +189,6 @@ export const dbSlowQueriesTotal = new Counter({
   registers: [registry],
 });
 
-// ── Valkey command latency ───────────────────────────────────────────────────
-
 // Command name only (bounded, ~200 possible values) - args/keys would be
 // unbounded cardinality. Blocking stream reads (XREAD/XREADGROUP with BLOCK)
 // are excluded by the caller since their wait time isn't latency.
@@ -221,8 +199,6 @@ export const valkeyCommandDuration = new Histogram({
   buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [registry],
 });
-
-// ── Cache ─────────────────────────────────────────────────────────────────────
 
 export const cacheHits = new Counter({
   name: "lumi_cache_hits_total",
@@ -237,8 +213,6 @@ export const cacheMisses = new Counter({
   labelNames: ["cache"] as const,
   registers: [registry],
 });
-
-// ── Bulkheads (Semaphore) ────────────────────────────────────────────────────
 
 export const semaphoreInFlight = new Gauge({
   name: "lumi_semaphore_in_flight",
@@ -261,8 +235,6 @@ export const semaphoreRejectedTotal = new Counter({
   registers: [registry],
 });
 
-// ── Dashboard events (SSE) ───────────────────────────────────────────────────
-
 export const dashboardEventPublishFailures = new Counter({
   name: "lumi_dashboard_event_publish_failures_total",
   help: "Dashboard SSE events dropped or failed to publish, by reason",
@@ -270,7 +242,6 @@ export const dashboardEventPublishFailures = new Counter({
   registers: [registry],
 });
 
-/** Start a tiny /metrics HTTP server. No-op (returns null) if METRICS_ENABLED=false. */
 export function startMetricsServer(port: number): ReturnType<typeof Bun.serve> | null {
   if (process.env["METRICS_ENABLED"] === "false") return null;
   if (typeof Bun === "undefined" || !Bun?.serve) return null;

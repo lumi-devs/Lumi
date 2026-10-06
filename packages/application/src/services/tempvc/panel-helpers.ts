@@ -16,15 +16,10 @@ import { TempVcPanelId } from "#modules/tempvc/constants.js";
 import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
 
 /**
- * Guards every owner-only panel control.
- *
  * @remarks
  *
  * Staff pass through {@linkcode TempVcUtility.canManage} even when they do not
  * own the channel, so this is not a plain owner-id comparison.
- *
- * @param t - Translator; falls back to English when the caller has none.
- * @throws UserError - `TempVcNotOwner` when neither check passes.
  */
 export function assertOwner(
   service: TempVcUtility,

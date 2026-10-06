@@ -72,7 +72,6 @@ export function resolveGeneratorName(
 
 @ApplyOptions<Piece.Options>({ name: "tempvc" })
 export default class TempVcUtility extends Utility {
-  /** True if this user must wait before creating another channel. */
   public async onCreateCooldown(
     guildId: string,
     userId: string,
@@ -84,7 +83,6 @@ export default class TempVcUtility extends Utility {
     ));
   }
 
-  /** Creates a temporary voice channel and moves the member in. */
   public async createVc(
     member: GuildMember,
     generator: VoiceBasedChannel,
@@ -159,7 +157,6 @@ export default class TempVcUtility extends Utility {
     }
   }
 
-  /** Sorts voice channels by grouping generators, managed VCs, and static VCs. */
   public async reorderChannels(
     guild: Guild,
     categoryId: string,
@@ -225,7 +222,6 @@ export default class TempVcUtility extends Utility {
     }
   }
 
-  /** Schedules a debounced channel cleanup task. */
   public async scheduleCleanup(
     guildId: string,
     channelId: string,
@@ -246,7 +242,6 @@ export default class TempVcUtility extends Utility {
     ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));
   }
 
-  /** Deletes the channel if it is empty. */
   public async runCleanup(data: {
     guildId: string;
     channelId: string;
@@ -277,7 +272,6 @@ export default class TempVcUtility extends Utility {
     }
   }
 
-  /** Reconciles channel cleanup at startup. */
   public async reconcileGuild(guild: Guild): Promise<void> {
     const records = await listVcRecords(guild.id);
     for (const [channelId] of records) {
@@ -368,7 +362,6 @@ export default class TempVcUtility extends Utility {
     return listGenerators(guildId);
   }
 
-  /** Toggles per-channel connection or visibility restriction. */
   async #setRestriction(
     channel: VoiceBasedChannel,
     record: VcRecord,

@@ -96,10 +96,8 @@ function assertPositiveInteger(amount: number): void {
 }
 
 /**
- * Domain service for the guild-scoped economy. Commands resolve the guild's
- * {@linkcode EconomyConfig} and call one method per action; every balance
- * mutation funnels into `EconomyRepository`, which applies it together with
- * its ledger row inside a single database transaction.
+ * Every balance mutation funnels into `EconomyRepository`, which applies it
+ * together with its ledger row inside a single database transaction.
  */
 export class BankService {
   public constructor(

@@ -65,8 +65,8 @@ const VcMuteRemove: Flow = {
   requiredPermit: "mod.voiceMute",
   prefixEnabled: true,
   subcommands: [
-    { name: "add", run: "add", default: true },
-    { name: "remove", run: "remove" },
+    { name: "add", run: "add", default: true, requiredPermit: "mod.voiceMute" },
+    { name: "remove", run: "remove", requiredPermit: "mod.voiceMute" },
   ],
 })
 export class VcMuteCommand extends ModerationSubcommand {

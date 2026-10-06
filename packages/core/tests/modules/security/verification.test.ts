@@ -6,8 +6,8 @@ import {
   grantVerified,
   advanceChallenge,
   postOrEditVerifyPanel,
-} from "#modules/security/services/verification.js";
-import { MaxAttempts, type CaptchaState } from "#modules/security/services/captcha.js";
+} from "@lumi/application/services/security/verification.js";
+import { MaxAttempts, type CaptchaState } from "@lumi/application/services/security/captcha.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 

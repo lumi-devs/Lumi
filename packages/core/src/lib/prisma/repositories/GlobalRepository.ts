@@ -43,7 +43,6 @@ export class GlobalRepository extends Repository {
     return updated;
   }
 
-  /** Set maintenance mode status and optional message. */
   public async setMaintenanceMode(
     enabled: boolean,
     message?: string | null,

@@ -2,25 +2,16 @@ import { Time } from "@sapphire/time-utilities";
 
 export interface HeatConfig {
   enabled: boolean;
-  /** Points added for every message from a non-exempt member. */
   perMessage: number;
-  /** Points added per user/role mention. */
   perMention: number;
-  /** Points added when a message repeats the member's previous one. */
   perDuplicate: number;
-  /** Points added when a message is a reworded/partial repeat of the member's previous one. */
   perSimilar: number;
   /** Similarity ratio (0-1) against the previous message above which `perSimilar` applies. */
   similarityThreshold: number;
-  /** Points added when a message has an unusually high ratio of combining marks (zalgo text). */
   perZalgo: number;
-  /** Points added when a message trips a hard filter rule. */
   perFilterHit: number;
-  /** Points added per attachment (image/embed-spam signal). */
   perAttachment: number;
-  /** Points added per emoji (custom or unicode). */
   perEmoji: number;
-  /** Points added when the message contains a link (advertisement signal). */
   perLink: number;
   /** `perMessage`/`perLink` are multiplied by this for webhook-sent messages. */
   webhookMultiplier: number;
@@ -52,7 +43,6 @@ export interface HeatConfig {
 
 export type HeatAction = "none" | "warn" | "timeout" | "quarantine";
 
-/** Linear decay: subtract `decayPerMinute` for every minute since the last touch. */
 export function decayHeat(
   stored: number,
   lastTs: number,
@@ -103,12 +93,10 @@ const HeatUrlRe = /https?:\/\/[^\s/<>"']+/i;
 const CustomEmojiRe = /<a?:\w+:\d+>/g;
 const UnicodeEmojiRe = /\p{Extended_Pictographic}/gu;
 
-/** True if the message contains a link — a cheap advertisement/spam signal. */
 export function containsLink(content: string): boolean {
   return HeatUrlRe.test(content);
 }
 
-/** Counts custom (`<:name:id>`) and unicode emoji in a message. */
 export function countEmoji(content: string): number {
   const custom = content.match(CustomEmojiRe)?.length ?? 0;
   const withoutCustom = content.replace(CustomEmojiRe, "");
@@ -118,7 +106,6 @@ export function countEmoji(content: string): number {
 
 const CombiningMarkRe = /\p{M}/gu;
 
-/** True if combining marks (`\p{M}`) make up more than `ratioThreshold` of the message — zalgo text. */
 export function isZalgo(content: string, ratioThreshold = 0.5): boolean {
   if (content.length === 0) return false;
   const marks = content.match(CombiningMarkRe)?.length ?? 0;

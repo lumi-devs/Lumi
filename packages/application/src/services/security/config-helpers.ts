@@ -1,8 +1,5 @@
 import type { GateAction } from "./join-gate.js";
 
-/**
- * Extracts a number config value with a fallback default.
- */
 export function getConfigNumber(
 	raw: Record<string, unknown>,
 	key: string,
@@ -11,9 +8,6 @@ export function getConfigNumber(
 	return typeof raw[key] === "number" ? (raw[key]) : fallback;
 }
 
-/**
- * Extracts a string config value, returning null if missing or empty.
- */
 export function getConfigString(
 	raw: Record<string, unknown>,
 	key: string,
@@ -22,10 +16,7 @@ export function getConfigString(
 	return typeof v === "string" && v ? v : null;
 }
 
-/**
- * Extracts a GateAction config value with a fallback default.
- * Valid values: "log" | "kick" | "timeout" | "quarantine".
- */
+/** Valid values: "log" | "kick" | "timeout" | "quarantine". */
 export function getConfigAction(
 	raw: Record<string, unknown>,
 	key: string,

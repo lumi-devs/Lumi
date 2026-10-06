@@ -95,8 +95,8 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
   cooldownLimit: 3,
   cooldownDelay: 5000,
   subcommands: [
-    { name: "add", run: "add", default: true },
-    { name: "remove", run: "remove" },
+    { name: "add", run: "add", default: true, requiredPermit: "mod.ban" },
+    { name: "remove", run: "remove", requiredPermit: "mod.unban" },
   ],
 })
 export class BanCommand extends ModerationSubcommand {

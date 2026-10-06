@@ -12,7 +12,7 @@
   "targetUtility": "worker",
   "subStores": [
     "commands",
-    "interaction-handlers"
+    "interactions"
   ],
   "configFields": [
     {

@@ -3,11 +3,11 @@ import TempVcUtility, {
   resolveGeneratorName,
 } from "#modules/tempvc/utilities/TempVcUtility.js";
 import { container } from "@sapphire/framework";
-import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
-import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/services/voice-occupancy.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "@lumi/application/services/tempvc/voice-occupancy.js";
 import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data/tempvc.js";
 
-vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
+vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
   clearVoiceChannelOccupancy: vi.fn(),
 }));
@@ -23,7 +23,7 @@ vi.mock("#modules/tempvc/data/tempvc.js", () => ({
   removeGenerator: vi.fn(),
 }));
 
-vi.mock("#modules/tempvc/services/registry.js", () => ({
+vi.mock("@lumi/application/services/tempvc/registry.js", () => ({
   tempVcRegistry: {
     nextNumber: vi.fn(),
     addVc: vi.fn(),

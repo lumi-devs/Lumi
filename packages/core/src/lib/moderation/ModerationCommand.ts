@@ -185,31 +185,6 @@ export async function checkHierarchy(
     : null;
 }
 
-/**
- * Drives a single moderation flow to completion and replies with its outcome.
- *
- * @remarks
- *
- * The call order below is part of the contract, not an implementation detail:
- * on the prefix path {@linkcode CommandContext} binds positional arguments in
- * the order the getters are called, so a hook that reads an extra option must
- * run in the slot the command's own option list puts it in.
- *
- * 1. Defer the reply, then resolve the guild's translator.
- * 2. {@linkcode ModerationCommand.Flow.resolveTarget}. A nullish target ends
- *    the run with {@linkcode ModerationCommand.Flow.targetNotFound}.
- * 3. {@linkcode ModerationCommand.Flow.preHandle} - the slot for reading and
- *    validating options that sit between the target and the reason. An `Err`
- *    ends the run with that reply.
- * 4. {@linkcode ModerationCommand.Flow.resolveReason}, which consumes the rest
- *    of a prefix invocation by default and so must run last.
- * 5. {@linkcode ModerationCommand.Flow.action}, wrapped in a `try`/`catch` only
- *    when the flow declares a `logScope`.
- * 6. {@linkcode ModerationCommand.Flow.buildSuccessMessage}.
- *
- * @param ctx - The invocation this flow replies to.
- * @param flow - The hooks describing the one action being taken.
- */
 interface PreparedEntry<Target, Prepared> {
   target: Target;
   prepared: Prepared;
@@ -225,7 +200,6 @@ const DefaultBatchConcurrency = 1;
 /** Delay between starting batched Discord API mutations, so a 25-target run does not burst. */
 const BatchStaggerMs = 250;
 
-/** Builds one line of the batch-result card for a target that didn't make it through. */
 function rejectedLine<Target extends ModerationCommand.TargetLike>(
   entry: RejectedEntry<Target>,
 ): string {
@@ -613,7 +587,6 @@ export namespace ModerationCommand {
   /** Anything a flow can address and log a target id for. */
   export type TargetLike = string | { id: string };
 
-  /** The title and body of one moderation card. */
   export interface Reply {
     title: string;
     body: string;

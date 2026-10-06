@@ -57,6 +57,15 @@ export function DefineModule(options: ModuleOptions) {
 /**
  * Abstract base class for all Lumi feature modules.
  * Inherits from Sapphire's `Piece` to allow registration within Sapphire stores.
+ *
+ * Piece lifecycle (owned entirely by Sapphire's store system):
+ * load → validate → register → ready → execute → unload.
+ * `ModuleStore` inserts modules via `Store.insert()`, which runs `onLoad`;
+ * `ModuleStore.unload()` runs `onUnload` through `Store.unload()`.
+ *
+ * Mandatory cleanup rule: anything `onLoad` registers (timers, listeners,
+ * task handlers, external subscriptions) MUST be undone in `onUnload`.
+ * Subclass overrides of either hook MUST call `super`.
  */
 export abstract class Module extends Piece {
   public readonly displayName: string;
@@ -111,11 +120,19 @@ export abstract class Module extends Piece {
 
   /**
    * Re-arms any delayed jobs or background tasks this module owns after a restart.
+   *
+   * Runs from {@linkcode Module.onLoad}. Anything registered here that holds a
+   * live resource must be released by the matching {@linkcode Module.onUnload}.
    */
   public reconcileScheduledJobs(): Awaitable<void> {
     return undefined;
   }
 
+  /**
+   * Load hook: runs once the store registers this piece. Subclass overrides
+   * MUST call `super.onLoad()`, and MUST pair every registration with cleanup
+   * in {@linkcode Module.onUnload}.
+   */
   public override onLoad(): Awaitable<unknown> {
     void Promise.resolve(this.reconcileScheduledJobs()).catch(
       (err: unknown) => {
@@ -128,6 +145,13 @@ export abstract class Module extends Piece {
     return super.onLoad();
   }
 
+  /**
+   * Unload hook: MUST undo everything {@linkcode Module.onLoad} (or a subclass
+   * override) registered. Sapphire's `Store.unload()` — the only path
+   * `ModuleStore.unload()` uses — always runs this, so cleanup here is the
+   * guarantee that a disabled module leaves no live registrations behind.
+   * Subclass overrides MUST call `super.onUnload()`.
+   */
   public override onUnload(): Awaitable<unknown> {
     return super.onUnload();
   }

@@ -5,11 +5,7 @@ import { sweepExpiredPending } from "./verification.js";
 /** Sweeps touch the Discord API per guild, so the fan-out stays capped. */
 const SweepConcurrency = 10;
 
-/**
- * Broadcast fire handler for the periodic verification sweep. Each worker
- * iterates its own `guilds.cache` (shard affinity preserved) and evicts members
- * whose verification window elapsed.
- */
+/** Each worker iterates its own `guilds.cache` (shard affinity preserved). */
 export async function handleVerifySweepFire(): Promise<void> {
   const guilds = [...container.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, SweepConcurrency, async (guild) => {

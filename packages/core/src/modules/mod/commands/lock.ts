@@ -30,8 +30,8 @@ function resolveTargetChannel(ctx: CommandContext): LockableChannel | null {
   requiredPermit: "mod.lockdown",
   prefixEnabled: true,
   subcommands: [
-    { name: "enable", run: "enable", default: true },
-    { name: "disable", run: "disable" },
+    { name: "enable", run: "enable", default: true, requiredPermit: "mod.lockdown" },
+    { name: "disable", run: "disable", requiredPermit: "mod.lockdown" },
   ],
 })
 export class LockCommand extends BaseSubcommand {

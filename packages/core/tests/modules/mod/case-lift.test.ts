@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
-import { liftModerationCaseWithUndo } from '#modules/mod/services/case-lift.js';
+import { liftModerationCaseWithUndo } from '@lumi/application/services/mod/case-lift.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 import type { ModerationCase } from '@prisma/client';
 

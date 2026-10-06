@@ -11,6 +11,8 @@ import {
   type ApplicationCommandRegistry,
   type Args,
 } from "@sapphire/framework";
+import { LumiCommand } from "#lib/discord-adapter/LumiCommand.js";
+import { LumiSubcommand } from "#lib/discord-adapter/LumiSubcommand.js";
 import { fetchT } from "@sapphire/plugin-i18next";
 import { Subcommand } from "@sapphire/plugin-subcommands";
 import {
@@ -85,15 +87,6 @@ function mapRequiredPermitToDiscordPermission(
   return undefined;
 }
 
-function appendPermitPrecondition(
-  instance: { preconditions: Command["preconditions"] },
-  permitNode: string | undefined,
-): void {
-  if (permitNode) {
-    instance.preconditions.append("RequirePermit");
-  }
-}
-
 interface LumiCommandExtras {
   /** Permit node required to invoke the command, e.g. `mod.ban`. */
   requiredPermit?: string;
@@ -135,6 +128,8 @@ interface RunMappingEntry {
   entries?: RunMappingEntry[];
   chatInputRun?: unknown;
   messageRun?: unknown;
+  preconditions?: unknown;
+  requiredPermit?: string;
   [key: string]: unknown;
 }
 
@@ -169,7 +164,6 @@ function transformRunMappings(
   });
 }
 
-/** Define the instance wrapper methods the rewritten mappings reference. */
 function defineCtxWrappers(
   piece: object,
   runNames: Set<string>,
@@ -205,6 +199,26 @@ function defineCtxWrappers(
 
 interface SharedCommandOptions extends LumiCommandExtras {
   preconditions?: Command.Options["preconditions"];
+}
+
+/**
+ * Give mapping entries carrying `requiredPermit` (and no explicit
+ * `preconditions`) a per-subcommand `LumiPermission` gate, enforced by the
+ * subcommands plugin before dispatch, in addition to the command-level gates.
+ */
+function applyEntryPermits(entries: RunMappingEntry[] | undefined): void {
+  if (!entries) return;
+  for (const entry of entries) {
+    if (entry.type === "group" || Array.isArray(entry.entries)) {
+      applyEntryPermits(entry.entries);
+      continue;
+    }
+    if (entry.requiredPermit && entry.preconditions === undefined) {
+      entry.preconditions = [
+        { name: "LumiPermission", context: entry.requiredPermit },
+      ];
+    }
+  }
 }
 
 function declaresPrecondition(
@@ -429,8 +443,8 @@ function guardAutocompleteRun(
  * `messageRun` when `prefixEnabled`), instruments the run methods, and arranges
  * for the defaults to be seeded onto every builder the subclass registers.
  */
-export abstract class BaseCommand extends Command implements CommandLike {
-  public readonly requiredPermit: string | undefined;
+export abstract class BaseCommand extends LumiCommand implements CommandLike {
+  public override readonly requiredPermit: string | undefined;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
@@ -470,7 +484,7 @@ export abstract class BaseCommand extends Command implements CommandLike {
   public run?(ctx: CommandContext): Awaited<unknown> | Promise<unknown>;
 
   /**
-   * Appends the `RequirePermit` precondition when the command declares a
+   * Appends the `LumiPermission` precondition when the command declares a
    * permit node, plus the `MaintenanceMode` and `ModuleEnabled` gates every
    * Lumi command carries.
    */
@@ -479,7 +493,6 @@ export abstract class BaseCommand extends Command implements CommandLike {
   ): void {
     super.parseConstructorPreConditions(options);
     this.preconditions.append("MaintenanceMode");
-    appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }
 }
@@ -493,8 +506,8 @@ export abstract class BaseCommand extends Command implements CommandLike {
  * `run: "methodName"` mapping entries into generated wrapper methods so a
  * subcommand handler can take a {@linkcode CommandContext} directly.
  */
-export abstract class BaseSubcommand extends Subcommand implements CommandLike {
-  public readonly requiredPermit: string | undefined;
+export abstract class BaseSubcommand extends LumiSubcommand implements CommandLike {
+  public override readonly requiredPermit: string | undefined;
   public readonly integrationTypes: ApplicationIntegrationType[];
   public readonly contexts: InteractionContextType[];
   public readonly defaultMemberPermissions: bigint | undefined;
@@ -510,6 +523,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
       options.prefixEnabled ?? false,
       runNames,
     );
+    applyEntryPermits(subcommands);
     super(context, {
       ...options,
       subcommands: subcommands as BaseSubcommand.Options["subcommands"],
@@ -529,7 +543,7 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   }
 
   /**
-   * Appends the `RequirePermit` precondition when the command declares a
+   * Appends the `LumiPermission` precondition when the command declares a
    * permit node, plus the `MaintenanceMode` and `ModuleEnabled` gates every
    * Lumi command carries.
    */
@@ -538,7 +552,6 @@ export abstract class BaseSubcommand extends Subcommand implements CommandLike {
   ): void {
     super.parseConstructorPreConditions(options);
     this.preconditions.append("MaintenanceMode");
-    appendPermitPrecondition(this, options.requiredPermit);
     this.preconditions.append("ModuleEnabled");
   }
 }
@@ -552,7 +565,7 @@ type LumiSubcommandMappings = NonNullable<Subcommand.Options["subcommands"]>;
 type LumiMappingEntry = LumiSubcommandMappings[number];
 type WithRun<T> = T extends { entries: infer E extends readonly unknown[] }
   ? Omit<T, "entries"> & { entries: Array<WithRun<E[number]>> }
-  : T & { run?: string };
+  : T & { run?: string; requiredPermit?: string };
 
 export namespace BaseCommand {
   export type Options = Command.Options & LumiCommandExtras;

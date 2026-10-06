@@ -5,7 +5,7 @@ import {
   recordAction,
   isExempt,
   respond,
-} from "#modules/security/services/anti-nuke.js";
+} from "@lumi/application/services/security/anti-nuke.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 

@@ -63,7 +63,6 @@ export interface HubOverview {
   iconUrl?: string | null;
 }
 
-/** The hub landing card: a counts summary plus the per-tab hint list. */
 export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
   const prefix = o.prefix ?? DefaultPrefix;
   const glanceLines = [
@@ -106,7 +105,6 @@ export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
   );
 }
 
-/** The settings tab: prefix editing, language picker, and core maintenance. */
 export function buildSettingsView(
   settings: { prefix: string | null; locale: string },
   t?: LumiT,

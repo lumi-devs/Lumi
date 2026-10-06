@@ -29,9 +29,6 @@ export class QueueEventsWatcher {
     return this.#events;
   }
 
-  /**
-   * Watches for failed jobs and resolves whether they exhausted all retry attempts.
-   */
   public watchExhaustedRetries(
     getJobFn: (jobId: string) => Promise<{
       name?: string;
@@ -85,9 +82,6 @@ export class QueueEventsWatcher {
   }
 }
 
-/**
- * Higher-level helper to watch failed jobs on a queue.
- */
 export function watchFailedJobs(
   queue: Queue | { queue: string; options?: { connection?: QueueConnectionOptions }; client: { getJob: (id: string) => Promise<any> } },
   logger?: QueueLogger,

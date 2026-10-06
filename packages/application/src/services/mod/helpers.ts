@@ -7,7 +7,7 @@ import { cancelTask } from "#lib/schedule-task.js";
 
 const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
 
-/** Schedule a one-shot lift job to fire exactly when the case expires. Idempotent per case id. */
+/** Idempotent per case id. */
 export async function scheduleCaseLift(
   container: Container,
   c: { id: number; expiresAt: Date | null },
@@ -35,10 +35,6 @@ export async function scheduleCaseLift(
   );
 }
 
-/**
- * Lifts all active cases for a user's moderation action and cancels their scheduled tasks.
- * Creates a new unmute/unvoice-mute case record.
- */
 export async function liftAllActiveCases(
   container: Container,
   guild: Guild,

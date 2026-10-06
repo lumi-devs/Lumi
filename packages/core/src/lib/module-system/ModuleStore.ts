@@ -93,7 +93,6 @@ export class ModuleStore extends Store<Module> {
     super(Module, { name: "modules" });
   }
 
-  /** Adds a new root URL to the store for module discovery. */
   public addRoot(root: URL) {
     this.#roots.push(root);
   }
@@ -339,14 +338,11 @@ export class ModuleStore extends Store<Module> {
 
   /**
    * Retrieves all module records currently tracked by the store.
-   *
-   * @returns An array of {@link ModuleRecord} instances.
    */
   public all() {
     return Array.from(this.#records.values());
   }
 
-  /** Retrieves a specific module record by name, or `undefined` if not found. */
   public getRecord(name: string) {
     return this.#records.get(name);
   }
@@ -388,8 +384,6 @@ export class ModuleStore extends Store<Module> {
 
   /**
    * Retrieves all fully loaded module records.
-   *
-   * @returns An array of {@link ModuleRecord} instances representing loaded modules.
    */
   public loaded(): ModuleRecord[] {
     return Array.from(this.values())
@@ -424,6 +418,13 @@ export class ModuleStore extends Store<Module> {
       if (!(await this.#exists(storePath))) continue;
 
       store.registerPath(storePath);
+
+      if (store.name === "interaction-handlers") {
+        for (const subdir of ["buttons", "selects", "modals", "autocomplete"]) {
+          const subPath = path.join(record.dir, "interactions", subdir);
+          if (await this.#exists(subPath)) store.registerPath(subPath);
+        }
+      }
     }
 
     try {
@@ -443,8 +444,8 @@ export class ModuleStore extends Store<Module> {
       if (meta?.configSchema) {
         this.#schemaCache.set(name, meta.configSchema);
       }
-      this.set(
-        name,
+      // insert (not set) so onLoad/onUnload lifecycle runs.
+      await this.insert(
         new mod.default({ name: record.name, root: record.dir, store: this }, meta),
       );
       record.meta = meta ?? record.meta;
@@ -519,8 +520,8 @@ export class ModuleStore extends Store<Module> {
     try {
       const commands = await this.#addons.start(record);
       registerProxyCommands(this.#addons, record.name, record.dir, commands);
-      this.set(
-        record.name,
+      // insert (not set) so onLoad/onUnload lifecycle runs.
+      await this.insert(
         new ProxyModule(
           { name: record.name, path: record.dir, root: record.dir, store: this },
           { ...record.meta, name: record.name },
@@ -617,27 +618,6 @@ export class ModuleStore extends Store<Module> {
         );
       }
     });
-  }
-
-  async #walkStoreFiles(dir: string, baseDir = dir): Promise<string[]> {
-    const out: string[] = [];
-    const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      if (entry.name.startsWith("_") || entry.name.startsWith(".")) continue;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        out.push(...(await this.#walkStoreFiles(full, baseDir)));
-      } else if (
-        entry.isFile() &&
-        (entry.name.endsWith(".ts") ||
-          entry.name.endsWith(".js") ||
-          entry.name.endsWith(".mts")) &&
-        !entry.name.endsWith(".d.ts")
-      ) {
-        out.push(path.relative(baseDir, full));
-      }
-    }
-    return out;
   }
 
   async #exists(p: string) {

@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import TempVcVoiceStateListener from "#modules/tempvc/listeners/voiceStateUpdate.js";
-import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
-import { trackVoiceState } from "#modules/tempvc/services/voice-occupancy.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import { trackVoiceState } from "@lumi/application/services/tempvc/voice-occupancy.js";
 
-vi.mock("#modules/tempvc/services/registry.js", () => ({
+vi.mock("@lumi/application/services/tempvc/registry.js", () => ({
   tempVcRegistry: {
     isManagedVc: vi.fn().mockResolvedValue(false),
     getGenerator: vi.fn().mockResolvedValue(null),
   },
 }));
 
-vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
+vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
   trackVoiceState: vi.fn().mockResolvedValue({ prevChannelId: null }),
   isVoiceChannelEmpty: vi.fn().mockResolvedValue(false),
 }));

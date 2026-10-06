@@ -472,7 +472,6 @@ export class FilterUtility extends Utility {
     await this.container.invalidation.invalidate(ValkeyKeys.filterAutoLockdown(guildId));
   }
 
-  /** Mark a guild as most-recently-used and return its rule set. */
   #touch(guildId: string): CompiledRules | null {
     const rules = this._guilds.get(guildId) ?? null;
     this._guilds.delete(guildId);

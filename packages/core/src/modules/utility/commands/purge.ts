@@ -33,7 +33,6 @@ type MessageFilter = (message: Message) => boolean;
  */
 type MessageBatchFilter = (messages: Message[]) => Promise<Set<string>>;
 
-/** Aborts a purge without deleting anything; surfaced to the invoking channel. */
 class PurgeAbortedError extends Error {
   public constructor(message: string) {
     super(message);

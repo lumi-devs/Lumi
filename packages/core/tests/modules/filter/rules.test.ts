@@ -9,7 +9,7 @@ import {
   findBlockedLink,
   MaxRegexLength,
   type RuleConfig,
-} from "#modules/filter/services/rules.js";
+} from "@lumi/application/services/filter/rules.js";
 
 const baseConfig: RuleConfig = {
   terms: [],

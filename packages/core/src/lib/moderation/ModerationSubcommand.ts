@@ -16,7 +16,6 @@ import {
  * instead, and get the identical pipeline and call order.
  */
 export abstract class ModerationSubcommand extends BaseSubcommand {
-  /** Runs one entry's flow and replies with its outcome. */
   protected runFlow<
     Target extends ModerationCommand.TargetLike,
     Outcome,

@@ -20,9 +20,9 @@ function isCaseAction(value: string): value is $Enums.CaseAction {
   requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
-    { name: "view", run: "view", default: true },
-    { name: "modify", run: "modify" },
-    { name: "delete", run: "delete" },
+    { name: "view", run: "view", default: true, requiredPermit: "mod.cases" },
+    { name: "modify", run: "modify", requiredPermit: "mod.cases" },
+    { name: "delete", run: "delete", requiredPermit: "mod.cases" },
   ],
 })
 export class CasesCommand extends BaseSubcommand {

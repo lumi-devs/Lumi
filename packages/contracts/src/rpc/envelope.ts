@@ -85,7 +85,6 @@ export interface CodedRpcErrorOptions {
   retryAfterMs?: number;
 }
 
-/** Thrown inside the RPC pipeline to put a specific `code` on the failure envelope. */
 export class CodedRpcError extends Error {
   public readonly code: RpcFailureCode;
   public readonly retryable: boolean;
@@ -148,7 +147,6 @@ const RpcResponseEnvelopeSchema = s.object({
   retryAfterMs: s.number().optional(),
 });
 
-/** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
 export function parseRpcResponse(raw: unknown): RpcResponse {
   let envelope;
   try {

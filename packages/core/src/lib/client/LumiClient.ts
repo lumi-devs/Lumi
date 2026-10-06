@@ -68,6 +68,7 @@ export class LumiClient extends SapphireClient {
     });
   }
 
+  /** Registration boundary: `super.login()` is the only path that registers commands with Discord. */
   public override async login(token?: string) {
     await container.prisma.$connect();
     await container.invalidation.start();

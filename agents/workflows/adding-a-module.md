@@ -15,12 +15,15 @@ packages/core/src/modules/<name>/
   data/<name>.ts                # Valkey/Prisma read-write functions, imported by commands/utilities
   commands/<name>.ts
   listeners/<event>.ts          # optional
-  interaction-handlers/<x>.ts   # optional, only if the module has buttons/selects/modals
+  interactions/buttons/<x>.ts   # optional, only if the module has buttons/selects/modals
+  interactions/selects/<x>.ts
+  interactions/modals/<x>.ts
+  interactions/autocomplete/<x>.ts
   scheduled-tasks/<x>.ts        # optional
   utilities/<Name>Utility.ts    # optional, only if commands/handlers need shared stateful logic
 ```
 
-Only `commands`, `listeners`, `interaction-handlers`, `preconditions`, `utilities`,
+Only `commands`, `listeners`, `interactions`, `preconditions`, `utilities`,
 `scheduled-tasks`, `routes` are auto-discovered sub-stores (`KnownSubstores`,
 `packages/contracts/src/manifest.ts:10-18`). A `services/` directory (used by `economy`)
 or a `lib/` directory (used by `afk`, `mod`) is plain application code you import
@@ -176,7 +179,7 @@ of the known sub-store directories physically exist) and the derived
   "conflicts": [],
   "configOverrides": true,
   "targetUtility": "worker",
-  "subStores": ["commands", "listeners", "interaction-handlers", "utilities", "scheduled-tasks"],
+  "subStores": ["commands", "listeners", "interactions", "utilities", "scheduled-tasks"],
   "configFields": [
     {
       "key": "nick_prefix_enabled",

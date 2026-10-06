@@ -1,6 +1,3 @@
-// @lumi/observability - Cross-service telemetry primitives (tracing, metrics, logger).
-
-
 // NOTE: extensionless relative specifiers (not "./boot.js" etc.) are
 // deliberate — see the matching note in packages/contracts/src/index.ts.
 // This repo's "moduleResolution": "Bundler" resolves either style

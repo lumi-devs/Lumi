@@ -99,7 +99,6 @@ export class SecurityRepository extends Repository {
     });
   }
 
-  /** Deletes every backup for the guild past the most recent `keep`. */
   public async pruneBackups(guildId: string, keep: number): Promise<number> {
     const stale = await this.prisma.guildBackup.findMany({
       where: { guildId },

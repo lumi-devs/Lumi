@@ -1,9 +1,6 @@
 import type { Guild, User, GuildMember } from "discord.js";
 import { makeErrorCard } from "#lib/ui/cards.js";
 
-/**
- * Sends a moderation action DM to a user/member. Silently fails if DMs are closed.
- */
 export async function sendModActionDm(
   target: User | GuildMember,
   emoji: string,

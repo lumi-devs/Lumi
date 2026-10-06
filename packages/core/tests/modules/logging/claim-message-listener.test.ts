@@ -6,9 +6,9 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#modules/logging/services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 
-vi.mock("#modules/logging/services/claims.js", () => ({
+vi.mock("@lumi/application/services/logging/claims.js", () => ({
   consumeLogClaimCode: vi.fn(),
   normalizeLogClaimCode: vi.fn((raw: string) => (raw === "AB23CD" ? "AB23CD" : null)),
   peekLogClaimCode: vi.fn().mockResolvedValue("issuer-1"),

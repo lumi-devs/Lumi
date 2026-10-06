@@ -1,14 +1,11 @@
 import type { container } from "@sapphire/framework";
 
 export interface ModulePiecesInfo {
-  /** Piece names grouped by the store that loaded them. */
   piecesByStore: Record<string, string[]>;
   totalPieces: number;
 }
 
 /**
- * Collects every loaded piece owned by `moduleName`, grouped by store.
- *
  * Ownership is resolved from each piece's on-disk location, so a module that
  * failed to load reports no pieces. The `modules` store is skipped because its
  * entries are the modules themselves, not their pieces.

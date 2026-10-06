@@ -16,7 +16,6 @@ import type {
   ModalSubmitInteraction,
 } from "discord.js";
 
-/** Any interaction the hub panel can be driven from. */
 export type PanelInteraction =
   ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
@@ -72,7 +71,6 @@ export async function renderSettings(interaction: PanelInteraction, t?: LumiT) {
   );
 }
 
-/** Flattens the guild's permits into one revocable assignment-per-row list. */
 async function loadPermitAssignments(
   guildId: string,
 ): Promise<PermitAssignmentRow[]> {

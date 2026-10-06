@@ -23,11 +23,7 @@ function downloader(): DownloaderUtility {
   return getUtility("downloader");
 }
 
-/**
- * Flips a module's global toggle and reports the outcome.
- *
- * Essential modules refuse to be disabled; enabling is always allowed.
- */
+/** Essential modules refuse to be disabled; enabling is always allowed. */
 export async function setModuleEnabled(
   name: string,
   enabled: boolean,
@@ -55,12 +51,7 @@ export async function setModuleEnabled(
   }
 }
 
-/**
- * Clones and loads a third-party module from a tracked repository.
- *
- * A collision with an existing checkout is not an error: the user is offered
- * the update flow instead.
- */
+/** A collision with an existing checkout is not an error: the user is offered the update flow instead. */
 export async function installModule(
   repoName: string,
   moduleName: string,
@@ -113,10 +104,6 @@ export async function uninstallModule(
   }
 }
 
-/**
- * Re-evaluates a module's full source subtree and re-syncs the application
- * commands it contributes.
- */
 export async function reloadModule(
   moduleName: string,
   userTag: string,
@@ -136,11 +123,6 @@ export async function reloadModule(
   }
 }
 
-/**
- * Pulls new code for a single installed module.
- *
- * @param userId - Scopes the restart prompt the result card may carry.
- */
 export async function updateModule(
   moduleName: string,
   userId: string,
@@ -156,14 +138,7 @@ export async function updateModule(
   }
 }
 
-/**
- * Pulls new code for every module installed through the Downloader.
- *
- * A failure on one module never aborts the sweep - it is recorded and the run
- * continues, so the report card always covers every installed module.
- *
- * @param userId - Scopes the restart prompt the report card may carry.
- */
+/** A failure on one module never aborts the sweep - it is recorded and the run continues. */
 export async function updateAllModules(userId: string): Promise<CardReply> {
   try {
     const installed = await downloader().getInstalledModules();

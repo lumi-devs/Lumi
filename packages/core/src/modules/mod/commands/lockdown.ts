@@ -12,8 +12,8 @@ import { makeErrorCard } from "#lib/ui/cards.js";
   preconditions: ["GuildOnly"],
   requiredPermit: "mod.lockdown",
   subcommands: [
-    { name: "enable", run: "enable" },
-    { name: "disable", run: "disable" },
+    { name: "enable", run: "enable", requiredPermit: "mod.lockdown" },
+    { name: "disable", run: "disable", requiredPermit: "mod.lockdown" },
   ],
 })
 export class LockdownCommand extends BaseSubcommand {

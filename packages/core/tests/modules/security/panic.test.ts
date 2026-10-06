@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "@sapphire/framework";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
+import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 

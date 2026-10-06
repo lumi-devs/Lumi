@@ -44,5 +44,3 @@ export async function evictGuildValkeyState(
   }
 }
 
-// Deprecated alias — remove after callers migrate.
-

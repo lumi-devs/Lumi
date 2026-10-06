@@ -168,7 +168,6 @@ export function valkeyConnectionOptions(
         ...(isTls && { tls: {} }),
       };
     } catch {
-      // Fall through to standard option parsing if URL parsing fails
     }
   }
 

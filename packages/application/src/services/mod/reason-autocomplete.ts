@@ -18,10 +18,8 @@ const DefaultReasonPresets = [
 ];
 
 /**
- * Autocomplete for a command's `reason` option: suggests the guild's
- * configured `mod:predefined_reasons`, falling back to the built-in presets
- * when none are configured. Responds with an empty list for any other
- * focused option so a command can delegate its whole `autocompleteRun` here.
+ * Responds with an empty list for any other focused option so a command can
+ * delegate its whole `autocompleteRun` here.
  */
 export async function respondWithReasonChoices(
   interaction: AutocompleteInteraction,

@@ -50,7 +50,6 @@ async function startSingle(target: Target): Promise<number> {
     try {
       proc.kill(signal);
     } catch {
-      // already exited
     }
   };
   process.on("SIGINT", forward);

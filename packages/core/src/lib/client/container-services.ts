@@ -45,6 +45,7 @@ export function installContainerServices(
   }
   client.stores.register(moduleStore);
   client.stores.registerPath(new URL("../permissions/", import.meta.url));
+  client.stores.registerPath(new URL("../preconditions/", import.meta.url));
 
   const valkey = createValkeyClient();
   const ownedEventBus = createEventBus({

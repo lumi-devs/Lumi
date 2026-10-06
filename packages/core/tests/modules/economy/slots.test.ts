@@ -6,7 +6,7 @@ import {
   resolveSlotPayout,
   spinSlots,
   type SlotRow,
-} from "#modules/economy/services/slots.js";
+} from "@lumi/application/services/economy/slots.js";
 
 describe("slots engine", () => {
   it("keeps Red's jackpot, cherry, and clover combos", () => {

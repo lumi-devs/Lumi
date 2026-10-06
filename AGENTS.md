@@ -72,7 +72,7 @@ must use the `@lumi/*` specifier, never a relative path across a package boundar
 Feature modules live under `packages/core/src/modules/<name>/`, each exporting a class
 decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`), with a
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
-sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
+sub-store directories (`commands/`, `listeners/`, `services/`, `interactions/`,
 `scheduled-tasks/`). For the agent-facing deep dive (lifecycle hooks, config schema builders,
 real gotchas), see [`agents/architecture/module-system.md`](agents/architecture/module-system.md)
 and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md). The public doc

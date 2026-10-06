@@ -413,7 +413,7 @@ export function resolveModerationRetentionDays(): number {
  * to before deleting a batch of rows from any purged table (audit ledger,
  * config history, moderation cases, appeals) - each table gets its own
  * subdirectory. Unset skips archiving entirely: matching rows are deleted
- * with no backup, the behavior before this setting existed.
+ * with no backup.
  */
 export const getAuditArchiveDir = (): string | null => {
   const raw = process.env["AUDIT_ARCHIVE_DIR"]?.trim();

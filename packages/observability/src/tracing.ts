@@ -1,6 +1,3 @@
-// OpenTelemetry tracing setup and helpers.
-
-
 import {
   diag,
   DiagConsoleLogger,
@@ -115,7 +112,6 @@ export function getTracer() {
   return trace.getTracer(TracerName);
 }
 
-/** Run `fn` inside a new active span; records exceptions + ERROR status, always ends the span. */
 export async function withSpan<T>(
   name: string,
   fn: (span: Span) => Promise<T> | T,

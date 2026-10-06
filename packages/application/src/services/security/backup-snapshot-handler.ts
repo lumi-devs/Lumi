@@ -9,12 +9,7 @@ const HourMs = 60 * 60 * 1000;
 /** createBackup is Discord-API heavy, so this fan-out stays tighter than the sweeps. */
 const BackupConcurrency = 5;
 
-/**
- * Broadcast fire handler for the hourly backup sweep. Each worker iterates
- * its own `guilds.cache` (shard affinity preserved) and snapshots any guild
- * whose anti-nuke protection is on and whose last backup is older than its
- * configured interval.
- */
+/** Each worker iterates its own `guilds.cache` (shard affinity preserved). */
 export async function handleBackupSnapshotFire(): Promise<void> {
   const guilds = [...container.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, BackupConcurrency, async (guild) => {

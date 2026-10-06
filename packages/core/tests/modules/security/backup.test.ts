@@ -6,7 +6,7 @@ import {
   createBackup,
   flagRestorePending,
   isRestorePending,
-} from "#modules/security/services/backup.js";
+} from "@lumi/application/services/security/backup.js";
 
 function setContainer(overrides: {
   valkey?: Record<string, unknown>;

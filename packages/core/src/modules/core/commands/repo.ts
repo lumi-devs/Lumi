@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { deriveRepoNameFromUrl } from "../services/url-helpers.js";
+import { deriveRepoNameFromUrl } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { AutocompleteInteraction } from "discord.js";

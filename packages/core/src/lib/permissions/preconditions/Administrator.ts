@@ -1,5 +1,5 @@
 import type { ChatInputCommandInteraction, Message } from "discord.js";
-import { PermitPrecondition } from "#lib/permissions/PermitPrecondition.js";
+import { LumiPermissionPrecondition } from "#lib/preconditions/LumiPermissionPrecondition.js";
 import { permitSubject } from "#lib/permissions/subject.js";
 
 declare module "@sapphire/framework" {
@@ -10,7 +10,7 @@ declare module "@sapphire/framework" {
 
 const DeniedMessage = "You need at least **Administrator** level to use this.";
 
-export class AdministratorPrecondition extends PermitPrecondition {
+export class AdministratorPrecondition extends LumiPermissionPrecondition {
   public override messageRun(message: Message) {
     const subject = permitSubject(message.guild, message.author.id, message.member, message.channelId);
     if (!subject) return this.outsideGuild();

@@ -192,7 +192,7 @@ describe("package dependency direction", () => {
   it("apps/api never imports command/listener/interaction-handler files directly", () => {
     const violations: string[] = [];
     const restrictedRoot = join(REPO_ROOT, "packages/core/src/modules");
-    const restrictedSubdirs = ["commands", "listeners", "interaction-handlers"];
+    const restrictedSubdirs = ["commands", "listeners", "interactions"];
 
     for (const { file, ref } of allImports) {
       const owner = ownerOf(file);

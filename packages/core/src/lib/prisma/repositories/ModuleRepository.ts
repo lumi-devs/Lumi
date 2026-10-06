@@ -167,7 +167,6 @@ export class ModuleRepository extends Repository {
     return updated;
   }
 
-  /** Resolves a module's config-level enable state. */
   async #configLevelEnabled(guildId: string, name: string): Promise<boolean> {
     const configEnabled = await this.config.getModuleConfig(
       guildId,

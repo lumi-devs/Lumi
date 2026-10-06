@@ -8,9 +8,6 @@ export interface ContractCompatibilityOptions {
   range?: string;
 }
 
-/**
- * Normalizes a version string into a clean semver string if valid.
- */
 function normalizeVersion(v: string): string | null {
   return semver.valid(v) ?? (semver.valid(semver.coerce(v)) ? semver.coerce(v)?.version ?? null : null);
 }
@@ -45,7 +42,6 @@ export function contractVersionsCompatible(
   const supportedMin = normalizeVersion(minSupported) ?? minSupported;
   const effectiveRange = options?.range ?? `>=${supportedMin} <=${validOur}`;
 
-  // If theirVersion is a semver range (e.g. ^0.6.0, >=0.6.0)
   if (semver.validRange(theirVersion) && !semver.valid(theirVersion)) {
     return semver.intersects(theirVersion, effectiveRange, { includePrerelease: true });
   }
@@ -58,17 +54,13 @@ export function contractVersionsCompatible(
   const ourMinor = semver.minor(validOur);
   const theirMinor = semver.minor(validTheir);
 
-  // Differing major is always breaking
   if (ourMajor !== theirMajor) return false;
 
-  // Same major and minor -> patch level or prereleases of the same release are compatible
   if (ourMinor === theirMinor) return true;
 
-  // Post-1.0: backward-compatible additive minors
   if (ourMajor >= 1) {
     return theirMinor <= ourMinor;
   }
 
-  // Pre-1.0 (0.x): callers within the supported range [minSupported, ourVersion] are compatible
   return semver.satisfies(validTheir, effectiveRange, { includePrerelease: true });
 }

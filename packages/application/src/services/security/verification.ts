@@ -91,13 +91,6 @@ function isSendableGuildChannel(
 }
 
 /**
- * Posts the verification panel to `channelId` (or a freshly created
- * channel), editing the currently tracked message in place when the target
- * channel hasn't changed and that message still exists. Falls back to
- * posting fresh whenever the tracked message can't be found or edited
- * (channel access lost, message deleted out from under it), or when the
- * target channel differs from the one currently tracked.
- *
  * REST-only (no gateway-cached `Guild`/channel/message needed): channel
  * create is `POST /guilds/{id}/channels` (same body shape as
  * `restore-guild.ts`'s channel recreation), channel/message reads are
@@ -216,11 +209,6 @@ export async function postOrEditVerifyPanel(
   };
 }
 
-/**
- * Builds a fresh emoji-sequence challenge for a member, persists it (expiring
- * at the configured timeout), and tracks the member in the pending set for
- * the timeout sweep. Returns the state to render.
- */
 export async function startChallenge(
   guildId: string,
   userId: string,
@@ -289,7 +277,6 @@ export async function advanceChallenge(
   });
 }
 
-/** Drops all pending state for a member (on success or failure). */
 async function clearChallenge(guildId: string, userId: string): Promise<void> {
   await container.invalidation.invalidate(
     ValkeyKeys.verifyChallenge(guildId, userId),
@@ -336,7 +323,6 @@ export async function grantVerified(guildId: string, userId: string): Promise<bo
   return true;
 }
 
-/** Assigns the pending role on join and starts the timeout clock. */
 export async function assignPending(
   member: GuildMember,
   config: VerificationConfig,
@@ -354,10 +340,7 @@ export async function assignPending(
   );
 }
 
-/**
- * Kicks (or just clears) members whose verification window elapsed. Called by
- * the periodic sweep; safe to run on any worker holding the guild.
- */
+/** Called by the periodic sweep; safe to run on any worker holding the guild. */
 export async function sweepExpiredPending(guild: Guild): Promise<void> {
   const config = await loadVerificationConfig(guild.id);
   if (!config.enabled) return;

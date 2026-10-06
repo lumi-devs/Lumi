@@ -21,7 +21,6 @@ export interface VerifyPanelContent {
   footer?: string | null;
 }
 
-/** The public, persistent verification card members interact with to gain the verified role. */
 export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardReply {
   const button = createActionButton({
     customId: VerifyButtonId,
@@ -41,7 +40,6 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
   );
 }
 
-/** The fresh challenge shown when a member first clicks Verify. */
 export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
   const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Time.Minute));
   return makeInfoCard(
@@ -55,7 +53,6 @@ export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
   );
 }
 
-/** After a correct-but-incomplete click: green solved buttons, progress copy. */
 export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
   const solved = new Set(state.sequence.slice(0, state.progress));
   return makeInfoCard(
@@ -68,7 +65,6 @@ export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
   );
 }
 
-/** After a wrong click with attempts remaining: reset to a clean board. */
 export function buildWrongCard(t: LumiT, state: CaptchaState): CardReply {
   return makeWarningCard(
     t("panels:verifyWrongTitle"),

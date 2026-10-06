@@ -62,7 +62,6 @@ export class PermitResolver {
     return false;
   }
 
-  /** Checks if a user is the Guild Owner. */
   public static isGuildOwner(
     guildOwnerId: string | null | undefined,
     userId: string,
@@ -70,7 +69,6 @@ export class PermitResolver {
     return Boolean(guildOwnerId && guildOwnerId === userId);
   }
 
-  /** Helper for matching permit nodes. */
   public evaluateNodeMatch(grantedNode: string, requiredNode: string): boolean {
     return evaluateNodeMatch(grantedNode, requiredNode);
   }

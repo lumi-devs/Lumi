@@ -10,7 +10,7 @@ vi.mock("#lib/permissions/index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("#modules/utility/services/media-utils.js", () => ({
+vi.mock("@lumi/application/services/utility/media-utils.js", () => ({
   handleMediaRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -22,7 +22,7 @@ vi.mock("#modules/afk/data/afk.js", () => ({
   getAfkMentions: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#modules/tempvc/services/panel-guard.js", () => ({
+vi.mock("@lumi/application/services/tempvc/panel-guard.js", () => ({
   resolveVc: vi.fn().mockResolvedValue(null),
   resolveOwnedVc: vi.fn().mockResolvedValue(null),
   resolveOwnedRecord: vi.fn().mockResolvedValue(null),
@@ -57,7 +57,7 @@ describe("interaction handlers guard on per-guild module state", () => {
 
   it("security panic revert skips work when security is disabled", async () => {
     const { PanicRevertInteractionHandler } = await import(
-      "#modules/security/interaction-handlers/panic.js"
+      "#modules/security/interactions/buttons/panic.js"
     );
     const handler = new PanicRevertInteractionHandler(pieceContext("panic"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
@@ -84,7 +84,7 @@ describe("interaction handlers guard on per-guild module state", () => {
 
   it("security verify skips work when security is disabled", async () => {
     const { VerifyInteractionHandler } = await import(
-      "#modules/security/interaction-handlers/verify.js"
+      "#modules/security/interactions/buttons/verify.js"
     );
     const handler = new VerifyInteractionHandler(pieceContext("verify"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
@@ -105,8 +105,8 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("utility media view skips work when utility is disabled", async () => {
-    const { handleMediaRequest } = await import("#modules/utility/services/media-utils.js");
-    const mod = await import("#modules/utility/interaction-handlers/view.js");
+    const { handleMediaRequest } = await import("@lumi/application/services/utility/media-utils.js");
+    const mod = await import("#modules/utility/interactions/buttons/view.js");
     const HandlerClass = mod.default;
     const handler = new HandlerClass(pieceContext("view"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
@@ -131,7 +131,7 @@ describe("interaction handlers guard on per-guild module state", () => {
 
   it("afk mentions skips work when afk is disabled", async () => {
     const { getAfkMentions } = await import("#modules/afk/data/afk.js");
-    const mod = await import("#modules/afk/interaction-handlers/mentions.js");
+    const mod = await import("#modules/afk/interactions/buttons/mentions.js");
     const HandlerClass = mod.default;
     const handler = new HandlerClass(pieceContext("afk-mentions"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
@@ -152,9 +152,9 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("tempvc panel button skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
+    const { resolveOwnedVc } = await import("@lumi/application/services/tempvc/panel-guard.js");
     const { TempVcPanelButtonHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-button.js"
+      "#modules/tempvc/interactions/buttons/tempvc-panel-button.js"
     );
     const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn"), {
       interactionHandlerType: InteractionHandlerTypes.Button,
@@ -174,9 +174,9 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("tempvc panel modal skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
+    const { resolveOwnedVc } = await import("@lumi/application/services/tempvc/panel-guard.js");
     const { TempVcPanelModalHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-modal.js"
+      "#modules/tempvc/interactions/modals/tempvc-panel-modal.js"
     );
     const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal"), {
       interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
@@ -196,9 +196,9 @@ describe("interaction handlers guard on per-guild module state", () => {
   });
 
   it("tempvc panel select skips work when tempvc is disabled", async () => {
-    const { resolveOwnedRecord } = await import("#modules/tempvc/services/panel-guard.js");
+    const { resolveOwnedRecord } = await import("@lumi/application/services/tempvc/panel-guard.js");
     const { TempVcPanelSelectHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-select.js"
+      "#modules/tempvc/interactions/selects/tempvc-panel-select.js"
     );
     const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select"), {
       interactionHandlerType: InteractionHandlerTypes.SelectMenu,

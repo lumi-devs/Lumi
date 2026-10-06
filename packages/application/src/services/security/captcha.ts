@@ -4,7 +4,6 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { CaptchaButtonId } from "#modules/security/constants.js";
 
-/** Visually distinct emoji; challenge indices point into this pool. */
 export const EmojiPool = [
   "🍎",
   "🐶",
@@ -29,9 +28,7 @@ export interface CaptchaState {
   sequence: number[];
   /** All button indices (sequence + distractors), shuffled. */
   buttons: number[];
-  /** How many correct clicks so far. */
   progress: number;
-  /** Wrong attempts remaining. */
   attempts: number;
   /** Epoch ms the challenge expires. */
   expiresAt: number;
@@ -48,7 +45,6 @@ function cryptoShuffle<T>(input: readonly T[]): T[] {
   return a;
 }
 
-/** Builds a fresh sequence + shuffled button set (sequence interleaved with distractors). */
 export function buildChallenge(): { sequence: number[]; buttons: number[] } {
   const pool = cryptoShuffle(EmojiPool.map((_, i) => i));
   const sequence = pool.slice(0, SequenceLength);
@@ -81,7 +77,6 @@ export function buildCaptchaRows(
   return buildSafeActionRows(rows);
 }
 
-/** The target sequence rendered as spaced emoji for the prompt line. */
 export function sequenceDisplay(sequence: number[]): string {
   return sequence.map((i) => EmojiPool[i]).join("  ");
 }

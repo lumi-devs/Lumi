@@ -1,6 +1,6 @@
 import type { InteractionHandler } from "@sapphire/framework";
 import type { Awaitable } from "@sapphire/utilities";
-import { BaseInteractionHandler, type AnyInteraction } from "#lib/interaction-handler.js";
+import { LumiInteractionHandler, type AnyInteraction } from "#lib/discord-adapter/LumiInteractionHandler.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 
 export interface ModuleInteractionHandlerOptions extends InteractionHandler.Options {
@@ -11,7 +11,7 @@ export interface ModuleInteractionHandlerOptions extends InteractionHandler.Opti
 export abstract class ModuleInteractionHandler<
   I extends AnyInteraction = AnyInteraction,
   T = unknown,
-> extends BaseInteractionHandler {
+> extends LumiInteractionHandler<I, T> {
   readonly #module: string;
 
   public constructor(

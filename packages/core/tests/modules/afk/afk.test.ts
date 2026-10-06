@@ -51,7 +51,7 @@ Object.assign(container, {
   invalidation: undefined as any,
 });
 
-vi.mock("#modules/afk/services/format.js", () => ({
+vi.mock("@lumi/application/services/afk/format.js", () => ({
   sanitizeReason: vi.fn((s) => s),
 }));
 

@@ -97,7 +97,6 @@ export async function loadAntiNukeConfig(guildId: string): Promise<AntiNukeConfi
   };
 }
 
-/** Per-action responses; kinds without a config key use the default. */
 function loadResponses(raw: Record<string, unknown>): Record<NukeKind, NukeResponse> {
   const kinds: NukeKind[] = [
     "ban",

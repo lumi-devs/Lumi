@@ -9,7 +9,7 @@ import { queueSend } from "#lib/outbound/send-queue.js";
 import {
   resolveLogChannel,
   sendLog,
-} from "#modules/logging/services/send.js";
+} from "@lumi/application/services/logging/send.js";
 
 const GUILD_ID = "123456789012345678";
 const MESSAGE_CHANNEL = "111111111111111111";

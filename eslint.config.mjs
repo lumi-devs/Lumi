@@ -144,7 +144,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['../../*/**', '../../../modules/**'],
+              group: ['../../modules/**', '../../../*/**'],
               message:
                 'Cross-module import detected. A module may only import from its own folder, src/lib/, src/core/, src/storage/, or src/db/.',
             },

@@ -25,7 +25,6 @@ export function getRequestContext(): RequestContext | undefined {
   return als.getStore();
 }
 
-/** Trace/span ids of the active OpenTelemetry span, if any. */
 export function activeTraceIds(): { traceId?: string; spanId?: string } {
   const span = trace.getSpan(otelContext.active());
   if (!span) return {};
@@ -40,7 +39,6 @@ export function injectTraceContext(): Record<string, string> {
   return carrier;
 }
 
-/** Build an OpenTelemetry context from an incoming carrier so the consumer continues the trace. */
 export function extractTraceContext(carrier: Record<string, unknown>) {
   return propagation.extract(otelContext.active(), carrier);
 }

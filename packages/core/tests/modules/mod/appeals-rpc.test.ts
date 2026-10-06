@@ -57,11 +57,11 @@ function makeCase(overrides: Record<string, unknown> = {}) {
 
 describe("mod module appeals RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let generateAppealToken: (typeof import("#modules/mod/services/appeal-token.js"))["generateAppealToken"];
+  let generateAppealToken: (typeof import("@lumi/application/services/mod/appeal-token.js"))["generateAppealToken"];
 
   beforeAll(async () => {
     process.env["APPEAL_TOKEN_SECRET"] = "test-appeal-secret";
-    ({ generateAppealToken } = await import("#modules/mod/services/appeal-token.js"));
+    ({ generateAppealToken } = await import("@lumi/application/services/mod/appeal-token.js"));
   });
 
   beforeEach(() => {

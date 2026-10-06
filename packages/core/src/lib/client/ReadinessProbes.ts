@@ -143,9 +143,7 @@ export class ReadinessProbes {
 
 export namespace ReadinessProbes {
   export interface Options {
-    /** Reads the client's current gateway readiness. */
     isReady: () => boolean;
-    /** Reads the internal RPC HTTP server readiness. */
     isRpcReady?: () => boolean;
   }
 }

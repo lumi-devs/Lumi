@@ -44,25 +44,13 @@ import { fetchTyped } from "#lib/commands.js";
 export default class AFKMessageCreateListener extends GuildMessageListener {
   protected async handle(message: GuildMessage): Promise<void> {
     const entry = await getAfkEntry(message.guildId, message.author.id);
-    if (entry) {
-      const prefixes = await this.container.client.fetchPrefix(message);
-      const prefixList = prefixes
-        ? Array.isArray(prefixes)
-          ? prefixes
-          : [prefixes]
-        : [];
-      const isCommand = prefixList.some(
-        (p) => typeof p === "string" && message.content.startsWith(p),
-      );
-
-      if (
-        !isCommand &&
-        !(await isAfkOnCooldown(
-          AfkKeys.removalCooldown(message.guildId, message.author.id),
-        ))
-      ) {
-        await this.#removeAfk(message, entry.since);
-      }
+    if (
+      entry &&
+      !(await isAfkOnCooldown(
+        AfkKeys.removalCooldown(message.guildId, message.author.id),
+      ))
+    ) {
+      await this.#removeAfk(message, entry.since);
     }
 
     if (message.mentions.users.size) await this.#notifyMentioned(message);

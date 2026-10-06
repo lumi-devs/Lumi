@@ -76,7 +76,6 @@ const backToAddonsRow = (t?: LumiT): Row =>
       .setStyle(ButtonStyle.Secondary),
   );
 
-/** The add-ons tab landing card: repository and install counts plus navigation. */
 export function buildAddonsView(
   stats: AddonDashboardStats = {
     repoCount: 0,
@@ -196,7 +195,6 @@ export function buildAddonReposView(
   );
 }
 
-/** The confirmation card shown after checking a repo, when a pending update was found. */
 export function buildRepoUpdateConfirmView(
   repoName: string,
   changelog: string,
@@ -408,7 +406,6 @@ export function buildAddonRepoModulesView(
   );
 }
 
-/** The auto-update settings card: on/off toggle plus the check-interval picker. */
 export function buildAutoUpdateSettingsView(
   status: AutoUpdateStatus,
   t?: LumiT,

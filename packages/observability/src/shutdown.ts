@@ -16,7 +16,6 @@ export interface DrainStep {
 }
 
 export interface DrainOptions {
-  /** Logger - usually console or a structured logger. */
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
   /** Wait this long after markDraining() before running steps. Default 5s. */
   preCloseGraceMs?: number;

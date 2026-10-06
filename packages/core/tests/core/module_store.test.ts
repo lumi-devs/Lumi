@@ -195,12 +195,13 @@ describe('ModuleStore', () => {
 
 		const failingStore = {
 			name: 'commands',
-			load: vi.fn().mockRejectedValue(new Error('bad command')),
+			registerPath: vi.fn(),
 			values: vi.fn().mockReturnValue([]),
 			paths: new Set()
 		};
 		container.stores = {
 			values: vi.fn().mockReturnValue([failingStore]),
+			load: vi.fn().mockRejectedValue(new Error('bad command')),
 			get: vi.fn()
 		} as any;
 		(fs.readdir as any).mockImplementation((p: any, opts: any) => {

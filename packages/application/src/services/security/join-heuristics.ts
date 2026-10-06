@@ -1,6 +1,6 @@
 import type { User } from "discord.js";
 
-/** Wick-style raid indicator: no custom avatar. Cheap, no API calls. */
+/** Cheap, no API calls. */
 export function hasNoAvatar(user: User): boolean {
   return user.avatar === null;
 }
@@ -96,7 +96,6 @@ export function isCreationClustered(
   return sameDay / recentJoiners.length >= ClusterShareThreshold;
 }
 
-/** Any recent joiner whose username is similar to `username`. */
 export function hasSimilarRecentJoiner(username: string, recentJoiners: RecentJoiner[]): boolean {
   return recentJoiners.some((j) => isUsernameSimilar(username, j.username));
 }

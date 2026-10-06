@@ -39,7 +39,6 @@ export function isDraining(): boolean {
   return draining;
 }
 
-/** Register (or replace) a readiness probe. */
 export function registerReadinessProbe(name: string, fn: ProbeFn): void {
   probes.set(name, { name, fn });
 }

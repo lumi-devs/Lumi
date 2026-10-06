@@ -120,7 +120,6 @@ export function compileRules(
   };
 }
 
-/** First invite code in `content` that isn't allowlisted, else null. */
 export function findBlockedInvite(
   content: string,
   allowlist: string[],
@@ -133,7 +132,6 @@ export function findBlockedInvite(
     : code;
 }
 
-/** First linked domain that isn't (a subdomain of) an allowlisted one. */
 export function findBlockedLink(
   content: string,
   allowlist: string[],

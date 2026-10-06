@@ -57,7 +57,6 @@ function groupTimeoutKey(rule: FilterHit["rule"]): string | null {
   return null;
 }
 
-/** Optional escalation: timeout the author for `timeout_minutes`. */
 async function punish(
   message: GuildMessage,
   hit: FilterHit,
@@ -107,7 +106,6 @@ async function logHit(
   });
 }
 
-/** Delete the offending message and run warn/punish/log for a confirmed hit. */
 export async function enforceHit(
   message: GuildMessage,
   hit: FilterHit,

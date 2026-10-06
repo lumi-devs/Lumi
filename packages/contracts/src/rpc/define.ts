@@ -20,9 +20,7 @@ type RpcInputValidator = BaseValidator<unknown> | undefined;
 interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
   input?: V;
   auth: A;
-  /** Permission node required for execution (e.g. "mod.notes.write"). */
   permission?: string;
-  /** Name of the module that must be loaded before the handler runs. */
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
@@ -35,9 +33,7 @@ interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
    * doesn't dedupe on its own.
    */
   readOnly?: boolean;
-  /** Whether this action supports/requires idempotency key handling. */
   idempotent?: boolean;
-  /** Audit log event name associated with this mutation. */
   audit?: string;
 }
 

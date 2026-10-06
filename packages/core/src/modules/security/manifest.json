@@ -13,7 +13,7 @@
   "subStores": [
     "commands",
     "listeners",
-    "interaction-handlers",
+    "interactions",
     "scheduled-tasks"
   ],
   "configFields": [

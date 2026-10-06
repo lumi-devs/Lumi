@@ -16,7 +16,6 @@ interface NotFoundErrors {
 }
 
 /**
- * Resolves a panel's target channel and its temp-VC record, in that order.
  * With `notFound` supplied, a missing channel/record throws the matching
  * `UserError` instead of resolving to `null` - used by callers that need to
  * surface a specific reason to the user.
@@ -42,7 +41,6 @@ export async function resolveVc(
   return { channel, record };
 }
 
-/** {@linkcode resolveVc} followed by {@linkcode assertOwner}. */
 export async function resolveOwnedVc(
   guild: Guild | null | undefined,
   guildId: string,
@@ -58,10 +56,7 @@ export async function resolveOwnedVc(
   return resolved;
 }
 
-/**
- * {@linkcode resolveOwnedVc} for callers that already resolved the channel
- * (and need to keep doing so ahead of an interaction defer).
- */
+/** For callers that already resolved the channel (and need to keep doing so ahead of an interaction defer). */
 export async function resolveOwnedRecord(
   guildId: string,
   channelId: string,

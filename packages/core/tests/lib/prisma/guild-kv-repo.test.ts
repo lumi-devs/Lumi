@@ -18,7 +18,7 @@ describe("GuildKVRepository", () => {
     mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     mockValkey = { hincrby: vi.fn().mockResolvedValue(1) };
     const mockLogger = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    repo = new GuildKVRepository(prisma as any, mockValkey, mockLogger as any, mockDb);
+    repo = new GuildKVRepository(prisma, mockValkey, mockLogger as any, mockDb);
   });
 
   it("stores, retrieves, and checks single module data entries", async () => {

@@ -126,7 +126,6 @@ function assertExecResults(results: unknown): void {
   if (failure) throw failure[0];
 }
 
-/** DEL over keys that may span slots. */
 export async function delSafe(
   client: ValkeyClient,
   keys: readonly string[],

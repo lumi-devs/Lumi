@@ -22,8 +22,6 @@ import {
   type RpcRequest,
 } from "@lumi/contracts/rpc";
 
-/** Internal HTTP server for dispatchRpc. Requires RPC_INTERNAL_TOKEN. */
-
 const AuthHeader = "authorization";
 const BearerPrefix = "Bearer ";
 
@@ -50,7 +48,6 @@ export function readInternalToken(
   const token = getRpcInternalToken();
   if (token) return token;
 
-  // Refuse unauthenticated start in production.
   if (isProduction()) {
     throw new Error(
       "[ENV] Missing: RPC_INTERNAL_TOKEN — the internal RPC server refuses to " +
@@ -69,7 +66,6 @@ export function readInternalToken(
 
 const ContractVersionHeader = "x-lumi-contract-version";
 
-/** Validates contract compatibility using x-lumi-contract-version. */
 function checkContractVersion(
   req: Request,
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void,
@@ -101,7 +97,6 @@ function checkContractVersion(
 
 const GdprExportDownloadPath = "/gdpr-export";
 
-/** Streams a completed GDPR export verified by signed download token. */
 async function handleGdprExportDownload(req: Request): Promise<Response> {
   const token = new URL(req.url).searchParams.get("token");
   if (!token) {

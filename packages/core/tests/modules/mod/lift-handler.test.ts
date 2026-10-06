@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { container } from '@sapphire/framework';
-import { handleModLiftFire } from '#modules/mod/services/lift-handler.js';
+import { handleModLiftFire } from '@lumi/application/services/mod/lift-handler.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();

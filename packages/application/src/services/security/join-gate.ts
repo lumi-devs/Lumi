@@ -19,7 +19,6 @@ import { getConfigNumber, getConfigAction } from "./config-helpers.js";
 
 export type GateAction = "log" | "kick" | "timeout" | "quarantine";
 
-/** Severity order used to pick a single action when several filters trip at once. */
 const GateActionSeverity: Record<GateAction, number> = {
   log: 0,
   kick: 1,
@@ -93,11 +92,6 @@ export async function loadJoinGateConfig(guildId: string): Promise<JoinGateConfi
   };
 }
 
-/**
- * Runs every enabled join-gate filter against a member and returns the
- * single most severe triggered action (quarantine > timeout > kick > log),
- * or null when nothing tripped.
- */
 export function evaluateJoinFilters(
   member: GuildMember,
   config: JoinGateConfig,
@@ -145,7 +139,6 @@ export function evaluateJoinFilters(
   return { action, triggered };
 }
 
-/** Tracks a joiner for the short-lived recent-joiners window used by the raid/similarity heuristics. */
 export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
   const key = ValkeyKeys.recentJoiners(guildId);
   await container.valkey
@@ -163,12 +156,7 @@ async function getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
     .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
 }
 
-/**
- * "Suspicious" scope for raid mode: no avatar, under the configured min
- * age, a username too close to a recent joiner's, or an unusual share of
- * recent joiners sharing this account's creation day - any one is enough,
- * this doesn't need to be a tunable score.
- */
+/** Any one signal is enough; this doesn't need to be a tunable score. */
 export async function isSuspiciousJoiner(
   member: GuildMember,
   config: JoinGateConfig,

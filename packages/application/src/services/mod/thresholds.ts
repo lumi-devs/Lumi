@@ -4,11 +4,11 @@ import { tryParseJSON } from "@sapphire/utilities";
 import { type WarnThresholdAction } from "@lumi/contracts/rpc";
 import { Time } from "@sapphire/time-utilities";
 import { thresholdKey } from "./threshold-rules.js";
-import { BanAction } from "#modules/mod/services/actions/BanAction.js";
-import { MuteAction } from "#modules/mod/services/actions/MuteAction.js";
-import { KickAction } from "#modules/mod/services/actions/KickAction.js";
+import { BanAction } from "./actions/BanAction.js";
+import { MuteAction } from "./actions/MuteAction.js";
+import { KickAction } from "./actions/KickAction.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { VoiceMuteAction } from "#modules/mod/services/actions/VoiceMuteAction.js";
+import { VoiceMuteAction } from "./actions/VoiceMuteAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 
 /** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */

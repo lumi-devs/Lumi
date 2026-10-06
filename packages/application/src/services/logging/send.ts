@@ -8,7 +8,6 @@ const MessageLogChannelKey = "message_log_channel_id";
 const MemberLogChannelKey = "member_log_channel_id";
 const DefaultLogChannelKey = "log_channel_id";
 
-/** Toggle key (as checked by `isToggleEnabled`) to its per-event channel key. */
 const LogEventChannels: Record<string, string> = {
   message_deletes: "message_deletes_channel_id",
   message_edits: "message_edits_channel_id",
@@ -20,7 +19,6 @@ const LogEventChannels: Record<string, string> = {
   role_changes: "role_changes_channel_id",
 };
 
-/** Toggle key (as checked by `isToggleEnabled`) to its per-type channel key. */
 const LogToggleChannels: Record<string, string> = {
   message_deletes: MessageLogChannelKey,
   message_edits: MessageLogChannelKey,
@@ -44,7 +42,6 @@ export async function isToggleEnabled(
   return toggle !== false;
 }
 
-/** Message events in these channels are skipped (e.g. staff/log channels). */
 export async function isIgnoredChannel(
   guildId: string,
   channelId: string,

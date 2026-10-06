@@ -83,8 +83,8 @@ const TimeoutRemove: Flow = {
   requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
-    { name: "add", run: "add", default: true },
-    { name: "remove", run: "remove" },
+    { name: "add", run: "add", default: true, requiredPermit: "mod.timeout" },
+    { name: "remove", run: "remove", requiredPermit: "mod.timeout" },
   ],
 })
 export class TimeoutCommand extends ModerationSubcommand {

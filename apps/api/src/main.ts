@@ -18,7 +18,6 @@ let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 const services = await bootstrapApiApp({
   extraDrainSteps: [
     {
-      // Reject new connections while allowing active requests to finish.
       name: "rpc-http-server",
       run: async () => {
         if (rpcServer) {

@@ -31,10 +31,7 @@ export interface RunModerationActionOptions<T extends ModerationCase> {
 }
 
 /**
- * Runs the shared moderation-action tail: schedule the lift job, log to the
- * mod-log channel, and DM the appeal link. All three are best-effort - only
- * `perform()` (the case write, and whatever DM/Discord API call precedes it)
- * can fail the operation.
+ * All three tail steps are best-effort - only `perform()` can fail the operation.
  */
 export async function runModerationAction<T extends ModerationCase>(
   options: RunModerationActionOptions<T>,

@@ -1,5 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Command, container } from "@sapphire/framework";
+import { Subcommand } from "@sapphire/plugin-subcommands";
 import { toTitleCase } from "@sapphire/utilities";
 import { SeparatorBuilder, TextDisplayBuilder } from "@discordjs/builders";
 import {
@@ -43,6 +44,20 @@ export function getCategories(containerInstance: typeof container) {
   });
 
   return { categories, categoryEmojis, sortedCategories, totalCommandsCount };
+}
+
+/** Lists a subcommand group's entries from the same mapping that drives dispatch. */
+function subcommandLabels(cmd: BaseCommand): string {
+  if (!(cmd instanceof Subcommand)) return "";
+  const parts: string[] = [];
+  for (const entry of cmd.parsedSubcommandMappings) {
+    if (entry.type === "group") {
+      for (const sub of entry.entries) parts.push(`${entry.name} ${sub.name}`);
+    } else {
+      parts.push(entry.name);
+    }
+  }
+  return parts.length > 0 ? ` (${parts.join(", ")})` : "";
 }
 
 @ApplyOptions<Command.Options>({
@@ -126,7 +141,7 @@ export class HelpCommand extends BaseCommand {
       .map((cmd) => {
         const desc =
           cmd.description || t("commands:helpNoDescription");
-        return `**\`/${cmd.name}\`** or **\`${prefix}${cmd.name}\`** — ${desc}`;
+        return `**\`/${cmd.name}\`**${subcommandLabels(cmd)} or **\`${prefix}${cmd.name}\`** — ${desc}`;
       })
       .join("\n");
 

@@ -4,25 +4,25 @@ import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
-import { postOrEditVerifyPanel } from "#modules/security/services/verification.js";
-import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
+import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
+import { postOrEditVerifyPanel } from "@lumi/application/services/security/verification.js";
+import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { createMemoryValkey } from "../../mocks/memory-valkey.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
-vi.mock("#modules/security/services/panic.js", () => ({
+vi.mock("@lumi/application/services/security/panic.js", () => ({
   enterPanic: vi.fn(),
   revertPanic: vi.fn(),
 }));
 
-vi.mock("#modules/security/services/verification.js", () => ({
+vi.mock("@lumi/application/services/security/verification.js", () => ({
   postOrEditVerifyPanel: vi.fn(),
   loadVerificationConfig: vi.fn(),
   grantVerified: vi.fn(),
 }));
 
-vi.mock("#modules/security/services/restore-guild.js", () => ({
+vi.mock("@lumi/application/services/security/restore-guild.js", () => ({
   restoreGuildFromBackup: vi.fn(),
 }));
 

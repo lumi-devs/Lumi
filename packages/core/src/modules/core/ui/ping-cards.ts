@@ -1,8 +1,3 @@
-/**
- * Executive-Class Aesthetic Card builders.
- * High-end, structured, and extremely readable data layouts.
- * Stacked Label-Value pairs for maximized clarity.
- */
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -44,13 +39,6 @@ function fmtKB(bytes: bigint | number): string {
   return `${n} B`;
 }
 
-/**
- * Stacked Executive Layout:
- * - Simple Header
- * - Blockquote wrapper
- * - Label on top
- * - Indented Value below
- */
 function executiveSection(
   title: string,
   fields: [string, string][],
@@ -82,7 +70,6 @@ function header(data: PingData, subtitle?: string): SectionBuilder {
     );
 }
 
-/** Shared scaffold for every detail card: header section, divider. */
 function detailCard(subtitle: string, data: PingData): ContainerBuilder {
   const c = new ContainerBuilder();
   c.addSectionComponents(header(data, subtitle));

@@ -238,7 +238,6 @@ export function isMaxVersionCompatible(
   return semver.lte(current, max);
 }
 
-/** Validate a single addon directory. Returns collected errors + warnings. */
 export async function validateAddon(dir: string): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -415,7 +414,6 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   return { errors, warnings };
 }
 
-/** Validate one addon or a directory of addons. */
 export async function validateAddonOrRepo(
   target: string,
 ): Promise<Map<string, ValidationResult>> {

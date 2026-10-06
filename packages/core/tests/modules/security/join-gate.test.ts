@@ -4,7 +4,7 @@ import {
   applyGateAction,
   loadJoinGateConfig,
   evaluateJoinFilters,
-} from "#modules/security/services/join-gate.js";
+} from "@lumi/application/services/security/join-gate.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 

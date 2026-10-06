@@ -1,6 +1,3 @@
-// Pino structured logger factory with request context and OpenTelemetry trace propagation.
-
-
 import { createRequire } from "node:module";
 import { pino, type Logger as PinoLogger } from "pino";
 import { activeTraceIds, getRequestContext } from "./context.js";
