@@ -29,6 +29,8 @@ export interface CardOptions {
   thumbnail?: string;
   thumbnailUrl?: string;
   divider?: boolean;
+  hideTitle?: boolean;
+  noAccent?: boolean;
   sections?: SectionBuilder[];
   actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
   /** Adds a divider above actionRows - only used above the hub tab bar so it doesn't blend into the content above it. */
@@ -55,7 +57,7 @@ function buildContainer(
   accentColor?: number,
 ) {
   const c = new ContainerBuilder();
-  if (accentColor !== undefined) {
+  if (accentColor !== undefined && !opts.noAccent) {
     c.setAccentColor(accentColor);
   }
 
@@ -72,16 +74,17 @@ function buildContainer(
     );
   }
 
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`## ${title}`),
-  );
-  if (opts.subtitle) {
+  if (!opts.hideTitle && title) {
     c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
+      new TextDisplayBuilder().setContent(`## ${title}`),
     );
+    if (opts.subtitle) {
+      c.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
+      );
+    }
+    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
   }
-
-  c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
 
   const headerUrls = (opts.headerImages ?? [])
     .filter((url) => url && url.length > 0)

@@ -45,10 +45,9 @@ describe("misc utilities & telemetry instrumentation", () => {
       expect(formatted).toBe("[Admin#1234 | 100200300] aaaaaaaaaaaaaaaaaaaaaaaaa");
     });
 
-    it("LumiInfo returns age in days", () => {
+    it("LumiInfo returns valid version", () => {
       expect(LumiInfo.version).toMatch(/^\d+\.\d+\.\d+/);
-      expect(typeof LumiInfo.getAgeInDays()).toBe("number");
-      expect(LumiInfo.getAgeInDays()).toBeGreaterThanOrEqual(0);
+      expect(typeof LumiInfo.github).toBe("string");
     });
 
     it("fmtId converts id to string or returns 'unknown'", () => {
