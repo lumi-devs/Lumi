@@ -18,7 +18,7 @@ describe("addon child environment", () => {
     const secrets = {
       BOT_TOKEN: "token",
       DATABASE_URL: "postgres://user:pw@host/db",
-      VALKEY_URL: "rediss://host",
+      VALKEY_URL: "valkeys://host",
       RPC_INTERNAL_TOKEN: "internal",
       AUTH_SECRET: "secret",
     };

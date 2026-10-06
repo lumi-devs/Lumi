@@ -16,16 +16,16 @@ COPY apps/cli/package.json apps/cli/package.json
 RUN bun install --frozen-lockfile
 
 FROM deps AS source
-COPY tsconfig.base.json tsconfig.json prisma.config.ts ./
-COPY packages/ packages/
-COPY prisma/ prisma/
+COPY --chown=bun:bun tsconfig.base.json tsconfig.json prisma.config.ts ./
+COPY --chown=bun:bun packages/ packages/
+COPY --chown=bun:bun prisma/ prisma/
 # scripts/ and apps/cli/ back the `lumi` CLI (addon create/validate reuse these
 # scripts directly - see apps/cli/src/commands/addon.ts) - copied once here so
 # every target image below gets the same `lumi` binary rather than a
 # per-target copy that could drift.
-COPY scripts/ scripts/
-COPY apps/cli/ apps/cli/
-RUN bunx prisma generate && chown -R bun:bun /app && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache
+COPY --chown=bun:bun scripts/ scripts/
+COPY --chown=bun:bun apps/cli/ apps/cli/
+RUN bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /root/.bun/install/cache /tmp/*
 
 FROM source AS worker
 ENV NODE_ENV=production

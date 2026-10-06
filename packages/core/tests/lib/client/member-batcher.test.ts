@@ -65,10 +65,11 @@ describe("createMemberBatcher", () => {
   it("propagates errors to all batched callers", async () => {
     (guild.members.fetch as any).mockRejectedValueOnce(new Error("fetch failed"));
 
-    const p1 = fetcher("user1");
-    const p2 = fetcher("user2");
+    const p1 = fetcher("user1").catch((e) => e);
+    const p2 = fetcher("user2").catch((e) => e);
 
-    await expect(p1).rejects.toThrow("fetch failed");
-    await expect(p2).rejects.toThrow("fetch failed");
+    const [e1, e2] = await Promise.all([p1, p2]);
+    expect(e1?.message).toBe("fetch failed");
+    expect(e2?.message).toBe("fetch failed");
   });
 });

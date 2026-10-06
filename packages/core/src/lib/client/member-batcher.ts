@@ -22,9 +22,9 @@ export function createMemberBatcher(
     const ids = currentBatch.map((b) => b.userId);
     try {
       const members = await guild.members.fetch({ user: ids });
-      const map = members instanceof Map ? members : new Map(Array.from(members.values()).map((m: any) => [m.id, m]));
+      const map = members as any;
       for (const item of currentBatch) {
-        item.resolve(map.get(item.userId) ?? null);
+        item.resolve(map.get?.(item.userId) ?? null);
       }
     } catch (err) {
       for (const item of currentBatch) {

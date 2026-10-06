@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { ShardingManager } from "discord.js";
 import { getBotToken, getTotalShards, getShardList } from "@lumi/core/env";
-import { initializeShardLease, getMyShards, getMyNodeId } from "@lumi/core/cluster";
 
 const token = getBotToken();
 const shardFile = fileURLToPath(new URL("./shard-client.ts", import.meta.url));
