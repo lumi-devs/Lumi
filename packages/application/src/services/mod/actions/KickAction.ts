@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { sendModActionDm } from "../notify.js";

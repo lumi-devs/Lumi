@@ -1,83 +1,93 @@
-import { container } from "@sapphire/framework";
-import { Utility as SapphireUtility, type UtilitiesStore } from "@sapphire/plugin-utilities-store";
-import { utilitiesTotal, utilityDuration } from "@lumi/observability";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-/**
- * Registry of utility piece names → classes. Each utility file augments this
- * next to its class so `getUtility("name")` returns the right type:
- *
- * ```ts
- * declare module "#lib/module-system/Utility.js" {
- *   interface Utilities {
- *     afk: AfkUtility;
- *   }
- * }
- * ```
- */
+export interface UtilityContext {
+  name: string;
+}
+
+export interface UtilityOptions {
+  name?: string;
+}
+
 export interface Utilities {}
 
-/** Typed lookup for utility pieces - use instead of `container.utilities.get(...) as X`. */
+export interface UtilityDef {
+  name: string;
+  onLoad?: () => unknown;
+  onUnload?: () => unknown;
+  [key: string]: unknown;
+}
+
+export function defineUtility<D extends UtilityDef>(def: D): D {
+  return def;
+}
+
+const utilityRegistry = new Map<string, UtilityDef>();
+const utilityDirs = new Map<string, string[]>();
+
 export function getUtility<K extends keyof Utilities>(name: K): Utilities[K] {
   const utility = tryGetUtility(name);
   if (!utility) throw new Error(`Utility "${String(name)}" is not loaded`);
   return utility;
 }
 
-/** Like {@link getUtility} but returns undefined when the piece isn't loaded (e.g. module disabled). */
 export function tryGetUtility<K extends keyof Utilities>(
   name: K,
 ): Utilities[K] | undefined {
-  const store = container.stores?.get?.("utilities") as UtilitiesStore | undefined;
-  if (store && typeof store.get === "function") {
-    return store.get(name) as Utilities[K] | undefined;
-  }
-  return undefined;
+  return utilityRegistry.get(name) as Utilities[K] | undefined;
 }
 
-/**
- * The base class that all feature utilities extend.
- * Extends Sapphire's `Utility` piece with container helpers, hot-reloading support,
- * and automatic Prometheus telemetry metrics.
- */
-export class Utility extends SapphireUtility {
-  public constructor(
-    context: SapphireUtility.LoaderContext,
-    options: SapphireUtility.Options = {},
-  ) {
-    super(context, options);
+async function* walk(dir: string): AsyncGenerator<string> {
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
   }
-
-  /** Quick accessor for the global Pino logger instance. */
-  public get logger() {
-    return this.container.logger;
-  }
-
-  /** Quick accessor for the global Prisma database service. */
-  public get db() {
-    return this.container.db;
-  }
-
-  /** Quick accessor for the global Valkey client. */
-  public get valkey() {
-    return this.container.valkey;
-  }
-
-  /**
-   * Instruments an async utility method with Prometheus duration and counter metrics.
-   */
-  protected async track<T>(method: string, fn: () => Promise<T>): Promise<T> {
-    const end = utilityDuration.startTimer({ utility: this.name, method });
-    try {
-      const res = await fn();
-      utilitiesTotal.inc({ utility: this.name, method, status: "success" });
-      return res;
-    } catch (err) {
-      utilitiesTotal.inc({ utility: this.name, method, status: "error" });
-      throw err;
-    } finally {
-      end();
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walk(full);
+    else if (
+      entry.isFile() &&
+      entry.name.endsWith(".ts") &&
+      !entry.name.endsWith(".test.ts")
+    ) {
+      yield full;
     }
   }
 }
 
+export async function loadUtilities(moduleDir: string): Promise<void> {
+  const names: string[] = [];
+  for await (const file of walk(join(moduleDir, "utilities"))) {
+    const mod = (await import(pathToFileURL(file).href)) as Record<
+      string,
+      unknown
+    >;
+    for (const value of Object.values(mod)) {
+      if (typeof value !== "object" || value === null) continue;
+      const def = value as UtilityDef;
+      if (typeof def.name !== "string") continue;
+      if (utilityRegistry.has(def.name)) continue;
+      utilityRegistry.set(def.name, def);
+      names.push(def.name);
+      await def.onLoad?.();
+    }
+  }
+  utilityDirs.set(moduleDir, names);
+}
 
+export async function unloadUtilitiesForDir(
+  moduleDir: string,
+): Promise<void> {
+  const names = utilityDirs.get(moduleDir) ?? [];
+  utilityDirs.delete(moduleDir);
+  for (const name of names) {
+    const instance = utilityRegistry.get(name);
+    if (instance) {
+      utilityRegistry.delete(name);
+      await instance.onUnload?.();
+    }
+  }
+}

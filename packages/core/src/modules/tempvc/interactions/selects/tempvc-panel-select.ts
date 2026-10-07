@@ -1,7 +1,3 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import { roleMention, userMention } from "@discordjs/formatters";
 import type {
   AnySelectMenuInteraction,
@@ -10,14 +6,18 @@ import type {
 } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeSuccessCard } from "#lib/ui/cards.js";
 import type { VcRecord } from "#modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../../constants.js";
 import { showLimitModal, showRenameModal } from "@lumi/application/services/tempvc/panel-helpers.js";
 import { resolveOwnedRecord } from "@lumi/application/services/tempvc/panel-guard.js";
-import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBackRows,
   buildBlockView,
@@ -67,29 +67,14 @@ const AccessVerbKeys = {
   ubsel: "tempvc:accessVerbUnblocked",
 } as const;
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "tempvc-panel-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+export const tempVcPanelSelect = defineInteraction({
+  prefix: TempVcPanelId.prefix,
   module: "tempvc",
-})
-export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
-  AnySelectMenuInteraction,
-  { action: string; channelId: string }
-> {
-  private get service(): TempVcUtility {
-    return getUtility("tempvc");
-  }
-
-  public override parse(interaction: AnySelectMenuInteraction) {
+  async run(services: Container, interaction: AnySelectMenuInteraction): Promise<void> {
     const parsed = TempVcPanelId.parse(interaction.customId);
-    if (!parsed || !SelectActions.has(parsed.action)) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: AnySelectMenuInteraction,
-    { action, channelId }: { action: string; channelId: string },
-  ): Promise<void> {
+    if (!parsed || !SelectActions.has(parsed.action)) return;
+    const { action, channelId } = parsed;
+    const service: TempVcUtility = getUtility("tempvc");
     const { guildId } = interaction;
     if (!guildId) return;
     const channel = interaction.guild?.channels.cache.get(channelId);
@@ -101,7 +86,7 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
     // lookups below. `interaction.values` is available synchronously.
     const selected = action === "panelmenu" ? interaction.values[0] : undefined;
     const opensModal = selected === "name" || selected === "limit";
-    if (!opensModal) await this.acknowledge(interaction);
+    if (!opensModal) await acknowledge(interaction);
 
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
@@ -109,7 +94,7 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
       guildId,
       channelId,
       channel,
-      this.service,
+      service,
       member,
       t,
     );
@@ -124,21 +109,23 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
           await showLimitModal(interaction, channel, t);
           return;
         case "lock": {
-          const next = await this.service.setLock(
+          const next = await service.setLock(
+            services,
             channel,
             record,
             !record.locked,
           );
-          await interaction.editReply(await buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(services, channel, next, t));
           return;
         }
         case "hide": {
-          const next = await this.service.setHide(
+          const next = await service.setHide(
+            services,
             channel,
             record,
             !record.hidden,
           );
-          await interaction.editReply(await buildPanel(channel, next, t));
+          await interaction.editReply(await buildPanel(services, channel, next, t));
           return;
         }
         case "kick":
@@ -171,8 +158,8 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
 
     const result =
       action === "select_transfer" || action === "xsel"
-        ? await this.#transfer(channel, record, interaction.values[0]!, t)
-        : await this.#applyAccess(channel, action, ids, t);
+        ? await transfer(services, service, channel, record, interaction.values[0]!, t)
+        : await applyAccess(services, channel, action, ids, t);
 
     const backRows = buildBackRows(channelId);
 
@@ -184,14 +171,16 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
       ),
     );
     return undefined;
-  }
+  },
+});
 
-  async #applyAccess(
-    channel: VoiceBasedChannel,
-    action: string,
-    ids: string[],
-    t: LumiT,
-  ): Promise<string> {
+async function applyAccess(
+  services: Container,
+  channel: VoiceBasedChannel,
+  action: string,
+  ids: string[],
+  t: LumiT,
+): Promise<string> {
     const done: string[] = [];
     for (const id of ids) {
       try {
@@ -259,7 +248,7 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
           }
         }
       } catch (err: unknown) {
-        this.container.logger.debug(
+        services.logger.debug(
           `[tempvc] ${action} failed for ${id} in ${channel.id}: ${String(err)}`,
         );
       }
@@ -270,15 +259,16 @@ export class TempVcPanelSelectHandler extends ModuleInteractionHandler<
     return t("tempvc:accessResult", { verb, members: done.join(", ") });
   }
 
-  async #transfer(
-    channel: VoiceBasedChannel,
-    record: VcRecord,
-    newOwnerId: string,
-    t: LumiT,
-  ): Promise<string> {
-    const target = channel.members.get(newOwnerId);
-    if (!target) return t("tempvc:memberNoLongerInChannel");
-    await this.service.setOwner(channel, record, newOwnerId);
-    return t("tempvc:ownershipTransferred", { user: userMention(newOwnerId) });
-  }
+async function transfer(
+  services: Container,
+  service: TempVcUtility,
+  channel: VoiceBasedChannel,
+  record: VcRecord,
+  newOwnerId: string,
+  t: LumiT,
+): Promise<string> {
+  const target = channel.members.get(newOwnerId);
+  if (!target) return t("tempvc:memberNoLongerInChannel");
+  await service.setOwner(services, channel, record, newOwnerId);
+  return t("tempvc:ownershipTransferred", { user: userMention(newOwnerId) });
 }

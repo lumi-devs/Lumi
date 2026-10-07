@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { wrapWithTraceContext } from "#lib/scheduler-otel.js";
 
@@ -39,10 +39,11 @@ export type ScheduleOptions =
     };
 
 /**
- * Enqueue a BullMQ job. Every role that boots a client owns a BullMQ worker
- * against the shared queue, so the enqueue is always local: the job is durable
- * in Valkey the moment this resolves, and whichever replica BullMQ hands it to
- * relays the fire onto the bus for a worker to execute.
+ * Enqueue a BullMQ job. Only the scheduler runs a BullMQ `Worker` against the
+ * shared queue; every other process enqueues through the producer-only
+ * `container.tasks` stand-in. The job is durable in Valkey the moment this
+ * resolves, and the scheduler relays the fire onto the bus for a worker to
+ * execute.
  */
 export async function scheduleTask<N extends keyof ScheduledTasks>(
   name: N,
@@ -50,13 +51,7 @@ export async function scheduleTask<N extends keyof ScheduledTasks>(
   options?: ScheduleOptions,
 ): Promise<void> {
   await container.tasks.create(
-    { name, payload: wrapWithTraceContext(payload) } as Parameters<
-      typeof container.tasks.create
-    >[0],
-    options as Parameters<typeof container.tasks.create>[1],
+    { name, payload: wrapWithTraceContext(payload) },
+    options,
   );
-}
-
-export async function cancelTask(jobId: string): Promise<void> {
-  await container.tasks.delete(jobId);
 }

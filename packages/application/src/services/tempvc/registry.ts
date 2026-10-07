@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { logError } from "#lib/utilities/errors.js";
 import type { GeneratorConfig } from "#modules/tempvc/data/tempvc.js";
 

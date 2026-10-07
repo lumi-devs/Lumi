@@ -1,8 +1,8 @@
-import type { Container } from "@sapphire/framework";
-import { pipelineBySlot } from "#lib/database/cluster-safe.js";
-import { tryParseJSON } from "@sapphire/utilities";
+import type { Container } from "#lib/services.js";
+import { pipelineBySlot } from "@lumi/infrastructure/database";
+import { tryParseJSON } from "@lumi/shared";
 import { type WarnThresholdAction } from "@lumi/contracts/rpc";
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 import { thresholdKey } from "./threshold-rules.js";
 import { BanAction } from "./actions/BanAction.js";
 import { MuteAction } from "./actions/MuteAction.js";
@@ -131,7 +131,7 @@ export async function resetWarnCount(
  * still describe an intended punishment, and a Discord timeout cannot be
  * permanent, so there is no "no duration" reading of the rule to honour.
  */
-const FallbackThresholdDurationMs = Time.Hour;
+const FallbackThresholdDurationMs = Ms.Hour;
 
 function resolveThresholdDuration(
   container: Container,
@@ -145,7 +145,7 @@ function resolveThresholdDuration(
   container.logger.warn(
     `[Thresholds] Guild ${guildId}: the ${entry.action} rule at ${targetCount} warns has an unusable duration (${
       entry.duration ? `"${entry.duration}"` : "none set"
-    }) - applying ${FallbackThresholdDurationMs / Time.Minute}m instead. Save the rule again with a valid duration.`,
+    }) - applying ${FallbackThresholdDurationMs / Ms.Minute}m instead. Save the rule again with a valid duration.`,
   );
   return FallbackThresholdDurationMs;
 }

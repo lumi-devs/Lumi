@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { type Container } from "#lib/services.js";
 
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 import { loadAntiNukeConfig } from "./anti-nuke.js";
@@ -10,10 +10,10 @@ const HourMs = 60 * 60 * 1000;
 const BackupConcurrency = 5;
 
 /** Each worker iterates its own `guilds.cache` (shard affinity preserved). */
-export async function handleBackupSnapshotFire(): Promise<void> {
-  const guilds = [...container.client.guilds.cache.values()];
+export async function handleBackupSnapshotFire(services: Container): Promise<void> {
+  const guilds = [...services.client.guilds.cache.values()];
   await mapWithConcurrency(guilds, BackupConcurrency, async (guild) => {
-    const enabled = await container.db.modules
+    const enabled = await services.db.modules
       .isModuleEnabled(guild.id, "security")
       .catch(() => false);
     if (!enabled) return;
@@ -22,12 +22,12 @@ export async function handleBackupSnapshotFire(): Promise<void> {
     if (!antiNuke.enabled) return;
 
     const { intervalHours, keepCount } = await loadBackupConfig(guild.id);
-    const latest = await container.db.security.getLatestBackup(guild.id);
+    const latest = await services.db.security.getLatestBackup(guild.id);
     const dueAt = latest ? latest.createdAt.getTime() + intervalHours * HourMs : 0;
     if (Date.now() < dueAt) return;
 
     await createBackup(guild, keepCount).catch((err: unknown) => {
-      container.logger.error(
+      services.logger.error(
         `[security] Backup snapshot failed for ${guild.id}:`,
         err,
       );

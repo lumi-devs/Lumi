@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { Guild } from "discord.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { snapshotGuild } from "./backup-types.js";

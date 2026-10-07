@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 // bun:test's `vi.mock` isn't hoisted above imports the way vitest's is, so
@@ -134,7 +134,7 @@ describe("updateLumiCore", () => {
   it("returns the docker fallback error when there is no .git directory", async () => {
     mockExistsSync.mockReturnValue(false);
 
-    const result = await updateLumiCore();
+    const result = await updateLumiCore(container);
 
     expect(result.updated).toBe(false);
     expect(result.currentCommit).toBe("unknown");
@@ -152,7 +152,7 @@ describe("updateLumiCore", () => {
       "git rev-list --count abc1234..origin/main": { stdout: "0\n" },
     });
 
-    const result = await updateLumiCore();
+    const result = await updateLumiCore(container);
 
     expect(result).toEqual({ updated: false, currentCommit: "abc1234" });
     const calledFiles = spawnSpy.mock.calls.map((c) => (c[0])[0]);
@@ -177,7 +177,7 @@ describe("updateLumiCore", () => {
       "bun install --frozen-lockfile": { stdout: "" },
     });
 
-    const result = await updateLumiCore();
+    const result = await updateLumiCore(container);
 
     expect(result).toEqual({
       updated: true,
@@ -214,7 +214,7 @@ describe("updateLumiCore", () => {
       "bun install": { stdout: "" },
     });
 
-    const result = await updateLumiCore();
+    const result = await updateLumiCore(container);
 
     expect(result.updated).toBe(true);
     const fallbackInstall = spawnSpy.mock.calls.find(
@@ -239,7 +239,7 @@ describe("updateLumiCore", () => {
       },
     });
 
-    const result = await updateLumiCore();
+    const result = await updateLumiCore(container);
 
     expect(result.updated).toBe(false);
     expect(result.currentCommit).toBe("unknown");

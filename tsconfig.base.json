@@ -45,6 +45,7 @@
       "@lumi/infrastructure/queues": ["./packages/infrastructure/src/queues/index.ts"],
       "@lumi/infrastructure/services": ["./packages/infrastructure/src/services/index.ts"],
       "@lumi/infrastructure/*": ["./packages/infrastructure/src/*"],
+      "@lumi/shared": ["./packages/shared/src/index.ts"],
       "#modules/*.js": ["./packages/core/src/modules/*.ts"],
       "#lib/env.js": ["./packages/core/src/lib/env.ts"],
       "#lib/*.js": ["./packages/core/src/lib/*.ts"]

@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { rpcAction, RpcTimeouts } from "./define.js";
 import { SnowflakeSchema } from "./schemas.js";
 
@@ -60,9 +60,9 @@ export const accountRpc = {
     success: boolean;
     failedModules?: string[];
   }>()({
-    input: s.object({
+    input: z.object({
       userId: SnowflakeSchema,
-      requester: s.enum(GdprRequesters).optional(),
+      requester: z.enum(GdprRequesters).optional(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
@@ -72,20 +72,20 @@ export const accountRpc = {
     success: boolean;
     data: GdprExportResult;
   }>()({
-    input: s.object({ userId: SnowflakeSchema }),
+    input: z.object({ userId: SnowflakeSchema }),
     auth: "session",
     timeoutMs: RpcTimeouts.long,
     summary: "Export a user's data, keyed by module.",
   }),
   "global.gdpr.export.start": rpcAction<GdprExportJobStartResponse>()({
-    input: s.object({ userId: SnowflakeSchema }),
+    input: z.object({ userId: SnowflakeSchema }),
     auth: "session",
     timeoutMs: RpcTimeouts.long,
     summary:
       "Start an async export of a user's data on the scheduled-tasks queue; returns a job id to poll.",
   }),
   "global.gdpr.export.status": rpcAction<GdprExportJobStatusResponse>()({
-    input: s.object({ jobId: s.string() }),
+    input: z.object({ jobId: z.string() }),
     auth: "session",
     timeoutMs: RpcTimeouts.long,
     summary:

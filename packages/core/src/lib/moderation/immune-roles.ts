@@ -1,4 +1,4 @@
-import type { Container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { GuildMember } from "discord.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 
@@ -9,11 +9,11 @@ import { toStringArray } from "#lib/module-system/config-schema.js";
  * staff commands (/ban, /warn, etc.) always work regardless.
  */
 export async function isImmuneToAutomatedAction(
-  container: Container,
+  services: Container,
   guildId: string,
   member: GuildMember,
 ): Promise<boolean> {
-  const raw = await container.db.config.getModuleConfig(
+  const raw = await services.db.config.getModuleConfig(
     guildId,
     "mod",
     "immune_role_ids",

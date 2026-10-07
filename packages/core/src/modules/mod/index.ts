@@ -1,4 +1,5 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import { container, type Container } from "#lib/services.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { invalidateThresholds } from "@lumi/application/services/mod/threshold-rules.js";
@@ -6,7 +7,7 @@ import { scheduleCaseLift } from "@lumi/application/services/mod/helpers.js";
 import { handleModLiftFire } from "@lumi/application/services/mod/lift-handler.js";
 import { handleWarnDecayFire } from "@lumi/application/services/mod/warn-decay-handler.js";
 
-@DefineModule({
+export const modModule = defineModule({
   name: "mod",
   displayName: "Moderation",
   emoji: "🛡️",
@@ -58,31 +59,28 @@ import { handleWarnDecayFire } from "@lumi/application/services/mod/warn-decay-h
       max: 1440,
     }),
   }),
-})
-export class ModModule extends Module {
-  public override onLoad() {
-    this.container.configChangeHooks.set("mod:warn_thresholds", (guildId) =>
-      invalidateThresholds(this.container, guildId),
+  onLoad(services: Container = container) {
+    services.configChangeHooks.set("mod:warn_thresholds", (guildId) =>
+      invalidateThresholds(services, guildId),
     );
     registerTaskFireHandler("mod-lift", "unicast", handleModLiftFire);
     registerTaskFireHandler("warn-decay", "unicast", handleWarnDecayFire);
-    return super.onLoad();
-  }
+  },
 
-  public override onUnload() {
-    this.container.configChangeHooks.delete("mod:warn_thresholds");
-    return super.onUnload();
-  }
+  onUnload(services: Container = container) {
+    services.configChangeHooks.delete("mod:warn_thresholds");
+  },
 
-  public override async deleteUserData(userId: string): Promise<void> {
-    await this.container.db.moderation.anonymizeUser(userId);
-    await this.container.db.modNotes.deleteUserData(userId);
-  }
+  async deleteUserData(services: Container, userId: string): Promise<void> {
+    await services.db.moderation.anonymizeUser(userId);
+    await services.db.modNotes.deleteUserData(userId);
+  },
 
-  public override async exportUserData(
+  async exportUserData(
+    services: Container,
     userId: string,
   ): Promise<Record<string, unknown> | null> {
-    const cases = await this.container.db.moderation.findCasesForUser(userId);
+    const cases = await services.db.moderation.findCasesForUser(userId);
     if (cases.length === 0) return null;
 
     // GDPR Recital 63 - redact third-party identity, not just the requester's own data.
@@ -92,18 +90,18 @@ export class ModModule extends Module {
         : { ...c, moderatorId: "[redacted: third-party moderator]" },
     );
     return { moderationCases: redacted };
-  }
+  },
 
-  public override async reconcileScheduledJobs(): Promise<void> {
+  async reconcileScheduledJobs(services: Container = container): Promise<void> {
     let armed = 0;
-    for await (const page of this.container.db.moderation.iterateActiveExpiringCases()) {
-      await Promise.all(page.map((c) => scheduleCaseLift(this.container, c)));
+    for await (const page of services.db.moderation.iterateActiveExpiringCases()) {
+      await Promise.all(page.map((c) => scheduleCaseLift(services, c)));
       armed += page.length;
     }
     if (armed > 0) {
-      this.container.logger.debug(
+      services.logger.debug(
         `[mod] Re-armed ${armed} expiry job(s) on load.`,
       );
     }
-  }
-}
+  },
+});

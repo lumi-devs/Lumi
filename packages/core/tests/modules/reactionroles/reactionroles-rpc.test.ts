@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { reactionrolesRpcHandlers } from "#modules/reactionroles/rpc.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 vi.mock("#lib/rpc/discord-rest-lookup.js", () => ({
   checkGuildManagerRest: vi.fn().mockResolvedValue({ isManager: true }),
@@ -82,6 +82,6 @@ describe("ReactionRoles RPC Handlers", () => {
     })) as any;
 
     expect(res).toEqual({ success: true, id: "menu-1", deleted: true });
-    expect(mockUtility.deleteMenu).toHaveBeenCalledWith("111111111111111111", "menu-1");
+    expect(mockUtility.deleteMenu).toHaveBeenCalledWith(container, "111111111111111111", "menu-1");
   });
 });

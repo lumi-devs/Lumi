@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { systemRpc, type SystemStatusData } from "@lumi/contracts/rpc";
 import { streamConsumerLag, getEventLoopLagP99Ms } from "@lumi/observability";
 import { Queue } from "bullmq";
@@ -24,8 +24,7 @@ const StaleAfterMs = DefaultPublishIntervalMs * 3;
 
 // A bare, read-only BullMQ `Queue` handle against the shared scheduled-tasks
 // queue - the same "producer-only" trick `scheduler-producer.ts` uses, since
-// this process (`apps/api` in practice) never runs `@sapphire/plugin-
-// scheduled-tasks`'s own `Queue`/`Worker` (see `api-container-services.ts`).
+// this process (`apps/api` in practice) never runs a `Worker`.
 // Lazily created and cached for the process lifetime rather than per-call.
 let scheduledTasksQueue: Queue | null = null;
 
@@ -54,11 +53,6 @@ async function readEventBusStats(): Promise<{ pending: number | null; lag: numbe
 
 const StatusCacheMs = 3_000;
 let statusCache: { at: number; value: Promise<SystemStatusData> } | null = null;
-
-/** Clears the module-level status snapshot cache this file keeps, so a test can force a fresh aggregation. */
-export function resetSystemStatusCacheForTests(): void {
-  statusCache = null;
-}
 
 function buildSystemStatusDeps(): SystemStatusDeps {
   return {
@@ -118,8 +112,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
         clusterName: getClusterName() ?? DefaultClusterName,
       }),
     ]);
-    const allModules = container.stores
-      .get("modules")
+    const allModules = container.moduleStore
       .loaded()
       .map((m) => ({
         name: m.meta.name,
@@ -154,7 +147,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
   },
 
   "system.module.toggle": async ({ input }) => {
-    const moduleStore = container.stores.get("modules");
+    const moduleStore = container.moduleStore;
     if (!moduleStore) {
       throw new Error("ModuleStore not initialized");
     }

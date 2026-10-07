@@ -1,12 +1,12 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-  UserError,
-} from "@sapphire/framework";
-import { PermitResolver } from "#lib/permissions/index.js";
+import { UserError } from "@lumi/shared";
+import type { Container } from "#lib/services.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { type ButtonInteraction } from "discord.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  checkSecurity,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { makeSuccessCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
@@ -18,33 +18,29 @@ import { ModuleRestartCancelId, ModuleRestartId } from "../../constants.js";
  * needs a restart to load (Bun can't hot-swap module code). Restart sends the
  * process a graceful SIGTERM; the supervisor brings it back on the new code.
  */
-@ApplyOptions<InteractionHandler.Options>({
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class ModuleRestartInteractionHandler extends LumiInteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
+export const moduleRestart = defineInteraction({
+  prefix: [ModuleRestartCancelId.prefix, ModuleRestartId.prefix],
+  async run(services: Container, interaction: ButtonInteraction) {
     const cancel = ModuleRestartCancelId.parse(interaction.customId);
-    if (cancel) return this.some({ action: "cancel" as const, userId: cancel.userId });
-
-    const restart = ModuleRestartId.parse(interaction.customId);
-    if (restart) return this.some({ action: "restart" as const, userId: restart.userId });
-
-    return this.none();
-  }
-
-  public override async run(
-    interaction: ButtonInteraction,
-    { action, userId }: { action: "restart" | "cancel"; userId: string },
-  ) {
-    this.checkSecurity(interaction, userId);
+    const restart = cancel
+      ? null
+      : ModuleRestartId.parse(interaction.customId);
+    const match = cancel
+      ? { action: "cancel" as const, userId: cancel.userId }
+      : restart
+        ? { action: "restart" as const, userId: restart.userId }
+        : null;
+    if (!match) return;
+    const { action, userId } = match;
+    checkSecurity(interaction, userId);
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
         message: `${Emojis.Cross} Only Bot Owners can restart Lumi.`,
       });
     }
-    await this.acknowledge(interaction);
-    const t = await fetchTyped(interaction);
+    await acknowledge(interaction);
+    const t = await fetchTyped(interaction, services);
 
     if (action === "cancel") {
       await interaction.editReply(
@@ -62,6 +58,6 @@ export class ModuleRestartInteractionHandler extends LumiInteractionHandler {
         t("core:restartingText"),
       ),
     );
-    scheduleProcessRestart(`bot owner ${userId} via update button`);
-  }
-}
+    scheduleProcessRestart(services, `bot owner ${userId} via update button`);
+  },
+});

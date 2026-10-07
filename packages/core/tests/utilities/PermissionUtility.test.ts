@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { PermissionUtility } from "#modules/core/utilities/PermissionUtility.js";
+import { container } from "#lib/services.js";
+import { permissionUtility } from "#modules/core/utilities/PermissionUtility.js";
 
 describe("PermissionUtility", () => {
-  let service: PermissionUtility;
+  let service: typeof permissionUtility;
   let mockPermissions: any;
 
   beforeEach(() => {
@@ -23,37 +23,34 @@ describe("PermissionUtility", () => {
 
     (container as any).db = { permissions: mockPermissions } as any;
 
-    service = new PermissionUtility(
-      { name: "permissions", store: { name: "utilities" } } as any,
-      {},
-    );
+    service = permissionUtility;
   });
 
   describe("createPermit", () => {
     it("rejects creating an enforced permit", async () => {
       await expect(
-        service.createPermit("G1", "Fake Tier", "enforced", ["admin.*"]),
+        service.createPermit(container, "G1", "Fake Tier", "enforced", ["admin.*"]),
       ).rejects.toThrow(/fixed system tiers/i);
       expect(mockPermissions.createPermit).not.toHaveBeenCalled();
     });
 
     it("rejects an invalid kind", async () => {
       await expect(
-        service.createPermit("G1", "Weird", "bogus", ["admin.*"]),
+        service.createPermit(container, "G1", "Weird", "bogus", ["admin.*"]),
       ).rejects.toThrow(/invalid permit kind/i);
     });
 
     it("rejects a duplicate name in the same guild", async () => {
       mockPermissions.findPermitByName.mockResolvedValue({ id: 1, name: "Mods" });
       await expect(
-        service.createPermit("G1", "Mods", "custom", ["mod.*"]),
+        service.createPermit(container, "G1", "Mods", "custom", ["mod.*"]),
       ).rejects.toThrow(/already exists/i);
     });
 
     it("normalizes and dedupes nodes, then creates", async () => {
       mockPermissions.findPermitByName.mockResolvedValue(null);
       mockPermissions.createPermit.mockResolvedValue({ id: 1 });
-      await service.createPermit("G1", " Mods ", "custom", [
+      await service.createPermit(container, "G1", " Mods ", "custom", [
         " mod.ban ",
         "mod.ban",
         "",
@@ -70,7 +67,7 @@ describe("PermissionUtility", () => {
     it("rejects when no nodes remain after normalization", async () => {
       mockPermissions.findPermitByName.mockResolvedValue(null);
       await expect(
-        service.createPermit("G1", "Empty", "custom", ["  ", ""]),
+        service.createPermit(container, "G1", "Empty", "custom", ["  ", ""]),
       ).rejects.toThrow(/at least one permit node/i);
     });
   });
@@ -83,7 +80,7 @@ describe("PermissionUtility", () => {
         builtin: true,
         kind: "enforced",
       });
-      await expect(service.deletePermit("G1", 1)).rejects.toThrow(/built-in/i);
+      await expect(service.deletePermit(container, "G1", 1)).rejects.toThrow(/built-in/i);
       expect(mockPermissions.deletePermit).not.toHaveBeenCalled();
     });
 
@@ -94,13 +91,13 @@ describe("PermissionUtility", () => {
         builtin: false,
         kind: "custom",
       });
-      await service.deletePermit("G1", 2);
+      await service.deletePermit(container, "G1", 2);
       expect(mockPermissions.deletePermit).toHaveBeenCalledWith("G1", 2);
     });
 
     it("throws when the permit doesn't exist", async () => {
       mockPermissions.getPermit.mockResolvedValue(null);
-      await expect(service.deletePermit("G1", 999)).rejects.toThrow(
+      await expect(service.deletePermit(container, "G1", 999)).rejects.toThrow(
         /not found/i,
       );
     });
@@ -114,7 +111,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       await expect(
-        service.assignPermit("G1", 1, "role", "111111111111111111"),
+        service.assignPermit(container, "G1", 1, "role", "111111111111111111"),
       ).rejects.toThrow(/only be assigned to users/i);
       expect(mockPermissions.assignPermit).not.toHaveBeenCalled();
     });
@@ -126,7 +123,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       await expect(
-        service.assignPermit("G1", 1, "channel", "111111111111111111"),
+        service.assignPermit(container, "G1", 1, "channel", "111111111111111111"),
       ).rejects.toThrow(/only be assigned to users/i);
     });
 
@@ -137,7 +134,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       mockPermissions.assignPermit.mockResolvedValue({ id: 10 });
-      await service.assignPermit("G1", 1, "user", "111111111111111111");
+      await service.assignPermit(container, "G1", 1, "user", "111111111111111111");
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         1,
@@ -153,7 +150,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       mockPermissions.assignPermit.mockResolvedValue({ id: 11 });
-      await service.assignPermit("G1", 2, "role", "222222222222222222");
+      await service.assignPermit(container, "G1", 2, "role", "222222222222222222");
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         2,
@@ -169,7 +166,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       mockPermissions.assignPermit.mockResolvedValue({ id: 12 });
-      await service.assignPermit("G1", 2, "user", "333333333333333333");
+      await service.assignPermit(container, "G1", 2, "user", "333333333333333333");
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         2,
@@ -185,7 +182,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       mockPermissions.assignPermit.mockResolvedValue({ id: 13 });
-      await service.assignPermit("G1", 2, "channel", "444444444444444444");
+      await service.assignPermit(container, "G1", 2, "channel", "444444444444444444");
       expect(mockPermissions.assignPermit).toHaveBeenCalledWith(
         "G1",
         2,
@@ -201,7 +198,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       await expect(
-        service.assignPermit("G1", 2, "role", "not-a-snowflake"),
+        service.assignPermit(container, "G1", 2, "role", "not-a-snowflake"),
       ).rejects.toThrow(/invalid mention/i);
     });
 
@@ -212,7 +209,7 @@ describe("PermissionUtility", () => {
         guildId: "G1",
       });
       await expect(
-        service.unassignPermit("G1", 1, "role", "111111111111111111"),
+        service.unassignPermit(container, "G1", 1, "role", "111111111111111111"),
       ).rejects.toThrow(/only be assigned to users/i);
       expect(mockPermissions.unassignPermit).not.toHaveBeenCalled();
     });
@@ -220,14 +217,14 @@ describe("PermissionUtility", () => {
 
   describe("updatePermitNodes", () => {
     it("rejects an empty node list", async () => {
-      await expect(service.updatePermitNodes("G1", 1, [])).rejects.toThrow(
+      await expect(service.updatePermitNodes(container, "G1", 1, [])).rejects.toThrow(
         /at least one permit node/i,
       );
     });
 
     it("normalizes and forwards the node list", async () => {
       mockPermissions.updatePermitNodes.mockResolvedValue({ id: 1 });
-      await service.updatePermitNodes("G1", 1, [" mod.ban ", "mod.ban"]);
+      await service.updatePermitNodes(container, "G1", 1, [" mod.ban ", "mod.ban"]);
       expect(mockPermissions.updatePermitNodes).toHaveBeenCalledWith("G1", 1, [
         "mod.ban",
       ]);
@@ -242,7 +239,7 @@ describe("PermissionUtility", () => {
         name: "Old",
       });
       mockPermissions.findPermitByName.mockResolvedValue({ id: 2, name: "New" });
-      await expect(service.renamePermit("G1", 1, "New")).rejects.toThrow(
+      await expect(service.renamePermit(container, "G1", 1, "New")).rejects.toThrow(
         /already exists/i,
       );
     });
@@ -255,7 +252,7 @@ describe("PermissionUtility", () => {
       });
       mockPermissions.findPermitByName.mockResolvedValue({ id: 1, name: "Old" });
       mockPermissions.renamePermit.mockResolvedValue({ id: 1, name: "Old" });
-      await service.renamePermit("G1", 1, "Old");
+      await service.renamePermit(container, "G1", 1, "Old");
       expect(mockPermissions.renamePermit).toHaveBeenCalledWith("G1", 1, "Old");
     });
   });
@@ -283,7 +280,7 @@ describe("PermissionUtility", () => {
 
     it("refuses to assign another guild's Extra Owner permit", async () => {
       await expect(
-        service.assignPermit(
+        service.assignPermit(container, 
           "GUILD_A",
           FOREIGN_EXTRA_OWNER.id,
           "user",
@@ -295,7 +292,7 @@ describe("PermissionUtility", () => {
 
     it("refuses to unassign from another guild's permit", async () => {
       await expect(
-        service.unassignPermit(
+        service.unassignPermit(container, 
           "GUILD_A",
           FOREIGN_EXTRA_OWNER.id,
           "user",
@@ -307,14 +304,14 @@ describe("PermissionUtility", () => {
 
     it("refuses to delete another guild's permit", async () => {
       await expect(
-        service.deletePermit("GUILD_A", FOREIGN_EXTRA_OWNER.id),
+        service.deletePermit(container, "GUILD_A", FOREIGN_EXTRA_OWNER.id),
       ).rejects.toThrow(/not found/i);
       expect(mockPermissions.deletePermit).not.toHaveBeenCalled();
     });
 
     it("refuses to rename another guild's permit", async () => {
       await expect(
-        service.renamePermit("GUILD_A", FOREIGN_EXTRA_OWNER.id, "Pwned"),
+        service.renamePermit(container, "GUILD_A", FOREIGN_EXTRA_OWNER.id, "Pwned"),
       ).rejects.toThrow(/not found/i);
       expect(mockPermissions.renamePermit).not.toHaveBeenCalled();
     });
@@ -322,7 +319,7 @@ describe("PermissionUtility", () => {
     it("refuses to rewrite another guild's permit nodes", async () => {
       mockPermissions.updatePermitNodes.mockResolvedValue(null);
       await expect(
-        service.updatePermitNodes("GUILD_A", FOREIGN_EXTRA_OWNER.id, ["*"]),
+        service.updatePermitNodes(container, "GUILD_A", FOREIGN_EXTRA_OWNER.id, ["*"]),
       ).rejects.toThrow(/not found/i);
       expect(mockPermissions.updatePermitNodes).toHaveBeenCalledWith(
         "GUILD_A",
@@ -333,13 +330,13 @@ describe("PermissionUtility", () => {
 
     it("does not leak the foreign permit through getPermit", async () => {
       await expect(
-        service.getPermit("GUILD_A", FOREIGN_EXTRA_OWNER.id),
+        service.getPermit(container, "GUILD_A", FOREIGN_EXTRA_OWNER.id),
       ).resolves.toBeNull();
     });
 
     it("still resolves the permit for its owning guild", async () => {
       await expect(
-        service.getPermit("GUILD_B", FOREIGN_EXTRA_OWNER.id),
+        service.getPermit(container, "GUILD_B", FOREIGN_EXTRA_OWNER.id),
       ).resolves.toEqual<typeof FOREIGN_EXTRA_OWNER>(FOREIGN_EXTRA_OWNER);
     });
   });
@@ -361,7 +358,7 @@ describe("PermissionUtility", () => {
         },
       ]);
 
-      const result = await service.exportPermits("G1");
+      const result = await service.exportPermits(container, "G1");
 
       expect(result.permits).toEqual([
         { name: "Mods", nodes: ["mod.*"], roleIds: ["111", "222"] },
@@ -371,7 +368,7 @@ describe("PermissionUtility", () => {
 
   describe("importPermits", () => {
     it("rejects a payload without a permits array", async () => {
-      await expect(service.importPermits("G1", { foo: "bar" })).rejects.toThrow(
+      await expect(service.importPermits(container, "G1", { foo: "bar" })).rejects.toThrow(
         /not a valid permit export/i,
       );
     });
@@ -381,7 +378,7 @@ describe("PermissionUtility", () => {
       mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Mods" });
       mockPermissions.assignPermit.mockResolvedValue({});
 
-      const result = await service.importPermits("G1", {
+      const result = await service.importPermits(container, "G1", {
         version: 1,
         exportedAt: "now",
         permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: ["111111111111111111"] }],
@@ -396,7 +393,7 @@ describe("PermissionUtility", () => {
       mockPermissions.findPermitByName.mockResolvedValue({ id: 9, name: "Mods", builtin: false });
       mockPermissions.updatePermitNodes.mockResolvedValue({ id: 9 });
 
-      const result = await service.importPermits("G1", {
+      const result = await service.importPermits(container, "G1", {
         permits: [{ name: "Mods", nodes: ["mod.*", "mod.warn"], roleIds: [] }],
       });
 
@@ -412,7 +409,7 @@ describe("PermissionUtility", () => {
       mockPermissions.findPermitByName.mockResolvedValue(null);
       mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Good" });
 
-      const result = await service.importPermits("G1", {
+      const result = await service.importPermits(container, "G1", {
         permits: [
           { name: "", nodes: ["mod.*"], roleIds: [] },
           { name: "Good", nodes: ["mod.*"], roleIds: [] },
@@ -426,7 +423,7 @@ describe("PermissionUtility", () => {
       mockPermissions.findPermitByName.mockResolvedValue(null);
       mockPermissions.createPermit.mockRejectedValue(new Error("boom"));
 
-      const result = await service.importPermits("G1", {
+      const result = await service.importPermits(container, "G1", {
         permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: [] }],
       });
 
@@ -438,7 +435,7 @@ describe("PermissionUtility", () => {
       mockPermissions.findPermitByName.mockResolvedValue(null);
       mockPermissions.createPermit.mockResolvedValue({ id: 5, name: "Mods" });
 
-      await service.importPermits("G1", {
+      await service.importPermits(container, "G1", {
         permits: [{ name: "Mods", nodes: ["mod.*"], roleIds: ["not-a-snowflake", "111111111111111111"] }],
       });
 

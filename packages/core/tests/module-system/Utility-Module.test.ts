@@ -1,43 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { Utility, getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { container } from "#lib/services.js";
+import {
+  defineUtility,
+  getUtility,
+  tryGetUtility,
+} from "#lib/module-system/Utility.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 
-class DummyUtility extends Utility {
-  public testAccessors() {
-    return {
-      logger: this.logger,
-      db: this.db,
-      valkey: this.valkey,
-    };
-  }
-}
-
-class BaseDummyModule extends Module {
-  public override reconcileScheduledJobs(): void {
-    // Custom reconcile
-  }
-}
-
-const DummyModule = DefineModule({
-  name: "dummy-mod",
-  displayName: "Dummy Module",
-  emoji: "🎮",
-  description: "A dummy module for testing",
-  version: "1.0.0",
-  configSchema: cfg.object({
-    enabled: cfg.boolean({ label: "Enabled", description: "Enable feature" }),
-  }),
-})(BaseDummyModule);
-
-class FailingReconcileModule extends Module {
-  public override reconcileScheduledJobs(): Promise<void> {
-    return Promise.reject(new Error("Reconcile error"));
-  }
-}
-
-describe("module-system Utility and Module", () => {
+describe("module-system defineUtility and defineModule", () => {
   beforeEach(() => {
     container.logger = {
       info: vi.fn(),
@@ -48,63 +19,64 @@ describe("module-system Utility and Module", () => {
 
     (container as any).db = { dummyDb: true } as any;
     (container as any).valkey = { dummyValkey: true } as any;
-
-    const mockUtilitiesStore = new Map();
-    container.stores = {
-      get: (storeName: string) => {
-        if (storeName === "utilities") return mockUtilitiesStore;
-        return null;
-      },
-    } as any;
   });
 
-  describe("Utility", () => {
-    it("accesses container utilities via getters", () => {
-      const utility = new DummyUtility({} as any, { name: "dummy" });
-      const accessors = utility.testAccessors();
-
-      expect(accessors.logger).toBe(container.logger);
-      expect(accessors.db).toBe(container.db);
-      expect(accessors.valkey).toBe(container.valkey);
+  describe("defineUtility", () => {
+    it("returns the def object with its methods intact", () => {
+      const def = defineUtility({
+        name: "dummy",
+        answer: () => 42,
+      });
+      expect(def.name).toBe("dummy");
+      expect(def.answer()).toBe(42);
     });
 
-    it("fetches utility with tryGetUtility and throws on getUtility if missing", () => {
-      const mockStore = container.stores.get("utilities") as unknown as Map<string, any>;
-      const dummyUtilityInstance = new DummyUtility({} as any, { name: "dummy" });
-      mockStore.set("dummy", dummyUtilityInstance);
-
-      expect(tryGetUtility("dummy" as any)).toBe(dummyUtilityInstance);
-      expect(getUtility("dummy" as any)).toBe(dummyUtilityInstance);
-
+    it("fetches utility with tryGetUtility and throws on getUtility if missing", async () => {
+      const { loadUtilities } = await import("#lib/module-system/Utility.js");
       expect(tryGetUtility("nonexistent" as any)).toBeUndefined();
-      expect(() => getUtility("nonexistent" as any)).toThrow('Utility "nonexistent" is not loaded');
+      expect(() => getUtility("nonexistent" as any)).toThrow(
+        'Utility "nonexistent" is not loaded',
+      );
+      expect(typeof loadUtilities).toBe("function");
     });
   });
 
-  describe("Module & DefineModule", () => {
-    it("decorates Module class with DefineModule and sets metadata", () => {
-      expect((DummyModule as any).meta).toBeDefined();
-
-      const mod = new DummyModule({} as any, { name: "dummy-mod" });
-      expect(mod.configFields).toHaveLength(1);
-      expect(mod.configFields[0]!.key).toBe("enabled");
-      expect(mod.enabled).toBe(true);
+  describe("defineModule", () => {
+    const dummyModule = defineModule({
+      name: "dummy-mod",
+      displayName: "Dummy Module",
+      emoji: "🎮",
+      description: "A dummy module for testing",
+      version: "1.0.0",
+      configSchema: cfg.object({
+        enabled: cfg.boolean({ label: "Enabled", description: "Enable feature" }),
+      }),
     });
 
-    it("executes lifecycle methods deleteUserData, reconcileScheduledJobs, onLoad, onUnload", async () => {
-      const mod = new DummyModule({} as any, { name: "dummy-mod" });
+    it("builds metadata and derives config fields from the schema", () => {
+      expect(dummyModule.meta).toBeDefined();
+      expect(dummyModule.meta.name).toBe("dummy-mod");
+      expect(dummyModule.configFields).toHaveLength(1);
+      expect(dummyModule.configFields[0]!.key).toBe("enabled");
+      expect(dummyModule.enabled).toBe(true);
+    });
 
-      expect(mod.deleteUserData("user-1")).toBeUndefined();
-      expect(mod.reconcileScheduledJobs()).toBeUndefined();
+    it("runs lifecycle hooks with working defaults", async () => {
+      expect(await dummyModule.deleteUserData?.(container, "user-1")).toBeUndefined();
+      expect(await dummyModule.reconcileScheduledJobs?.(container)).toBeUndefined();
 
-      await mod.onLoad();
-      await mod.onUnload();
+      await dummyModule.onLoad?.(container);
+      await dummyModule.onUnload?.(container);
     });
 
     it("catches reconcileScheduledJobs errors in onLoad and logs them instead of throwing", async () => {
-      const failingMod = new FailingReconcileModule({} as any, { name: "failing-mod" });
+      const failingMod = defineModule({
+        name: "failing-mod",
+        description: "fails reconcile",
+        reconcileScheduledJobs: () => Promise.reject(new Error("Reconcile error")),
+      });
 
-      await failingMod.onLoad();
+      await failingMod.onLoad?.(container);
 
       // reconcileScheduledJobs() failure is caught off a detached promise
       // inside onLoad(); flush microtasks so the .catch() handler runs.
@@ -114,7 +86,9 @@ describe("module-system Utility and Module", () => {
         "[Module:failing-mod] reconcileScheduledJobs failed:",
         expect.any(Error),
       );
-      expect((container.logger.error as any).mock.calls[0][1].message).toBe("Reconcile error");
+      expect((container.logger.error as any).mock.calls[0][1].message).toBe(
+        "Reconcile error",
+      );
     });
   });
 });

@@ -8,8 +8,8 @@
 // a shard nobody is running.
 
 import type { Cluster } from "iovalkey";
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
-import { tryParseJSON } from "@sapphire/utilities";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
+import { tryParseJSON } from "@lumi/shared";
 
 function isClusterClient(valkey: ValkeyClient): boolean {
   return (

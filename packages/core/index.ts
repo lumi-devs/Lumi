@@ -2,6 +2,11 @@ import "./src/lib/types/common.js";
 
 export { bootstrapClientApp } from "./src/lib/client/bootstrap.js";
 export {
+  createClient,
+  loginLumi,
+  destroyLumi,
+} from "./src/lib/client/LumiClient.js";
+export {
   bootstrapApiApp,
   destroyApiContainerServices,
 } from "./src/lib/client/api-bootstrap.js";
@@ -32,5 +37,6 @@ export {
   registerInfrastructureReadinessProbes,
   registerRpcReadinessProbe,
   registerSchedulerReadinessProbe,
+  registerWorkerProbes,
 } from "./src/lib/client/ReadinessProbes.js";
-export { container } from "@sapphire/framework";
+export { container } from "./src/lib/services.js";

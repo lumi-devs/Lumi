@@ -1,10 +1,9 @@
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 
 const NODE_TTL_MS = 30_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
 const LEASE_KEY = "lumi:cluster:shard_leases";
 const NODES_KEY = "lumi:cluster:nodes";
-const SHARD_STATE_KEY = "lumi:cluster:shard_state";
 
 export interface ShardLease {
   shardId: number;
@@ -17,18 +16,6 @@ export interface NodeRegistration {
   startedAt: number;
   shardCapacity: number;
   metadata?: Record<string, unknown>;
-}
-
-export interface ShardStatePayload {
-  shardId: number;
-  guilds: Array<{
-    id: string;
-    approximateMemberCount: number;
-    channels: Array<{ id: string; type: number }>;
-    roles: Array<{ id: string; permissions: string }>;
-  }>;
-  voiceStates: Map<string, { channelId: string; deaf: boolean; mute: boolean }>;
-  timestamp: number;
 }
 
 let nodeId: string;
@@ -181,21 +168,4 @@ async function handoffShards(shards: number[]): Promise<void> {
     multi.hset(LEASE_KEY, { [String(shards[i])]: targetNode });
   }
   await multi.exec();
-}
-
-export async function publishShardState(payload: ShardStatePayload): Promise<void> {
-  await valkey.hset(SHARD_STATE_KEY, String(payload.shardId), JSON.stringify(payload));
-}
-
-export async function getShardState(shardId: number): Promise<ShardStatePayload | null> {
-  const raw = await valkey.hget(SHARD_STATE_KEY, String(shardId));
-  return raw ? JSON.parse(raw) : null;
-}
-
-export function getMyNodeId(): string {
-  return nodeId;
-}
-
-export function getMyShards(): number[] {
-  return [];
 }

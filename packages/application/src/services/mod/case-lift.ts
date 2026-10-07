@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { ModerationCase } from "@prisma/client";
 import { BanAction } from "./actions/BanAction.js";
 import { MuteAction } from "./actions/MuteAction.js";

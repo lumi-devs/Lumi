@@ -1,24 +1,20 @@
 import { buildRestOptions } from "#lib/discord-rest.js";
-import {
-  getScheduledTasksConnectionOptions,
-  SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
-} from "#lib/client/scheduled-tasks-queue.js";
 import { envParseString, getConsumerId } from "#lib/env.js";
-import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import type { ValkeyLock } from "#lib/lock.js";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
+import { ScheduledTaskRunner } from "#lib/scheduler-runner.js";
+import { loadScheduledTasks } from "#lib/scheduled-tasks.js";
 import { watchFailedJobs } from "#lib/scheduler-failed-jobs.js";
 import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
 import {
-  publishSchedulerHeartbeat,
-  type SchedulerHeartbeatWatcher,
-} from "#lib/scheduler-heartbeat.js";
-import { SapphireClient, container } from "@sapphire/framework";
+  publishSchedulerHeartbeat, type SchedulerHeartbeatWatcher, } from "#lib/scheduler-heartbeat.js";
+import { Client } from "discord.js";
+import { container } from "#lib/services.js";
 import { installContainerServices } from "./container-services.js";
 
 export interface SchedulerContainerServices {
-  client: SapphireClient;
+  client: Client;
   ownedEventBus: OwnedEventBus;
   schedulerLock: ValkeyLock;
   failedJobsWatcher: { close(): Promise<void> };
@@ -26,53 +22,41 @@ export interface SchedulerContainerServices {
   heartbeatWatcher: SchedulerHeartbeatWatcher;
 }
 
-/**
- * Installs container services for the gateway-free scheduler process.
- * Initializes BullMQ tasks and loads scheduled-task stores without calling `client.login()`.
- */
 export async function installSchedulerContainerServices(): Promise<SchedulerContainerServices> {
-  const client = new SapphireClient({
+  const client = new Client({
     intents: [],
     rest: buildRestOptions(),
-    baseUserDirectory: null,
-    loadDefaultErrorListeners: false,
-    loadApplicationCommandRegistriesStatusListeners: false,
-    loadMessageCommandListeners: false,
-    loadScheduledTaskErrorListeners: false,
-    logger: {
-      instance: new PinoSapphireLogger(
-        envParseString("SERVICE_NAME", "lumi-scheduler"),
-      ),
-    },
-    tasks: {
-      bull: {
-        connection: getScheduledTasksConnectionOptions(),
-        defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
-      },
-    },
   });
 
-  const ownedEventBus = installContainerServices(client);
-
-  await Promise.all(
-    [...client.stores.values()].map((store) => store.loadAll()),
+  const ownedEventBus = installContainerServices(
+    client,
+    envParseString("SERVICE_NAME", "lumi-scheduler"),
   );
 
-  // Acquired after piece-loading (so the store is populated the moment the
-  // `Worker` - already running since construction - could plausibly dispatch
-  // a job to it) but before this replica trusts itself to own repeatable-job
-  // registration. A second replica racing this fails fast (`onLostLock`/the
-  // rejected promise below both `process.exit(1)`), same semantics
-  // `LumiClient.ts` had.
+  await container.moduleStore.discover();
+  for (const record of container.moduleStore.all()) {
+    if (!record.enabled) continue;
+    await container.moduleStore.loadModule(record.name).catch((err: unknown) => {
+      container.logger.error(`[Scheduler] Module load failed: ${record.name}`, err);
+    });
+  }
+
+  for (const record of container.moduleStore.loaded()) {
+    if (record.state === "loaded") await loadScheduledTasks(record.dir);
+  }
+
+  const tasks = new ScheduledTaskRunner();
+  container.tasks = tasks;
+
   const schedulerLock = await acquireSchedulerLock(container.valkey, () => {
     container.logger.error("[Scheduler] Lost scheduler lock, exiting");
     process.exit(1);
   });
 
-  await container.tasks.createRepeated();
+  await tasks.createRepeated();
 
-  const failedJobsWatcher = watchFailedJobs(container.tasks);
-  const queueDepthWatcher = watchQueueDepth(container.tasks);
+  const failedJobsWatcher = watchFailedJobs(tasks);
+  const queueDepthWatcher = watchQueueDepth(tasks);
   const heartbeatWatcher = publishSchedulerHeartbeat(container.valkey, getConsumerId());
 
   return {

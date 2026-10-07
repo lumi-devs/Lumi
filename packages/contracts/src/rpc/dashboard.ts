@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type {
   AuditListData,
   ConfigHistoryListData,
@@ -55,7 +55,7 @@ export const dashboardRpc = {
     readOnly: true,
   }),
   "guild.module.get": rpcAction<{ module: DashboardModuleView | null }>()({
-    input: s.object({ module: ModuleNameSchema }),
+    input: z.object({ module: ModuleNameSchema }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.medium,
     summary:
@@ -69,7 +69,7 @@ export const dashboardRpc = {
     readOnly: true,
   }),
   "guild.summaries.list": rpcAction<{ summaries: GuildSummaryView[] }>()({
-    input: s.object({
+    input: z.object({
       guildIds: boundedArray(SnowflakeSchema, { min: 1 }),
     }),
     auth: "session",
@@ -79,9 +79,9 @@ export const dashboardRpc = {
     readOnly: true,
   }),
   "guild.module.toggle": rpcAction<{ success: boolean; enabled: boolean }>()({
-    input: s.object({
-      moduleName: s.string().lengthGreaterThanOrEqual(1),
-      enabled: s.boolean(),
+    input: z.object({
+      moduleName: z.string().min(1),
+      enabled: z.boolean(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -92,10 +92,10 @@ export const dashboardRpc = {
     key: string;
     value: unknown;
   }>()({
-    input: s.object({
-      moduleName: s.string().lengthGreaterThanOrEqual(1),
-      key: s.string().lengthGreaterThanOrEqual(1),
-      value: s.unknown(),
+    input: z.object({
+      moduleName: z.string().min(1),
+      key: z.string().min(1),
+      value: z.unknown(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -106,9 +106,9 @@ export const dashboardRpc = {
     /** Coerced value per key, or null when the key was deleted. */
     updated: Record<string, unknown>;
   }>()({
-    input: s.object({
-      moduleName: s.string().lengthGreaterThanOrEqual(1),
-      values: s.unknown(),
+    input: z.object({
+      moduleName: z.string().min(1),
+      values: z.unknown(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -118,23 +118,23 @@ export const dashboardRpc = {
     success: boolean;
     settings: GuildSettings;
   }>()({
-    input: s.object({
-      prefix: s.string().lengthLessThanOrEqual(5).nullable().optional(),
-      locale: s.enum(SupportedLocales).optional(),
+    input: z.object({
+      prefix: z.string().max(5).nullable().optional(),
+      locale: z.enum(SupportedLocales).optional(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "General guild settings form.",
   }),
   "guild.audit.list": rpcAction<AuditListData>()({
-    input: s.object(AuditFilterShape),
+    input: z.object(AuditFilterShape),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.medium,
     summary: "Paged guild audit log.",
     readOnly: true,
   }),
   "guild.history.list": rpcAction<ConfigHistoryListData>()({
-    input: s.object({
+    input: z.object({
       moduleName: ModuleNameSchema.optional(),
       key: ConfigKeySchema.optional(),
       actorId: SnowflakeSchema.optional(),
@@ -152,40 +152,36 @@ export const dashboardRpc = {
     key: string;
     value: unknown;
   }>()({
-    input: s.object({
-      entryId: s.number().int().greaterThanOrEqual(1),
+    input: z.object({
+      entryId: z.number().int().gte(1),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Roll config back to a history entry.",
   }),
   "guild.overrides.list": rpcAction<{ overrides: ConfigOverrideView[] }>()({
-    input: s.object({ moduleName: ModuleNameSchema.optional() }),
+    input: z.object({ moduleName: ModuleNameSchema.optional() }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "List per-channel/role/user config overrides.",
     readOnly: true,
   }),
   "guild.overrides.set": rpcAction<{ success: boolean; deleted: boolean }>()({
-    input: s.object({
+    input: z.object({
       moduleName: ModuleNameSchema,
       key: ConfigKeySchema,
-      modelType: s.enum(ConfigOverrideModelTypes),
+      modelType: z.enum(ConfigOverrideModelTypes),
       modelId: SnowflakeSchema,
-      value: s.unknown(),
+      value: z.unknown(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Upsert an override; null value deletes it.",
   }),
   "guild.moduleData.list": rpcAction<ModuleDataListData>()({
-    input: s.object({
+    input: z.object({
       moduleName: ModuleNameSchema.optional(),
-      targetId: s
-        .string()
-        .lengthGreaterThanOrEqual(1)
-        .lengthLessThanOrEqual(191)
-        .optional(),
+      targetId: z.string().min(1).max(191).optional(),
       key: ConfigKeySchema.optional(),
       page: PageSchema,
       pageSize: PageSizeSchema,

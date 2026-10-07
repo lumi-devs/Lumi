@@ -1,5 +1,6 @@
+process.env["NODE_ENV"] ??= "development";
+
 import "./telemetry.js";
-import "@lumi/core/setup-api";
 import {
   bootstrapApiApp,
   closeAllSseConnections,

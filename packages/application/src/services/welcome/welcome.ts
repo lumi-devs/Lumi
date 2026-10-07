@@ -1,13 +1,11 @@
 import { userMention } from "@discordjs/formatters";
 import type { Guild } from "discord.js";
-import { container } from "@sapphire/framework";
-import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
+import { container } from "#lib/services.js";
+import { clampMessageDocumentV2, splitOnSeparator, type MessageDocumentV2 } from "@lumi/contracts";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeInfoCard, type CardReply } from "#lib/ui/cards.js";
 import {
-  MessageTemplateDocs,
   renderMessageContent,
-  splitOnSeparator,
   type MessageButton,
 } from "#lib/message-content.js";
 import { renderTemplate } from "#lib/utilities/template.js";
@@ -132,10 +130,6 @@ export const WelcomeDefaults = {
   dmWelcomeEnabled: false,
   dmWelcomeTemplate: "Welcome to {server}, {username}!",
 } as const;
-
-export const WelcomeTemplateDocs = MessageTemplateDocs;
-export const GoodbyeTemplateDocs = MessageTemplateDocs;
-export const DmTemplateDocs = MessageTemplateDocs;
 
 export function renderWelcomeCard(
   config: WelcomeModuleConfig,

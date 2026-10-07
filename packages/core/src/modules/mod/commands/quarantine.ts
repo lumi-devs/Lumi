@@ -1,6 +1,12 @@
-import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import {
+  runModerationFlow,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { Container } from "#lib/services.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/command-context.js";
+import { applyLocalizedBuilder } from "#lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
@@ -9,7 +15,7 @@ import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-
 
 const Root = "commands";
 
-type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
+type Flow = MC.Flow<GuildMember, ModerationCase>;
 
 function isSentinel(error: unknown, message: string): boolean {
   return error instanceof Error && error.message === message;
@@ -76,22 +82,15 @@ const QuarantineRemove: Flow = {
   }),
 };
 
-@ApplyOptions<ModerationSubcommand.Options>({
+export const quarantineDef: CommandDef = {
   name: "quarantine",
   description: "Quarantine or release a member",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.*",
   prefixEnabled: true,
-  subcommands: [
-    { name: "add", run: "add", default: true, requiredPermit: "mod.quarantine" },
-    { name: "remove", run: "remove", requiredPermit: "mod.quarantine" },
-  ],
-})
-export class QuarantineCommand extends ModerationSubcommand {
-  public override registerApplicationCommands(
-    registry: ModerationSubcommand.Registry,
-  ) {
-    registry.registerChatInputCommand((b) =>
+  build: () => {
+    const b = new SlashCommandBuilder().setName("quarantine");
+    return (
       applyLocalizedBuilder(b, "commands:quarantine")
         .addSubcommand((s) =>
           applyLocalizedBuilder(s, "commands:quarantineAdd")
@@ -118,21 +117,21 @@ export class QuarantineCommand extends ModerationSubcommand {
                 .setRequired(false)
                 .setAutocomplete(true),
             ),
-        ),
+        )
     );
-  }
-
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
+  },
+  handlers: {
+    add: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, QuarantineAdd),
+      requiredPermit: "mod.quarantine",
+    },
+    remove: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, QuarantineRemove),
+      requiredPermit: "mod.quarantine",
+    },
+  },
+  defaultSub: "add",
+  autocomplete: (_services: Container, interaction: AutocompleteInteraction) => {
     return respondWithReasonChoices(interaction);
-  }
-
-  public add(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, QuarantineAdd);
-  }
-
-  public remove(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, QuarantineRemove);
-  }
-}
+  },
+};

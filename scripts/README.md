@@ -84,7 +84,7 @@ A structural validation utility used during addon development and CI pipelines t
 
 * **Manifest Integrity**: Asserts presence and valid JSON formatting of `info.json`.
 * **Module Definition**: Verifies that `index.ts` exports a valid `@DefineModule` decorator definition.
-* **Directory Conventions**: Ensures all Sapphire Scheduled Tasks are placed strictly inside a `scheduled-tasks/` subdirectory.
+* **Directory Conventions**: Ensures all scheduled tasks are placed strictly inside a `scheduled-tasks/` subdirectory.
 * **Architectural Boundaries**: Checks for forbidden cross-module relative imports and disallowed global monkey-patching patterns.
 * **Memory-leak heuristics** *(warnings, not errors)*: flags `setInterval`/`setTimeout` handles that are never stored or never passed to `clearInterval`/`clearTimeout`, `.on(`/`.addListener(` registrations with no `onUnload`/`dispose`/`.off(`/`.removeListener(` anywhere in the same file, and module-level `let`/array/`Map`/`Set` state that's pushed/set/added to without any visible bound or eviction. These are best-effort static checks (regex-level, not a real parser) meant to prompt a second look, not a verdict - see `packages/core/src/lib/downloader/validate.ts`.
 

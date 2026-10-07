@@ -1,7 +1,6 @@
-import { Utility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { Piece } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
+import { defineUtility } from "#lib/module-system/Utility.js";
+import { type Container } from "#lib/services.js";
+import { Mutex } from "@lumi/shared";
 import {
   ChannelType,
   Collection,
@@ -36,7 +35,7 @@ import {
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import { buildPanel } from "../ui/panel.js";
 
-const creationQueues = new Collection<string, AsyncQueue>();
+const creationQueues = new Collection<string, Mutex>();
 
 const cleanupJobId = (guildId: string, channelId: string) =>
   `tempvc-cleanup:${guildId}:${channelId}`;
@@ -70,27 +69,143 @@ export function resolveGeneratorName(
   return [...substituted].slice(0, 100).join("");
 }
 
-@ApplyOptions<Piece.Options>({ name: "tempvc" })
-export default class TempVcUtility extends Utility {
-  public async onCreateCooldown(
+async function reorderChannels(
+  services: Container,
+  guild: Guild,
+  categoryId: string,
+): Promise<void> {
+  try {
+    const categoryChannels = [...guild.channels.cache.values()].filter(
+      (c) => c.parentId === categoryId && c.isVoiceBased(),
+    ) as VoiceBasedChannel[];
+
+    if (categoryChannels.length === 0) return;
+
+    const [recordsMap, generatorsMap] = await Promise.all([
+      listVcRecords(services, guild.id),
+      listGenerators(services, guild.id),
+    ]);
+
+    const generators: VoiceBasedChannel[] = [];
+    const managedVcs: VoiceBasedChannel[] = [];
+    const staticVcs: VoiceBasedChannel[] = [];
+
+    for (const channel of categoryChannels) {
+      if (generatorsMap.has(channel.id)) {
+        generators.push(channel);
+      } else if (recordsMap.has(channel.id)) {
+        managedVcs.push(channel);
+      } else {
+        staticVcs.push(channel);
+      }
+    }
+
+    generators.sort((a, b) => a.position - b.position);
+    staticVcs.sort((a, b) => a.position - b.position);
+
+    const genPosition = new Map<string, number>();
+    generators.forEach((g, i) => genPosition.set(g.id, i));
+
+    managedVcs.sort((a, b) => {
+      const recA = recordsMap.get(a.id);
+      const recB = recordsMap.get(b.id);
+      if (!recA || !recB) return 0;
+
+      const posA =
+        genPosition.get(recA.generatorId) ?? Number.MAX_SAFE_INTEGER;
+      const posB =
+        genPosition.get(recB.generatorId) ?? Number.MAX_SAFE_INTEGER;
+      if (posA !== posB) return posA - posB;
+
+      return recA.number - recB.number;
+    });
+
+    const finalOrder = [...generators, ...managedVcs, ...staticVcs];
+    const positions = finalOrder.map((c, index) => ({
+      channel: c.id,
+      position: index,
+    }));
+
+    const needsReorder = finalOrder.some((c, index) => c.position !== index);
+    if (needsReorder) {
+      await guild.channels.setPositions(positions);
+    }
+  } catch (err: unknown) {
+    logError("TempVC: reorder channels failed", err);
+  }
+}
+
+async function scheduleCleanup(
+  guildId: string,
+  channelId: string,
+): Promise<void> {
+  await scheduleTask(
+    "tempvc-cleanup",
+    { guildId, channelId },
+    {
+      repeated: false,
+      delay: TempvcCleanupDelayMs,
+      customJobOptions: {
+        jobId: cleanupJobId(guildId, channelId),
+        removeOnComplete: true,
+        removeOnFail: true,
+        priority: QueuePriority.CLEANUP,
+      },
+    },
+  ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));
+}
+
+async function setRestriction(
+  services: Container,
+  channel: VoiceBasedChannel,
+  record: VcRecord,
+  permission: "Connect" | "ViewChannel",
+  active: boolean,
+  patch: Partial<VcRecord>,
+): Promise<VcRecord> {
+  const { everyone } = channel.guild.roles;
+  await channel.permissionOverwrites.edit(everyone, {
+    [permission]: active ? false : null,
+  });
+  if (active) {
+    for (const m of channel.members.values()) {
+      await channel.permissionOverwrites
+        .edit(m.id, { [permission]: true })
+        .catch(() => null);
+    }
+  }
+  const next = await patchVcRecord(services, channel.guild.id, channel.id, patch);
+  return next ?? { ...record, ...patch };
+}
+
+const tempVcUtility = defineUtility({
+  name: "tempvc",
+
+  reorderChannels,
+  scheduleCleanup,
+
+  async onCreateCooldown(
+    services: Container,
     guildId: string,
     userId: string,
   ): Promise<boolean> {
-    const cooldownMs = await getCreateCooldownMs(guildId);
+    const cooldownMs = await getCreateCooldownMs(services, guildId);
     return !(await claimCooldown(
+      services,
       TempVcKeys.createCooldown(guildId, userId),
       cooldownMs,
     ));
-  }
+  },
 
-  public async createVc(
+  async createVc(
+    services: Container,
     member: GuildMember,
     generator: VoiceBasedChannel,
     config: GeneratorConfig,
   ): Promise<void> {
     let queue = creationQueues.get(generator.id);
     if (!queue) {
-      queue = new AsyncQueue();
+      queue = new Mutex();
       creationQueues.set(generator.id, queue);
     }
     await queue.wait();
@@ -131,7 +246,7 @@ export default class TempVcUtility extends Utility {
         createdAt: Date.now(),
       };
       try {
-        await setVcRecord(guild.id, vc.id, record);
+        await setVcRecord(services, guild.id, vc.id, record);
       } catch (err: unknown) {
         await vc.delete("Temp VC record write failed").catch(() => null);
         throw err;
@@ -140,13 +255,13 @@ export default class TempVcUtility extends Utility {
       if (generator.parentId) {
         const { parentId } = generator;
         setTimeout(() => {
-          void this.reorderChannels(guild, parentId).catch((err: unknown) => {
+          void reorderChannels(services, guild, parentId).catch((err: unknown) => {
             logError("TempVC: reorder channels failed", err);
           });
         }, 1000);
       }
 
-      void buildPanel(vc, record)
+      void buildPanel(services, vc, record)
         .then((panel) => vc.send(panel))
         .catch((err: unknown) => {
           logError("TempVC: panel send failed", err);
@@ -155,110 +270,25 @@ export default class TempVcUtility extends Utility {
       queue.shift();
       if (queue.remaining === 0) creationQueues.delete(generator.id);
     }
-  }
+  },
 
-  public async reorderChannels(
-    guild: Guild,
-    categoryId: string,
-  ): Promise<void> {
-    try {
-      const categoryChannels = [...guild.channels.cache.values()].filter(
-        (c) => c.parentId === categoryId && c.isVoiceBased(),
-      ) as VoiceBasedChannel[];
-
-      if (categoryChannels.length === 0) return;
-
-      const [recordsMap, generatorsMap] = await Promise.all([
-        listVcRecords(guild.id),
-        listGenerators(guild.id),
-      ]);
-
-      const generators: VoiceBasedChannel[] = [];
-      const managedVcs: VoiceBasedChannel[] = [];
-      const staticVcs: VoiceBasedChannel[] = [];
-
-      for (const channel of categoryChannels) {
-        if (generatorsMap.has(channel.id)) {
-          generators.push(channel);
-        } else if (recordsMap.has(channel.id)) {
-          managedVcs.push(channel);
-        } else {
-          staticVcs.push(channel);
-        }
-      }
-
-      generators.sort((a, b) => a.position - b.position);
-      staticVcs.sort((a, b) => a.position - b.position);
-
-      const genPosition = new Map<string, number>();
-      generators.forEach((g, i) => genPosition.set(g.id, i));
-
-      managedVcs.sort((a, b) => {
-        const recA = recordsMap.get(a.id);
-        const recB = recordsMap.get(b.id);
-        if (!recA || !recB) return 0;
-
-        const posA =
-          genPosition.get(recA.generatorId) ?? Number.MAX_SAFE_INTEGER;
-        const posB =
-          genPosition.get(recB.generatorId) ?? Number.MAX_SAFE_INTEGER;
-        if (posA !== posB) return posA - posB;
-
-        return recA.number - recB.number;
-      });
-
-      const finalOrder = [...generators, ...managedVcs, ...staticVcs];
-      const positions = finalOrder.map((c, index) => ({
-        channel: c.id,
-        position: index,
-      }));
-
-      const needsReorder = finalOrder.some((c, index) => c.position !== index);
-      if (needsReorder) {
-        await guild.channels.setPositions(positions);
-      }
-    } catch (err: unknown) {
-      logError("TempVC: reorder channels failed", err);
-    }
-  }
-
-  public async scheduleCleanup(
-    guildId: string,
-    channelId: string,
-  ): Promise<void> {
-    await scheduleTask(
-      "tempvc-cleanup",
-      { guildId, channelId },
-      {
-        repeated: false,
-        delay: TempvcCleanupDelayMs,
-        customJobOptions: {
-          jobId: cleanupJobId(guildId, channelId),
-          removeOnComplete: true,
-          removeOnFail: true,
-          priority: QueuePriority.CLEANUP,
-        },
-      },
-    ).catch((err: unknown) => logError("TempVC: schedule cleanup failed", err));
-  }
-
-  public async runCleanup(data: {
+  async runCleanup(services: Container, data: {
     guildId: string;
     channelId: string;
   }): Promise<void> {
     const { guildId, channelId } = data;
-    const record = await getVcRecord(guildId, channelId);
+    const record = await getVcRecord(services, guildId, channelId);
     if (!record) return;
 
     if (!(await isVoiceChannelEmpty(channelId))) return;
 
     const cleanup = async () => {
-      await removeVcRecord(guildId, channelId);
+      await removeVcRecord(services, guildId, channelId);
       await clearVoiceChannelOccupancy(channelId);
     };
 
     try {
-      await this.container.client.rest.delete(Routes.channel(channelId), {
+      await services.client.rest.delete(Routes.channel(channelId), {
         reason: "Empty temp VC cleanup",
       });
       await cleanup();
@@ -270,40 +300,43 @@ export default class TempVcUtility extends Utility {
       }
       throw err;
     }
-  }
+  },
 
-  public async reconcileGuild(guild: Guild): Promise<void> {
-    const records = await listVcRecords(guild.id);
+  async reconcileGuild(services: Container, guild: Guild): Promise<void> {
+    const records = await listVcRecords(services, guild.id);
     for (const [channelId] of records) {
       if (!guild.channels.cache.has(channelId)) {
-        await removeVcRecord(guild.id, channelId).catch((err: unknown) => {
+        await removeVcRecord(services, guild.id, channelId).catch((err: unknown) => {
           logError("TempVC: reconcile orphaned record removal failed", err);
         });
         continue;
       }
-      await this.scheduleCleanup(guild.id, channelId);
+      await scheduleCleanup(guild.id, channelId);
     }
-  }
+  },
 
-  public setLock(
+  setLock(
+    services: Container,
     channel: VoiceBasedChannel,
     record: VcRecord,
     locked: boolean,
   ): Promise<VcRecord> {
-    return this.#setRestriction(channel, record, "Connect", locked, { locked });
-  }
+    return setRestriction(services, channel, record, "Connect", locked, { locked });
+  },
 
-  public setHide(
+  setHide(
+    services: Container,
     channel: VoiceBasedChannel,
     record: VcRecord,
     hidden: boolean,
   ): Promise<VcRecord> {
-    return this.#setRestriction(channel, record, "ViewChannel", hidden, {
+    return setRestriction(services, channel, record, "ViewChannel", hidden, {
       hidden,
     });
-  }
+  },
 
-  public async setOwner(
+  async setOwner(
+    services: Container,
     channel: VoiceBasedChannel,
     record: VcRecord,
     newOwnerId: string,
@@ -316,77 +349,63 @@ export default class TempVcUtility extends Utility {
     await channel.permissionOverwrites
       .edit(newOwnerId, { ManageChannels: true })
       .catch(() => null);
-    const next = await patchVcRecord(channel.guild.id, channel.id, {
+    const next = await patchVcRecord(services, channel.guild.id, channel.id, {
       ownerId: newOwnerId,
     });
     return next ?? { ...record, ownerId: newOwnerId };
-  }
+  },
 
-  public canManage(member: GuildMember, channel: VoiceBasedChannel): boolean {
+  canManage(member: GuildMember, channel: VoiceBasedChannel): boolean {
     return channel
       .permissionsFor(member)
       .has(PermissionFlagsBits.ManageChannels);
-  }
+  },
 
-  public get moduleName() {
+  get moduleName() {
     return ModuleName;
-  }
+  },
 
-  public async addGenerator(
+  async addGenerator(
+    services: Container,
     guildId: string,
     channelId: string,
     config: GeneratorConfig,
   ): Promise<void> {
-    const generators = await listGenerators(guildId);
+    const generators = await listGenerators(services, guildId);
     if (!generators.has(channelId)) {
-      const maxGenerators = await getMaxGenerators(guildId);
+      const maxGenerators = await getMaxGenerators(services, guildId);
       if (generators.size >= maxGenerators) {
         throw new Error(
           `This server already has the maximum of ${maxGenerators} voice generators.`,
         );
       }
     }
-    await setGenerator(guildId, channelId, config);
-  }
+    await setGenerator(services, guildId, channelId, config);
+  },
 
-  public async removeGenerator(
+  async removeGenerator(
+    services: Container,
     guildId: string,
     channelId: string,
   ): Promise<boolean> {
-    return removeGenerator(guildId, channelId);
-  }
+    return removeGenerator(services, guildId, channelId);
+  },
 
-  public async listGenerators(
+  async listGenerators(
+    services: Container,
     guildId: string,
   ): Promise<Map<string, GeneratorConfig>> {
-    return listGenerators(guildId);
+    return listGenerators(services, guildId);
   }
 
-  async #setRestriction(
-    channel: VoiceBasedChannel,
-    record: VcRecord,
-    permission: "Connect" | "ViewChannel",
-    active: boolean,
-    patch: Partial<VcRecord>,
-  ): Promise<VcRecord> {
-    const { everyone } = channel.guild.roles;
-    await channel.permissionOverwrites.edit(everyone, {
-      [permission]: active ? false : null,
-    });
-    if (active) {
-      for (const m of channel.members.values()) {
-        await channel.permissionOverwrites
-          .edit(m.id, { [permission]: true })
-          .catch(() => null);
-      }
-    }
-    const next = await patchVcRecord(channel.guild.id, channel.id, patch);
-    return next ?? { ...record, ...patch };
-  }
-}
+});
+
+export default tempVcUtility;
+
+export type TempVcUtility = typeof tempVcUtility;
 
 declare module "#lib/module-system/Utility.js" {
   interface Utilities {
-    tempvc: TempVcUtility;
+    tempvc: typeof tempVcUtility;
   }
 }

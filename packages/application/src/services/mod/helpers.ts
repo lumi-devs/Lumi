@@ -1,8 +1,7 @@
-import type { Container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { Guild } from "discord.js";
 import type { CaseAction } from "@prisma/client";
 import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
-import { cancelTask } from "#lib/schedule-task.js";
 
 
 const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
@@ -53,7 +52,7 @@ export async function liftAllActiveCases(
     activeCases.map((c) => c.id),
   );
   await Promise.all(
-    activeCases.map((c) => cancelTask(liftJobId(c.id)).catch(() => null)),
+    activeCases.map((c) => container.tasks.delete(liftJobId(c.id)).catch(() => null)),
   );
 
   return container.db.moderation.createModerationCase({

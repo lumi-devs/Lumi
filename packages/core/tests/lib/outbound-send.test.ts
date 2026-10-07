@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   handleSendMessageFire,
   queueSend,
@@ -48,7 +48,7 @@ beforeEach(() => {
 
 describe("queueSend", () => {
   it("hands the send to the scheduler and stamps the time", async () => {
-    await queueSend({ channelId: "c1", content: "hello" });
+    await queueSend(container, { channelId: "c1", content: "hello" });
 
     expect(container.tasks.create).toHaveBeenCalledWith(
       {
@@ -68,7 +68,7 @@ describe("queueSend", () => {
     channels.set("c1", channel);
     (container.tasks.create as any).mockRejectedValueOnce(new Error("valkey down"));
 
-    await queueSend({ channelId: "c1", content: "hello" });
+    await queueSend(container, { channelId: "c1", content: "hello" });
 
     expect(channel.send).toHaveBeenCalledWith("hello");
     expect(container.logger.warn).toHaveBeenCalled();

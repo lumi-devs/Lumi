@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ModuleCommand } from "#modules/core/commands/module.js";
 import { ModuleAlreadyInstalledError } from "#modules/core/utilities/DownloaderUtility.js";
 
@@ -311,7 +311,7 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: false });
       await command.install(ctx as any);
       expect(ctx.reply).toHaveBeenCalledTimes(2); // Initial info card + success card
-      expect(mockDownloaderUtility.installModule).toHaveBeenCalledWith("official", "economy");
+      expect(mockDownloaderUtility.installModule).toHaveBeenCalledWith(container, "official", "economy");
     });
 
     it("should handle ModuleAlreadyInstalledError with update button option", async () => {
@@ -344,7 +344,7 @@ describe("ModuleCommand", () => {
     it("should uninstall third-party module successfully", async () => {
       const ctx = createMockCtx({ module: "economy", isSlash: false });
       await command.uninstall(ctx as any);
-      expect(mockDownloaderUtility.uninstallModule).toHaveBeenCalledWith("economy");
+      expect(mockDownloaderUtility.uninstallModule).toHaveBeenCalledWith(container, "economy");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 
@@ -364,7 +364,7 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: "afk", isSlash: false });
       await command.reloadModuleCmd(ctx as any);
       expect(mockModuleStore.reload).toHaveBeenCalledWith("afk");
-      expect(mockDownloaderUtility.syncApplicationCommands).toHaveBeenCalled();
+      expect(mockDownloaderUtility.syncApplicationCommands).toHaveBeenCalledWith(container);
       expect(container.logger.info).toHaveBeenCalled();
     });
 
@@ -384,7 +384,7 @@ describe("ModuleCommand", () => {
       mockDownloaderUtility.updateModule.mockResolvedValue({ updated: true, needsRestart: true });
       const ctx = createMockCtx({ module: "afk", isSlash: false });
       await command.update(ctx as any);
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("afk");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith(container, "afk");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 
@@ -409,9 +409,9 @@ describe("ModuleCommand", () => {
       const ctx = createMockCtx({ module: null, isSlash: false });
       await command.update(ctx as any);
 
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("economy");
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("music");
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("levels");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith(container, "economy");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith(container, "music");
+      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith(container, "levels");
       expect(ctx.reply).toHaveBeenCalledTimes(2);
     });
 

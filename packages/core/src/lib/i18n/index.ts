@@ -1,10 +1,21 @@
-import type {
-  InternationalizationContext,
-  InternationalizationOptions,
-} from "@sapphire/plugin-i18next";
-import type { TFunction } from "i18next";
-import { fileURLToPath } from "node:url";
+import i18next, { type TFunction } from "i18next";
+import {
+  BaseInteraction,
+  Guild,
+  Message,
+  type Channel,
+} from "discord.js";
 import { getGuildContext } from "#lib/cache/GuildContext.js";
+import { container, type Container } from "#lib/services.js";
+import afk from "../../languages/en-US/afk.json";
+import commands from "../../languages/en-US/commands.json";
+import common from "../../languages/en-US/common.json";
+import core from "../../languages/en-US/core.json";
+import filter from "../../languages/en-US/filter.json";
+import logging from "../../languages/en-US/logging.json";
+import panels from "../../languages/en-US/panels.json";
+import preconditions from "../../languages/en-US/preconditions.json";
+import tempvc from "../../languages/en-US/tempvc.json";
 
 /**
  * The namespaces Lumi ships. Kept as a tuple so a bound `TFunction` accepts
@@ -58,59 +69,140 @@ export function isSupportedLanguage(
   return supported.has(language);
 }
 
-const LanguageRoot = fileURLToPath(
-  new URL("../../languages/", import.meta.url),
-);
+const resources = {
+  "en-US": {
+    afk,
+    commands,
+    common,
+    core,
+    filter,
+    logging,
+    panels,
+    preconditions,
+    tempvc,
+  },
+};
 
-/**
- * Resolves the language for a translation target. Guild context wins (so a whole
- * server speaks one language); outside a guild we have no per-user storage yet,
- * so the plugin's own fallback chain (guild.preferredLocale → defaultName →
- * en-US) takes over when this returns nullish.
- *
- * `ctx.locale` could in principle still reference a locale that's since been
- * dropped from `SupportedLanguages` (set before a migration, or written by an
- * older dashboard build mid-deploy); the plugin throws for any locale it can't
- * find on disk, so an unsupported value is treated the same as an unset one.
- */
-async function fetchLanguage(
-  context: InternationalizationContext,
-): Promise<string | null> {
-  const { guild } = context;
-  if (!guild) return null;
-  try {
-    const ctx = await getGuildContext(guild.id);
-    if (!ctx.locale) return null;
-    return isSupportedLanguage(ctx.locale) ? ctx.locale : null;
-  } catch {
-    return null;
-  }
+let initPromise: Promise<unknown> | null = null;
+
+export function initI18n(): Promise<unknown> {
+  return (initPromise ??= i18next.init({
+    lng: DefaultLanguage,
+    fallbackLng: DefaultLanguage,
+    supportedLngs: [...SupportedLanguages],
+    preload: [...SupportedLanguages],
+    ns: [
+      "afk",
+      "commands",
+      "common",
+      "core",
+      "filter",
+      "logging",
+      "panels",
+      "preconditions",
+      "tempvc",
+    ],
+    defaultNS: "common",
+    resources,
+    load: "all",
+    returnEmptyString: false,
+    returnNull: false,
+    interpolation: { escapeValue: false },
+  }));
 }
 
-/**
- * Builds the `i18n` client option consumed by `@sapphire/plugin-i18next`.
- * Centralised here so `LumiClient` stays focused on wiring.
- */
-export function buildI18nOptions(): InternationalizationOptions {
-  return {
-    defaultMissingKey: "default",
-    defaultNS: "common",
-    defaultLanguageDirectory: LanguageRoot,
-    fetchLanguage,
-    i18next: (_namespaces, languages) => ({
-      supportedLngs: languages,
-      preload: languages,
-      returnEmptyString: false,
-      returnNull: false,
-      load: "all",
-      lng: DefaultLanguage,
-      fallbackLng: DefaultLanguage,
-      defaultNS: "common",
-      initImmediate: false,
-      interpolation: { escapeValue: false },
-      overloadTranslationOptionHandler: (args) => ({
-        defaultValue: args[1] ?? "common:default",
-      }),
-    }),
-  };
+const fixedT = new Map<string, LumiT>();
+
+export function getT(language: string): LumiT {
+  void initI18n();
+  const cached = fixedT.get(language);
+  if (cached) return cached;
+  const t = i18next.getFixedT(language) as unknown as LumiT;
+  fixedT.set(language, t);
+  return t;
+}
+
+export function translate(
+  key: string,
+  args?: Record<string, unknown>,
+  guildLang?: string,
+): string {
+  return getT(guildLang ?? DefaultLanguage)(key, args);
+}
+
+export type TranslationTarget =
+  | BaseInteraction
+  | Message
+  | Guild
+  | Channel
+  | null
+  | undefined;
+
+async function resolveLanguage(target: TranslationTarget, services: Container = container): Promise<string> {
+  let guildId: string | null = null;
+  let discordLocale: string | null = null;
+  if (target instanceof BaseInteraction) {
+    guildId = target.guildId;
+    discordLocale = target.guildLocale ?? target.locale ?? null;
+  } else if (target instanceof Message) {
+    guildId = target.guild?.id ?? null;
+    discordLocale = target.guild?.preferredLocale ?? null;
+  } else if (target instanceof Guild) {
+    guildId = target.id;
+    discordLocale = target.preferredLocale;
+  } else if (target && "guild" in target && target.guild) {
+    guildId = target.guild.id;
+  }
+  if (guildId) {
+    try {
+      const ctx = await getGuildContext(services, guildId);
+      if (ctx.locale && isSupportedLanguage(ctx.locale)) return ctx.locale;
+    } catch {
+      // No stored locale readable; fall through to Discord/default.
+    }
+  }
+  if (discordLocale && isSupportedLanguage(discordLocale)) return discordLocale;
+  return DefaultLanguage;
+}
+
+export async function fetchLanguage(target: TranslationTarget, services: Container = container): Promise<string> {
+  return resolveLanguage(target, services);
+}
+
+export async function fetchT(target: TranslationTarget, services: Container = container): Promise<LumiT> {
+  return getT(await resolveLanguage(target, services));
+}
+
+export async function resolveKey(
+  target: TranslationTarget,
+  key: string,
+  options: Record<string, unknown> | undefined,
+  services: Container = container,
+): Promise<string> {
+  return (await fetchT(target, services))(key, options);
+}
+
+interface LocalizableBuilder {
+  setName(name: string): unknown;
+  setDescription(description: string): unknown;
+  setNameLocalizations(localizations: Record<string, string>): unknown;
+  setDescriptionLocalizations(localizations: Record<string, string>): unknown;
+}
+
+export function applyLocalizedBuilder<T extends LocalizableBuilder>(
+  builder: T,
+  rootKey: string,
+): T {
+  const nameLocalizations: Record<string, string> = {};
+  const descriptionLocalizations: Record<string, string> = {};
+  for (const lang of SupportedLanguages) {
+    const t = getT(lang);
+    nameLocalizations[lang] = t(`${rootKey}Name`);
+    descriptionLocalizations[lang] = t(`${rootKey}Description`);
+  }
+  builder.setName(nameLocalizations[DefaultLanguage] ?? rootKey);
+  builder.setNameLocalizations(nameLocalizations);
+  builder.setDescription(descriptionLocalizations[DefaultLanguage] ?? rootKey);
+  builder.setDescriptionLocalizations(descriptionLocalizations);
+  return builder;
 }

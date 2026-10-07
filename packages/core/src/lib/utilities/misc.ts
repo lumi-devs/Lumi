@@ -1,7 +1,7 @@
 import type { User, Message } from "discord.js";
 import { PermissionsBitField } from "discord.js";
-import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
+import type { Container } from "#lib/services.js";
+import { Mutex } from "@lumi/shared";
 import { createRequire } from "node:module";
 
 const _req = createRequire(import.meta.url);
@@ -51,10 +51,11 @@ export const LumiInfo = {
 export const fmtId = (id: unknown): string => (id ? String(id) : "unknown");
 
 export async function isModuleEnabled(
+  services: Container,
   guildId: string,
   module: string,
 ): Promise<boolean> {
-  return container.db.modules.isModuleEnabled(guildId, module);
+  return services.db.modules.isModuleEnabled(guildId, module);
 }
 
 export function canSendMessages(message: Message<true>): boolean {
@@ -67,11 +68,11 @@ export function canSendMessages(message: Message<true>): boolean {
   );
 }
 
-const queues = new Map<string, AsyncQueue>();
+const queues = new Map<string, Mutex>();
 
-function queueFor(key: string): AsyncQueue {
+function queueFor(key: string): Mutex {
   let queue = queues.get(key);
-  if (!queue) queues.set(key, (queue = new AsyncQueue()));
+  if (!queue) queues.set(key, (queue = new Mutex()));
   return queue;
 }
 

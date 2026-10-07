@@ -1,5 +1,5 @@
 import { rpcRouter } from "@lumi/contracts/rpc";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { accountRpcHandlers } from "#lib/rpc/account-rpc.js";
 import type { RpcBoundHandler, RpcImplementation } from "#lib/rpc/implement.js";
 import { systemRpcHandlers } from "#lib/rpc/system-rpc.js";

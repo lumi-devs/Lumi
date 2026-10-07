@@ -16,8 +16,8 @@ import {
   splitPage,
 } from "#lib/prisma/cursor.js";
 
-import { tryParseJSON } from "@sapphire/utilities";
-import { Time } from "@sapphire/time-utilities";
+import { tryParseJSON } from "@lumi/shared";
+import { Ms } from "@lumi/shared";
 
 /**
  * Per-process, so two overlapping workers cannot both read the other's pending
@@ -26,7 +26,7 @@ import { Time } from "@sapphire/time-utilities";
 const AuditConsumer = `${hostname()}:${process.pid}`;
 
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
-const StalePendingMs = Time.Minute;
+const StalePendingMs = Ms.Minute;
 
 /**
  * Approximate cap on the buffer stream. If the flush task stops - a crash loop,

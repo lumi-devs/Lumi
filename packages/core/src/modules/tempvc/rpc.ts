@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { tempvcRpc } from "@lumi/contracts/rpc";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc } from "#lib/rpc/implement.js";
@@ -22,12 +22,12 @@ export const tempvcRpcHandlers = implementRpc(tempvcRpc, {
     const tempvc = getUtility("tempvc");
 
     if (name === null) {
-      const deleted = await tempvc.removeGenerator(guildId, channelId);
+      const deleted = await tempvc.removeGenerator(container, guildId, channelId);
       return { success: true, channelId, deleted };
     }
 
     await container.db.ensureGuild(guildId);
-    await tempvc.addGenerator(guildId, channelId, { name, limit: limit ?? 0 });
+    await tempvc.addGenerator(container, guildId, channelId, { name, limit: limit ?? 0 });
     return { success: true, channelId, deleted: false };
   },
 

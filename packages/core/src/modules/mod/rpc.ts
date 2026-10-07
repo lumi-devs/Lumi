@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
 import {
   CodedRpcError,

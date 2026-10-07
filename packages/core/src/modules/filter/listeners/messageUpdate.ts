@@ -1,7 +1,8 @@
-import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { GuildMessageEditListener } from "#lib/module-system/GuildMessageEditListener.js";
+import type { Container } from "#lib/services.js";
+import { LumiEvents } from "#lib/types/common.js";
 import type { GuildMessage } from "#lib/types/common.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
 import { enforceHit, runRules, shouldScreen } from "@lumi/application/services/filter/enforce.js";
 
@@ -13,19 +14,18 @@ import { enforceHit, runRules, shouldScreen } from "@lumi/application/services/f
  * counting - so that repeatedly editing one message cannot inflate rate-based
  * counters the way posting that many messages would.
  */
-@ApplyOptions<GuildMessageEditListener.Options>({ module: "filter" })
-export class FilterMessageEditListener extends GuildMessageEditListener {
-  private get filterService(): FilterUtility {
-    return getUtility("filter");
-  }
-
-  protected async handle(message: GuildMessage): Promise<void> {
-    if (!(await shouldScreen(message, this.filterService))) return;
+export const FilterMessageEditListener = defineListener({
+  name: "filterMessageUpdate",
+  event: LumiEvents.GuildUserMessageEdit,
+  module: "filter",
+  async execute(services: Container, message: GuildMessage): Promise<void> {
+    const filterService: FilterUtility = getUtility("filter");
+    if (!(await shouldScreen(services, message, filterService))) return;
 
     const mentionCount =
       message.mentions.users.size + message.mentions.roles.size;
 
-    const hit = await runRules(message, this.filterService, mentionCount);
-    if (hit) await enforceHit(message, hit);
-  }
-}
+    const hit = await runRules(services, message, filterService, mentionCount);
+    if (hit) await enforceHit(services, message, hit);
+  },
+});

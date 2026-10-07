@@ -32,6 +32,8 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   // A read must not ride on a write capability.
   "discord.messages.fetch": "editMessage",
   "discord.messages.edit": "editMessage",
+  "discord.guilds.get": null,
+  "discord.guilds.members.fetch": "manageRoles",
 };
 
 export function parseCapabilities(raw: unknown): AddonCapabilities {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
 
 Object.assign(container, {
@@ -20,8 +20,8 @@ describe("cooldown", () => {
         .mockResolvedValueOnce("OK")
         .mockResolvedValueOnce(null);
 
-      await expect(claimCooldown("cd-key", 5000)).resolves.toBe(true);
-      await expect(claimCooldown("cd-key", 5000)).resolves.toBe(false);
+      await expect(claimCooldown(container, "cd-key", 5000)).resolves.toBe(true);
+      await expect(claimCooldown(container, "cd-key", 5000)).resolves.toBe(false);
 
       expect(container.valkey.set).toHaveBeenCalledWith(
         "cd-key",
@@ -36,10 +36,10 @@ describe("cooldown", () => {
   describe("isOnCooldown", () => {
     it("reflects claimed state", async () => {
       (container.valkey.exists as any).mockResolvedValueOnce(0);
-      await expect(isOnCooldown("cd-key")).resolves.toBe(false);
+      await expect(isOnCooldown(container, "cd-key")).resolves.toBe(false);
 
       (container.valkey.exists as any).mockResolvedValueOnce(1);
-      await expect(isOnCooldown("cd-key")).resolves.toBe(true);
+      await expect(isOnCooldown(container, "cd-key")).resolves.toBe(true);
 
       expect(container.valkey.exists).toHaveBeenCalledWith("cd-key");
     });

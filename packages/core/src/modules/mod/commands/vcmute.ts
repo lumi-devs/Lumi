@@ -1,15 +1,20 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry, Result } from "@sapphire/framework";
-import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
+import {
+  runModerationFlow,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { VoiceMuteAction } from "@lumi/application/services/mod/actions/VoiceMuteAction.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
+import { Result } from "@lumi/shared";
 
 const DefaultDurationMs = 24 * 3600 * 1000;
 
-type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
-type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
+type TimedFlow = MC.Flow<GuildMember, ModerationCase, number>;
+type Flow = MC.Flow<GuildMember, ModerationCase>;
 
 const VcMuteAdd: TimedFlow = {
   logScope: "vcmute add",
@@ -57,69 +62,63 @@ const VcMuteRemove: Flow = {
   }),
 };
 
-@ApplyOptions<ModerationSubcommand.Options>({
+export const vcmuteDef: CommandDef = {
   name: "vcmute",
   aliases: ["voicemute", "vmute"],
   description: "Voice mute a member in server voice channels",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.voiceMute",
   prefixEnabled: true,
-  subcommands: [
-    { name: "add", run: "add", default: true, requiredPermit: "mod.voiceMute" },
-    { name: "remove", run: "remove", requiredPermit: "mod.voiceMute" },
-  ],
-})
-export class VcMuteCommand extends ModerationSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand(
-      (builder) =>
-        builder
-          .setName(this.name)
-          .setDescription(this.description)
-          .addSubcommand((sub) =>
-            sub
-              .setName("add")
-              .setDescription("Voice mute a member")
-              .addUserOption((opt) =>
-                opt
-                  .setName("target")
-                  .setDescription("Target member")
-                  .setRequired(true),
-              )
-              .addStringOption((opt) =>
-                opt
-                  .setName("duration")
-                  .setDescription("Mute duration (e.g. 1h, 1d)"),
-              )
-              .addStringOption((opt) =>
-                opt.setName("reason").setDescription("Mute reason"),
-              ),
-          )
-          .addSubcommand((sub) =>
-            sub
-              .setName("remove")
-              .setDescription("Unmute a member in voice")
-              .addUserOption((opt) =>
-                opt
-                  .setName("target")
-                  .setDescription("Target member")
-                  .setRequired(true),
-              )
-              .addStringOption((opt) =>
-                opt.setName("reason").setDescription("Unmute reason"),
-              ),
-          ),
-      { guildIds: [] },
+  build: () => {
+    const b = new SlashCommandBuilder().setName("vcmute");
+    return (
+      b
+        .setName("vcmute")
+        .setDescription("Voice mute a member in server voice channels")
+        .addSubcommand((sub) =>
+          sub
+            .setName("add")
+            .setDescription("Voice mute a member")
+            .addUserOption((opt) =>
+              opt
+                .setName("target")
+                .setDescription("Target member")
+                .setRequired(true),
+            )
+            .addStringOption((opt) =>
+              opt
+                .setName("duration")
+                .setDescription("Mute duration (e.g. 1h, 1d)"),
+            )
+            .addStringOption((opt) =>
+              opt.setName("reason").setDescription("Mute reason"),
+            ),
+        )
+        .addSubcommand((sub) =>
+          sub
+            .setName("remove")
+            .setDescription("Unmute a member in voice")
+            .addUserOption((opt) =>
+              opt
+                .setName("target")
+                .setDescription("Target member")
+                .setRequired(true),
+            )
+            .addStringOption((opt) =>
+              opt.setName("reason").setDescription("Unmute reason"),
+            ),
+        )
     );
-  }
-
-  public add(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, VcMuteAdd);
-  }
-
-  public remove(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, VcMuteRemove);
-  }
-}
+  },
+  handlers: {
+    add: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, VcMuteAdd),
+      requiredPermit: "mod.voiceMute",
+    },
+    remove: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, VcMuteRemove),
+      requiredPermit: "mod.voiceMute",
+    },
+  },
+  defaultSub: "add",
+};

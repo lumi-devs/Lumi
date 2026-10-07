@@ -1,5 +1,7 @@
-import { container } from "@sapphire/framework";
-import { s, type BaseValidator } from "@sapphire/shapeshift";
+// boundary, where no threaded services bag crosses today. They read the global
+// boot container directly until the IPC scope carries services explicitly.
+import { container } from "#lib/services.js";
+import { z } from "zod";
 import type {
   MessageComponentInteraction,
   ModalSubmitInteraction,
@@ -63,124 +65,133 @@ type OptionGetter = "getString" | "getInteger" | "getNumber" | "getBoolean";
 // into the host - request.data's TypeScript annotations below only ever described
 // the shape at compile time. Every field that flows into a Valkey/DB key or a
 // Discord API call is checked at runtime; free-form payloads (Discord message/
-// modal builders) are left as s.unknown() since discord.js itself validates them.
-const ParamSchemas: Record<string, BaseValidator<unknown>> = {
-  "ctx.option": s.object({
-    getter: s.union([
-      s.literal("getString"),
-      s.literal("getInteger"),
-      s.literal("getNumber"),
-      s.literal("getBoolean"),
+// modal builders) are left as z.unknown() since discord.js itself validates them.
+const ParamSchemas: Record<string, z.ZodType> = {
+  "ctx.option": z.object({
+    getter: z.union([
+      z.literal("getString"),
+      z.literal("getInteger"),
+      z.literal("getNumber"),
+      z.literal("getBoolean"),
     ]),
-    name: s.string(),
-    spec: s.unknown().optional(),
+    name: z.string(),
+    spec: z.unknown().optional(),
   }),
 
-  "ctx.defer": s.object({
-    ephemeral: s.boolean().optional(),
-    update: s.boolean().optional(),
+  "ctx.defer": z.object({
+    ephemeral: z.boolean().optional(),
+    update: z.boolean().optional(),
   }),
 
-  "ctx.reply": s.object({
-    card: s.unknown(),
-    ephemeral: s.boolean().optional(),
+  "ctx.reply": z.object({
+    card: z.unknown(),
+    ephemeral: z.boolean().optional(),
   }),
 
-  "ctx.editReply": s.object({
-    payload: s.unknown(),
+  "ctx.editReply": z.object({
+    payload: z.unknown(),
   }),
 
-  "ctx.checkPermit": s.object({
-    node: s.string(),
+  "ctx.checkPermit": z.object({
+    node: z.string(),
   }),
 
-  "ctx.showModal": s.object({
-    modal: s.unknown(),
+  "ctx.showModal": z.object({
+    modal: z.unknown(),
   }),
 
-  "config.get": s.object({
-    key: s.string(),
-    guildId: s.string().optional(),
+  "config.get": z.object({
+    key: z.string(),
+    guildId: z.string().optional(),
   }),
 
-  "kv.get": s.object({
-    guildId: s.string(),
-    targetId: s.string(),
-    key: s.string(),
+  "kv.get": z.object({
+    guildId: z.string(),
+    targetId: z.string(),
+    key: z.string(),
   }),
 
-  "kv.set": s.object({
-    guildId: s.string(),
-    targetId: s.string(),
-    key: s.string(),
-    value: s.unknown(),
+  "kv.set": z.object({
+    guildId: z.string(),
+    targetId: z.string(),
+    key: z.string(),
+    value: z.unknown(),
   }),
 
-  "kv.delete": s.object({
-    guildId: s.string(),
-    targetId: s.string(),
-    key: s.string(),
+  "kv.delete": z.object({
+    guildId: z.string(),
+    targetId: z.string(),
+    key: z.string(),
   }),
 
-  "kv.list": s.object({
-    key: s.string(),
-    guildId: s.string().optional(),
+  "kv.list": z.object({
+    key: z.string(),
+    guildId: z.string().optional(),
   }),
 
-  "kv.incr": s.object({
-    guildId: s.string(),
-    targetId: s.string(),
-    key: s.string(),
-    delta: s.number().optional(),
+  "kv.incr": z.object({
+    guildId: z.string(),
+    targetId: z.string(),
+    key: z.string(),
+    delta: z.number().optional(),
   }),
 
-  "valkey.sadd": s.object({
-    key: s.string(),
-    members: s.string().array(),
+  "valkey.sadd": z.object({
+    key: z.string(),
+    members: z.array(z.string()),
   }),
 
-  "valkey.srem": s.object({
-    key: s.string(),
-    members: s.string().array(),
+  "valkey.srem": z.object({
+    key: z.string(),
+    members: z.array(z.string()),
   }),
 
-  "valkey.scard": s.object({
-    key: s.string(),
+  "valkey.scard": z.object({
+    key: z.string(),
   }),
 
-  "valkey.smembers": s.object({
-    key: s.string(),
+  "valkey.smembers": z.object({
+    key: z.string(),
   }),
 
-  "valkey.del": s.object({
-    key: s.string(),
+  "valkey.del": z.object({
+    key: z.string(),
   }),
 
-  "schedule.add": s.object({
-    task: s.string(),
-    payload: s.record(s.unknown()),
-    delay: s.number().optional(),
+  "schedule.add": z.object({
+    task: z.string(),
+    payload: z.record(z.string(), z.unknown()),
+    delay: z.number().optional(),
   }),
 
-  "discord.channels.send": s.object({
-    channelId: s.string(),
-    payload: s.unknown(),
+  "discord.channels.send": z.object({
+    channelId: z.string(),
+    payload: z.unknown(),
   }),
 
-  "discord.messages.fetch": s.object({
-    channelId: s.string(),
-    messageId: s.string(),
+  "discord.messages.fetch": z.object({
+    channelId: z.string(),
+    messageId: z.string(),
   }),
 
-  "discord.messages.edit": s.object({
-    channelId: s.string(),
-    messageId: s.string(),
-    payload: s.unknown(),
+  "discord.messages.edit": z.object({
+    channelId: z.string(),
+    messageId: z.string(),
+    payload: z.unknown(),
   }),
 
-  "log": s.object({
-    level: s.union([s.literal("info"), s.literal("warn"), s.literal("error")]),
-    message: s.string(),
+  "discord.guilds.get": z.object({
+    guildId: z.string(),
+  }),
+
+  "discord.guilds.members.fetch": z.object({
+    guildId: z.string(),
+    userId: z.string(),
+  }),
+
+  "log": z.object({
+    level: z.union([z.literal("info"), z.literal("warn"), z.literal("error")]),
+    message: z.string(),
   }),
 };
 
@@ -367,6 +378,24 @@ const Methods = {
     const message = await channel.messages.fetch(messageId);
     const edited = await message.edit(payload as never);
     return { id: edited.id, channelId: edited.channelId };
+  },
+
+  "discord.guilds.get"({ guildId }: { guildId: string }, scope: HostCallScope) {
+    const g = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!g) return null;
+    return { id: g.id, name: g.name };
+  },
+
+  async "discord.guilds.members.fetch"({ guildId, userId }: { guildId: string; userId: string }, scope: HostCallScope) {
+    const g = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!g) return null;
+    const m = await g.members.fetch(userId).catch(() => null);
+    if (!m) return null;
+    return {
+      id: m.id,
+      roles: [...m.roles.cache.keys()],
+      premiumSince: m.premiumSinceTimestamp,
+    };
   },
 
   log({ level, message }: { level: "info" | "warn" | "error"; message: string }, scope: HostCallScope) {

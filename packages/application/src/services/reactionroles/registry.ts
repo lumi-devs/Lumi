@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { logError } from "#lib/utilities/errors.js";
 import { getMenu, listMenus, type ReactionRoleMenu } from "#modules/reactionroles/data/reactionroles.js";
 
@@ -34,7 +34,7 @@ class ReactionRoleRegistry {
     await this.#ensure(guildId);
     const cached = this.#menus.get(guildId)?.get(menuId);
     if (cached) return cached;
-    const fresh = await getMenu(guildId, menuId).catch((err: unknown) => {
+    const fresh = await getMenu(container, guildId, menuId).catch((err: unknown) => {
       logError("ReactionRoles: menu hydrate", err);
       return null;
     });
@@ -51,7 +51,7 @@ class ReactionRoleRegistry {
       if (menu.messageIds.includes(messageId)) return menu;
     }
     const { findMenuByMessage } = await import("#modules/reactionroles/data/reactionroles.js");
-    const fresh = await findMenuByMessage(guildId, messageId).catch(
+    const fresh = await findMenuByMessage(container, guildId, messageId).catch(
       (err: unknown) => {
         logError("ReactionRoles: message lookup", err);
         return null;
@@ -73,7 +73,7 @@ class ReactionRoleRegistry {
     let pending = this.#hydrating.get(guildId);
     if (!pending) {
       pending = (async () => {
-        const rows = await listMenus(guildId);
+        const rows = await listMenus(container, guildId);
         const map = new Map<string, ReactionRoleMenu>();
         for (const menu of rows) map.set(menu.id, menu);
         this.#menus.set(guildId, map);

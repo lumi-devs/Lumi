@@ -1,12 +1,11 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import { container, type Container } from "#lib/services.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 import { cfg, toStringArray } from "#lib/module-system/config-schema.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { ChannelType } from "discord.js";
-import {
-  shutdownRegexWorker,
-  validateRegexPattern,
-} from "#lib/regex-worker/index.js";
+import { shutdownRegexWorker } from "#lib/regex-worker/RegexWorkerHandler.js";
+import { validateRegexPattern } from "#lib/regex-worker/validate.js";
 import { DefaultWarnMessage } from "@lumi/application/services/filter/rules.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleAutoLockdownUnlockFire } from "@lumi/application/services/filter/auto-lockdown-handler.js";
@@ -49,7 +48,7 @@ const CompiledKeys = [
   "heat_timeout_minutes",
 ] as const;
 
-@DefineModule({
+export const filterModule = defineModule({
   name: "filter",
   displayName: "Filter",
   emoji: "🚫",
@@ -398,26 +397,24 @@ const CompiledKeys = [
       enabledBy: "heat_enabled",
     }),
   }),
-})
-export class FilterModule extends Module {
-  public override onLoad() {
+  onLoad(services: Container = container) {
     registerTaskFireHandler(
       "filter-auto-lockdown-unlock",
       "unicast",
       handleAutoLockdownUnlockFire,
     );
     for (const key of CompiledKeys) {
-      this.container.configChangeHooks.set(
+      services.configChangeHooks.set(
         `filter:${key}`,
         async (guildId, _key) => {
           const svc = tryGetUtility("filter");
-          await svc?.loadGuild(guildId);
+          await svc?.loadGuild(services, guildId);
         },
       );
     }
     // Reject catastrophic patterns at save time so they are never reachable
     // from the message path in the first place.
-    this.container.configValueValidators.set(
+    services.configValueValidators.set(
       "filter:regex_rules",
       async (value) => {
         for (const pattern of toStringArray(value)) {
@@ -427,15 +424,13 @@ export class FilterModule extends Module {
         return null;
       },
     );
-    return super.onLoad();
-  }
+  },
 
-  public override async onUnload() {
+  async onUnload(services: Container = container) {
     for (const key of CompiledKeys) {
-      this.container.configChangeHooks.delete(`filter:${key}`);
+      services.configChangeHooks.delete(`filter:${key}`);
     }
-    this.container.configValueValidators.delete("filter:regex_rules");
+    services.configValueValidators.delete("filter:regex_rules");
     await shutdownRegexWorker();
-    return super.onUnload();
-  }
-}
+  },
+});

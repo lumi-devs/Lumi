@@ -1,5 +1,9 @@
 import { fetchTyped } from "#lib/commands.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import type { Container } from "#lib/services.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { GuildSettingsUtility } from "../../utilities/GuildSettingsUtility.js";
 import type { PermissionUtility } from "../../utilities/PermissionUtility.js";
@@ -22,12 +26,7 @@ import {
   HubPermitAssignId,
   HubPermitPickId,
 } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-  UserError,
-} from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
 import type { AnySelectMenuInteraction } from "discord.js";
 
 const ownerOnly = () =>
@@ -36,47 +35,42 @@ const ownerOnly = () =>
     message: "Only Bot Owners can manage add-ons.",
   });
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "hub-panel-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export class HubPanelSelectHandler extends LumiInteractionHandler {
-  private get settings(): GuildSettingsUtility {
-    return getUtility("guild-settings");
-  }
-
-  private get perms(): PermissionUtility {
-    return getUtility("permissions");
-  }
-
-  public override parse(interaction: AnySelectMenuInteraction) {
-    if (interaction.customId === "lumi:setlang") return this.some("lang");
-    if (HubPermitPickId.parse(interaction.customId))
-      return this.some("permit_pick");
-    if (HubPermitAssignId.parse(interaction.customId))
-      return this.some("permit_assign");
-    if (interaction.customId === "lumi:addon:repo_pick")
-      return this.some("addon_repo_pick");
-    if (HubAddonModActionId.parse(interaction.customId))
-      return this.some("addon_mod_action");
-    if (interaction.customId === "lumi:addon:autoupdate_interval")
-      return this.some("addon_autoupdate_interval");
-    return this.none();
-  }
-
-  public async run(interaction: AnySelectMenuInteraction, kind: string) {
+export const hubPanelSelect = defineInteraction({
+  prefix: [
+    "lumi:setlang",
+    HubPermitPickId.prefix,
+    HubPermitAssignId.prefix,
+    "lumi:addon:repo_pick",
+    HubAddonModActionId.prefix,
+    "lumi:addon:autoupdate_interval",
+  ],
+  async run(services: Container, interaction: AnySelectMenuInteraction) {
+    let kind: string | null = null;
+    if (interaction.customId === "lumi:setlang") kind = "lang";
+    else if (HubPermitPickId.parse(interaction.customId)) kind = "permit_pick";
+    else if (HubPermitAssignId.parse(interaction.customId))
+      kind = "permit_assign";
+    else if (interaction.customId === "lumi:addon:repo_pick")
+      kind = "addon_repo_pick";
+    else if (HubAddonModActionId.parse(interaction.customId))
+      kind = "addon_mod_action";
+    else if (interaction.customId === "lumi:addon:autoupdate_interval")
+      kind = "addon_autoupdate_interval";
+    if (!kind) return;
+    const settings: GuildSettingsUtility = getUtility("guild-settings");
+    const perms: PermissionUtility = getUtility("permissions");
     if (!interaction.inGuild()) return;
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
     if (!(await hasAdminPermit(interaction))) throw accessDenied();
     const t = await fetchTyped(interaction);
 
     if (kind === "lang") {
       const language = interaction.values[0];
       if (language)
-        await this.settings
-          .setLanguage(interaction.guildId, language)
+        await settings
+          .setLanguage(services, interaction.guildId, language)
           .catch(() => {});
-      return renderSettings(interaction, t);
+      return renderSettings(services, interaction, t);
     }
 
     if (kind === "addon_mod_action") {
@@ -89,9 +83,9 @@ export class HubPanelSelectHandler extends LumiInteractionHandler {
       const downloader = getUtility("downloader");
       try {
         if (act === "install") {
-          await downloader.installModule(repoName, moduleName);
+          await downloader.installModule(services, repoName, moduleName);
         } else if (act === "uninstall") {
-          await downloader.uninstallModule(moduleName);
+          await downloader.uninstallModule(services, moduleName);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -100,7 +94,7 @@ export class HubPanelSelectHandler extends LumiInteractionHandler {
         );
       }
 
-      return renderRepoModules(interaction, repoName, t, 0);
+      return renderRepoModules(services, interaction, repoName, t, 0);
     }
 
     if (kind === "addon_repo_pick") {
@@ -115,24 +109,24 @@ export class HubPanelSelectHandler extends LumiInteractionHandler {
         );
       }
 
-      return renderRepoModules(interaction, repoName, t, 0);
+      return renderRepoModules(services, interaction, repoName, t, 0);
     }
 
     if (kind === "addon_autoupdate_interval") {
       if (!(await hasOwnerPermit(interaction))) throw ownerOnly();
       const minutes = Number(interaction.values[0]);
       const downloader = getUtility("downloader");
-      await downloader.setAutoUpdateConfig({ intervalMinutes: minutes });
-      const config = await downloader.getAutoUpdateConfig();
+      await downloader.setAutoUpdateConfig(services, { intervalMinutes: minutes });
+      const config = await downloader.getAutoUpdateConfig(services);
       return interaction.editReply(buildAutoUpdateSettingsView(config, t));
     }
 
     if (kind === "permit_pick") {
       const permitKind = interaction.customId.split(":")[3] as PermitKind;
       const permitId = Number(interaction.values[0]);
-      if (!Number.isInteger(permitId)) return renderPermissions(interaction, 0, t);
-      const permit = await this.perms.getPermit(interaction.guildId, permitId);
-      if (!permit) return renderPermissions(interaction, 0, t);
+      if (!Number.isInteger(permitId)) return renderPermissions(services, interaction, 0, t);
+      const permit = await perms.getPermit(services, interaction.guildId, permitId);
+      if (!permit) return renderPermissions(services, interaction, 0, t);
       return interaction.editReply(
         buildPermitAssignTargetView(permit.id, permit.name, permitKind, t),
       );
@@ -145,13 +139,13 @@ export class HubPanelSelectHandler extends LumiInteractionHandler {
         const targetType: "role" | "user" = interaction.isRoleSelectMenu()
           ? "role"
           : "user";
-        await this.perms
-          .assignPermit(interaction.guildId, permitId, targetType, targetId)
+        await perms
+          .assignPermit(services, interaction.guildId, permitId, targetType, targetId)
           .catch(() => {});
       }
-      return renderPermissions(interaction, 0, t);
+      return renderPermissions(services, interaction, 0, t);
     }
 
-    return renderPermissions(interaction, 0, t);
-  }
-}
+    return renderPermissions(services, interaction, 0, t);
+  },
+});

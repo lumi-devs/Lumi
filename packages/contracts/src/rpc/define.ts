@@ -1,4 +1,4 @@
-import type { BaseValidator, Unwrap } from "@sapphire/shapeshift";
+import type { z } from "zod";
 
 /**
  * Who may call an action. `guildManager` needs a guild the actor manages,
@@ -15,7 +15,7 @@ export const RpcTimeouts = {
   bulk: 120_000,
 } as const;
 
-type RpcInputValidator = BaseValidator<unknown> | undefined;
+type RpcInputValidator = z.ZodType<unknown> | undefined;
 
 interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
   input?: V;
@@ -54,7 +54,7 @@ export function rpcAction<O extends object>() {
 }
 
 export interface RpcSliceEntry {
-  input?: BaseValidator<unknown>;
+  input?: z.ZodType<unknown>;
   auth: RpcAuth;
   permission?: string;
   requiresEnabled?: string;
@@ -67,8 +67,8 @@ export interface RpcSliceEntry {
 
 export type RpcInputOf<E> =
   E extends RpcActionDef<infer V, RpcAuth, object>
-    ? V extends BaseValidator<unknown>
-      ? Unwrap<V>
+    ? V extends z.ZodType<unknown>
+      ? z.infer<V>
       : undefined
     : never;
 

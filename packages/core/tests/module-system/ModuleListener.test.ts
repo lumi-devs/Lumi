@@ -1,64 +1,94 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { EventEmitter } from "node:events";
 import * as misc from "#lib/utilities/misc.js";
 
-class TestModuleListener extends ModuleListener {
-  public handleCalls: any[][] = [];
+import {
+  addListenerDef,
+  defineListener,
+} from "#lib/listeners/listener-def.js";
+import { attachDefs } from "#lib/listeners/listener-loader.js";
+import type { Container } from "#lib/services.js";
 
-  protected handle(...args: any[]): void {
-    this.handleCalls.push(args);
-  }
+const services = {} as unknown as Container;
 
-  public testResolveGuildId(...args: any[]): string | null {
-    return this.resolveGuildId(...args);
-  }
-}
+const flush = () =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 
-describe("module-system ModuleListener", () => {
+describe("listener-loader module gating", () => {
+  let isModuleEnabled: ReturnType<
+    typeof vi.spyOn<typeof misc, "isModuleEnabled">
+  >;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    isModuleEnabled = vi
+      .spyOn(misc, "isModuleEnabled")
+      .mockResolvedValue(true);
   });
 
-  it("exposes module name getter", () => {
-    const listener = new TestModuleListener({} as any, {
-      name: "test-listener",
-      module: "afk",
-    });
-    expect(listener.module).toBe("afk");
+  // Spies mutate the shared module object: restore the real implementation
+  // so later test files see real misc.js behavior.
+  afterEach(() => {
+    isModuleEnabled.mockRestore();
   });
 
-  it("resolves guild ID from args", () => {
-    const listener = new TestModuleListener({} as any, {
-      name: "test-listener",
-      module: "afk",
-    });
-
-    expect(listener.testResolveGuildId({ guildId: "g-1" })).toBe("g-1");
-    expect(listener.testResolveGuildId({ guild: { id: "g-2" } })).toBe("g-2");
-    expect(listener.testResolveGuildId({})).toBeNull();
-    expect(listener.testResolveGuildId()).toBeNull();
-  });
-
-  it("runs handle only when guildId is present and module is enabled", async () => {
-    const listener = new TestModuleListener({} as any, {
-      name: "test-listener",
-      module: "mod",
-    });
-
-    const isModuleEnabled = vi.spyOn(misc, "isModuleEnabled").mockResolvedValue(true);
-
-    // No guildId resolved -> no handle
-    await listener.run({});
-    expect(listener.handleCalls).toHaveLength(0);
-
-    // GuildId resolved and module enabled -> runs handle
-    await listener.run({ guildId: "g-100" });
-    expect(listener.handleCalls).toHaveLength(1);
-    expect(misc.isModuleEnabled).toHaveBeenCalledWith("g-100", "mod");
-
-    // Module disabled -> no handle
+  it("does not run a module-gated def when the module is disabled", async () => {
     isModuleEnabled.mockResolvedValue(false);
-    await listener.run({ guildId: "g-100" });
-    expect(listener.handleCalls).toHaveLength(1); // Call count unchanged
+    const execute = vi.fn();
+    const def = defineListener({
+      name: "gate-disabled",
+      event: "test:gate-disabled",
+      module: "mod",
+      execute,
+    });
+    addListenerDef(def);
+
+    const emitter = new EventEmitter();
+    const detach = attachDefs(services, emitter as never, [def]);
+    emitter.emit("test:gate-disabled", { guildId: "g-1" });
+    await flush();
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(isModuleEnabled).toHaveBeenCalledWith(services, "g-1", "mod");
+    detach();
+  });
+
+  it("runs a module-gated def with event args when the module is enabled", async () => {
+    const execute = vi.fn();
+    const def = defineListener({
+      name: "gate-enabled",
+      event: "test:gate-enabled",
+      module: "mod",
+      execute,
+    });
+    addListenerDef(def);
+
+    const emitter = new EventEmitter();
+    const detach = attachDefs(services, emitter as never, [def]);
+    const payload = { guildId: "g-2" };
+    emitter.emit("test:gate-enabled", payload);
+    await flush();
+
+    expect(execute).toHaveBeenCalledWith(services, payload);
+    detach();
+  });
+
+  it("runs an un-gated def even without a guild id", async () => {
+    const execute = vi.fn();
+    const def = defineListener({
+      name: "no-gate",
+      event: "test:no-gate",
+      execute,
+    });
+    addListenerDef(def);
+
+    const emitter = new EventEmitter();
+    const detach = attachDefs(services, emitter as never, [def]);
+    emitter.emit("test:no-gate", {});
+    await flush();
+
+    expect(execute).toHaveBeenCalled();
+    detach();
   });
 });

@@ -1,11 +1,11 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { Routes } from "discord-api-types/v10";
-import { DiscordSnowflake } from "@sapphire/snowflake";
-import { Time } from "@sapphire/time-utilities";
+import { SnowflakeUtil } from "discord.js";
+import { Ms } from "@lumi/shared";
 
 const MaxBatch = 100;
-const FlushDelayMs = Time.Second * 1.5;
-const TwoWeeksMs = 14 * Time.Day;
+const FlushDelayMs = Ms.Second * 1.5;
+const TwoWeeksMs = 14 * Ms.Day;
 
 interface PendingEntry {
   messageId: string;
@@ -31,7 +31,7 @@ export function coalesceMessageDelete(
   channelId: string,
   messageId: string,
 ): Promise<void> {
-  const ageMs = Date.now() - DiscordSnowflake.timestampFrom(messageId);
+  const ageMs = Date.now() - SnowflakeUtil.timestampFrom(messageId);
   if (ageMs >= TwoWeeksMs) {
     return singleDelete(channelId, messageId);
   }

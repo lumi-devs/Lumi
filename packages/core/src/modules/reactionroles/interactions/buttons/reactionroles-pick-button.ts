@@ -1,45 +1,26 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import type {
   ButtonInteraction,
   GuildMember,
-  Interaction,
 } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import { ReactionRolePickId } from "../../constants.js";
-import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import type { ReactionRolesUtility } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "reactionroles-pick-button",
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export const reactionrolesPickButton = defineInteraction({
+  prefix: ReactionRolePickId.prefix,
   module: "reactionroles",
-})
-export class ReactionRolesPickButtonHandler extends ModuleInteractionHandler<
-  ButtonInteraction,
-  { menuId: string; optionId: string }
-> {
-  private get service(): ReactionRolesUtility {
-    return getUtility("reactionroles");
-  }
-
-  public override parse(interaction: Interaction) {
-    if (!interaction.isButton()) return this.none();
+  async run(_services: Container, interaction: ButtonInteraction): Promise<void> {
+    if (!interaction.isButton()) return;
     const parsed = ReactionRolePickId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: ButtonInteraction,
-    { menuId, optionId }: { menuId: string; optionId: string },
-  ): Promise<void> {
+    if (!parsed) return;
+    const { menuId, optionId } = parsed;
+    const service: ReactionRolesUtility = getUtility("reactionroles");
     const { guild } = interaction;
     if (!guild) return;
     await interaction.deferReply({
@@ -49,7 +30,7 @@ export class ReactionRolesPickButtonHandler extends ModuleInteractionHandler<
 
     const member = interaction.member as GuildMember;
     try {
-      const result = await this.service.toggleOption(
+      const result = await service.toggleOption(
         guild,
         member,
         menuId,
@@ -83,5 +64,5 @@ export class ReactionRolesPickButtonHandler extends ModuleInteractionHandler<
         )
         .catch(() => null);
     }
-  }
-}
+  },
+});

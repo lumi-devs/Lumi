@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { TempVcRecord } from "@prisma/client";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 
@@ -37,46 +37,51 @@ function toRecord(row: TempVcRecord): VcRecord {
 }
 
 export async function setGenerator(
+  services: Container,
   guildId: string,
   channelId: string,
   config: GeneratorConfig,
 ): Promise<void> {
-  await container.db.tempvc.upsertGenerator(guildId, channelId, config);
+  await services.db.tempvc.upsertGenerator(guildId, channelId, config);
   await tempVcRegistry.invalidateGenerators(guildId);
 }
 
 export async function removeGenerator(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const removed = await container.db.tempvc.deleteGenerator(guildId, channelId);
+  const removed = await services.db.tempvc.deleteGenerator(guildId, channelId);
   if (removed) await tempVcRegistry.invalidateGenerators(guildId);
   return removed;
 }
 
 export async function listGenerators(
+  services: Container,
   guildId: string,
 ): Promise<Map<string, GeneratorConfig>> {
-  const rows = await container.db.tempvc.listGenerators(guildId);
+  const rows = await services.db.tempvc.listGenerators(guildId);
   return new Map(
     rows.map((r) => [r.channelId, { name: r.name, limit: r.limit }]),
   );
 }
 
 export async function getVcRecord(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<VcRecord | null> {
-  const row = await container.db.tempvc.getRecord(guildId, channelId);
+  const row = await services.db.tempvc.getRecord(guildId, channelId);
   return row ? toRecord(row) : null;
 }
 
 export async function setVcRecord(
+  services: Container,
   guildId: string,
   channelId: string,
   record: VcRecord,
 ): Promise<void> {
-  await container.db.tempvc.upsertRecord(guildId, channelId, {
+  await services.db.tempvc.upsertRecord(guildId, channelId, {
     ownerId: record.ownerId,
     generatorId: record.generatorId,
     name: record.name,
@@ -95,11 +100,12 @@ export async function setVcRecord(
  * Returns null when the record is gone (channel deleted mid-interaction).
  */
 export async function patchVcRecord(
+  services: Container,
   guildId: string,
   channelId: string,
   patch: Partial<Omit<VcRecord, "createdAt">>,
 ): Promise<VcRecord | null> {
-  const row = await container.db.tempvc.patchRecord(guildId, channelId, patch);
+  const row = await services.db.tempvc.patchRecord(guildId, channelId, patch);
   if (!row) return null;
   const record = toRecord(row);
   await tempVcRegistry.addVc(guildId, channelId, {
@@ -110,16 +116,18 @@ export async function patchVcRecord(
 }
 
 export async function removeVcRecord(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  await container.db.tempvc.deleteRecord(guildId, channelId);
+  await services.db.tempvc.deleteRecord(guildId, channelId);
   await tempVcRegistry.removeVc(guildId, channelId);
 }
 
 export async function listVcRecords(
+  services: Container,
   guildId: string,
 ): Promise<Map<string, VcRecord>> {
-  const rows = await container.db.tempvc.listRecords(guildId);
+  const rows = await services.db.tempvc.listRecords(guildId);
   return new Map(rows.map((r) => [r.channelId, toRecord(r)]));
 }

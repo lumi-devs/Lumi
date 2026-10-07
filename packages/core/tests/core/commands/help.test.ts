@@ -10,7 +10,7 @@ vi.mock("#lib/utilities/pagination.js", () => ({
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@sapphire/plugin-i18next", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 

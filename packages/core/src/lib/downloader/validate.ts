@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { CombinedPropertyError, s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import semver from "semver";
 import { AddonDiscordCapabilities } from "@lumi/contracts";
 import { LumiInfo } from "#lib/utilities/misc.js";
@@ -13,28 +13,28 @@ export interface ValidationResult {
   warnings: string[];
 }
 
-const infoSchema = s.object({
-  name: s.string().regex(/^[a-z0-9][a-z0-9-]*$/),
-  author: s
-    .array(s.string().lengthGreaterThanOrEqual(1))
-    .lengthGreaterThanOrEqual(1),
-  description: s.string().lengthGreaterThanOrEqual(1),
-  short: s.string().lengthGreaterThanOrEqual(1).optional(),
-  version: s.string().regex(/^\d+\.\d+\.\d+/),
-  dependencies: s.array(s.string()).optional(),
-  conflicts: s.array(s.string()).optional(),
-  requirements: s.array(s.string()).optional(),
-  tags: s.array(s.string()).optional(),
-  min_bot_version: s.string().optional(),
-  max_bot_version: s.string().optional(),
-  end_user_data_statement: s.string(),
-  hidden: s.boolean().optional(),
+const infoSchema = z.object({
+  name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+  author: z
+    .array(z.string().min(1))
+    .min(1),
+  description: z.string().min(1),
+  short: z.string().min(1).optional(),
+  version: z.string().regex(/^\d+\.\d+\.\d+/),
+  dependencies: z.array(z.string()).optional(),
+  conflicts: z.array(z.string()).optional(),
+  requirements: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  min_bot_version: z.string().optional(),
+  max_bot_version: z.string().optional(),
+  end_user_data_statement: z.string(),
+  hidden: z.boolean().optional(),
 });
 
-const configFieldSchema = s.object({
-  key: s.string().lengthGreaterThanOrEqual(1),
-  label: s.string(),
-  type: s.enum([
+const configFieldSchema = z.object({
+  key: z.string().min(1),
+  label: z.string(),
+  type: z.enum([
     "BOOLEAN",
     "NUMBER",
     "STRING",
@@ -43,31 +43,31 @@ const configFieldSchema = s.object({
     "ROLE",
     "USER",
   ]),
-  description: s.string(),
-  default: s.unknown().optional(),
-  choices: s.array(s.string()).optional(),
-  required: s.boolean().optional(),
-  channelTypes: s.array(s.number()).optional(),
-  claimable: s.boolean().optional(),
-  templateVars: s.array(s.string()).optional(),
-  pairedWith: s.string().optional(),
-  enabledBy: s.string().optional(),
-  list: s.boolean().optional(),
+  description: z.string(),
+  default: z.unknown().optional(),
+  choices: z.array(z.string()).optional(),
+  required: z.boolean().optional(),
+  channelTypes: z.array(z.number()).optional(),
+  claimable: z.boolean().optional(),
+  templateVars: z.array(z.string()).optional(),
+  pairedWith: z.string().optional(),
+  enabledBy: z.string().optional(),
+  list: z.boolean().optional(),
 });
 
-const manifestSchema = s.object({
-  name: s.string().regex(/^[a-z0-9][a-z0-9-]*$/),
-  displayName: s.string().lengthGreaterThanOrEqual(1),
-  emoji: s.string(),
-  description: s.string(),
-  version: s.string().regex(/^\d+\.\d+\.\d+/),
-  disableable: s.boolean().optional(),
-  dependencies: s.array(s.string()).optional(),
-  conflicts: s.array(s.string()).optional(),
-  configOverrides: s.boolean().optional(),
-  targetUtility: s.enum(["worker", "gateway", "scheduler", "api"]),
-  subStores: s.array(s.string()),
-  configFields: s.array(configFieldSchema),
+const manifestSchema = z.object({
+  name: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+  displayName: z.string().min(1),
+  emoji: z.string(),
+  description: z.string(),
+  version: z.string().regex(/^\d+\.\d+\.\d+/),
+  disableable: z.boolean().optional(),
+  dependencies: z.array(z.string()).optional(),
+  conflicts: z.array(z.string()).optional(),
+  configOverrides: z.boolean().optional(),
+  targetUtility: z.enum(["worker", "gateway", "scheduler", "api"]),
+  subStores: z.array(z.string()),
+  configFields: z.array(configFieldSchema),
 });
 
 const IgnoredDirs = new Set(["node_modules", ".git", "dist", "build"]);
@@ -247,24 +247,29 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   if (await pathExists(infoPath)) {
     try {
       const info = JSON.parse(await fs.readFile(infoPath, "utf8")) as unknown;
-      const parsed = infoSchema.run(info);
-      if (parsed.isErr()) {
-        const err = parsed.error;
-        if (err instanceof CombinedPropertyError) {
-          for (const [key, propertyError] of err.errors) {
-            if (key === "end_user_data_statement" && propertyError.name === "MissingPropertyError") {
-              errors.push(
-                `info.json: "end_user_data_statement" is required. You must provide a clear statement explaining what user data this addon collects and why (or state that none is collected).`
-              );
-            } else {
-              errors.push(`info.json: "${String(key)}" - ${propertyError.message}`);
-            }
+      const parsed = infoSchema.safeParse(info);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          if (issue.path.length === 0) {
+            errors.push(`info.json: (root) - ${issue.message}`);
+            continue;
           }
-        } else {
-          errors.push(`info.json: (root) - ${err.message}`);
+          const key = String(issue.path[0]);
+          if (
+            key === "end_user_data_statement" &&
+            typeof info === "object" &&
+            info !== null &&
+            (info as Record<string, unknown>).end_user_data_statement === undefined
+          ) {
+            errors.push(
+              `info.json: "end_user_data_statement" is required. You must provide a clear statement explaining what user data this addon collects and why (or state that none is collected).`
+            );
+          } else {
+            errors.push(`info.json: "${key}" - ${issue.message}`);
+          }
         }
       } else {
-        const val = parsed.unwrap();
+        const val = parsed.data;
         if (val.name !== base) {
           errors.push(
             `info.json "name" (${val.name}) must match the directory name (${base}).`,
@@ -301,18 +306,17 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       const manifest = JSON.parse(
         await fs.readFile(manifestPath, "utf8"),
       ) as unknown;
-      const parsed = manifestSchema.run(manifest);
-      if (parsed.isErr()) {
-        const err = parsed.error;
-        if (err instanceof CombinedPropertyError) {
-          for (const [key, propertyError] of err.errors) {
-            errors.push(`manifest.json: "${String(key)}" - ${propertyError.message}`);
+      const parsed = manifestSchema.safeParse(manifest);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          if (issue.path.length === 0) {
+            errors.push(`manifest.json: (root) - ${issue.message}`);
+          } else {
+            errors.push(`manifest.json: "${String(issue.path[0])}" - ${issue.message}`);
           }
-        } else {
-          errors.push(`manifest.json: (root) - ${err.message}`);
         }
       } else {
-        const val = parsed.unwrap();
+        const val = parsed.data;
         if (val.name !== base) {
           errors.push(
             `manifest.json "name" (${val.name}) must match the directory name (${base}).`,
@@ -337,8 +341,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   const indexPath = path.join(dir, "index.ts");
   if (await pathExists(indexPath)) {
     const src = await fs.readFile(indexPath, "utf8");
-    if (!/@DefineModule\s*\(/.test(src))
-      errors.push("index.ts does not use the @DefineModule decorator.");
+    if (!/@DefineModule\s*\(|defineModule\s*\(/.test(src))
+      errors.push("index.ts does not define a module (defineModule).");
     if (!/\bexport\b/.test(src))
       errors.push(
         "index.ts exports nothing (the module class must be exported).",
@@ -371,7 +375,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       );
     if (/\bcontainer\b/.test(src))
       errors.push(
-        `${rel}: uses Sapphire's \`container\` - it does not exist in an addon process. Persist via "lumi/kv", read settings via "lumi/config", act on Discord via "lumi/discord".`,
+        `${rel}: uses \`container\` - it does not exist in an addon process. Persist via "lumi/kv", read settings via "lumi/config", act on Discord via "lumi/discord".`,
       );
     if (/\bstores\.registerPath\s*\(/.test(src))
       warnings.push(

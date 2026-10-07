@@ -15,36 +15,36 @@
  * the database stays the source of truth for everything they describe.
  */
 
-import { s, type Type } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { SnowflakeSchema, ModuleNameSchema, ConfigKeySchema } from "./rpc/schemas.js";
 
 export const DashboardEventStream = "lumi:dashboard-events";
 
-export const ModuleStateChangedEventSchema = s.object({
-  type: s.literal("module.stateChanged"),
-  v: s.literal(1),
+export const ModuleStateChangedEventSchema = z.object({
+  type: z.literal("module.stateChanged"),
+  v: z.literal(1),
   guildId: SnowflakeSchema,
   moduleName: ModuleNameSchema,
-  enabled: s.boolean(),
+  enabled: z.boolean(),
   actorId: SnowflakeSchema,
-  at: s.number(),
+  at: z.number(),
 });
 
-export const ConfigChangedEventSchema = s.object({
-  type: s.literal("config.changed"),
-  v: s.literal(1),
+export const ConfigChangedEventSchema = z.object({
+  type: z.literal("config.changed"),
+  v: z.literal(1),
   guildId: SnowflakeSchema,
   moduleName: ModuleNameSchema,
   key: ConfigKeySchema,
   actorId: SnowflakeSchema,
-  at: s.number(),
+  at: z.number(),
 });
 
-export const DashboardEventSchema = s.union([
+export const DashboardEventSchema = z.union([
   ModuleStateChangedEventSchema,
   ConfigChangedEventSchema,
 ]);
 
-export type ModuleStateChangedEvent = Type<typeof ModuleStateChangedEventSchema>;
-export type ConfigChangedEvent = Type<typeof ConfigChangedEventSchema>;
-export type DashboardEvent = Type<typeof DashboardEventSchema>;
+export type ModuleStateChangedEvent = z.infer<typeof ModuleStateChangedEventSchema>;
+export type ConfigChangedEvent = z.infer<typeof ConfigChangedEventSchema>;
+export type DashboardEvent = z.infer<typeof DashboardEventSchema>;

@@ -9,7 +9,7 @@ import {
 
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { resolveCardColor } from "#lib/utilities/config.js";

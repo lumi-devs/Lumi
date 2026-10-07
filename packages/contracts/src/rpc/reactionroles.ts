@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type { ReactionRoleMenuView } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
 import { boundedArray, SnowflakeSchema } from "./schemas.js";
@@ -7,19 +7,16 @@ export const ReactionRoleMenuModes = ["buttons", "select", "reactions"] as const
 
 export type ReactionRoleMenuMode = (typeof ReactionRoleMenuModes)[number];
 
-const ReactionRoleOptionSchema = s.object({
-  id: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(32).optional(),
-  label: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(80),
-  emoji: s.string().lengthLessThanOrEqual(100).nullable().optional(),
-  description: s.string().lengthLessThanOrEqual(100).nullable().optional(),
+const ReactionRoleOptionSchema = z.object({
+  id: z.string().min(1).max(32).optional(),
+  label: z.string().min(1).max(80),
+  emoji: z.string().max(100).nullable().optional(),
+  description: z.string().max(100).nullable().optional(),
   roleId: SnowflakeSchema,
   requiredRoleId: SnowflakeSchema.nullable().optional(),
 });
 
-const MenuIdSchema = s
-  .string()
-  .lengthGreaterThanOrEqual(1)
-  .lengthLessThanOrEqual(40);
+const MenuIdSchema = z.string().min(1).max(40);
 
 export const reactionrolesRpc = {
   "guild.reactionroles.menus.list": rpcAction<{
@@ -34,19 +31,19 @@ export const reactionrolesRpc = {
     success: boolean;
     menu: ReactionRoleMenuView;
   }>()({
-    input: s.object({
+    input: z.object({
       id: MenuIdSchema,
-      title: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100),
-      description: s.string().lengthLessThanOrEqual(1000).nullable().optional(),
-      color: s.string().lengthLessThanOrEqual(7).nullable().optional(),
-      mode: s.enum(ReactionRoleMenuModes),
-      exclusive: s.boolean().optional(),
-      maxRoles: s.number().int().greaterThanOrEqual(1).lessThanOrEqual(25).optional(),
+      title: z.string().min(1).max(100),
+      description: z.string().max(1000).nullable().optional(),
+      color: z.string().max(7).nullable().optional(),
+      mode: z.enum(ReactionRoleMenuModes),
+      exclusive: z.boolean().optional(),
+      maxRoles: z.number().int().gte(1).lte(25).optional(),
       options: boundedArray(ReactionRoleOptionSchema, { max: 25 }),
       /** Block layout replacing the title/description header; the options and
        * mode controls always stay appended below, since the pick handlers
        * dispatch on them. Clamped server-side. */
-      richContent: s.unknown().optional(),
+      richContent: z.unknown().optional(),
     }),
     auth: "guildManager",
     requiresEnabled: "reactionroles",
@@ -58,7 +55,7 @@ export const reactionrolesRpc = {
     id: string;
     deleted: boolean;
   }>()({
-    input: s.object({ id: MenuIdSchema }),
+    input: z.object({ id: MenuIdSchema }),
     auth: "guildManager",
     requiresEnabled: "reactionroles",
     timeoutMs: RpcTimeouts.long,

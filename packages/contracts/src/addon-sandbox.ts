@@ -46,6 +46,8 @@ export type AddonRpcMethod =
   | "discord.channels.send"
   | "discord.messages.fetch"
   | "discord.messages.edit"
+  | "discord.guilds.get"
+  | "discord.guilds.members.fetch"
   | "log";
 
 export type AddonRpcRequest<T = unknown> = RpcRequest<T> & {

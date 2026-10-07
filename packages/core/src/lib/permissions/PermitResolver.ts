@@ -1,4 +1,5 @@
-import { container, UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
+import { container } from "#lib/services.js";
 import { envParseString } from "#lib/env.js";
 import type { PermitTargetType } from "#lib/prisma/repositories/PermissionRepository.js";
 

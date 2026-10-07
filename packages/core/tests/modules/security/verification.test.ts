@@ -11,7 +11,7 @@ import { MaxAttempts, type CaptchaState } from "@lumi/application/services/secur
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
-vi.mock("@sapphire/plugin-i18next", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 

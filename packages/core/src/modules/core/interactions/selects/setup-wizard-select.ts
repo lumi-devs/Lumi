@@ -1,4 +1,8 @@
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import {
   VerificationModes,
   emptySetupState,
@@ -8,33 +12,18 @@ import {
 } from "../../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 import { SetupStepId } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
 import type { AnySelectMenuInteraction } from "discord.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "setup-wizard-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export class SetupWizardSelectHandler extends LumiInteractionHandler {
-  public override parse(interaction: AnySelectMenuInteraction) {
+export const setupWizardSelect = defineInteraction({
+  prefix: SetupStepId.prefix,
+  async run(_services: Container, interaction: AnySelectMenuInteraction) {
     const parsed = SetupStepId.parse(interaction.customId);
-    if (!parsed) return this.none();
+    if (!parsed) return;
     const parts = ["setup", "step", ...parsed.segments];
     const tail = parts[parts.length - 1];
-    if (tail !== "ch" && tail !== "vmode") return this.none();
-    return this.some({ tail, parts });
-  }
-
-  public async run(
-    interaction: AnySelectMenuInteraction,
-    { tail, parts }: { tail: string; parts: string[] },
-  ) {
+    if (tail !== "ch" && tail !== "vmode") return;
     if (!interaction.inGuild()) return;
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
     if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
 
     if (tail === "ch") {
@@ -56,5 +45,5 @@ export class SetupWizardSelectHandler extends LumiInteractionHandler {
     return interaction.editReply(
       buildSetupStepView(3, { ...base, verificationMode: mode }),
     );
-  }
-}
+  },
+});

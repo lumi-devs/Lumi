@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import {
@@ -49,16 +49,16 @@ let restartScheduled = false;
  * Schedule a graceful self-restart. Idempotent within a process. The delay lets
  * the triggering command finish replying to the user before the drain begins.
  */
-export function scheduleProcessRestart(reason: string, delayMs = 2_000): void {
+export function scheduleProcessRestart(services: Container, reason: string, delayMs = 2_000): void {
   if (restartScheduled) return;
   restartScheduled = true;
 
-  container.logger.warn(
+  services.logger.warn(
     `[Restart] Scheduling graceful restart in ${delayMs}ms - ${reason}`,
   );
 
   const timer = setTimeout(() => {
-    container.logger.warn(
+    services.logger.warn(
       `[Restart] Sending SIGTERM to self (pid ${process.pid})`,
     );
     process.kill(process.pid, "SIGTERM");

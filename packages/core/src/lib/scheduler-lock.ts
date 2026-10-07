@@ -1,4 +1,4 @@
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { getConsumerId } from "#lib/env.js";
 import { acquireValkeyLock, type ValkeyLock } from "#lib/lock.js";

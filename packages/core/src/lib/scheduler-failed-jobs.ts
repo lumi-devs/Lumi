@@ -1,21 +1,21 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { failedJobsTotal } from "@lumi/observability";
-import type { ScheduledTaskHandler } from "@sapphire/plugin-scheduled-tasks";
+import type { ScheduledTaskRunner } from "#lib/scheduler-runner.js";
 import { QueueEventsWatcher } from "@lumi/infrastructure/queues";
 
 /**
  * Counts a scheduled-task job as failed only once it has exhausted retries.
  */
 export function watchFailedJobs(
-  handler: ScheduledTaskHandler,
+  runner: ScheduledTaskRunner,
 ): { close(): Promise<void> } {
-  const watcher = new QueueEventsWatcher(handler.queue, {
-    connection: handler.options.connection,
+  const watcher = new QueueEventsWatcher(runner.queue, {
+    connection: runner.options.connection,
     logger: container.logger,
   });
 
   watcher.watchExhaustedRetries(
-    async (jobId) => handler.client.getJob(jobId),
+    async (jobId) => runner.client.getJob(jobId),
     (info) => {
       failedJobsTotal.inc({ task: info.name });
       container.logger.error(

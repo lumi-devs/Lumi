@@ -1,9 +1,9 @@
 import { sectionsOf } from "@lumi/contracts";
 import type { ModuleMeta } from "#lib/module-system/meta.js";
-import { SecurityModule } from "#modules/security/index.js";
+import { securityModule } from "#modules/security/index.js";
 import { describe, expect, it } from "bun:test";
 
-const fields = (SecurityModule as unknown as { meta: ModuleMeta }).meta.configFields ?? [];
+const fields = securityModule.meta.configFields ?? [];
 
 describe("security config sections", () => {
   it("declares fields at all", () => {

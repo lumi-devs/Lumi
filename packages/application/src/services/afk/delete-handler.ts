@@ -1,10 +1,11 @@
-import { container } from "@sapphire/framework";
+import { type Container } from "#lib/services.js";
 import { errorCode } from "#lib/utilities/errors.js";
 import { coalesceMessageDelete } from "#lib/rest-coalesce.js";
 import { clearAfkMentions } from "#modules/afk/data/afk.js";
 import type { AfkDeleteMessagePayload } from "#modules/afk/scheduled-tasks/afkDeleteMessage.js";
 
 export async function handleAfkDeleteMessageFire(
+  services: Container,
   payload: AfkDeleteMessagePayload,
 ): Promise<void> {
   const { channelId, messageId, clearMentions } = payload;
@@ -12,16 +13,16 @@ export async function handleAfkDeleteMessageFire(
   await coalesceMessageDelete(channelId, messageId).catch((err: unknown) => {
     const code = errorCode(err);
     if (code === 10008 || code === 10003 || code === 50001) return;
-    container.logger.warn(
+    services.logger.warn(
       `[AFK] Failed to delete message ${messageId} in ${channelId}:`,
       err,
     );
   });
 
   if (clearMentions) {
-    await clearAfkMentions(clearMentions.guildId, clearMentions.userId).catch(
+    await clearAfkMentions(services, clearMentions.guildId, clearMentions.userId).catch(
       (err: unknown) =>
-        container.logger.warn("[AFK] Failed to clear mentions:", err),
+        services.logger.warn("[AFK] Failed to clear mentions:", err),
     );
   }
 }

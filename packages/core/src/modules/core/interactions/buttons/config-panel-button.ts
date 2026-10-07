@@ -1,6 +1,11 @@
 import { fetchTyped } from "#lib/commands.js";
+import { UserError } from "@lumi/shared";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";
@@ -34,37 +39,15 @@ import {
   ModalBuilder,
   TextInputBuilder,
 } from "@discordjs/builders";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-  UserError,
-} from "@sapphire/framework";
 import { TextInputStyle, type ButtonInteraction } from "discord.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "config-panel-button",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class ConfigPanelButtonHandler extends LumiInteractionHandler {
-  private get cfg(): ConfigUtility {
-    return getUtility("config");
-  }
-
-  public override parse(interaction: ButtonInteraction) {
+export const configPanelButton = defineInteraction({
+  prefix: ConfigButtonId.prefix,
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = ConfigButtonId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  public async run(
-    interaction: ButtonInteraction,
-    {
-      action,
-      moduleName,
-      rest,
-    }: { action: string; moduleName: string; rest: string[] },
-  ) {
+    if (!parsed) return;
+    const { action, moduleName, rest } = parsed;
+    const cfg: ConfigUtility = getUtility("config");
     if (!interaction.inGuild()) return;
 
     // showModal() must be the interaction's first response, so modal-opening
@@ -72,17 +55,18 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     // beat Discord's 3s ack window before the permission/i18n lookups below.
     const opensModal =
       action === "cfg" || action === "ovadd" || action === "fedit";
-    if (!opensModal) await this.acknowledge(interaction);
+    if (!opensModal) await acknowledge(interaction);
 
     if (!(await hasPanelAccess(interaction))) throw configAccessDenied();
     const { guildId } = interaction;
 
     if (action === "cfg")
-      return this.#openConfigureModal(interaction, guildId, moduleName);
+      return openConfigureModal(services, interaction, guildId, moduleName);
     if (action === "ovadd")
-      return this.#openOverrideModal(interaction, guildId, moduleName);
+      return openOverrideModal(services, interaction, guildId, moduleName);
     if (action === "fedit")
-      return this.#openFieldModal(
+      return openFieldModal(
+        services,
         interaction,
         guildId,
         moduleName,
@@ -94,21 +78,21 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
 
     switch (action) {
       case "back": {
-        const features = await loadFeatures(guildId);
+        const features = await loadFeatures(services, guildId);
         return interaction.editReply(buildFeatureListView(features, 0, t));
       }
       case "page": {
         const page = parseInt(rest[0] ?? moduleName, 10) || 0;
-        const features = await loadFeatures(guildId);
+        const features = await loadFeatures(services, guildId);
         return interaction.editReply(buildFeatureListView(features, page, t));
       }
       case "open":
-        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
+        return renderDetail(services, interaction, guildId, moduleName, 0, t);
       case "field": {
         const key = rest[0];
         const fieldPage = parseInt(rest[1] ?? "0", 10) || 0;
         if (!key) return;
-        const detail = await this.#requireDetail(guildId, moduleName);
+        const detail = await requireDetail(services, guildId, moduleName);
         const field = detail.meta.configFields?.find((f) => f.key === key);
         if (!field) return;
         return interaction.editReply(
@@ -117,31 +101,33 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
       }
       case "fpage": {
         const page = parseInt(rest[1] ?? "0", 10) || 0;
-        return this.#renderDetail(interaction, guildId, moduleName, page, t);
+        return renderDetail(services, interaction, guildId, moduleName, page, t);
       }
       case "tog": {
-        await this.#requireDetail(guildId, moduleName);
-        await this.cfg.flipGuildModule(guildId, moduleName);
-        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
+        await requireDetail(services, guildId, moduleName);
+        await cfg.flipGuildModule(services, guildId, moduleName);
+        return renderDetail(services, interaction, guildId, moduleName, 0, t);
       }
       case "rst": {
-        await this.container.db.config.clearModuleConfig(guildId, moduleName);
-        return this.#renderDetail(interaction, guildId, moduleName, 0, t);
+        await services.db.config.clearModuleConfig(guildId, moduleName);
+        return renderDetail(services, interaction, guildId, moduleName, 0, t);
       }
       case "bool": {
         const key = rest[0];
         const fieldPage = parseInt(rest[1] ?? "0", 10) || 0;
         if (!key) return;
-        const detail = await this.#requireDetail(guildId, moduleName);
+        const detail = await requireDetail(services, guildId, moduleName);
         const field = detail.meta.configFields?.find((f) => f.key === key);
         if (!field) return;
-        await this.cfg.toggleConfigBool(
+        await cfg.toggleConfigBool(
+          services,
           guildId,
           moduleName,
           key,
           interaction.user.id,
         );
-        return this.#renderDetail(
+        return renderDetail(
+          services,
           interaction,
           guildId,
           moduleName,
@@ -150,17 +136,17 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
         );
       }
       case "hist": {
-        const detail = await this.#requireDetail(guildId, moduleName);
-        const entries = await this.container.db.configHistory.getConfigHistory(
+        const detail = await requireDetail(services, guildId, moduleName);
+        const entries = await services.db.configHistory.getConfigHistory(
           guildId,
           moduleName,
         );
         return interaction.editReply(buildHistoryView(detail.meta, entries));
       }
       case "ovr": {
-        const detail = await this.#requireDetail(guildId, moduleName);
+        const detail = await requireDetail(services, guildId, moduleName);
         const overrides =
-          await this.container.db.configOverrides.getConfigOverrides(
+          await services.db.configOverrides.getConfigOverrides(
             guildId,
             moduleName,
           );
@@ -171,16 +157,18 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
       default:
         return undefined;
     }
-  }
+  },
+});
 
-  async #renderDetail(
+async function renderDetail(
+  services: Container,
     interaction: ButtonInteraction,
     guildId: string,
     moduleName: string,
     fieldPage = 0,
     t?: LumiT,
   ) {
-    const detail = await this.#requireDetail(guildId, moduleName);
+    const detail = await requireDetail(services, guildId, moduleName);
     return interaction.editReply(
       buildFeatureDetailView(
         detail.meta,
@@ -192,7 +180,8 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     );
   }
 
-  async #openFieldModal(
+  async function openFieldModal(
+    services: Container,
     interaction: ButtonInteraction,
     guildId: string,
     moduleName: string,
@@ -200,7 +189,7 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     page?: string,
   ) {
     if (!key) return;
-    const detail = await this.#requireDetail(guildId, moduleName);
+    const detail = await requireDetail(services, guildId, moduleName);
     const field = detail.meta.configFields?.find((f) => f.key === key);
     if (!field) return;
 
@@ -242,11 +231,12 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     return interaction.showModal(modal);
   }
 
-  async #requireDetail(
+  async function requireDetail(
+    services: Container,
     guildId: string,
     moduleName: string,
   ): Promise<FeatureDetail> {
-    const detail = await loadDetail(guildId, moduleName);
+    const detail = await loadDetail(services, guildId, moduleName);
     if (!detail)
       throw new UserError({
         identifier: "UnknownModule",
@@ -255,12 +245,13 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     return detail;
   }
 
-  async #openConfigureModal(
+  async function openConfigureModal(
+    services: Container,
     interaction: ButtonInteraction,
     guildId: string,
     moduleName: string,
   ) {
-    const detail = await this.#requireDetail(guildId, moduleName);
+    const detail = await requireDetail(services, guildId, moduleName);
     const fields = (detail.meta.configFields ?? [])
       .filter(
         (f) =>
@@ -312,12 +303,13 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     return interaction.showModal(modal);
   }
 
-  async #openOverrideModal(
+  async function openOverrideModal(
+    services: Container,
     interaction: ButtonInteraction,
     guildId: string,
     moduleName: string,
   ) {
-    const detail = await this.#requireDetail(guildId, moduleName);
+    const detail = await requireDetail(services, guildId, moduleName);
     const modal = new ModalBuilder()
       .setCustomId(ConfigOverrideModalId.build({ moduleName }))
       .setTitle(`Override • ${detail.meta.displayName}`.slice(0, 45));
@@ -341,5 +333,4 @@ export class ConfigPanelButtonHandler extends LumiInteractionHandler {
     );
 
     return interaction.showModal(modal);
-  }
 }

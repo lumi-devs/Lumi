@@ -1,17 +1,17 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { Message, PartialMessage } from "discord.js";
 import { LumiEvents } from "#lib/types/common.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.MessageUpdate })
-export class GuildUserMessageEditRouterListener extends Listener<
-  typeof Events.MessageUpdate
-> {
-  public run(_old: Message | PartialMessage, updated: Message): void {
+export const guildUserMessageEditRouterListener = defineListener({
+  name: "guildUserMessageEditRouterListener",
+  event: Events.MessageUpdate,
+  execute(services: Container, _old: Message | PartialMessage, updated: Message): void {
     if (updated.webhookId !== null) return;
     if (updated.system) return;
     if (updated.author.bot) return;
     if (!updated.inGuild()) return;
-    this.container.client.emit(LumiEvents.GuildUserMessageEdit, updated);
-  }
-}
+    services.client.emit(LumiEvents.GuildUserMessageEdit, updated);
+  },
+});

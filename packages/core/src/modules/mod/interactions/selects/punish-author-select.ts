@@ -1,36 +1,21 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { InteractionHandlerTypes } from "@sapphire/framework";
 import type { StringSelectMenuInteraction } from "discord.js";
 import { LabelBuilder, ModalBuilder, TextInputBuilder } from "@discordjs/builders";
 import { TextInputStyle } from "discord.js";
-import {
-  LumiInteractionHandler,
-  LumiStringSelectHandler,
-} from "#lib/discord-adapter/LumiInteractionHandler.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
 import { PunishAuthorModalId, PunishAuthorSelectId } from "../../constants.js";
+import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 
-@ApplyOptions<LumiInteractionHandler.Options>({
-  name: "punish-author-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+export const punishAuthorSelect = defineInteraction({
+  prefix: PunishAuthorSelectId.prefix,
   module: "mod",
-})
-export class PunishAuthorSelectHandler extends LumiStringSelectHandler<
-  { authorId: string }
-> {
-  public override parse(interaction: StringSelectMenuInteraction) {
+  async run(services: Container, interaction: StringSelectMenuInteraction): Promise<void> {
     const parsed = PunishAuthorSelectId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  public override async run(
-    interaction: StringSelectMenuInteraction,
-    { authorId }: { authorId: string },
-  ): Promise<void> {
+    if (!parsed) return;
+    const { authorId } = parsed;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(guildId, "mod"))) return;
+    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
 
     const action = interaction.values[0];
     if (!action) return;
@@ -63,5 +48,5 @@ export class PunishAuthorSelectHandler extends LumiStringSelectHandler<
     }
 
     await interaction.showModal(modal);
-  }
-}
+  },
+});

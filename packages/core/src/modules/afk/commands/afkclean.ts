@@ -1,38 +1,32 @@
-import { ApplyOptions } from "@sapphire/decorators";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
-import type AfkUtility from "../utilities/AfkUtility.js";
+import type { AfkUtility } from "../utilities/AfkUtility.js";
 
-@ApplyOptions<BaseCommand.Options>({
+function afkService(): AfkUtility {
+  return getUtility("afk");
+}
+
+export const afkcleanDef: CommandDef = {
   name: "afkclean",
-  description:
-    "Remove AFK entries whose users are no longer cached (owner only).",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "owner.*",
   module: "afk",
-})
-export default class AfkCleanCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b.setName(this.name).setDescription(this.description),
+  description: "Remove AFK entries whose users are no longer cached (owner only).",
+  guildOnly: true,
+  requiredPermit: "owner.*",
+  build: () => {
+    const b = new SlashCommandBuilder().setName("afkclean");
+    return (
+    b.setName("afkclean").setDescription("Remove AFK entries whose users are no longer cached (owner only).")
     );
-  }
-
-  private get afkService(): AfkUtility {
-    return getUtility("afk");
-  }
-
-  public override async run(ctx: CommandContext) {
+  },
+  run: async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
     await ctx.defer();
-    const removed = await this.afkService.cleanStaleEntries();
+    const removed = await afkService().cleanStaleEntries(ctx.services);
     return ctx.replySuccess(
       t("afk:cleanTitle"),
       t("afk:cleanSuccess", { count: removed }),
     );
   }
-}
+};

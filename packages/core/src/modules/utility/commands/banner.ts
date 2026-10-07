@@ -1,48 +1,35 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { Args, Command } from "@sapphire/framework";
-import { Message, type ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/command-context.js";
 import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const bannerDef: CommandDef = {
   name: "banner",
   aliases: ["b"],
   description: "Displays a user's banner.",
-  preconditions: ["GuildOnly"],
-})
-export class BannerCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
+  guildOnly: true,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("banner");
+    return (
+      b
+        .setName("banner")
+        .setDescription("Displays a user's banner.")
         .addUserOption((option) =>
           option
             .setName("user")
             .setDescription(
               "The user whose banner to display (defaults to you).",
             ),
-        ),
-    );
-  }
-
-  public override async messageRun(message: Message, args: Args) {
-    const user = await args.pick("user").catch(() => message.author);
+        )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
+    const user = (await ctx.getUser("user")) ?? ctx.user;
     return handleMediaRequest({
-      context: message,
+      context: ctx.source,
       targetUser: user,
       mediaType: "banner",
-      container: this.container,
+      container: ctx.services,
     });
-  }
-
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const user = interaction.options.getUser("user") ?? interaction.user;
-    return handleMediaRequest({
-      context: interaction,
-      targetUser: user,
-      mediaType: "banner",
-      container: this.container,
-    });
-  }
-}
+  },
+};

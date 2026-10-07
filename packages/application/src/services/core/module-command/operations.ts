@@ -16,7 +16,7 @@ import {
   noInstalledModulesCard,
   type ModuleUpdateOutcome,
 } from "#modules/core/ui/module-command-cards.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { User } from "discord.js";
 
 function downloader(): DownloaderUtility {
@@ -58,7 +58,7 @@ export async function installModule(
   user: User,
 ): Promise<CardReply> {
   try {
-    const { signatureWarning } = await downloader().installModule(repoName, moduleName);
+    const { signatureWarning } = await downloader().installModule(container, repoName, moduleName);
     container.logger.debug(
       `[Module] ${Emojis.Install} Installed: ${moduleName} from ${repoName} by ${user.tag}`,
     );
@@ -87,7 +87,7 @@ export async function uninstallModule(
   user: User,
 ): Promise<CardReply> {
   try {
-    await downloader().uninstallModule(moduleName);
+    await downloader().uninstallModule(container, moduleName);
     container.logger.debug(
       `[Module] ${Emojis.Uninstall} Uninstalled: ${moduleName} by ${user.tag}`,
     );
@@ -110,7 +110,7 @@ export async function reloadModule(
 ): Promise<CardReply> {
   try {
     await container.moduleStore.reload(moduleName);
-    await downloader().syncApplicationCommands();
+    await downloader().syncApplicationCommands(container);
     container.logger.info(`[Module] Reloaded: ${moduleName} by ${userTag}`);
     return makeSuccessCard(
       `${Emojis.Check} Module Reloaded`,
@@ -128,7 +128,7 @@ export async function updateModule(
   userId: string,
 ): Promise<CardReply> {
   try {
-    const result = await downloader().updateModule(moduleName);
+    const result = await downloader().updateModule(container, moduleName);
     return moduleUpdateResultCard(result, moduleName, userId);
   } catch (err: unknown) {
     return makeErrorCard(
@@ -141,7 +141,7 @@ export async function updateModule(
 /** A failure on one module never aborts the sweep - it is recorded and the run continues. */
 export async function updateAllModules(userId: string): Promise<CardReply> {
   try {
-    const installed = await downloader().getInstalledModules();
+    const installed = await downloader().getInstalledModules(container);
     if (!installed.length) return noInstalledModulesCard();
 
     const outcomes: ModuleUpdateOutcome[] = [];
@@ -155,7 +155,7 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
         continue;
       }
       try {
-        const result = await downloader().updateModule(item.moduleName);
+        const result = await downloader().updateModule(container, item.moduleName);
         outcomes.push({
           moduleName: item.moduleName,
           status: result.updated ? "updated" : "up-to-date",
@@ -183,7 +183,7 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
 /** Freezes a downloader-installed module against `,module update`/`updateall`. */
 export async function pinModule(moduleName: string): Promise<CardReply> {
   try {
-    await downloader().setModulePinned(moduleName, true);
+    await downloader().setModulePinned(container, moduleName, true);
     return modulePinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(
@@ -196,7 +196,7 @@ export async function pinModule(moduleName: string): Promise<CardReply> {
 /** Removes the update lock set by {@linkcode pinModule}. */
 export async function unpinModule(moduleName: string): Promise<CardReply> {
   try {
-    await downloader().setModulePinned(moduleName, false);
+    await downloader().setModulePinned(container, moduleName, false);
     return moduleUnpinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(

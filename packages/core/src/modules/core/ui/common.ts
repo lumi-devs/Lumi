@@ -10,7 +10,7 @@ import {
   roleMention,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 
 export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 

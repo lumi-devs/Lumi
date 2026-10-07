@@ -1,40 +1,35 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { makeInfoCard } from "#lib/ui/cards.js";
 
 const MaxMessageLength = 2000;
 
-@ApplyOptions<BaseCommand.Options>({
+export const dmDef: CommandDef = {
   name: "dm",
   description: "Relay a direct message through the bot to a user",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.dm",
   prefixEnabled: true,
-})
-export class DmCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addUserOption((o) =>
-          o.setName("user").setDescription("User to message").setRequired(true),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("message")
-            .setDescription("Message to send")
-            .setRequired(true)
-            .setMaxLength(MaxMessageLength),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  build: () => {
+    const b = new SlashCommandBuilder().setName("dm");
+    return (
+    b
+            .setName("dm")
+            .setDescription("Relay a direct message through the bot to a user")
+            .addUserOption((o) =>
+              o.setName("user").setDescription("User to message").setRequired(true),
+            )
+            .addStringOption((o) =>
+              o
+                .setName("message")
+                .setDescription("Message to send")
+                .setRequired(true)
+                .setMaxLength(MaxMessageLength),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const target = await ctx.getUser("user", { required: true });
     const message = await ctx.getString("message", {
       required: true,
@@ -57,4 +52,4 @@ export class DmCommand extends BaseCommand {
     }
     return ctx.replySuccess("Message Sent", `Sent your message to ${target}.`);
   }
-}
+};

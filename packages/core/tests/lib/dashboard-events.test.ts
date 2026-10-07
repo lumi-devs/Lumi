@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { publishDashboardEvent } from "#lib/rpc/dashboard-events.js";
 import { DashboardEventStream } from "@lumi/contracts/events";
 import { dashboardEventPublishFailures } from "@lumi/observability";
@@ -27,7 +27,7 @@ describe("publishDashboardEvent", () => {
       actorId: "222222222222222222",
       at: 123,
     };
-    await publishDashboardEvent(event);
+    await publishDashboardEvent(container, event);
 
     expect(publish).toHaveBeenCalledWith(DashboardEventStream, { ...event, v: 1 });
   });
@@ -38,7 +38,7 @@ describe("publishDashboardEvent", () => {
     };
 
     await expect(
-      publishDashboardEvent({
+      publishDashboardEvent(container, {
         type: "config.changed",
         guildId: "111111111111111111",
         moduleName: "afk",
@@ -57,7 +57,7 @@ describe("publishDashboardEvent", () => {
     (container as any).eventBus = undefined;
 
     await expect(
-      publishDashboardEvent({
+      publishDashboardEvent(container, {
         type: "config.changed",
         guildId: "111111111111111111",
         moduleName: "afk",
@@ -73,7 +73,7 @@ describe("publishDashboardEvent", () => {
     (container as any).eventBus = { publish };
 
     await expect(
-      publishDashboardEvent({
+      publishDashboardEvent(container, {
         type: "module.stateChanged",
         guildId: "not-a-snowflake",
         moduleName: "afk",

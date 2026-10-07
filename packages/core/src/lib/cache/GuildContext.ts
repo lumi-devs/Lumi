@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { BrandColors } from "#lib/branding/colors.js";
 
 export interface GuildContextData {
@@ -16,11 +16,11 @@ export interface GuildContextData {
  * (`ConfigRepository`, `AccessRepository`), so a cache entry here would just
  * be a second, harder-to-invalidate copy of data that's already fast.
  */
-export async function getGuildContext(guildId: string): Promise<GuildContextData> {
+export async function getGuildContext(services: Container, guildId: string): Promise<GuildContextData> {
   const [settings, ignoredGuild, brandColorConfig] = await Promise.all([
-    container.db.config.getGuildSettings(guildId),
-    container.db.access.isGuildIgnored(guildId),
-    container.db.config.getModuleConfig(guildId, "core", "brandColor"),
+    services.db.config.getGuildSettings(guildId),
+    services.db.access.isGuildIgnored(guildId),
+    services.db.config.getModuleConfig(guildId, "core", "brandColor"),
   ]);
 
   return {

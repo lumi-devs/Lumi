@@ -1,18 +1,13 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { InteractionHandlerTypes } from "@sapphire/framework";
 import {
   MessageFlags,
   type GuildMember,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { fetchT } from "@sapphire/plugin-i18next";
-import {
-  LumiInteractionHandler,
-  LumiModalHandler,
-} from "#lib/discord-adapter/LumiInteractionHandler.js";
+import { fetchT } from "#lib/i18n/index.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
 import { parseDuration } from "#lib/utilities/time.js";
+import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
-import type { LumiT } from "#lib/i18n/index.js";
 import {
   checkDuplicateCase,
   checkHierarchy,
@@ -37,40 +32,30 @@ const CaseActionFor: Record<string, CaseAction> = {
   timeout: "mute",
 };
 
-@ApplyOptions<LumiInteractionHandler.Options>({
-  name: "punish-author-modal",
-  interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+export const punishAuthorModal = defineInteraction({
+  prefix: PunishAuthorModalId.prefix,
   module: "mod",
-})
-export class PunishAuthorModalHandler extends LumiModalHandler<
-  { action: string; authorId: string }
-> {
-  public override parse(interaction: ModalSubmitInteraction) {
+  async run(services: Container, interaction: ModalSubmitInteraction): Promise<void> {
     const parsed = PunishAuthorModalId.parse(interaction.customId);
-    if (!parsed || !(parsed.action in CaseActionFor)) return this.none();
-    return this.some(parsed);
-  }
-
-  public override async run(
-    interaction: ModalSubmitInteraction,
-    { action, authorId }: { action: string; authorId: string },
-  ): Promise<void> {
+    if (!parsed || !(parsed.action in CaseActionFor)) return;
+    const { action, authorId } = parsed;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(guildId, "mod"))) return;
+    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
 
     const { guild } = interaction;
     if (!guild) return;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const moderator = interaction.user;
-    const t = (await fetchT(interaction)) as unknown as LumiT;
+    const t = await fetchT(interaction, services);
 
     // Adapter satisfying DuplicateCaseCheckContext (HierarchyCheckContext +
     // ConfirmPromptContext) so this modal-driven flow enforces the exact same
     // hierarchy/duplicate-case checks runModerationFlow applies to the slash
     // commands, instead of calling the punishment action directly.
     const checkCtx: DuplicateCaseCheckContext = {
+      services,
       guild,
       member: interaction.member as GuildMember | null,
       user: moderator,
@@ -152,5 +137,5 @@ export class PunishAuthorModalHandler extends LumiModalHandler<
     }
 
     await interaction.editReply(`Applied **${action}** to <@${authorId}>.`);
-  }
-}
+  },
+});

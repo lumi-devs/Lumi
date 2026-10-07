@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { loggingRpc } from "@lumi/contracts/rpc";
 import { Routes } from "discord-api-types/v10";
 import {

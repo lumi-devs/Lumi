@@ -48,8 +48,6 @@ export const DefaultCapsMinLength = 12;
 export const DefaultWarnMessage =
   "{user}, your message was removed for containing {reason}.";
 
-export { MaxRegexLength };
-
 const InviteRe =
   /(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([\w-]+)/i;
 

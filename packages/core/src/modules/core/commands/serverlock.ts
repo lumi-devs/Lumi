@@ -1,46 +1,37 @@
-import { BaseSubcommand } from "#lib/commands.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { CommandContext } from "#lib/command-context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   getServerLockState,
   setServerLockState,
 } from "../services/server-lock.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
 
-@ApplyOptions<BaseSubcommand.Options>({
+export const serverlockDef: CommandDef = {
   name: "serverlock",
   description: "Lock the bot to its current servers (Bot Owner Only)",
-  preconditions: ["BotOwner"],
+  botOwner: true,
   prefixEnabled: true,
-  subcommands: [
-    { name: "on", run: "enable" },
-    { name: "off", run: "disable" },
-    { name: "status", run: "status", default: true },
-  ],
-})
-export class ServerLockCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s.setName("on").setDescription("Lock the bot to its current servers"),
-        )
-        .addSubcommand((s) =>
-          s.setName("off").setDescription("Unlock the bot so it can join new servers"),
-        )
-        .addSubcommand((s) =>
-          s.setName("status").setDescription("Show whether server lock is enabled"),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("serverlock");
+    return (
+    b
+            .setName("serverlock")
+            .setDescription("Lock the bot to its current servers (Bot Owner Only)")
+            .addSubcommand((s) =>
+              s.setName("on").setDescription("Lock the bot to its current servers"),
+            )
+            .addSubcommand((s) =>
+              s.setName("off").setDescription("Unlock the bot so it can join new servers"),
+            )
+            .addSubcommand((s) =>
+              s.setName("status").setDescription("Show whether server lock is enabled"),
+            )
     );
-  }
-
-  public async enable(ctx: CommandContext): Promise<void> {
-    const state = await getServerLockState(this.container.db);
+  },
+  handlers: {
+  "on": async (ctx: CommandContext) => {
+    const state = await getServerLockState(ctx.services.db);
     if (state.enabled) {
       await ctx.replyInfo(
         `${Emojis.Lock} Server Lock Already On`,
@@ -48,19 +39,18 @@ export class ServerLockCommand extends BaseSubcommand {
       );
       return;
     }
-    const guildIds = [...this.container.client.guilds.cache.keys()];
-    await setServerLockState(this.container.db, { enabled: true, guildIds });
-    this.container.logger.info(
+    const guildIds = [...ctx.services.client.guilds.cache.keys()];
+    await setServerLockState(ctx.services.db, { enabled: true, guildIds });
+    ctx.services.logger.info(
       `[ServerLock] ${Emojis.Lock} Enabled by ${ctx.user.tag} (${guildIds.length} guilds snapshotted)`,
     );
     await ctx.replySuccess(
       `${Emojis.Lock} Server Lock Enabled`,
-      `Locked to the current **${guildIds.length}** server(s). The bot will now leave any newly joined server.`,
+      `Locked to the current **${guildIds.length}** server(s). The bot will now leave any newly joined server.`
     );
-  }
-
-  public async disable(ctx: CommandContext): Promise<void> {
-    const state = await getServerLockState(this.container.db);
+  },
+  "off": async (ctx: CommandContext) => {
+    const state = await getServerLockState(ctx.services.db);
     if (!state.enabled) {
       await ctx.replyInfo(
         `${Emojis.Unlock} Server Lock Already Off`,
@@ -68,18 +58,17 @@ export class ServerLockCommand extends BaseSubcommand {
       );
       return;
     }
-    await setServerLockState(this.container.db, { enabled: false, guildIds: [] });
-    this.container.logger.info(
+    await setServerLockState(ctx.services.db, { enabled: false, guildIds: [] });
+    ctx.services.logger.info(
       `[ServerLock] ${Emojis.Unlock} Disabled by ${ctx.user.tag}`,
     );
     await ctx.replySuccess(
       `${Emojis.Unlock} Server Lock Disabled`,
-      "The bot will now stay in newly joined servers.",
+      "The bot will now stay in newly joined servers."
     );
-  }
-
-  public async status(ctx: CommandContext): Promise<void> {
-    const state = await getServerLockState(this.container.db);
+  },
+  "status": async (ctx: CommandContext) => {
+    const state = await getServerLockState(ctx.services.db);
     if (!state.enabled) {
       await ctx.replyInfo(
         `${Emojis.Unlock} Server Lock Off`,
@@ -92,4 +81,6 @@ export class ServerLockCommand extends BaseSubcommand {
       `Locked to **${state.guildIds.length}** server(s). The bot leaves any newly joined server.`,
     );
   }
-}
+  },
+  defaultSub: "status"
+};

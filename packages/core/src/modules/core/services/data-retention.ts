@@ -8,7 +8,7 @@ import {
 } from "#lib/env.js";
 import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
 import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
-import { container } from "@sapphire/framework";
+import { type Container } from "#lib/services.js";
 
 function daysAgo(days: number): Date {
   const date = new Date();
@@ -16,7 +16,7 @@ function daysAgo(days: number): Date {
   return date;
 }
 
-export async function handleDataRetentionFire(): Promise<void> {
+export async function handleDataRetentionFire(services: Container): Promise<void> {
   try {
     const auditDays = resolveAuditRetentionDays();
     const configHistoryDays = resolveConfigHistoryRetentionDays();
@@ -30,9 +30,9 @@ export async function handleDataRetentionFire(): Promise<void> {
     const economyTransactionDate = daysAgo(economyTransactionDays);
     const guildDataDate = daysAgo(guildDataDays);
 
-    const deletedAudit = await container.db.audit.purgeOldEntries(auditDate, { archiveDir });
-    const deletedConfigHistory = await container.db.configHistory.purgeOldEntries(configHistoryDate, { archiveDir });
-    const deletedEconomyTransactions = await container.db.economy.purgeOldTransactions(economyTransactionDate);
+    const deletedAudit = await services.db.audit.purgeOldEntries(auditDate, { archiveDir });
+    const deletedConfigHistory = await services.db.configHistory.purgeOldEntries(configHistoryDate, { archiveDir });
+    const deletedEconomyTransactions = await services.db.economy.purgeOldTransactions(economyTransactionDate);
 
     // `0` (the default) means keep moderation history forever - it has
     // legal/audit value an operator opts out of, not into. Only lifted
@@ -41,18 +41,18 @@ export async function handleDataRetentionFire(): Promise<void> {
     let deletedAppeals = 0;
     if (moderationDays > 0) {
       const moderationDate = daysAgo(moderationDays);
-      deletedCases = await container.db.moderation.purgeOldCases(moderationDate, { archiveDir });
-      deletedAppeals = await container.db.appeals.purgeOldAppeals(moderationDate, { archiveDir });
+      deletedCases = await services.db.moderation.purgeOldCases(moderationDate, { archiveDir });
+      deletedAppeals = await services.db.appeals.purgeOldAppeals(moderationDate, { archiveDir });
     }
 
-    container.logger.info(`[DataRetention] Purged ${deletedAudit} audit ledger entries, ${deletedCases} moderation cases, ${deletedAppeals} appeals, ${deletedConfigHistory} module config history entries, and ${deletedEconomyTransactions} economy transactions.`);
+    services.logger.info(`[DataRetention] Purged ${deletedAudit} audit ledger entries, ${deletedCases} moderation cases, ${deletedAppeals} appeals, ${deletedConfigHistory} module config history entries, and ${deletedEconomyTransactions} economy transactions.`);
 
-    const deletedGuilds = await purgeDepartedGuilds(guildDataDate);
+    const deletedGuilds = await purgeDepartedGuilds(services, guildDataDate);
     if (deletedGuilds !== null) {
-      container.logger.info(`[DataRetention] Purged ${deletedGuilds} departed guild(s) past their retention window.`);
+      services.logger.info(`[DataRetention] Purged ${deletedGuilds} departed guild(s) past their retention window.`);
     }
   } catch (error) {
-    container.logger.error("[DataRetention] Sweep failed:", error);
+    services.logger.error("[DataRetention] Sweep failed:", error);
   }
 }
 
@@ -63,27 +63,27 @@ export async function handleDataRetentionFire(): Promise<void> {
  * hasn't been reconciled by its (still-offline) shard yet. Returns `null`
  * when the purge was skipped for that reason.
  */
-async function purgeDepartedGuilds(cutoffDate: Date): Promise<number | null> {
+async function purgeDepartedGuilds(services: Container, cutoffDate: Date): Promise<number | null> {
   const clusterName = getClusterName() ?? DefaultClusterName;
   const { missingShardIds, shards, shardCount } = await readClusterShards({
-    valkey: container.valkey,
+    valkey: services.valkey,
     clusterName,
   });
 
   if (missingShardIds.length > 0 || shards.length === 0 || shards.length !== shardCount) {
-    container.logger.debug(
+    services.logger.debug(
       "[DataRetention] Fleet not fully reporting, skipping guild purge for this run.",
     );
     return null;
   }
 
-  const purgedGuildIds = await container.db.purgeDepartedGuilds(cutoffDate);
+  const purgedGuildIds = await services.db.purgeDepartedGuilds(cutoffDate);
 
   for (const guildId of purgedGuildIds) {
     await evictGuildValkeyState(
-      container.valkey,
-      container.invalidation,
-      container.logger,
+      services.valkey,
+      services.invalidation,
+      services.logger,
       guildId,
       "DataRetention",
     );

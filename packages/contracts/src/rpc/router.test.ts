@@ -6,7 +6,7 @@ type Equal<A, B> =
     ? true
     : false;
 
-// Shapeshift's `Unwrap` yields a mapped type that is structurally equal to the
+// `z.infer` yields a mapped type that is structurally equal to the
 // plain object but not type-identical, so inputs are compared by mutual
 // assignability, with `any` ruled out so the check can't pass vacuously.
 type SameShape<A, B> = 0 extends 1 & A

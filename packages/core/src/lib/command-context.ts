@@ -1,5 +1,7 @@
-import { container, UserError, type Args } from "@sapphire/framework";
-import { fetchT } from "@sapphire/plugin-i18next";
+import { UserError } from "@lumi/shared";
+import { container, type Container } from "#lib/services.js";
+import type { PrefixArgs } from "#lib/commands/prefix-args.js";
+import { fetchT } from "#lib/i18n/index.js";
 import {
   GuildMember,
   MessageFlags,
@@ -54,7 +56,9 @@ export class CommandContext {
 
   private constructor(
     public readonly source: ChatInputCommandInteraction | Message,
-    private readonly args: Args | null,
+    private readonly args: PrefixArgs | null,
+    /** Explicit service bag; defaults to the process-global boot container. */
+    public readonly services: Container = container,
   ) {}
 
   public get isSlash(): boolean {
@@ -180,7 +184,7 @@ export class CommandContext {
   /** Guild-configured cap for `getMembers`/`getUsers` (Moderation → "Max Targets Per Command"). */
   private async maxMultiTargets(): Promise<number> {
     if (!this.guildId) return defaultMaxMultiTargets;
-    const configured = await container.db.config.getModuleConfig(
+    const configured = await this.services.db.config.getModuleConfig(
       this.guildId,
       "mod",
       "max_multi_targets",
@@ -267,7 +271,7 @@ export class CommandContext {
    */
   public async brandColor(): Promise<number> {
     if (this.guildId) {
-      const ctx = await getGuildContext(this.guildId);
+      const ctx = await getGuildContext(this.services, this.guildId);
       return ctx.brandColor;
     }
     return BrandColors.primary;
@@ -347,7 +351,7 @@ export class CommandContext {
 
   /** Localized translator for the invoker's guild language. */
   public fetchT(): Promise<LumiT> {
-    return fetchT(this.source) as unknown as Promise<LumiT>;
+    return fetchT(this.source, this.services);
   }
 
   /** Per-subcommand permit check - throws a rendered denial. */
@@ -359,16 +363,21 @@ export class CommandContext {
         message: "This command can only be used in a server.",
       });
     }
-    await container.permitResolver.assertPermit({ ...subject, permitNode });
+    await this.services.permitResolver.assertPermit({ ...subject, permitNode });
   }
 
   public static fromInteraction(
     interaction: ChatInputCommandInteraction,
+    services: Container = container,
   ): CommandContext {
-    return new CommandContext(interaction, null);
+    return new CommandContext(interaction, null, services);
   }
 
-  public static fromMessage(message: Message, args: Args): CommandContext {
-    return new CommandContext(message, args);
+  public static fromMessage(
+    message: Message,
+    args: PrefixArgs,
+    services: Container = container,
+  ): CommandContext {
+    return new CommandContext(message, args, services);
   }
 }

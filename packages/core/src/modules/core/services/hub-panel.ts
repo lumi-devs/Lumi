@@ -1,6 +1,7 @@
 import type { LumiT } from "#lib/i18n/index.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { hasRequiredPermit, PermitResolver } from "#lib/permissions/index.js";
+import { hasRequiredPermit } from "#lib/permissions/index.js";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { loadFeatures } from "./config-panel.js";
 import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
 import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
@@ -9,7 +10,8 @@ import {
   type PermitAssignmentRow,
 } from "#modules/core/ui/permissions.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { container, UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
+import type { Container } from "#lib/services.js";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
@@ -40,11 +42,11 @@ export const hasOwnerPermit = (interaction: PanelInteraction) =>
   Promise.resolve(PermitResolver.isBotOwner(interaction.user.id));
 
 /** Re-renders the hub landing card in place; the interaction must be deferred. */
-export async function renderHub(interaction: ButtonInteraction, t?: LumiT) {
+export async function renderHub(services: Container, interaction: ButtonInteraction, t?: LumiT) {
   const guildId = interaction.guildId!;
   const [features, settings] = await Promise.all([
-    loadFeatures(guildId),
-    container.db.config.getGuildSettings(guildId),
+    loadFeatures(services, guildId),
+    services.db.config.getGuildSettings(guildId),
   ]);
   return interaction.editReply(
     buildHubView(
@@ -55,15 +57,15 @@ export async function renderHub(interaction: ButtonInteraction, t?: LumiT) {
         locale: settings.locale,
         iconUrl:
           interaction.guild?.iconURL() ??
-          container.client.user?.displayAvatarURL(),
+          services.client.user?.displayAvatarURL(),
       },
       t,
     ),
   );
 }
 
-export async function renderSettings(interaction: PanelInteraction, t?: LumiT) {
-  const settings = await container.db.config.getGuildSettings(
+export async function renderSettings(services: Container, interaction: PanelInteraction, t?: LumiT) {
+  const settings = await services.db.config.getGuildSettings(
     interaction.guildId!,
   );
   return interaction.editReply(
@@ -72,9 +74,10 @@ export async function renderSettings(interaction: PanelInteraction, t?: LumiT) {
 }
 
 async function loadPermitAssignments(
+  services: Container,
   guildId: string,
 ): Promise<PermitAssignmentRow[]> {
-  const permits = await container.db.permissions.listPermits(guildId);
+  const permits = await services.db.permissions.listPermits(guildId);
   return permits.flatMap((permit) =>
     permit.assignments.map((a) => ({
       permitId: permit.id,
@@ -88,11 +91,12 @@ async function loadPermitAssignments(
 }
 
 export async function renderPermissions(
+  services: Container,
   interaction: ButtonInteraction | AnySelectMenuInteraction,
   page = 0,
   t?: LumiT,
 ) {
-  const assignments = await loadPermitAssignments(interaction.guildId!);
+  const assignments = await loadPermitAssignments(services, interaction.guildId!);
   return interaction.editReply(buildPermissionsView(assignments, page, t));
 }
 
@@ -103,6 +107,7 @@ export async function renderPermissions(
  * @param page - Zero-based page index; the view clamps out-of-range values.
  */
 export async function renderRepoModules(
+  services: Container,
   interaction: ButtonInteraction | AnySelectMenuInteraction,
   repoName: string,
   t?: LumiT,
@@ -111,7 +116,7 @@ export async function renderRepoModules(
   const downloader = getUtility("downloader");
   const [modules, installedDetailed] = await Promise.all([
     downloader.getModulesInRepo(repoName),
-    downloader.getInstalledModulesDetailed(),
+    downloader.getInstalledModulesDetailed(services),
   ]);
   const installed = new Set(
     installedDetailed

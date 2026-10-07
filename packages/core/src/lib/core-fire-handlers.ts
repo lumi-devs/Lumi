@@ -1,60 +1,60 @@
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
+import { type Container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
 
-async function handleFlushLogsFire(): Promise<void> {
+async function handleFlushLogsFire(services: Container): Promise<void> {
   try {
-    const count = await container.db.audit.flushAuditLogsToPostgres(500);
+    const count = await services.db.audit.flushAuditLogsToPostgres(500);
     if (count > 0) {
-      container.logger.debug(
+      services.logger.debug(
         `[FlushLogsTask] Flushed ${count} audit logs to Postgres.`,
       );
     }
   } catch (error) {
-    container.logger.error(
+    services.logger.error(
       "[FlushLogsTask] Failed to flush audit logs:",
       error,
     );
   }
 }
 
-async function handleAddonAutoUpdateFire(): Promise<void> {
+async function handleAddonAutoUpdateFire(services: Container): Promise<void> {
   try {
     const downloader = tryGetUtility("downloader");
     if (!downloader) return;
 
-    const config = await downloader.getAutoUpdateConfig();
+    const config = await downloader.getAutoUpdateConfig(services);
     if (!config.enabled) return;
 
     const dueForCheck =
       config.lastCheckedAt === null ||
       Date.now() - config.lastCheckedAt.getTime() >=
-        config.intervalMinutes * Time.Minute;
+        config.intervalMinutes * Ms.Minute;
     if (!dueForCheck) return;
 
-    const pending = await downloader.checkForUpdates();
+    const pending = await downloader.checkForUpdates(services);
     let restartNeeded = false;
     for (const moduleName of pending) {
       try {
-        const res = await downloader.updateModule(moduleName);
+        const res = await downloader.updateModule(services, moduleName);
         if (res.needsRestart) restartNeeded = true;
       } catch (err: unknown) {
-        container.logger.warn(
+        services.logger.warn(
           `[AddonAutoUpdate] Failed to update ${moduleName}: ${String(err)}`,
         );
       }
     }
 
-    await downloader.setAutoUpdateConfig({ lastCheckedAt: new Date() });
+    await downloader.setAutoUpdateConfig(services, { lastCheckedAt: new Date() });
 
     if (restartNeeded) {
-      scheduleProcessRestart("addon auto-update");
+      scheduleProcessRestart(services, "addon auto-update");
     }
   } catch (error) {
-    container.logger.error("[AddonAutoUpdate] Sweep failed:", error);
+    services.logger.error("[AddonAutoUpdate] Sweep failed:", error);
   }
 }
 

@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { isHexColor } from "#lib/message-content.js";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { MessageDocumentV2 } from "@lumi/contracts";
@@ -235,50 +235,53 @@ export function toggleBlockedMessage(
   return `You already hold the maximum of ${menu.maxRoles} role(s) from this menu. Remove one first.`;
 }
 
-export async function listMenus(guildId: string): Promise<ReactionRoleMenu[]> {
-  return container.db.reactionRoles.listMenus(guildId);
+export async function listMenus(services: Container, guildId: string): Promise<ReactionRoleMenu[]> {
+  return services.db.reactionRoles.listMenus(guildId);
 }
 
 export async function getMenu(
+  services: Container,
   guildId: string,
   menuId: string,
 ): Promise<ReactionRoleMenu | null> {
-  return container.db.reactionRoles.getMenu(guildId, menuId);
+  return services.db.reactionRoles.getMenu(guildId, menuId);
 }
 
-export async function resolveMenuId(guildId: string, desired: string): Promise<string> {
+export async function resolveMenuId(services: Container, guildId: string, desired: string): Promise<string> {
   const base = normalizeMenuId(desired);
-  if (!(await getMenu(guildId, base))) return base;
+  if (!(await getMenu(services, guildId, base))) return base;
   for (let n = 2; n < 100; n++) {
     const candidate = `${base}-${n}`.slice(0, 40);
-    if (!(await getMenu(guildId, candidate))) return candidate;
+    if (!(await getMenu(services, guildId, candidate))) return candidate;
   }
   return `${base}-${Date.now().toString(36)}`.slice(0, 40);
 }
 
-export async function saveMenu(menu: ReactionRoleMenu): Promise<ReactionRoleMenu> {
-  return container.db.reactionRoles.saveMenu(menu);
+export async function saveMenu(services: Container, menu: ReactionRoleMenu): Promise<ReactionRoleMenu> {
+  return services.db.reactionRoles.saveMenu(menu);
 }
 
-export async function deleteMenu(guildId: string, menuId: string): Promise<boolean> {
-  return container.db.reactionRoles.deleteMenu(guildId, menuId);
+export async function deleteMenu(services: Container, guildId: string, menuId: string): Promise<boolean> {
+  return services.db.reactionRoles.deleteMenu(guildId, menuId);
 }
 
 export async function trackMenuMessage(
+  services: Container,
   menu: ReactionRoleMenu,
   channelId: string,
   messageId: string,
 ): Promise<ReactionRoleMenu> {
-  return container.db.reactionRoles.trackMenuMessage(menu, channelId, messageId);
+  return services.db.reactionRoles.trackMenuMessage(menu, channelId, messageId);
 }
 
 export async function findMenuByMessage(
+  services: Container,
   guildId: string,
   messageId: string,
 ): Promise<ReactionRoleMenu | null> {
-  return container.db.reactionRoles.findMenuByMessage(guildId, messageId);
+  return services.db.reactionRoles.findMenuByMessage(guildId, messageId);
 }
 
-export async function countMenus(guildId: string): Promise<number> {
-  return container.db.reactionRoles.countMenus(guildId);
+export async function countMenus(services: Container, guildId: string): Promise<number> {
+  return services.db.reactionRoles.countMenus(guildId);
 }

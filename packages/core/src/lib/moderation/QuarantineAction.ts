@@ -1,6 +1,6 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { tryParseJSON } from "@sapphire/utilities";
+import { tryParseJSON } from "@lumi/shared";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -74,6 +74,7 @@ export class QuarantineAction {
       });
 
       await logToChannel(
+        container,
         guild.id,
         "🔒 Quarantined",
         Colors.Orange,
@@ -133,6 +134,7 @@ export class QuarantineAction {
       });
 
       await logToChannel(
+        container,
         guild.id,
         "🔓 Released",
         Colors.Green,

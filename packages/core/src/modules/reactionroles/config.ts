@@ -1,8 +1,8 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { ReactionRoleMaxMenus } from "./constants.js";
 
-export async function getMaxMenus(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
+export async function getMaxMenus(services: Container, guildId: string): Promise<number> {
+  const value = await services.db.config.getModuleConfig(
     guildId,
     "reactionroles",
     "max_menus",

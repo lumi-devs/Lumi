@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 
@@ -41,7 +41,7 @@ function isGuildManager(memberPermissions: Actor["memberPermissions"]): boolean 
 
 /**
  * The one place every "what may you do" decision is evaluated - commands
- * (via the Sapphire preconditions), RPC handlers, and the addon SDK (via
+ * (via the gate checks), RPC handlers, and the addon SDK (via
  * `CommandContext`) all resolve through here rather than each re-deriving
  * "is this a bot owner"/"does this bitfield count as a guild manager" for
  * itself. It never authenticates (no token/session/interaction-user

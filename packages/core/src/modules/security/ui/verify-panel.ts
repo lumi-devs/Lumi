@@ -1,5 +1,5 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
@@ -41,7 +41,7 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
 }
 
 export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
-  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Time.Minute));
+  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Ms.Minute));
   return makeInfoCard(
     t("panels:verifyChallengeTitle"),
     t("panels:verifyChallenge", {

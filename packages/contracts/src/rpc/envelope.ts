@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 
 export interface RpcRequest<T = unknown> {
   id: string;
@@ -137,14 +137,14 @@ export function makeRpcFailure(
 }
 
 /** Runtime check on the envelope only - dashboard and worker deploy independently, so this is the one shape TypeScript can't guarantee across the wire. */
-const RpcResponseEnvelopeSchema = s.object({
-  id: s.string(),
-  ok: s.boolean(),
-  data: s.unknown().optional(),
-  error: s.string().optional(),
-  code: s.enum(Object.values(RpcFailureCodes)).optional(),
-  retryable: s.boolean().optional(),
-  retryAfterMs: s.number().optional(),
+const RpcResponseEnvelopeSchema = z.object({
+  id: z.string(),
+  ok: z.boolean(),
+  data: z.unknown().optional(),
+  error: z.string().optional(),
+  code: z.enum(RpcFailureCodes).optional(),
+  retryable: z.boolean().optional(),
+  retryAfterMs: z.number().optional(),
 });
 
 export function parseRpcResponse(raw: unknown): RpcResponse {

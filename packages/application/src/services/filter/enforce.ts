@@ -1,8 +1,8 @@
-import { container } from "@sapphire/framework";
+import { type Container } from "#lib/services.js";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
-import { Time } from "@sapphire/time-utilities";
+import { cutText } from "@lumi/shared";
+import { Ms } from "@lumi/shared";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import type { GuildMessage } from "#lib/types/common.js";
@@ -12,8 +12,8 @@ import { fetchTyped } from "#lib/commands.js";
 import { getHitReason, type FilterHit } from "./rules.js";
 import type { FilterUtility } from "#modules/filter/utilities/FilterUtility.js";
 
-async function isExempt(message: GuildMessage): Promise<boolean> {
-  const stored = await container.db.config.getModuleConfig(
+async function isExempt(services: Container, message: GuildMessage): Promise<boolean> {
+  const stored = await services.db.config.getModuleConfig(
     message.guildId,
     "filter",
     "exempt_roles",
@@ -26,11 +26,12 @@ async function isExempt(message: GuildMessage): Promise<boolean> {
 
 /** Transient warning with the configurable template; empty string disables. */
 async function warnUser(
+  services: Container,
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
-  const t = await fetchTyped(message);
-  const template = await container.db.config.getModuleConfig(
+  const t = await fetchTyped(message, services);
+  const template = await services.db.config.getModuleConfig(
     message.guildId,
     "filter",
     "warn_message",
@@ -58,12 +59,13 @@ function groupTimeoutKey(rule: FilterHit["rule"]): string | null {
 }
 
 async function punish(
+  services: Container,
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
   const overrideKey = groupTimeoutKey(hit.rule);
   const override = overrideKey
-    ? await container.db.config.getModuleConfig(
+    ? await services.db.config.getModuleConfig(
         message.guildId,
         "filter",
         overrideKey,
@@ -72,7 +74,7 @@ async function punish(
   const minutes =
     typeof override === "number" && override > 0
       ? override
-      : await container.db.config.getModuleConfig(
+      : await services.db.config.getModuleConfig(
           message.guildId,
           "filter",
           "timeout_minutes",
@@ -80,23 +82,24 @@ async function punish(
   if (typeof minutes !== "number" || minutes <= 0) return;
   await message.member
     ?.timeout(
-      minutes * Time.Minute,
+      minutes * Ms.Minute,
       `[Filter] Message matched ${hit.rule} rule (${hit.detail})`,
     )
     .catch(swallow("Filter: timeout member"));
 }
 
 async function logHit(
+  services: Container,
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
   const logService = tryGetUtility("guild-log");
-  await logService?.dispatch({
+  await logService?.dispatch(services, {
     guildId: message.guildId,
     moduleName: "filter",
     action: `Filter - ${hit.rule}`,
     targetId: message.author.id,
-    actorId: container.client.user!.id,
+    actorId: services.client.user!.id,
     reason: hit.detail,
     color: Colors.Red,
     extra: {
@@ -107,12 +110,13 @@ async function logHit(
 }
 
 export async function enforceHit(
+  services: Container,
   message: GuildMessage,
   hit: FilterHit,
 ): Promise<void> {
   await message.delete().catch(swallow("Filter: delete filtered message"));
-  await warnUser(message, hit);
-  await Promise.all([punish(message, hit), logHit(message, hit)]);
+  await warnUser(services, message, hit);
+  await Promise.all([punish(services, message, hit), logHit(services, message, hit)]);
 }
 
 /**
@@ -124,6 +128,7 @@ export async function enforceHit(
  * non-exempt, non-privileged authors.
  */
 export async function shouldScreen(
+  services: Container,
   message: GuildMessage,
   filterService: FilterUtility,
 ): Promise<boolean> {
@@ -131,16 +136,17 @@ export async function shouldScreen(
     return false;
 
   if (!filterService.has(message.guildId)) {
-    await filterService.loadGuild(message.guildId);
+    await filterService.loadGuild(services, message.guildId);
   }
 
-  return !(await isExempt(message));
+  return !(await isExempt(services, message));
 }
 
 export async function runRules(
+  services: Container,
   message: GuildMessage,
   filterService: FilterUtility,
   mentionCount: number,
 ): Promise<FilterHit | null> {
-  return filterService.test(message.guildId, message.content, mentionCount);
+  return filterService.test(services, message.guildId, message.content, mentionCount);
 }

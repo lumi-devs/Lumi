@@ -10,4 +10,3 @@ export * from "./services/reactionroles/index.js";
 export * from "./services/sticky/index.js";
 export * from "./services/utility/index.js";
 export * from "./services/core/index.js";
-export * as Interfaces from "./services/interfaces/index.js";

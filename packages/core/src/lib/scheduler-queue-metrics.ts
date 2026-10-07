@@ -1,6 +1,6 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { scheduledJobsGauge } from "@lumi/observability";
-import type { ScheduledTaskHandler } from "@sapphire/plugin-scheduled-tasks";
+import type { ScheduledTaskRunner } from "#lib/scheduler-runner.js";
 
 /**
  * States sampled off the shared scheduled-tasks BullMQ queue. Matches
@@ -18,17 +18,16 @@ const SAMPLE_INTERVAL_MS = 15_000;
 
 /**
  * Periodically samples `lumi_scheduled_jobs` off the shared scheduled-tasks
- * queue, the same `handler.client` (the BullMQ `Queue` behind
- * `ScheduledTaskHandler`) that `scheduler-failed-jobs.ts`'s `watchFailedJobs`
- * reads. Mirrors its timer/close shape so `scheduler-container-services.ts`
- * can start and tear both down together.
+ * queue through the runner's BullMQ `Queue`. Mirrors the failed-jobs
+ * watcher's timer/close shape so `scheduler-container-services.ts` can start
+ * and tear both down together.
  */
 export function watchQueueDepth(
-  handler: ScheduledTaskHandler,
+  runner: ScheduledTaskRunner,
 ): { close(): Promise<void> } {
   const sample = async () => {
     try {
-      const counts = await handler.client.getJobCounts(...SAMPLED_STATES);
+      const counts = await runner.client.getJobCounts(...SAMPLED_STATES);
       for (const state of SAMPLED_STATES) {
         scheduledJobsGauge.set({ state }, counts[state] ?? 0);
       }

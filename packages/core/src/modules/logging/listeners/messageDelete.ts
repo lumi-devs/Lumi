@@ -1,31 +1,27 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { Colors, type Message, type PartialMessage } from "discord.js";
 import {
   channelMention,
   escapeMarkdown,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { cutText } from "@lumi/shared";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
-import { fetchT } from "#lib/commands.js";
+import { fetchTyped } from "#lib/commands.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const LoggingMessageDeleteListener = defineListener({
   name: "loggingMessageDelete",
   event: Events.MessageDelete,
   module: "logging",
-})
-export class LoggingMessageDeleteListener extends ModuleListener<
-  typeof Events.MessageDelete
-> {
-  protected async handle(message: Message | PartialMessage): Promise<void> {
+  async execute(services: Container, message: Message | PartialMessage): Promise<void> {
     if (!message.guildId || message.author?.bot) return;
     const guildId = message.guildId;
-    if (!(await isToggleEnabled(guildId, "message_deletes"))) return;
-    if (await isIgnoredChannel(guildId, message.channelId)) return;
+    if (!(await isToggleEnabled(services, guildId, "message_deletes"))) return;
+    if (await isIgnoredChannel(services, guildId, message.channelId)) return;
 
-    const t = await fetchT(message.channel);
+    const t = await fetchTyped(message.channel, services);
     const lines = [
       `**${t("logging:author")}**: ${message.author ? `${userMention(message.author.id)} (${message.author.id})` : t("logging:unknownUncached")}`,
       `**${t("logging:channel")}**: ${channelMention(message.channelId)}`,
@@ -34,6 +30,6 @@ export class LoggingMessageDeleteListener extends ModuleListener<
     if (message.attachments?.size) {
       lines.push(`**${t("logging:attachments")}**: ${message.attachments.size}`);
     }
-    await sendLog(guildId, "message_deletes", Colors.Red, t("logging:messageDeleted"), lines);
-  }
-}
+    await sendLog(services, guildId, "message_deletes", Colors.Red, t("logging:messageDeleted"), lines);
+  },
+});

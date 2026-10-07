@@ -2,7 +2,7 @@ import { performance } from "perf_hooks";
 import { evaluateNodeMatch } from "#lib/permissions/PermitResolver.js";
 import { makeInfoCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { userMention, roleMention, channelMention, time } from "@discordjs/formatters";
-import { cutText, isNullish } from "@sapphire/utilities";
+import { cutText, isNullish } from "@lumi/shared";
 
 // Helper: Calculate P99 Latency
 function calculateP99(latencies: number[]): number {

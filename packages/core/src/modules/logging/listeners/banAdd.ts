@@ -1,23 +1,19 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { Colors, type GuildBan } from "discord.js";
 import { escapeMarkdown, userMention } from "@discordjs/formatters";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const LoggingBanAddListener = defineListener({
   name: "loggingBanAdd",
   event: Events.GuildBanAdd,
   module: "logging",
-})
-export class LoggingBanAddListener extends ModuleListener<
-  typeof Events.GuildBanAdd
-> {
-  protected async handle(ban: GuildBan): Promise<void> {
-    if (!(await isToggleEnabled(ban.guild.id, "member_bans"))) return;
+  async execute(services: Container, ban: GuildBan): Promise<void> {
+    if (!(await isToggleEnabled(services, ban.guild.id, "member_bans"))) return;
 
     const lines = [`**Member**: ${userMention(ban.user.id)} (${ban.user.id})`];
     if (ban.reason) lines.push(`**Reason**: ${escapeMarkdown(ban.reason)}`);
-    await sendLog(ban.guild.id, "member_bans", Colors.DarkRed, "Member Banned", lines);
-  }
-}
+    await sendLog(services, ban.guild.id, "member_bans", Colors.DarkRed, "Member Banned", lines);
+  },
+});

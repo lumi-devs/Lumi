@@ -10,39 +10,24 @@ import {
 } from "../../services/hub-panel.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { HubAddonModalId } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "hub-panel-modal",
-  interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
-})
-export class HubPanelModalHandler extends InteractionHandler {
-  private get settings(): GuildSettingsUtility {
-    return getUtility("guild-settings");
-  }
-
-  private get downloader(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  public override parse(interaction: ModalSubmitInteraction) {
+export const hubPanelModal = defineInteraction({
+  prefix: ["lumi:prefixmodal", HubAddonModalId.prefix],
+  async run(services: Container, interaction: ModalSubmitInteraction) {
+    let data: { kind: "prefix" } | { kind: "addon"; action: string } | null =
+      null;
     if (interaction.customId === "lumi:prefixmodal")
-      return this.some({ kind: "prefix" as const });
-    const parsed = HubAddonModalId.parse(interaction.customId);
-    if (parsed)
-      return this.some({ kind: "addon" as const, action: parsed.action });
-    return this.none();
-  }
-
-  public async run(
-    interaction: ModalSubmitInteraction,
-    data: { kind: "prefix" } | { kind: "addon"; action: string },
-  ) {
+      data = { kind: "prefix" as const };
+    else {
+      const parsed = HubAddonModalId.parse(interaction.customId);
+      if (parsed) data = { kind: "addon" as const, action: parsed.action };
+    }
+    if (!data) return;
+    const settings: GuildSettingsUtility = getUtility("guild-settings");
+    const downloader: DownloaderUtility = getUtility("downloader");
     if (!interaction.inGuild()) return;
 
     // Defer immediately (before any permit/DB lookups) to beat Discord's 3s
@@ -61,7 +46,7 @@ export class HubPanelModalHandler extends InteractionHandler {
             ),
           ),
         );
-      return this.#submitAddon(interaction, data.action);
+      return submitAddon(services, downloader, interaction, data.action);
     }
 
     await interaction.deferUpdate();
@@ -75,22 +60,32 @@ export class HubPanelModalHandler extends InteractionHandler {
         ),
       );
 
-    return this.#submitPrefix(interaction);
-  }
+    return submitPrefix(services, settings, interaction);
+  },
+});
 
-  async #submitPrefix(interaction: ModalSubmitInteraction) {
+async function submitPrefix(
+  services: Container,
+  settings: GuildSettingsUtility,
+  interaction: ModalSubmitInteraction,
+) {
     const prefix = interaction.fields.getTextInputValue("prefix").trim();
     try {
-      await this.settings.setPrefix(interaction.guildId!, prefix);
+      await settings.setPrefix(services, interaction.guildId!, prefix);
     } catch (err) {
-      return this.#error(interaction, "Invalid Prefix", err);
+      return error(interaction, "Invalid Prefix", err);
     }
 
     const t = await fetchTyped(interaction);
-    return renderSettings(interaction, t);
+    return renderSettings(services, interaction, t);
   }
 
-  async #submitAddon(interaction: ModalSubmitInteraction, action: string) {
+async function submitAddon(
+  services: Container,
+  downloader: DownloaderUtility,
+  interaction: ModalSubmitInteraction,
+  action: string,
+) {
     try {
       if (action === "add_repo") {
         const url = interaction.fields.getTextInputValue("url").trim();
@@ -98,7 +93,7 @@ export class HubPanelModalHandler extends InteractionHandler {
         const name = rawName || deriveRepoNameFromUrl(url);
         const branch =
           interaction.fields.getTextInputValue("branch")?.trim() || "main";
-        await this.downloader.addRepo(name, url, branch);
+        await downloader.addRepo(services, name, url, branch);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(
@@ -109,7 +104,7 @@ export class HubPanelModalHandler extends InteractionHandler {
         );
       } else if (action === "rm_repo") {
         const name = interaction.fields.getTextInputValue("name").trim();
-        await this.downloader.removeRepo(name);
+        await downloader.removeRepo(services, name);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(
@@ -121,7 +116,7 @@ export class HubPanelModalHandler extends InteractionHandler {
       } else if (action === "install") {
         const repo = interaction.fields.getTextInputValue("repo").trim();
         const module = interaction.fields.getTextInputValue("module").trim();
-        await this.downloader.installModule(repo, module);
+        await downloader.installModule(services, repo, module);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(
@@ -132,7 +127,7 @@ export class HubPanelModalHandler extends InteractionHandler {
         );
       } else if (action === "uninstall") {
         const module = interaction.fields.getTextInputValue("module").trim();
-        await this.downloader.uninstallModule(module);
+        await downloader.uninstallModule(services, module);
         await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(
@@ -154,9 +149,8 @@ export class HubPanelModalHandler extends InteractionHandler {
     }
   }
 
-  #error(interaction: ModalSubmitInteraction, title: string, err: unknown) {
-    const message =
-      err instanceof Error ? err.message : String(err ?? "Unknown error");
-    return interaction.followUp(ephemeralCard(makeErrorCard(title, message)));
-  }
+function error(interaction: ModalSubmitInteraction, title: string, err: unknown) {
+  const message =
+    err instanceof Error ? err.message : String(err ?? "Unknown error");
+  return interaction.followUp(ephemeralCard(makeErrorCard(title, message)));
 }

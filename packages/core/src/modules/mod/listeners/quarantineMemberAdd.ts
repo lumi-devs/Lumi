@@ -1,23 +1,16 @@
-import { Listener, container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { GuildMember } from "discord.js";
 import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 
-export class QuarantineMemberAddListener extends Listener {
-  public constructor(
-    context: Listener.LoaderContext,
-    options: Listener.Options,
-  ) {
-    super(context, {
-      ...options,
-      event: "guildMemberAdd",
-    });
-  }
-
-  public async run(member: GuildMember): Promise<void> {
+export const QuarantineMemberAddListener = defineListener({
+  name: "quarantineMemberAdd",
+  event: "guildMemberAdd",
+  async execute(services: Container, member: GuildMember): Promise<void> {
     const guildId = member.guild.id;
     const userId = member.id;
 
-    const quarantineState = await container.valkey.get(
+    const quarantineState = await services.valkey.get(
       ValkeyKeys.quarantineState(guildId, userId),
     );
 
@@ -29,7 +22,7 @@ export class QuarantineMemberAddListener extends Listener {
     let isQuarantined = Boolean(quarantineState);
 
     if (!isQuarantined) {
-      const activeCases = await container.db.moderation.getActiveCases(
+      const activeCases = await services.db.moderation.getActiveCases(
         guildId,
         userId,
         "quarantine",
@@ -40,7 +33,7 @@ export class QuarantineMemberAddListener extends Listener {
         // Cache the negative result for 60 s. The quarantine-application path
         // writes a positive value that overwrites this, so there is no
         // window where a user could evade re-quarantine on rejoin.
-        await container.valkey.setex(
+        await services.valkey.setex(
           ValkeyKeys.quarantineState(guildId, userId),
           ValkeyTTL.quarantineNegative,
           "0",
@@ -49,7 +42,7 @@ export class QuarantineMemberAddListener extends Listener {
     }
 
     if (isQuarantined) {
-      const roleId = (await container.db.config.getModuleConfig(
+      const roleId = (await services.db.config.getModuleConfig(
         guildId,
         "mod",
         "quarantine_role_id",
@@ -58,11 +51,10 @@ export class QuarantineMemberAddListener extends Listener {
         await member.roles
           .set([roleId], "Re-enforcing active quarantine on rejoin")
           .catch(() => null);
-        container.logger.info(
+        services.logger.info(
           `[quarantine] Re-enforced quarantine role for ${member.user.tag} on rejoin.`,
         );
       }
     }
-  }
-}
-
+  },
+});

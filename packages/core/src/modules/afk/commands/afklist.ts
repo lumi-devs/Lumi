@@ -1,32 +1,27 @@
-import { ApplyOptions } from "@sapphire/decorators";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
 import { userMention } from "@discordjs/formatters";
-import { BaseCommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { afkDurationSince } from "@lumi/application/services/afk/format.js";
 import { getAfkEntriesForGuild } from "../data/afk.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const afklistDef: CommandDef = {
   name: "afklist",
-  description: "List users currently AFK in this server (owner only).",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "owner.*",
   module: "afk",
-})
-export default class AfkListCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b.setName(this.name).setDescription(this.description),
+  description: "List users currently AFK in this server (owner only).",
+  guildOnly: true,
+  requiredPermit: "owner.*",
+  build: () => {
+    const b = new SlashCommandBuilder().setName("afklist");
+    return (
+    b.setName("afklist").setDescription("List users currently AFK in this server (owner only).")
     );
-  }
-
-  public override async run(ctx: CommandContext) {
+  },
+  run: async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
-    const entries = await getAfkEntriesForGuild(ctx.guildId!);
+    const entries = await getAfkEntriesForGuild(ctx.services, ctx.guildId!);
 
     if (entries.length === 0) {
       return ctx.replyInfo(
@@ -47,4 +42,4 @@ export default class AfkListCommand extends BaseCommand {
       perPage: 15,
     });
   }
-}
+};

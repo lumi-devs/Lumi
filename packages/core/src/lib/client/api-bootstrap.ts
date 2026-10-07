@@ -3,7 +3,7 @@ import { validateRequiredEnv } from "#lib/env.js";
 import { closeSystemStatusResources } from "#lib/rpc/system-rpc.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   installApiContainerServices,
   type ApiContainerServices,
@@ -103,7 +103,7 @@ export async function bootstrapApiApp(
         // depends on - otherwise an in-flight request can hit a connection
         // that's already been closed. `runDrainSequence` runs these strictly
         // sequentially, so order here is the actual shutdown order.
-        { name: "addon-shutdown", run: () => (container.stores.get("modules") as any)?.stopAddonProcesses() },
+        { name: "addon-shutdown", run: () => container.moduleStore?.stopAddonProcesses() },
         ...(options.extraDrainSteps ?? []),
         { name: "api-container-services", run: () => destroyApiContainerServices(services) },
         { name: "tracing-shutdown", run: () => shutdownTracing() },

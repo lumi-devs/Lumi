@@ -1,31 +1,31 @@
-import { Listener, Events } from "@sapphire/framework";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
 import type { Guild } from "discord.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.GuildDelete })
-export class GuildDeleteEventBusListener extends Listener<
-  typeof Events.GuildDelete
-> {
-  public override async run(guild: Guild) {
+export const guildDeleteEventBusListener = defineListener({
+  name: "guildDeleteEventBusListener",
+  event: Events.GuildDelete,
+  async execute(services: Container, guild: Guild) {
     // discord.js also fires this event when a Discord outage makes a guild
     // temporarily unavailable (`guild.available === false`) - only a
     // hydrated guild (`available === true`) means the bot was actually
     // removed, so only that branch counts as a real departure.
     if (!guild.available) return;
 
-    await this.container.db.markGuildLeft(guild.id);
+    await services.db.markGuildLeft(guild.id);
 
     await evictGuildValkeyState(
-      this.container.valkey,
-      this.container.invalidation,
-      this.container.logger,
+      services.valkey,
+      services.invalidation,
+      services.logger,
       guild.id,
       "GuildDelete",
     );
 
     const filterSvc = tryGetUtility("filter");
     filterSvc?.evict(guild.id);
-  }
-}
+  },
+});

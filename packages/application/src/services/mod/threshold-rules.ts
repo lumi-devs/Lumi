@@ -1,4 +1,4 @@
-import type { Container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { WarnThresholdAction } from "@lumi/contracts/rpc";
 
 export type ThresholdAction = WarnThresholdAction;

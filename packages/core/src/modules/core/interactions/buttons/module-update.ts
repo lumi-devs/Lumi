@@ -1,13 +1,13 @@
-import { ApplyOptions } from "@sapphire/decorators";
 import { getUtility } from "#lib/module-system/Utility.js";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-  UserError,
-} from "@sapphire/framework";
-import { PermitResolver } from "#lib/permissions/index.js";
+import type { Container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
+import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { type ButtonInteraction } from "discord.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  checkSecurity,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { errorFrom } from "#lib/utilities/errors.js";
@@ -15,25 +15,14 @@ import { moduleUpdateResultCard } from "../../ui/module-update-card.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
 import { ModuleUpdateId } from "../../constants.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class ModuleUpdateInteractionHandler extends LumiInteractionHandler {
-  private get downloaderService(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  public override parse(interaction: ButtonInteraction) {
+export const moduleUpdate = defineInteraction({
+  prefix: ModuleUpdateId.prefix,
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = ModuleUpdateId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  public override async run(
-    interaction: ButtonInteraction,
-    { moduleName, userId }: { moduleName: string; userId: string },
-  ) {
-    this.checkSecurity(interaction, userId);
+    if (!parsed) return;
+    const { moduleName, userId } = parsed;
+    const downloaderService: DownloaderUtility = getUtility("downloader");
+    checkSecurity(interaction, userId);
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
@@ -41,7 +30,7 @@ export class ModuleUpdateInteractionHandler extends LumiInteractionHandler {
       });
     }
 
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
 
     await interaction.editReply(
       makeInfoCard(
@@ -51,7 +40,7 @@ export class ModuleUpdateInteractionHandler extends LumiInteractionHandler {
     );
 
     try {
-      const result = await this.downloaderService.updateModule(moduleName);
+      const result = await downloaderService.updateModule(services, moduleName);
       await interaction.editReply(
         moduleUpdateResultCard(result, moduleName, userId),
       );
@@ -60,5 +49,5 @@ export class ModuleUpdateInteractionHandler extends LumiInteractionHandler {
         makeErrorCard(`${Emojis.Error} Update Failed`, errorFrom(err).message),
       );
     }
-  }
-}
+  },
+});

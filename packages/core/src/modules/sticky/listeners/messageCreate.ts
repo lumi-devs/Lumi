@@ -1,8 +1,8 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { renderMessageContent } from "#lib/message-content.js";
-import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import { LumiEvents } from "#lib/types/common.js";
 import type { GuildMessage } from "#lib/types/common.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
 import {
@@ -12,15 +12,14 @@ import {
 } from "../data/sticky-store.js";
 import { stickyIndex } from "@lumi/application/services/sticky/sticky-index.js";
 
-@ApplyOptions<GuildMessageListener.Options>({
+export const StickyMessageListener = defineListener({
   name: "stickyMessageCreate",
+  event: LumiEvents.GuildUserMessage,
   module: "sticky",
-})
-export class StickyMessageListener extends GuildMessageListener {
-  protected async handle(message: GuildMessage): Promise<void> {
+  async execute(services: Container, message: GuildMessage): Promise<void> {
     if (message.author.bot) return;
-    if (await isStickyOnCooldown(message.guildId, message.channelId)) return;
-    const entries = await container.db.config.getModuleConfig(
+    if (await isStickyOnCooldown(services, message.guildId, message.channelId)) return;
+    const entries = await services.db.config.getModuleConfig(
       message.guildId,
       "sticky",
       "entries",
@@ -28,6 +27,7 @@ export class StickyMessageListener extends GuildMessageListener {
     const entry = stickyIndex.find(message.guildId, message.channelId, entries);
     if (!entry) return;
     const oldId = await getStickyMessageId(
+      services,
       message.guildId,
       message.channelId,
     ).catch(swallow("Sticky: read last message id"));
@@ -53,8 +53,8 @@ export class StickyMessageListener extends GuildMessageListener {
       )
       .catch(swallow("Sticky: send message"));
     if (!sent) return;
-    await setStickyMessageId(message.guildId, message.channelId, sent.id).catch(
+    await setStickyMessageId(services, message.guildId, message.channelId, sent.id).catch(
       swallow("Sticky: store message id"),
     );
-  }
-}
+  },
+});

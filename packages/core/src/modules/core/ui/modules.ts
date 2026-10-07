@@ -1,4 +1,4 @@
-import { chunk } from "@sapphire/utilities";
+import { chunk } from "@lumi/shared";
 import type { LumiT } from "#lib/i18n/index.js";
 import { resolveChannelTypeIds, sectionsOf } from "@lumi/contracts";
 import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
@@ -26,7 +26,7 @@ import {
   settingRow,
 } from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { ButtonStyle, ChannelType } from "discord.js";
 import { ConfigButtonId } from "../constants.js";
 

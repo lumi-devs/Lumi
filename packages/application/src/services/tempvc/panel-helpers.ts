@@ -1,4 +1,4 @@
-import { UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
 import {
   ActionRowBuilder,
   ModalBuilder,
@@ -13,7 +13,7 @@ import {
 import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { TempVcPanelId } from "#modules/tempvc/constants.js";
-import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
 
 /**
  * @remarks

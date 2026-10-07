@@ -14,7 +14,7 @@ import {
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
 
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real

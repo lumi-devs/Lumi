@@ -1,11 +1,7 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { InteractionHandlerTypes } from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
-import {
-  LumiButtonHandler,
-  LumiInteractionHandler,
-} from "#lib/discord-adapter/LumiInteractionHandler.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
 import { defineCustomId } from "#lib/interactions/custom-id.js";
+import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 
 export const CaseActionButtonId = defineCustomId("mod:case-action", [
@@ -13,29 +9,17 @@ export const CaseActionButtonId = defineCustomId("mod:case-action", [
   "caseId",
 ]);
 
-@ApplyOptions<LumiInteractionHandler.Options>({
-  name: "mod-case-action-button",
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export const caseActionButton = defineInteraction({
+  prefix: CaseActionButtonId.prefix,
   module: "mod",
-})
-export class CaseActionButtonHandler extends LumiButtonHandler<{
-  action: string;
-  caseId: string;
-}> {
-  public override parse(interaction: ButtonInteraction) {
+  async run(services: Container, interaction: ButtonInteraction): Promise<void> {
     const parsed = CaseActionButtonId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  public override async run(
-    interaction: ButtonInteraction,
-    { action, caseId }: { action: string; caseId: string },
-  ): Promise<void> {
-    const { db } = this.services;
+    if (!parsed) return;
+    const { action, caseId } = parsed;
+    const { db } = services;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(guildId, "mod"))) return;
+    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
 
     await interaction.deferReply({ ephemeral: true });
 
@@ -63,5 +47,5 @@ export class CaseActionButtonHandler extends LumiButtonHandler<{
     }
 
     await interaction.editReply(`Action ${action} is not yet implemented for Case #${caseNumber}.`);
-  }
-}
+  },
+});

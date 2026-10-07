@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { StickyEntry } from "#modules/sticky/config.js";
 
 function parseStickyEntry(raw: unknown): StickyEntry | null {

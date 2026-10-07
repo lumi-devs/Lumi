@@ -85,7 +85,7 @@ describe('ModuleStore', () => {
 		container.stores = { registerPath: vi.fn() } as any;
 		container.logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as any;
 
-		store = new ModuleStore();
+		store = new ModuleStore(container as any);
 		store.addRoot(new URL('file:///test/modules'));
 	});
 

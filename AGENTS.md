@@ -9,8 +9,8 @@ https://lumi-devs.github.io/Lumi-docs (self-hosters and add-on authors) — its 
 in the separate [`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) repo. For why a given architectural shape was chosen, see
 [`docs/adr/`](docs/adr/README.md).
 
-Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
-discord.js v14, Prisma/PostgreSQL, Valkey.
+Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, discord.js v14
+(native runtime, no framework), Prisma/PostgreSQL, Valkey.
 
 ## Repo shape
 

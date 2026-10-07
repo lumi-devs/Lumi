@@ -1,25 +1,19 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { PermissionFlagsBits } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import type { CommandContext } from "#lib/command-context.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const nickDef: CommandDef = {
   name: "nick",
   description: "Change a member's nickname.",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredClientPermissions: [PermissionFlagsBits.ManageNicknames],
-  requiredUserPermissions: [PermissionFlagsBits.ManageNicknames],
   prefixEnabled: true,
-})
-export class UserCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
+  build: () => {
+    const b = new SlashCommandBuilder().setName("nick");
+    return (
       b
-        .setName(this.name)
-        .setDescription(this.description)
+        .setName("nick")
+        .setDescription("Change a member's nickname.")
         .addUserOption((o) =>
           o
             .setName("member")
@@ -31,11 +25,10 @@ export class UserCommand extends BaseCommand {
             .setName("nickname")
             .setDescription("New nickname; omit to reset")
             .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext): Promise<void> {
+        )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext): Promise<void> => {
     const t = await ctx.fetchT();
 
     const member = await ctx.getMember("member", { required: true }).catch(
@@ -107,5 +100,5 @@ export class UserCommand extends BaseCommand {
         t("commands:nickFailed"),
       );
     }
-  }
-}
+  },
+};

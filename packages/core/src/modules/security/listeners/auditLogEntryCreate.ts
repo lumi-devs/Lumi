@@ -1,12 +1,12 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
 import {
   AuditLogEvent,
   type Guild,
   type GuildAuditLogsEntry,
 } from "discord.js";
-import { isNullish } from "@sapphire/utilities";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { isNullish } from "@lumi/shared";
+import type { Container } from "#lib/services.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { evaluateNukeEvent, type NukeKind } from "@lumi/application/services/security/anti-nuke.js";
 import { flagRestorePending } from "@lumi/application/services/security/backup.js";
 
@@ -18,15 +18,12 @@ const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.WebhookCreate]: "webhook_create",
 };
 
-@ApplyOptions<ModuleListener.Options>({
+export const SecurityAuditLogListener = defineListener({
   name: "securityAuditLogEntryCreate",
   event: Events.GuildAuditLogEntryCreate,
   module: "security",
-})
-export class SecurityAuditLogListener extends ModuleListener<
-  typeof Events.GuildAuditLogEntryCreate
-> {
-  protected async handle(
+  async execute(
+    services: Container,
     entry: GuildAuditLogsEntry,
     guild: Guild,
   ): Promise<void> {
@@ -37,11 +34,11 @@ export class SecurityAuditLogListener extends ModuleListener<
 
     if (
       (kind === "channel_delete" || kind === "role_delete") &&
-      (await this.container.db.security.getPanicState(guild.id))
+      (await services.db.security.getPanicState(guild.id))
     ) {
       await flagRestorePending(guild.id);
     }
 
     await evaluateNukeEvent(guild, kind, () => executorId);
-  }
-}
+  },
+});

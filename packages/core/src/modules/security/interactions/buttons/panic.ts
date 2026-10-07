@@ -1,37 +1,26 @@
-import {
-  InteractionHandlerTypes,
-  container,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import type { Container } from "#lib/services.js";
 import type { ButtonInteraction } from "discord.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { fetchTyped } from "#lib/commands.js";
 import { revertPanic } from "@lumi/application/services/security/panic.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
 import { PanicRevertId, buildPanicRevertedCard } from "../../ui/panic-card.js";
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "security-panic-revert",
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export const panicRevert = defineInteraction({
+  prefix: PanicRevertId,
   module: "security",
-})
-export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
-  ButtonInteraction,
-  undefined
-> {
-  public override parse(interaction: ButtonInteraction) {
-    if (interaction.customId !== PanicRevertId) return this.none();
-    return this.some();
-  }
-
-  protected override async handle(interaction: ButtonInteraction) {
+  async run(services: Container, interaction: ButtonInteraction) {
+    if (interaction.customId !== PanicRevertId) return;
     const { guild } = interaction;
     if (!guild) return;
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
     const t = await fetchTyped(interaction);
 
-    const hasPermit = await container.permitResolver.hasPermit({
+    const hasPermit = await services.permitResolver.hasPermit({
       guildId: guild.id,
       userId: interaction.user.id,
       roleIds: memberRoleIds(interaction.member),
@@ -57,5 +46,5 @@ export class PanicRevertInteractionHandler extends ModuleInteractionHandler<
     }
 
     await interaction.editReply(buildPanicRevertedCard(t, result.restoredCount));
-  }
-}
+  },
+});

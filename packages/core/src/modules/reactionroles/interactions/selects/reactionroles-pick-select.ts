@@ -1,45 +1,26 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import type {
   GuildMember,
-  Interaction,
   StringSelectMenuInteraction,
 } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { fetchTyped } from "#lib/commands.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import { ReactionRoleSelectId } from "../../constants.js";
-import type ReactionRolesUtility from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import type { ReactionRolesUtility } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "reactionroles-pick-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
+export const reactionrolesPickSelect = defineInteraction({
+  prefix: ReactionRoleSelectId.prefix,
   module: "reactionroles",
-})
-export class ReactionRolesPickSelectHandler extends ModuleInteractionHandler<
-  StringSelectMenuInteraction,
-  { menuId: string }
-> {
-  private get service(): ReactionRolesUtility {
-    return getUtility("reactionroles");
-  }
-
-  public override parse(interaction: Interaction) {
-    if (!interaction.isStringSelectMenu()) return this.none();
+  async run(_services: Container, interaction: StringSelectMenuInteraction): Promise<void> {
+    if (!interaction.isStringSelectMenu()) return;
     const parsed = ReactionRoleSelectId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: StringSelectMenuInteraction,
-    { menuId }: { menuId: string },
-  ): Promise<void> {
+    if (!parsed) return;
+    const { menuId } = parsed;
+    const service: ReactionRolesUtility = getUtility("reactionroles");
     const { guild } = interaction;
     if (!guild) return;
     await interaction.deferReply({
@@ -49,7 +30,7 @@ export class ReactionRolesPickSelectHandler extends ModuleInteractionHandler<
 
     const member = interaction.member as GuildMember;
     try {
-      const results = await this.service.toggleSelect(
+      const results = await service.toggleSelect(
         guild,
         member,
         menuId,
@@ -93,5 +74,5 @@ export class ReactionRolesPickSelectHandler extends ModuleInteractionHandler<
         )
         .catch(() => null);
     }
-  }
-}
+  },
+});

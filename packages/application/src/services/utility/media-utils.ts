@@ -14,28 +14,30 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
-import { container } from "@sapphire/framework";
-import { capitalizeFirstLetter } from "@sapphire/utilities";
+import { container, type Container } from "#lib/services.js";
+import { capitalizeFirstLetter } from "@lumi/shared";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 import { claimCooldown } from "#lib/cooldown.js";
+import { fetchT } from "#lib/i18n/index.js";
 import { UserMediaViewId } from "#modules/utility/constants.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;
   targetUser: User;
   mediaType: "avatar" | "banner";
-  container: typeof container;
+  services?: Container;
+  container?: Container;
 }
-
-import { fetchT } from "@sapphire/plugin-i18next";
 
 export async function handleMediaRequest({
   context,
   targetUser,
   mediaType,
-  container,
+  services,
+  container: containerParam,
 }: MediaRequestContext) {
-  const t = await fetchT(context);
+  const svc = services ?? containerParam ?? container;
+  const t = await fetchT(context, svc);
   const interactionUser =
     context instanceof Message ? context.author : context.user;
   const { guildId } = context;
@@ -45,7 +47,7 @@ export async function handleMediaRequest({
 
   if (!isButton) {
     const cooldownSeconds =
-      ((await container.db.config.getModuleConfig(
+      ((await svc.db.config.getModuleConfig(
         guildId,
         "utility",
         "cooldown_seconds",
@@ -53,10 +55,10 @@ export async function handleMediaRequest({
     const cooldownMs = cooldownSeconds * 1000;
     const cooldownKey = `lumi:media:${guildId}:${interactionUser.id}`;
 
-    const claimed = await claimCooldown(cooldownKey, cooldownMs);
+    const claimed = await claimCooldown(svc, cooldownKey, cooldownMs);
 
     if (!claimed) {
-      const remainingMs = await container.valkey.pttl(cooldownKey);
+      const remainingMs = await svc.valkey.pttl(cooldownKey);
       const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
       const title = t("commands:mediaCooldownTitle");
       const reply = t("commands:mediaCooldown", { timeLeft });

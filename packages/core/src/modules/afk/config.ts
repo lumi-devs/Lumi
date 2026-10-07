@@ -1,9 +1,10 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 
 export async function isAfkNickPrefixEnabled(
+  services: Container,
   guildId: string,
 ): Promise<boolean> {
-  const value = await container.db.config.getModuleConfig(
+  const value = await services.db.config.getModuleConfig(
     guildId,
     "afk",
     "nick_prefix_enabled",

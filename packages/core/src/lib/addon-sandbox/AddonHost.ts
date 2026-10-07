@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
+import { container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
 import { GuildMember } from "discord.js";
 import type { MessageComponentInteraction, ModalSubmitInteraction, User } from "discord.js";
 import type {
@@ -25,7 +25,7 @@ const ChildEntry = fileURLToPath(new URL("../../runtime/addon-child.ts", import.
 
 const ReadyTimeoutMs = 15_000;
 const InvocationTimeoutMs = 30_000;
-const CrashLoopWindowMs = Time.Minute;
+const CrashLoopWindowMs = Ms.Minute;
 
 // Allowlist, not a denylist: a denylist silently leaks whatever secret is
 // added to .env next.
@@ -374,7 +374,7 @@ export class AddonHost {
     this.#lastCrash.set(name, now);
 
     if (now - previous < CrashLoopWindowMs) {
-      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Time.Second}s (exit ${code})`);
+      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Ms.Second}s (exit ${code})`);
       container.logger.error(`[AddonHost] ${name} crash-looping; leaving it failed`);
       return;
     }

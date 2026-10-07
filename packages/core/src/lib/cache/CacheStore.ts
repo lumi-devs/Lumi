@@ -1,6 +1,6 @@
 import type { InvalidationBus } from "#lib/database/valkey.js";
 import { cacheHits, cacheMisses } from "@lumi/observability";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 export interface CacheStoreOptions {
   maxEntries?: number;

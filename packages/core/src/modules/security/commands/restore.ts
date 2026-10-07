@@ -1,47 +1,39 @@
-import { ApplyOptions } from "@sapphire/decorators";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { restoreFromBackup } from "@lumi/application/services/security/backup.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { makeErrorCard } from "#lib/ui/cards.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+export const restoreDef: CommandDef = {
   name: "restore",
   description: "Restore server structure from a role/channel backup",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "admin.*",
-  subcommands: [
-    { name: "list", run: "list" },
-    { name: "latest", run: "latest" },
-  ],
-})
-export class RestoreCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s.setName("list").setDescription("List recent backups for this server"),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("latest")
-            .setDescription(
-              "Recreate any role/channel missing since the most recent backup",
-            ),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("restore");
+    return (
+    b
+            .setName("restore")
+            .setDescription("Restore server structure from a role/channel backup")
+            .addSubcommand((s) =>
+              s.setName("list").setDescription("List recent backups for this server"),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("latest")
+                .setDescription(
+                  "Recreate any role/channel missing since the most recent backup",
+                ),
+            )
     );
-  }
-
-  public async list(ctx: CommandContext) {
+  },
+  handlers: {
+  "list": async (ctx: CommandContext) => {
     await ctx.defer();
     const guild = ctx.guild!;
-    const backups = await this.container.db.security.listBackups(guild.id, 10);
+    const backups = await ctx.services.db.security.listBackups(guild.id, 10);
 
     if (backups.length === 0) {
       return ctx.replyError(
@@ -58,9 +50,8 @@ export class RestoreCommand extends BaseSubcommand {
     });
 
     return ctx.replySuccess("Recent Backups", lines.join("\n"));
-  }
-
-  public async latest(ctx: CommandContext) {
+  },
+  "latest": async (ctx: CommandContext) => {
     const { confirmed, message } = await confirmPrompt(ctx, {
       title: "Confirm Restore",
       body: "You're about to recreate any role or channel missing since the most recent backup. This can create a large number of roles/channels at once.",
@@ -89,4 +80,5 @@ export class RestoreCommand extends BaseSubcommand {
       `Recreated ${result.rolesRestored} role(s) and ${result.channelsRestored} channel(s) that were missing since the most recent backup.`,
     );
   }
-}
+  }
+};

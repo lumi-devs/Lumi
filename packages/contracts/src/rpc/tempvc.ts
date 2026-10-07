@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type { TempVcGeneratorView, TempVcRecordView } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
 import { SnowflakeSchema } from "./schemas.js";
@@ -17,15 +17,11 @@ export const tempvcRpc = {
     channelId: string;
     deleted: boolean;
   }>()({
-    input: s.object({
+    input: z.object({
       channelId: SnowflakeSchema,
       /** `null` deletes the generator on `channelId`. */
-      name: s
-        .string()
-        .lengthGreaterThanOrEqual(1)
-        .lengthLessThanOrEqual(100)
-        .nullable(),
-      limit: s.number().int().greaterThanOrEqual(0).lessThanOrEqual(99).optional(),
+      name: z.string().min(1).max(100).nullable(),
+      limit: z.number().int().gte(0).lte(99).optional(),
     }),
     auth: "guildManager",
     requiresEnabled: "tempvc",

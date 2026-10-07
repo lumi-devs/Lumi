@@ -1,22 +1,112 @@
-import { Utility } from "#lib/module-system/Utility.js";
+import { defineUtility } from "#lib/module-system/Utility.js";
+import type { Container } from "#lib/services.js";
 import { FieldType } from "#lib/module-system/config-schema.js";
 import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
 import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { Piece } from "@sapphire/framework";
 import type { Prisma } from "@prisma/client";
 import { configLock } from "#lib/guild-transaction.js";
 
-@ApplyOptions<Piece.Options>({ name: "config" })
-export class ConfigUtility extends Utility {
-  public async setConfig(
+/** Persist + audit + post-set hook. Caller must hold the module's config lock. */
+async function write(
+  services: Container,
+  guildId: string,
+  moduleName: string,
+  key: string,
+  coerced: unknown,
+  actorId?: string,
+): Promise<void> {
+  await services.db.config.setModuleConfig(
+    guildId,
+    moduleName,
+    key,
+    coerced as Prisma.InputJsonValue,
+    actorId,
+  );
+  const hook = services.configChangeHooks.get(`${moduleName}:${key}`);
+  if (hook) {
+    hook(guildId, key).catch((err: unknown) =>
+      services.logger.warn(
+        `[ConfigUtility] Post-set hook failed for ${moduleName}:${key}:`,
+        err,
+      ),
+    );
+  }
+}
+
+function coerce(value: unknown, type: FieldType, choices?: string[]): unknown {
+  switch (type) {
+    case FieldType.Boolean: {
+      if (typeof value === "boolean") return value;
+      if (typeof value !== "string") return null;
+      const lower = value.toLowerCase();
+      const trueSet = new Set(["true", "yes", "1", "on"]);
+      const falseSet = new Set(["false", "no", "0", "off"]);
+      if (trueSet.has(lower)) return true;
+      if (falseSet.has(lower)) return false;
+      return null;
+    }
+    case FieldType.Number: {
+      if (typeof value === "number") return value;
+      if (typeof value !== "string") return null;
+      const n = Number(value);
+      return isNaN(n) ? null : n;
+    }
+    case FieldType.Enum:
+      return typeof value === "string" && choices?.includes(value) ? value : null;
+    case FieldType.Channel:
+    case FieldType.Role:
+    case FieldType.User: {
+      if (typeof value !== "string") return null;
+      const id = cleanMention(value);
+      return isSnowflakeId(id) ? id : null;
+    }
+    case FieldType.Duration:
+      return typeof value === "string" ? value : null;
+    case FieldType.MultiRole:
+    case FieldType.MultiChannel:
+    case FieldType.MultiUser: {
+      const entries = Array.isArray(value)
+        ? value.map(String)
+        : typeof value === "string"
+          ? value.split(/[,\n]/)
+          : null;
+      if (!entries) return null;
+      return entries
+        .map((entry) => cleanMention(entry.trim()))
+        .filter((id) => id.length > 0);
+    }
+    case FieldType.StringList: {
+      const entries = Array.isArray(value)
+        ? value.map(String)
+        : typeof value === "string"
+          ? value.split(/\r?\n/)
+          : null;
+      if (!entries) return null;
+      return entries
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+    }
+    case FieldType.ObjectArray:
+      return Array.isArray(value) ? value : null;
+    default:
+      return value;
+  }
+}
+
+export const configUtility = defineUtility({
+  name: "config",
+
+  coerce,
+
+  async setConfig(
+    services: Container,
     guildId: string,
     moduleName: string,
     key: string,
     rawValue: unknown,
     actorId?: string,
   ) {
-    const meta = this.container.moduleStore.getRecord(moduleName)?.meta;
+    const meta = services.moduleStore.getRecord(moduleName)?.meta;
     if (!meta) throw new Error(`No module named \`${moduleName}\`.`);
 
     const field = meta.configFields?.find((f) => f.key === key);
@@ -26,7 +116,7 @@ export class ConfigUtility extends Utility {
       );
     }
 
-    const coerced = this.coerce(rawValue, field.type, field.choices);
+    const coerced = coerce(rawValue, field.type, field.choices);
     if (coerced === null) {
       const hint =
         field.type === FieldType.Enum
@@ -35,7 +125,7 @@ export class ConfigUtility extends Utility {
       throw new Error(`Invalid value: ${hint}`);
     }
 
-    const schema = await this.container.moduleStore.getConfigSchema(moduleName);
+    const schema = await services.moduleStore.getConfigSchema(moduleName);
     if (schema) {
       try {
         validateModuleConfigValue(schema, key, coerced);
@@ -45,7 +135,7 @@ export class ConfigUtility extends Utility {
       }
     }
 
-    const validator = this.container.configValueValidators.get(
+    const validator = services.configValueValidators.get(
       `${moduleName}:${key}`,
     );
     if (validator) {
@@ -55,26 +145,27 @@ export class ConfigUtility extends Utility {
 
     const release = await configLock(guildId);
     try {
-      await this.#write(guildId, moduleName, key, coerced, actorId);
+      await write(services, guildId, moduleName, key, coerced, actorId);
     } finally {
       release();
     }
 
     return { coerced };
-  }
+  },
 
   /**
    * Read-modify-write of a BOOLEAN field (panel toggles). The read has to
    * happen under the same lock as the write, or two clicks landing together
    * both read the old value and the second flip is lost.
    */
-  public async toggleConfigBool(
+  async toggleConfigBool(
+    services: Container,
     guildId: string,
     moduleName: string,
     key: string,
     actorId?: string,
   ): Promise<boolean> {
-    const meta = this.container.moduleStore.getRecord(moduleName)?.meta;
+    const meta = services.moduleStore.getRecord(moduleName)?.meta;
     const field = meta?.configFields?.find((f) => f.key === key);
     if (!field || field.type !== FieldType.Boolean) {
       throw new Error(`\`${key}\` is not a boolean config key.`);
@@ -82,7 +173,7 @@ export class ConfigUtility extends Utility {
 
     const release = await configLock(guildId);
     try {
-      const stored = await this.container.db.config.getModuleConfig(
+      const stored = await services.db.config.getModuleConfig(
         guildId,
         moduleName,
         key,
@@ -91,71 +182,45 @@ export class ConfigUtility extends Utility {
       const next = !(stored === null || stored === undefined
         ? fallback
         : Boolean(stored));
-      await this.#write(guildId, moduleName, key, next, actorId);
+      await write(services, guildId, moduleName, key, next, actorId);
       return next;
     } finally {
       release();
     }
-  }
+  },
 
-  /** Persist + audit + post-set hook. Caller must hold the module's config lock. */
-  async #write(
-    guildId: string,
-    moduleName: string,
-    key: string,
-    coerced: unknown,
-    actorId?: string,
-  ): Promise<void> {
-    await this.container.db.config.setModuleConfig(
-      guildId,
-      moduleName,
-      key,
-      coerced as Prisma.InputJsonValue,
-      actorId,
-    );
-    const hook = this.container.configChangeHooks.get(`${moduleName}:${key}`);
-    if (hook) {
-      hook(guildId, key).catch((err: unknown) =>
-        this.container.logger.warn(
-          `[ConfigUtility] Post-set hook failed for ${moduleName}:${key}:`,
-          err,
-        ),
-      );
-    }
-  }
-
-  public async toggleGlobalModule(name: string, enable: boolean) {
+  async toggleGlobalModule(services: Container, name: string, enable: boolean) {
     if (name === "core") {
       throw new Error("The `core` module cannot be disabled.");
     }
 
-    const record = this.container.moduleStore.getRecord(name);
+    const record = services.moduleStore.getRecord(name);
     if (!record) {
       throw new Error(`No module named \`${name}\`.`);
     }
 
-    await this.container.moduleStore.setEnabled(name, enable);
+    await services.moduleStore.setEnabled(name, enable);
     return record;
-  }
+  },
 
   /**
    * Flip a module's per-guild enabled state. Reads and writes under the
    * module's config lock so a double-clicked panel toggle applies twice
    * instead of two handlers both flipping off the same stale value.
    */
-  public async flipGuildModule(guildId: string, name: string) {
-    const record = this.container.moduleStore.getRecord(name);
+  async flipGuildModule(services: Container, guildId: string, name: string) {
+    const record = services.moduleStore.getRecord(name);
     if (!record) {
       throw new Error(`No module named \`${name}\`.`);
     }
 
     const release = await configLock(guildId);
     try {
-      const isEnabled = await this.container.db.modules.isModuleGuildEnabled(
+      const isEnabled = await services.db.modules.isModuleGuildEnabled(
         guildId,
         name,
       );
-      await this.container.db.modules.setModuleGuildEnabled(
+      await services.db.modules.setModuleGuildEnabled(
         guildId,
         name,
         !isEnabled,
@@ -164,19 +229,20 @@ export class ConfigUtility extends Utility {
     } finally {
       release();
     }
-  }
+  },
 
-  public async toggleGuildModule(
+  async toggleGuildModule(
+    services: Container,
     guildId: string,
     name: string,
     enable: boolean,
   ) {
-    const record = this.container.moduleStore.getRecord(name);
+    const record = services.moduleStore.getRecord(name);
     if (!record) {
       throw new Error(`No module named \`${name}\`.`);
     }
 
-    const isEnabled = await this.container.db.modules.isModuleGuildEnabled(
+    const isEnabled = await services.db.modules.isModuleGuildEnabled(
       guildId,
       name,
     );
@@ -184,15 +250,16 @@ export class ConfigUtility extends Utility {
       return { changed: false, record };
     }
 
-    await this.container.db.modules.setModuleGuildEnabled(
+    await services.db.modules.setModuleGuildEnabled(
       guildId,
       name,
       enable,
     );
     return { changed: true, record };
-  }
+  },
 
-  public async getConfig(
+  async getConfig(
+    services: Container,
     guildId: string,
     moduleName: string,
     key: string,
@@ -204,12 +271,12 @@ export class ConfigUtility extends Utility {
     },
   ): Promise<unknown> {
     if (!ctx) {
-      return this.container.db.config.getModuleConfig(guildId, moduleName, key);
+      return services.db.config.getModuleConfig(guildId, moduleName, key);
     }
 
     const [base, overrides] = await Promise.all([
-      this.container.db.config.getModuleConfig(guildId, moduleName, key),
-      this.container.db.configOverrides.getConfigOverrides(
+      services.db.config.getModuleConfig(guildId, moduleName, key),
+      services.db.configOverrides.getConfigOverrides(
         guildId,
         moduleName,
         key,
@@ -245,70 +312,12 @@ export class ConfigUtility extends Utility {
 
     return bestValue;
   }
+});
 
-  public coerce(value: unknown, type: FieldType, choices?: string[]): unknown {
-    switch (type) {
-      case FieldType.Boolean: {
-        if (typeof value === "boolean") return value;
-        if (typeof value !== "string") return null;
-        const lower = value.toLowerCase();
-        const trueSet = new Set(["true", "yes", "1", "on"]);
-        const falseSet = new Set(["false", "no", "0", "off"]);
-        if (trueSet.has(lower)) return true;
-        if (falseSet.has(lower)) return false;
-        return null;
-      }
-      case FieldType.Number: {
-        if (typeof value === "number") return value;
-        if (typeof value !== "string") return null;
-        const n = Number(value);
-        return isNaN(n) ? null : n;
-      }
-      case FieldType.Enum:
-        return typeof value === "string" && choices?.includes(value) ? value : null;
-      case FieldType.Channel:
-      case FieldType.Role:
-      case FieldType.User: {
-        if (typeof value !== "string") return null;
-        const id = cleanMention(value);
-        return isSnowflakeId(id) ? id : null;
-      }
-      case FieldType.Duration:
-        return typeof value === "string" ? value : null;
-      case FieldType.MultiRole:
-      case FieldType.MultiChannel:
-      case FieldType.MultiUser: {
-        const entries = Array.isArray(value)
-          ? value.map(String)
-          : typeof value === "string"
-            ? value.split(/[,\n]/)
-            : null;
-        if (!entries) return null;
-        return entries
-          .map((entry) => cleanMention(entry.trim()))
-          .filter((id) => id.length > 0);
-      }
-      case FieldType.StringList: {
-        const entries = Array.isArray(value)
-          ? value.map(String)
-          : typeof value === "string"
-            ? value.split(/\r?\n/)
-            : null;
-        if (!entries) return null;
-        return entries
-          .map((entry) => entry.trim())
-          .filter((entry) => entry.length > 0);
-      }
-      case FieldType.ObjectArray:
-        return Array.isArray(value) ? value : null;
-      default:
-        return value;
-    }
-  }
-}
+export type ConfigUtility = typeof configUtility;
 
 declare module "#lib/module-system/Utility.js" {
   interface Utilities {
-    config: ConfigUtility;
+    config: typeof configUtility;
   }
 }

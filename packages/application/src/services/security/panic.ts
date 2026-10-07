@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import {
   GuildFeature,

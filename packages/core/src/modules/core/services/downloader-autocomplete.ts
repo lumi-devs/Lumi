@@ -1,23 +1,26 @@
 import type { AutocompleteInteraction } from "discord.js";
+import type { Container } from "#lib/services.js";
 import type { DownloaderUtility } from "#modules/core/utilities/DownloaderUtility.js";
 import { filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
 
 export async function repoNameChoices(
+  services: Container,
   downloaderService: DownloaderUtility,
   focusedValue: string,
   opts?: { extra?: string[] },
 ): Promise<string[]> {
-  const names = (await downloaderService.listRepos()).map((r) => r.name);
+  const names = (await downloaderService.listRepos(services)).map((r) => r.name);
   if (opts?.extra) names.push(...opts.extra);
   return filterAutocompleteChoices(names, focusedValue);
 }
 
 export async function installedModuleChoices(
+  services: Container,
   downloaderService: DownloaderUtility,
   focusedValue: string,
   opts?: { pinned?: boolean },
 ): Promise<string[]> {
-  const installed = await downloaderService.getInstalledModules();
+  const installed = await downloaderService.getInstalledModules(services);
   const names = installed
     .filter((m) => opts?.pinned === undefined || m.pinned === opts.pinned)
     .map((m) => m.moduleName);
@@ -25,6 +28,7 @@ export async function installedModuleChoices(
 }
 
 export async function repoModuleChoices(
+  services: Container,
   downloaderService: DownloaderUtility,
   interaction: AutocompleteInteraction,
   repoOptionName: string,
@@ -35,7 +39,7 @@ export async function repoModuleChoices(
   try {
     const [modules, installed] = await Promise.all([
       downloaderService.getModulesInRepo(repoName),
-      downloaderService.getInstalledModules(),
+      downloaderService.getInstalledModules(services),
     ]);
     const installedNames = new Set(installed.map((m) => m.moduleName));
     const names = modules

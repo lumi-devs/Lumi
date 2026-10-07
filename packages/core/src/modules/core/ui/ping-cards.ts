@@ -227,7 +227,7 @@ function buildEngineCard(data: PingData, t?: LumiT): ContainerBuilder {
             ["Engine Runtime", data.runtime],
             [
               "Library Stack",
-              `D.JS v${data.djsVersion} | Sapphire v${data.sapphireVersion}`,
+              `D.JS v${data.djsVersion} | native runtime`,
             ],
           ],
           "Optimized on JavaScriptCore (JSC)",

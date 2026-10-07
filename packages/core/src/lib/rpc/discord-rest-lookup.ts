@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType, PermissionsBitField, RESTJSONErrorCodes } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {

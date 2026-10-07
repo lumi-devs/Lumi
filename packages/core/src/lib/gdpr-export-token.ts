@@ -84,7 +84,7 @@ export interface GdprExportJobRecord {
 export async function findGdprExportJob(
   jobId: string,
 ): Promise<GdprExportJobRecord | null> {
-  const { container } = await import("@sapphire/framework");
+  const { container } = await import("#lib/services.js");
   return (await container.db?.gdprExportJobs.findById(jobId)) ?? null;
 }
 

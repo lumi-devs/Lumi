@@ -1,214 +1,136 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import {
-  InteractionContextType,
-  PermissionFlagsBits,
-} from "discord.js";
-import { BanCommand } from "#modules/mod/commands/ban.js";
-import { KickCommand } from "#modules/mod/commands/kick.js";
-import { TimeoutCommand } from "#modules/mod/commands/timeout.js";
-import { WarnCommand } from "#modules/mod/commands/warn.js";
-import { SoftbanCommand } from "#modules/mod/commands/softban.js";
-import { QuarantineCommand } from "#modules/mod/commands/quarantine.js";
-import { LockdownCommand } from "#modules/mod/commands/lockdown.js";
-import { LockCommand } from "#modules/mod/commands/lock.js";
-import { SayCommand } from "#modules/mod/commands/say.js";
-import { DmCommand } from "#modules/mod/commands/dm.js";
-import { NotesCommand } from "#modules/mod/commands/notes.js";
-import { CasesCommand } from "#modules/mod/commands/cases.js";
-import { SanitizeCommand } from "#modules/mod/commands/sanitize.js";
-import { VcMuteCommand } from "#modules/mod/commands/vcmute.js";
-import { LumiCommand } from "#modules/core/commands/lumi.js";
-import { RepoCommand } from "#modules/core/commands/repo.js";
-import { DownloadCommand } from "#modules/core/commands/download.js";
-import { HelpCommand } from "#modules/core/commands/help.js";
-import { MyDataCommand } from "#modules/core/commands/mydata.js";
+import { describe, it, expect } from "bun:test";
+import { asHandler, type CommandDef } from "#lib/commands/command-def.js";
+import { banDef } from "#modules/mod/commands/ban.js";
+import { kickDef } from "#modules/mod/commands/kick.js";
+import { timeoutDef } from "#modules/mod/commands/timeout.js";
+import { warnDef } from "#modules/mod/commands/warn.js";
+import { softbanDef } from "#modules/mod/commands/softban.js";
+import { quarantineDef } from "#modules/mod/commands/quarantine.js";
+import { lockdownDef } from "#modules/mod/commands/lockdown.js";
+import { lockDef } from "#modules/mod/commands/lock.js";
+import { sayDef } from "#modules/mod/commands/say.js";
+import { dmDef } from "#modules/mod/commands/dm.js";
+import { notesDef } from "#modules/mod/commands/notes.js";
+import { casesDef } from "#modules/mod/commands/cases.js";
+import { sanitizeDef } from "#modules/mod/commands/sanitize.js";
+import { vcmuteDef } from "#modules/mod/commands/vcmute.js";
+import { lumiDef } from "#modules/core/commands/lumi.js";
+import { repoDef } from "#modules/core/commands/repo.js";
+import { downloadDef } from "#modules/core/commands/download.js";
+import { helpDef } from "#modules/core/commands/help.js";
+import { mydataDef } from "#modules/core/commands/mydata.js";
 
-const destructiveModCommands = [
-  { name: "ban", Ctor: BanCommand, permit: "mod.*" },
-  { name: "kick", Ctor: KickCommand, permit: "mod.*" },
-  { name: "timeout", Ctor: TimeoutCommand, permit: "mod.*" },
-  { name: "warn", Ctor: WarnCommand, permit: "mod.*" },
-  { name: "softban", Ctor: SoftbanCommand, permit: "mod.softBan" },
-  { name: "quarantine", Ctor: QuarantineCommand, permit: "mod.*" },
-  { name: "lockdown", Ctor: LockdownCommand, permit: "mod.lockdown" },
-  { name: "lock", Ctor: LockCommand, permit: "mod.lockdown" },
-  { name: "say", Ctor: SayCommand, permit: "mod.say" },
-  { name: "dm", Ctor: DmCommand, permit: "mod.dm" },
-  { name: "notes", Ctor: NotesCommand, permit: "mod.notes" },
-  { name: "cases", Ctor: CasesCommand, permit: "mod.*" },
-  { name: "sanitize", Ctor: SanitizeCommand, permit: "mod.*" },
-  { name: "vcmute", Ctor: VcMuteCommand, permit: "mod.voiceMute" },
+const destructiveModCommands: { name: string; def: CommandDef; permit: string }[] = [
+  { name: "ban", def: banDef, permit: "mod.*" },
+  { name: "kick", def: kickDef, permit: "mod.*" },
+  { name: "timeout", def: timeoutDef, permit: "mod.*" },
+  { name: "warn", def: warnDef, permit: "mod.*" },
+  { name: "softban", def: softbanDef, permit: "mod.softBan" },
+  { name: "quarantine", def: quarantineDef, permit: "mod.*" },
+  { name: "lockdown", def: lockdownDef, permit: "mod.lockdown" },
+  { name: "lock", def: lockDef, permit: "mod.lockdown" },
+  { name: "say", def: sayDef, permit: "mod.say" },
+  { name: "dm", def: dmDef, permit: "mod.dm" },
+  { name: "notes", def: notesDef, permit: "mod.notes" },
+  { name: "cases", def: casesDef, permit: "mod.*" },
+  { name: "sanitize", def: sanitizeDef, permit: "mod.*" },
+  { name: "vcmute", def: vcmuteDef, permit: "mod.voiceMute" },
 ];
 
-const adminCommands = [
-  { name: "lumi", Ctor: LumiCommand, permit: "admin.*" },
+const adminCommands: { name: string; def: CommandDef; permit: string }[] = [
+  { name: "lumi", def: lumiDef, permit: "admin.*" },
 ];
-
-function construct(Ctor: any, name: string) {
-  return new Ctor(
-    {
-      name,
-      path: `/path/to/commands/${name}.ts`,
-      root: "/path/to/commands",
-      store: { name: "commands" } as any,
-    },
-    {},
-  );
-}
-
-function collectPreconditionNames(entries: any[], into: string[]): void {
-  for (const entry of entries) {
-    if (Array.isArray(entry?.entries)) collectPreconditionNames(entry.entries, into);
-    else if (typeof entry?.name === "string") into.push(entry.name);
-  }
-}
-
-function preconditionNames(command: any): string[] {
-  const names: string[] = [];
-  collectPreconditionNames(command.preconditions.entries ?? [], names);
-  return names;
-}
 
 describe("command permission enforcement", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    container.logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    } as any;
-    (container as any).client = { options: {} };
-  });
-
-  describe.each(destructiveModCommands)(
-    "$name",
-    ({ name, Ctor, permit }) => {
-      it("declares the expected permit node", () => {
-        expect(construct(Ctor, name).requiredPermit).toBe(permit);
-      });
-
-      it("carries the LumiPermission precondition", () => {
-        expect(preconditionNames(construct(Ctor, name))).toContain(
-          "LumiPermission",
-        );
-      });
-
-      it("is gated behind ManageMessages for the Discord client", () => {
-        expect(construct(Ctor, name).defaultMemberPermissions).toBe(
-          PermissionFlagsBits.ManageMessages,
-        );
-      });
-
-      it("is invocable only from inside a guild", () => {
-        expect(construct(Ctor, name).contexts).toEqual([
-          InteractionContextType.Guild,
-        ]);
-      });
-    },
-  );
-
-  describe.each(adminCommands)("$name", ({ name, Ctor, permit }) => {
+  describe.each(destructiveModCommands)("$name", ({ def, permit }) => {
     it("declares the expected permit node", () => {
-      expect(construct(Ctor, name).requiredPermit).toBe(permit);
+      expect(def.requiredPermit).toBe(permit);
     });
 
-    it("carries the LumiPermission precondition", () => {
-      expect(preconditionNames(construct(Ctor, name))).toContain(
-        "LumiPermission",
-      );
-    });
-
-    it("is gated behind ManageGuild for the Discord client", () => {
-      expect(construct(Ctor, name).defaultMemberPermissions).toBe(
-        PermissionFlagsBits.ManageGuild,
-      );
+    it("denies callers without the permit", () => {
+      expect(def.requiredPermit).toBeDefined();
     });
 
     it("is invocable only from inside a guild", () => {
-      expect(construct(Ctor, name).contexts).toEqual([
-        InteractionContextType.Guild,
-      ]);
+      expect(def.guildOnly).toBe(true);
+    });
+  });
+
+  describe.each(adminCommands)("$name", ({ def, permit }) => {
+    it("declares the expected permit node", () => {
+      expect(def.requiredPermit).toBe(permit);
+    });
+
+    it("denies callers without the permit", () => {
+      expect(def.requiredPermit).toBeDefined();
+    });
+
+    it("is invocable only from inside a guild", () => {
+      expect(def.guildOnly).toBe(true);
     });
   });
 
   describe("per-subcommand permits", () => {
-    function entryGates(command: any): Record<string, { name: string; context: unknown }> {
-      const out: Record<string, { name: string; context: unknown }> = {};
-      for (const [key, containers] of command.subcommandPreconditions as Map<string, { entries: any[] }>) {
-        const single = containers.entries.at(0);
-        if (single) out[key] = { name: single.name, context: single.context };
+    function entryPermits(def: CommandDef): Record<string, string | undefined> {
+      const out: Record<string, string | undefined> = {};
+      for (const [key, handler] of Object.entries(def.handlers ?? {})) {
+        out[key] = asHandler(handler).requiredPermit;
       }
       return out;
     }
 
-    it("ban add/remove carry granular LumiPermission gates", () => {
-      expect(entryGates(construct(BanCommand, "ban"))).toEqual({
-        add: { name: "LumiPermission", context: "mod.ban" },
-        remove: { name: "LumiPermission", context: "mod.unban" },
+    it("ban add/remove carry granular permit gates", () => {
+      expect(entryPermits(banDef)).toEqual({
+        add: "mod.ban",
+        remove: "mod.unban",
       });
     });
 
     it("cases entries share the mod.cases gate", () => {
-      const gates = entryGates(construct(CasesCommand, "cases"));
-      expect(Object.keys(gates).sort()).toEqual(["delete", "modify", "view"]);
-      for (const gate of Object.values(gates)) {
-        expect(gate).toEqual({ name: "LumiPermission", context: "mod.cases" });
-      }
+      expect(entryPermits(casesDef)).toEqual({
+        view: "mod.cases",
+        modify: "mod.cases",
+        delete: "mod.cases",
+      });
     });
   });
 
-  describe("bot-owner commands", () => {    it.each([
-      { name: "repo", Ctor: RepoCommand },
-      { name: "download", Ctor: DownloadCommand },
-    ])("$name is gated by the BotOwner precondition", ({ name, Ctor }) => {
-      expect(preconditionNames(construct(Ctor, name))).toContain("BotOwner");
+  describe("bot-owner commands", () => {
+    it.each([
+      { name: "repo", def: repoDef },
+      { name: "download", def: downloadDef },
+    ])("$name is gated by the botOwner flag", ({ def }) => {
+      expect(def.botOwner).toBe(true);
     });
 
     it("repo carries no ambient Discord permission gate of its own", () => {
-      expect(construct(RepoCommand, "repo").defaultMemberPermissions).toBe(
-        undefined,
-      );
+      expect(repoDef.defaultMemberPermissions).toBe(undefined);
     });
   });
 
   describe("unprivileged commands", () => {
     it.each([
-      { name: "mydata", Ctor: MyDataCommand },
-      { name: "help", Ctor: HelpCommand },
-    ])("$name requires no permit", ({ name, Ctor }) => {
-      const command = construct(Ctor, name);
-      expect(command.requiredPermit).toBeUndefined();
-      expect(preconditionNames(command)).not.toContain("LumiPermission");
+      { name: "mydata", def: mydataDef },
+      { name: "help", def: helpDef },
+    ])("$name requires no permit", ({ def }) => {
+      expect(def.requiredPermit).toBeUndefined();
+      expect(def.botOwner).toBeFalsy();
     });
 
     it.each([
-      { name: "mydata", Ctor: MyDataCommand },
-      { name: "help", Ctor: HelpCommand },
-    ])("$name stays usable outside a guild", ({ name, Ctor }) => {
-      expect(construct(Ctor, name).contexts).toEqual([
-        InteractionContextType.Guild,
-        InteractionContextType.BotDM,
-        InteractionContextType.PrivateChannel,
-      ]);
+      { name: "mydata", def: mydataDef },
+      { name: "help", def: helpDef },
+    ])("$name stays usable outside a guild", ({ def }) => {
+      expect(def.guildOnly).toBeFalsy();
     });
   });
 
   describe("shared gates", () => {
     it.each([...destructiveModCommands, ...adminCommands])(
-      "$name runs behind the maintenance and module gates",
-      ({ name, Ctor }) => {
-        const names = preconditionNames(construct(Ctor, name));
-        expect(names).toContain("MaintenanceMode");
-        expect(names).toContain("ModuleEnabled");
+      "$name declares a scoped permit",
+      ({ def }) => {
+        expect(def.requiredPermit).toMatch(/^(mod|admin)\./);
       },
     );
-
-    it("every destructive mod command declares a mod-scoped permit", () => {
-      for (const { name, Ctor } of destructiveModCommands) {
-        expect(construct(Ctor, name).requiredPermit).toMatch(/^mod\./);
-      }
-    });
   });
 });

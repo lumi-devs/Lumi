@@ -1,30 +1,16 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 import { UserMediaViewId } from "../../constants.js";
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export default defineInteraction({
+  prefix: UserMediaViewId.prefix,
   module: "utility",
-})
-export default class UserMediaViewHandler extends ModuleInteractionHandler<
-  ButtonInteraction,
-  { userId: string; type: string }
-> {
-  public override parse(interaction: ButtonInteraction) {
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = UserMediaViewId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: ButtonInteraction,
-    { userId, type }: { userId: string; type: string },
-  ) {
+    if (!parsed) return;
+    const { userId, type } = parsed;
     await interaction.deferReply({
       flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
     });
@@ -32,7 +18,7 @@ export default class UserMediaViewHandler extends ModuleInteractionHandler<
       context: interaction,
       targetUser: await interaction.client.users.fetch(userId),
       mediaType: type as "avatar" | "banner",
-      container: this.container,
+      container: services,
     });
-  }
-}
+  },
+});

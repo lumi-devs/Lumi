@@ -1,7 +1,7 @@
 import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
-import { mgetSafe, pipelineBySlot } from "#lib/database/cluster-safe.js";
+import { mgetSafe, pipelineBySlot } from "@lumi/infrastructure/database";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { tryParseJSON } from "@sapphire/utilities";
+import { tryParseJSON } from "@lumi/shared";
 
 export type PermitKind = "enforced" | "custom";
 export type PermitTargetType = "user" | "role" | "channel";

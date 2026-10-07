@@ -1,4 +1,8 @@
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import {
   emptySetupState,
   finishSetupWizard,
@@ -14,33 +18,16 @@ import {
   buildSetupSuccessCard,
 } from "#modules/core/ui/setup-wizard.js";
 import { SetupId } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "setup-wizard-button",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class SetupWizardButtonHandler extends LumiInteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
+export const setupWizardButton = defineInteraction({
+  prefix: SetupId.prefix,
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = SetupId.parse(interaction.customId);
-    if (!parsed) return this.none();
+    if (!parsed) return;
     const { head, rest } = parsed;
-    if (head !== "step" && head !== "finish" && head !== "agebtn") {
-      return this.none();
-    }
+    if (head !== "step" && head !== "finish" && head !== "agebtn") return;
     const parts = ["setup", head, ...rest];
-    return this.some({ head, parts });
-  }
-
-  public async run(
-    interaction: ButtonInteraction,
-    { head, parts }: { head: string; parts: string[] },
-  ) {
     if (!interaction.inGuild()) return;
 
     if (head === "agebtn") {
@@ -50,13 +37,13 @@ export class SetupWizardButtonHandler extends LumiInteractionHandler {
       );
     }
 
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
     if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
     const { guildId } = interaction;
 
     if (head === "finish") {
       const settled = normalizeSetupState(stateFromSegments(parts.slice(2)));
-      await finishSetupWizard(guildId, settled, interaction.user.id);
+      await finishSetupWizard(services, guildId, settled, interaction.user.id);
       return interaction.editReply(buildSetupSuccessCard(settled));
     }
 
@@ -70,5 +57,5 @@ export class SetupWizardButtonHandler extends LumiInteractionHandler {
       );
     }
     return interaction.editReply(buildSetupStepView(1, emptySetupState()));
-  }
-}
+  },
+});

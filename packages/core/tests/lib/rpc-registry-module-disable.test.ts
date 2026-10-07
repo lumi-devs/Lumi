@@ -127,7 +127,7 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     // Populated once, exactly like at boot - never touched again by unload().
     registerRpcHandlers();
 
-    store = new ModuleStore();
+    store = new ModuleStore(container as any);
     store.addRoot(new URL("file:///test/modules"));
   });
 

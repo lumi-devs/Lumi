@@ -1,6 +1,6 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
-import { isNullish, tryParseJSON } from "@sapphire/utilities";
+import { isNullish, tryParseJSON } from "@lumi/shared";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -213,7 +213,7 @@ export async function applyGateAction(
 
   if (action === "log") {
     const logService = tryGetUtility("guild-log");
-    await logService?.dispatch({
+    await logService?.dispatch(container, {
       guildId: guild.id,
       moduleName: "security",
       action: "📝 Gate Logged",
@@ -250,6 +250,7 @@ export async function applyGateAction(
       reason,
     });
     await logToChannel(
+      container,
       guild.id,
       action === "kick" ? "👢 Gate Kicked" : "🔇 Gate Timed Out",
       Colors.Orange,

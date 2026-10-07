@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { injectTraceContext } from "@lumi/observability";
 

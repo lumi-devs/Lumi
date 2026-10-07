@@ -1,7 +1,7 @@
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
-import { scanKeysSafe } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
+import { scanKeysSafe } from "@lumi/infrastructure/database";
 import { ValkeyKeys, type InvalidationBus } from "#lib/database/valkey.js";
-import type { ILogger } from "@sapphire/framework";
+import type { ILogger } from "@lumi/shared";
 
 /**
  * Evicts every Valkey key a guild's config/module-enabled cache can occupy.

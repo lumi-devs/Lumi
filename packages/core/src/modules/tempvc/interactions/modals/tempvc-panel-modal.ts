@@ -1,46 +1,31 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { fetchTyped } from "#lib/commands.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
 import { getVcRecord, patchVcRecord } from "#modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../../constants.js";
 import { resolveOwnedVc } from "@lumi/application/services/tempvc/panel-guard.js";
-import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
 import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
 
 const ModalKinds = new Set(["namem", "limitm"]);
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "tempvc-panel-modal",
-  interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
+export const tempVcPanelModal = defineInteraction({
+  prefix: TempVcPanelId.prefix,
   module: "tempvc",
-})
-export class TempVcPanelModalHandler extends ModuleInteractionHandler<
-  ModalSubmitInteraction,
-  { action: string; channelId: string }
-> {
-  private get service(): TempVcUtility {
-    return getUtility("tempvc");
-  }
-
-  public override parse(interaction: ModalSubmitInteraction) {
+  async run(services: Container, interaction: ModalSubmitInteraction): Promise<void> {
     const parsed = TempVcPanelId.parse(interaction.customId);
-    if (!parsed || !ModalKinds.has(parsed.action)) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: ModalSubmitInteraction,
-    { action: kind, channelId }: { action: string; channelId: string },
-  ): Promise<void> {
+    if (!parsed || !ModalKinds.has(parsed.action)) return;
+    const { action: kind, channelId } = parsed;
+    const service: TempVcUtility = getUtility("tempvc");
     const { guildId } = interaction;
     if (!guildId) return;
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
 
     const member = interaction.member as GuildMember;
     const t = await fetchTyped(interaction);
@@ -48,7 +33,7 @@ export class TempVcPanelModalHandler extends ModuleInteractionHandler<
       interaction.guild,
       guildId,
       channelId,
-      this.service,
+      service,
       member,
       t,
     );
@@ -70,7 +55,7 @@ export class TempVcPanelModalHandler extends ModuleInteractionHandler<
         return;
       }
       await channel.setName(name.slice(0, 100), "Renamed by owner");
-      await patchVcRecord(guildId, channelId, {
+      await patchVcRecord(services, guildId, channelId, {
         name: channel.name,
       });
     } else {
@@ -91,9 +76,9 @@ export class TempVcPanelModalHandler extends ModuleInteractionHandler<
       await channel.setUserLimit(limit, "Limit changed by owner");
     }
 
-    const fresh = await getVcRecord(guildId, channelId);
+    const fresh = await getVcRecord(services, guildId, channelId);
     if (fresh) {
-      await interaction.editReply(await buildPanel(channel, fresh, t));
+      await interaction.editReply(await buildPanel(services, channel, fresh, t));
       return;
     }
     await interaction.followUp(
@@ -103,5 +88,5 @@ export class TempVcPanelModalHandler extends ModuleInteractionHandler<
         }),
       ),
     );
-  }
-}
+  },
+});

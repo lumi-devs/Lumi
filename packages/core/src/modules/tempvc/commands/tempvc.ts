@@ -1,29 +1,23 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, replyError, sendReply, fetchTyped } from "#lib/commands.js";
-import { type ChatInputCommandInteraction, type GuildMember } from "discord.js";
+import type { CommandContext } from "#lib/command-context.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import { replyError, sendReply, fetchTyped } from "#lib/commands.js";
+import { SlashCommandBuilder, type ChatInputCommandInteraction, type GuildMember } from "discord.js";
 import { ephemeralCard } from "#lib/ui/cards.js";
 import { getVcRecord } from "../data/tempvc.js";
 import { buildPanel } from "../ui/panel.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const tempvcDef: CommandDef = {
   name: "tempvc",
-  description: "Open the control panel for your current temp VC.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "tempvc",
-})
-export class TempVcCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
+  description: "Open the control panel for your current temp VC.",
+  guildOnly: true,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("tempvc");
+    return (
+    builder.setName("tempvc").setDescription("Open the control panel for your current temp VC.")
     );
-  }
-
-  public override async chatInputRun(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
+  },
+  run: async (ctx: CommandContext) => { const interaction: ChatInputCommandInteraction = ctx.interaction;
     const t = await fetchTyped(interaction);
     const member = interaction.member as GuildMember | null;
     const channel = member?.voice.channel;
@@ -35,7 +29,7 @@ export class TempVcCommand extends BaseCommand {
       );
     }
 
-    const record = await getVcRecord(interaction.guildId!, channel.id);
+    const record = await getVcRecord(ctx.services, interaction.guildId!, channel.id);
     if (!record) {
       return replyError(
         interaction,
@@ -44,7 +38,7 @@ export class TempVcCommand extends BaseCommand {
       );
     }
 
-    const panel = await buildPanel(channel, record, t);
+    const panel = await buildPanel(ctx.services, channel, record, t);
     await sendReply(interaction, ephemeralCard(panel));
   }
-}
+};

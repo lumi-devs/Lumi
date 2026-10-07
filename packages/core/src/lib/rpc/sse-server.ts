@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
@@ -60,15 +60,15 @@ let starting: Promise<void> | null = null;
 
 async function handleIncoming(msg: BusMessage<DashboardEvent>): Promise<void> {
   await msg.ack();
-  const validated = DashboardEventSchema.run(msg.body);
-  if (validated.isErr()) {
+  const validated = DashboardEventSchema.safeParse(msg.body);
+  if (!validated.success) {
     dashboardEventPublishFailures.inc({ reason: "invalid" });
     container.logger?.warn?.("[Sse] dropping malformed dashboard event", {
       err: validated.error.message,
     });
     return;
   }
-  const body = validated.unwrap();
+  const body = validated.data;
   const conns = connectionsByGuild.get(body.guildId);
   if (!conns || conns.size === 0) return;
   const chunk = `data: ${JSON.stringify(body)}\n\n`;

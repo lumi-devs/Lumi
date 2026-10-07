@@ -1,12 +1,12 @@
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
+import { container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
 import { promises as fs } from "node:fs";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { logError } from "#lib/utilities/errors.js";
 import {
   detectSubStores,
@@ -97,8 +97,8 @@ function describeVerification(
 }
 
 
-const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
-const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
+const repoSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
+const branchSchema = z.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
 
 function buildGitCloneArgs(
   branch: string,
@@ -130,8 +130,8 @@ function parseUrl(val: string): string {
   );
 }
 
-const reqsSchema = s.array(
-  s.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
+const reqsSchema = z.array(
+  z.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
 );
 
 export const ModuleRoot = path.join(
@@ -626,7 +626,7 @@ export class DownloadResolver {
       await execFileAsync(
         "bun",
         ["add", "--ignore-scripts", ...reqs],
-        { cwd: sourcePath, timeout: Time.Minute },
+        { cwd: sourcePath, timeout: Ms.Minute },
       ).catch(execError("Requirement installation failed"));
 
       const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");

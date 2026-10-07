@@ -1,6 +1,6 @@
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Colors } from "discord.js";
-import { isNullish } from "@sapphire/utilities";
+import { isNullish } from "@lumi/shared";
 import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
 
 export interface AuditEntry {

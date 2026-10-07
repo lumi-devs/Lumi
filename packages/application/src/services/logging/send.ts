@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { type Container } from "#lib/services.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { queueSend } from "#lib/outbound/send-queue.js";
 
@@ -31,10 +31,11 @@ const LogToggleChannels: Record<string, string> = {
 };
 
 export async function isToggleEnabled(
+  services: Container,
   guildId: string,
   toggleKey: string,
 ): Promise<boolean> {
-  const toggle = await container.db.config.getModuleConfig(
+  const toggle = await services.db.config.getModuleConfig(
     guildId,
     Module,
     toggleKey,
@@ -43,10 +44,11 @@ export async function isToggleEnabled(
 }
 
 export async function isIgnoredChannel(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const stored = await container.db.config.getModuleConfig(
+  const stored = await services.db.config.getModuleConfig(
     guildId,
     Module,
     "ignored_channels",
@@ -56,10 +58,11 @@ export async function isIgnoredChannel(
 }
 
 async function readChannelKey(
+  services: Container,
   guildId: string,
   key: string,
 ): Promise<string | null> {
-  const stored = await container.db.config.getModuleConfig(
+  const stored = await services.db.config.getModuleConfig(
     guildId,
     Module,
     key,
@@ -72,20 +75,21 @@ async function readChannelKey(
  * channel, then null (disabled).
  */
 export async function resolveLogChannel(
+  services: Container,
   guildId: string,
   toggleKey: string,
 ): Promise<string | null> {
   const eventKey = LogEventChannels[toggleKey];
   if (eventKey) {
-    const eventChannel = await readChannelKey(guildId, eventKey);
+    const eventChannel = await readChannelKey(services, guildId, eventKey);
     if (eventChannel) return eventChannel;
   }
   const perTypeKey = LogToggleChannels[toggleKey];
   if (perTypeKey) {
-    const perType = await readChannelKey(guildId, perTypeKey);
+    const perType = await readChannelKey(services, guildId, perTypeKey);
     if (perType) return perType;
   }
-  return readChannelKey(guildId, DefaultLogChannelKey);
+  return readChannelKey(services, guildId, DefaultLogChannelKey);
 }
 
 /**
@@ -95,14 +99,15 @@ export async function resolveLogChannel(
  * of blocking the event handler that produced it.
  */
 export async function sendLog(
+  services: Container,
   guildId: string,
   toggleKey: string,
   color: number,
   title: string,
   lines: string[],
 ): Promise<void> {
-  const channelId = await resolveLogChannel(guildId, toggleKey);
+  const channelId = await resolveLogChannel(services, guildId, toggleKey);
   if (!channelId) return;
 
-  await queueSend({ channelId, logCard: { color, title, lines } });
+  await queueSend(services, { channelId, logCard: { color, title, lines } });
 }

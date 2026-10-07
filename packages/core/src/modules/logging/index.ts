@@ -1,9 +1,10 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import type { Container } from "#lib/services.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { ChannelType } from "discord.js";
 
-@DefineModule({
+export const loggingModule = defineModule({
   name: "logging",
   displayName: "Logging",
   emoji: "📋",
@@ -183,15 +184,15 @@ import { ChannelType } from "discord.js";
         "Channel IDs whose message events are not logged.",
     }),
   }),
-})
-export class LoggingModule extends Module {
-  public override async deleteUserData(
+  async deleteUserData(
+    _services: Container,
     _userId: string,
-  ): Promise<void> {}
+  ): Promise<void> {},
 
-  public override exportUserData(
+  exportUserData(
+    _services: Container,
     _userId: string,
   ): Record<string, unknown> | null {
     return null;
-  }
-}
+  },
+});

@@ -1,7 +1,7 @@
-import { container } from "@sapphire/framework";
+import { container, type Container } from "#lib/services.js";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
-import { isNullish, tryParseJSON } from "@sapphire/utilities";
+import { isNullish, tryParseJSON } from "@lumi/shared";
 import { fetchTyped } from "#lib/commands.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import {
@@ -51,9 +51,13 @@ function challengeLockKey(guildId: string, userId: string): string {
 }
 
 export async function loadVerificationConfig(
-  guildId: string,
+  guildIdOrServices: Container | string,
+  maybeGuildId?: string,
 ): Promise<VerificationConfig> {
-  const raw = await container.db.config.getAllModuleConfig(guildId, "security");
+  const [services, guildId] = typeof guildIdOrServices === "string"
+    ? [container, guildIdOrServices]
+    : [guildIdOrServices, maybeGuildId!];
+  const raw = await services.db.config.getAllModuleConfig(guildId, "security");
   const timeout = getConfigNumber(raw, "verification_timeout_minutes", 10);
   const mode = raw["verification_mode"];
   const target = raw["verification_target"];
@@ -68,8 +72,8 @@ export async function loadVerificationConfig(
   };
 }
 
-async function loadVerifyPanelContent(guildId: string): Promise<VerifyPanelContent> {
-  const raw = await container.db.config.getAllModuleConfig(guildId, "security");
+async function loadVerifyPanelContent(services: Container, guildId: string): Promise<VerifyPanelContent> {
+  const raw = await services.db.config.getAllModuleConfig(guildId, "security");
   return {
     title: getConfigString(raw, "verification_panel_title"),
     welcome: getConfigString(raw, "verification_panel_welcome"),
@@ -99,6 +103,7 @@ function isSendableGuildChannel(
  * (now shared via `#lib/rpc/card-serialize.js`).
  */
 export async function postOrEditVerifyPanel(
+  services: Container,
   guildId: string,
   opts: {
     channelId?: string;
@@ -106,19 +111,19 @@ export async function postOrEditVerifyPanel(
     deleteOldMessage?: boolean;
   },
 ): Promise<VerifyPanelSetResult> {
-  const config = await loadVerificationConfig(guildId);
+  const config = await loadVerificationConfig(services, guildId);
   if (!config.enabled || !config.verifiedRoleId) {
     throw new Error(
       "Turn on Verification and pick a Verified Role before posting the panel.",
     );
   }
 
-  const existing = await container.db.security.getVerificationPanel(guildId);
+  const existing = await services.db.security.getVerificationPanel(guildId);
 
   let targetChannelId: string;
   let createdChannel = false;
   if (opts.createChannel) {
-    const created = (await container.client.rest.post(Routes.guildChannels(guildId), {
+    const created = (await services.client.rest.post(Routes.guildChannels(guildId), {
       body: { name: "verify-here", type: ChannelType.GuildText },
       reason: "Dashboard: verification panel channel",
     })) as APIChannel;
@@ -140,8 +145,9 @@ export async function postOrEditVerifyPanel(
     {
       guild: { id: guildId, preferredLocale: guildData?.preferred_locale },
     } as unknown as Parameters<typeof fetchTyped>[0],
+    services,
   );
-  const content = await loadVerifyPanelContent(guildId);
+  const content = await loadVerifyPanelContent(services, guildId);
   const card = buildVerifyPanel(t, content);
   const body = serializeCard(card);
 
@@ -151,7 +157,7 @@ export async function postOrEditVerifyPanel(
     const message = await fetchChannelMessageRest(targetChannelId, existing.messageId);
     if (message) {
       try {
-        await container.client.rest.patch(
+        await services.client.rest.patch(
           Routes.channelMessage(targetChannelId, message.id),
           { body },
         );
@@ -165,7 +171,7 @@ export async function postOrEditVerifyPanel(
           oldMessageDeleted: false,
         };
       } catch (err: unknown) {
-        container.logger.warn(
+        services.logger.warn(
           `[security] Verify panel edit failed in ${guildId}, posting fresh instead: ${String(err)}`,
         );
       }
@@ -181,7 +187,7 @@ export async function postOrEditVerifyPanel(
         existing.messageId,
       );
       if (oldMessage) {
-        await container.client.rest
+        await services.client.rest
           .delete(Routes.channelMessage(existing.channelId, existing.messageId))
           .catch(() => null);
         oldMessageDeleted = true;
@@ -189,10 +195,10 @@ export async function postOrEditVerifyPanel(
     }
   }
 
-  const sent = (await container.client.rest.post(Routes.channelMessages(targetChannelId), {
+  const sent = (await services.client.rest.post(Routes.channelMessages(targetChannelId), {
     body,
   })) as APIMessage;
-  await container.db.security.saveVerificationPanel({
+  await services.db.security.saveVerificationPanel({
     guildId,
     channelId: targetChannelId,
     messageId: sent.id,
@@ -341,10 +347,16 @@ export async function assignPending(
 }
 
 /** Called by the periodic sweep; safe to run on any worker holding the guild. */
-export async function sweepExpiredPending(guild: Guild): Promise<void> {
-  const config = await loadVerificationConfig(guild.id);
+export async function sweepExpiredPending(
+  guildOrServices: Container | Guild,
+  maybeGuild?: Guild,
+): Promise<void> {
+  const [services, guild] = "client" in guildOrServices
+    ? [guildOrServices as Container, maybeGuild!]
+    : [container, guildOrServices as Guild];
+  const config = await loadVerificationConfig(services, guild.id);
   if (!config.enabled) return;
-  const expired = await container.valkey.zrangebyscore(
+  const expired = await services.valkey.zrangebyscore(
     ValkeyKeys.verifyPending(guild.id),
     0,
     Date.now(),

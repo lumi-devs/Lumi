@@ -1,9 +1,9 @@
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import type { Container } from "#lib/services.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
 import { fetchTyped } from "#lib/commands.js";
 import {
   loadVerificationConfig,
@@ -24,29 +24,21 @@ import {
 
 type Parsed = { kind: "start" } | { kind: "step"; idx: number };
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  name: "security-verify",
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export const verify = defineInteraction({
+  prefix: [VerifyButtonId, CaptchaButtonId.prefix],
   module: "security",
-})
-export class VerifyInteractionHandler extends ModuleInteractionHandler<
-  ButtonInteraction,
-  Parsed
-> {
-  public override parse(interaction: ButtonInteraction) {
+  async run(_services: Container, interaction: ButtonInteraction) {
+    let parsed: Parsed | null = null;
     if (interaction.customId === VerifyButtonId) {
-      return this.some<Parsed>({ kind: "start" });
+      parsed = { kind: "start" };
+    } else {
+      const captcha = CaptchaButtonId.parse(interaction.customId);
+      if (captcha) {
+        const idx = Number.parseInt(captcha.idx, 10);
+        if (!Number.isNaN(idx)) parsed = { kind: "step", idx };
+      }
     }
-    const parsed = CaptchaButtonId.parse(interaction.customId);
-    if (parsed) {
-      const idx = Number.parseInt(parsed.idx, 10);
-      if (Number.isNaN(idx)) return this.none();
-      return this.some<Parsed>({ kind: "step", idx });
-    }
-    return this.none();
-  }
-
-  protected override async handle(interaction: ButtonInteraction, parsed: Parsed) {
+    if (!parsed) return;
     const { guild } = interaction;
     if (!guild) return;
 
@@ -59,7 +51,7 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     } else {
-      await this.acknowledge(interaction);
+      await acknowledge(interaction);
     }
 
     const t = await fetchTyped(interaction);
@@ -146,5 +138,5 @@ export class VerifyInteractionHandler extends ModuleInteractionHandler<
         );
         return;
     }
-  }
-}
+  },
+});

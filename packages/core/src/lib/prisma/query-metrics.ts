@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { dbQueryDuration, dbSlowQueriesTotal } from "@lumi/observability";
 import { resolveDbSlowQueryThresholdMs } from "#lib/env.js";
 

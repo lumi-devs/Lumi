@@ -1,9 +1,10 @@
-import { UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
+import { container } from "#lib/services.js";
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { getVcRecord, type VcRecord } from "#modules/tempvc/data/tempvc.js";
 import { assertOwner } from "./panel-helpers.js";
-import type TempVcUtility from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
 
 export interface ResolvedVc {
   channel: VoiceBasedChannel;
@@ -32,9 +33,9 @@ export async function resolveVc(
     return null;
   }
 
-  const record = await getVcRecord(guildId, channelId);
+  const record = await getVcRecord(container, guildId, channelId);
   if (!record) {
-    if (notFound) throw new UserError(notFound.record);
+    if (notFound) throw new UserError(notFound.channel);
     return null;
   }
 
@@ -65,7 +66,7 @@ export async function resolveOwnedRecord(
   member: GuildMember,
   t?: LumiT,
 ): Promise<VcRecord | null> {
-  const record = await getVcRecord(guildId, channelId);
+  const record = await getVcRecord(container, guildId, channelId);
   if (!record) return null;
   assertOwner(service, member, channel, record.ownerId, t);
   return record;

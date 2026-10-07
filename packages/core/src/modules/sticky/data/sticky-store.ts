@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { claimCooldown } from "#lib/cooldown.js";
 
 export const StickyCooldownMs = 1_000;
@@ -10,36 +10,41 @@ const stickyCooldownKey = (guildId: string, channelId: string): string =>
   `lumi:sticky:cd:${guildId}:${channelId}`;
 
 export async function getStickyMessageId(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<string | null> {
-  return container.valkey.get(stickyKey(guildId, channelId));
+  return services.valkey.get(stickyKey(guildId, channelId));
 }
 
 export async function setStickyMessageId(
+  services: Container,
   guildId: string,
   channelId: string,
   messageId: string,
 ): Promise<void> {
-  await container.valkey.set(stickyKey(guildId, channelId), messageId);
+  await services.valkey.set(stickyKey(guildId, channelId), messageId);
 }
 
 export async function delStickyMessageId(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  if (container.invalidation) {
-    await container.invalidation.invalidate(stickyKey(guildId, channelId));
+  if (services.invalidation) {
+    await services.invalidation.invalidate(stickyKey(guildId, channelId));
   } else {
-    await container.valkey.del(stickyKey(guildId, channelId));
+    await services.valkey.del(stickyKey(guildId, channelId));
   }
 }
 
 export async function isStickyOnCooldown(
+  services: Container,
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
   return !(await claimCooldown(
+    services,
     stickyCooldownKey(guildId, channelId),
     StickyCooldownMs,
   ));

@@ -1,9 +1,5 @@
 import { ButtonStyle } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder, type MessageActionRowComponentBuilder } from "@discordjs/builders";
-import {
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
 import { ButtonInteraction, MessageFlags } from "discord.js";
 import {
   userMention,
@@ -12,8 +8,13 @@ import {
   messageLink,
 } from "@discordjs/formatters";
 import { formatDuration } from "#lib/utilities/time.js";
-import { makeListCard, ephemeralCard } from "#lib/ui/cards.js";
-import { ModuleInteractionHandler } from "#lib/interactions/ModuleInteractionHandler.js";
+import { makeErrorCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
+import {
+  acknowledge,
+  checkSecurity,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkMentions } from "../../data/afk.js";
 import { AfkMentionsId } from "../../constants.js";
@@ -22,41 +23,42 @@ import { fetchTyped } from "#lib/commands.js";
 
 const PageSize = 5;
 
-@ApplyOptions<ModuleInteractionHandler.Options>({
-  interactionHandlerType: InteractionHandlerTypes.Button,
+export default defineInteraction({
+  prefix: AfkMentionsId.prefix,
   module: "afk",
-})
-export default class AfkMentionsHandler extends ModuleInteractionHandler<
-  ButtonInteraction,
-  { userId: string; page: string }
-> {
-  public override parse(interaction: ButtonInteraction) {
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = AfkMentionsId.parse(interaction.customId);
-    if (!parsed) return this.none();
-    return this.some(parsed);
-  }
-
-  protected override async handle(
-    interaction: ButtonInteraction,
-    { userId, page: pageStr }: { userId: string; page: string },
-  ) {
+    if (!parsed) return;
+    const { userId, page: pageStr } = parsed;
     const { guildId } = interaction;
     if (!guildId) return;
-    this.checkSecurity(interaction, userId);
     const page = parseInt(pageStr, 10);
 
-    // Which defer to use depends only on the source message's own flags
-    // (known synchronously), so defer before the async lookups below to
-    // beat Discord's 3s ack window.
     const isEphemeral = interaction.message.flags.has(MessageFlags.Ephemeral);
-    if (isEphemeral) await this.acknowledge(interaction);
-    else
-      await interaction.deferReply({
-        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-      });
+    try {
+      if (isEphemeral) await acknowledge(interaction);
+      else
+        await interaction.deferReply({
+          flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        });
+    } catch (err: unknown) {
+      services.logger.warn(
+        `[AfkMentions] ack failed for ${interaction.customId}:`,
+        err,
+      );
+      try {
+        await interaction.reply(
+          ephemeralCard(makeErrorCard("Slow Down", "Please try again.")),
+        );
+      } catch {
+        return;
+      }
+      return;
+    }
+    checkSecurity(interaction, userId);
 
     const t = await fetchTyped(interaction);
-    const mentions = await getAfkMentions(guildId, userId);
+    const mentions = await getAfkMentions(services, guildId, userId);
 
     const totalPages = Math.max(1, Math.ceil(mentions.length / PageSize));
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
@@ -105,5 +107,5 @@ export default class AfkMentionsHandler extends ModuleInteractionHandler<
     );
 
     await interaction.editReply(isEphemeral ? card : ephemeralCard(card));
-  }
-}
+  },
+});

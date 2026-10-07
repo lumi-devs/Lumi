@@ -1,5 +1,5 @@
-import { container } from "@sapphire/framework";
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import { container } from "#lib/services.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import { acquireValkeyLock, verifyValkeyLock } from "#lib/lock.js";

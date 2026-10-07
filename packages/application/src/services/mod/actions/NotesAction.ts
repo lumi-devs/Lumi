@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { Guild, GuildMember, User } from "discord.js";
 
 export interface NotesApplyOptions {

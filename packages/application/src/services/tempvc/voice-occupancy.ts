@@ -1,5 +1,5 @@
-import { container } from "@sapphire/framework";
-import { pipelineBySlot } from "#lib/database/cluster-safe.js";
+import { container } from "#lib/services.js";
+import { pipelineBySlot } from "@lumi/infrastructure/database";
 
 const TtlSeconds = 24 * 60 * 60;
 

@@ -4,10 +4,9 @@ import { QueuePriority } from "#lib/schedule-task.js";
 import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastructure/queues";
 
 /**
- * The BullMQ queue name `@sapphire/plugin-scheduled-tasks` uses by default,
- * and the name `scheduler-producer.ts`'s bare `Queue` stand-in must match so
- * a job enqueued from a shard lands where `apps/scheduler`'s real
- * `ScheduledTaskHandler` drains it from.
+ * The BullMQ queue name shared by the producer-only stand-in on shards and
+ * the real runner in `apps/scheduler`, so a job enqueued from a shard lands
+ * where the scheduler drains it from.
  */
 export const SCHEDULED_TASKS_QUEUE_NAME = "scheduled-tasks";
 

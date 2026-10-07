@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import type { ILogger } from "@sapphire/framework";
+import type { ILogger } from "@lumi/shared";
 
 /** Default page size for batched retention deletes - bounds how long any single delete holds row locks. */
 export const RetentionBatchSize = 1000;

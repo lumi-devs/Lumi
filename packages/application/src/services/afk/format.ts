@@ -1,4 +1,4 @@
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { formatDuration } from "#lib/utilities/time.js";
 import { AfkMaxReasonLength } from "#modules/afk/constants.js";
 

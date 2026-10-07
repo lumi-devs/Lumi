@@ -1,7 +1,7 @@
 import { promises as fs, existsSync } from "node:fs";
 import { join } from "node:path";
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
+import type { Container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
 
@@ -122,7 +122,7 @@ export async function getCoreUpdateStatus(): Promise<CoreUpdateStatus> {
 /**
  * Checks for and applies git self-updates to Lumi core.
  */
-export async function updateLumiCore(): Promise<CoreUpdateResult> {
+export async function updateLumiCore(services: Container): Promise<CoreUpdateResult> {
   const cwd = process.cwd();
 
   if (!existsSync(join(cwd, ".git"))) {
@@ -138,7 +138,7 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     const { branch, currentCommit, latestCommit, behindBy } =
       await resolveGitSnapshot();
 
-    container.logger?.info(
+    services.logger?.info(
       `[SelfUpdate] Checking remote updates for Lumi core (${branch} @ ${currentCommit})...`,
     );
 
@@ -155,7 +155,7 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     ]);
     const changelog = logOut.stdout.trim();
 
-    container.logger?.info(
+    services.logger?.info(
       `[SelfUpdate] Pulling ${behindBy} commit(s) from origin/${branch}...`,
     );
     await execGit(["pull", "--ff-only", "origin", branch]);
@@ -163,15 +163,15 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     try {
       await execFileAsync("bun", ["install", "--frozen-lockfile"], {
         cwd,
-        timeout: Time.Minute,
+        timeout: Ms.Minute,
       });
     } catch {
-      await execFileAsync("bun", ["install"], { cwd, timeout: Time.Minute }).catch(
+      await execFileAsync("bun", ["install"], { cwd, timeout: Ms.Minute }).catch(
         () => {},
       );
     }
 
-    container.logger?.info(
+    services.logger?.info(
       `[SelfUpdate] Successfully updated Lumi core to ${latestCommit}!`,
     );
 
@@ -184,7 +184,7 @@ export async function updateLumiCore(): Promise<CoreUpdateResult> {
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    container.logger?.error(`[SelfUpdate] Failed to update Lumi core:`, err);
+    services.logger?.error(`[SelfUpdate] Failed to update Lumi core:`, err);
     return { updated: false, currentCommit: "unknown", error: msg };
   }
 }

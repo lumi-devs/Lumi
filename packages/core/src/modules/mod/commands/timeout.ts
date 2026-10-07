@@ -1,9 +1,15 @@
-import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
+import {
+  runModerationFlow,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
+import type { Container } from "#lib/services.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import { Time } from "@sapphire/time-utilities";
-import { Result } from "@sapphire/framework";
-import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { Ms } from "@lumi/shared";
+import { Result } from "@lumi/shared";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/command-context.js";
+import { applyLocalizedBuilder } from "#lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
@@ -11,10 +17,10 @@ import { MuteAction } from "@lumi/application/services/mod/actions/MuteAction.js
 import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
-const MaxTimeoutMs = 28 * Time.Day;
+const MaxTimeoutMs = 28 * Ms.Day;
 
-type Flow = ModerationSubcommand.Flow<GuildMember, ModerationCase>;
-type TimedFlow = ModerationSubcommand.Flow<GuildMember, ModerationCase, number>;
+type Flow = MC.Flow<GuildMember, ModerationCase>;
+type TimedFlow = MC.Flow<GuildMember, ModerationCase, number>;
 
 const TimeoutAdd: TimedFlow = {
   logScope: "timeout add",
@@ -76,22 +82,17 @@ const TimeoutRemove: Flow = {
   }),
 };
 
-@ApplyOptions<ModerationSubcommand.Options>({
+export const timeoutDef: CommandDef = {
   name: "timeout",
+  aliases: ["mute", "unmute"],
+  aliasSub: { unmute: "remove" },
   description: "Timeout or untimeout a member",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.*",
   prefixEnabled: true,
-  subcommands: [
-    { name: "add", run: "add", default: true, requiredPermit: "mod.timeout" },
-    { name: "remove", run: "remove", requiredPermit: "mod.timeout" },
-  ],
-})
-export class TimeoutCommand extends ModerationSubcommand {
-  public override registerApplicationCommands(
-    registry: ModerationSubcommand.Registry,
-  ) {
-    registry.registerChatInputCommand((b) =>
+  build: () => {
+    const b = new SlashCommandBuilder().setName("timeout");
+    return (
       applyLocalizedBuilder(b, "commands:timeout")
         .addSubcommand((s) =>
           applyLocalizedBuilder(s, "commands:timeoutAdd")
@@ -123,21 +124,21 @@ export class TimeoutCommand extends ModerationSubcommand {
                 .setRequired(false)
                 .setAutocomplete(true),
             ),
-        ),
+        )
     );
-  }
-
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
+  },
+  handlers: {
+    add: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, TimeoutAdd),
+      requiredPermit: "mod.timeout",
+    },
+    remove: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, TimeoutRemove),
+      requiredPermit: "mod.timeout",
+    },
+  },
+  defaultSub: "add",
+  autocomplete: (_services: Container, interaction: AutocompleteInteraction) => {
     return respondWithReasonChoices(interaction);
-  }
-
-  public add(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, TimeoutAdd);
-  }
-
-  public remove(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, TimeoutRemove);
-  }
-}
+  },
+};

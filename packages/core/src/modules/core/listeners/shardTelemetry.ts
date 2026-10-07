@@ -1,5 +1,6 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import { Status } from "discord.js";
 import { getEventLoopLagP99Ms } from "@lumi/observability";
 import {
@@ -9,25 +10,26 @@ import {
   getLastReadyAt,
   type ShardTelemetrySample,
 } from "#lib/sharding/shard-telemetry.js";
-import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
+import { LumiPinoLogger } from "#lib/logging/LumiPinoLogger.js";
 import { getClusterName, getConsumerId } from "#lib/env.js";
 
 const BytesPerMb = 1024 * 1024;
 
-@ApplyOptions<Listener.Options>({ event: Events.ClientReady })
-export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> {
-  #publisher?: ShardTelemetryPublisher;
-  #removeLogListener?: () => void;
+let publisher: ShardTelemetryPublisher | undefined;
+let removeLogListener: (() => void) | undefined;
 
-  public run() {
-    if (this.#publisher) return;
-    const { client, valkey, logger } = this.container;
+export const shardTelemetryListener = defineListener({
+  name: "shardTelemetryListener",
+  event: Events.ClientReady,
+  execute(services: Container) {
+    if (publisher) return;
+    const { client, valkey, logger } = services;
 
     const cluster = getClusterName() ?? DefaultClusterName;
     const shardIds = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
 
     // Push pre-ready buffered startup logs to each shard's Valkey log ring
-    const initialLogs = PinoSapphireLogger.getBufferedLogs();
+    const initialLogs = LumiPinoLogger.getBufferedLogs();
     for (const id of shardIds) {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
       for (const entry of initialLogs) {
@@ -44,7 +46,7 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
       void valkey.expire(key, 86400);
     }
 
-    this.#removeLogListener = PinoSapphireLogger.addListener((entry) => {
+    removeLogListener = LumiPinoLogger.addListener((entry) => {
       const currentShards = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
       const raw = JSON.stringify(entry);
       for (const id of currentShards) {
@@ -138,7 +140,7 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
       }));
     };
 
-    this.#publisher = new ShardTelemetryPublisher({
+    publisher = new ShardTelemetryPublisher({
       valkey,
       clusterName: getClusterName() ?? DefaultClusterName,
       replicaId: getConsumerId(),
@@ -147,15 +149,15 @@ export class ShardTelemetryListener extends Listener<typeof Events.ClientReady> 
       log: (level, msg, meta) => logger[level](`[ShardTelemetry] ${msg}`, meta),
     });
 
-    void this.#publisher.publish().catch((err: unknown) => {
+    void publisher.publish().catch((err: unknown) => {
       logger.warn("[ShardTelemetry] initial publish failed", { err: String(err) });
     });
-    this.#publisher.start();
-  }
-
-  public override onUnload() {
-    this.#removeLogListener?.();
-    void this.#publisher?.stop();
-    return super.onUnload();
-  }
-}
+    publisher.start();
+  },
+  onDetach() {
+    removeLogListener?.();
+    removeLogListener = undefined;
+    void publisher?.stop();
+    publisher = undefined;
+  },
+});

@@ -1,15 +1,19 @@
-import { container } from "@sapphire/framework";
+process.env["NODE_ENV"] ??= "development";
+
+import { Client } from "discord.js";
+import { container, createServices, useServices } from "#lib/services.js";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { LumiClient } from "./LumiClient.js";
+import { attachClient, destroyLumi, loginLumi } from "./LumiClient.js";
+import { buildClientOptions } from "./client-options.js";
 import {
   envParseString,
   validateAddonSignatureConfig,
   validateRequiredEnv,
 } from "#lib/env.js";
-import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#lib/cluster/index.js";
+import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#lib/cluster/shard-lease.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 
-export interface BootstrapAppOptions extends LumiClient.Options {
+export interface BootstrapAppOptions {
   onlineMessage?: string;
   extraDrainSteps?: Array<{ name: string; run: () => Promise<void> | void }>;
 }
@@ -52,7 +56,7 @@ export function registerProcessErrorHandlers(): void {
 
 export async function bootstrapClientApp(
   options: BootstrapAppOptions = {},
-): Promise<LumiClient> {
+): Promise<Client> {
   try {
     validateRequiredEnv(["BOT_TOKEN", "APPEAL_TOKEN_SECRET"]);
     validateAddonSignatureConfig();
@@ -67,9 +71,12 @@ export async function bootstrapClientApp(
 
   const onlineMsg = options.onlineMessage ?? "[Lumi] Online";
 
-  let client: LumiClient;
+  let client: Client;
   try {
-    client = LumiClient.bootstrap(options);
+    client = new Client(buildClientOptions());
+    const services = createServices(client);
+    useServices(services);
+    attachClient(client, services);
   } catch (err: unknown) {
     console.error(
       `[Lumi] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,
@@ -96,8 +103,8 @@ export async function bootstrapClientApp(
       log("info", `${sig} received`);
       await clusterGracefulShutdown();
       const drainSteps = [
-        { name: "addon-shutdown", run: () => (client.stores.get("modules") as any)?.stopAddonProcesses() },
-        { name: "client-destroy", run: () => client.destroy() },
+        { name: "addon-shutdown", run: () => container.moduleStore?.stopAddonProcesses() },
+        { name: "client-destroy", run: () => destroyLumi(client, container) },
         ...(options.extraDrainSteps ?? []),
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ];
@@ -118,15 +125,13 @@ export async function bootstrapClientApp(
   });
 
   try {
-    await client.login(envParseString("BOT_TOKEN"));
+    await loginLumi(client, container, envParseString("BOT_TOKEN"));
     container.logger.info(onlineMsg);
   } catch (err: unknown) {
     container.logger.fatal("[Lumi] Fatal:", err);
-    await client
-      .destroy()
-      .catch((err: unknown) =>
-        container.logger.error("[Lumi] Client destroy failed:", err),
-      );
+    await destroyLumi(client, container).catch((err: unknown) =>
+      container.logger.error("[Lumi] Client destroy failed:", err),
+    );
     process.exit(1);
   }
 

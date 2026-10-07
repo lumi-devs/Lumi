@@ -1,16 +1,17 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
 import { RelayTask } from "#lib/scheduled-tasks.js";
 import { QueuePriority } from "#lib/schedule-task.js";
 
-@ApplyOptions<ScheduledTask.Options>({
-  name: "security-verify-sweep",
-  pattern: "*/2 * * * *",
-  customJobOptions: { priority: QueuePriority.CLEANUP },
-})
-export class VerifySweepTask extends RelayTask<"security-verify-sweep"> {}
+export class VerifySweepTask extends RelayTask<"security-verify-sweep"> {
+  public constructor() {
+    super({
+      name: "security-verify-sweep",
+      pattern: "*/2 * * * *",
+      customJobOptions: { priority: QueuePriority.CLEANUP }
+    });
+  }
+}
 
-declare module "@sapphire/plugin-scheduled-tasks" {
+declare module "#lib/types/common.js" {
   interface ScheduledTasks {
     "security-verify-sweep": Record<string, never>;
   }

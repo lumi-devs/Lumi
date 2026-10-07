@@ -1,6 +1,5 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import type { Piece } from "@sapphire/framework";
 
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
 import { handleDataRetentionFire } from "./services/data-retention.js";
@@ -9,7 +8,7 @@ import {
   handleGdprExportFire,
 } from "./services/gdpr-export-task.js";
 
-@DefineModule({
+export const coreModule = defineModule({
   name: "core",
   displayName: "Core",
   description: "The built-in core module.",
@@ -19,23 +18,7 @@ import {
   emoji: Emojis.Shield,
   disableable: false,
   category: "System",
-})
-export class CoreModule extends Module {
-  public constructor(
-    context: Piece.LoaderContext,
-    options: Piece.Options = {},
-  ) {
-    super(context, {
-      ...options,
-      name: "core",
-      enabled: true,
-      displayName: "Core",
-      description: "The built-in core module.",
-      emoji: Emojis.Shield,
-    });
-  }
-
-  public override onLoad() {
+  onLoad() {
     registerTaskFireHandler(
       "data-retention-sweep",
       "unicast",
@@ -47,5 +30,5 @@ export class CoreModule extends Module {
       "unicast",
       handleGdprExportCleanupFire,
     );
-  }
-}
+  },
+});

@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { makeSuccessCard } from "#lib/ui/cards.js";
 import { incrementWarnCount, checkThresholds } from "../thresholds.js";

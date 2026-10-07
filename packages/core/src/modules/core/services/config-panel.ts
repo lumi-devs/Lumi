@@ -2,7 +2,8 @@ import type { ModuleMeta } from "#lib/module-system/meta.js";
 import { hasRequiredPermit } from "#lib/permissions/index.js";
 import type { FeatureListEntry } from "#modules/core/ui/modules.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { container, UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
+import type { Container } from "#lib/services.js";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
@@ -16,15 +17,16 @@ export interface FeatureDetail {
 }
 
 export async function loadFeatures(
+  services: Container,
   guildId: string,
 ): Promise<FeatureListEntry[]> {
   return Promise.all(
-    container.moduleStore
+    services.moduleStore
       .all()
       .filter((record) => record.meta.disableable !== false)
       .map(async (record) => ({
         meta: record.meta,
-        guildEnabled: await container.db.modules.isModuleGuildEnabled(
+        guildEnabled: await services.db.modules.isModuleGuildEnabled(
           guildId,
           record.meta.name,
         ),
@@ -39,14 +41,15 @@ export async function loadFeatures(
  * uninstalled while its panel message is still on screen.
  */
 export async function loadDetail(
+  services: Container,
   guildId: string,
   moduleName: string,
 ): Promise<FeatureDetail | null> {
-  const record = container.moduleStore.getRecord(moduleName);
+  const record = services.moduleStore.getRecord(moduleName);
   if (!record) return null;
   const [config, guildEnabled] = await Promise.all([
-    container.db.config.getAllModuleConfig(guildId, moduleName),
-    container.db.modules.isModuleGuildEnabled(guildId, moduleName),
+    services.db.config.getAllModuleConfig(guildId, moduleName),
+    services.db.modules.isModuleGuildEnabled(guildId, moduleName),
   ]);
   return { meta: record.meta, config, guildEnabled };
 }

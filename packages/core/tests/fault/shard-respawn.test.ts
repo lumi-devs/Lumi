@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { ReadinessProbes } from "#lib/client/ReadinessProbes.js";
+import { registerRpcReadinessProbe } from "#lib/client/ReadinessProbes.js";
 import { runReadinessProbes } from "@lumi/observability";
 
 // The RPC HTTP server's own bind-retry/EADDRINUSE chaos test lives with the
@@ -8,12 +8,7 @@ import { runReadinessProbes } from "@lumi/observability";
 describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
   it("reflects RPC unreadiness during probe checks when RPC server is starting up", async () => {
     let rpcReady = false;
-    const probe = new ReadinessProbes({
-      isReady: () => true,
-      isRpcReady: () => rpcReady,
-    });
-
-    probe.register();
+    registerRpcReadinessProbe(() => rpcReady);
 
     // Check readiness before RPC server binds
     const initialReport = await runReadinessProbes();

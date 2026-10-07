@@ -1,41 +1,36 @@
-import { BaseSubcommand } from "#lib/commands.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { CommandContext } from "#lib/command-context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
 
-@ApplyOptions<BaseSubcommand.Options>({
+export const svDef: CommandDef = {
   name: "sv",
   description: "Bot owner server management",
-  preconditions: ["BotOwner"],
+  botOwner: true,
   prefixEnabled: true,
-  subcommands: [{ name: "leave", run: "leaveGuild" }],
-})
-export class SvCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("leave")
-            .setDescription("Make the bot leave a server")
-            .addStringOption((o) =>
-              o
-                .setName("guild_id")
-                .setDescription("Server ID to leave")
-                .setRequired(true),
-            ),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("sv");
+    return (
+    b
+            .setName("sv")
+            .setDescription("Bot owner server management")
+            .addSubcommand((s) =>
+              s
+                .setName("leave")
+                .setDescription("Make the bot leave a server")
+                .addStringOption((o) =>
+                  o
+                    .setName("guild_id")
+                    .setDescription("Server ID to leave")
+                    .setRequired(true),
+                ),
+            )
     );
-  }
-
-  public async leaveGuild(ctx: CommandContext): Promise<void> {
+  },
+  handlers: {
+  "leave": async (ctx: CommandContext) => {
     await ctx.defer();
     const raw = (await ctx.getString("guild_id", { required: true }))!;
     const guildId = raw.replace(/\D/g, "");
@@ -48,8 +43,8 @@ export class SvCommand extends BaseSubcommand {
     }
 
     const guild =
-      this.container.client.guilds.cache.get(guildId) ??
-      (await this.container.client.guilds.fetch(guildId).catch(() => null));
+      ctx.services.client.guilds.cache.get(guildId) ??
+      (await ctx.services.client.guilds.fetch(guildId).catch(() => null));
     if (!guild) {
       await ctx.replyError(
         `${Emojis.Cross} Server Not Found`,
@@ -81,11 +76,11 @@ export class SvCommand extends BaseSubcommand {
       return;
     }
 
-    this.container.logger.info(
+    ctx.services.logger.info(
       `[Sv] ${Emojis.Wave} Left guild ${guildName} (${guildId}) on behalf of ${ctx.user.tag}`,
     );
-    await this.container.db.ensureGuild(guildId);
-    await this.container.db.audit
+    await ctx.services.db.ensureGuild(guildId);
+    await ctx.services.db.audit
       .queueAuditLog({
         guildId,
         userId: ctx.user.id,
@@ -94,11 +89,12 @@ export class SvCommand extends BaseSubcommand {
         details: { guildName, memberCount },
       })
       .catch((err: unknown) =>
-        this.container.logger.warn("[Sv] Failed to queue leave audit entry:", err),
+        ctx.services.logger.warn("[Sv] Failed to queue leave audit entry:", err),
       );
     await ctx.replySuccess(
       `${Emojis.Wave} Left Server`,
       `Left **${guildName}** (\`${guildId}\`).`,
     );
   }
-}
+  }
+};

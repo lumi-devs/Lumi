@@ -1,13 +1,13 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import { shardStatus } from "@lumi/observability";
 
-@ApplyOptions<Listener.Options>({ event: Events.ShardReconnecting })
-export class ShardReconnectingListener extends Listener<
-  typeof Events.ShardReconnecting
-> {
-  public run(id: number) {
+export const shardReconnectingListener = defineListener({
+  name: "shardReconnectingListener",
+  event: Events.ShardReconnecting,
+  execute(services: Container, id: number) {
     shardStatus.set({ shard: String(id) }, 0);
-    this.container.logger.warn(`[Shard ${id}] Reconnecting…`);
-  }
-}
+    services.logger.warn(`[Shard ${id}] Reconnecting…`);
+  },
+});

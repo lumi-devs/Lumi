@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container, type Container } from "#lib/services.js";
 import type { EventBus, BusMessage } from "#lib/event-bus/types.js";
 import type { ScheduledTasks } from "#lib/types/common.js";
 import { taskFireStream, type FireEnvelope } from "#lib/scheduler-bus.js";
@@ -7,6 +7,7 @@ import { extractTraceContext, otelContext } from "@lumi/observability";
 export type TaskFireMode = "unicast" | "broadcast";
 
 export type TaskFireHandler<N extends keyof ScheduledTasks> = (
+  services: Container,
   payload: ScheduledTasks[N],
 ) => Promise<void>;
 
@@ -68,6 +69,7 @@ export class TaskFireConsumer {
   private ephemeralGroups: Array<{ stream: string; group: string }> = [];
 
   public constructor(
+    private readonly services: Container,
     private readonly bus: EventBus,
     private readonly opts: TaskFireConsumerOptions,
   ) {}
@@ -149,7 +151,7 @@ export class TaskFireConsumer {
     });
     await otelContext.with(parent, async () => {
       try {
-        await reg.handler(msg.body.payload);
+        await reg.handler(this.services, msg.body.payload);
         await msg.ack();
       } catch (err) {
         container.logger.error(

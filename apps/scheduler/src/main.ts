@@ -1,11 +1,10 @@
 import "./telemetry.js";
-import "@lumi/core/setup-scheduler";
 import {
   bootstrapSchedulerApp,
   registerInfrastructureReadinessProbes,
   registerSchedulerReadinessProbe,
 } from "@lumi/core";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 await bootstrapSchedulerApp();
 

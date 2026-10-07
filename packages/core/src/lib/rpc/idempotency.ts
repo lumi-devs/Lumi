@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { container } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
+import { container } from "#lib/services.js";
+import { tryParseJSON } from "@lumi/shared";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 

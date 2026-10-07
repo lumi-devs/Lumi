@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type {
   AppealsListData,
   AppealVerifyResult,
@@ -52,19 +52,15 @@ export const AppealStatuses = ["pending", ...AppealReviewStatuses] as const;
 export type AppealStatus = (typeof AppealStatuses)[number];
 
 const AppealTokenShape = {
-  caseId: s.number().int().greaterThanOrEqual(1),
+  caseId: z.number().int().gte(1),
   /** The signed link param, verified entirely server-side. */
-  token: s.string().lengthGreaterThanOrEqual(1),
+  token: z.string().min(1),
 };
 
 export const modRpc = {
   "guild.cases.list": rpcAction<CasesListData>()({
-    input: s.object({
-      action: s
-        .string()
-        .lengthGreaterThanOrEqual(1)
-        .lengthLessThanOrEqual(32)
-        .optional(),
+    input: z.object({
+      action: z.string().min(1).max(32).optional(),
       userId: SnowflakeSchema.optional(),
       moderatorId: SnowflakeSchema.optional(),
       pageSize: PageSizeSchema,
@@ -76,7 +72,7 @@ export const modRpc = {
     readOnly: true,
   }),
   "guild.cases.revoke": rpcAction<{ success: boolean; caseNumber: number }>()({
-    input: s.object({ caseNumber: s.number().int().greaterThanOrEqual(1) }),
+    input: z.object({ caseNumber: z.number().int().gte(1) }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Revoke a case.",
@@ -94,11 +90,11 @@ export const modRpc = {
     warnCount: number;
     deleted: boolean;
   }>()({
-    input: s.object({
-      warnCount: s.number().int().greaterThanOrEqual(1),
+    input: z.object({
+      warnCount: z.number().int().gte(1),
       /** `null` deletes the rule for `warnCount`. */
-      action: s.enum(WarnThresholdActions).nullable(),
-      duration: s.string().lengthLessThanOrEqual(32).nullable().optional(),
+      action: z.enum(WarnThresholdActions).nullable(),
+      duration: z.string().max(32).nullable().optional(),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
@@ -106,29 +102,29 @@ export const modRpc = {
       "Upsert a rule; null action deletes it. mute/voice_mute need a duration.",
   }),
   "guild.modNotes.list": rpcAction<{ notes: ModNoteView[] }>()({
-    input: s.object({ userId: SnowflakeSchema }),
+    input: z.object({ userId: SnowflakeSchema }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.short,
     summary: "Moderator notes for a user.",
     readOnly: true,
   }),
   "guild.modNotes.add": rpcAction<{ success: boolean; note: ModNoteView }>()({
-    input: s.object({
+    input: z.object({
       userId: SnowflakeSchema,
-      message: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(1000),
+      message: z.string().min(1).max(1000),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Add a moderator note.",
   }),
   "guild.modNotes.remove": rpcAction<{ success: boolean; deleted: boolean }>()({
-    input: s.object({ id: s.number().int().greaterThanOrEqual(1) }),
+    input: z.object({ id: z.number().int().gte(1) }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Remove a moderator note.",
   }),
   "guild.appeals.verify": rpcAction<AppealVerifyResult>()({
-    input: s.object(AppealTokenShape),
+    input: z.object(AppealTokenShape),
     auth: "public",
     timeoutMs: RpcTimeouts.long,
     summary: "Verify an appeal link token.",
@@ -137,17 +133,17 @@ export const modRpc = {
     success: boolean;
     appeal: { id: number; status: string; createdAt: string };
   }>()({
-    input: s.object({
+    input: z.object({
       ...AppealTokenShape,
-      message: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(2000),
+      message: z.string().min(1).max(2000),
     }),
     auth: "public",
     timeoutMs: RpcTimeouts.long,
     summary: "Submit an appeal message.",
   }),
   "guild.appeals.list": rpcAction<AppealsListData>()({
-    input: s.object({
-      status: s.enum(AppealStatuses).optional(),
+    input: z.object({
+      status: z.enum(AppealStatuses).optional(),
       pageSize: PageSizeSchema,
       cursor: CursorSchema,
     }),
@@ -165,9 +161,9 @@ export const modRpc = {
       reviewedAt: string | null;
     };
   }>()({
-    input: s.object({
-      id: s.number().int().greaterThanOrEqual(1),
-      status: s.enum(AppealReviewStatuses),
+    input: z.object({
+      id: z.number().int().gte(1),
+      status: z.enum(AppealReviewStatuses),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,

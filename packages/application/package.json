@@ -18,28 +18,12 @@
   "dependencies": {
     "@discordjs/builders": "^1.14.1",
     "@discordjs/formatters": "^0.6.2",
-    "@discordjs/rest": "^2.6.3",
     "@lumi/contracts": "workspace:*",
-    "@lumi/observability": "workspace:*",
-    "@opentelemetry/api": "^1.9.1",
+    "@lumi/infrastructure": "workspace:*",
+    "@lumi/shared": "workspace:*",
     "@prisma/client": "^7.10.0",
-    "@sapphire/async-queue": "^1.5.5",
-    "@sapphire/decorators": "^6.2.0",
-    "@sapphire/framework": "^5.5.1",
-    "@sapphire/pieces": "^4.4.1",
-    "@sapphire/plugin-i18next": "^8.0.0",
-    "@sapphire/plugin-logger": "^4.1.0",
-    "@sapphire/plugin-scheduled-tasks": "^10.0.4",
-    "@sapphire/plugin-subcommands": "^7.0.1",
-    "@sapphire/plugin-utilities-store": "^2.0.3",
-    "@sapphire/shapeshift": "^5.0.0",
-    "@sapphire/snowflake": "^3.5.5",
-    "@sapphire/time-utilities": "^1.7.14",
-    "@sapphire/utilities": "^3.18.2",
     "ahocorasick": "^1.0.2",
     "discord-api-types": "^0.38.55",
-    "discord.js": "^14.27.0",
-    "i18next": "^26.4.2",
-    "iovalkey": "^0.4.0"
+    "discord.js": "^14.27.0"
   }
 }

@@ -1,8 +1,8 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { ModuleName } from "./constants.js";
 
-@DefineModule({
+export const reactionRolesModule = defineModule({
   name: ModuleName,
   displayName: "Reaction Roles",
   emoji: "🎭",
@@ -22,5 +22,4 @@ import { ModuleName } from "./constants.js";
       max: 25,
     }),
   }),
-})
-export class ReactionRolesModule extends Module {}
+});

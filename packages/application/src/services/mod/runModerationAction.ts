@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
 import { logToChannel } from "#lib/moderation/log.js";
@@ -44,6 +44,7 @@ export async function runModerationAction<T extends ModerationCase>(
 
   const entry = options.log(result);
   await logToChannel(
+    container,
     entry.guildId,
     entry.label,
     entry.color,

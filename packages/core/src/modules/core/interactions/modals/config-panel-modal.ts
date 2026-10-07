@@ -12,11 +12,8 @@ import {
   ConfigModalId,
   ConfigOverrideModalId,
 } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
+import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import type { ModalSubmitInteraction } from "discord.js";
 import { OverrideTargetType, type $Enums } from "@prisma/client";
 
@@ -26,60 +23,25 @@ function isOverrideTargetType(
   return (Object.values(OverrideTargetType) as string[]).includes(value);
 }
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "config-panel-modal",
-  interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
-})
-export class ConfigPanelModalHandler extends InteractionHandler {
-  private get cfg(): ConfigUtility {
-    return getUtility("config");
-  }
-
-  public override parse(interaction: ModalSubmitInteraction) {
+export const configPanelModal = defineInteraction({
+  prefix: [
+    ConfigFieldModalId.prefix,
+    ConfigModalId.prefix,
+    ConfigOverrideModalId.prefix,
+  ],
+  async run(services: Container, interaction: ModalSubmitInteraction) {
     const fmodal = ConfigFieldModalId.parse(interaction.customId);
-    if (fmodal) {
-      return this.some({
-        kind: "fmodal",
-        moduleName: fmodal.moduleName,
-        fieldKey: fmodal.fieldKey,
-        fieldPage: fmodal.fieldPage,
-      });
-    }
-    const modal = ConfigModalId.parse(interaction.customId);
-    if (modal) {
-      return this.some({
-        kind: "modal",
-        moduleName: modal.moduleName,
-        fieldKey: undefined,
-        fieldPage: undefined,
-      });
-    }
-    const ovmodal = ConfigOverrideModalId.parse(interaction.customId);
-    if (ovmodal) {
-      return this.some({
-        kind: "ovmodal",
-        moduleName: ovmodal.moduleName,
-        fieldKey: undefined,
-        fieldPage: undefined,
-      });
-    }
-    return this.none();
-  }
-
-  public async run(
-    interaction: ModalSubmitInteraction,
-    {
-      kind,
-      moduleName,
-      fieldKey,
-      fieldPage,
-    }: {
-      kind: string;
-      moduleName: string;
-      fieldKey?: string;
-      fieldPage?: string;
-    },
-  ) {
+    const modal = fmodal ? null : ConfigModalId.parse(interaction.customId);
+    const ovmodal =
+      fmodal || modal
+        ? null
+        : ConfigOverrideModalId.parse(interaction.customId);
+    if (!fmodal && !modal && !ovmodal) return;
+    const kind = fmodal ? "fmodal" : modal ? "modal" : "ovmodal";
+    const moduleName = (fmodal ?? modal ?? ovmodal)!.moduleName;
+    const fieldKey = fmodal?.fieldKey;
+    const fieldPage = fmodal?.fieldPage;
+    const cfg: ConfigUtility = getUtility("config");
     if (!interaction.inGuild()) return;
     await interaction.deferUpdate();
 
@@ -94,7 +56,7 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       );
     }
     const { guildId } = interaction;
-    const record = this.container.moduleStore.getRecord(moduleName);
+    const record = services.moduleStore.getRecord(moduleName);
     if (!record) {
       return interaction.followUp(
         ephemeralCard(
@@ -109,20 +71,21 @@ export class ConfigPanelModalHandler extends InteractionHandler {
     if (kind === "fmodal") {
       const field = record.meta.configFields?.find((f) => f.key === fieldKey);
       if (!field)
-        return this.#err(
+        return err(
           interaction,
           `\`${fieldKey}\` is not a valid config key.`,
         );
       const raw = interaction.fields.getTextInputValue("value").trim();
       try {
         if (raw === "") {
-          await this.container.db.config.deleteModuleConfigKey(
+          await services.db.config.deleteModuleConfigKey(
             guildId,
             moduleName,
             field.key,
           );
         } else {
-          await this.cfg.setConfig(
+          await cfg.setConfig(
+            services,
             guildId,
             moduleName,
             field.key,
@@ -157,13 +120,14 @@ export class ConfigPanelModalHandler extends InteractionHandler {
         }
         try {
           if (raw === "") {
-            await this.container.db.config.deleteModuleConfigKey(
+            await services.db.config.deleteModuleConfigKey(
               guildId,
               moduleName,
               f.key,
             );
           } else {
-            await this.cfg.setConfig(
+            await cfg.setConfig(
+            services,
               guildId,
               moduleName,
               f.key,
@@ -193,24 +157,24 @@ export class ConfigPanelModalHandler extends InteractionHandler {
 
       const field = record.meta.configFields?.find((f) => f.key === key);
       if (!field)
-        return this.#err(interaction, `\`${key}\` is not a valid config key.`);
+        return err(interaction, `\`${key}\` is not a valid config key.`);
       if (!isOverrideTargetType(type))
-        return this.#err(
+        return err(
           interaction,
           "Target type must be one of: channel, role, user, category.",
         );
       const modelId = cleanMention(target);
       if (!isSnowflakeId(modelId))
-        return this.#err(
+        return err(
           interaction,
           "Provide a valid ID or mention as target.",
         );
 
-      const coerced = this.cfg.coerce(value, field.type, field.choices);
+      const coerced = cfg.coerce(value, field.type, field.choices);
       if (coerced === null)
-        return this.#err(interaction, `Invalid value for \`${key}\`.`);
+        return err(interaction, `Invalid value for \`${key}\`.`);
 
-      await this.container.db.configOverrides.setConfigOverride({
+      await services.db.configOverrides.setConfigOverride({
         guildId,
         moduleName,
         key,
@@ -220,14 +184,14 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       });
 
       const overrides =
-        await this.container.db.configOverrides.getConfigOverrides(
+        await services.db.configOverrides.getConfigOverrides(
           guildId,
           moduleName,
         );
       return interaction.editReply(buildOverridesView(record.meta, overrides));
     }
 
-    const detail = await loadDetail(guildId, moduleName);
+    const detail = await loadDetail(services, guildId, moduleName);
     if (!detail) return;
     const t = await fetchTyped(interaction);
     const sectionIndex = parseInt(fieldPage ?? "0", 10) || 0;
@@ -239,11 +203,11 @@ export class ConfigPanelModalHandler extends InteractionHandler {
       t,
     );
     return interaction.editReply(view);
-  }
+  },
+});
 
-  #err(interaction: ModalSubmitInteraction, message: string) {
-    return interaction.followUp(
-      ephemeralCard(makeErrorCard("Invalid Override", message)),
-    );
-  }
+function err(interaction: ModalSubmitInteraction, message: string) {
+  return interaction.followUp(
+    ephemeralCard(makeErrorCard("Invalid Override", message)),
+  );
 }

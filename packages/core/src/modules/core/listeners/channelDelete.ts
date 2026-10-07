@@ -1,24 +1,25 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { DMChannel, NonThreadGuildBasedChannel } from "discord.js";
 import { clearStaleConfigRefs } from "../services/config-cleanup.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.ChannelDelete })
-export class ChannelDeleteListener extends Listener<
-  typeof Events.ChannelDelete
-> {
-  public async run(
+export const channelDeleteListener = defineListener({
+  name: "channelDeleteListener",
+  event: Events.ChannelDelete,
+  async execute(
+    services: Container,
     channel: DMChannel | NonThreadGuildBasedChannel,
   ): Promise<void> {
     const guild = "guild" in channel ? channel.guild : null;
     if (!guild) return;
     try {
-      await clearStaleConfigRefs(guild.id, channel.id, "channel");
+      await clearStaleConfigRefs(services, guild.id, channel.id, "channel");
     } catch (err: unknown) {
-      this.container.logger.warn(
+      services.logger.warn(
         `[ConfigCleanup] Channel cleanup for ${channel.id} failed:`,
         err,
       );
     }
-  }
-}
+  },
+});

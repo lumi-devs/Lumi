@@ -1,5 +1,5 @@
-import { Listener } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { GatewayDispatchPayload, APIGuild } from "discord-api-types/v10";
 import { logError } from "#lib/utilities/errors.js";
 import {
@@ -8,12 +8,10 @@ import {
 } from "@lumi/application/services/tempvc/voice-occupancy.js";
 import { listVcRecords } from "../data/tempvc.js";
 
-@ApplyOptions<Listener.Options>({
+const tempvcRawGuildCreate = defineListener({
   name: "tempvcRawGuildCreate",
   event: "raw",
-})
-export default class TempVcRawListener extends Listener {
-  public async run(packet: GatewayDispatchPayload): Promise<void> {
+  async execute(services: Container, packet: GatewayDispatchPayload): Promise<void> {
     if (packet.t !== "GUILD_CREATE") return;
     const g = packet.d as APIGuild & {
       voice_states?: ReadonlyArray<{
@@ -22,7 +20,7 @@ export default class TempVcRawListener extends Listener {
       }>;
     };
 
-    const records = await listVcRecords(g.id).catch(() => new Map());
+    const records = await listVcRecords(services, g.id).catch(() => new Map());
     await Promise.all(
       [...records.keys()].map((channelId) =>
         clearVoiceChannelOccupancy(channelId).catch(() => null),
@@ -33,5 +31,7 @@ export default class TempVcRawListener extends Listener {
     await seedVoiceStates(g.voice_states).catch((err: unknown) =>
       logError(`TempVC: voice-state seed failed for guild ${g.id}`, err),
     );
-  }
-}
+  },
+});
+
+export default tempvcRawGuildCreate;

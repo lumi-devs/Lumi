@@ -26,3 +26,13 @@ export const messages = {
     return call("discord.messages.edit", { channelId, messageId, payload });
   },
 };
+
+export const guilds = {
+  get(guildId: string): Promise<{ id: string; name: string } | null> {
+    return call("discord.guilds.get", { guildId });
+  },
+
+  fetchMember(guildId: string, userId: string): Promise<{ id: string; roles: string[]; premiumSince: number | null } | null> {
+    return call("discord.guilds.members.fetch", { guildId, userId });
+  },
+};

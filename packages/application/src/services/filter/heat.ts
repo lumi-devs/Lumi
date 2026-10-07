@@ -1,4 +1,4 @@
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 
 export interface HeatConfig {
   enabled: boolean;
@@ -50,7 +50,7 @@ export function decayHeat(
   decayPerMinute: number,
 ): number {
   if (decayPerMinute <= 0) return Math.max(0, stored);
-  const minutes = Math.max(0, (now - lastTs) / Time.Minute);
+  const minutes = Math.max(0, (now - lastTs) / Ms.Minute);
   return Math.max(0, stored - minutes * decayPerMinute);
 }
 

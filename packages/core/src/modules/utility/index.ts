@@ -1,9 +1,9 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
-@DefineModule({
+export const utilityModule = defineModule({
   name: "utility",
   displayName: "Utility",
   emoji: Emojis.Gear,
@@ -18,5 +18,4 @@ import { Emojis } from "#lib/utilities/assets.js";
       default: 10,
     }),
   }),
-})
-export class UtilityModule extends Module {}
+});

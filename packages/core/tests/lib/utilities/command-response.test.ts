@@ -18,7 +18,7 @@ import * as temporaryMessage from "#lib/utilities/temporary-message.js";
 // named reference here rather than cast after a normal import.
 const resolveKey = vi.fn();
 
-vi.mock("@sapphire/plugin-i18next", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   resolveKey,
 }));
 

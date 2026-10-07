@@ -3,38 +3,31 @@ import {
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
 } from "#lib/client/scheduled-tasks-queue.js";
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type {
-  ScheduledTaskHandler,
-  ScheduledTasksResolvable,
-  ScheduledTasksTaskOptions,
-} from "@sapphire/plugin-scheduled-tasks";
+  CreateTaskOptions,
+  TaskQueue,
+} from "#lib/scheduler-runner.js";
 import { JobQueue, type QueueJobOptions } from "@lumi/infrastructure/queues";
 
-function resolveTask(
-  task: ScheduledTasksResolvable,
-): { name: string; payload: unknown } {
+function resolveTask(task: string | { name: string; payload?: unknown }): {
+  name: string;
+  payload: unknown;
+} {
   if (typeof task === "string") return { name: task, payload: undefined };
   if ("payload" in task) return { name: task.name, payload: task.payload };
   return { name: task.name, payload: undefined };
 }
 
-/**
- * Producer-only Queue stand-in for worker shards to enqueue scheduled tasks
- * into BullMQ without spawning a worker.
- */
-export function installProducerOnlyTasks(): void {
+export function installProducerOnlyTasks(services: Container): void {
   const queue = new JobQueue(SCHEDULED_TASKS_QUEUE_NAME, {
     connection: getScheduledTasksConnectionOptions(),
     defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   });
 
-  const handler = {
+  const handler: TaskQueue = {
     queue: SCHEDULED_TASKS_QUEUE_NAME,
-    async create(
-      task: ScheduledTasksResolvable,
-      options?: ScheduledTasksTaskOptions | number,
-    ) {
+    async create(task, options?: CreateTaskOptions) {
       const { name, payload } = resolveTask(task);
       if (options === undefined) return queue.add(name, payload);
       if (typeof options === "number") {
@@ -59,5 +52,5 @@ export function installProducerOnlyTasks(): void {
     },
   };
 
-  container.tasks = handler as unknown as ScheduledTaskHandler;
+  services.tasks = handler;
 }

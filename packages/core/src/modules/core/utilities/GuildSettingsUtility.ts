@@ -1,6 +1,5 @@
-import { Utility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { Piece } from "@sapphire/framework";
+import { defineUtility } from "#lib/module-system/Utility.js";
+import type { Container } from "#lib/services.js";
 import type { Guild } from "@prisma/client";
 import {
   DefaultLanguage,
@@ -8,76 +7,84 @@ import {
   SupportedLanguages,
 } from "#lib/i18n/index.js";
 
-@ApplyOptions<Piece.Options>({ name: "guild-settings" })
-export class GuildSettingsUtility extends Utility {
-  public async setPrefix(guildId: string, newPrefix: string) {
+/**
+ * Shared guild-settings write: opens a guild transaction, rejects the change
+ * as a no-op when `isUnchanged`, otherwise applies `patch`. Always disposes
+ * the underlying lock.
+ */
+async function applyGuildUpdate(
+  services: Container,
+  guildId: string,
+  patch: Partial<Guild>,
+  isUnchanged: (current: Readonly<Guild>) => boolean,
+  unchangedMessage: string,
+): Promise<void> {
+  const tx = await services.db.transaction(guildId);
+  try {
+    if (isUnchanged(tx.settings)) throw new Error(unchangedMessage);
+    await tx.write(patch).submit();
+  } finally {
+    tx.dispose();
+  }
+}
+
+export const guildSettingsUtility = defineUtility({
+  name: "guild-settings",
+
+  async setPrefix(services: Container, guildId: string, newPrefix: string) {
     if (newPrefix.length > 5)
       throw new Error("Prefix must be 5 characters or less.");
 
-    await this.applyGuildUpdate(
+    await applyGuildUpdate(
+      services,
       guildId,
       { prefix: newPrefix },
       (s) => s.prefix === newPrefix,
       `Prefix is already set to \`${newPrefix}\`.`,
     );
-  }
+  },
 
-  public async resetPrefix(guildId: string) {
-    await this.applyGuildUpdate(
+  async resetPrefix(services: Container, guildId: string) {
+    await applyGuildUpdate(
+      services,
       guildId,
       { prefix: null },
       (s) => s.prefix === null,
       "Prefix is already unset (using default).",
     );
-  }
+  },
 
-  public async setLanguage(guildId: string, language: string) {
+  async setLanguage(services: Container, guildId: string, language: string) {
     if (!isSupportedLanguage(language)) {
       throw new Error(
         `Unsupported language. Supported: ${SupportedLanguages.join(", ")}.`,
       );
     }
 
-    await this.applyGuildUpdate(
+    await applyGuildUpdate(
+      services,
       guildId,
       { locale: language },
       (s) => s.locale === language,
       `Language is already set to ${language}.`,
     );
-  }
+  },
 
-  public async resetLanguage(guildId: string) {
-    await this.applyGuildUpdate(
+  async resetLanguage(services: Container, guildId: string) {
+    await applyGuildUpdate(
+      services,
       guildId,
       { locale: DefaultLanguage },
       (s) => s.locale === DefaultLanguage,
       `Language is already set to ${DefaultLanguage}.`,
     );
   }
+});
 
-  /**
-   * Shared guild-settings write: opens a guild transaction, rejects the change
-   * as a no-op when `isUnchanged`, otherwise applies `patch`. Always disposes
-   * the underlying lock.
-   */
-  private async applyGuildUpdate(
-    guildId: string,
-    patch: Partial<Guild>,
-    isUnchanged: (current: Readonly<Guild>) => boolean,
-    unchangedMessage: string,
-  ): Promise<void> {
-    const tx = await this.container.db.transaction(guildId);
-    try {
-      if (isUnchanged(tx.settings)) throw new Error(unchangedMessage);
-      await tx.write(patch).submit();
-    } finally {
-      tx.dispose();
-    }
-  }
-}
+export type GuildSettingsUtility = typeof guildSettingsUtility;
 
 declare module "#lib/module-system/Utility.js" {
   interface Utilities {
-    "guild-settings": GuildSettingsUtility;
+    "guild-settings": typeof guildSettingsUtility;
   }
 }

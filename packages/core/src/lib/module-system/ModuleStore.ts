@@ -1,10 +1,5 @@
-import {
-  Store,
-  container,
-  InteractionHandlerTypes,
-  type Command,
-} from "@sapphire/framework";
-import { Module } from "./Module.js";
+import type { Container } from "#lib/services.js";
+import type { ModuleObject } from "./Module.js";
 import type { ModuleMeta } from "./meta.js";
 import {
   metaFromManifest,
@@ -15,7 +10,7 @@ import {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { BaseValidator } from "@sapphire/shapeshift";
+import type { ZodType } from "zod";
 import {
   isDependencySatisfied,
   parseDependencySpec,
@@ -26,10 +21,17 @@ import {
   registerProxyCommands,
   unregisterProxyCommands,
 } from "#lib/addon-sandbox/proxy-command.js";
-import { ProxyModule } from "#lib/addon-sandbox/proxy-module.js";
-import { AddonInteractionRouter } from "#lib/addon-sandbox/interaction-router.js";
+import { createProxyModule } from "#lib/addon-sandbox/proxy-module.js";
+import { registerAddonInteractionRouting } from "#lib/addon-sandbox/interaction-router.js";
+import { attachListeners } from "#lib/listeners/listener-loader.js";
+import { loadInteractionHandlers } from "#lib/interactions/interaction-dispatch.js";
+import { commandRegistry, loadCommandDefs } from "#lib/commands/command-def.js";
 import { AddonRelayTaskName } from "#lib/addon-sandbox/relay-task.js";
 import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import {
+  loadUtilities,
+  unloadUtilitiesForDir,
+} from "./Utility.js";
 
 type ModuleState =
   "discovered" | "loaded" | "failed" | "disabled" | "skipped-conflict";
@@ -40,27 +42,17 @@ export interface ModuleRecord {
   indexUrl: string;
   enabled: boolean;
   meta: ModuleMeta;
-  /** Static manifest when discovery was manifest-driven (no code executed). */
   manifest?: ModuleManifest;
-  /** Service that owns this module (workers run feature modules). */
   targetUtility: TargetUtility;
   state?: ModuleState;
   failureReason?: string;
 }
 
-/** True when `child` is `parent` itself or a path nested beneath it. */
 function isPathInside(child: string | undefined | null, parent: string): boolean {
   if (!child || !parent) return false;
   return child === parent || child.startsWith(parent + path.sep);
 }
 
-/** True if the error is a missing piece error from Sapphire. */
-function isMissingPieceError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes("does not exist");
-}
-
-/** Resolve a module's `meta` export from a dynamically imported index module. */
 function extractModuleMeta(mod: {
   meta?: ModuleMeta;
   default?: { meta?: ModuleMeta };
@@ -75,33 +67,55 @@ function extractModuleMeta(mod: {
   return undefined;
 }
 
-/**
- * A specialized Sapphire {@link Store} that discovers, loads, and manages lifecycle events for Lumi modules.
- * This store handles dependency resolution, conflict detection, and runtime enabling/disabling of modules.
- */
-export class ModuleStore extends Store<Module> {
+type ModuleDef = Omit<ModuleObject, "dir"> & { dir?: string };
+
+function findModuleDef(
+  mod: Record<string, unknown>,
+  name: string,
+): ModuleDef | undefined {
+  const candidates = [mod.default, ...Object.values(mod)];
+  for (const v of candidates) {
+    if (typeof v === "function") continue;
+    if (typeof v !== "object" || v === null) continue;
+    const def = v as ModuleDef & { __lumiModule?: unknown };
+    if (def.__lumiModule !== true) continue;
+    if (!def.name || def.name === name) return def;
+  }
+  return undefined;
+}
+
+export class ModuleStore {
+  readonly #services: Container;
   readonly #roots: URL[] = [];
   #discovered = false;
   #records = new Map<string, ModuleRecord>();
+  #modules = new Map<string, ModuleObject>();
   #invalidationListenerSet = false;
-  #guarded = new WeakSet<Command>();
-  #schemaCache = new Map<string, BaseValidator<any> | undefined>();
+  #schemaCache = new Map<string, ZodType<any> | undefined>();
   readonly #addons = new AddonHost();
   #addonRoutingReady = false;
+  #loaderDetach = new Map<string, Array<() => void>>();
 
-  public constructor() {
-    super(Module, { name: "modules" });
+  public constructor(services: Container) {
+    this.#services = services;
   }
 
   public addRoot(root: URL) {
     this.#roots.push(root);
   }
 
-  /**
-   * Determines whether a module was discovered outside the core modules root (i.e. it's an addon).
-   *
-   * @returns `true` if the module's directory is not nested under the first registered root.
-   */
+  public get(name: string): ModuleObject | undefined {
+    return this.#modules.get(name);
+  }
+
+  public values(): IterableIterator<ModuleObject> {
+    return this.#modules.values();
+  }
+
+  public get size(): number {
+    return this.#modules.size;
+  }
+
   public isAddonModule(record: ModuleRecord): boolean {
     return this.#isAddonPath(record.dir);
   }
@@ -116,75 +130,46 @@ export class ModuleStore extends Store<Module> {
     this.#addons.stopAll();
   }
 
-  /**
-   * Discovers and loads all modules from the registered root paths, respecting global enabled states and resolving dependencies.
-   */
-  public override async loadAll() {
+  public async loadAll() {
     await this.discover();
 
-    const rootPaths = this.#roots.map((r) => path.resolve(fileURLToPath(r)));
-    const removedPaths: string[] = [];
-    for (const p of this.paths) {
-      const resolvedP = path.resolve(p);
-      if (rootPaths.some((root) => isPathInside(resolvedP, root))) {
-        removedPaths.push(p);
-      }
-    }
-    for (const p of removedPaths) this.paths.delete(p);
-
-    await super.loadAll();
-
-    for (const p of removedPaths) this.paths.add(p);
-
     for (const record of this.#records.values()) {
-      if (record.enabled) {
-        try {
-          // Addons take the sandbox path here too. Sapphire's loader imports a
-          // file before checking what it exports, so importing an addon's index
-          // to find out whether it is one would already have run its code in
-          // this process.
-          if (this.isAddonModule(record)) {
-            await this.#loadAddon(record);
-            continue;
-          }
-          const indexPath = await this.#findIndex(record.dir);
-          if (indexPath) await this.load(record.dir, path.basename(indexPath));
-          record.state = "loaded";
-        } catch (err: unknown) {
-          record.state = "failed";
-          record.enabled = false;
-          record.failureReason =
-            err instanceof Error ? err.message : String(err);
-          container.logger.error(
-            `[ModuleStore] Module "${record.name}" failed to load:`,
-            err,
-          );
+      if (!record.enabled) continue;
+      try {
+        if (this.isAddonModule(record)) {
+          await this.#loadAddon(record);
+          continue;
         }
+        await this.#loadIndex(record);
+        record.state = "loaded";
+      } catch (err: unknown) {
+        record.state = "failed";
+        record.enabled = false;
+        record.failureReason =
+          err instanceof Error ? err.message : String(err);
+        this.#services.logger.error(
+          `[ModuleStore] Module "${record.name}" failed to load:`,
+          err,
+        );
       }
     }
 
     try {
-      const stateMap = await container.db.modules.getGlobalModuleStates();
-      for (const module of this.values()) {
+      const stateMap = await this.#services.db.modules.getGlobalModuleStates();
+      for (const module of this.#modules.values()) {
         module.enabled = stateMap.get(module.name) ?? true;
       }
     } catch (err: unknown) {
-      container.logger.error("[ModuleStore] DB sync failed:", err);
+      this.#services.logger.error("[ModuleStore] DB sync failed:", err);
     }
 
     this.#setupInvalidationListener();
   }
 
-  /**
-   * Discovers modules across all registered roots without fully loading them into memory, computing topological load order and conflicts.
-   *
-   * @param force - If true, forces rediscovery even if modules were already discovered.
-   * @param bustCache - If true, bypasses the import cache for dynamic imports.
-   */
   public async discover(force = false, bustCache = false) {
     if (this.#discovered && !force) return;
 
-    const globalState = await container.db.modules.getGlobalModuleStates();
+    const globalState = await this.#services.db.modules.getGlobalModuleStates();
     const found = new Map<string, ModuleRecord>();
 
     for (const root of this.#roots) {
@@ -207,41 +192,20 @@ export class ModuleStore extends Store<Module> {
     }
 
     this.#applyConflicts();
-
-    const topo = this.#topoSort();
-    for (const name of topo) {
-      const record = this.#records.get(name)!;
-      if (!record.enabled) continue;
-      // Registering an addon's directory would have Sapphire load its pieces
-      // into this process, which is the boundary the sandbox exists to draw.
-      if (this.isAddonModule(record)) continue;
-
-      container.stores.registerPath(record.dir);
-    }
+    this.#topoSort();
 
     this.#discovered = true;
   }
 
-  /** Reloads a specific module dynamically by unloading and re-discovering it. */
   public async reload(name: string) {
     return withSerializedWork(`module-store:enable:${name}`, async () => {
-      try {
-        await this.unload(name);
-      } catch (err: unknown) {
-        if (!isMissingPieceError(err)) throw err;
-      }
+      await this.unload(name).catch(() => undefined);
       await this.discover(true, true);
       await this.loadModule(name);
     });
   }
 
-  /**
-   * Unloads a module and all its associated pieces (commands, listeners, etc.) from their respective stores.
-   *
-   * @param nameOrPiece - The name of the module, or the {@link Module} instance itself.
-   * @returns The unloaded module instance.
-   */
-  public override async unload(nameOrPiece: string | Module): Promise<Module> {
+  public async unload(nameOrPiece: string | ModuleObject): Promise<ModuleObject | undefined> {
     const name =
       typeof nameOrPiece === "string" ? nameOrPiece : nameOrPiece.name;
     const record = this.#records.get(name);
@@ -252,21 +216,18 @@ export class ModuleStore extends Store<Module> {
     }
 
     if (record) {
-      for (const store of container.stores.values()) {
-        const storePath = `${record.dir}/${store.name}`;
-        store.paths?.delete(storePath);
-
-        if (store === this) continue;
-
-        for (const piece of [...store.values()]) {
-          if (this.#isInsideModule(record, piece.location.full)) {
-            await store.unload(piece.name);
-          }
-        }
+      this.detachModuleLoaders(record.dir);
+      await unloadUtilitiesForDir(record.dir).catch(() => undefined);
+      for (const def of commandRegistry.values()) {
+        if (def.module === name) await def.onUnload?.();
       }
     }
 
-    const result = await super.unload(nameOrPiece);
+    const module = this.#modules.get(name);
+    if (module) {
+      await module.onUnload?.(this.#services);
+      this.#modules.delete(name);
+    }
 
     if (record && !(await this.#exists(record.dir))) {
       this.#records.delete(name);
@@ -277,12 +238,9 @@ export class ModuleStore extends Store<Module> {
       record.failureReason = undefined;
     }
 
-    return result;
+    return module;
   }
 
-  /**
-   * Checks whether a module can be disabled.
-   */
   public isModuleDisableable(name: string): boolean {
     const record = this.#records.get(name);
     return record ? record.meta.disableable !== false : true;
@@ -300,12 +258,10 @@ export class ModuleStore extends Store<Module> {
       if (enabled) {
         await this.loadModule(name);
       } else {
-        await this.unload(name).catch((err: unknown) => {
-          if (!isMissingPieceError(err)) throw err;
-        });
+        await this.unload(name).catch(() => undefined);
       }
 
-      await container.db.modules.setModuleGlobalEnabled(name, enabled, reason);
+      await this.#services.db.modules.setModuleGlobalEnabled(name, enabled, reason);
 
       record.enabled = enabled;
       record.state = enabled ? "loaded" : "disabled";
@@ -336,9 +292,6 @@ export class ModuleStore extends Store<Module> {
     return `module-store:enable:${name}`;
   }
 
-  /**
-   * Retrieves all module records currently tracked by the store.
-   */
   public all() {
     return Array.from(this.#records.values());
   }
@@ -347,7 +300,6 @@ export class ModuleStore extends Store<Module> {
     return this.#records.get(name);
   }
 
-  /** Resolves which module owns a given piece location (absolute path). */
   public moduleNameForLocation(fullPath: string): string | null {
     let best: ModuleRecord | null = null;
     for (const record of this.#records.values()) {
@@ -358,176 +310,93 @@ export class ModuleStore extends Store<Module> {
     return best?.name ?? null;
   }
 
-  /** Ensures commands belonging to a module carry the `ModuleEnabled` precondition. */
-  public attachModuleGuards() {
-    const commands = container.stores.get("commands");
-    for (const command of commands.values()) {
-      if (this.#guarded.has(command)) continue;
-      const moduleName = this.moduleNameForLocation(command.location.full);
-      if (!moduleName) continue;
-
-      const declared = command.options.preconditions;
-      const alreadyDeclared =
-        Array.isArray(declared) &&
-        declared.some(
-          (p) =>
-            p === "ModuleEnabled" ||
-            (typeof p === "object" &&
-              p !== null &&
-              "name" in p &&
-              p.name === "ModuleEnabled"),
-        );
-      if (!alreadyDeclared) command.preconditions.append("ModuleEnabled");
-      this.#guarded.add(command);
-    }
-  }
-
-  /**
-   * Retrieves all fully loaded module records.
-   */
   public loaded(): ModuleRecord[] {
-    return Array.from(this.values())
+    return Array.from(this.#modules.values())
       .map((m) => this.#records.get(m.name))
       .filter((r): r is ModuleRecord => r !== undefined);
   }
 
-  /** Every module's entry file is `index.ts`; rename the piece to its declared module name so Sapphire's name-collision eviction in `insert()` doesn't unload one module per subsequent module load. */
-  public override construct(
-    ...args: Parameters<Store<Module>["construct"]>
-  ): Module {
-    const [Ctor, data] = args;
-    const record = [...this.#records.values()].find(
-      (r) => r.dir === data.root,
-    );
-    return super.construct(Ctor, record ? { ...data, name: record.name } : data);
+  public async attachModuleLoaders(record: ModuleRecord): Promise<void> {
+    this.detachModuleLoaders(record.dir);
+    this.#loaderDetach.set(record.dir, [
+      await attachListeners(this.#services, this.#services.client, record.dir),
+    ]);
+    await loadInteractionHandlers(record.dir);
+    await loadCommandDefs(record.dir);
+    await loadUtilities(record.dir);
   }
 
-  /** Loads a module and its pieces via Sapphire's store system. */
+  public detachModuleLoaders(dir: string): void {
+    const fns = this.#loaderDetach.get(dir) ?? [];
+    this.#loaderDetach.delete(dir);
+    for (const fn of fns) fn();
+  }
+
   public async loadModule(name: string): Promise<void> {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
 
     if (this.isAddonModule(record)) return this.#loadAddon(record);
 
-    const failures: Error[] = [];
-
-    for (const store of container.stores.values()) {
-      if (store === this) continue;
-
-      const storePath = path.join(record.dir, store.name);
-      if (!(await this.#exists(storePath))) continue;
-
-      store.registerPath(storePath);
-
-      if (store.name === "interaction-handlers") {
-        for (const subdir of ["buttons", "selects", "modals", "autocomplete"]) {
-          const subPath = path.join(record.dir, "interactions", subdir);
-          if (await this.#exists(subPath)) store.registerPath(subPath);
-        }
-      }
-    }
-
     try {
-      await container.stores.load();
+      await this.#loadIndex(record);
     } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      failures.push(error);
-      container.logger.error(
-        `[ModuleStore] Failed to load pieces for module ${name}:`,
-        error,
-      );
-    }
-
-    try {
-      const mod = await import(record.indexUrl);
-      const meta = extractModuleMeta(mod);
-      if (meta?.configSchema) {
-        this.#schemaCache.set(name, meta.configSchema);
-      }
-      // insert (not set) so onLoad/onUnload lifecycle runs.
-      await this.insert(
-        new mod.default({ name: record.name, root: record.dir, store: this }, meta),
-      );
-      record.meta = meta ?? record.meta;
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      failures.push(error);
-      container.logger.error(
+      const reason = err instanceof Error ? err.message : String(err);
+      this.#services.logger.error(
         `[ModuleStore] Failed to load module index for ${name}:`,
-        error,
+        err,
       );
-    }
-
-    if (failures.length > 0) {
-      const failureReason = failures.map((err) => err.message).join("; ");
       await this.unload(name).catch(() => undefined);
       record.enabled = false;
       record.state = "failed";
-      record.failureReason = failureReason;
+      record.failureReason = reason;
       throw new Error(`Module ${name} failed to load: ${record.failureReason}`);
     }
 
-    this.attachModuleGuards();
+    await this.attachModuleLoaders(record);
     record.enabled = true;
     record.state = "loaded";
     record.failureReason = undefined;
   }
 
-  /**
-   * The two host-side pieces every sandboxed addon shares: one interaction
-   * handler that routes components by custom-id prefix, and one fire handler
-   * that routes scheduled jobs back into the addon that queued them.
-   */
+  async #loadIndex(record: ModuleRecord): Promise<void> {
+    const mod = await import(record.indexUrl);
+    const def = findModuleDef(mod, record.name);
+    if (!def)
+      throw new Error(`No module definition export found in ${record.indexUrl}`);
+    const module: ModuleObject = { ...def, dir: record.dir };
+    await module.onLoad?.(this.#services);
+    this.#modules.set(record.name, module);
+    if (def.meta) record.meta = def.meta;
+    const schema = def.meta?.configSchema ?? def.configSchema;
+    if (schema) {
+      this.#schemaCache.set(record.name, schema);
+    }
+  }
+
   #ensureAddonRouting() {
     if (this.#addonRoutingReady) return;
     this.#addonRoutingReady = true;
 
-    // A respawned child re-reports its pieces; a failed one leaves none behind.
     this.#addons.onRespawn = (record, commands) =>
       registerProxyCommands(this.#addons, record.name, record.dir, commands);
     this.#addons.onFailed = (record) => unregisterProxyCommands(record.dir);
 
-    const store = container.stores.get("interaction-handlers");
-    // Sapphire dispatches components and modal submits down separate paths, so
-    // the same router is registered once for each.
-    for (const [name, type] of [
-      ["addon-component-router", InteractionHandlerTypes.MessageComponent],
-      ["addon-modal-router", InteractionHandlerTypes.ModalSubmit],
-    ] as const) {
-      store.set(
-        name,
-        new AddonInteractionRouter(
-          { name, path: "", root: "", store },
-          this.#addons,
-          name,
-          type,
-        ),
-      );
-    }
+    registerAddonInteractionRouting(this.#addons);
 
-    registerTaskFireHandler(AddonRelayTaskName, "unicast", async (payload) => {
+    registerTaskFireHandler(AddonRelayTaskName, "unicast", async (_services, payload) => {
       await this.#addons.fireTask(payload.addon, payload.task, payload.payload);
     });
   }
 
-  /**
-   * Addons never load into this process. Their code runs in a child process
-   * that holds no bot token, database URL or Valkey URL; what lands here is a
-   * set of proxy command pieces that forward invocations across the boundary.
-   */
   async #loadAddon(record: ModuleRecord) {
     this.#ensureAddonRouting();
     try {
       const commands = await this.#addons.start(record);
       registerProxyCommands(this.#addons, record.name, record.dir, commands);
-      // insert (not set) so onLoad/onUnload lifecycle runs.
-      await this.insert(
-        new ProxyModule(
-          { name: record.name, path: record.dir, root: record.dir, store: this },
-          { ...record.meta, name: record.name },
-        ),
-      );
-      this.attachModuleGuards();
+      const module = createProxyModule(record.name, record.dir, record.meta);
+      await module.onLoad?.(this.#services);
+      this.#modules.set(record.name, module);
       record.enabled = true;
       record.state = "loaded";
       record.failureReason = undefined;
@@ -541,14 +410,9 @@ export class ModuleStore extends Store<Module> {
     }
   }
 
-  /**
-   * Retrieves the configuration schema for a specific module, extracting it from the module's meta export.
-   *
-   * @returns The shape validation schema, or `undefined` if none is defined.
-   */
   public async getConfigSchema(
     name: string,
-  ): Promise<BaseValidator<any> | undefined> {
+  ): Promise<ZodType<any> | undefined> {
     if (this.#schemaCache.has(name)) return this.#schemaCache.get(name);
 
     const record = this.#records.get(name);
@@ -558,8 +422,6 @@ export class ModuleStore extends Store<Module> {
       return record.meta.configSchema;
     }
 
-    // An addon's schema comes from its manifest's `configFields`; importing its
-    // index to read a live `configSchema` would run addon code in this process.
     if (this.isAddonModule(record)) return undefined;
 
     try {
@@ -568,7 +430,7 @@ export class ModuleStore extends Store<Module> {
       this.#schemaCache.set(name, meta?.configSchema);
       return meta?.configSchema;
     } catch (err: unknown) {
-      container.logger.error(
+      this.#services.logger.error(
         `[ModuleStore] Failed to load configSchema for ${name}:`,
         err,
       );
@@ -577,19 +439,19 @@ export class ModuleStore extends Store<Module> {
   }
 
   #setupInvalidationListener() {
-    if (this.#invalidationListenerSet || !container.invalidation) return;
+    if (this.#invalidationListenerSet || !this.#services.invalidation) return;
     this.#invalidationListenerSet = true;
 
     const prefix = "lumi:module:global:enabled:";
 
-    container.invalidation.onInvalidate(async (keys) => {
+    this.#services.invalidation.onInvalidate(async (keys) => {
       for (const key of keys) {
         if (!key.startsWith(prefix)) continue;
         await this.#syncModuleEnabled(key.slice(prefix.length));
       }
     });
 
-    container.invalidation.onResync(async () => {
+    this.#services.invalidation.onResync(async () => {
       await Promise.all(
         [...this.#records.keys()].map((name) => this.#syncModuleEnabled(name)),
       );
@@ -602,7 +464,7 @@ export class ModuleStore extends Store<Module> {
       const record = this.#records.get(name);
       if (!record) return;
 
-      const newEnabled = await container.db.modules.isModuleGlobalEnabled(name);
+      const newEnabled = await this.#services.db.modules.isModuleGlobalEnabled(name);
       if (record.enabled === newEnabled) return;
 
       record.enabled = newEnabled;
@@ -610,11 +472,11 @@ export class ModuleStore extends Store<Module> {
 
       if (newEnabled) {
         await this.loadModule(name).catch((err) =>
-          container.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
+          this.#services.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
         );
       } else {
         await this.unload(name).catch((err) =>
-          container.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
+          this.#services.logger.error(`[ModuleStore] Cluster unload failed: ${name}`, err),
         );
       }
     });
@@ -660,10 +522,7 @@ export class ModuleStore extends Store<Module> {
         const effectiveIndex = indexPath || path.join(sub, "manifest.json");
         this.#ingestManifest(sub, effectiveIndex, manifest, found, globalState);
       } else if (indexPath && this.#isAddonPath(sub)) {
-        // Discovering a built-in reads its `meta` by importing it. Doing that
-        // for an addon would run its top-level code in this process before any
-        // sandbox exists, so an addon must describe itself in a manifest.
-        container.logger.warn(
+        this.#services.logger.warn(
           `[ModuleStore] Ignoring addon without a manifest.json: ${sub}`,
         );
       } else if (indexPath) {
@@ -746,7 +605,7 @@ export class ModuleStore extends Store<Module> {
         this.#buildRecord(meta.name, dir, indexPath, meta, globalState, "worker"),
       );
     } catch (err: unknown) {
-      container.logger.error(`[ModuleStore] Import failed: ${indexPath}`, err);
+      this.#services.logger.error(`[ModuleStore] Import failed: ${indexPath}`, err);
     }
   }
 
@@ -755,7 +614,7 @@ export class ModuleStore extends Store<Module> {
       for (const conflict of record.meta.conflicts ?? []) {
         const other = this.#records.get(conflict);
         if (other?.enabled) {
-          container.logger.warn(
+          this.#services.logger.warn(
             `[ModuleStore] Disabling conflicting module: ${conflict} (conflict with ${record.name})`,
           );
           other.enabled = false;
@@ -770,7 +629,7 @@ export class ModuleStore extends Store<Module> {
       record.enabled = false;
       record.state = "failed";
       record.failureReason = reason;
-      container.logger.error(`[ModuleStore] Disabling module "${name}": ${reason}`);
+      this.#services.logger.error(`[ModuleStore] Disabling module "${name}": ${reason}`);
     }
     broken.add(name);
   }
@@ -796,16 +655,12 @@ export class ModuleStore extends Store<Module> {
 
       const record = this.#records.get(name);
       if (!record) {
-        container.logger.error(`[ModuleStore] Missing dependency: ${name}`);
+        this.#services.logger.error(`[ModuleStore] Missing dependency: ${name}`);
         broken.add(name);
         return false;
       }
 
       if (!record.enabled) {
-        // Disabled, not broken - do not log or set a failureReason. Still
-        // must report "unavailable" to any dependent visiting it, and must
-        // do so consistently on every visit, so it's tracked as `broken`
-        // too rather than only being skipped from `order`.
         visited.add(name);
         broken.add(name);
         return false;
@@ -851,11 +706,5 @@ export class ModuleStore extends Store<Module> {
 
     for (const name of this.#records.keys()) visit(name);
     return order;
-  }
-}
-
-declare module "@sapphire/framework" {
-  interface StoreRegistryEntries {
-    modules: ModuleStore;
   }
 }

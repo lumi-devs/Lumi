@@ -1,6 +1,10 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";
@@ -15,11 +19,6 @@ import {
   buildOverridesView,
 } from "#modules/core/ui/overrides.js";
 import { ConfigSelectId } from "../../constants.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
 import type { AnySelectMenuInteraction } from "discord.js";
 import { OverrideTargetType, type $Enums } from "@prisma/client";
 
@@ -29,34 +28,16 @@ function isOverrideTargetType(
   return (Object.values(OverrideTargetType) as string[]).includes(value);
 }
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "config-panel-select",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export class ConfigPanelSelectHandler extends LumiInteractionHandler {
-  private get cfg(): ConfigUtility {
-    return getUtility("config");
-  }
-
-  public override parse(interaction: AnySelectMenuInteraction) {
+export const configPanelSelect = defineInteraction({
+  prefix: ConfigSelectId.prefix,
+  async run(services: Container, interaction: AnySelectMenuInteraction) {
     const parsed = ConfigSelectId.parse(interaction.customId);
-    if (!parsed) return this.none();
+    if (!parsed) return;
     const { action, moduleName, rest } = parsed;
     const [key, page] = rest;
-    return this.some({ action, moduleName, key, page });
-  }
-
-  public async run(
-    interaction: AnySelectMenuInteraction,
-    {
-      action,
-      moduleName,
-      key,
-      page,
-    }: { action: string; moduleName: string; key: string; page?: string },
-  ) {
+    const cfg: ConfigUtility = getUtility("config");
     if (!interaction.inGuild()) return;
-    await this.acknowledge(interaction);
+    await acknowledge(interaction);
     if (!(await hasPanelAccess(interaction))) throw configAccessDenied();
     const { guildId } = interaction;
     const t = await fetchTyped(interaction);
@@ -68,25 +49,27 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
           ? interaction.values[0]
           : undefined;
         if (!selected || selected === "_none") return;
-        return this.#renderDetail(interaction, guildId, selected, 0, t);
+        return renderDetail(services, interaction, guildId, selected, 0, t);
       }
       case "gsel": {
         if (!interaction.isStringSelectMenu()) return;
         const section = parseInt(interaction.values[0] ?? "0", 10) || 0;
-        return this.#renderDetail(interaction, guildId, moduleName, section, t);
+        return renderDetail(services, interaction, guildId, moduleName, section, t);
       }
       case "enum": {
         if (!interaction.isStringSelectMenu() || !key) return;
         const value = interaction.values[0];
         if (value !== undefined)
-          await this.cfg.setConfig(
+          await cfg.setConfig(
+            services,
             guildId,
             moduleName,
             key,
             value,
             interaction.user.id,
           );
-        return this.#renderDetail(
+        return renderDetail(
+          services,
           interaction,
           guildId,
           moduleName,
@@ -99,14 +82,15 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
       case "user": {
         if (!key) return;
         if (interaction.values.length > 0) {
-          const field = this.container.moduleStore
+          const field = services.moduleStore
             .getRecord(moduleName)
             ?.meta.configFields?.find((f) => f.key === key);
           const multi =
             field?.type === FieldType.MultiRole ||
             field?.type === FieldType.MultiChannel ||
             field?.type === FieldType.MultiUser;
-          await this.cfg.setConfig(
+          await cfg.setConfig(
+            services,
             guildId,
             moduleName,
             key,
@@ -114,13 +98,14 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
             interaction.user.id,
           );
         } else {
-          await this.container.db.config.deleteModuleConfigKey(
+          await services.db.config.deleteModuleConfigKey(
             guildId,
             moduleName,
             key,
           );
         }
-        return this.#renderDetail(
+        return renderDetail(
+          services,
           interaction,
           guildId,
           moduleName,
@@ -135,7 +120,7 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
         const parsedHistoryId = Number(historyId);
         if (!Number.isInteger(parsedHistoryId)) return;
         const entry =
-          await this.container.db.configHistory.getConfigHistoryEntry(
+          await services.db.configHistory.getConfigHistoryEntry(
             parsedHistoryId,
           );
         if (
@@ -144,7 +129,8 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
           entry.oldValue !== null &&
           entry.oldValue !== undefined
         ) {
-          await this.cfg.setConfig(
+          await cfg.setConfig(
+            services,
             guildId,
             entry.moduleName,
             entry.key,
@@ -157,11 +143,11 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
             interaction.user.id,
           );
         }
-        const entries = await this.container.db.configHistory.getConfigHistory(
+        const entries = await services.db.configHistory.getConfigHistory(
           guildId,
           moduleName,
         );
-        const record = this.container.moduleStore.getRecord(moduleName);
+        const record = services.moduleStore.getRecord(moduleName);
         if (!record) return;
         return interaction.editReply(buildHistoryView(record.meta, entries));
       }
@@ -172,7 +158,7 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
         const [modelType, modelId, ovKey] = raw.split("|");
         if (!modelType || !modelId || !ovKey) return;
         if (!isOverrideTargetType(modelType)) return;
-        await this.container.db.configOverrides.deleteConfigOverride({
+        await services.db.configOverrides.deleteConfigOverride({
           guildId,
           moduleName,
           key: ovKey,
@@ -180,11 +166,11 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
           modelId,
         });
         const overrides =
-          await this.container.db.configOverrides.getConfigOverrides(
+          await services.db.configOverrides.getConfigOverrides(
             guildId,
             moduleName,
           );
-        const record = this.container.moduleStore.getRecord(moduleName);
+        const record = services.moduleStore.getRecord(moduleName);
         if (!record) return;
         return interaction.editReply(
           buildOverridesView(record.meta, overrides),
@@ -193,16 +179,18 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
       default:
         return undefined;
     }
-  }
+  },
+});
 
-  async #renderDetail(
+async function renderDetail(
+  services: Container,
     interaction: AnySelectMenuInteraction,
     guildId: string,
     moduleName: string,
     fieldPage = 0,
     t?: LumiT,
   ) {
-    const detail = await loadDetail(guildId, moduleName);
+    const detail = await loadDetail(services, guildId, moduleName);
     if (!detail) return;
     return interaction.editReply(
       buildFeatureDetailView(
@@ -213,5 +201,4 @@ export class ConfigPanelSelectHandler extends LumiInteractionHandler {
         t,
       ),
     );
-  }
 }

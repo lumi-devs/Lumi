@@ -1,11 +1,11 @@
 import os from "node:os";
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Prisma } from "@prisma/client";
 import { version as djsVersion } from "discord.js";
-import { container, version as sapphireVersion } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
 
@@ -100,7 +100,6 @@ export interface PingData {
   messagesPerMin: number;
 
   djsVersion: string;
-  sapphireVersion: string;
   prismaVersion: string;
 }
 
@@ -116,7 +115,7 @@ let cachedCommandsPerSec = 0;
 let cachedMessagesPerMin = 0;
 let cachedTxRate = 0;
 
-function recordInvocation(wsPing: number) {
+function recordInvocation(services: Container, wsPing: number) {
   sessionCommandCount++;
   if (wsPing > 0) {
     PingHistory.push(wsPing);
@@ -129,9 +128,9 @@ function recordInvocation(wsPing: number) {
   if (delta >= 2) {
     cachedCommandsPerSec = (sessionCommandCount - lastCmdCount) / delta;
     cachedMessagesPerMin =
-      ((container.stats.messages - lastMsgCount) / delta) * 60;
+      ((services.stats.messages - lastMsgCount) / delta) * 60;
     lastCmdCount = sessionCommandCount;
-    lastMsgCount = container.stats.messages;
+    lastMsgCount = services.stats.messages;
     lastSampleTime = now;
   }
 }
@@ -232,13 +231,13 @@ const rdStat: TtlCache<ReturnType<typeof valkeyStats>> = {
   at: 0,
 };
 
-async function probePrisma() {
-  return container.db.probePrisma();
+async function probePrisma(services: Container) {
+  return services.db.probePrisma();
 }
 
-async function postgresStats() {
+async function postgresStats(services: Container) {
   try {
-    const { overview: ov, tables, tx } = await container.db.getPostgresStats();
+    const { overview: ov, tables, tx } = await services.db.getPostgresStats();
 
     const commits = tx ? parseInt(tx.commits, 10) : 0;
     const now = Date.now();
@@ -440,11 +439,11 @@ let lastCollect: {
 } | null = null;
 const CollectTtlMs = 5_000;
 
-export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
+export async function collectPingData(services: Container): Promise<Omit<PingData, "roundTrip">> {
   if (lastCollect && Date.now() - lastCollect.at < CollectTtlMs) {
     return lastCollect.data;
   }
-  const data = await collectPingDataFresh();
+  const data = await collectPingDataFresh(services);
   lastCollect = { at: Date.now(), data };
   return data;
 }
@@ -455,11 +454,11 @@ export function resetPingCachesForTests(): void {
   lastCollect = null;
 }
 
-async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
-  const { client, valkey, moduleStore, stats } = container;
+async function collectPingDataFresh(services: Container): Promise<Omit<PingData, "roundTrip">> {
+  const { client, valkey, moduleStore, stats } = services;
   const wsPing = client.ws.ping ?? 0;
 
-  recordInvocation(wsPing);
+  recordInvocation(services, wsPing);
 
   const cpuBefore = process.cpuUsage();
   const nsBefore = process.hrtime.bigint();
@@ -477,10 +476,10 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     gatewayNode,
   ] = await Promise.all([
     measureLoopLag(),
-    probePrisma().catch(() => null),
+    probePrisma(services).catch(() => null),
     probeValkeyRead(valkey).catch(() => null),
     probeValkeyWrite(valkey).catch(() => null),
-    ttlCached(pgStat, postgresStats),
+    ttlCached(pgStat, () => postgresStats(services)),
     ttlCached(rdStat, () => valkeyStats(valkey)),
     hostStats(),
     countDeps(),
@@ -565,7 +564,6 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     messagesPerMin: cachedMessagesPerMin,
 
     djsVersion,
-    sapphireVersion,
     prismaVersion,
   };
 }

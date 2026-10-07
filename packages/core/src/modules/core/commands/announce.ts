@@ -1,4 +1,5 @@
-import { BaseCommand } from "#lib/commands.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { CommandContext } from "#lib/command-context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
@@ -7,8 +8,6 @@ import {
   runGlobalAnnounce,
   type AnnounceSummary,
 } from "../services/global-announce.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
 
 const AnnounceChannelConfigKey = "announce_channel_id";
 const MaxFailedGuildsShown = 10;
@@ -32,31 +31,27 @@ function buildAnnounceReportCard(summary: AnnounceSummary): CardReply {
     : makeSuccessCard("Announcement Sent", body);
 }
 
-@ApplyOptions<BaseCommand.Options>({
+export const announceDef: CommandDef = {
   name: "announce",
   description: "Broadcast a message to every server (Bot Owner Only)",
-  preconditions: ["BotOwner"],
+  botOwner: true,
   prefixEnabled: true,
-})
-export class AnnounceCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((o) =>
-          o
-            .setName("message")
-            .setDescription("Announcement text sent to every server")
-            .setRequired(true)
-            .setMaxLength(2000),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext): Promise<void> {
+  build: () => {
+    const b = new SlashCommandBuilder().setName("announce");
+    return (
+    b
+            .setName("announce")
+            .setDescription("Broadcast a message to every server (Bot Owner Only)")
+            .addStringOption((o) =>
+              o
+                .setName("message")
+                .setDescription("Announcement text sent to every server")
+                .setRequired(true)
+                .setMaxLength(2000),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     await ctx.defer();
     const message = (await ctx.getString("message", { required: true, rest: true }))!;
     if (message.trim().length === 0) {
@@ -67,7 +62,7 @@ export class AnnounceCommand extends BaseCommand {
       return;
     }
 
-    const guilds = [...this.container.client.guilds.cache.values()];
+    const guilds = [...ctx.services.client.guilds.cache.values()];
     if (guilds.length === 0) {
       await ctx.replyError(
         `${Emojis.Cross} No Servers`,
@@ -85,7 +80,7 @@ export class AnnounceCommand extends BaseCommand {
     const summary = await runGlobalAnnounce(guilds, async (guild) => {
       let configured: string | null = null;
       try {
-        const stored = await this.container.db.config.getModuleConfig(
+        const stored = await ctx.services.db.config.getModuleConfig(
           guild.id,
           "core",
           AnnounceChannelConfigKey,
@@ -104,9 +99,9 @@ export class AnnounceCommand extends BaseCommand {
       }
     });
 
-    this.container.logger.info(
+    ctx.services.logger.info(
       `[Announce] ${Emojis.Bell} Broadcast by ${ctx.user.tag}: ${summary.sent} sent, ${summary.failed} failed, ${summary.skipped} skipped`,
     );
     await ctx.reply(buildAnnounceReportCard(summary));
   }
-}
+};

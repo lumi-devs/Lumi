@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   collectPingData,
   getRuntimeLabel,
@@ -50,7 +50,7 @@ describe("collectPingData", () => {
   });
 
   it("reports the library versions it was built against", async () => {
-    const data = await collectPingData();
+    const data = await collectPingData(container);
 
     expect(data.djsVersion).toMatch(Semver);
     expect(data.sapphireVersion).toMatch(Semver);
@@ -62,7 +62,7 @@ describe("collectPingData", () => {
   });
 
   it("passes an abort signal with a bounded timeout to the gateway-node lookup", async () => {
-    await collectPingData();
+    await collectPingData(container);
 
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -72,7 +72,7 @@ describe("collectPingData", () => {
   it("falls back to Unknown instead of throwing when the gateway-node fetch times out", async () => {
     spyOn(globalThis, "fetch").mockRejectedValue(new DOMException("The operation was aborted.", "TimeoutError"));
 
-    const data = await collectPingData();
+    const data = await collectPingData(container);
 
     expect(data.gatewayNode).toBe("Unknown");
   });
@@ -80,7 +80,7 @@ describe("collectPingData", () => {
   it("falls back to Unknown instead of throwing when the gateway-node fetch rejects", async () => {
     spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
 
-    const data = await collectPingData();
+    const data = await collectPingData(container);
 
     expect(data.gatewayNode).toBe("Unknown");
   });

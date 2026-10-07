@@ -1,187 +1,208 @@
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 import { disconnectDatabase } from "#lib/prisma/client.js";
-import { getConsumerId, getDefaultPrefix } from "#lib/env.js";
+import { getConsumerId } from "#lib/env.js";
 import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
 import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
 import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import {
-  ApplicationCommandRegistries,
-  RegisterBehavior,
-  SapphireClient,
-  container,
-} from "@sapphire/framework";
-import type { Message } from "discord.js";
+import { Client } from "discord.js";
+import { ownedEventBusOf, type Container } from "#lib/services.js";
 import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
 import { buildClientOptions } from "./client-options.js";
-import { installContainerServices } from "./container-services.js";
 import { installProducerOnlyTasks } from "./scheduler-producer.js";
-import { ReadinessProbes } from "./ReadinessProbes.js";
+import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
+import {
+  dispatchAutocomplete,
+  dispatchChatInput,
+  dispatchContextMenu,
+  dispatchMessage,
+} from "#lib/commands/command-dispatch.js";
+import { registerWorkerProbes } from "./ReadinessProbes.js";
 
-// Teardown steps swallow their own failure so one unreachable resource can't strand the rest.
-const warnOnCleanupError = (what: string) => (err: unknown) =>
-  container.logger.warn(`[Client] ${what} failed:`, err);
-
-/**
- * The primary client for Lumi, extending {@linkcode SapphireClient}.
- *
- * @remarks
- *
- * The client composes rather than implements its start-up concerns: option
- * building, container-service installation and readiness probes each live in
- * their own module. What stays here is the ordering contract between them.
- *
- * `login()` brings resources up in dependency order - database, module
- * discovery - and only then hands over to Sapphire. The internal RPC HTTP
- * server is no longer part of this process; it's served by `apps/api`
- * instead (see `packages/core/src/lib/client/api-bootstrap.ts`). BullMQ
- * scheduling (the scheduler lock, repeatable-job registration, the actual
- * job `Worker`) is likewise no longer part of this process - it's served by
- * `apps/scheduler` instead (see `scheduler-container-services.ts`); every
- * shard only ever enqueues a job via the producer-only `container.tasks`
- * stand-in installed below. `destroy()` unwinds what's left in reverse, and
- * every step swallows its own failure so one unreachable resource cannot
- * strand the others.
- */
-export class LumiClient extends SapphireClient {
-  private _livenessInterval: ReturnType<typeof setInterval> | null = null;
-  private _ownedEventBus: OwnedEventBus | null = null;
-  private _taskFireConsumer: TaskFireConsumer | null = null;
-  private _repositoryCacheUnbind: (() => void) | null = null;
-
-  public constructor(_options: LumiClient.Options = {}) {
-    super(buildClientOptions());
-
-    installProducerOnlyTasks();
-
-    this._ownedEventBus = installContainerServices(this);
-    this._repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
-      container.invalidation,
-    );
-
-    ApplicationCommandRegistries.setDefaultBehaviorWhenNotIdentical(
-      RegisterBehavior.Overwrite,
-    );
-
-    this.on("messageCreate", (m) => {
-      if (!m.author.bot) container.stats.messages++;
-    });
-  }
-
-  /** Registration boundary: `super.login()` is the only path that registers commands with Discord. */
-  public override async login(token?: string) {
-    await container.prisma.$connect();
-    await container.invalidation.start();
-    await container.signals.start();
-
-    await this.stores.get("modules").discover();
-
-    const result = await super.login(token);
-
-    await this.application?.fetch().catch((err: unknown) => {
-      container.logger.warn("[LumiClient] Failed to fetch Discord application info:", err);
-    });
-
-    // Every shard executes fired task effects for the guilds it holds - this
-    // is the event-bus relay, unrelated to which shard owns BullMQ itself.
-    registerCoreFireHandlers();
-    this._taskFireConsumer = new TaskFireConsumer(container.eventBus, {
-      consumerId: getConsumerId(),
-    });
-    await this._taskFireConsumer.start();
-
-    this._livenessInterval = setInterval(async () => {
-      try {
-        await container.db.probePrisma();
-      } catch (err: unknown) {
-        container.logger.error("[Database] Liveness check failed:", err);
-      }
-    }, Time.Minute);
-
-    new ReadinessProbes({
-      isReady: () => this.isReady(),
-    }).register();
-
-    return result;
-  }
-
-  public override async destroy() {
-    if (this._repositoryCacheUnbind) {
-      this._repositoryCacheUnbind();
-      this._repositoryCacheUnbind = null;
-    }
-    if (this._livenessInterval) {
-      clearInterval(this._livenessInterval);
-      this._livenessInterval = null;
-    }
-    if (container.tasks) {
-      await container.tasks
-        .close()
-        .catch(warnOnCleanupError("ScheduledTasks (BullMQ) close"));
-    }
-    if (this._taskFireConsumer) {
-      await this._taskFireConsumer
-        .stopConsuming()
-        .catch(warnOnCleanupError("TaskFireConsumer stop"));
-      this._taskFireConsumer = null;
-    }
-    await super.destroy().catch(warnOnCleanupError("Sapphire client destroy"));
-    await flushAllMessageDeletes().catch(
-      warnOnCleanupError("flushAllMessageDeletes"),
-    );
-    await this._ownedEventBus
-      ?.close()
-      .catch(warnOnCleanupError("EventBus close"));
-    this._ownedEventBus = null;
-    await container.invalidation
-      .close()
-      .catch(warnOnCleanupError("Invalidation close"));
-    await container.signals
-      .close()
-      .catch(warnOnCleanupError("Signals close"));
-    await container.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
-    // $disconnect alone leaves the pg Pool open: the adapter is constructed from
-    // a pool we own, so Prisma never ends it. Both pools drain here.
-    await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
-  }
-
-  public override fetchPrefix = async (message: Message) => {
-    if (message.guild) {
-      const settings = await container.db.config.getGuildSettings(
-        message.guild.id,
-      );
-      if (settings.prefix) {
-        return [settings.prefix];
-      }
-      const globalConfig = await container.db.global
-        .getGlobalConfig()
-        .catch(() => null);
-      const envFallback = getDefaultPrefix();
-      return [globalConfig?.defaultPrefix ?? envFallback];
-    }
-
-    const globalConfig = await container.db.global
-      .getGlobalConfig()
-      .catch(() => null);
-    const envFallback = getDefaultPrefix();
-    return globalConfig?.defaultPrefix ?? envFallback;
-  };
-
-  /**
-   * Factory kept as the stable call site for the worker entrypoint. Shard
-   * assignment (`SHARDS`/`SHARD_COUNT`) comes from discord.js's
-   * `ShardingManager` via env vars read directly by the `Client` constructor
-   * - see `apps/worker/src/main.ts`.
-   *
-   * @param options - Additional options for client construction.
-   * @returns A fully constructed and initialized {@linkcode LumiClient}.
-   */
-  public static bootstrap(options: LumiClient.Options = {}): LumiClient {
-    return new LumiClient(options);
-  }
+interface ClientState {
+  ownedEventBus: OwnedEventBus | null;
+  taskFireConsumer: TaskFireConsumer | null;
+  repositoryCacheUnbind: (() => void) | null;
+  livenessInterval: ReturnType<typeof setInterval> | null;
 }
 
-export namespace LumiClient {
-   
-  export interface Options {}
+const clientStates = new WeakMap<Client, ClientState>();
+
+function stateOf(client: Client): ClientState {
+  let state = clientStates.get(client);
+  if (!state) {
+    state = {
+      ownedEventBus: null,
+      taskFireConsumer: null,
+      repositoryCacheUnbind: null,
+      livenessInterval: null,
+    };
+    clientStates.set(client, state);
+  }
+  return state;
+}
+
+/**
+ * Points an explicit service bag at a client and wires the per-client
+ * attachments the old constructor did: producer-only task queue,
+ * repository-cache invalidation binding, and the message counter.
+ * Shared by `createClient` and the worker bootstrap (which must build
+ * services around an already-created client).
+ */
+export function attachClient(client: Client, services: Container): void {
+  services.client = client;
+  installProducerOnlyTasks(services);
+  const state = stateOf(client);
+  state.ownedEventBus = ownedEventBusOf(services) ?? null;
+  state.repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
+    services.invalidation,
+  );
+  client.on("messageCreate", (m) => {
+    if (!m.author.bot) services.stats.messages++;
+  });
+}
+
+export function createClient(services: Container): Client {
+  const client = new Client(buildClientOptions());
+  attachClient(client, services);
+  return client;
+}
+
+/**
+ * Pre-gateway wiring: module discover + load loop, interaction/message
+ * handler registration, fire handlers, task-fire consumer, readiness probes.
+ */
+export async function wireApp(client: Client, services: Container): Promise<void> {
+  await services.moduleStore.discover();
+  for (const record of services.moduleStore.all()) {
+    if (!record.enabled) continue;
+    await services.moduleStore.loadModule(record.name).catch((err: unknown) => {
+      services.logger.error(`[LumiClient] Module load failed: ${record.name}`, err);
+    });
+  }
+
+  client.on("interactionCreate", (interaction) => {
+    const run = async (): Promise<void> => {
+      if (interaction.isChatInputCommand())
+        return dispatchChatInput(services, interaction);
+      if (interaction.isAutocomplete())
+        return dispatchAutocomplete(services, interaction);
+      if (interaction.isMessageContextMenuCommand()) {
+        return dispatchContextMenu(services, interaction);
+      }
+      return dispatchInteraction(services, interaction);
+    };
+    void run().catch((error: unknown) => {
+      services.logger.error("[InteractionDispatch] dispatch failed:", error);
+    });
+  });
+  client.on("messageCreate", (message) => {
+    void dispatchMessage(services, client, message).catch((error: unknown) => {
+      services.logger.error("[CommandDispatch] prefix dispatch failed:", error);
+    });
+  });
+
+  registerCoreFireHandlers();
+  const taskFireConsumer = new TaskFireConsumer(services, services.eventBus, {
+    consumerId: getConsumerId(),
+  });
+  await taskFireConsumer.start();
+  stateOf(client).taskFireConsumer = taskFireConsumer;
+
+  registerWorkerProbes(client);
+}
+
+/**
+ * THE future gateway-proxy seam: the single place that opens the gateway
+ * connection. Multi-bot = two service bags + two clients, both funneled here.
+ */
+export async function connectGateway(
+  client: Client,
+  services: Container,
+  token?: string,
+): Promise<string> {
+  await services.prisma.$connect();
+  await services.invalidation.start();
+  await services.signals.start();
+
+  const result = await client.login(token);
+
+  await client.application?.fetch().catch((err: unknown) => {
+    services.logger.warn(
+      "[LumiClient] Failed to fetch Discord application info:",
+      err,
+    );
+  });
+
+  stateOf(client).livenessInterval = setInterval(async () => {
+    try {
+      await services.db.probePrisma();
+    } catch (err: unknown) {
+      services.logger.error("[Database] Liveness check failed:", err);
+    }
+  }, Ms.Minute);
+
+  return result;
+}
+
+/**
+ * Preserves the old `login` order across the split point: `wireApp`
+ * (discover → handlers → fire/task/probes) runs first, then `connectGateway`
+ * (prisma/invalidation/signals → login → fetch → liveness).
+ *
+ * NOTE: this inverts two adjacencies of the old order — module
+ * discover/load and the task-fire/probe registration now run BEFORE the
+ * prisma `$connect` and invalidation/signals `start()`, whereas the old
+ * constructor-login ran prisma/invalidation/signals first. Safe in practice
+ * (Prisma connects lazily on first query; the Valkey clients used by the
+ * event bus connect lazily too), but flagging for review.
+ */
+export async function loginLumi(
+  client: Client,
+  services: Container,
+  token?: string,
+): Promise<string> {
+  await wireApp(client, services);
+  return connectGateway(client, services, token);
+}
+
+export async function destroyLumi(
+  client: Client,
+  services: Container,
+): Promise<void> {
+  const warnOnCleanupError = (what: string) => (err: unknown) =>
+    services.logger.warn(`[Client] ${what} failed:`, err);
+  const state = stateOf(client);
+  if (state.repositoryCacheUnbind) {
+    state.repositoryCacheUnbind();
+    state.repositoryCacheUnbind = null;
+  }
+  if (state.livenessInterval) {
+    clearInterval(state.livenessInterval);
+    state.livenessInterval = null;
+  }
+  if (services.tasks) {
+    await services.tasks
+      .close()
+      .catch(warnOnCleanupError("ScheduledTasks (BullMQ) close"));
+  }
+  if (state.taskFireConsumer) {
+    await state.taskFireConsumer
+      .stopConsuming()
+      .catch(warnOnCleanupError("TaskFireConsumer stop"));
+    state.taskFireConsumer = null;
+  }
+  await client.destroy().catch(warnOnCleanupError("Client destroy"));
+  await flushAllMessageDeletes().catch(
+    warnOnCleanupError("flushAllMessageDeletes"),
+  );
+  const owned = state.ownedEventBus ?? ownedEventBusOf(services);
+  await owned?.close().catch(warnOnCleanupError("EventBus close"));
+  state.ownedEventBus = null;
+  await services.invalidation
+    .close()
+    .catch(warnOnCleanupError("Invalidation close"));
+  await services.signals.close().catch(warnOnCleanupError("Signals close"));
+  await services.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
+  await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
 }

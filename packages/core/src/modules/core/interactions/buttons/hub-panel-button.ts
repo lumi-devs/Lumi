@@ -1,6 +1,10 @@
 import { fetchTyped } from "#lib/commands.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { LumiInteractionHandler } from "#lib/discord-adapter/LumiInteractionHandler.js";
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { restartChoiceRow } from "#lib/restart.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
@@ -34,42 +38,25 @@ import {
   ModalBuilder,
   TextInputBuilder,
 } from "@discordjs/builders";
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-  UserError,
-} from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
 import { TextInputStyle, type ButtonInteraction } from "discord.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "hub-panel-button",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class HubPanelButtonHandler extends LumiInteractionHandler {
-  private static readonly ADDON_MODAL_ACTIONS = new Set([
-    "add_repo",
-    "rm_repo",
-    "install",
-    "uninstall",
-  ]);
+const ADDON_MODAL_ACTIONS = new Set([
+  "add_repo",
+  "rm_repo",
+  "install",
+  "uninstall",
+]);
 
-  private get settings(): GuildSettingsUtility {
-    return getUtility("guild-settings");
-  }
-
-  public override parse(interaction: ButtonInteraction) {
+export const hubPanelButton = defineInteraction({
+  prefix: HubId.prefix,
+  async run(services: Container, interaction: ButtonInteraction) {
     const parsed = HubId.parse(interaction.customId);
-    if (!parsed) return this.none();
+    if (!parsed) return;
     const { action, rest: tail } = parsed;
     const [sub, ...rest] = tail;
-    return this.some({ action, sub, rest });
-  }
-
-  public async run(
-    interaction: ButtonInteraction,
-    { action, sub, rest }: { action: string; sub?: string; rest: string[] },
-  ) {
+    const settings: GuildSettingsUtility = getUtility("guild-settings");
+    const downloader: DownloaderUtility = getUtility("downloader");
     if (!interaction.inGuild()) return;
 
     // showModal() must be the interaction's first response, so modal-opening
@@ -79,37 +66,37 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
       (action === "prefix" && sub === "set") ||
       (action === "addon" &&
         !!sub &&
-        HubPanelButtonHandler.ADDON_MODAL_ACTIONS.has(sub));
-    if (!opensModal) await this.acknowledge(interaction);
+        ADDON_MODAL_ACTIONS.has(sub));
+    if (!opensModal) await acknowledge(interaction);
 
     if (!(await hasAdminPermit(interaction))) throw accessDenied();
 
     if (action === "prefix" && sub === "set")
-      return this.#openPrefixModal(interaction);
+      return openPrefixModal(interaction);
     if (
       action === "addon" &&
       sub &&
-      HubPanelButtonHandler.ADDON_MODAL_ACTIONS.has(sub)
+      ADDON_MODAL_ACTIONS.has(sub)
     ) {
       if (!(await hasOwnerPermit(interaction)))
         throw new UserError({
           identifier: "AccessDenied",
           message: "Only Bot Owners can manage addons.",
         });
-      return this.#openAddonModal(interaction, sub);
+      return openAddonModal(interaction, sub);
     }
 
     const t = await fetchTyped(interaction);
 
     switch (action) {
       case "home":
-        return renderHub(interaction, t);
+        return renderHub(services, interaction, t);
       case "tab":
-        return this.#renderTab(interaction, sub, t);
+        return renderTab(services, downloader, interaction, sub, t);
       case "prefix":
         if (sub === "reset") {
-          await this.settings.resetPrefix(interaction.guildId).catch(() => {});
-          return renderSettings(interaction, t);
+          await settings.resetPrefix(services, interaction.guildId).catch(() => {});
+          return renderSettings(services, interaction, t);
         }
         return undefined;
       case "permdel": {
@@ -124,6 +111,7 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
           const perms = getUtility("permissions");
           await perms
             .unassignPermit(
+              services,
               interaction.guildId,
               permitId,
               targetType,
@@ -131,12 +119,12 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
             )
             .catch(() => null);
         }
-        return renderPermissions(interaction, 0, t);
+        return renderPermissions(services, interaction, 0, t);
       }
       case "permpage": {
         if (sub === "indicator") return undefined;
         const page = parseInt(rest[0] ?? "0", 10) || 0;
-        return renderPermissions(interaction, page, t);
+        return renderPermissions(services, interaction, page, t);
       }
       case "permit": {
         if (
@@ -145,7 +133,7 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
         ) {
           const kind = rest[0];
           const perms = getUtility("permissions");
-          const permits = (await perms.listPermits(interaction.guildId)).filter(
+          const permits = (await perms.listPermits(services, interaction.guildId)).filter(
             (p) => p.kind === kind,
           );
           return interaction.editReply(
@@ -155,40 +143,41 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
         return undefined;
       }
       case "update_all":
-        return this.#updateAllRepos(interaction, t);
+        return updateAllRepos(services, downloader, interaction, t);
       case "check_core":
-        return this.#checkCore(interaction);
+        return checkCore(services, interaction);
       case "update_core":
-        return this.#updateCore(interaction);
+        return updateCore(services, interaction);
       case "addon":
-        return this.#runAddonAction(interaction, sub, rest, t);
+        return runAddonAction(services, downloader, interaction, sub, rest, t);
       default:
         return undefined;
     }
-  }
+  },
+});
 
-  async #updateAllRepos(interaction: ButtonInteraction, t?: LumiT) {
+async function updateAllRepos(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
     if (!(await hasOwnerPermit(interaction)))
       throw new UserError({
         identifier: "AccessDenied",
         message: "Only Bot Owners can manage add-ons.",
       });
 
-    const repos = await this.downloader.listRepos();
+    const repos = await downloader.listRepos(services);
     if (repos.length === 0) {
       await interaction.followUp(
         ephemeralCard(
           makeInfoCard("No Repositories", "No add-on repositories are added."),
         ),
       );
-      return this.#renderAddonRepos(interaction, t);
+      return renderAddonRepos(services, downloader, interaction, t);
     }
 
     const updated: string[] = [];
     const failed: string[] = [];
     for (const repo of repos) {
       try {
-        await this.downloader.updateRepo(repo.name);
+        await downloader.updateRepo(services, repo.name);
         updated.push(repo.name);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -214,10 +203,10 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
             ),
       ),
     );
-    return this.#renderAddonRepos(interaction, t);
+    return renderAddonRepos(services, downloader, interaction, t);
   }
 
-  async #checkCore(interaction: ButtonInteraction) {
+  async function checkCore(_services: Container, interaction: ButtonInteraction) {
     if (!(await hasOwnerPermit(interaction)))
       throw new UserError({
         identifier: "AccessDenied",
@@ -271,14 +260,14 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
     );
   }
 
-  async #updateCore(interaction: ButtonInteraction) {
+  async function updateCore(services: Container, interaction: ButtonInteraction) {
     if (!(await hasOwnerPermit(interaction)))
       throw new UserError({
         identifier: "AccessDenied",
         message: "Only Bot Owners can update Lumi core.",
       });
 
-    const res = await updateLumiCore();
+    const res = await updateLumiCore(services);
     if (res.error) {
       return interaction.editReply(
         ephemeralCard(makeErrorCard("Core Update Failed", res.error)),
@@ -306,7 +295,9 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
     );
   }
 
-  async #runAddonAction(
+  async function runAddonAction(
+    services: Container,
+    downloader: DownloaderUtility,
     interaction: ButtonInteraction,
     sub: string | undefined,
     rest: string[],
@@ -318,45 +309,45 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
         message: "Only Bot Owners can manage add-ons.",
       });
     if (sub === "repos" || sub === "modules") {
-      return this.#renderAddonRepos(interaction, t);
+      return renderAddonRepos(services, downloader, interaction, t);
     }
     if (sub === "installed") {
-      return this.#renderAddonInstalled(interaction, t);
+      return renderAddonInstalled(services, downloader, interaction, t);
     }
     if (sub === "autoupdate") {
-      const config = await this.downloader.getAutoUpdateConfig();
+      const config = await downloader.getAutoUpdateConfig(services);
       return interaction.editReply(buildAutoUpdateSettingsView(config, t));
     }
     if (sub === "autoupdate_toggle") {
-      const config = await this.downloader.getAutoUpdateConfig();
-      await this.downloader.setAutoUpdateConfig({ enabled: !config.enabled });
-      const next = await this.downloader.getAutoUpdateConfig();
+      const config = await downloader.getAutoUpdateConfig(services);
+      await downloader.setAutoUpdateConfig(services, { enabled: !config.enabled });
+      const next = await downloader.getAutoUpdateConfig(services);
       return interaction.editReply(buildAutoUpdateSettingsView(next, t));
     }
     if (sub === "toggle") {
       const moduleName = rest.join(":");
       if (!moduleName) return undefined;
       try {
-        const record = this.container.moduleStore.getRecord(moduleName);
-        await this.downloader.toggleModule(moduleName, !record?.enabled);
+        const record = services.moduleStore.getRecord(moduleName);
+        await downloader.toggleModule(services, moduleName, !record?.enabled);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         return interaction.followUp(
           ephemeralCard(makeErrorCard("Action Failed", msg)),
         );
       }
-      return this.#renderAddonInstalled(interaction, t);
+      return renderAddonInstalled(services, downloader, interaction, t);
     }
     if (sub === "update_repo") {
       const repoName = rest.join(":");
       if (!repoName) return undefined;
       try {
-        const check = await this.downloader.checkRepoUpdate(repoName);
+        const check = await downloader.checkRepoUpdate(services, repoName);
         if (!check.ok) {
           await interaction.followUp(
             ephemeralCard(makeErrorCard("Check Failed", check.reason)),
           );
-          return this.#renderAddonRepos(interaction, t);
+          return renderAddonRepos(services, downloader, interaction, t);
         }
         if (!check.hasUpdate) {
           await interaction.followUp(
@@ -367,7 +358,7 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
               ),
             ),
           );
-          return this.#renderAddonRepos(interaction, t);
+          return renderAddonRepos(services, downloader, interaction, t);
         }
         return interaction.editReply(
           buildRepoUpdateConfirmView(repoName, check.changelog, t),
@@ -383,7 +374,7 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
       const repoName = rest.join(":");
       if (!repoName) return undefined;
       try {
-        const result = await this.downloader.updateRepo(repoName);
+        const result = await downloader.updateRepo(services, repoName);
         const shaLine = result.changed
           ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
           : "Already up to date.";
@@ -403,16 +394,16 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
           ephemeralCard(makeErrorCard("Update Failed", msg)),
         );
       }
-      return this.#renderAddonRepos(interaction, t);
+      return renderAddonRepos(services, downloader, interaction, t);
     }
     if (sub === "update_repo_skip") {
-      return this.#renderAddonRepos(interaction, t);
+      return renderAddonRepos(services, downloader, interaction, t);
     }
     if (sub === "browsepage") {
       const [repoName, dir, pageStr] = rest;
       if (!repoName || dir === "indicator") return undefined;
       const page = parseInt(pageStr ?? "0", 10) || 0;
-      return renderRepoModules(interaction, repoName, t, page);
+      return renderRepoModules(services, interaction, repoName, t, page);
     }
     if (sub === "modact") {
       const [act, repoName, ...moduleParts] = rest;
@@ -420,9 +411,9 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
       if (!act || !repoName || !moduleName) return undefined;
       try {
         if (act === "install") {
-          await this.downloader.installModule(repoName, moduleName);
+          await downloader.installModule(services, repoName, moduleName);
         } else if (act === "uninstall") {
-          await this.downloader.uninstallModule(moduleName);
+          await downloader.uninstallModule(services, moduleName);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -430,39 +421,41 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
           ephemeralCard(makeErrorCard("Action Failed", msg)),
         );
       }
-      return renderRepoModules(interaction, repoName, t);
+      return renderRepoModules(services, interaction, repoName, t);
     }
     return undefined;
   }
 
-  async #renderTab(
+  async function renderTab(
+    services: Container,
+    downloader: DownloaderUtility,
     interaction: ButtonInteraction,
     tab: string | undefined,
     t?: LumiT,
   ) {
     switch (tab) {
       case "home":
-        return renderHub(interaction, t);
+        return renderHub(services, interaction, t);
       case "modules": {
-        const features = await loadFeatures(interaction.guildId!);
+        const features = await loadFeatures(services, interaction.guildId!);
         return interaction.editReply(buildFeatureListView(features, 0, t));
       }
       case "permissions":
-        return renderPermissions(interaction, 0, t);
+        return renderPermissions(services, interaction, 0, t);
       case "settings":
-        return renderSettings(interaction, t);
+        return renderSettings(services, interaction, t);
       case "addons":
-        return this.#renderAddonDashboard(interaction, t);
+        return renderAddonDashboard(services, downloader, interaction, t);
       default:
         return undefined;
     }
   }
 
-  async #renderAddonDashboard(interaction: ButtonInteraction, t?: LumiT) {
+  async function renderAddonDashboard(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
     const [repos, installed, pendingUpdates] = await Promise.all([
-      this.downloader.listRepos(),
-      this.downloader.getInstalledModulesDetailed(),
-      this.downloader.checkForUpdates(),
+      downloader.listRepos(services),
+      downloader.getInstalledModulesDetailed(services),
+      downloader.checkForUpdates(services),
     ]);
     return interaction.editReply(
       buildAddonsView(
@@ -476,10 +469,10 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
     );
   }
 
-  async #renderAddonRepos(interaction: ButtonInteraction, t?: LumiT) {
+  async function renderAddonRepos(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
     const [repos, installed] = await Promise.all([
-      this.downloader.listRepos(),
-      this.downloader.getInstalledModulesDetailed(),
+      downloader.listRepos(services),
+      downloader.getInstalledModulesDetailed(services),
     ]);
 
     const installedByRepo = new Map<number, number>();
@@ -504,10 +497,10 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
     );
   }
 
-  async #renderAddonInstalled(interaction: ButtonInteraction, t?: LumiT) {
+  async function renderAddonInstalled(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
     const [installed, repos] = await Promise.all([
-      this.downloader.getInstalledModulesDetailed(),
-      this.downloader.listRepos(),
+      downloader.getInstalledModulesDetailed(services),
+      downloader.listRepos(services),
     ]);
 
     return interaction.editReply(
@@ -518,20 +511,16 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
           repoName: row.repo.name,
           installedAt: row.installedAt,
           enabled:
-            this.container.moduleStore.getRecord(row.moduleName)?.enabled ??
+            services.moduleStore.getRecord(row.moduleName)?.enabled ??
             true,
         })),
         repos.map((repo) => ({ name: repo.name })),
         t,
       ),
     );
-  }
+}
 
-  private get downloader(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  #openPrefixModal(interaction: ButtonInteraction) {
+function openPrefixModal(interaction: ButtonInteraction) {
     const modal = new ModalBuilder()
       .setCustomId("lumi:prefixmodal")
       .setTitle("Set Command Prefix")
@@ -549,7 +538,7 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
     return interaction.showModal(modal);
   }
 
-  #openAddonModal(interaction: ButtonInteraction, action: string) {
+function openAddonModal(interaction: ButtonInteraction, action: string) {
     const field = (
       id: string,
       label: string,
@@ -599,5 +588,4 @@ export class HubPanelButtonHandler extends LumiInteractionHandler {
         .addComponents(field("module", "Module Name", "e.g. activity-roles"));
     }
     return interaction.showModal(modal);
-  }
 }

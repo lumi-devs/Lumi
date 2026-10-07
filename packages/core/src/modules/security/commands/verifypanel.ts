@@ -1,38 +1,32 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { channelMention } from "@discordjs/formatters";
-import { ChannelType, type GuildTextBasedChannel } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { SlashCommandBuilder, ChannelType, type GuildTextBasedChannel } from "discord.js";
 import type { CommandContext } from "#lib/command-context.js";
 import { logError } from "#lib/utilities/errors.js";
 import { loadVerificationConfig } from "@lumi/application/services/security/verification.js";
 import { buildVerifyPanel } from "../ui/verify-panel.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const verifypanelDef: CommandDef = {
   name: "verifypanel",
   description: "Post the member verification panel in a channel.",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "admin.*",
-})
-export class VerifyPanelCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addChannelOption((o) =>
-          o
-            .setName("channel")
-            .setDescription("Channel to post the panel in (defaults to here).")
-            .addChannelTypes(ChannelType.GuildText)
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  build: () => {
+    const b = new SlashCommandBuilder().setName("verifypanel");
+    return (
+    b
+            .setName("verifypanel")
+            .setDescription("Post the member verification panel in a channel.")
+            .addChannelOption((o) =>
+              o
+                .setName("channel")
+                .setDescription("Channel to post the panel in (defaults to here).")
+                .addChannelTypes(ChannelType.GuildText)
+                .setRequired(false),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     await ctx.defer();
     const t = await ctx.fetchT();
     const guild = ctx.guild!;
@@ -59,7 +53,7 @@ export class VerifyPanelCommand extends BaseCommand {
 
     try {
       const message = await target.send(buildVerifyPanel(t));
-      await this.container.db.security.saveVerificationPanel({
+      await ctx.services.db.security.saveVerificationPanel({
         guildId: guild.id,
         channelId: target.id,
         messageId: message.id,
@@ -77,4 +71,4 @@ export class VerifyPanelCommand extends BaseCommand {
       t("panels:verifyPosted", { channel: channelMention(target.id) }),
     );
   }
-}
+};

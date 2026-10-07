@@ -14,6 +14,8 @@
     "lint": "eslint src tests --fix"
   },
   "dependencies": {
-    "@lumi/core": "workspace:*"
+    "@discordjs/rest": "^2.6.3",
+    "@lumi/core": "workspace:*",
+    "discord-api-types": "^0.38.55"
   }
 }

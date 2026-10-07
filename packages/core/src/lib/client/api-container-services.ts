@@ -1,45 +1,29 @@
 import { buildRestOptions } from "#lib/discord-rest.js";
-import { getScheduledTasksConnectionOptions } from "#lib/client/scheduled-tasks-queue.js";
 import { envParseString, getBotToken } from "#lib/env.js";
-import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
+import { container } from "#lib/services.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import { SapphireClient } from "@sapphire/framework";
+import { Client } from "discord.js";
 import { Routes, type APIUser } from "discord-api-types/v10";
 import { installContainerServices } from "./container-services.js";
 
 export interface ApiContainerServices {
-  client: SapphireClient;
+  client: Client;
   ownedEventBus: OwnedEventBus;
 }
 
-/**
- * Installs container services for the gateway-free RPC server process.
- * Configures REST authentication and loads stores without invoking `client.login()`.
- */
 export async function installApiContainerServices(): Promise<ApiContainerServices> {
-  const client = new SapphireClient({
+  const client = new Client({
     intents: [],
     rest: buildRestOptions(),
-    baseUserDirectory: null,
-    loadDefaultErrorListeners: false,
-    loadApplicationCommandRegistriesStatusListeners: false,
-    loadMessageCommandListeners: false,
-    logger: {
-      instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi-api")),
-    },
-    // Satisfies ClientOptions type augmentation from @sapphire/plugin-scheduled-tasks.
-    tasks: {
-      bull: {
-        connection: getScheduledTasksConnectionOptions(),
-      },
-    },
   });
 
-  const ownedEventBus = installContainerServices(client);
+  const ownedEventBus = installContainerServices(
+    client,
+    envParseString("SERVICE_NAME", "lumi-api"),
+  );
 
   client.rest.setToken(getBotToken());
   const me = (await client.rest.get(Routes.user())) as APIUser;
-  // Minimal ClientUser stand-in for RPC handlers reading user ID without gateway READY.
   client.user = { id: me.id } as NonNullable<typeof client.user>;
 
   try {
@@ -63,19 +47,16 @@ export async function installApiContainerServices(): Promise<ApiContainerService
       },
     );
   } catch (err: unknown) {
-    client.logger.warn("[Api] Failed to fetch application info for bot owner check:", err);
+    container.logger.warn("[Api] Failed to fetch application info for bot owner check:", err);
   }
 
-  // Discover and load modules first so their piece directories are registered into client.stores.
-  await client.stores.get("modules")?.loadAll();
-
-  // api process only needs utilities, preconditions, and arguments — never gateway commands/listeners.
-  const apiStores = new Set(["utilities", "preconditions", "arguments"]);
-  await Promise.all(
-    [...client.stores.values()]
-      .filter((store) => apiStores.has(store.name))
-      .map((store) => store.loadAll()),
-  );
+  await container.moduleStore.discover();
+  for (const record of container.moduleStore.all()) {
+    if (!record.enabled) continue;
+    await container.moduleStore.loadModule(record.name).catch((err: unknown) => {
+      container.logger.error(`[Api] Module load failed: ${record.name}`, err);
+    });
+  }
 
   return { client, ownedEventBus };
 }

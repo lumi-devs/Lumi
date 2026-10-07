@@ -5,8 +5,8 @@ import {
   mgetSafe,
   pipelineBySlot,
   scanKeysSafe,
-} from "../../src/lib/database/cluster-safe.js";
-import type { ValkeyClient } from "../../src/lib/database/cluster-safe.js";
+} from "@lumi/infrastructure/database";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 
 // A stand-in for iovalkey' Cluster: every multi-key call asserts that all its
 // keys share a slot, which is exactly what a real cluster enforces.

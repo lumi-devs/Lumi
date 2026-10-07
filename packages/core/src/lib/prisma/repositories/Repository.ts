@@ -1,6 +1,7 @@
-import type { ValkeyClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { CacheStore } from "#lib/cache/CacheStore.js";
-import { type ILogger, container } from "@sapphire/framework";
+import { type ILogger } from "@lumi/shared";
+import { container } from "#lib/services.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 

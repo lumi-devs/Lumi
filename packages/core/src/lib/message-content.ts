@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -9,8 +9,6 @@ import { splitOnSeparator } from "@lumi/contracts";
 import { makeCard, type CardReply } from "#lib/ui/cards.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
 import { renderTemplate } from "#lib/utilities/template.js";
-
-export { splitOnSeparator };
 
 export interface MessageButton {
   label: string;
@@ -27,22 +25,22 @@ export interface MessageContent {
   buttons?: MessageButton[];
 }
 
-const HexColorSchema = s.string().regex(/^#[0-9a-fA-F]{6}$/);
-const HttpUrlSchema = s.string().url();
+const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const HttpUrlSchema = z.string().url();
 
-const MessageButtonSchema = s.object({
-  label: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(80),
+const MessageButtonSchema = z.object({
+  label: z.string().min(1).max(80),
   url: HttpUrlSchema,
-  emoji: s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(100).optional(),
+  emoji: z.string().min(1).max(100).optional(),
 });
 
-export const MessageContentSchema = s.object({
-  text: s.string().lengthGreaterThanOrEqual(1),
+export const MessageContentSchema = z.object({
+  text: z.string().min(1),
   accentColor: HexColorSchema.optional(),
-  imageUrls: s.array(HttpUrlSchema).lengthLessThanOrEqual(10).optional(),
+  imageUrls: z.array(HttpUrlSchema).max(10).optional(),
   thumbnailUrl: HttpUrlSchema.optional(),
-  footer: s.string().lengthLessThanOrEqual(2000).optional(),
-  buttons: s.array(MessageButtonSchema).lengthLessThanOrEqual(5).optional(),
+  footer: z.string().max(2000).optional(),
+  buttons: z.array(MessageButtonSchema).max(5).optional(),
 });
 
 const HexColorPattern = /^#[0-9a-fA-F]{6}$/;

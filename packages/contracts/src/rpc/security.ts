@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type {
   PanicStateView,
   VerificationPanelSetResult,
@@ -33,11 +33,11 @@ export const securityRpc = {
     readOnly: true,
   }),
   "guild.panic.set": rpcAction<PanicSetResult>()({
-    input: s.object({
+    input: z.object({
       /** `false` reverts panic mode. */
-      active: s.boolean(),
+      active: z.boolean(),
       /** Narrows which channels get locked. */
-      channelIds: s.array(SnowflakeSchema).optional(),
+      channelIds: z.array(SnowflakeSchema).optional(),
     }),
     auth: "guildManager",
     requiresEnabled: "security",
@@ -53,12 +53,12 @@ export const securityRpc = {
     readOnly: true,
   }),
   "guild.verificationPanel.set": rpcAction<VerificationPanelSetResult>()({
-    input: s.object({
+    input: z.object({
       /** Exactly one of `channelId` and `createChannel` must be given. */
       channelId: SnowflakeSchema.optional(),
-      createChannel: s.boolean().optional(),
+      createChannel: z.boolean().optional(),
       /** Only matters when the target channel differs from the tracked one. */
-      deleteOldMessage: s.boolean().optional(),
+      deleteOldMessage: z.boolean().optional(),
     }),
     auth: "guildManager",
     requiresEnabled: "security",
@@ -90,7 +90,7 @@ export const securityRpc = {
     rolesRestored: number;
     channelsRestored: number;
   }>()({
-    input: s.object({ backupId: s.number().int().optional() }),
+    input: z.object({ backupId: z.number().int().optional() }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.bulk,
     summary: "Restore a guild backup.",

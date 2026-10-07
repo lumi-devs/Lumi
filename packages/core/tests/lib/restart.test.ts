@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ButtonStyle } from "discord.js";
 import {
   restartChoiceRow,
@@ -50,8 +50,8 @@ describe("Bot Restart & State Management Utilities", () => {
     it("schedules process restart and is idempotent when called multiple times", async () => {
       const killSpy = vi.spyOn(process, "kill").mockImplementation(() => true);
 
-      scheduleProcessRestart("First attempt", 1500);
-      scheduleProcessRestart("Second attempt", 1500);
+      scheduleProcessRestart(container, "First attempt", 1500);
+      scheduleProcessRestart(container, "Second attempt", 1500);
 
       expect(container.logger.warn).toHaveBeenCalledWith(
         "[Restart] Scheduling graceful restart in 1500ms - First attempt"

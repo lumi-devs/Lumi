@@ -1,8 +1,8 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 
-@DefineModule({
+export const stickyModule = defineModule({
   name: "sticky",
   displayName: "Sticky Messages",
   emoji: "📌",
@@ -59,5 +59,4 @@ import { cfg } from "#lib/module-system/config-schema.js";
       },
     ),
   }),
-})
-export class StickyModule extends Module {}
+});
