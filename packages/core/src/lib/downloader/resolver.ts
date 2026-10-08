@@ -416,9 +416,17 @@ export class DownloadResolver {
     const repoPath = path.join(ModuleRoot, repoName);
 
     if (!(await this._exists(repoPath))) {
-      throw new Error(
-        `Repository **${repoName}** has not been cloned locally. Run \`,repo add\` first.`,
-      );
+      const dbRepo = await container.db?.downloader?.readDownloaderRepo(repoName);
+      if (dbRepo) {
+        container.logger?.info?.(
+          `[Downloader] Repository ${repoName} tracked in DB but missing from disk. Auto-restoring clone...`,
+        );
+        await this.addRepo(dbRepo.name, dbRepo.url, dbRepo.branch || "default");
+      } else {
+        throw new Error(
+          `Repository **${repoName}** has not been cloned locally. Run \`,repo add\` first.`,
+        );
+      }
     }
 
     const indexPath = path.join(repoPath, "modules.json");
