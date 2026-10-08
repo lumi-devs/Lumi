@@ -2,14 +2,8 @@ import type { User, Message } from "discord.js";
 import { PermissionsBitField } from "discord.js";
 import type { Container } from "#lib/services.js";
 import { Mutex } from "@lumi/shared";
-import { createRequire } from "node:module";
-
-const _req = createRequire(import.meta.url);
-// Changesets bumps packages/core/package.json on every release merge - the
-// single source of truth for this number, never hand-edit it elsewhere.
-export const CoreVersion = (
-  _req("../../../package.json") as { version: string }
-).version;
+import pkg from "../../../package.json" with { type: "json" };
+export const CoreVersion = pkg.version;
 
 export function cleanMention(raw: string): string {
   return raw.replace(/[<@&#!>]/g, "");

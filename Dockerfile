@@ -27,7 +27,10 @@ COPY --chown=bun:bun prisma/ prisma/
 # per-target copy that could drift.
 COPY --chown=bun:bun scripts/ scripts/
 COPY --chown=bun:bun apps/cli/ apps/cli/
-RUN mkdir -p /app/data && chown -R bun:bun /app/data && bunx prisma generate && ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && rm -rf /tmp/*
+RUN mkdir -p /app/data && chown -R bun:bun /app/data && \
+    bunx prisma generate && \
+    ln -s /app/apps/cli/src/main.ts /usr/local/bin/lumi && \
+    bun run scripts/prune-deps.ts
 
 FROM source AS worker
 ENV NODE_ENV=production
