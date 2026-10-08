@@ -1,6 +1,8 @@
 import { UserError } from "@lumi/shared";
 import type { Container } from "#lib/services.js";
 import {
+  ApplicationIntegrationType,
+  InteractionContextType,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type Client,
@@ -388,4 +390,22 @@ export async function dispatchAutocomplete(
     }
   }
   await def.autocomplete(services, interaction);
+}
+
+export function finalizeBuilder(def: CommandDef) {
+  if (!def.build) throw new Error(`Command ${def.name} has no slash builder.`);
+  const builder = def.build();
+  const guildOnly = def.guildOnly ?? false;
+  builder.setDefaultMemberPermissions(def.defaultMemberPermissions ?? null);
+  builder.setContexts(
+    ...(guildOnly
+      ? [InteractionContextType.Guild]
+      : [
+          InteractionContextType.Guild,
+          InteractionContextType.BotDM,
+          InteractionContextType.PrivateChannel,
+        ]),
+  );
+  builder.setIntegrationTypes(ApplicationIntegrationType.GuildInstall);
+  return builder;
 }
