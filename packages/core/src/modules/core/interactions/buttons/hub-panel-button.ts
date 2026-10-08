@@ -6,7 +6,6 @@ import {
 } from "#lib/interactions/interaction-def.js";
 import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { restartChoiceRow } from "#lib/restart.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
 import type { GuildSettingsUtility } from "../../utilities/GuildSettingsUtility.js";
 import {
@@ -29,9 +28,7 @@ import {
 import { DefaultPrefix } from "#modules/core/ui/hub.js";
 import { buildFeatureListView } from "#modules/core/ui/modules.js";
 import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
-import { Emojis } from "#lib/utilities/assets.js";
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#lib/ui/cards.js";
-import { getCoreUpdateStatus, updateLumiCore } from "#lib/utilities/self-update.js";
 import { HubAddonModalId, HubId } from "../../constants.js";
 import {
   ActionRowBuilder,
@@ -144,10 +141,6 @@ export const hubPanelButton = defineInteraction({
       }
       case "update_all":
         return updateAllRepos(services, downloader, interaction, t);
-      case "check_core":
-        return checkCore(services, interaction);
-      case "update_core":
-        return updateCore(services, interaction);
       case "addon":
         return runAddonAction(services, downloader, interaction, sub, rest, t);
       default:
@@ -204,95 +197,6 @@ async function updateAllRepos(services: Container, downloader: DownloaderUtility
       ),
     );
     return renderAddonRepos(services, downloader, interaction, t);
-  }
-
-  async function checkCore(_services: Container, interaction: ButtonInteraction) {
-    if (!(await hasOwnerPermit(interaction)))
-      throw new UserError({
-        identifier: "AccessDenied",
-        message: "Only Bot Owners can check core update status.",
-      });
-
-    const status = await getCoreUpdateStatus();
-    if (status.error) {
-      return interaction.editReply(
-        ephemeralCard(makeErrorCard("Update Check Failed", status.error)),
-      );
-    }
-
-    if (status.upToDate) {
-      return interaction.editReply(
-        ephemeralCard(
-          makeSuccessCard(
-            "Lumi Core Is Up To Date",
-            [
-              `Branch: **${status.branch}**`,
-              `Commit: \`${status.currentCommit}\``,
-              status.currentVersion
-                ? `Version file: **${status.currentVersion}**`
-                : "Version file: not found",
-            ].join("\n"),
-          ),
-        ),
-      );
-    }
-
-    const lines = [
-      `Branch: **${status.branch}**`,
-      `Current commit: \`${status.currentCommit}\``,
-      `Latest commit: \`${status.latestCommit ?? "unknown"}\``,
-      `Behind by: **${status.behindBy}** commit(s)`,
-    ];
-
-    if (status.currentVersion || status.remoteVersion) {
-      lines.push(
-        `Local version file: **${status.currentVersion ?? "not found"}**`,
-        `Remote version file: **${status.remoteVersion ?? "not found"}**`,
-      );
-    }
-
-    return interaction.editReply(
-      ephemeralCard(
-        makeInfoCard("Core Update Available", lines, {
-          footer: "Use 'Update Lumi Core' when you are ready.",
-        }),
-      ),
-    );
-  }
-
-  async function updateCore(services: Container, interaction: ButtonInteraction) {
-    if (!(await hasOwnerPermit(interaction)))
-      throw new UserError({
-        identifier: "AccessDenied",
-        message: "Only Bot Owners can update Lumi core.",
-      });
-
-    const res = await updateLumiCore(services);
-    if (res.error) {
-      return interaction.editReply(
-        ephemeralCard(makeErrorCard("Core Update Failed", res.error)),
-      );
-    }
-
-    if (res.updated) {
-      const body = `Successfully updated Lumi core codebase! (**${res.commitsCount}** new commit(s) pulled).\n\n**New Commit:** \`${res.latestCommit}\` (from \`${res.currentCommit}\`)\n\n**Changelog:**\n\`\`\`\n${res.changelog}\n\`\`\``;
-      return interaction.editReply(
-        ephemeralCard(
-          makeSuccessCard(`${Emojis.Bot} Lumi Core Updated`, body, {
-            actionRows: [restartChoiceRow(interaction.user.id)],
-          }),
-        ),
-      );
-    }
-
-    return interaction.editReply(
-      ephemeralCard(
-        makeSuccessCard(
-          `${Emojis.Bot} Lumi Core Up to Date`,
-          `Lumi core is already running the latest commit (\`${res.currentCommit}\`).`,
-        ),
-      ),
-    );
   }
 
   async function runAddonAction(
@@ -422,6 +326,31 @@ async function updateAllRepos(services: Container, downloader: DownloaderUtility
         );
       }
       return renderRepoModules(services, interaction, repoName, t);
+    }
+    if (sub === "modinfo") {
+      const [repoName, ...moduleParts] = rest;
+      const moduleName = moduleParts.join(":");
+      if (!repoName || !moduleName) return undefined;
+      const modules = await downloader.getModulesInRepo(repoName);
+      const mod = modules.find((m) => m.name === moduleName);
+      if (!mod) {
+        return interaction.followUp(
+          ephemeralCard(makeErrorCard("Not Found", `Module **${moduleName}** was not found in **${repoName}**.`)),
+        );
+      }
+      const lines = [
+        `### 📦 __${mod.name}__ (v${mod.version})`,
+        mod.description ? `*${mod.description}*` : "*No description provided.*",
+        "",
+        `**Author:** ${mod.author || "Unknown"}`,
+        `**Min Bot Version:** \`${mod.min_bot_version || "Any"}\``,
+        "",
+        "### 🛡️ __Data & Privacy Statement__",
+        mod.end_user_data_statement || "*This module has not specified an end-user data statement.*",
+      ];
+      return interaction.followUp(
+        ephemeralCard(makeInfoCard(`Module Info: ${mod.name}`, lines)),
+      );
     }
     return undefined;
   }

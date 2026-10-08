@@ -86,16 +86,17 @@ export const pingDef: CommandDef = {
         await interaction.deferReply({ flags: EphemeralFlags });
       }
 
+      const card = buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id);
       const msg = await interaction.editReply({
-        components: [
-          buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id),
-        ],
+        flags: PingFlags,
+        components: [card],
         allowedMentions: {},
       });
 
       const roundTrip = msg.createdTimestamp - interaction.createdTimestamp;
 
       await interaction.editReply({
+        flags: PingFlags,
         components: [
           buildOverviewCard({ roundTrip, ...data }, interaction.user.id),
         ],

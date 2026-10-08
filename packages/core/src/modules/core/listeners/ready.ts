@@ -4,7 +4,8 @@ import type { Container } from "#lib/services.js";
 import { commandRegistry } from "#lib/commands/command-def.js";
 import { styleText } from "node:util";
 import { Emojis } from "#lib/utilities/assets.js";
-import { getShardCount } from "#lib/env.js";
+import { getShardCount, isPrimaryShard } from "#lib/env.js";
+import { getUtility } from "#lib/module-system/Utility.js";
 
 async function publishStats(services: Container, guilds: number) {
   const stats = {
@@ -90,5 +91,16 @@ export const readyListener = defineListener({
 
     void publishStats(services, guilds);
     void reconcileGuilds(services);
+
+    if (isPrimaryShard()) {
+      void (async () => {
+        try {
+          const downloader = getUtility<any>("downloader");
+          await downloader?.syncApplicationCommands(services);
+        } catch (err: unknown) {
+          logger.error("[ReadyListener] Failed to sync application commands:", err);
+        }
+      })();
+    }
   },
 });

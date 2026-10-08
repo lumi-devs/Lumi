@@ -142,5 +142,6 @@ export function createServices(
     services.moduleStore.addRoot(pathToFileURL(`${devPath}/`));
   }
   ownedBuses.set(services, ownedEventBus);
+  useServices(services);
   return services;
 }

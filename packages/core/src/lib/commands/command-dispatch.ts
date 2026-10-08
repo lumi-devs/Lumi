@@ -247,7 +247,7 @@ export async function dispatchMessage(
   const [name, ...tokens] = withoutPrefix.split(/ +/g);
   if (!name) return;
   const def = commandRegistry.get(name.toLowerCase());
-  if (!def || !def.prefixEnabled) return;
+  if (!def || def.prefixEnabled === false) return;
   if (await denyCommand(services, message, gateSourceFromMessage(message), def)) {
     return;
   }

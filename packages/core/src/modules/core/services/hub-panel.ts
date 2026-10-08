@@ -33,7 +33,7 @@ export const hasAdminPermit = (interaction: PanelInteraction) =>
   hasRequiredPermit(interaction, "admin.*");
 
 /**
- * Host-level actions (addons, core self-update) are Bot Owner only. This is
+ * Host-level actions (addons) are Bot Owner only. This is
  * deliberately not a permit node: `owner.*` is satisfied by every guild owner
  * (PermitResolver's guild-owner bypass), and installing an addon runs
  * third-party code in the bot process.
@@ -133,6 +133,8 @@ export async function renderRepoModules(
         short: moduleInfo.short,
         description: moduleInfo.description,
         endUserDataStatement: moduleInfo.end_user_data_statement,
+        author: moduleInfo.author,
+        minBotVersion: moduleInfo.min_bot_version,
         hidden: moduleInfo.hidden,
         isInstalled: installed.has(moduleInfo.name),
       })),

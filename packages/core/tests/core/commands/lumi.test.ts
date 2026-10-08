@@ -2,14 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { CommandContext } from "#lib/commands/context.js";
 import { asHandler } from "#lib/commands/command-def.js";
 import { lumiDef } from "#modules/core/commands/lumi.js";
-import { UserError } from "@lumi/shared";
 
 vi.mock("#modules/core/services/config-panel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
-}));
-
-vi.mock("#lib/utilities/self-update.js", () => ({
-  updateLumiCore: vi.fn(),
 }));
 
 vi.mock("#modules/core/ui/hub.js", () => ({
@@ -26,10 +21,7 @@ vi.mock("#lib/utilities/command-response.js", () => ({
 }));
 
 import { loadFeatures } from "#modules/core/services/config-panel.js";
-import { updateLumiCore } from "#lib/utilities/self-update.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { buildHubView } from "#modules/core/ui/hub.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
 
 function makeServices() {
   return {
@@ -58,13 +50,8 @@ function slashCtx(services: any) {
   return CommandContext.fromInteraction(interaction, services);
 }
 
-function runHandler(name: "panel" | "update", ctx: CommandContext) {
+function runHandler(name: "panel", ctx: CommandContext) {
   return asHandler(lumiDef.handlers![name]!).run(ctx);
-}
-
-function lastCardJson() {
-  const calls = (sendInteractionReply as any).mock.calls;
-  return JSON.stringify(calls[calls.length - 1][1]);
 }
 
 describe("lumiDef", () => {
@@ -118,50 +105,6 @@ describe("lumiDef", () => {
         expect.objectContaining({ iconUrl: "https://cdn/guild.png" }),
         expect.anything(),
       );
-    });
-  });
-
-  describe("update", () => {
-    beforeEach(() => {
-      vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
-    });
-
-    it("refuses a non bot owner before running the updater", async () => {
-      (PermitResolver.isBotOwner as any).mockReturnValue(false);
-
-      await expect(runHandler("update", slashCtx(services))).rejects.toThrow(UserError);
-      expect(updateLumiCore).not.toHaveBeenCalled();
-    });
-
-    it("surfaces the updater error without claiming success", async () => {
-      (updateLumiCore as any).mockResolvedValue({ error: "working tree is dirty" });
-
-      await runHandler("update", slashCtx(services));
-
-      expect(lastCardJson()).toContain("working tree is dirty");
-    });
-
-    it("offers a restart choice after a successful update", async () => {
-      (updateLumiCore as any).mockResolvedValue({
-        updated: true,
-        commitsCount: 3,
-        latestCommit: "def5678",
-        currentCommit: "abc1234",
-        changelog: "- fix things",
-      });
-
-      await runHandler("update", slashCtx(services));
-
-      expect(lastCardJson()).toContain("module:restart:u-1");
-    });
-
-    it("reports an already-current install without offering a restart", async () => {
-      (updateLumiCore as any).mockResolvedValue({ updated: false, currentCommit: "abc1234" });
-
-      await runHandler("update", slashCtx(services));
-
-      expect(lastCardJson()).toContain("core:coreUpToDateTitle");
-      expect(lastCardJson()).not.toContain("module:restart:");
     });
   });
 });

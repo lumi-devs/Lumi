@@ -90,6 +90,14 @@ export class PermitResolver {
       return true;
     }
 
+    if (container.client?.guilds?.cache) {
+      const g = container.client.guilds.cache.get(guildId);
+      const m = g?.members?.cache?.get(userId);
+      if (m?.permissions?.has(1n << 3n) || m?.permissions?.has(1n << 5n)) {
+        return true;
+      }
+    }
+
     const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
       { targetType: "user", targetId: userId },
       ...(channelId ? [{ targetType: "channel" as const, targetId: channelId }] : []),

@@ -24,9 +24,18 @@ export function defineInteraction<I extends Interaction>(
 
 const registry: InteractionDef<any>[] = [];
 
+function specificity(def: InteractionDef<any>): number {
+  if (def.match) return Number.POSITIVE_INFINITY;
+  const prefixes = Array.isArray(def.prefix) ? def.prefix : [def.prefix];
+  return Math.max(...prefixes.map((p) => p?.length ?? -1));
+}
+
 export function addInteractionDef(def: InteractionDef<any>): void {
   if (def.match) {
-    if (!registry.includes(def)) registry.push(def);
+    if (!registry.includes(def)) {
+      registry.push(def);
+      registry.sort((a, b) => specificity(b) - specificity(a));
+    }
     return;
   }
   const prefixes = Array.isArray(def.prefix) ? def.prefix : [def.prefix];
@@ -37,6 +46,7 @@ export function addInteractionDef(def: InteractionDef<any>): void {
     })
   ) {
     registry.push(def);
+    registry.sort((a, b) => specificity(b) - specificity(a));
   }
 }
 

@@ -5,6 +5,7 @@ import {
   buildDetailCard,
   type PingCategory,
 } from "../../ui/ping-cards.js";
+import { MessageFlags } from "discord.js";
 import {
   acknowledge,
   checkSecurity,
@@ -40,6 +41,7 @@ export const ping = defineInteraction({
     if (result.category === "overview") {
       return interaction
         .editReply({
+          flags: MessageFlags.IsComponentsV2,
           components: [
             buildOverviewCard({ roundTrip: null, ...data }, result.userId),
           ],
@@ -52,6 +54,6 @@ export const ping = defineInteraction({
       { roundTrip: null, ...data },
       result.userId,
     );
-    return interaction.editReply({ components: [card] }).catch(() => null);
+    return interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [card] }).catch(() => null);
   },
 });

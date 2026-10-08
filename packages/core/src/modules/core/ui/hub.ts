@@ -153,16 +153,6 @@ export function buildSettingsView(
       .setLabel(t ? t("panels:settingsUpdateAddons") : "Update Addons")
       .setEmoji(Emojis.parse("🔄"))
       .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId("lumi:check_core")
-      .setLabel(t ? t("panels:settingsCheckCore") : "Check Core")
-      .setEmoji(Emojis.parse(Emojis.Bot))
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId("lumi:update_core")
-      .setLabel(t ? t("panels:settingsUpdateCore") : "Update Lumi Core")
-      .setEmoji(Emojis.parse(Emojis.Bot))
-      .setStyle(ButtonStyle.Primary),
   );
 
   return makeCard(
