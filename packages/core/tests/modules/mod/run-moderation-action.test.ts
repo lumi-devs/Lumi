@@ -12,9 +12,7 @@ vi.mock("#lib/moderation/log.js", () => ({
   logToChannel: vi.fn(),
 }));
 
-const __actualHelpers = await import("@lumi/application/services/mod/helpers.js");
 vi.mock("@lumi/application/services/mod/helpers.js", () => ({
-  ...__actualHelpers,
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 

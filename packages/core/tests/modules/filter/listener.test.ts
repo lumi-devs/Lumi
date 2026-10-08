@@ -4,9 +4,7 @@ import { container } from "#lib/services.js";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
-const __actualUtility = await import("#lib/module-system/Utility.js");
 vi.mock("#lib/module-system/Utility.js", () => ({
-  ...__actualUtility,
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
@@ -15,17 +13,12 @@ vi.mock("#lib/utilities/temporary-message.js", () => ({
   deleteMessageLater: vi.fn(),
 }));
 
-const __actualModule15 = await import("#lib/commands.js");
-vi.mock("#lib/commands.js", () => {
-  const actual: any = __actualModule15;
-  return {
-    ...actual,
-    fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
-      if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
-      return key;
-    }),
-  };
-});
+vi.mock("#lib/commands.js", () => ({
+  fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
+    if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
+    return key;
+  }),
+}));
 
 describe("FilterMessageListener", () => {
   let listener: typeof FilterMessageListener;
