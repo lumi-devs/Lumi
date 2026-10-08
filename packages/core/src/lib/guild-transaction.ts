@@ -2,7 +2,7 @@ import { container } from "#lib/services.js";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#lib/prisma/client.js";
-import { acquireValkeyLock, verifyValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock, verifyValkeyLock } from "@lumi/infrastructure/cache";
 
 const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
 

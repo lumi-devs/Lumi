@@ -8,9 +8,3 @@ export class BackupSnapshotTask extends RelayTask<"security-backup-snapshot"> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "security-backup-snapshot": Record<string, never>;
-  }
-}

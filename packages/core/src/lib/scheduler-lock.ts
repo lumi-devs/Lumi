@@ -1,7 +1,8 @@
 import type { ValkeyClient } from "@lumi/infrastructure/database";
+import type { CacheLogger } from "@lumi/infrastructure/cache";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { getConsumerId } from "#lib/env.js";
-import { acquireValkeyLock, type ValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock, type ValkeyLock } from "@lumi/infrastructure/cache";
 
 /**
  * Exclusive fleet-wide lease on the scheduler role.
@@ -17,11 +18,13 @@ const LeaseMs = 30_000;
 export function acquireSchedulerLock(
   valkey: ValkeyClient,
   onLost: () => void,
+  logger?: CacheLogger,
 ): Promise<ValkeyLock> {
   return acquireValkeyLock(valkey, ValkeyKeys.schedulerLeader(), {
     ttlMs: LeaseMs,
     acquireTimeoutMs: 0,
     onLostLock: onLost,
+    ...(logger ? { logger } : {}),
   }).catch((cause: unknown) => {
     throw new Error(
       `[Primary] Failed to acquire scheduler lock (this process=${getConsumerId()})`,

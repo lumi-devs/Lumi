@@ -20,7 +20,6 @@ type RpcInputValidator = z.ZodType<unknown> | undefined;
 interface RpcActionOptions<V extends RpcInputValidator, A extends RpcAuth> {
   input?: V;
   auth: A;
-  permission?: string;
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;
@@ -56,7 +55,6 @@ export function rpcAction<O extends object>() {
 export interface RpcSliceEntry {
   input?: z.ZodType<unknown>;
   auth: RpcAuth;
-  permission?: string;
   requiresEnabled?: string;
   timeoutMs: number;
   summary: string;

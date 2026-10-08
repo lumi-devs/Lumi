@@ -9,9 +9,3 @@ export class ModLiftTask extends RelayTask<"mod-lift"> {
     super({ name: "mod-lift" });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "mod-lift": ModLiftPayload;
-  }
-}

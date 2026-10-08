@@ -55,15 +55,13 @@ describe("lumi addon SDK resolution", () => {
 
   it("exposes the module fundamentals from the top-level import", async () => {
     const sdk = await import("./sdk/index.js");
-    expect(sdk.Module).toBeTypeOf("function");
-    expect(sdk.DefineModule).toBeTypeOf("function");
+    expect(sdk.defineModule).toBeTypeOf("function");
     expect(sdk.cfg).toBeDefined();
   });
 
-  it("exposes command base classes from lumi/commands", async () => {
+  it("exposes plain command definitions from lumi/commands", async () => {
     const commands = await import("./sdk/commands.js");
-    expect(commands.BaseCommand).toBeTypeOf("function");
-    expect(commands.BaseSubcommand).toBeTypeOf("function");
+    expect(commands.defineCommand).toBeTypeOf("function");
     expect(commands.CommandContext).toBeTypeOf("function");
   });
 

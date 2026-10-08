@@ -10,9 +10,3 @@ export class DataRetentionSweepTask extends RelayTask<'data-retention-sweep'> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    'data-retention-sweep': Record<string, never>;
-  }
-}

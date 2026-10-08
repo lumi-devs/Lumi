@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
 import type Valkey from "iovalkey";
-import { acquireValkeyLock, type ValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock, type ValkeyLock } from "@lumi/infrastructure/cache";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { createTestValkey, deleteByPrefix, integrationDescribe } from "./setup.js";

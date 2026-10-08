@@ -35,6 +35,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("scheduler-lock", () => {
   let valkey: ReturnType<typeof mockValkey>;
+  const silentLogger = { error: vi.fn(), warn: vi.fn(), debug: vi.fn(), info: vi.fn() };
 
   beforeEach(() => {
     valkey = mockValkey();
@@ -46,16 +47,16 @@ describe("scheduler-lock", () => {
   });
 
   it("claims the scheduler leader key", async () => {
-    const lock = await acquireSchedulerLock(valkey as never, vi.fn());
+    const lock = await acquireSchedulerLock(valkey as never, vi.fn(), silentLogger);
     expect(valkey.store.has(ValkeyKeys.schedulerLeader())).toBe(true);
     await lock.release();
     expect(valkey.store.has(ValkeyKeys.schedulerLeader())).toBe(false);
   });
 
   it("rejects a second claimant instead of running two schedulers", async () => {
-    const first = await acquireSchedulerLock(valkey as never, vi.fn());
+    const first = await acquireSchedulerLock(valkey as never, vi.fn(), silentLogger);
 
-    await expect(acquireSchedulerLock(valkey as never, vi.fn())).rejects.toThrow(
+    await expect(acquireSchedulerLock(valkey as never, vi.fn(), silentLogger)).rejects.toThrow(
       /Failed to acquire scheduler lock/,
     );
 
@@ -63,10 +64,10 @@ describe("scheduler-lock", () => {
   });
 
   it("does not block waiting for the lease to free up", async () => {
-    await acquireSchedulerLock(valkey as never, vi.fn());
+    await acquireSchedulerLock(valkey as never, vi.fn(), silentLogger);
     const before = valkey.set.mock.calls.length;
 
-    await expect(acquireSchedulerLock(valkey as never, vi.fn())).rejects.toThrow(
+    await expect(acquireSchedulerLock(valkey as never, vi.fn(), silentLogger)).rejects.toThrow(
       /Failed to acquire scheduler lock/,
     );
 
@@ -75,7 +76,7 @@ describe("scheduler-lock", () => {
 
   it("signals loss when the lease is taken over while held", async () => {
     const onLost = vi.fn();
-    await acquireSchedulerLock(valkey as never, onLost);
+    await acquireSchedulerLock(valkey as never, onLost, silentLogger);
 
     valkey.store.set(ValkeyKeys.schedulerLeader(), "another-process");
     await sleep(15_000);
@@ -85,7 +86,7 @@ describe("scheduler-lock", () => {
 
   it("invokes onLost only once across multiple consecutive renewal failures", async () => {
     const onLost = vi.fn();
-    const lock = await acquireSchedulerLock(valkey as never, onLost);
+    const lock = await acquireSchedulerLock(valkey as never, onLost, silentLogger);
 
     valkey.store.set(ValkeyKeys.schedulerLeader(), "another-process");
 
@@ -102,13 +103,13 @@ describe("scheduler-lock", () => {
   }, 50_000);
 
   it("allows immediate acquisition by another claimant after clean release", async () => {
-    const first = await acquireSchedulerLock(valkey as never, vi.fn());
+    const first = await acquireSchedulerLock(valkey as never, vi.fn(), silentLogger);
     expect(valkey.store.has(ValkeyKeys.schedulerLeader())).toBe(true);
 
     await first.release();
     expect(valkey.store.has(ValkeyKeys.schedulerLeader())).toBe(false);
 
-    const second = await acquireSchedulerLock(valkey as never, vi.fn());
+    const second = await acquireSchedulerLock(valkey as never, vi.fn(), silentLogger);
     expect(valkey.store.has(ValkeyKeys.schedulerLeader())).toBe(true);
 
     await second.release();
@@ -116,7 +117,7 @@ describe("scheduler-lock", () => {
 
   it("stays quiet while the lease is still ours", async () => {
     const onLost = vi.fn();
-    await acquireSchedulerLock(valkey as never, onLost);
+    await acquireSchedulerLock(valkey as never, onLost, silentLogger);
 
     await sleep(45_000);
 

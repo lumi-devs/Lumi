@@ -1,6 +1,6 @@
 import { type Container } from "#lib/services.js";
 import { Ms } from "@lumi/shared";
-import { acquireValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock } from "@lumi/infrastructure/cache";
 import type { ModLiftPayload } from "#modules/mod/scheduled-tasks/modLift.js";
 import { liftModerationCaseWithUndo } from "./case-lift.js";
 import { errorCode } from "#lib/utilities/errors.js";

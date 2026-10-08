@@ -44,7 +44,7 @@ async function writeFixtureAddon() {
   );
   await fs.writeFile(
     path.join(dir, "index.ts"),
-    `import { Module, DefineModule } from "lumi";\n\n@DefineModule({ name: "${ModuleName}" })\nexport class Fixture extends Module {}\n`,
+    `import { defineModule } from "lumi";\n\nexport const meta = defineModule({ name: "${ModuleName}" });\n`,
   );
   return dir;
 }

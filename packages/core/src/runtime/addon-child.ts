@@ -6,14 +6,13 @@ import type {
   ChildToHost,
   HostToChild,
 } from "@lumi/contracts";
-import { CommandContext, type BaseCommand } from "#lib/addon-sandbox/sdk/commands.js";
+import { CommandContext, type AddonCommandDefinition } from "#lib/addon-sandbox/sdk/commands.js";
 import {
   InteractionContext,
-  type BaseInteractionHandler,
+  type InteractionHandler,
 } from "#lib/addon-sandbox/sdk/interactions.js";
 import { getTaskHandler, registeredTasks } from "#lib/addon-sandbox/sdk/scheduling.js";
 import { settleRpc, withInvocation } from "#lib/addon-sandbox/sdk/rpc.js";
-import { captureBuilder } from "#lib/addon-sandbox/sdk/builder.js";
 
 const addonName = process.env.LUMI_ADDON_NAME;
 const addonDir = process.env.LUMI_ADDON_DIR;
@@ -22,8 +21,8 @@ function send(message: ChildToHost): void {
   process.send?.(message);
 }
 
-const commands = new Map<string, BaseCommand>();
-const handlers: BaseInteractionHandler[] = [];
+const commands = new Map<string, AddonCommandDefinition>();
+const handlers: InteractionHandler[] = [];
 
 async function exists(target: string): Promise<boolean> {
   return stat(target).then(
@@ -32,18 +31,31 @@ async function exists(target: string): Promise<boolean> {
   );
 }
 
-async function loadPieces<T>(dir: string): Promise<T[]> {
+function isCommandDef(value: unknown): value is AddonCommandDefinition {
+  if (typeof value !== "object" || value === null) return false;
+  const def = value as Partial<AddonCommandDefinition>;
+  return typeof def.name === "string" && typeof def.run === "function";
+}
+
+function isInteractionHandler(value: unknown): value is InteractionHandler {
+  if (typeof value !== "object" || value === null) return false;
+  const def = value as Partial<InteractionHandler>;
+  return typeof def.prefix === "string" && typeof def.run === "function";
+}
+
+async function loadDefs<T>(dir: string, guard: (value: unknown) => value is T): Promise<T[]> {
   if (!(await exists(dir))) return [];
 
   const glob = new Bun.Glob("**/*.{ts,js,mts}");
-  const pieces: T[] = [];
+  const defs: T[] = [];
 
   for await (const file of glob.scan({ cwd: dir, absolute: true, onlyFiles: true })) {
     if (path.basename(file).startsWith("_") || file.endsWith(".d.ts")) continue;
-    const module = (await import(file)) as { default?: new () => T };
-    if (typeof module.default === "function") pieces.push(new module.default());
+    const module = (await import(file)) as { default?: unknown };
+    const def = module.default;
+    if (guard(def)) defs.push(def);
   }
-  return pieces;
+  return defs;
 }
 
 async function load(): Promise<{
@@ -52,15 +64,15 @@ async function load(): Promise<{
 }> {
   if (!(await exists(addonDir!))) throw new Error(`Addon directory ${addonDir} does not exist`);
 
-  for (const command of await loadPieces<BaseCommand>(path.join(addonDir!, "commands"))) {
+  for (const command of await loadDefs(path.join(addonDir!, "commands"), isCommandDef)) {
     commands.set(command.name, command);
   }
   handlers.push(
-    ...(await loadPieces<BaseInteractionHandler>(
+    ...(await loadDefs(
       path.join(addonDir!, "interaction-handlers"),
+      isInteractionHandler,
     )),
   );
-  // Importing the index registers the addon's task fire handlers as a side effect.
   const index = path.join(addonDir!, "index.ts");
   if (await exists(index)) await import(index);
 
@@ -68,7 +80,7 @@ async function load(): Promise<{
     commands: [...commands.values()].map((command) => ({
       name: command.name,
       description: command.description,
-      builder: captureBuilder(command),
+      builder: command.build?.() ?? null,
     })),
     interactionPrefixes: handlers.map((handler) => handler.prefix),
   };
@@ -79,7 +91,9 @@ async function run(invocation: AddonInvocation): Promise<void> {
     case "command": {
       const command = commands.get(invocation.piece);
       if (!command) throw new Error(`No command "${invocation.piece}"`);
-      await command.run(new CommandContext(invocation));
+      const ctx = new CommandContext(invocation);
+      const sub = command.handlers?.[ctx.subcommand ?? ""];
+      await (sub ?? command.run)(ctx);
       return;
     }
     case "interaction": {

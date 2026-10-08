@@ -1,10 +1,16 @@
 import type { InvalidationBus } from "#lib/database/valkey.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import { container } from "#lib/services.js";
 
 export interface CacheStoreOptions {
   maxEntries?: number;
   negativeTtlMs?: number;
+  /**
+   * Explicit L2 client. When omitted the process-default `container.valkey`
+   * is used.
+   */
+  valkey?: ValkeyClient;
 }
 
 interface L1Entry {
@@ -14,6 +20,11 @@ interface L1Entry {
 
 const DefaultMaxEntries = 5_000;
 const DefaultNegativeTtlMs = 15_000;
+
+/** Whole seconds for SETEX, clamped: sub-second TTLs would send `0` and fail. */
+function ttlSeconds(ttlMs: number): number {
+  return Math.max(1, Math.ceil(ttlMs / 1000));
+}
 
 /**
  * A process-local, bounded L1 cache in front of Valkey (L2), with negative
@@ -28,10 +39,21 @@ export class CacheStore {
   readonly #generations = new Map<string, number>();
   readonly #maxEntries: number;
   readonly #negativeTtlMs: number;
+  #valkey: ValkeyClient | undefined;
 
   public constructor(options?: CacheStoreOptions) {
     this.#maxEntries = options?.maxEntries ?? DefaultMaxEntries;
     this.#negativeTtlMs = options?.negativeTtlMs ?? DefaultNegativeTtlMs;
+    this.#valkey = options?.valkey;
+  }
+
+  /** Overrides the L2 client (e.g. in tests); preferred over the global. */
+  public setValkeyClient(valkey: ValkeyClient): void {
+    this.#valkey = valkey;
+  }
+
+  #l2(): ValkeyClient {
+    return this.#valkey ?? container.valkey;
   }
 
   public peek<T>(key: string): T | null | undefined {
@@ -60,16 +82,22 @@ export class CacheStore {
 
     if (value === null || value === undefined) {
       this.#l1.delete(key);
+      this.#capAux(this.#negativeUntil);
       this.#negativeUntil.set(key, Date.now() + this.#negativeTtlMs);
+      if (!opts?.l1Only) {
+        // L1-only negative caching would leave a stale L2 entry for peers
+        // (and for this process once the negative window lapses).
+        void this.#l2().del(key)?.catch?.(() => {});
+      }
       return;
     }
 
     this.#negativeUntil.delete(key);
     this.#writeL1(key, value, ttlMs);
     if (!opts?.l1Only) {
-      container.valkey
-        .setex(key, Math.ceil(ttlMs / 1000), JSON.stringify(value))
-        .catch(() => {});
+      void this.#l2()
+        .setex(key, ttlSeconds(ttlMs), JSON.stringify(value))
+        ?.catch?.(() => {});
     }
   }
 
@@ -127,7 +155,7 @@ export class CacheStore {
 
     const flight = (async (): Promise<T> => {
       try {
-        const cached = await container.valkey.get(key);
+        const cached = await this.#l2().get(key);
         if (cached) {
           try {
             const value = parser(cached);
@@ -148,12 +176,16 @@ export class CacheStore {
         }
 
         if (data === null || data === undefined) {
+          this.#capAux(this.#negativeUntil);
           this.#negativeUntil.set(key, Date.now() + this.#negativeTtlMs);
         } else {
           this.#writeL1(key, data, ttlMs);
           const serialized = serializer(data);
           if (serialized !== undefined) {
-            await container.valkey.setex(key, Math.ceil(ttlMs / 1000), serialized);
+            // Fire-and-forget: the L2 fill must not add a round trip to the
+            // read-miss path, nor fail a DB read that already succeeded when
+            // Valkey itself is having a bad day.
+            void this.#l2().setex(key, ttlSeconds(ttlMs), serialized)?.catch?.(() => {});
           }
         }
         return data as T;
@@ -167,7 +199,22 @@ export class CacheStore {
   }
 
   #bumpGeneration(key: string): void {
+    this.#capAux(this.#generations);
     this.#generations.set(key, (this.#generations.get(key) ?? 0) + 1);
+  }
+
+  /**
+   * FIFO cap for the unbounded aux maps. L1 is already bounded; without this
+   * `#negativeUntil`/`#generations` keep one entry per distinct key ever seen.
+   * Evicting from either is fail-safe: a lost negative entry just re-reads,
+   * and a lost generation only ever discards (never poisons) an in-flight
+   * write, since the lookup falls back to `?? 0` and mismatches on `!==`.
+   */
+  #capAux(map: Map<string, number>): void {
+    if (map.size >= this.#maxEntries) {
+      const oldestKey = map.keys().next().value;
+      if (oldestKey !== undefined) map.delete(oldestKey);
+    }
   }
 
   #writeL1<T>(key: string, value: T, ttlMs: number): void {

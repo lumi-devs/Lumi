@@ -9,9 +9,3 @@ export class AutoLockdownUnlockTask extends RelayTask<"filter-auto-lockdown-unlo
     super({ name: "filter-auto-lockdown-unlock" });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "filter-auto-lockdown-unlock": AutoLockdownUnlockPayload;
-  }
-}

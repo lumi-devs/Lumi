@@ -19,12 +19,12 @@ export interface UtilityDef {
   [key: string]: unknown;
 }
 
-export function defineUtility<D extends UtilityDef>(def: D): D {
-  return def;
+export function defineUtility<D extends UtilityDef>(def: D): D & { __lumiUtility: true } {
+  return { ...def, __lumiUtility: true as const };
 }
 
 const utilityRegistry = new Map<string, UtilityDef>();
-const utilityDirs = new Map<string, string[]>();
+const utilityOwners = new Map<string, Map<string, UtilityDef>>();
 
 export function getUtility<K extends keyof Utilities>(name: K): Utilities[K] {
   const utility = tryGetUtility(name);
@@ -38,52 +38,55 @@ export function tryGetUtility<K extends keyof Utilities>(
   return utilityRegistry.get(name) as Utilities[K] | undefined;
 }
 
-async function* walk(dir: string): AsyncGenerator<string> {
-  let entries: import("node:fs").Dirent[];
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) yield* walk(full);
-    else if (
-      entry.isFile() &&
-      entry.name.endsWith(".ts") &&
-      !entry.name.endsWith(".test.ts")
-    ) {
-      yield full;
-    }
-  }
+function isUtilityDef(value: unknown): value is UtilityDef {
+  if (typeof value !== "object" || value === null) return false;
+  const def = value as UtilityDef;
+  return (
+    (def as { __lumiUtility?: unknown }).__lumiUtility === true &&
+    typeof def.name === "string"
+  );
 }
 
 export async function loadUtilities(moduleDir: string): Promise<void> {
-  const names: string[] = [];
-  for await (const file of walk(join(moduleDir, "utilities"))) {
-    const mod = (await import(pathToFileURL(file).href)) as Record<
-      string,
-      unknown
-    >;
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = await readdir(join(moduleDir, "utilities"), { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries
+    .filter((e) => e.isFile() && e.name.endsWith(".ts") && !e.name.endsWith(".test.ts"))
+    .sort((a, b) => a.name.localeCompare(b.name))) {
+    const mod = (await import(
+      pathToFileURL(join(moduleDir, "utilities", entry.name)).href
+    )) as Record<string, unknown>;
     for (const value of Object.values(mod)) {
-      if (typeof value !== "object" || value === null) continue;
-      const def = value as UtilityDef;
-      if (typeof def.name !== "string") continue;
-      if (utilityRegistry.has(def.name)) continue;
-      utilityRegistry.set(def.name, def);
-      names.push(def.name);
-      await def.onLoad?.();
+      if (!isUtilityDef(value)) continue;
+      const owners = utilityOwners.get(value.name) ?? new Map<string, UtilityDef>();
+      if (utilityRegistry.has(value.name)) {
+        console.warn(
+          `[Utility] "${value.name}" from ${entry.name} collides with an already-loaded utility - last-wins.`,
+        );
+      }
+      utilityRegistry.set(value.name, value);
+      owners.set(moduleDir, value);
+      utilityOwners.set(value.name, owners);
+      await value.onLoad?.();
     }
   }
-  utilityDirs.set(moduleDir, names);
 }
 
 export async function unloadUtilitiesForDir(
   moduleDir: string,
 ): Promise<void> {
-  const names = utilityDirs.get(moduleDir) ?? [];
-  utilityDirs.delete(moduleDir);
-  for (const name of names) {
+  for (const [name, owners] of utilityOwners) {
+    if (!owners.delete(moduleDir)) continue;
+    if (owners.size > 0) {
+      const [last] = [...owners.values()].slice(-1);
+      if (last) utilityRegistry.set(name, last);
+      continue;
+    }
+    utilityOwners.delete(name);
     const instance = utilityRegistry.get(name);
     if (instance) {
       utilityRegistry.delete(name);

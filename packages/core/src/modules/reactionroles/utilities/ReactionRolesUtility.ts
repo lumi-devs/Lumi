@@ -7,7 +7,7 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { acquireValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock } from "@lumi/infrastructure/cache";
 import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
   deleteMenu,

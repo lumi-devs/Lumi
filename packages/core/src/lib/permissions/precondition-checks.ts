@@ -16,7 +16,7 @@ export interface GateSource {
   channelId: string | null;
 }
 
-/** A failed gate: the same identifier/message/i18n the store piece denied with. */
+/** A failed gate: the same identifier/message/i18n the gate denied with. */
 export interface GateDenial {
   identifier: string;
   message: string;
@@ -175,7 +175,6 @@ async function checkModuleEnabled(
   };
 }
 
-/** Plain gates keyed by the store name each piece used to register under. */
 export const preconditionChecks: Record<string, GateCheck> = {
   GuildOnly: checkGuildOnly,
   BotOwner: checkBotOwner,

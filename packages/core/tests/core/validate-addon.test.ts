@@ -14,9 +14,8 @@ const GOOD_INFO = JSON.stringify({
   version: "1.0.0",
   end_user_data_statement: "This addon does not store any user data.",
 });
-const GOOD_INDEX = `import { Module, DefineModule } from "lumi";
-@DefineModule({ name: "sample", displayName: "Sample", emoji: "🧪", version: "1.0.0", description: "d" })
-export class SampleModule extends Module {}
+const GOOD_INDEX = `import { defineModule } from "lumi";
+export const meta = defineModule({ name: "sample", displayName: "Sample", emoji: "🧪", version: "1.0.0", description: "d" });
 `;
 
 async function makeAddon(
@@ -155,7 +154,7 @@ describe("validateAddon", () => {
   it("validates a valid manifest.json contract", async () => {
     const dir = await makeAddon("valid-manifest", {
       "info.json": JSON.stringify({ name: "valid-manifest", author: ["T"], description: "d", short: "s", version: "1.0.0", end_user_data_statement: "Valid privacy statement" }),
-      "index.ts": `import { Module, DefineModule } from "lumi";\n@DefineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class MModule extends Module {}\n`,
+      "index.ts": `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "valid-manifest", displayName: "M", emoji: "🧪", version: "1.0.0", description: "d" });\n`,
       "manifest.json": JSON.stringify({
         name: "valid-manifest",
         displayName: "M",

@@ -42,7 +42,7 @@ describe("InvalidationBus", () => {
     };
 
     subscriber = createMockSubscriber();
-    bus = new InvalidationBus(subscriber as any);
+    bus = new InvalidationBus(subscriber as any, (container as any).valkey);
   });
 
   describe("invalidate", () => {
@@ -101,6 +101,25 @@ describe("InvalidationBus", () => {
 
       expect((container.valkey as any).set).toBeUndefined();
       expect(container.valkey.del).toHaveBeenCalledTimes(1);
+    });
+
+    it("chunks a huge key list so no single broadcast fans out unbounded", async () => {
+      const keys = Array.from({ length: 1_200 }, (_, i) => `k:${i}`);
+
+      await bus.invalidate(...keys);
+
+      const publish = container.valkey.publish as any;
+      expect(publish).toHaveBeenCalledTimes(3);
+      const seen = publish.mock.calls.flatMap(([, payload]: [string, string]) =>
+        JSON.parse(payload).keys,
+      );
+      expect(seen).toHaveLength(1_200);
+      expect(new Set(seen).size).toBe(1_200);
+      for (const [, payload] of publish.mock.calls) {
+        expect(JSON.parse(payload).keys.length).toBeLessThanOrEqual(500);
+      }
+      // Every chunk deletes before it publishes.
+      expect(container.valkey.del).toHaveBeenCalledTimes(3);
     });
   });
 

@@ -1,7 +1,7 @@
 import { buildRestOptions } from "#lib/discord-rest.js";
 import { envParseString, getConsumerId } from "#lib/env.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import type { ValkeyLock } from "#lib/lock.js";
+import type { ValkeyLock } from "@lumi/infrastructure/cache";
 import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
 import { ScheduledTaskRunner } from "#lib/scheduler-runner.js";
 import { loadScheduledTasks } from "#lib/scheduled-tasks.js";
@@ -51,7 +51,7 @@ export async function installSchedulerContainerServices(): Promise<SchedulerCont
   const schedulerLock = await acquireSchedulerLock(container.valkey, () => {
     container.logger.error("[Scheduler] Lost scheduler lock, exiting");
     process.exit(1);
-  });
+  }, container.logger);
 
   await tasks.createRepeated();
 

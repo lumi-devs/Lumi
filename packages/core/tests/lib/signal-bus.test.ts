@@ -42,7 +42,7 @@ describe("SignalBus", () => {
     };
 
     subscriber = createMockSubscriber();
-    bus = new SignalBus(subscriber as any);
+    bus = new SignalBus(subscriber as any, (container as any).valkey);
   });
 
   describe("publish", () => {

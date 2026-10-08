@@ -1,7 +1,7 @@
 import type { ConfigField, ModuleConfigSchema } from "./config-schema.js";
 
 /**
- * Configuration options provided to the `@DefineModule` decorator or the `Module` constructor.
+ * Configuration options provided to `defineModule`.
  */
 export interface ModuleDefinition {
   name?: string;
@@ -49,8 +49,6 @@ export interface ModuleMeta {
   category?: string;
   /** Dashboard route (relative to `/guild/:id/`) for a bespoke settings page, instead of the generic `/modules/[name]` form. */
   dashboardHref?: string;
-  onLoad?: () => void;
-  onUnload?: () => void;
 }
 
 /**

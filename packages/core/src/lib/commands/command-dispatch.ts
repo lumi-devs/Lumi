@@ -1,8 +1,6 @@
 import { UserError } from "@lumi/shared";
 import type { Container } from "#lib/services.js";
 import {
-  ApplicationIntegrationType,
-  InteractionContextType,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type Client,
@@ -25,10 +23,7 @@ import {
   type GateSource,
 } from "#lib/permissions/precondition-checks.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
-import {
-  denyGated,
-  mapRequiredPermitToDiscordPermission,
-} from "#lib/commands.js";
+import { denyGated } from "#lib/commands.js";
 import { instrumentedRun } from "#lib/telemetry/instrument.js";
 import {
   handleDenied,
@@ -393,26 +388,4 @@ export async function dispatchAutocomplete(
     }
   }
   await def.autocomplete(services, interaction);
-}
-
-export function finalizeBuilder(def: CommandDef) {
-  if (!def.build) throw new Error(`Command ${def.name} has no slash builder.`);
-  const builder = def.build();
-  const guildOnly = def.guildOnly ?? false;
-  builder.setDefaultMemberPermissions(
-    def.defaultMemberPermissions ??
-      mapRequiredPermitToDiscordPermission(def.requiredPermit) ??
-      null,
-  );
-  builder.setContexts(
-    ...(guildOnly
-      ? [InteractionContextType.Guild]
-      : [
-          InteractionContextType.Guild,
-          InteractionContextType.BotDM,
-          InteractionContextType.PrivateChannel,
-        ]),
-  );
-  builder.setIntegrationTypes(ApplicationIntegrationType.GuildInstall);
-  return builder;
 }

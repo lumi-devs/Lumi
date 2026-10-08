@@ -1,4 +1,4 @@
-import { sendReply } from "#lib/commands.js";
+import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { createStringSelectMenu } from "#lib/ui/panels.js";
 import {
   ActionRowBuilder,
@@ -41,11 +41,11 @@ async function run(
     }),
   );
 
-  await sendReply(interaction, {
+  await sendInteractionReply(interaction, {
     content: `Choose a punishment for <@${authorId}>:`,
     components: [row],
     flags: MessageFlags.Ephemeral,
-  });
+  }, "followUp");
 }
 
 export const punishAuthorDef: CommandDef = {

@@ -53,25 +53,11 @@ function isPathInside(child: string | undefined | null, parent: string): boolean
   return child === parent || child.startsWith(parent + path.sep);
 }
 
-function extractModuleMeta(mod: {
-  meta?: ModuleMeta;
-  default?: { meta?: ModuleMeta };
-  [key: string]: unknown;
-}): ModuleMeta | undefined {
-  if (mod.meta) return mod.meta;
-  if (mod.default?.meta) return mod.default.meta;
-  for (const v of Object.values(mod)) {
-    const m = (v as { meta?: ModuleMeta } | undefined)?.meta;
-    if (m?.name) return m;
-  }
-  return undefined;
-}
-
 type ModuleDef = Omit<ModuleObject, "dir"> & { dir?: string };
 
 function findModuleDef(
   mod: Record<string, unknown>,
-  name: string,
+  name?: string,
 ): ModuleDef | undefined {
   const candidates = [mod.default, ...Object.values(mod)];
   for (const v of candidates) {
@@ -79,7 +65,9 @@ function findModuleDef(
     if (typeof v !== "object" || v === null) continue;
     const def = v as ModuleDef & { __lumiModule?: unknown };
     if (def.__lumiModule !== true) continue;
-    if (!def.name || def.name === name) return def;
+    if (name !== undefined && def.name && def.name !== name) continue;
+    if (!def.name && name === undefined) continue;
+    return def;
   }
   return undefined;
 }
@@ -130,42 +118,6 @@ export class ModuleStore {
     this.#addons.stopAll();
   }
 
-  public async loadAll() {
-    await this.discover();
-
-    for (const record of this.#records.values()) {
-      if (!record.enabled) continue;
-      try {
-        if (this.isAddonModule(record)) {
-          await this.#loadAddon(record);
-          continue;
-        }
-        await this.#loadIndex(record);
-        record.state = "loaded";
-      } catch (err: unknown) {
-        record.state = "failed";
-        record.enabled = false;
-        record.failureReason =
-          err instanceof Error ? err.message : String(err);
-        this.#services.logger.error(
-          `[ModuleStore] Module "${record.name}" failed to load:`,
-          err,
-        );
-      }
-    }
-
-    try {
-      const stateMap = await this.#services.db.modules.getGlobalModuleStates();
-      for (const module of this.#modules.values()) {
-        module.enabled = stateMap.get(module.name) ?? true;
-      }
-    } catch (err: unknown) {
-      this.#services.logger.error("[ModuleStore] DB sync failed:", err);
-    }
-
-    this.#setupInvalidationListener();
-  }
-
   public async discover(force = false, bustCache = false) {
     if (this.#discovered && !force) return;
 
@@ -195,13 +147,14 @@ export class ModuleStore {
     this.#topoSort();
 
     this.#discovered = true;
+    this.#setupInvalidationListener();
   }
 
   public async reload(name: string) {
     return withSerializedWork(`module-store:enable:${name}`, async () => {
       await this.unload(name).catch(() => undefined);
       await this.discover(true, true);
-      await this.loadModule(name);
+      await this.loadModule(name, true);
     });
   }
 
@@ -256,7 +209,7 @@ export class ModuleStore {
       if (record.enabled === enabled) return;
 
       if (enabled) {
-        await this.loadModule(name);
+        await this.loadModule(name, true);
       } else {
         await this.unload(name).catch(() => undefined);
       }
@@ -332,14 +285,14 @@ export class ModuleStore {
     for (const fn of fns) fn();
   }
 
-  public async loadModule(name: string): Promise<void> {
+  public async loadModule(name: string, fresh = false): Promise<void> {
     const record = this.#records.get(name);
     if (!record) throw new Error(`Module ${name} not found`);
 
     if (this.isAddonModule(record)) return this.#loadAddon(record);
 
     try {
-      await this.#loadIndex(record);
+      await this.#loadIndex(record, fresh);
     } catch (err: unknown) {
       const reason = err instanceof Error ? err.message : String(err);
       this.#services.logger.error(
@@ -359,11 +312,14 @@ export class ModuleStore {
     record.failureReason = undefined;
   }
 
-  async #loadIndex(record: ModuleRecord): Promise<void> {
-    const mod = await import(record.indexUrl);
-    const def = findModuleDef(mod, record.name);
-    if (!def)
+  async #loadIndex(record: ModuleRecord, fresh = false): Promise<void> {
+    const baseUrl = record.indexUrl;
+    const importUrl = fresh ? `${baseUrl}?t=${Date.now()}` : baseUrl;
+    const mod = (await import(importUrl)) as Record<string, unknown>;
+    const found = findModuleDef(mod, record.name);
+    if (!found)
       throw new Error(`No module definition export found in ${record.indexUrl}`);
+    const def = { ...found, name: found.name ?? record.name };
     const module: ModuleObject = { ...def, dir: record.dir };
     await module.onLoad?.(this.#services);
     this.#modules.set(record.name, module);
@@ -425,8 +381,8 @@ export class ModuleStore {
     if (this.isAddonModule(record)) return undefined;
 
     try {
-      const mod = await import(record.indexUrl);
-      const meta = extractModuleMeta(mod);
+      const mod = (await import(record.indexUrl)) as Record<string, unknown>;
+      const meta = findModuleDef(mod, name)?.meta;
       this.#schemaCache.set(name, meta?.configSchema);
       return meta?.configSchema;
     } catch (err: unknown) {
@@ -471,7 +427,7 @@ export class ModuleStore {
       if (module) module.enabled = newEnabled;
 
       if (newEnabled) {
-        await this.loadModule(name).catch((err) =>
+        await this.loadModule(name, true).catch((err) =>
           this.#services.logger.error(`[ModuleStore] Cluster load failed: ${name}`, err),
         );
       } else {
@@ -592,17 +548,19 @@ export class ModuleStore {
     try {
       const baseUrl = pathToFileURL(indexPath).href;
       const importUrl = bustCache ? `${baseUrl}?t=${Date.now()}` : baseUrl;
-      const mod = await import(importUrl);
-      const meta = extractModuleMeta(mod);
+      const mod = (await import(importUrl)) as Record<string, unknown>;
+      const meta = findModuleDef(mod)?.meta;
 
-      if (!meta || found.has(meta.name)) return;
+      if (!meta) return;
+      const name = meta.name ?? path.basename(dir);
+      if (found.has(name)) return;
 
       if (meta.configSchema)
-        this.#schemaCache.set(meta.name, meta.configSchema);
+        this.#schemaCache.set(name, meta.configSchema);
 
       found.set(
-        meta.name,
-        this.#buildRecord(meta.name, dir, indexPath, meta, globalState, "worker"),
+        name,
+        this.#buildRecord(name, dir, indexPath, { ...meta, name }, globalState, "worker"),
       );
     } catch (err: unknown) {
       this.#services.logger.error(`[ModuleStore] Import failed: ${indexPath}`, err);

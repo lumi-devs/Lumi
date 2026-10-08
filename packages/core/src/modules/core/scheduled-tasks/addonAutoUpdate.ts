@@ -8,9 +8,3 @@ export class AddonAutoUpdateTask extends RelayTask<"addon-auto-update"> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "addon-auto-update": Record<string, never>;
-  }
-}

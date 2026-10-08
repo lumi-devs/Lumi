@@ -4,7 +4,7 @@ import {
   acquireValkeyLock,
   verifyValkeyLock,
   ValkeyExtendScript,
-} from "#lib/lock.js";
+} from "@lumi/infrastructure/cache";
 
 function mockValkey() {
   const store = new Map<string, string>();
@@ -39,6 +39,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("valkey-lock", () => {
   let valkey: ReturnType<typeof mockValkey>;
+  const silentLogger = { error: vi.fn(), warn: vi.fn(), debug: vi.fn(), info: vi.fn() };
 
   beforeEach(() => {
     valkey = mockValkey();
@@ -50,7 +51,7 @@ describe("valkey-lock", () => {
 
   describe("fencing token and verification", () => {
     it("returns a release closure and a valid fencing token", async () => {
-      const lock = await acquireValkeyLock(valkey as any, "lock:guild:1", { ttlMs: 5000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:1", { ttlMs: 5000, logger: silentLogger });
       expect(typeof lock.release).toBe("function");
       expect(typeof lock.token).toBe("string");
       expect(lock.token.length).toBeGreaterThan(0);
@@ -58,14 +59,14 @@ describe("valkey-lock", () => {
     });
 
     it("verifies lock holder while held and returns false after release", async () => {
-      const lock = await acquireValkeyLock(valkey as any, "lock:guild:2", { ttlMs: 5000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:2", { ttlMs: 5000, logger: silentLogger });
       await expect(verifyValkeyLock(valkey as any, "lock:guild:2", lock.token)).resolves.toBe(true);
       await lock.release();
       await expect(verifyValkeyLock(valkey as any, "lock:guild:2", lock.token)).resolves.toBe(false);
     });
 
     it("rejects stale token verification when token does not match", async () => {
-      const lock = await acquireValkeyLock(valkey as any, "lock:guild:3", { ttlMs: 5000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:guild:3", { ttlMs: 5000, logger: silentLogger });
       await expect(verifyValkeyLock(valkey as any, "lock:guild:3", "stale-token-123")).resolves.toBe(false);
       await lock.release();
     });
@@ -80,6 +81,7 @@ describe("valkey-lock", () => {
         acquireTimeoutMs: 100,
         retryDelayMs: 20,
         maxRetryDelayMs: 50,
+        logger: silentLogger,
       });
 
       const assertionPromise = expect(acquirePromise).rejects.toThrow(
@@ -93,7 +95,7 @@ describe("valkey-lock", () => {
 
   describe("lock renewal", () => {
     it("renews lock automatically at half ttl intervals when held", async () => {
-      const lock = await acquireValkeyLock(valkey as any, "lock:renew:1", { ttlMs: 4000 });
+      const lock = await acquireValkeyLock(valkey as any, "lock:renew:1", { ttlMs: 4000, logger: silentLogger });
       const evalSpy = valkey.eval;
 
       await sleep(2000);

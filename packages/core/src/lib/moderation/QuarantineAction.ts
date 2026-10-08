@@ -4,7 +4,7 @@ import { tryParseJSON } from "@lumi/shared";
 import { formatAuditReason } from "#lib/utilities/misc.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import { logToChannel } from "#lib/moderation/log.js";
-import { acquireValkeyLock } from "#lib/lock.js";
+import { acquireValkeyLock } from "@lumi/infrastructure/cache";
 
 export interface QuarantineApplyOptions {
   guild: Guild;

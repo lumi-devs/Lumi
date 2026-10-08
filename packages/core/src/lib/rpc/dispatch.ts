@@ -19,7 +19,6 @@ import {
   resolveRpcDiscordBulkheadQueueLimit,
   resolveRpcDiscordBulkheadSize,
 } from "#lib/env.js";
-import { handlePrismaError } from "#lib/prisma/errors.js";
 import { getRpcHandler } from "#lib/rpc/registry.js";
 import { Semaphore, SemaphoreQueueFullError } from "#lib/utilities/concurrency.js";
 import { errorFrom, logError } from "#lib/utilities/errors.js";
@@ -147,7 +146,20 @@ export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
           err instanceof Prisma.PrismaClientRustPanicError ||
           err instanceof Prisma.PrismaClientValidationError ||
           err instanceof Prisma.PrismaClientInitializationError;
-        const safeErr = isPrismaError ? handlePrismaError(err) : errorFrom(err);
+        const safeErr =
+          isPrismaError && err instanceof Prisma.PrismaClientKnownRequestError
+            ? new Error(
+                err.code === "P2002"
+                  ? "Unique constraint violation."
+                  : err.code === "P2025"
+                    ? "Record not found."
+                    : err.code === "P1008"
+                      ? "Operation timed out."
+                      : `Database error occurred (code: ${err.code}).`,
+              )
+            : isPrismaError
+              ? new Error("Database error occurred.")
+              : errorFrom(err);
         const code =
           err instanceof CodedRpcError ? err.code : RpcFailureCodes.HandlerError;
         return makeRpcFailure(req.id, safeErr.message ?? "Internal error", code, {

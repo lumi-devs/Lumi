@@ -397,7 +397,7 @@ export const downloaderUtility = defineUtility({
       services.logger.info(
         `[DownloaderUtility] Loading module ${moduleName}...`,
       );
-      await services.moduleStore.loadModule(moduleName);
+      await services.moduleStore.loadModule(moduleName, true);
       services.logger.info("[DownloaderUtility] Syncing commands...");
       await downloaderUtility.syncApplicationCommands(services);
       await services.db.downloader.writeInstalledDownloaderModule(
@@ -562,7 +562,7 @@ export const downloaderUtility = defineUtility({
       );
 
       await services.moduleStore.discover(true);
-      await services.moduleStore.loadModule(moduleName);
+      await services.moduleStore.loadModule(moduleName, true);
       await downloaderUtility.syncApplicationCommands(services);
 
       if (info.commit) {
@@ -647,7 +647,7 @@ export const downloaderUtility = defineUtility({
     );
 
     await services.moduleStore.discover(true);
-    await services.moduleStore.loadModule(moduleName);
+    await services.moduleStore.loadModule(moduleName, true);
     await downloaderUtility.syncApplicationCommands(services);
 
     if (info.commit) {

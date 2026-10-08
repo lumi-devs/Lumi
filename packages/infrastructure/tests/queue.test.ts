@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { QueueService } from "../src/services/queue-service.js";
 import { TaskQueueProducer } from "../src/queues/producer.js";
 
 // Mock BullMQ Queue so tests run fully offline
@@ -31,29 +30,10 @@ vi.mock("bullmq", () => {
   };
 });
 
-describe("QueueService & TaskQueueProducer", () => {
+describe("TaskQueueProducer", () => {
   beforeEach(() => {
     mockQueueInstances.length = 0;
     vi.clearAllMocks();
-  });
-
-  it("caches and returns the same queue instance for a given name", async () => {
-    const service = new QueueService({
-      connection: { host: "127.0.0.1", port: 6379 },
-    });
-
-    const q1 = service.getQueue("moderation-tasks");
-    const q2 = service.getQueue("moderation-tasks");
-    expect(q1).toBe(q2);
-    expect(mockQueueInstances).toHaveLength(1);
-
-    const qOther = service.getQueue("email-tasks");
-    expect(qOther).not.toBe(q1);
-    expect(mockQueueInstances).toHaveLength(2);
-
-    await service.closeAll();
-    expect(mockQueueInstances[0].close).toHaveBeenCalled();
-    expect(mockQueueInstances[1].close).toHaveBeenCalled();
   });
 
   it("TaskQueueProducer schedules one-off and repeating jobs", async () => {

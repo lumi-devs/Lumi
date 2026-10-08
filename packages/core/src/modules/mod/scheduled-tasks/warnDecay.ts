@@ -10,9 +10,3 @@ export class WarnDecayTask extends RelayTask<"warn-decay"> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "warn-decay": WarnDecayPayload;
-  }
-}

@@ -10,9 +10,3 @@ export class GdprExportCleanupTask extends RelayTask<"gdpr-export-cleanup"> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "gdpr-export-cleanup": Record<string, never>;
-  }
-}

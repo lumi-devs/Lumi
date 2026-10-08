@@ -10,9 +10,3 @@ export class VerifySweepTask extends RelayTask<"security-verify-sweep"> {
     });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "security-verify-sweep": Record<string, never>;
-  }
-}

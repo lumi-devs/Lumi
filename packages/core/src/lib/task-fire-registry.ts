@@ -11,13 +11,18 @@ export type TaskFireHandler<N extends keyof ScheduledTasks> = (
   payload: ScheduledTasks[N],
 ) => Promise<void>;
 
-interface Registration<N extends keyof ScheduledTasks = keyof ScheduledTasks> {
-  name: N;
+export type AnyTaskFireHandler = (
+  services: Container,
+  payload: ScheduledTasks[keyof ScheduledTasks],
+) => Promise<void>;
+
+interface AnyRegistration {
+  name: keyof ScheduledTasks;
   mode: TaskFireMode;
-  handler: TaskFireHandler<N>;
+  handler: AnyTaskFireHandler;
 }
 
-const registry = new Map<keyof ScheduledTasks, Registration>();
+const registry = new Map<keyof ScheduledTasks, AnyRegistration>();
 
 /** The consumer currently running on this process, if any. */
 let activeConsumer: TaskFireConsumer | null = null;
@@ -36,7 +41,7 @@ export function registerTaskFireHandler<N extends keyof ScheduledTasks>(
       `[TaskFireRegistry] Handler for task '${String(name)}' is being replaced (was mode=${previous.mode}, now mode=${mode}). If these are different owners, one of them is hijacking the other's task fires.`,
     );
   }
-  registry.set(name, { name, mode, handler } as Registration);
+  registry.set(name, { name, mode, handler: handler as AnyTaskFireHandler });
 
   if (activeConsumer) {
     void activeConsumer
@@ -50,7 +55,7 @@ export function registerTaskFireHandler<N extends keyof ScheduledTasks>(
   }
 }
 
-export function getRegisteredFireHandlers(): readonly Registration[] {
+export function getRegisteredFireHandlers(): readonly AnyRegistration[] {
   return [...registry.values()];
 }
 
@@ -90,7 +95,7 @@ export class TaskFireConsumer {
   }
 
   /** Subscribe one registration's fire-stream. Idempotent per task name. */
-  public async subscribe(reg: Registration): Promise<void> {
+  public async subscribe(reg: AnyRegistration): Promise<void> {
     if (this.subscribed.has(reg.name)) return;
     this.subscribed.add(reg.name);
 

@@ -119,7 +119,7 @@ const TimerRe =
 
 const ListenerRe = /\.(?:on|addListener)\s*\(\s*["'`]/;
 const ListenerCleanupRe =
-  /\b(?:onUnload|dispose|\.off\s*\(|removeListener|removeAllListeners)\b/;
+  /\b(?:onUnload|dispose|removeListener|removeAllListeners)\b|\.off\s*\(/;
 
 // Anchored at true line-start (no leading whitespace) as a cheap proxy for
 // "module scope" without a real parser - matches the formatting this repo
@@ -166,7 +166,7 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
   GlobalLetRe.lastIndex = 0;
   while ((m = GlobalLetRe.exec(src)) !== null) {
     warnings.push(
-      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage (container.db.guildKV / container.valkey) over an in-memory module-level variable.`,
+      `${rel}: module-level \`let ${m[1]}\` is mutable state shared by every guild this addon runs in, for the life of the process - prefer per-guild storage ("lumi/kv", "lumi/valkey") over an in-memory module-level variable.`,
     );
   }
 
@@ -341,11 +341,11 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   const indexPath = path.join(dir, "index.ts");
   if (await pathExists(indexPath)) {
     const src = await fs.readFile(indexPath, "utf8");
-    if (!/@DefineModule\s*\(|defineModule\s*\(/.test(src))
+    if (!/\bdefineModule\s*\(/.test(src))
       errors.push("index.ts does not define a module (defineModule).");
     if (!/\bexport\b/.test(src))
       errors.push(
-        "index.ts exports nothing (the module class must be exported).",
+        "index.ts exports nothing (export the `meta` object from defineModule).",
       );
     if (/\bconfigFields\s*:/.test(src))
       warnings.push(
@@ -376,6 +376,10 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     if (/\bcontainer\b/.test(src))
       errors.push(
         `${rel}: uses \`container\` - it does not exist in an addon process. Persist via "lumi/kv", read settings via "lumi/config", act on Discord via "lumi/discord".`,
+      );
+    if (/@DefineModule\s*\(|extends\s+BaseCommand|extends\s+Module\b/.test(src))
+      errors.push(
+        `${rel}: uses the removed class API (@DefineModule/BaseCommand/Module) - export a \`meta\` object from defineModule() and plain command objects from defineCommand() instead.`,
       );
     if (/\bstores\.registerPath\s*\(/.test(src))
       warnings.push(

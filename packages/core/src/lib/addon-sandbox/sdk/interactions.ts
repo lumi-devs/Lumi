@@ -52,11 +52,9 @@ export class InteractionContext {
   }
 }
 
-export abstract class BaseInteractionHandler {
-  // Must start with "<your-addon-name>:" — the host ignores anything else.
-  abstract readonly prefix: string;
-
-  abstract run(ctx: InteractionContext): unknown | Promise<unknown>;
+export interface InteractionHandler {
+  prefix: string;
+  run: (ctx: InteractionContext) => unknown | Promise<unknown>;
 }
 
 export function deferUpdate(): Promise<void> {

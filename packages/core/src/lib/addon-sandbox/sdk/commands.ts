@@ -1,4 +1,3 @@
-import type { SlashCommandBuilder } from "@discordjs/builders";
 import type { AddonCommandInvocation, SerialisedMember, SerialisedUser } from "@lumi/contracts";
 import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/ui/cards.js";
 import { call } from "./rpc.js";
@@ -93,62 +92,14 @@ export interface CommandOptions {
   prefixEnabled?: boolean;
 }
 
-export interface CommandRegistry {
-  registerChatInputCommand(
-    build: (builder: SlashCommandBuilder) => { toJSON(): unknown },
-  ): void;
-}
-
-export abstract class BaseCommand {
-  readonly name: string;
-  readonly description: string;
-  readonly options: CommandOptions;
-
-  constructor(options: CommandOptions) {
-    this.name = options.name;
-    this.description = options.description;
-    this.options = options;
-  }
-
-  registerApplicationCommands?(registry: CommandRegistry): void;
-
-  abstract run(ctx: CommandContext): unknown | Promise<unknown>;
-}
-
-export declare namespace BaseCommand {
-  type Options = CommandOptions;
-}
-
-export abstract class BaseSubcommand extends BaseCommand {
-  constructor(options: SubcommandOptions) {
-    super(options);
-    this.subcommands = options.subcommands;
-  }
-
-  readonly subcommands: SubcommandRoute[];
-
-  override run(ctx: CommandContext): unknown | Promise<unknown> {
-    const route = this.subcommands.find((s) => s.name === ctx.subcommand);
-    if (!route) {
-      return ctx.replyError("Unknown Subcommand", `\`${ctx.subcommand ?? "?"}\` is not handled.`);
-    }
-    const handler = (this as unknown as Record<string, (c: CommandContext) => unknown>)[route.run];
-    if (typeof handler !== "function") {
-      throw new Error(`${this.name}: no method "${route.run}" for subcommand "${route.name}"`);
-    }
-    return handler.call(this, ctx);
-  }
-}
-
-export interface SubcommandRoute {
+export interface AddonCommandDefinition {
   name: string;
-  run: string;
+  description: string;
+  build?: () => Record<string, unknown> | null;
+  run: (ctx: CommandContext) => unknown | Promise<unknown>;
+  handlers?: Record<string, (ctx: CommandContext) => unknown | Promise<unknown>>;
 }
 
-export interface SubcommandOptions extends CommandOptions {
-  subcommands: SubcommandRoute[];
-}
-
-export declare namespace BaseSubcommand {
-  type Options = SubcommandOptions;
+export function defineCommand<D extends AddonCommandDefinition>(def: D): D {
+  return def;
 }

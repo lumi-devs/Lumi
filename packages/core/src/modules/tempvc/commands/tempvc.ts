@@ -1,8 +1,7 @@
 import type { CommandContext } from "#lib/command-context.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import { replyError, sendReply, fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/commands.js";
 import { SlashCommandBuilder, type ChatInputCommandInteraction, type GuildMember } from "discord.js";
-import { ephemeralCard } from "#lib/ui/cards.js";
 import { getVcRecord } from "../data/tempvc.js";
 import { buildPanel } from "../ui/panel.js";
 
@@ -22,8 +21,7 @@ export const tempvcDef: CommandDef = {
     const member = interaction.member as GuildMember | null;
     const channel = member?.voice.channel;
     if (!channel) {
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("tempvc:notInVcTitle"),
         t("tempvc:notInVcMessage"),
       );
@@ -31,14 +29,13 @@ export const tempvcDef: CommandDef = {
 
     const record = await getVcRecord(ctx.services, interaction.guildId!, channel.id);
     if (!record) {
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("tempvc:unmanagedChannelTitle"),
         t("tempvc:unmanagedChannelMessage"),
       );
     }
 
     const panel = await buildPanel(ctx.services, channel, record, t);
-    await sendReply(interaction, ephemeralCard(panel));
+    await ctx.reply(panel);
   }
 };

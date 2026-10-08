@@ -12,9 +12,3 @@ export class AfkDeleteMessageTask extends RelayTask<"afk-delete-message"> {
     super({ name: "afk-delete-message" });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "afk-delete-message": AfkDeleteMessagePayload;
-  }
-}

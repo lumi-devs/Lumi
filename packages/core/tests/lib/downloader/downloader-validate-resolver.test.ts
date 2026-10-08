@@ -58,16 +58,37 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await fs.writeFile(path.join(addonDir, "manifest.json"), JSON.stringify(manifestJson));
 
       const indexTs = `
-        import { Module } from "lumi";
-        export function DefineModule(meta: any) { return (cls: any) => cls; }
-        @DefineModule({ name: "${addonName}" })
-        export class ValidModule extends Module {}
+        import { defineModule } from "lumi";
+        export const meta = defineModule({ name: "${addonName}" });
       `;
       await fs.writeFile(path.join(addonDir, "index.ts"), indexTs);
 
       const result = await validateAddon(addonDir);
       expect(result.errors).toEqual([]);
       expect(result.warnings).toEqual([]);
+    });
+
+    it("rejects the removed decorator/class addon API", async () => {
+      const addonDir = path.join(tmpDir, "legacy-addon");
+      await fs.mkdir(addonDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(addonDir, "info.json"),
+        JSON.stringify({
+          name: "legacy-addon",
+          author: ["Tester"],
+          description: "Legacy addon",
+          short: "Legacy",
+          version: "1.0.0",
+        })
+      );
+      await fs.writeFile(
+        path.join(addonDir, "index.ts"),
+        `import { DefineModule, Module } from "lumi";\n@DefineModule({ name: "legacy-addon" })\nexport class LegacyModule extends Module {}`
+      );
+
+      const result = await validateAddon(addonDir);
+      expect(result.errors.some((e) => e.includes("removed class API"))).toBe(true);
     });
 
     it("detects missing info.json and index.ts", async () => {
@@ -95,7 +116,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await fs.writeFile(path.join(addonDir, "info.json"), JSON.stringify(infoJson));
       await fs.writeFile(
         path.join(addonDir, "index.ts"),
-        `@DefineModule({ name: "my-addon" })\nexport class TestModule {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "my-addon" });`
       );
 
       const result = await validateAddon(addonDir);
@@ -134,7 +155,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
       await fs.writeFile(
         path.join(addonDir, "index.ts"),
-        `@DefineModule({ name: "version-addon" })\nexport class TestModule {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "version-addon" });`
       );
 
       const result = await validateAddon(addonDir);
@@ -149,7 +170,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       await fs.writeFile(path.join(addonDir, "manifest.json"), "{ invalid manifest ");
       await fs.writeFile(
         path.join(addonDir, "index.ts"),
-        `@DefineModule({ name: "bad-json" })\nexport class TestModule {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "bad-json" });`
       );
 
       const result = await validateAddon(addonDir);
@@ -174,16 +195,15 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
 
       const indexTs = `
+        import { defineModule } from "lumi";
         import { EmbedBuilder } from "discord.js";
         import { other } from "#modules/afk/index.js";
         import { outside } from "../outside.js";
-        @DefineModule({ name: "rule-addon" })
-        export class RuleModule {
-          run() {
-            const embed = new EmbedBuilder();
-            const db = container.prisma;
-            stores.registerPath('/path');
-          }
+        export const meta = defineModule({ name: "rule-addon" });
+        export function run() {
+          const embed = new EmbedBuilder();
+          const db = container.prisma;
+          stores.registerPath('/path');
         }
       `;
       await fs.writeFile(path.join(addonDir, "index.ts"), indexTs);
@@ -216,7 +236,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
       await fs.writeFile(
         path.join(addonDir, "index.ts"),
-        `@DefineModule({ name: "single-addon" })\nexport class SingleModule {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "single-addon" });`
       );
 
       const map = await validateAddonOrRepo(addonDir);
@@ -237,7 +257,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
       await fs.writeFile(
         path.join(child1, "index.ts"),
-        `@DefineModule({ name: "addon-one" })\nexport class M1 {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "addon-one" });`
       );
 
       await fs.writeFile(
@@ -246,7 +266,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
       await fs.writeFile(
         path.join(child2, "index.ts"),
-        `@DefineModule({ name: "addon-two" })\nexport class M2 {}`
+        `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "addon-two" });`
       );
 
       const map = await validateAddonOrRepo(repoDir);

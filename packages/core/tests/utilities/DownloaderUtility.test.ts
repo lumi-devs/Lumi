@@ -215,7 +215,7 @@ describe("DownloaderUtility", () => {
 
       expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
-      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
+      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1", true);
       expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0", null);
     });
 
@@ -543,7 +543,7 @@ describe("DownloaderUtility", () => {
 
       expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "oldhash");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
-      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
+      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1", true);
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
         "r1-id",
         "m1",

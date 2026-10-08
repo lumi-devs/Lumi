@@ -10,9 +10,3 @@ export class TempVcCleanupTask extends RelayTask<"tempvc-cleanup"> {
     super({ name: "tempvc-cleanup" });
   }
 }
-
-declare module "#lib/types/common.js" {
-  interface ScheduledTasks {
-    "tempvc-cleanup": TempVcCleanupPayload;
-  }
-}

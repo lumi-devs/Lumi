@@ -7,7 +7,7 @@ import {
   respondWithChoices,
 } from "#lib/utilities/autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { fetchTyped, replyError, replySuccess } from "#lib/commands.js";
+import { fetchTyped } from "#lib/commands.js";
 import {
   ChannelType,
   channelMention,
@@ -61,16 +61,14 @@ export const reactionrolesDef: CommandDef = {
       (interaction.options.getChannel("channel") as GuildTextBasedChannel | null) ??
       (interaction.channel as GuildTextBasedChannel | null);
     if (!channel || !channel.isTextBased() || channel.isDMBased()) {
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("reactionroles:postChannelTitle"),
         t("reactionroles:postChannelMessage"),
       );
     }
     try {
       const { message } = await service().postMenu(ctx.services, guild, channel, menuId);
-      return replySuccess(
-        interaction,
+      return ctx.replySuccess(
         t("reactionroles:menuPostedTitle"),
         t("reactionroles:menuPostedMessage", {
           channel: channelMention(channel.id),
@@ -79,10 +77,9 @@ export const reactionrolesDef: CommandDef = {
       );
     } catch (err: unknown) {
       if (err instanceof ReactionRoleMenuLockedError) {
-        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+        return ctx.replyError(t("reactionroles:menuLockedTitle"), err.message);
       }
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("reactionroles:menuPostFailedTitle"),
         err instanceof Error ? err.message : t("reactionroles:genericFailure"),
       );

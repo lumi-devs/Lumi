@@ -104,7 +104,11 @@ describe("static RPC registry survives ModuleStore#unload", () => {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
     (container as any).discordRest = ownerOnlyRest(GUILD_ID, OWNER_ID);
-    (container as any).invalidation = { invalidate: vi.fn() };
+    (container as any).invalidation = {
+      invalidate: vi.fn(),
+      onInvalidate: vi.fn(),
+      onResync: vi.fn(),
+    };
     repositoryCache.clear();
 
     const valkey = {

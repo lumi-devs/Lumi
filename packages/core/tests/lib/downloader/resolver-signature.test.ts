@@ -60,7 +60,7 @@ async function writeModuleInfo(moduleDir: string, version: string) {
   );
   await fs.writeFile(
     path.join(moduleDir, "index.ts"),
-    `@DefineModule({ name: "${name}" })\nexport class TestModule {}\n`,
+    `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "${name}" });\n`,
   );
 }
 

@@ -13,8 +13,6 @@ import { securityRpcHandlers } from "#modules/security/rpc.js";
 import { tempvcRpcHandlers } from "#modules/tempvc/rpc.js";
 import { welcomeRpcHandlers } from "#modules/welcome/rpc.js";
 
-// Imported statically instead of registered by module pieces, so a module
-// that is disabled or unloaded keeps answering its dashboard reads.
 const implementations: readonly RpcImplementation[] = [
   accountRpcHandlers,
   systemRpcHandlers,
