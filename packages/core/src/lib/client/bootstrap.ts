@@ -75,8 +75,8 @@ export async function bootstrapClientApp(
   try {
     client = new Client(buildClientOptions());
     const services = createServices(client);
-    useServices(services);
     attachClient(client, services);
+    useServices(services);
   } catch (err: unknown) {
     console.error(
       `[Lumi] Fatal during bootstrap: ${err instanceof Error ? err.message : String(err)}`,

@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { emptySetupState } from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 

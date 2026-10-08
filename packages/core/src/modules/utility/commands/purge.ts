@@ -2,7 +2,7 @@ import type { Container } from "#lib/services.js";
 import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { Ms } from "@lumi/shared";
 import {
   Message,

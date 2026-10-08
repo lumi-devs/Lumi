@@ -173,6 +173,14 @@ export async function fetchT(target: TranslationTarget, services: Container = co
   return getT(await resolveLanguage(target, services));
 }
 
+/** Resolves the translator for a target as Lumi's typed {@linkcode LumiT}. */
+export function fetchTyped(
+  target: Parameters<typeof fetchT>[0],
+  services?: Parameters<typeof fetchT>[1],
+): Promise<LumiT> {
+  return fetchT(target, services);
+}
+
 export async function resolveKey(
   target: TranslationTarget,
   key: string,

@@ -1,4 +1,4 @@
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { type ILogger } from "@lumi/shared";
 import { container } from "#lib/services.js";
 import type { ValkeyClient } from "@lumi/infrastructure/database";

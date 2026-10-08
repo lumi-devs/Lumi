@@ -13,7 +13,7 @@ vi.mock("#lib/utilities/temporary-message.js", () => ({
   deleteMessageLater: vi.fn(),
 }));
 
-vi.mock("#lib/commands.js", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
     if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
     return key;

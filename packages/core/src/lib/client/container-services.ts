@@ -1,6 +1,7 @@
 import { envParseString } from "#lib/env.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { createServices, ownedEventBusOf, useServices } from "#lib/services.js";
+import { installProducerOnlyTasks } from "#lib/scheduler/producer.js";
 import type { Client } from "discord.js";
 
 export function installContainerServices(
@@ -8,6 +9,7 @@ export function installContainerServices(
   service = envParseString("SERVICE_NAME", "lumi"),
 ): OwnedEventBus {
   const services = createServices(client, service);
+  installProducerOnlyTasks(services);
   useServices(services);
   const owned = ownedEventBusOf(services);
   if (!owned) {

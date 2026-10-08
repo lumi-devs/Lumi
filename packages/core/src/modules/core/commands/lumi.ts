@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { restartChoiceRow } from "#lib/restart.js";
 import { loadFeatures } from "../services/config-panel.js";
 import { buildHubView } from "#modules/core/ui/hub.js";

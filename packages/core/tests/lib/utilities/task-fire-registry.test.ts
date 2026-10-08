@@ -4,7 +4,7 @@ import {
   registerTaskFireHandler,
   getRegisteredFireHandlers,
   TaskFireConsumer,
-} from "#lib/task-fire-registry.js";
+} from "#lib/scheduler/fires.js";
 import type { EventBus } from "#lib/event-bus/types.js";
 
 describe("Task Fire Registry & Consumer", () => {

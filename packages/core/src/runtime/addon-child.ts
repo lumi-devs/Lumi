@@ -12,6 +12,7 @@ import {
   type InteractionHandler,
 } from "#lib/addon-sandbox/sdk/interactions.js";
 import { getTaskHandler, registeredTasks } from "#lib/addon-sandbox/sdk/scheduling.js";
+import { getEventHandler, registeredEvents } from "#lib/addon-sandbox/sdk/events.js";
 import { settleRpc, withInvocation } from "#lib/addon-sandbox/sdk/rpc.js";
 
 const addonName = process.env.LUMI_ADDON_NAME;
@@ -106,6 +107,13 @@ async function run(invocation: AddonInvocation): Promise<void> {
       const handler = getTaskHandler(invocation.task);
       if (!handler) throw new Error(`No fire handler for task "${invocation.task}"`);
       await handler(invocation.payload);
+      return;
+    }
+    case "event": {
+      const handler = getEventHandler(invocation.event);
+      if (!handler) throw new Error(`No handler for event "${invocation.event}"`);
+      await handler(invocation.data);
+      return;
     }
   }
 }
@@ -140,7 +148,7 @@ if (!addonName || !addonDir) {
 
 try {
   const loaded = await load();
-  send({ type: "ready", ...loaded, tasks: registeredTasks() });
+  send({ type: "ready", ...loaded, tasks: registeredTasks(), events: registeredEvents() });
 } catch (err: unknown) {
   send({ type: "load-failed", error: err instanceof Error ? err.message : String(err) });
   process.exit(1);

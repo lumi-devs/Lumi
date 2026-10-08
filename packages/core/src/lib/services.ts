@@ -1,20 +1,22 @@
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
-import type { InvalidationBus, SignalBus } from "#lib/database/valkey.js";
+import type { InvalidationBus, SignalBus } from "#lib/valkey/buses.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import type { DiscordRestPort } from "#lib/discord/rest-port.js";
 import type { EventBus } from "#lib/event-bus/types.js";
 import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import type { TaskQueue } from "#lib/scheduler-runner.js";
+import type { TaskQueue } from "#lib/scheduler/runner.js";
 import type { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import type { ILogger } from "@lumi/shared";
 import type { Client } from "discord.js";
 import {
   createValkeyClient,
   valkeyConnectionOptions,
+} from "#lib/valkey/client.js";
+import {
   InvalidationBus as InvalidationBusImpl,
   SignalBus as SignalBusImpl,
-} from "#lib/database/valkey.js";
+} from "#lib/valkey/buses.js";
 import { AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
 import {

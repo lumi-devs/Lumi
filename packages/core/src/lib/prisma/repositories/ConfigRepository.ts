@@ -1,7 +1,7 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
 import { type ILogger } from "@lumi/shared";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";

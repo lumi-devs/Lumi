@@ -5,11 +5,8 @@ import {
   type RetentionPurgeOptions,
 } from "#lib/retention/archive.js";
 import {
-  createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
-  decodeCreatedAtIdCursor,
-  encodeCreatedAtIdCursor,
-  splitPage,
+  paginateCreatedAtId,
 } from "#lib/prisma/cursor.js";
 
 export type AppealStatus =
@@ -66,26 +63,21 @@ export class AppealRepository extends Repository {
       guildId,
       ...(filter.status ? { status: filter.status } : {}),
     };
-    const take = filter.take ?? 25;
-    const where =
-      filter.cursor !== undefined
-        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
-        : baseWhere;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.appeal.findMany({
-        where,
-        orderBy: CreatedAtIdOrderBy,
-        take: take + 1,
-      }),
-      filter.cursor === undefined ? this.prisma.appeal.count({ where: baseWhere }) : undefined,
-    ]);
-    const { page, hasMore } = splitPage(rows, take);
-    const last = page.at(-1);
+    const result = await paginateCreatedAtId(
+      (where) =>
+        this.prisma.appeal.findMany({
+          where: where as never,
+          orderBy: CreatedAtIdOrderBy,
+          take: (filter.take ?? 25) + 1,
+        }),
+      (where) => this.prisma.appeal.count({ where: where as never }),
+      baseWhere,
+      filter,
+    );
     return {
-      appeals: page,
-      total,
-      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      appeals: result.rows,
+      total: result.total,
+      nextCursor: result.nextCursor,
     };
   }
 

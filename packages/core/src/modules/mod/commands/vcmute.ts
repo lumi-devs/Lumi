@@ -4,7 +4,7 @@ import {
 } from "#lib/moderation/ModerationCommand.js";
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { VoiceMuteAction } from "@lumi/application/services/mod/actions/VoiceMuteAction.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";

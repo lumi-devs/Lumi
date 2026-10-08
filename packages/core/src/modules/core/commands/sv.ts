@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { isSnowflakeId } from "#lib/utilities/misc.js";

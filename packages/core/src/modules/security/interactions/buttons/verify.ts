@@ -4,7 +4,7 @@ import {
   acknowledge,
   defineInteraction,
 } from "#lib/interactions/interaction-def.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import {
   loadVerificationConfig,
   grantVerified,

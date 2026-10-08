@@ -25,6 +25,30 @@ export const messages = {
   edit(channelId: string, messageId: string, payload: MessagePayload): Promise<SentMessage> {
     return call("discord.messages.edit", { channelId, messageId, payload });
   },
+
+  remove(channelId: string, messageId: string): Promise<void> {
+    return call("discord.messages.delete", { channelId, messageId });
+  },
+};
+
+export const members = {
+  addRole(guildId: string, userId: string, roleId: string): Promise<void> {
+    return call("discord.members.roles.add", { guildId, userId, roleId });
+  },
+
+  removeRole(guildId: string, userId: string, roleId: string): Promise<void> {
+    return call("discord.members.roles.remove", { guildId, userId, roleId });
+  },
+
+  timeout(guildId: string, userId: string, durationMs: number | null, reason?: string): Promise<void> {
+    return call("discord.members.timeout", { guildId, userId, durationMs, reason });
+  },
+};
+
+export const modules = {
+  enabled(guildId: string, names: string[]): Promise<Record<string, boolean>> {
+    return call("modules.enabled", { guildId, names });
+  },
 };
 
 export const guilds = {

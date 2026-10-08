@@ -1,6 +1,6 @@
 import type { Container } from "#lib/services.js";
 import { Colors } from "discord.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { defineListener } from "#lib/listeners/listener-def.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
 import { LumiEvents, type GuildMessage } from "#lib/types/common.js";

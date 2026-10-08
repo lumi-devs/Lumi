@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#lib/services.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { asHandler } from "#lib/commands/command-def.js";
 import { downloadDef } from "#modules/core/commands/download.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";

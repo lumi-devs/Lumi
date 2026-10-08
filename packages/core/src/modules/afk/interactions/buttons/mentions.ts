@@ -19,7 +19,7 @@ import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkMentions } from "../../data/afk.js";
 import { AfkMentionsId } from "../../constants.js";
 
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 
 const PageSize = 5;
 

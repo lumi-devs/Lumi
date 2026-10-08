@@ -1,4 +1,4 @@
-import type { InvalidationBus } from "#lib/database/valkey.js";
+import type { InvalidationBus } from "#lib/valkey/buses.js";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import { container } from "#lib/services.js";

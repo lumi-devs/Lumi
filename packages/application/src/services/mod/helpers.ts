@@ -1,10 +1,10 @@
 import type { Container } from "#lib/services.js";
 import type { Guild } from "discord.js";
 import type { CaseAction } from "@prisma/client";
-import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
 
 
-const liftJobId = (caseId: number) => `mod-lift:${caseId}`;
+const liftJobId = (caseId: number) => `mod-lift-${caseId}`;
 
 /** Idempotent per case id. */
 export async function scheduleCaseLift(

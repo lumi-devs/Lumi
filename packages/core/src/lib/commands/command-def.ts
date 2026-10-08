@@ -9,7 +9,7 @@ import type {
   SlashCommandBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { Container } from "#lib/services.js";
 
 export type CommandBuilder =

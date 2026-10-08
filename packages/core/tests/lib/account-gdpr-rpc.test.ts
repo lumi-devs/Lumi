@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "#lib/services.js";
 
-vi.mock("#lib/schedule-task.js", () => ({
+vi.mock("#lib/scheduler/schedule.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
   QueuePriority: { CRITICAL: 1, UTILITY: 5, CLEANUP: 10 },
 }));
 
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask } from "#lib/scheduler/schedule.js";
 
 const SELF_ID = "111111111111111111";
 const OTHER_USER_ID = "222222222222222222";

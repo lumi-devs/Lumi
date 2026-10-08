@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#lib/services.js";
-import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
+import { claimCooldown, isOnCooldown } from "#lib/valkey/cooldown.js";
 
 Object.assign(container, {
   valkey: {

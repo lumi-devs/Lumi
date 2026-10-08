@@ -48,6 +48,12 @@ export type AddonRpcMethod =
   | "discord.messages.edit"
   | "discord.guilds.get"
   | "discord.guilds.members.fetch"
+  | "discord.members.roles.add"
+  | "discord.members.roles.remove"
+  | "discord.members.timeout"
+  | "discord.messages.delete"
+  | "discord.channels.fetch"
+  | "modules.enabled"
   | "log";
 
 export type AddonRpcRequest<T = unknown> = RpcRequest<T> & {
@@ -60,7 +66,8 @@ export type AddonRpcResponse<T = unknown> = RpcResponse<T>;
 export type AddonInvocation =
   | AddonCommandInvocation
   | AddonInteractionInvocation
-  | AddonTaskFireInvocation;
+  | AddonTaskFireInvocation
+  | AddonEventInvocation;
 
 interface InvocationBase {
   invocationId: string;
@@ -93,6 +100,74 @@ export interface AddonTaskFireInvocation extends InvocationBase {
   payload: Record<string, unknown>;
 }
 
+export type AddonEventName =
+  | "presenceUpdate"
+  | "voiceStateUpdate"
+  | "guildMemberUpdate"
+  | "messageCreate"
+  | "threadCreate"
+  | "userUpdate";
+
+export interface AddonEventInvocation extends InvocationBase {
+  kind: "event";
+  event: AddonEventName;
+  data: Record<string, unknown>;
+}
+
+export interface SerialisedActivity {
+  name: string;
+  type: number;
+  state: string | null;
+}
+
+export interface SerialisedPresence {
+  userId: string;
+  guildId: string;
+  status: string;
+  activities: SerialisedActivity[];
+  roles: string[];
+}
+
+export interface SerialisedVoiceState {
+  guildId: string;
+  userId: string;
+  oldChannelId: string | null;
+  newChannelId: string | null;
+  roles: string[];
+}
+
+export interface SerialisedGuildMemberUpdate {
+  guildId: string;
+  userId: string;
+  oldRoles: string[];
+  newRoles: string[];
+  nickname: string | null;
+  pending: boolean;
+}
+
+export interface SerialisedMessage {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  authorId: string;
+  authorBot: boolean;
+  content: string;
+}
+
+export interface SerialisedThread {
+  guildId: string;
+  parentId: string;
+  threadId: string;
+  name: string;
+}
+
+export interface SerialisedUserUpdate {
+  userId: string;
+  username: string;
+  globalName: string | null;
+  avatar: string | null;
+}
+
 export interface SerialisedUser {
   id: string;
   username: string;
@@ -115,6 +190,7 @@ export interface AddonReady {
   commands: AddonCommandDescriptor[];
   interactionPrefixes: string[];
   tasks: string[];
+  events: AddonEventName[];
 }
 
 export interface AddonCommandDescriptor {

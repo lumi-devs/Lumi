@@ -19,10 +19,10 @@ import {
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { lockAllTextChannels } from "#lib/moderation/lockdown.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask } from "#lib/scheduler/schedule.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 
 export const FilterMessageListener = defineListener({
   name: "filterMessageCreate",
@@ -90,7 +90,7 @@ async function mentionFlood(
           repeated: false,
           delay: config.lockdownDurationMinutes * Ms.Minute,
           customJobOptions: {
-            jobId: `filter-auto-lockdown-unlock:${message.guildId}`,
+            jobId: `filter-auto-lockdown-unlock-${message.guildId}`,
             removeOnComplete: true,
             removeOnFail: true,
           },

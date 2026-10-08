@@ -1,51 +1,16 @@
 import {
-  ValkeyKeys,
-  ValkeyTTL,
-  valkeyConnectionOptions,
-  parseValkeyConnectionOption,
-  createValkeyClient as createInfraValkeyClient,
-  instrumentValkeyLatency as infraInstrumentValkeyLatency,
   InvalidationBus as InfraInvalidationBus,
   SignalBus as InfraSignalBus,
-  type ResyncContext,
 } from "@lumi/infrastructure/cache";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
-import type { RedisOptions } from "iovalkey";
 import type { ILogger } from "@lumi/shared";
-
-type ValkeyOptions = RedisOptions;
-import { valkeyCommandDuration } from "@lumi/observability";
-
-export {
-  ValkeyKeys,
-  ValkeyTTL,
-  valkeyConnectionOptions,
-  parseValkeyConnectionOption,
-  type ResyncContext,
-  type ValkeyOptions,
-  type ValkeyClient,
-};
-
-export function instrumentValkeyLatency(client: ValkeyClient): ValkeyClient {
-  return infraInstrumentValkeyLatency(client, (command, durationSeconds) => {
-    valkeyCommandDuration.observe({ command }, durationSeconds);
-  });
-}
-
-export function createValkeyClient(logger?: ILogger): ValkeyClient {
-  return createInfraValkeyClient({
-    logger,
-    onDuration: (command, durationSeconds) => {
-      valkeyCommandDuration.observe({ command }, durationSeconds);
-    },
-  });
-}
 
 // Max keys per del+publish round: keeps one broadcast in the tens-of-KB
 // range even when a guild eviction hands over thousands of keys.
 const MAX_KEYS_PER_INVALIDATION = 500;
 
-export class InvalidationBus extends InfraInvalidationBus {  public constructor(
+export class InvalidationBus extends InfraInvalidationBus {
+  public constructor(
     subscriber: ValkeyClient,
     publisher?: ValkeyClient,
     logger?: ILogger,
@@ -72,12 +37,5 @@ export class SignalBus extends InfraSignalBus {
     logger?: ILogger,
   ) {
     super(subscriber, publisher, logger);
-  }
-
-  public override async publish(
-    topic: string,
-    payload: Record<string, string | number>,
-  ): Promise<void> {
-    return super.publish(topic, payload);
   }
 }

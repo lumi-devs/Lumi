@@ -40,8 +40,8 @@ describe("lumi addon SDK resolution", () => {
 
   it.each([
     "#lib/env.js",
-    "#lib/commands.js",
-    "#lib/database/valkey.js",
+    "#lib/commands/gates.js",
+    "#lib/valkey/client.js",
     "#lib/utilities/misc.js",
     "#modules/mod/index.js",
     "#root/main.js",

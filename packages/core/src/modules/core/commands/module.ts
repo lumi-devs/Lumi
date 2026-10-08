@@ -1,6 +1,6 @@
 import type { Container } from "#lib/services.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import {
   installProgressCard,

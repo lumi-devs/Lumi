@@ -1,5 +1,5 @@
 import type { Container } from "#lib/services.js";
-import { QueuePriority, scheduleTask } from "#lib/schedule-task.js";
+import { QueuePriority, scheduleTask } from "#lib/scheduler/schedule.js";
 
 export interface GdprDeletionResult {
   /** Modules whose `deleteUserData` hook rejected; their data may still exist. */

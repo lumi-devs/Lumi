@@ -1,7 +1,7 @@
 import { container } from "#lib/services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
 import { isNullish, tryParseJSON } from "@lumi/shared";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";

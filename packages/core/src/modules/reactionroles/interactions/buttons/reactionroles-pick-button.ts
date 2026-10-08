@@ -3,7 +3,7 @@ import type {
   GuildMember,
 } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { defineInteraction } from "#lib/interactions/interaction-def.js";
 import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";

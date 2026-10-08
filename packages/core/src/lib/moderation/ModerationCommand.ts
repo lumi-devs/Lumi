@@ -1,4 +1,4 @@
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
   confirmPrompt,

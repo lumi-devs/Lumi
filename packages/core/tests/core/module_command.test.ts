@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { asHandler } from "#lib/commands/command-def.js";
 import { moduleDef } from "#modules/core/commands/module.js";
 

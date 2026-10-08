@@ -20,7 +20,7 @@
 import { Mutex } from "@lumi/shared";
 import { type Container } from "#lib/services.js";
 import { queueDepth } from "@lumi/observability";
-import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
 import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "./render.js";
 
 const QueueLabel = "outbound-send";

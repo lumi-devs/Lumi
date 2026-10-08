@@ -6,6 +6,7 @@ import type { MessageComponentInteraction, ModalSubmitInteraction, User } from "
 import type {
   AddonCapabilities,
   AddonCommandDescriptor,
+  AddonEventName,
   AddonInvocation,
   AddonRpcRequest,
   AddonRpcResponse,
@@ -16,7 +17,7 @@ import type {
 } from "@lumi/contracts";
 import { makeRpcFailure, RpcFailureCodes } from "@lumi/contracts/rpc";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
 import { callHostMethod, type HostCallScope } from "./host-methods.js";
 import { ensureSandboxRoot } from "./sandbox-root.js";
@@ -96,6 +97,7 @@ class AddonProcess {
   commands: AddonCommandDescriptor[] = [];
   interactionPrefixes: string[] = [];
   tasks: string[] = [];
+  events: AddonEventName[] = [];
 
   #proc: Bun.Subprocess;
   #pending = new Map<string, PendingInvocation>();
@@ -165,6 +167,7 @@ class AddonProcess {
         this.commands = raw.commands;
         this.interactionPrefixes = ownPrefixes(this.record.name, raw.interactionPrefixes);
         this.tasks = raw.tasks;
+        this.events = raw.events ?? [];
         this.#resolveReady(raw.commands);
         return;
       case "load-failed":
@@ -340,7 +343,6 @@ export class AddonHost {
       { interaction, guildId: interaction.guildId },
     );
   }
-
   fireTask(name: string, task: string, payload: Record<string, unknown>): Promise<void> {
     const proc = this.#require(name);
     const guildId = typeof payload.guildId === "string" ? payload.guildId : null;
@@ -355,6 +357,27 @@ export class AddonHost {
       },
       { guildId },
     );
+  }
+
+  emitEvent(event: AddonEventName, guildId: string | null, data: Record<string, unknown>): void {
+    for (const [name, proc] of this.#processes) {
+      if (!proc.events.includes(event)) continue;
+      proc
+        .invoke(
+          {
+            kind: "event",
+            invocationId: proc.nextInvocationId(),
+            piece: event,
+            guildId,
+            event,
+            data,
+          },
+          { guildId: guildId ?? undefined },
+        )
+        .catch((err: unknown) =>
+          container.logger.warn(`[addon:${name}] event "${event}" failed:`, err),
+        );
+    }
   }
 
   #require(name: string): AddonProcess {

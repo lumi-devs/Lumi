@@ -12,8 +12,8 @@ import {
 import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#lib/utilities/errors.js";
 import { renderTemplate } from "#lib/utilities/template.js";
-import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
-import { claimCooldown } from "#lib/cooldown.js";
+import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
+import { claimCooldown } from "#lib/valkey/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
@@ -38,7 +38,7 @@ import { buildPanel } from "../ui/panel.js";
 const creationQueues = new Collection<string, Mutex>();
 
 const cleanupJobId = (guildId: string, channelId: string) =>
-  `tempvc-cleanup:${guildId}:${channelId}`;
+  `tempvc-cleanup-${guildId}-${channelId}`;
 
 /**
  * Resolves a generator's name template into a channel name.

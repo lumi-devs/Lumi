@@ -2,7 +2,7 @@ import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,

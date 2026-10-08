@@ -1,7 +1,7 @@
 import type { CommandDef } from "#lib/commands/command-def.js";
 import { channelMention } from "@discordjs/formatters";
 import { SlashCommandBuilder, ChannelType, type GuildTextBasedChannel } from "discord.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { logError } from "#lib/utilities/errors.js";
 import { loadVerificationConfig } from "@lumi/application/services/security/verification.js";
 import { buildVerifyPanel } from "../ui/verify-panel.js";

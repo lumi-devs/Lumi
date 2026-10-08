@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 
 /**
  * Generic per-module key/value storage (`ModuleData`), keyed by

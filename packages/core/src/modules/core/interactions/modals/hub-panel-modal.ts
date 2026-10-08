@@ -1,4 +1,4 @@
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { deriveRepoNameFromUrl } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";

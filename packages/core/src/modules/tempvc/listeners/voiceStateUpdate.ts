@@ -2,7 +2,7 @@ import { Events } from "discord.js";
 import { defineListener } from "#lib/listeners/listener-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { VoiceState } from "discord.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { logError } from "#lib/utilities/errors.js";
 import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";

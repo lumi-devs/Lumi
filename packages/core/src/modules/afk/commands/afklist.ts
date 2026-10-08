@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
 
 import { userMention } from "@discordjs/formatters";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { afkDurationSince } from "@lumi/application/services/afk/format.js";
 import { getAfkEntriesForGuild } from "../data/afk.js";

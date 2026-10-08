@@ -1,6 +1,6 @@
 import type { Container } from "#lib/services.js";
 import type { GuildMember } from "discord.js";
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { defineListener } from "#lib/listeners/listener-def.js";
 
 export const QuarantineMemberAddListener = defineListener({

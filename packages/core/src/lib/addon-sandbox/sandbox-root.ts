@@ -10,6 +10,7 @@ const Subpaths: Record<string, string> = {
   "./commands": "commands.ts",
   "./config": "config.ts",
   "./discord": "discord.ts",
+  "./events": "events.ts",
   "./interactions": "interactions.ts",
   "./kv": "kv.ts",
   "./permissions": "permissions.ts",

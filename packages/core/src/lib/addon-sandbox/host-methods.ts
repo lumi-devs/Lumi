@@ -8,11 +8,11 @@ import type {
   RepliableInteraction,
 } from "discord.js";
 import type { AddonRpcRequest } from "@lumi/contracts";
-import type { CommandContext, CtxOptionSpec } from "#lib/command-context.js";
+import type { CommandContext, CtxOptionSpec } from "#lib/commands/context.js";
 import { MessageFlags } from "discord.js";
 import { ephemeralCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask } from "#lib/scheduler/schedule.js";
 import { AddonRelayTaskName } from "./relay-task.js";
 
 type MessagePayload = CardReply | { content?: string; components?: unknown[] };
@@ -60,6 +60,14 @@ function scopedGuild(scope: HostCallScope, requested?: string): string {
 }
 
 type OptionGetter = "getString" | "getInteger" | "getNumber" | "getBoolean";
+
+async function fetchGuildMember(guildId: string, userId: string) {
+  const guild = container.client.guilds.cache.get(guildId);
+  if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) throw new Error(`Member ${userId} not found in guild ${guildId}`);
+  return member;
+}
 
 // Validated once here, at the boundary where an addon subprocess's JSON crosses
 // into the host - request.data's TypeScript annotations below only ever described
@@ -396,6 +404,64 @@ const Methods = {
       roles: [...m.roles.cache.keys()],
       premiumSince: m.premiumSinceTimestamp,
     };
+  },
+
+  async "discord.members.roles.add"(
+    { guildId, userId, roleId }: { guildId: string; userId: string; roleId: string },
+    scope: HostCallScope,
+  ) {
+    const m = await fetchGuildMember(scopedGuild(scope, guildId), userId);
+    await m.roles.add(roleId);
+  },
+
+  async "discord.members.roles.remove"(
+    { guildId, userId, roleId }: { guildId: string; userId: string; roleId: string },
+    scope: HostCallScope,
+  ) {
+    const m = await fetchGuildMember(scopedGuild(scope, guildId), userId);
+    await m.roles.remove(roleId);
+  },
+
+  async "discord.members.timeout"(
+    { guildId, userId, durationMs, reason }: { guildId: string; userId: string; durationMs: number | null; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const m = await fetchGuildMember(scopedGuild(scope, guildId), userId);
+    await m.timeout(durationMs, reason);
+  },
+
+  async "discord.messages.delete"(
+    { channelId, messageId }: { channelId: string; messageId: string },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId);
+    if (!channel?.isTextBased()) throw new Error(`Channel ${channelId} is not a text channel`);
+    await channel.messages.delete(messageId);
+  },
+
+  async "discord.channels.fetch"(
+    { channelId }: { channelId: string },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !("guildId" in channel)) return null;
+    return {
+      id: channel.id,
+      guildId: (channel as { guildId: string }).guildId,
+      type: channel.type,
+      name: "name" in channel ? (channel.name as string) : null,
+    };
+  },
+
+  async "modules.enabled"(
+    { guildId, names }: { guildId: string; names: string[] },
+    scope: HostCallScope,
+  ) {
+    const result = await container.db.modules.areModulesEnabled(
+      scopedGuild(scope, guildId),
+      names,
+    );
+    return Object.fromEntries(result);
   },
 
   log({ level, message }: { level: "info" | "warn" | "error"; message: string }, scope: HostCallScope) {

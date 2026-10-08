@@ -22,6 +22,13 @@ import { container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { formatPageFooter } from "./layout.js";
 
+export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
+
+/** Wraps components in an action row, saving generic parameters at call sites. */
+export function row(...components: MessageActionRowComponentBuilder[]): Row {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...components);
+}
+
 function setEmojiIfPresent(
   builder: StringSelectMenuOptionBuilder | ButtonBuilder,
   emoji?: string | APIMessageComponentEmoji,

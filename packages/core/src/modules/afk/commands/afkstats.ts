@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { makeCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkStats } from "../data/afk.js";

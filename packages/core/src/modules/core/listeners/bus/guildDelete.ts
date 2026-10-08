@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
 import { defineListener } from "#lib/listeners/listener-def.js";
 import type { Container } from "#lib/services.js";
-import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
+import { evictGuildValkeyState } from "#lib/valkey/guild-eviction.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import type { Guild } from "discord.js";
 

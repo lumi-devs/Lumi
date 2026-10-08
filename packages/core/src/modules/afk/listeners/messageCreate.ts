@@ -14,7 +14,7 @@ import { makeCard } from "#lib/ui/cards.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask } from "#lib/scheduler/schedule.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   AfkKeys,
@@ -36,7 +36,7 @@ import {
   addAfkMentionsBatch,
 } from "../data/afk.js";
 
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 
 const afkMessageCreate = defineListener({
   name: "afkMessageCreate",

@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { applyLocalizedBuilder } from "#lib/i18n/index.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { AfkMaxReasonLength } from "../constants.js";
 import { sanitizeReason } from "@lumi/application/services/afk/format.js";

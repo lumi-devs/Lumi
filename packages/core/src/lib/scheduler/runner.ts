@@ -3,12 +3,14 @@ import { container } from "#lib/services.js";
 import {
   getScheduledTask,
   repeatedScheduledTasks,
-} from "#lib/scheduled-tasks.js";
+} from "#lib/scheduler/tasks.js";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/client/scheduled-tasks-queue.js";
+} from "#lib/scheduler/queue.js";
+import type { ScheduleOptions } from "#lib/scheduler/schedule.js";
+import { resolveTaskRef, toBullMQJobOptions } from "#lib/scheduler/job-options.js";
 
 export interface RepeatedTaskSpec {
   name: string;
@@ -18,16 +20,7 @@ export interface RepeatedTaskSpec {
   customJobOptions?: JobsOptions;
 }
 
-export type CreateTaskOptions =
-  | number
-  | {
-      repeated?: boolean;
-      delay?: number;
-      interval?: number;
-      pattern?: string;
-      timezone?: string;
-      customJobOptions?: JobsOptions;
-    };
+export type CreateTaskOptions = ScheduleOptions;
 
 /**
  * The `container.tasks` surface every process shares: enqueue, cancel, close.
@@ -38,7 +31,7 @@ export interface TaskQueue {
   readonly queue: string;
   create(
     task: string | { name: string; payload?: unknown },
-    options?: CreateTaskOptions,
+    options?: ScheduleOptions,
   ): Promise<unknown>;
   delete(id: string): Promise<unknown>;
   close(): Promise<void>;
@@ -68,29 +61,17 @@ export class ScheduledTaskRunner implements TaskQueue {
     this.#worker = new Worker(
       this.queue,
       (job) => this.execute(job.name, job.data),
-      { connection },
+      { connection, concurrency: 10 },
     );
   }
 
   public async create(
     task: string | { name: string; payload?: unknown },
-    options?: CreateTaskOptions,
+    options?: ScheduleOptions,
   ): Promise<Job> {
-    const taskName = typeof task === "string" ? task : task.name;
-    const payload = typeof task === "string" ? undefined : task.payload;
-    if (options === undefined) return this.client.add(taskName, payload);
-    if (typeof options === "number") {
-      return this.client.add(taskName, payload, { delay: options });
-    }
-    const { repeated, pattern, interval, delay, customJobOptions, timezone } =
-      options;
-    return this.client.add(taskName, payload, {
-      delay,
-      ...customJobOptions,
-      ...(repeated
-        ? { repeat: interval ? { every: interval } : { pattern, tz: timezone } }
-        : {}),
-    });
+    const { name, payload } = resolveTaskRef(task);
+    const jobOptions = toBullMQJobOptions(options);
+    return this.client.add(name, payload, jobOptions);
   }
 
   public async createRepeated(specs?: RepeatedTaskSpec[]): Promise<void> {
@@ -111,6 +92,19 @@ export class ScheduledTaskRunner implements TaskQueue {
         timezone: spec.timezone,
         customJobOptions: spec.customJobOptions,
       });
+    }
+    await this.pruneStaleSchedulers(list.map((spec) => spec.name));
+  }
+
+  public async pruneStaleSchedulers(known: string[]): Promise<void> {
+    const live = new Set(known);
+    for (const scheduler of await this.client.getJobSchedulers()) {
+      if (!live.has(scheduler.name)) {
+        await this.client.removeJobScheduler(scheduler.name);
+        container.logger.warn(
+          `[Scheduler] Removed orphaned repeatable scheduler '${scheduler.name}'.`,
+        );
+      }
     }
   }
 

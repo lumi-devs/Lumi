@@ -1,6 +1,6 @@
 import type { CommandDef } from "#lib/commands/command-def.js";
 import { SlashCommandBuilder, AttachmentBuilder } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { makeSuccessCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";

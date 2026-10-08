@@ -1,4 +1,4 @@
-import { RelayTask } from "#lib/scheduled-tasks.js";
+import { RelayTask } from "#lib/scheduler/tasks.js";
 
 export class AddonAutoUpdateTask extends RelayTask<"addon-auto-update"> {
   public constructor() {

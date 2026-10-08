@@ -85,8 +85,8 @@ describe("RegexWorkerHandler", () => {
       handler.test("evil:1", [EVIL], `${"a".repeat(40)}!`),
     ).rejects.toBeInstanceOf(RegexTimeoutError);
 
-    // Give the event loop a tick to ensure the dead worker termination and respawn
-    await new Promise((r) => setTimeout(r, 20));
+    // Give the event loop time to ensure dead worker termination and respawn
+    await new Promise((r) => setTimeout(r, 100));
 
     await expect(handler.test("good:1", ["spam"], "spam")).resolves.toBe(0);
   });

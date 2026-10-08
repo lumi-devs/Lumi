@@ -1,6 +1,7 @@
 import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { scanKeysSafe } from "@lumi/infrastructure/database";
-import { ValkeyKeys, type InvalidationBus } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
+import type { InvalidationBus } from "#lib/valkey/buses.js";
 import type { ILogger } from "@lumi/shared";
 
 /**

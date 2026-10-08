@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { AfkUtility } from "../utilities/AfkUtility.js";
 
 function afkService(): AfkUtility {

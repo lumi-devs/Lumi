@@ -1,4 +1,4 @@
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { mgetSafe, pipelineBySlot } from "@lumi/infrastructure/database";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { tryParseJSON } from "@lumi/shared";

@@ -1,4 +1,4 @@
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { FieldType } from "#lib/module-system/config-schema.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";

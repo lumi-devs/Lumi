@@ -1,4 +1,4 @@
-import { buildRestOptions } from "#lib/discord-rest.js";
+import { buildRestOptions } from "#lib/discord/options.js";
 import { envParseInteger } from "#lib/env.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import {

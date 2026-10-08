@@ -8,7 +8,7 @@ import { toStringArray } from "#lib/module-system/config-schema.js";
 import type { GuildMessage } from "#lib/types/common.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { getHitReason, type FilterHit } from "./rules.js";
 import type { FilterUtility } from "#modules/filter/utilities/FilterUtility.js";
 

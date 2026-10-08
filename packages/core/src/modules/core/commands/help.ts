@@ -9,9 +9,9 @@ import {
   SeparatorSpacingSize,
 } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { commandRegistry } from "#lib/commands/command-def.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { paginateContainer } from "#lib/utilities/pagination.js";

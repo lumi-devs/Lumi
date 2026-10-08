@@ -1,4 +1,4 @@
-import { RelayTask } from "#lib/scheduled-tasks.js";
+import { RelayTask } from "#lib/scheduler/tasks.js";
 import { AddonRelayTaskName } from "#lib/addon-sandbox/relay-task.js";
 
 export class AddonRelayScheduledTask extends RelayTask<typeof AddonRelayTaskName> {

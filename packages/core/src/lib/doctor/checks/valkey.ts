@@ -1,5 +1,5 @@
 import Valkey, { Cluster } from "iovalkey";
-import { valkeyConnectionOptions } from "#lib/database/valkey.js";
+import { valkeyConnectionOptions } from "#lib/valkey/client.js";
 import type { ValkeyClient as ValkeyConnection } from "@lumi/infrastructure/database";
 import { getValkeyClusterNodes, getValkeyClusterScaleReads } from "#lib/env.js";
 import { runCheck } from "#lib/doctor/util.js";

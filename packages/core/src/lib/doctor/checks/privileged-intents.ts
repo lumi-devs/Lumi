@@ -5,7 +5,7 @@ import {
   type APIApplication,
 } from "discord-api-types/v10";
 import { GatewayIntentBits } from "discord.js";
-import { buildRestOptions } from "#lib/discord-rest.js";
+import { buildRestOptions } from "#lib/discord/options.js";
 import { buildClientOptions } from "#lib/client/client-options.js";
 import { getBotToken } from "#lib/env.js";
 import { runCheck } from "#lib/doctor/util.js";

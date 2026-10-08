@@ -6,7 +6,7 @@ import {
   resolveConfigHistoryRetentionDays,
   resolveModerationRetentionDays,
 } from "#lib/env.js";
-import { evictGuildValkeyState } from "#lib/database/guild-eviction.js";
+import { evictGuildValkeyState } from "#lib/valkey/guild-eviction.js";
 import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
 import { type Container } from "#lib/services.js";
 

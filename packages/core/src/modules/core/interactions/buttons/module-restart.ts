@@ -10,7 +10,7 @@ import {
 import { makeSuccessCard, makeInfoCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { scheduleProcessRestart } from "#lib/restart.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { ModuleRestartCancelId, ModuleRestartId } from "../../constants.js";
 
 /**

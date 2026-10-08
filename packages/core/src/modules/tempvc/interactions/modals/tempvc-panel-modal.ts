@@ -1,6 +1,6 @@
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
 import type { Container } from "#lib/services.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,

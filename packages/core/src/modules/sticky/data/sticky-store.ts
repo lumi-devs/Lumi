@@ -1,5 +1,5 @@
 import type { Container } from "#lib/services.js";
-import { claimCooldown } from "#lib/cooldown.js";
+import { claimCooldown } from "#lib/valkey/cooldown.js";
 
 export const StickyCooldownMs = 1_000;
 

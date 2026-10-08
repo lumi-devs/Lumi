@@ -1,6 +1,6 @@
 import type { CommandDef } from "#lib/commands/command-def.js";
 import { SlashCommandBuilder, ChannelType } from "discord.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
 import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
 import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";

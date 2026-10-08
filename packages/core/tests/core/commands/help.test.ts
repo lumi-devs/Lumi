@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { asHandler } from "#lib/commands/command-def.js";
 import { commandRegistry } from "#lib/commands/command-def.js";
 import { getCategories, helpDef } from "#modules/core/commands/help.js";

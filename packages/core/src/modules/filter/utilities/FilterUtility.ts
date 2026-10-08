@@ -1,6 +1,6 @@
 import { defineUtility } from "#lib/module-system/Utility.js";
 import type { Container } from "#lib/services.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import {
   compileRules,

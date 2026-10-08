@@ -3,7 +3,7 @@ import { container } from "#lib/services.js";
 import type Valkey from "iovalkey";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { withIdempotency } from "#lib/rpc/idempotency.js";
-import { ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyTTL } from "#lib/valkey/client.js";
 import { createTestValkey, deleteByPrefix, integrationDescribe, scanKeys } from "./setup.js";
 
 const KeyPrefix = "lumi:rpc:idem:";

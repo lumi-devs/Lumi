@@ -7,9 +7,9 @@ import { Ms } from "@lumi/shared";
 import { SpanKind } from "@opentelemetry/api";
 import { otelContext, withSpan } from "@lumi/observability";
 import type { ScheduledTasks } from "#lib/types/common.js";
-import { publishTaskFire } from "#lib/scheduler-bus.js";
-import { unwrapTraceContext } from "#lib/scheduler-otel.js";
-import { SCHEDULED_TASKS_QUEUE_NAME } from "#lib/client/scheduled-tasks-queue.js";
+import { publishTaskFire } from "#lib/scheduler/bus.js";
+import { unwrapTraceContext } from "#lib/scheduler/otel.js";
+import { SCHEDULED_TASKS_QUEUE_NAME } from "#lib/scheduler/queue.js";
 
 /**
  * Catch-up metadata every scheduled-task payload may carry. BullMQ will

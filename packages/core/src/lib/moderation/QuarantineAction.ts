@@ -2,7 +2,7 @@ import { container } from "#lib/services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { tryParseJSON } from "@lumi/shared";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { logToChannel } from "#lib/moderation/log.js";
 import { acquireValkeyLock } from "@lumi/infrastructure/cache";
 

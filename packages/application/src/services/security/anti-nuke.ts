@@ -1,7 +1,7 @@
 import { container } from "#lib/services.js";
 import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
 import { isNullish, type Awaitable } from "@lumi/shared";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
 import { logToChannel } from "#lib/moderation/log.js";

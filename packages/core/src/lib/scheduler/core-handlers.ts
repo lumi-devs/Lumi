@@ -1,6 +1,6 @@
 import { type Container } from "#lib/services.js";
 import { Ms } from "@lumi/shared";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
 import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
 import { scheduleProcessRestart } from "#lib/restart.js";

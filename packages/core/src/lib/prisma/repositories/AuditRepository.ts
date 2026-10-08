@@ -1,7 +1,7 @@
 import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 import {
@@ -9,11 +9,8 @@ import {
   type RetentionPurgeOptions,
 } from "#lib/retention/archive.js";
 import {
-  createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
-  decodeCreatedAtIdCursor,
-  encodeCreatedAtIdCursor,
-  splitPage,
+  paginateCreatedAtId,
 } from "#lib/prisma/cursor.js";
 
 import { tryParseJSON } from "@lumi/shared";
@@ -240,28 +237,21 @@ export class AuditRepository extends Repository {
       ...(filter.action ? { action: { contains: filter.action } } : {}),
       ...(filter.platform ? { platform: filter.platform } : {}),
     };
-    const take = filter.take ?? 25;
-    const where =
-      filter.cursor !== undefined
-        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
-        : baseWhere;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.auditLedger.findMany({
-        where,
-        orderBy: CreatedAtIdOrderBy,
-        take: take + 1,
-      }),
-      filter.cursor === undefined
-        ? this.prisma.auditLedger.count({ where: baseWhere })
-        : undefined,
-    ]);
-    const { page, hasMore } = splitPage(rows, take);
-    const last = page.at(-1);
+    const result = await paginateCreatedAtId(
+      (where) =>
+        this.prisma.auditLedger.findMany({
+          where: where as Prisma.AuditLedgerWhereInput,
+          orderBy: CreatedAtIdOrderBy,
+          take: (filter.take ?? 25) + 1,
+        }),
+      (where) => this.prisma.auditLedger.count({ where: where as Prisma.AuditLedgerWhereInput }),
+      baseWhere,
+      filter,
+    );
     return {
-      entries: page,
-      total,
-      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      entries: result.rows,
+      total: result.total,
+      nextCursor: result.nextCursor,
     };
   }
 

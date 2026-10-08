@@ -3,7 +3,7 @@ import { cfg } from "#lib/module-system/config-schema.js";
 import { container, type Container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
 import { handleAfkDeleteMessageFire } from "@lumi/application/services/afk/delete-handler.js";
 
 export const afkModule = defineModule({

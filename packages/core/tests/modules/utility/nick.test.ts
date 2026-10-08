@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { nickDef } from "#modules/utility/commands/nick.js";
 
 vi.mock("#lib/i18n/index.js", () => ({

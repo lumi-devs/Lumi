@@ -1,15 +1,16 @@
 import { Ms } from "@lumi/shared";
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import { getConsumerId } from "#lib/env.js";
-import { registerCoreFireHandlers } from "#lib/core-fire-handlers.js";
-import { flushAllMessageDeletes } from "#lib/rest-coalesce.js";
-import { TaskFireConsumer } from "#lib/task-fire-registry.js";
+import { registerCoreFireHandlers } from "#lib/scheduler/core-handlers.js";
+import { attachAddonEventRelay } from "#lib/addon-sandbox/event-relay.js";
+import { flushAllMessageDeletes } from "#lib/discord/coalesce.js";
+import { TaskFireConsumer } from "#lib/scheduler/fires.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { Client } from "discord.js";
 import { ownedEventBusOf, type Container } from "#lib/services.js";
 import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { buildClientOptions } from "./client-options.js";
-import { installProducerOnlyTasks } from "./scheduler-producer.js";
+import { installProducerOnlyTasks } from "#lib/scheduler/producer.js";
 import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
 import {
   dispatchAutocomplete,
@@ -103,6 +104,7 @@ export async function wireApp(client: Client, services: Container): Promise<void
   });
 
   registerCoreFireHandlers();
+  attachAddonEventRelay(client, services);
   const taskFireConsumer = new TaskFireConsumer(services, services.eventBus, {
     consumerId: getConsumerId(),
   });

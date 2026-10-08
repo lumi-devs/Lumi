@@ -9,7 +9,7 @@ import {
 import { cutText } from "@lumi/shared";
 import { defineListener } from "#lib/listeners/listener-def.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 
 export const LoggingMessageDeleteListener = defineListener({
   name: "loggingMessageDelete",

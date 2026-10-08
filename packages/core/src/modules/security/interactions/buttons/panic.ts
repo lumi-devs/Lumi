@@ -4,7 +4,7 @@ import {
   acknowledge,
   defineInteraction,
 } from "#lib/interactions/interaction-def.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import { revertPanic } from "@lumi/application/services/security/panic.js";
 import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";

@@ -10,7 +10,7 @@ import {
   type Message,
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import {
   commandRegistry,
   asHandler,
@@ -25,7 +25,7 @@ import {
   type GateSource,
 } from "#lib/permissions/precondition-checks.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
-import { denyGated } from "#lib/commands.js";
+import { denyGated } from "#lib/commands/gates.js";
 import { instrumentedRun } from "#lib/telemetry/instrument.js";
 import {
   handleDenied,

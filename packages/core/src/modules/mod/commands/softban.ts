@@ -4,7 +4,7 @@ import {
 } from "#lib/moderation/ModerationCommand.js";
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
 import { SoftbanAction } from "@lumi/application/services/mod/actions/SoftbanAction.js";
 import type { LumiT } from "#lib/i18n/index.js";

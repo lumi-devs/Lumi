@@ -1,5 +1,5 @@
-import { RelayTask } from "#lib/scheduled-tasks.js";
-import { QueuePriority } from "#lib/schedule-task.js";
+import { RelayTask } from "#lib/scheduler/tasks.js";
+import { QueuePriority } from "#lib/scheduler/schedule.js";
 
 export class VerifySweepTask extends RelayTask<"security-verify-sweep"> {
   public constructor() {

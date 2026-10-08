@@ -2,8 +2,8 @@ import { container, type Container } from "#lib/services.js";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "@lumi/shared";
-import { fetchTyped } from "#lib/commands.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { fetchTyped } from "#lib/i18n/index.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,

@@ -1,5 +1,5 @@
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { SlashCommandBuilder, ChannelType, PermissionFlagsBits, type GuildTextBasedChannel } from "discord.js";
 
 const MaxMessageLength = 2000;

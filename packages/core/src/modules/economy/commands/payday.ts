@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
 import { reportEconomyError } from "@lumi/application/services/economy/respond.js";

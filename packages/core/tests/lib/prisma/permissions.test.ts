@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#lib/services.js";
 import { PermissionRepository } from "#lib/prisma/repositories/PermissionRepository.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

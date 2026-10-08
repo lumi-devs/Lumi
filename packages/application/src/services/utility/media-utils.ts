@@ -17,7 +17,7 @@ import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
 import { container, type Container } from "#lib/services.js";
 import { capitalizeFirstLetter } from "@lumi/shared";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { claimCooldown } from "#lib/cooldown.js";
+import { claimCooldown } from "#lib/valkey/cooldown.js";
 import { fetchT } from "#lib/i18n/index.js";
 import { UserMediaViewId } from "#modules/utility/constants.js";
 

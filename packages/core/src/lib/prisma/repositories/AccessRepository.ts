@@ -1,5 +1,5 @@
 import type { Blocklist, GlobalBlock, IgnoreEntry } from "@prisma/client";
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**

@@ -10,9 +10,9 @@ import {
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { LumiInfo } from "#lib/utilities/misc.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import { collectPingData } from "../services/ping-collect.js";

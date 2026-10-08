@@ -1,14 +1,14 @@
-import { buildRestOptions } from "#lib/discord-rest.js";
+import { buildRestOptions } from "#lib/discord/options.js";
 import { envParseString, getConsumerId } from "#lib/env.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import type { ValkeyLock } from "@lumi/infrastructure/cache";
-import { acquireSchedulerLock } from "#lib/scheduler-lock.js";
-import { ScheduledTaskRunner } from "#lib/scheduler-runner.js";
-import { loadScheduledTasks } from "#lib/scheduled-tasks.js";
-import { watchFailedJobs } from "#lib/scheduler-failed-jobs.js";
-import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
+import { acquireSchedulerLock } from "#lib/scheduler/lock.js";
+import { ScheduledTaskRunner } from "#lib/scheduler/runner.js";
+import { loadScheduledTasks } from "#lib/scheduler/tasks.js";
+import { watchFailedJobs } from "#lib/scheduler/failed-jobs.js";
+import { watchQueueDepth } from "#lib/scheduler/queue-metrics.js";
 import {
-  publishSchedulerHeartbeat, type SchedulerHeartbeatWatcher, } from "#lib/scheduler-heartbeat.js";
+  publishSchedulerHeartbeat, type SchedulerHeartbeatWatcher, } from "#lib/scheduler/heartbeat.js";
 import { Client } from "discord.js";
 import { container } from "#lib/services.js";
 import { installContainerServices } from "./container-services.js";

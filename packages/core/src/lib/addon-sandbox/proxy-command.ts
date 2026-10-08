@@ -1,5 +1,5 @@
 import type { AddonCommandDescriptor } from "@lumi/contracts";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import {
   commandRegistry,
   registerCommandDef,

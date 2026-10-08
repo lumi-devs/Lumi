@@ -1,4 +1,4 @@
-import { RelayTask, type CatchUpMeta } from "#lib/scheduled-tasks.js";
+import { RelayTask, type CatchUpMeta } from "#lib/scheduler/tasks.js";
 
 export interface WarnDecayPayload extends CatchUpMeta {}
 

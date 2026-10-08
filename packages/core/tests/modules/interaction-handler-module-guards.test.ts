@@ -8,7 +8,7 @@ import {
 import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
 import type { Container } from "#lib/services.js";
 
-vi.mock("#lib/commands.js", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 

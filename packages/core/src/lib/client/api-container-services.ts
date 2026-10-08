@@ -1,4 +1,4 @@
-import { buildRestOptions } from "#lib/discord-rest.js";
+import { buildRestOptions } from "#lib/discord/options.js";
 import { envParseString, getBotToken } from "#lib/env.js";
 import { container } from "#lib/services.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";

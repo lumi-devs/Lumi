@@ -3,7 +3,7 @@ import { container } from "#lib/services.js";
 import { UserError } from "@lumi/shared";
 import * as i18n from "#lib/i18n/index.js";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import * as commandResponse from "#lib/utilities/command-response.js";
 
 vi.mock("#lib/i18n/index.js", () => ({

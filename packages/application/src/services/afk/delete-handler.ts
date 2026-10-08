@@ -1,6 +1,6 @@
 import { type Container } from "#lib/services.js";
 import { errorCode } from "#lib/utilities/errors.js";
-import { coalesceMessageDelete } from "#lib/rest-coalesce.js";
+import { coalesceMessageDelete } from "#lib/discord/coalesce.js";
 import { clearAfkMentions } from "#modules/afk/data/afk.js";
 import type { AfkDeleteMessagePayload } from "#modules/afk/scheduled-tasks/afkDeleteMessage.js";
 

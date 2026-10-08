@@ -34,6 +34,12 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "discord.messages.edit": "editMessage",
   "discord.guilds.get": null,
   "discord.guilds.members.fetch": "manageRoles",
+  "discord.members.roles.add": "manageRoles",
+  "discord.members.roles.remove": "manageRoles",
+  "discord.members.timeout": "manageRoles",
+  "discord.messages.delete": "editMessage",
+  "discord.channels.fetch": null,
+  "modules.enabled": null,
 };
 
 export function parseCapabilities(raw: unknown): AddonCapabilities {

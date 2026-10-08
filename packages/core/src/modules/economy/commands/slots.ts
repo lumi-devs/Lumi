@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { Container } from "#lib/services.js";
-import { claimCooldown } from "#lib/cooldown.js";
+import { claimCooldown } from "#lib/valkey/cooldown.js";
 import { formatDuration } from "#lib/utilities/time.js";
 import { BankService } from "@lumi/application/services/economy/BankService.js";
 import {

@@ -1,4 +1,4 @@
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
   acknowledge,

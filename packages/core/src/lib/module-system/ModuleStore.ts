@@ -1,4 +1,5 @@
 import type { Container } from "#lib/services.js";
+import type { AddonEventName } from "@lumi/contracts";
 import type { ModuleObject } from "./Module.js";
 import type { ModuleMeta } from "./meta.js";
 import {
@@ -27,7 +28,7 @@ import { attachListeners } from "#lib/listeners/listener-loader.js";
 import { loadInteractionHandlers } from "#lib/interactions/interaction-dispatch.js";
 import { commandRegistry, loadCommandDefs } from "#lib/commands/command-def.js";
 import { AddonRelayTaskName } from "#lib/addon-sandbox/relay-task.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
 import {
   loadUtilities,
   unloadUtilitiesForDir,
@@ -116,6 +117,14 @@ export class ModuleStore {
 
   public stopAddonProcesses(): void {
     this.#addons.stopAll();
+  }
+
+  public emitAddonEvent(
+    event: AddonEventName,
+    guildId: string | null,
+    data: Record<string, unknown>,
+  ): void {
+    this.#addons.emitEvent(event, guildId, data);
   }
 
   public async discover(force = false, bustCache = false) {

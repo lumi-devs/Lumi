@@ -7,7 +7,7 @@ import { ChannelType } from "discord.js";
 import { shutdownRegexWorker } from "#lib/regex-worker/RegexWorkerHandler.js";
 import { validateRegexPattern } from "#lib/regex-worker/validate.js";
 import { DefaultWarnMessage } from "@lumi/application/services/filter/rules.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
 import { handleAutoLockdownUnlockFire } from "@lumi/application/services/filter/auto-lockdown-handler.js";
 
 /** Config keys the FilterUtility compiles into its per-guild rule set -

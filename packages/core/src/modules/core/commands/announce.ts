@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
 import {

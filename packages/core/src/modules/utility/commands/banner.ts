@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 
 export const bannerDef: CommandDef = {

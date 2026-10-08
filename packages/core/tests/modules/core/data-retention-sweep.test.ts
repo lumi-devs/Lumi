@@ -14,7 +14,7 @@ vi.mock("#lib/sharding/shard-telemetry.js", () => ({
   readClusterShards: vi.fn(),
 }));
 
-vi.mock("#lib/database/guild-eviction.js", () => ({
+vi.mock("#lib/valkey/guild-eviction.js", () => ({
   evictGuildValkeyState: vi.fn().mockResolvedValue(undefined),
 }));
 

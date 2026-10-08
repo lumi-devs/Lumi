@@ -1,11 +1,13 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { generateDtsBundle } from "dts-bundle-generator";
 
-const ROOT = path.resolve(import.meta.dir, "../..");
+const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(DIRNAME, "../..");
 const SDK_DIR = path.join(ROOT, "packages/core/src/lib/addon-sandbox/sdk");
 const OUT_DIR = path.join(ROOT, "dist/sdk");
-const TSCONFIG = path.join(import.meta.dir, "tsconfig.json");
+const TSCONFIG = path.join(DIRNAME, "tsconfig.json");
 
 // Mirrors the root package.json "exports" map's subpaths (the ones addon
 // authors actually import). "builder" and "rpc" are internal to the sandbox

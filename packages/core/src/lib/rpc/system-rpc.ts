@@ -5,12 +5,12 @@ import { Queue } from "bullmq";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/client/scheduled-tasks-queue.js";
+} from "#lib/scheduler/queue.js";
 import { getClusterName } from "#lib/env.js";
 import { authorize } from "#lib/permissions/authorize.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
-import { readSchedulerHeartbeat } from "#lib/scheduler-heartbeat.js";
+import { readSchedulerHeartbeat } from "#lib/scheduler/heartbeat.js";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,

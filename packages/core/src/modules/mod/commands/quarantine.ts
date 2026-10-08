@@ -5,7 +5,7 @@ import {
 import { SlashCommandBuilder } from "discord.js";
 import type { Container } from "#lib/services.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { applyLocalizedBuilder } from "#lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";

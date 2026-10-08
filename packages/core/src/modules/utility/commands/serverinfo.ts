@@ -12,7 +12,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { makeCard } from "#lib/ui/cards.js";

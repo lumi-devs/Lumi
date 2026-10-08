@@ -5,7 +5,7 @@ import { deriveRepoNameFromUrl } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
 
 import type { AutocompleteInteraction } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import { repoNameChoices } from "../services/downloader-autocomplete.js";

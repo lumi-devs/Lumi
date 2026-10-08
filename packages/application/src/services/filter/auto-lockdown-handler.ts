@@ -1,5 +1,5 @@
 import { type Container } from "#lib/services.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { swallow } from "#lib/utilities/errors.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";

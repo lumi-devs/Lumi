@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
-import { ValkeyKeys } from "#lib/database/valkey.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { container } from "#lib/services.js";
 

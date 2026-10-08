@@ -16,7 +16,7 @@ import { VoiceMuteAction } from '@lumi/application/services/mod/actions/VoiceMut
 import { KickAction } from '@lumi/application/services/mod/actions/KickAction.js';
 import { WarnAction } from '@lumi/application/services/mod/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { QueuePriority } from '#lib/schedule-task.js';
+import { QueuePriority } from '#lib/scheduler/schedule.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();

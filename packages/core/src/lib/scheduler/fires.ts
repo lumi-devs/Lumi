@@ -1,7 +1,7 @@
 import { container, type Container } from "#lib/services.js";
 import type { EventBus, BusMessage } from "#lib/event-bus/types.js";
 import type { ScheduledTasks } from "#lib/types/common.js";
-import { taskFireStream, type FireEnvelope } from "#lib/scheduler-bus.js";
+import { taskFireStream, type FireEnvelope } from "#lib/scheduler/bus.js";
 import { extractTraceContext, otelContext } from "@lumi/observability";
 
 export type TaskFireMode = "unicast" | "broadcast";

@@ -1,6 +1,6 @@
 import type { Container } from "#lib/services.js";
 import { mgetSafe, pipelineBySlot, scanKeysSafe } from "@lumi/infrastructure/database";
-import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
+import { claimCooldown, isOnCooldown } from "#lib/valkey/cooldown.js";
 import { isNullish, filterNullish, tryParseJSON } from "@lumi/shared";
 import { AfkKeys, AfkTTL } from "../constants.js";
 import { sanitizeReason } from "@lumi/application/services/afk/format.js";

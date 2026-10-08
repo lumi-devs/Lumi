@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { lockAllTextChannels, unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { makeErrorCard } from "#lib/ui/cards.js";

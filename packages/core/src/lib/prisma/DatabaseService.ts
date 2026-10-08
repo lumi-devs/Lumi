@@ -2,7 +2,7 @@ import type { ValkeyClient } from "@lumi/infrastructure/database";
 import { scanKeysSafe } from "@lumi/infrastructure/database";
 import { type ILogger } from "@lumi/shared";
 import { container } from "#lib/services.js";
-import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,

@@ -1,7 +1,7 @@
 import { defineModule } from "#lib/module-system/Module.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
 import { handleDataRetentionFire } from "./services/data-retention.js";
 import {
   handleGdprExportCleanupFire,

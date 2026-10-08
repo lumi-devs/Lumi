@@ -1,6 +1,6 @@
-import { parseValkeyConnectionOption } from "#lib/database/valkey.js";
+import { parseValkeyConnectionOption } from "#lib/valkey/client.js";
 import { envParseInteger } from "#lib/env.js";
-import { QueuePriority } from "#lib/schedule-task.js";
+import { QueuePriority } from "#lib/scheduler/schedule.js";
 import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastructure/queues";
 
 /**
@@ -38,7 +38,7 @@ export function getScheduledTasksConnectionOptions(): ConnectionOptions {
 export const SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS = {
   attempts: 5,
   backoff: { type: "exponential", delay: 5_000 },
-  removeOnComplete: 1_000,
-  removeOnFail: 5_000,
+  removeOnComplete: 100,
+  removeOnFail: 1_000,
   priority: QueuePriority.UTILITY,
 } as const;
