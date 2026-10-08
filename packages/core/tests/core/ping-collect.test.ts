@@ -53,7 +53,6 @@ describe("collectPingData", () => {
     const data = await collectPingData(container);
 
     expect(data.djsVersion).toMatch(Semver);
-    expect(data.sapphireVersion).toMatch(Semver);
     expect(data.prismaVersion).toMatch(Semver);
   });
 

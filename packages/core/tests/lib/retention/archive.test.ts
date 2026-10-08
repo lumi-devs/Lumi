@@ -8,8 +8,8 @@ import {
   writeRetentionArchive,
 } from "#lib/retention/archive.js";
 
-function mockLogger(): import("@sapphire/framework").ILogger {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@sapphire/framework").ILogger;
+function mockLogger(): import("@lumi/shared").ILogger {
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@lumi/shared").ILogger;
 }
 
 describe("writeRetentionArchive", () => {

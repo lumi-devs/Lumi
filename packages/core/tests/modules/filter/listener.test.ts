@@ -177,6 +177,7 @@ describe("FilterMessageListener", () => {
     expect(deleteMessageLater).toHaveBeenCalledWith(mockWarnMessageObj, undefined, "Filter: delete warning");
     expect(mockTimeout).toHaveBeenCalledWith(600_000, expect.stringContaining("invite"));
     expect(mockGuildLogUtility.dispatch).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         guildId: "G1",
         moduleName: "filter",

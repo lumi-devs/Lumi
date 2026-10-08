@@ -8,7 +8,7 @@ import {
   ChannelType,
   type APIButtonComponentWithCustomId,
 } from "discord.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,

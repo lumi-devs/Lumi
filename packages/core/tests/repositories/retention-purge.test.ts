@@ -5,8 +5,8 @@ import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryR
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 
-function mockLogger(): import("@sapphire/framework").ILogger {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@sapphire/framework").ILogger;
+function mockLogger(): import("@lumi/shared").ILogger {
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@lumi/shared").ILogger;
 }
 
 function mockValkey() {

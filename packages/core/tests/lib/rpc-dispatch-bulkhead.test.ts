@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { dispatchRpc, resetDiscordBulkheadForTests } from "#lib/rpc/dispatch.js";
 import { registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { registry } from "@lumi/observability";
 
 const GUILD_ID = "123456789012345678";

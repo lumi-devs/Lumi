@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 vi.mock("#lib/schedule-task.js", () => ({
   scheduleTask: vi.fn().mockResolvedValue(undefined),
@@ -28,9 +28,6 @@ describe("global.gdpr.export.start / global.gdpr.export.status", () => {
     } as any;
     // No bot-owner application configured by default - only SELF_ID can act on its own data.
     container.client = { application: null } as any;
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
 
     registerRpcHandlers();
   });

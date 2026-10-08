@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
@@ -23,7 +23,7 @@ vi.mock("#lib/module-system/manifest.js", () => ({
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
@@ -127,7 +127,7 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     // Populated once, exactly like at boot - never touched again by unload().
     registerRpcHandlers();
 
-    store = new ModuleStore(container as any);
+    store = new ModuleStore(container);
     store.addRoot(new URL("file:///test/modules"));
   });
 
@@ -136,29 +136,9 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     const record = store.getRecord("afk");
     expect(record.dir).toBe(MODULE_DIR);
 
-    // Register the module's own piece instance so Store#unload() can resolve
-    // it, plus a commands piece that lives under its directory, mirroring how
-    // a real module owns pieces across stores.
-    const fakeModulePiece: any = { name: "afk", onUnload: vi.fn().mockResolvedValue(undefined) };
-    store.set("afk", fakeModulePiece);
-
-    const ownedCommand = { name: "afk-command", location: { full: `${record.dir}/commands/afk.ts` } };
-    const commandsStore = {
-      name: "commands",
-      paths: new Set([`${record.dir}/commands`]),
-      values: vi.fn().mockReturnValue([ownedCommand]),
-      unload: vi.fn().mockResolvedValue(undefined),
-    };
-    container.stores = {
-      values: vi.fn().mockReturnValue([commandsStore]),
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
-
     await store.unload("afk");
 
     // Confirm the module was actually unloaded, not a no-op.
-    expect(commandsStore.unload).toHaveBeenCalledWith("afk-command");
-    expect(fakeModulePiece.onUnload).toHaveBeenCalledTimes(1);
     expect(store.getRecord("afk").enabled).toBe(false);
     expect(store.getRecord("afk").state).toBe("disabled");
 

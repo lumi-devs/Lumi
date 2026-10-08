@@ -1,6 +1,6 @@
 import { CacheStore } from "#lib/cache/CacheStore.js";
 import { InvalidationBus } from "#lib/database/valkey.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { describe, expect, test, vi, beforeEach } from "bun:test";
 
 vi.mock("@lumi/observability", () => ({

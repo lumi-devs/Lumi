@@ -180,3 +180,11 @@ export class CacheStore {
     this.#l1.set(key, { value, expiresAt: Date.now() + ttlMs });
   }
 }
+
+/**
+ * Process-wide shared cache for repository reads. Lives here (next to the
+ * class) rather than in `Repository.js`: that module sits inside the
+ * services → DatabaseService → repositories import chain, so instantiating
+ * the cache there runs while this module is still initializing (TDZ crash).
+ */
+export const repositoryCache = new CacheStore();

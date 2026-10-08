@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   handleSseRequest,
   closeAllSseConnections,

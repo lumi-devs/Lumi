@@ -18,13 +18,12 @@ import {
 } from "#lib/i18n/index.js";
 
 /**
- * `s.enum(...).optional()` builds a `UnionValidator` whose `validators` array
- * is TS-private but a plain runtime property: a `LiteralValidator(undefined)`
- * (from `.optional()`) followed by one `LiteralValidator` per allowed value,
- * each carrying its literal on `.expected`.
+ * `z.enum(...).optional()` is a `ZodOptional` wrapping a `ZodEnum`: unwrap to
+ * the inner type and read its `options`.
  */
 interface IntrospectableEnum {
-  readonly validators: readonly { readonly expected: unknown }[];
+  readonly unwrap?: () => { readonly options?: readonly string[] };
+  readonly options?: readonly string[];
 }
 
 const LANGUAGE_ROOT = fileURLToPath(
@@ -150,7 +149,7 @@ describe("i18n framework", () => {
     expect(await fetchLanguage(null)).toBe(DefaultLanguage);
     const t = await fetchT(null);
     expect(t("common:success")).toBe("Success");
-    expect(await resolveKey(null, "common:success")).toBe("Success");
+    expect(await resolveKey(null, "common:success", undefined)).toBe("Success");
   });
 
   it("keeps the dashboard locale enum in sync with SupportedLanguages", () => {
@@ -158,11 +157,10 @@ describe("i18n framework", () => {
       | { shape: { locale: IntrospectableEnum } }
       | undefined;
     if (!localeValidator) throw new Error("guild.settings.set has no input validator");
+    const inner = localeValidator.shape.locale.unwrap?.() ?? localeValidator.shape.locale;
+    const options = inner.options;
+    if (!options) throw new Error("guild.settings.set locale is not an enum");
 
-    const allowed = localeValidator.shape.locale.validators
-      .map((v) => v.expected)
-      .filter((value) => value !== undefined)
-      .sort();
-    expect(allowed).toEqual([...SupportedLanguages].sort());
+    expect([...options].sort()).toEqual([...SupportedLanguages].sort());
   });
 });

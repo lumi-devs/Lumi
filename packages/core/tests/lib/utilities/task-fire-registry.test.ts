@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   registerTaskFireHandler,
   getRegisteredFireHandlers,
@@ -66,7 +66,7 @@ describe("Task Fire Registry & Consumer", () => {
       registerTaskFireHandler("taskUnicast" as any, "unicast", handlerUnicast);
       registerTaskFireHandler("taskBroadcast" as any, "broadcast", handlerBroadcast);
 
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "consumer-node-1",
         unicastGroup: "custom-group",
         blockMs: 5000,
@@ -102,7 +102,7 @@ describe("Task Fire Registry & Consumer", () => {
       registerTaskFireHandler("stopUnicast" as any, "unicast", vi.fn());
       registerTaskFireHandler("stopBroadcast" as any, "broadcast", vi.fn());
 
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "consumer-stop",
       });
       await consumer.start();
@@ -119,7 +119,7 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("is idempotent when subscribe is called multiple times for the same task name", async () => {
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "consumer-node-dup",
       });
 
@@ -134,7 +134,7 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("handles late registration when an active consumer is running", async () => {
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "active-consumer",
       });
       await consumer.start();
@@ -156,7 +156,7 @@ describe("Task Fire Registry & Consumer", () => {
     });
 
     it("logs error if late subscription throws an exception", async () => {
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "active-consumer-fail",
       });
       await consumer.start();
@@ -187,7 +187,7 @@ describe("Task Fire Registry & Consumer", () => {
       const handler = vi.fn().mockResolvedValue(undefined);
       registerTaskFireHandler("eventTask" as any, "unicast", handler);
 
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "worker-event",
       });
       await consumer.start();
@@ -208,7 +208,7 @@ describe("Task Fire Registry & Consumer", () => {
 
       await consumeCallback!(mockMsg);
 
-      expect(handler).toHaveBeenCalledWith({ foo: "bar" });
+      expect(handler).toHaveBeenCalledWith(container, { foo: "bar" });
       expect(mockMsg.ack).toHaveBeenCalled();
       expect(mockMsg.nack).not.toHaveBeenCalled();
 
@@ -220,7 +220,7 @@ describe("Task Fire Registry & Consumer", () => {
         return Promise.resolve(vi.fn().mockResolvedValue(undefined));
       });
 
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "worker-unregistered",
       });
 
@@ -260,7 +260,7 @@ describe("Task Fire Registry & Consumer", () => {
       const failingHandler = vi.fn().mockRejectedValue(new Error("Handler execution crashed"));
       registerTaskFireHandler("failingTask" as any, "unicast", failingHandler);
 
-      const consumer = new TaskFireConsumer(mockBus as EventBus, {
+      const consumer = new TaskFireConsumer(container, mockBus as EventBus, {
         consumerId: "worker-failing",
       });
       await consumer.start();
@@ -277,7 +277,7 @@ describe("Task Fire Registry & Consumer", () => {
 
       await consumeCallback!(mockMsg);
 
-      expect(failingHandler).toHaveBeenCalledWith({ data: 123 });
+      expect(failingHandler).toHaveBeenCalledWith(container, { data: 123 });
       expect(mockMsg.nack).toHaveBeenCalled();
       expect(mockMsg.ack).not.toHaveBeenCalled();
       expect(container.logger.error).toHaveBeenCalledWith(

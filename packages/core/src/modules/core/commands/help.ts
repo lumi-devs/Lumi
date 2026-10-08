@@ -155,7 +155,7 @@ export const helpDef: CommandDef = {
       b
         .setName("help")
         .setDescription("Display all available commands with dynamic pagination.")
-    ) as SlashCommandBuilder;
+    );
   },
   run: async (ctx: CommandContext) => {
     if (ctx.isSlash) {

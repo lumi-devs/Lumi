@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
@@ -246,10 +246,8 @@ describe("system panel RPC handlers", () => {
   describe("system.module.toggle", () => {
     it("calls moduleStore.setEnabled when available", async () => {
       const setEnabledSpy = vi.fn().mockResolvedValue(undefined);
-      (container as any).stores = {
-        get: vi.fn().mockReturnValue({
-          setEnabled: setEnabledSpy,
-        }),
+      (container as any).moduleStore = {
+        setEnabled: setEnabledSpy,
       };
 
       const res = (await call("system.module.toggle", {
@@ -263,9 +261,7 @@ describe("system panel RPC handlers", () => {
     });
 
     it("throws when moduleStore is missing", async () => {
-      (container as any).stores = {
-        get: vi.fn().mockReturnValue(null),
-      };
+      delete (container as any).moduleStore;
 
       await expect(
         call("system.module.toggle", {

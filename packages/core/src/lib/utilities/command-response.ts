@@ -110,7 +110,7 @@ function reportUnexpected(error: unknown): string | undefined {
  * Resolve any thrown value into a user-facing {@link ResolvedCommandError},
  * logging it at the appropriate level as a side effect.
  *
- * Mirrors Skyra's `flattenError`: unwrap `ResultError`, translate `UserError`,
+ * Mirrors Skyra's `flattenError`: unwrap nested `{ error }` results, translate `UserError`,
  * map Discord API/HTTP/abort failures to friendly messages, and capture genuine
  * unhandled errors to OTEL with a trace id for the user.
  *

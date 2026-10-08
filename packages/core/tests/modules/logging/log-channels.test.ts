@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 vi.mock("#lib/outbound/send-queue.js", () => ({
   queueSend: vi.fn().mockResolvedValue(undefined),
@@ -42,10 +42,10 @@ describe("logging per-type channel resolution", () => {
     };
 
     await expect(
-      resolveLogChannel(GUILD_ID, "message_deletes"),
+      resolveLogChannel(container, GUILD_ID, "message_deletes"),
     ).resolves.toBe(MESSAGE_CHANNEL);
     await expect(
-      resolveLogChannel(GUILD_ID, "message_edits"),
+      resolveLogChannel(container, GUILD_ID, "message_edits"),
     ).resolves.toBe(MESSAGE_CHANNEL);
   });
 
@@ -63,7 +63,7 @@ describe("logging per-type channel resolution", () => {
       "nickname_changes",
       "role_changes",
     ]) {
-      await expect(resolveLogChannel(GUILD_ID, toggle)).resolves.toBe(
+      await expect(resolveLogChannel(container, GUILD_ID, toggle)).resolves.toBe(
         MEMBER_CHANNEL,
       );
     }
@@ -77,20 +77,20 @@ describe("logging per-type channel resolution", () => {
     };
 
     await expect(
-      resolveLogChannel(GUILD_ID, "message_deletes"),
+      resolveLogChannel(container, GUILD_ID, "message_deletes"),
     ).resolves.toBe("444444444444444444");
     await expect(
-      resolveLogChannel(GUILD_ID, "message_edits"),
+      resolveLogChannel(container, GUILD_ID, "message_edits"),
     ).resolves.toBe(MESSAGE_CHANNEL);
   });
 
   it("falls back to the default log channel when no per-type channel is set", async () => {
     configs = { log_channel_id: DEFAULT_CHANNEL };
 
-    await expect(resolveLogChannel(GUILD_ID, "message_deletes")).resolves.toBe(
+    await expect(resolveLogChannel(container, GUILD_ID, "message_deletes")).resolves.toBe(
       DEFAULT_CHANNEL,
     );
-    await expect(resolveLogChannel(GUILD_ID, "member_joins")).resolves.toBe(
+    await expect(resolveLogChannel(container, GUILD_ID, "member_joins")).resolves.toBe(
       DEFAULT_CHANNEL,
     );
   });
@@ -99,7 +99,7 @@ describe("logging per-type channel resolution", () => {
     configs = {};
 
     await expect(
-      resolveLogChannel(GUILD_ID, "message_deletes"),
+      resolveLogChannel(container, GUILD_ID, "message_deletes"),
     ).resolves.toBeNull();
   });
 
@@ -109,10 +109,10 @@ describe("logging per-type channel resolution", () => {
       log_channel_id: DEFAULT_CHANNEL,
     };
 
-    await sendLog(GUILD_ID, "member_joins", 0x00ff00, "Member Joined", ["line"]);
+    await sendLog(container, GUILD_ID, "member_joins", 0x00ff00, "Member Joined", ["line"]);
 
     expect(queueSend).toHaveBeenCalledTimes(1);
-    expect(queueSend).toHaveBeenCalledWith({
+    expect(queueSend).toHaveBeenCalledWith(container, {
       channelId: MEMBER_CHANNEL,
       logCard: { color: 0x00ff00, title: "Member Joined", lines: ["line"] },
     });
@@ -121,7 +121,7 @@ describe("logging per-type channel resolution", () => {
   it("sends nothing when resolution is disabled", async () => {
     configs = {};
 
-    await sendLog(GUILD_ID, "member_joins", 0x00ff00, "Member Joined", ["line"]);
+    await sendLog(container, GUILD_ID, "member_joins", 0x00ff00, "Member Joined", ["line"]);
 
     expect(queueSend).not.toHaveBeenCalled();
   });

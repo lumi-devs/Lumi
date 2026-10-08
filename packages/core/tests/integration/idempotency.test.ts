@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type Valkey from "iovalkey";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { withIdempotency } from "#lib/rpc/idempotency.js";

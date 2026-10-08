@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
 import { authorize } from "#lib/permissions/authorize.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";

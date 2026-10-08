@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+
+let permissionsUtility: any;
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn().mockImplementation(() => permissionsUtility),
+  tryGetUtility: vi.fn().mockImplementation(() => permissionsUtility),
+}));
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -15,7 +21,6 @@ function everyoneRole(permissions = "0") {
 
 describe("core module permit RPC handlers", () => {
   let discordRest: FakeDiscordRestPort;
-  let permissionsUtility: any;
 
   /** Re-seeds `checkGuildManagerRest`'s guild/member lookups; the intruder holds `memberRoles` (none by default). */
   function seedGuildManager(memberRoles: string[] = []) {
@@ -50,17 +55,6 @@ describe("core module permit RPC handlers", () => {
       unassignPermit: vi.fn().mockResolvedValue(undefined),
     };
 
-    container.stores = {
-      get: vi.fn((name: string) =>
-        name === "utilities"
-          ? {
-              get: (key: string) =>
-                key === "permissions" ? permissionsUtility : undefined,
-            }
-          : { loaded: () => [], get: () => undefined },
-      ),
-    } as any;
-
     registerRpcHandlers();
   });
 
@@ -85,6 +79,7 @@ describe("core module permit RPC handlers", () => {
 
       expect(res.success).toBe(true);
       expect(permissionsUtility.createPermit).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "mods",
         "custom",
@@ -161,12 +156,13 @@ describe("core module permit RPC handlers", () => {
       });
 
       expect(permissionsUtility.renamePermit).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         1,
         "senior-mods",
       );
       expect(permissionsUtility.updatePermitNodes).not.toHaveBeenCalled();
-      expect(permissionsUtility.getPermit).toHaveBeenCalledWith(GUILD_ID, 1);
+      expect(permissionsUtility.getPermit).toHaveBeenCalledWith(container, GUILD_ID, 1);
     });
 
     it("replaces nodes when they are supplied", async () => {
@@ -176,6 +172,7 @@ describe("core module permit RPC handlers", () => {
       });
 
       expect(permissionsUtility.updatePermitNodes).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         1,
         ["mod.kick"],
@@ -203,7 +200,7 @@ describe("core module permit RPC handlers", () => {
       })) as any;
 
       expect(res).toEqual({ success: true });
-      expect(permissionsUtility.deletePermit).toHaveBeenCalledWith(GUILD_ID, 7);
+      expect(permissionsUtility.deletePermit).toHaveBeenCalledWith(container, GUILD_ID, 7);
     });
 
     it("rejects an actor without ManageGuild before deleting", async () => {
@@ -251,6 +248,7 @@ describe("core module permit RPC handlers", () => {
 
       expect(res).toEqual({ success: true });
       expect(permissionsUtility.assignPermit).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         1,
         "role",
@@ -266,6 +264,7 @@ describe("core module permit RPC handlers", () => {
       });
 
       expect(permissionsUtility.unassignPermit).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         1,
         "role",

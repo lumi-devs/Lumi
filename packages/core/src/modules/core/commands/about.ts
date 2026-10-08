@@ -153,7 +153,7 @@ export const aboutDef: CommandDef = {
         .setDescription(
           "Display detailed information, statistics, and architecture of the Lumi bot.",
         )
-    ) as SlashCommandBuilder;
+    );
   },
   run: async (ctx: CommandContext) => {
     const card = await buildAboutCard(ctx.services, ctx.source);

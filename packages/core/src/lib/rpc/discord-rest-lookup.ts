@@ -11,7 +11,7 @@ import {
 } from "discord-api-types/v10";
 import { ValkeyKeys, ValkeyTTL } from "#lib/database/valkey.js";
 import { authorize } from "#lib/permissions/authorize.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { swallow } from "#lib/utilities/errors.js";
 
 /**

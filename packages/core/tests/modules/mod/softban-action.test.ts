@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { SoftbanAction } from "@lumi/application/services/mod/actions/SoftbanAction.js";
 
 Object.assign(container, {

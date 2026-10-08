@@ -10,7 +10,7 @@ import {
   buildDeleteConfirmView,
   buildPanel,
 } from "#modules/tempvc/ui/panel.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 describe("TempVC UI Panel Builders", () => {
   const mockChannel: any = {
@@ -69,12 +69,12 @@ describe("TempVC UI Panel Builders", () => {
       },
     };
 
-    const panel = await buildPanel(mockChannel, mockRecord);
+    const panel = await buildPanel(container, mockChannel, mockRecord);
     expect(panel.components).toBeDefined();
     expect(panel.components.length).toBeGreaterThan(0);
 
     // Also test with locked and hidden record
-    const lockedPanel = await buildPanel(mockChannel, {
+    const lockedPanel = await buildPanel(container, mockChannel, {
       ...mockRecord,
       locked: true,
       hidden: true,

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
-import { repositoryCache } from '#lib/prisma/repositories/Repository.js';
-import { container } from '@sapphire/framework';
+import { repositoryCache } from '#lib/cache/CacheStore.js';
+import { container } from "#lib/services.js";
 
 describe('ModerationRepository Tests', () => {
   let mockPrisma: any;

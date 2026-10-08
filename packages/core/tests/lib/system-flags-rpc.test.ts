@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { FeatureFlagRepository } from "#lib/prisma/repositories/FeatureFlagRepository.js";

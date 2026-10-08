@@ -14,7 +14,7 @@ const noopLogger = {
   debug: () => undefined,
   trace: () => undefined,
   fatal: () => undefined,
-} as unknown as import("@sapphire/framework").ILogger;
+} as unknown as import("@lumi/shared").ILogger;
 
 let guildIdCounter = 0;
 

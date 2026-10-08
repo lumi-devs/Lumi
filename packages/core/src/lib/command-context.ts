@@ -262,7 +262,7 @@ export class CommandContext {
       ) as GuildBasedChannel | null;
     const value = await this.args!.pick("guildChannel").catch(() => null);
     if (value === null && spec.required) throw missingArgument(name);
-    return value as GuildBasedChannel | null;
+    return value;
   }
 
   /**

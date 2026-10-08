@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+
+let config: { setConfig: ReturnType<typeof vi.fn> };
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn().mockImplementation(() => config),
+  tryGetUtility: vi.fn().mockImplementation(() => config),
+}));
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";
@@ -49,7 +55,6 @@ function makeHistory(overrides: Record<string, unknown> = {}) {
 describe("dashboard module audit + history + override RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let discordRest: FakeDiscordRestPort;
-  let config: { setConfig: ReturnType<typeof vi.fn> };
 
   /** Re-seeds `checkGuildManagerRest`'s guild/member lookups; the intruder holds `memberRoles` (none by default). */
   function seedGuildManager(memberRoles: string[] = []) {
@@ -95,14 +100,6 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     (container as any).db = db;
 
     config = { setConfig: vi.fn().mockResolvedValue({ coerced: "old" }) };
-
-    container.stores = {
-      get: vi.fn((name: string) =>
-        name === "utilities"
-          ? { get: (key: string) => (key === "config" ? config : undefined) }
-          : { loaded: () => [] },
-      ),
-    } as any;
 
     registerRpcHandlers();
   });
@@ -319,6 +316,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       })) as any;
 
       expect(config.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "mod",
         "logChannel",
@@ -359,6 +357,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
       await call("guild.history.rollback", { entryId: 1 });
 
       expect(config.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "mod",
         "logChannel",

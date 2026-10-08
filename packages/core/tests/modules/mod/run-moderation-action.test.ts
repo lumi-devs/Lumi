@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { runModerationAction } from "@lumi/application/services/mod/runModerationAction.js";
 
 Object.assign(container, {
@@ -50,6 +50,7 @@ describe("runModerationAction", () => {
 
     expect(result).toBe(mockCase);
     expect(logToChannel).toHaveBeenCalledWith(
+      container,
       "g-1",
       "Test",
       0,

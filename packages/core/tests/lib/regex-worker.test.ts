@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   RegexTimeoutError,
   RegexWorkerHandler,

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -98,10 +98,6 @@ describe("mod module appeals RPC handlers", () => {
     db.appeals = new AppealRepository(prisma as any, valkey, container.logger, db);
     db.access = new AccessRepository(prisma as any, valkey, container.logger, db);
     (container as any).db = db;
-
-    container.stores = {
-      get: vi.fn().mockReturnValue({ loaded: () => [] }),
-    } as any;
 
     registerRpcHandlers();
   });

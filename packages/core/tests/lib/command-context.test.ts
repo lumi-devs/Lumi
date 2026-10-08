@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { UserError, container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
 import * as i18n from "#lib/i18n/index.js";
 import { MessageFlags } from "discord.js";
 import { CommandContext } from "#lib/command-context.js";
@@ -255,7 +256,7 @@ describe("CommandContext", () => {
       const ctx = CommandContext.fromInteraction(mockInteraction);
       const t = await ctx.fetchT();
       expect(t).toBeDefined();
-      expect(i18n.fetchT).toHaveBeenCalledWith(mockInteraction);
+      expect(i18n.fetchT).toHaveBeenCalledWith(mockInteraction, expect.anything());
     });
   });
 });

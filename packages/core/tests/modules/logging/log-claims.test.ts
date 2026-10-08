@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ValkeyKeys } from "#lib/database/valkey.js";
 import {
   consumeLogClaimCode,

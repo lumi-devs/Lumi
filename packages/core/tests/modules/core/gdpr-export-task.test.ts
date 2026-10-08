@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 vi.mock("#lib/gdpr.js", () => ({
   executeGdprExport: vi.fn(),
@@ -57,7 +57,7 @@ describe("handleGdprExportFire", () => {
       },
     };
 
-    await handleGdprExportFire({ jobId: "job-1" });
+    await handleGdprExportFire(container, { jobId: "job-1" });
 
     expect(markRunning).toHaveBeenCalledWith("job-1");
     expect(markDone).toHaveBeenCalledTimes(1);
@@ -83,7 +83,7 @@ describe("handleGdprExportFire", () => {
       },
     };
 
-    await handleGdprExportFire({ jobId: "job-2" });
+    await handleGdprExportFire(container, { jobId: "job-2" });
 
     expect(markFailed).toHaveBeenCalledWith("job-2", "boom");
   });
@@ -98,7 +98,7 @@ describe("handleGdprExportFire", () => {
       },
     };
 
-    await handleGdprExportFire({ jobId: "missing" });
+    await handleGdprExportFire(container, { jobId: "missing" });
 
     expect(container.db.gdprExportJobs.markRunning).not.toHaveBeenCalled();
     expect(container.logger.warn).toHaveBeenCalled();
@@ -131,7 +131,7 @@ describe("handleGdprExportCleanupFire", () => {
       },
     };
 
-    await handleGdprExportCleanupFire();
+    await handleGdprExportCleanupFire(container);
 
     expect(deleteByIds).toHaveBeenCalledWith(["job-1"]);
     await expect(readFile(filePath)).rejects.toThrow();
@@ -146,7 +146,7 @@ describe("handleGdprExportCleanupFire", () => {
       },
     };
 
-    await handleGdprExportCleanupFire();
+    await handleGdprExportCleanupFire(container);
 
     expect(deleteByIds).not.toHaveBeenCalled();
   });
@@ -163,7 +163,7 @@ describe("handleGdprExportCleanupFire", () => {
       },
     };
 
-    await handleGdprExportCleanupFire();
+    await handleGdprExportCleanupFire(container);
 
     expect(deleteByIds).toHaveBeenCalledWith(["job-2"]);
   });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { welcomeRpcHandlers } from "#modules/welcome/rpc.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 vi.mock("#lib/rpc/discord-rest-lookup.js", () => ({
   fetchChannelRest: vi.fn(),

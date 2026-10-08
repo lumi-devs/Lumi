@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import {
@@ -8,7 +8,7 @@ import {
   postOrEditVerifyPanel,
 } from "@lumi/application/services/security/verification.js";
 import { MaxAttempts, type CaptchaState } from "@lumi/application/services/security/captcha.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 vi.mock("#lib/i18n/index.js", () => ({
@@ -206,7 +206,7 @@ describe("postOrEditVerifyPanel", () => {
     setUp({ config: baseConfig({ verification_enabled: false }), rest: {} });
 
     await expect(
-      postOrEditVerifyPanel(GUILD_ID, { channelId: "c1" }),
+      postOrEditVerifyPanel(container, GUILD_ID, { channelId: "c1" }),
     ).rejects.toThrow("Turn on Verification and pick a Verified Role");
   });
 
@@ -223,7 +223,7 @@ describe("postOrEditVerifyPanel", () => {
     });
 
     await expect(
-      postOrEditVerifyPanel(GUILD_ID, { channelId: "c1" }),
+      postOrEditVerifyPanel(container, GUILD_ID, { channelId: "c1" }),
     ).rejects.toThrow("That channel doesn't exist or isn't a text channel");
   });
 
@@ -236,7 +236,7 @@ describe("postOrEditVerifyPanel", () => {
       },
     });
 
-    const result = await postOrEditVerifyPanel(GUILD_ID, { createChannel: true });
+    const result = await postOrEditVerifyPanel(container, GUILD_ID, { createChannel: true });
 
     expect(result).toEqual({
       channelId: "new-channel",
@@ -269,7 +269,7 @@ describe("postOrEditVerifyPanel", () => {
       },
     });
 
-    const result = await postOrEditVerifyPanel(GUILD_ID, { channelId: "c1" });
+    const result = await postOrEditVerifyPanel(container, GUILD_ID, { channelId: "c1" });
 
     expect(result).toEqual({
       channelId: "c1",
@@ -298,7 +298,7 @@ describe("postOrEditVerifyPanel", () => {
       },
     });
 
-    const result = await postOrEditVerifyPanel(GUILD_ID, { channelId: "c1" });
+    const result = await postOrEditVerifyPanel(container, GUILD_ID, { channelId: "c1" });
 
     expect(result).toEqual({
       channelId: "c1",
@@ -338,7 +338,7 @@ describe("postOrEditVerifyPanel", () => {
     });
     (container as any).client.rest.delete = restDelete;
 
-    const result = await postOrEditVerifyPanel(GUILD_ID, {
+    const result = await postOrEditVerifyPanel(container, GUILD_ID, {
       channelId: "new-c",
       deleteOldMessage: true,
     });
@@ -371,7 +371,7 @@ describe("postOrEditVerifyPanel", () => {
     });
     (container as any).client.rest.delete = restDelete;
 
-    const result = await postOrEditVerifyPanel(GUILD_ID, {
+    const result = await postOrEditVerifyPanel(container, GUILD_ID, {
       channelId: "new-c",
       deleteOldMessage: false,
     });

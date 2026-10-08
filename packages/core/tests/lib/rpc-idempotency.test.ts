@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
 import { withIdempotency } from "#lib/rpc/idempotency.js";
 import { createMemoryValkey } from "../mocks/memory-valkey.js";

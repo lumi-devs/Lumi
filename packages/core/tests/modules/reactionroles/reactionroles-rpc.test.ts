@@ -29,10 +29,9 @@ describe("ReactionRoles RPC Handlers", () => {
       info: vi.fn(),
       error: vi.fn(),
     } as any;
-    (container as any).stores = {
-      get: vi.fn().mockReturnValue({
-        get: vi.fn().mockReturnValue({ name: "reactionroles" }),
-      }),
+    (container as any).moduleStore = {
+      get: () => ({ name: "reactionroles" }),
+      loaded: () => [{ name: "reactionroles" }],
     };
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { Repository, repositoryCache } from "#lib/prisma/repositories/Repository.js";
-import { container } from "@sapphire/framework";
+import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { container } from "#lib/services.js";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 
 vi.mock("@lumi/observability", () => ({

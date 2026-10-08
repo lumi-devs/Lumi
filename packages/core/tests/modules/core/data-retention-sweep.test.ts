@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { handleDataRetentionFire } from "#modules/core/services/data-retention.js";
 import { readClusterShards } from "#lib/sharding/shard-telemetry.js";
 
@@ -79,7 +79,7 @@ describe("core data retention sweep", () => {
   });
 
   it("purges audit, config history and economy transactions, but keeps moderation history by default", async () => {
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     expect(container.db.audit.purgeOldEntries).toHaveBeenCalledTimes(1);
     expect(container.db.configHistory.purgeOldEntries).toHaveBeenCalledTimes(1);
@@ -96,7 +96,7 @@ describe("core data retention sweep", () => {
   it("purges moderation cases and appeals once MODERATION_RETENTION_DAYS is set", async () => {
     process.env.MODERATION_RETENTION_DAYS = "30";
 
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     expect(container.db.moderation.purgeOldCases).toHaveBeenCalledTimes(1);
     expect(container.db.appeals.purgeOldAppeals).toHaveBeenCalledTimes(1);
@@ -117,7 +117,7 @@ describe("core data retention sweep", () => {
     process.env.MODERATION_RETENTION_DAYS = "30";
     process.env.AUDIT_ARCHIVE_DIR = "/tmp/lumi-retention-archive";
 
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     expect(asMock(container.db.audit.purgeOldEntries).mock.calls[0]?.[1]).toEqual({
       archiveDir: "/tmp/lumi-retention-archive",
@@ -137,7 +137,7 @@ describe("core data retention sweep", () => {
     process.env.CONFIG_HISTORY_RETENTION_DAYS = "10";
     process.env.ECONOMY_TRANSACTION_RETENTION_DAYS = "20";
 
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     const [configHistoryDate] = asMock(
       container.db.configHistory.purgeOldEntries,
@@ -158,14 +158,14 @@ describe("core data retention sweep", () => {
       new Error("db down"),
     );
 
-    await expect(handleDataRetentionFire()).resolves.toBeUndefined();
+    await expect(handleDataRetentionFire(container)).resolves.toBeUndefined();
     expect(container.logger.error).toHaveBeenCalled();
   });
 
   it("skips the guild purge when the fleet isn't fully reporting, but still runs the other purges", async () => {
     asMock(readClusterShards).mockResolvedValue(fleetNotReady);
 
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     expect(container.db.purgeDepartedGuilds).not.toHaveBeenCalled();
     expect(container.db.audit.purgeOldEntries).toHaveBeenCalledTimes(1);
@@ -178,7 +178,7 @@ describe("core data retention sweep", () => {
     asMock(readClusterShards).mockResolvedValue(fleetReady);
     asMock(container.db.purgeDepartedGuilds).mockResolvedValue(["g1", "g2"]);
 
-    await handleDataRetentionFire();
+    await handleDataRetentionFire(container);
 
     expect(container.db.purgeDepartedGuilds).toHaveBeenCalledTimes(1);
     const [cutoff] = asMock(container.db.purgeDepartedGuilds).mock.calls[0] as [Date];

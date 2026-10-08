@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test";
+import { container } from "#lib/services.js";
 import { loggingModule } from "#modules/logging/index.js";
 
 describe("LoggingModule", () => {
@@ -10,7 +11,7 @@ describe("LoggingModule", () => {
 
   it("handles deleteUserData without throwing", async () => {
     await expect(
-      loggingModule.deleteUserData?.("user-123"),
+      loggingModule.deleteUserData?.(container, "user-123"),
     ).resolves.toBeUndefined();
   });
 });

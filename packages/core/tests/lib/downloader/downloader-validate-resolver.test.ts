@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
 import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
 import { LumiInfo } from "#lib/utilities/misc.js";

@@ -87,11 +87,11 @@ export class PrefixArgs {
     }
   }
 
-  public async rest(_type?: string): Promise<string> {
+  public rest(_type?: string): Promise<string> {
     const rest = this.#tokens.join(" ");
     this.#tokens = [];
-    if (rest.length === 0) throw missingToken("text");
-    return rest;
+    if (rest.length === 0) return Promise.reject(missingToken("text"));
+    return Promise.resolve(rest);
   }
 
   public async repeatResult(
@@ -157,6 +157,6 @@ export class PrefixArgs {
     if (!id) throw new Error(`Expected a channel mention or id, got "${token}".`);
     const channel = guild.channels.cache.get(id) ?? (await guild.channels.fetch(id).catch(() => null));
     if (!channel || !("guildId" in channel)) throw new Error(`Channel "${token}" not found.`);
-    return channel as GuildBasedChannel;
+    return channel;
   }
 }

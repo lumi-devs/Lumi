@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { execFileSync } from "node:child_process";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 
 const BOT_OWNER_ID = "111111111111111111";

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   applyGateAction,
   loadJoinGateConfig,
@@ -67,6 +67,7 @@ describe("applyGateAction", () => {
       expect.objectContaining({ guildId: "g1", userId: "u1", action: "kick" }),
     );
     expect(logToChannel).toHaveBeenCalledWith(
+      container,
       "g1",
       expect.any(String),
       expect.any(Number),

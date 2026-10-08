@@ -80,8 +80,8 @@ describe("handleSendMessageFire", () => {
     channels.set("c1", makeChannel("c1", 20));
 
     await Promise.all([
-      handleSendMessageFire({ channelId: "c1", content: "a" }),
-      handleSendMessageFire({ channelId: "c1", content: "b" }),
+      handleSendMessageFire(container, { channelId: "c1", content: "a" }),
+      handleSendMessageFire(container, { channelId: "c1", content: "b" }),
     ]);
 
     // A rate-limited channel parks one slot; it never interleaves with itself.
@@ -93,8 +93,8 @@ describe("handleSendMessageFire", () => {
     channels.set("c2", makeChannel("c2", 5));
 
     await Promise.all([
-      handleSendMessageFire({ channelId: "c1", content: "a" }),
-      handleSendMessageFire({ channelId: "c2", content: "b" }),
+      handleSendMessageFire(container, { channelId: "c1", content: "a" }),
+      handleSendMessageFire(container, { channelId: "c2", content: "b" }),
     ]);
 
     // c2 finishes while c1 is still in flight.
@@ -103,7 +103,7 @@ describe("handleSendMessageFire", () => {
 
   it("drops sends for channels that cannot be resolved", async () => {
     await expect(
-      handleSendMessageFire({ channelId: "gone", content: "a" }),
+      handleSendMessageFire(container, { channelId: "gone", content: "a" }),
     ).resolves.toBeUndefined();
     expect(events).toEqual([]);
   });
@@ -115,7 +115,7 @@ describe("handleSendMessageFire", () => {
     });
 
     await expect(
-      handleSendMessageFire({ channelId: "c1", content: "a" }),
+      handleSendMessageFire(container, { channelId: "c1", content: "a" }),
     ).rejects.toThrow("500");
   });
 
@@ -123,7 +123,7 @@ describe("handleSendMessageFire", () => {
     const channel = makeChannel("c1", 0);
     channels.set("c1", channel);
 
-    await handleSendMessageFire({
+    await handleSendMessageFire(container, {
       channelId: "c1",
       at: Date.now(),
       auditEntry: {

@@ -307,7 +307,7 @@ describe("TempVcUtility", () => {
     it("does not delete channel if not registered", async () => {
       (getVcRecord as any).mockResolvedValue(null);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(isVoiceChannelEmpty).not.toHaveBeenCalled();
       expect(container.client.rest.delete).not.toHaveBeenCalled();
@@ -317,7 +317,7 @@ describe("TempVcUtility", () => {
       (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
       (isVoiceChannelEmpty as any).mockResolvedValue(false);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(container.client.rest.delete).not.toHaveBeenCalled();
     });
@@ -327,7 +327,7 @@ describe("TempVcUtility", () => {
       (isVoiceChannelEmpty as any).mockResolvedValue(true);
       (container.client.rest.delete as any).mockResolvedValue({} as any);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(container.client.rest.delete).toHaveBeenCalledWith("/channels/vc-123", {
         reason: "Empty temp VC cleanup",
@@ -518,7 +518,7 @@ describe("TempVcUtility", () => {
       err10003.code = 10003;
       (container.client.rest.delete as any).mockRejectedValueOnce(err10003);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-10003" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-10003" });
       expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-10003");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-10003");
 
@@ -526,7 +526,7 @@ describe("TempVcUtility", () => {
       err50013.code = 50013;
       (container.client.rest.delete as any).mockRejectedValueOnce(err50013);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-50013" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-50013" });
       expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-50013");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-50013");
     });
@@ -540,7 +540,7 @@ describe("TempVcUtility", () => {
       (container.client.rest.delete as any).mockRejectedValueOnce(unexpectedErr);
 
       await expect(
-        service.runCleanup({ guildId: "guild-1", channelId: "vc-err" })
+        service.runCleanup(container, { guildId: "guild-1", channelId: "vc-err" })
       ).rejects.toThrow("Internal Error");
     });
   });

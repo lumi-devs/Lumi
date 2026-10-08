@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { rpcRouter, type RpcActionName } from "@lumi/contracts/rpc";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { dispatchRpc } from "#lib/rpc/dispatch.js";
 import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -589,9 +589,7 @@ describe("static RPC registry", () => {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
     (container as any).discordRest = ownerOnlyRest(GUILD_ID, OWNER_ID);
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
+    (container as any).moduleStore = { get: () => undefined, loaded: () => [] };
     (container as any).db = {
       tempvc: { listGenerators: vi.fn().mockResolvedValue([]) },
     };
@@ -615,9 +613,7 @@ describe("static RPC registry", () => {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
     (container as any).discordRest = ownerOnlyRest(GUILD_ID, OWNER_ID);
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
+    (container as any).moduleStore = { get: () => undefined, loaded: () => [] };
 
     const handler = getRpcHandler("guild.tempvc.generators.set");
     await expect(

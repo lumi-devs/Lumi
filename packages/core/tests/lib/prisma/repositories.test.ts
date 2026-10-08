@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

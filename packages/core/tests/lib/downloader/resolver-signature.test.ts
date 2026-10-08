@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,

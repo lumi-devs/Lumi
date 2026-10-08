@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
@@ -7,7 +7,7 @@ import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
 import { postOrEditVerifyPanel } from "@lumi/application/services/security/verification.js";
 import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMemoryValkey } from "../../mocks/memory-valkey.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
@@ -92,12 +92,10 @@ describe("security module RPC handlers", () => {
 
     loadedModules = new Set(["security"]);
 
-    container.stores = {
-      get: vi.fn(() => ({
-        loaded: () => [],
-        get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
-      })),
-    } as any;
+    (container as any).moduleStore = {
+      get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
+      loaded: () => [],
+    };
 
     registerRpcHandlers();
   });
@@ -256,7 +254,7 @@ describe("security module RPC handlers", () => {
       })) as any;
 
       expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
-      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledWith(GUILD_ID, {
+      expect(mockPostOrEditVerifyPanel).toHaveBeenCalledWith(container, GUILD_ID, {
         channelId: CHANNEL_ID,
         createChannel: undefined,
         deleteOldMessage: undefined,

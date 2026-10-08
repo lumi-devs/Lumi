@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { UserError, ResultError, container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes, MessageFlags } from "discord.js";
 import { trace } from "@opentelemetry/api";
 import {
@@ -58,15 +59,13 @@ describe("command-response utilities", () => {
       });
     });
 
-    it("unwraps ResultError instances recursively", () => {
+    it("unwraps a nested error result", () => {
       const innerError = new UserError({
         identifier: "PermissionDenied",
         message: "You lack permission",
       });
-      const innerResultErr = new ResultError("Inner Error", innerError);
-      const outerResultErr = new ResultError("Outer Error", innerResultErr);
 
-      const res = resolveCommandError("TestLabel", outerResultErr);
+      const res = resolveCommandError("TestLabel", { error: innerError });
       expect(res.title).toBe<string | undefined>(ErrorTitles.PermissionDenied);
       expect(res.message).toBe("You lack permission");
       expect(res.expected).toBe(true);
@@ -433,7 +432,7 @@ describe("command-response utilities", () => {
       const error = new UserError({ identifier: "AccessDenied", message: "Denied" });
       const payload = { context: { silent: true } } as any;
 
-      const res = await handleDenied(interaction, error, payload);
+      const res = await handleDenied(container, interaction, error, payload);
       expect(res).toBeUndefined();
     });
 
@@ -453,11 +452,12 @@ describe("command-response utilities", () => {
 
       resolveKey.mockResolvedValue("Resolved i18n message");
 
-      await handleDenied(interaction, error, payload);
+      await handleDenied(container, interaction, error, payload);
       expect(resolveKey).toHaveBeenCalledWith(
         interaction,
         "errors:permission_denied",
-        expect.objectContaining({ defaultValue: "Default msg" })
+        expect.objectContaining({ defaultValue: "Default msg" }),
+        container,
       );
       expect(interaction.reply).toHaveBeenCalled();
     });
@@ -478,7 +478,7 @@ describe("command-response utilities", () => {
 
       resolveKey.mockRejectedValue(new Error("i18n failed"));
 
-      await handleDenied(interaction, error, payload);
+      await handleDenied(container, interaction, error, payload);
       expect(container.logger.warn).toHaveBeenCalledWith(
         "[CommandDenied] i18n resolve failed:",
         expect.any(Error)
@@ -492,7 +492,7 @@ describe("command-response utilities", () => {
       const error = new UserError({ identifier: "AccessDenied", message: "No entry" });
       const payload = { context: { silent: false } } as any;
 
-      const res = await handleDenied(message, error, payload);
+      const res = await handleDenied(container, message, error, payload);
       expect(res).toBeUndefined();
       expect(container.logger.error).toHaveBeenCalledWith(
         "[CommandDenied] Failed to send error card:",

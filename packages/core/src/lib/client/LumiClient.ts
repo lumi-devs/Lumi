@@ -7,7 +7,7 @@ import { TaskFireConsumer } from "#lib/task-fire-registry.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
 import { Client } from "discord.js";
 import { ownedEventBusOf, type Container } from "#lib/services.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { buildClientOptions } from "./client-options.js";
 import { installProducerOnlyTasks } from "./scheduler-producer.js";
 import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";

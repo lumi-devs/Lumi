@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -120,13 +120,11 @@ describe("dashboard module guild read RPC handlers", () => {
       },
     } as any;
 
-    container.stores = {
-      get: vi.fn().mockReturnValue({
-        loaded: () => [afkModule],
-        get: (name: string) => (name === "afk" ? afkModule : undefined),
-        isAddonModule: () => false,
-      }),
-    } as any;
+    (container as any).moduleStore = {
+      loaded: () => [afkModule],
+      get: (name: string) => (name === "afk" ? afkModule : undefined),
+      isAddonModule: () => false,
+    };
 
     registerRpcHandlers();
   });

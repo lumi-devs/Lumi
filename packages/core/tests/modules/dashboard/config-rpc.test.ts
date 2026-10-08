@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+
+let configUtility: any;
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn().mockImplementation(() => configUtility),
+  tryGetUtility: vi.fn().mockImplementation(() => configUtility),
+}));
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -15,7 +21,6 @@ function everyoneRole(permissions = "0") {
 
 describe("dashboard module config write RPC handlers", () => {
   let discordRest: FakeDiscordRestPort;
-  let configUtility: any;
   let transaction: any;
 
   /** Re-seeds `checkGuildManagerRest`'s guild/member lookups; the intruder holds `memberRoles` (none by default). */
@@ -64,27 +69,17 @@ describe("dashboard module config write RPC handlers", () => {
     configUtility = {
       setConfig: vi
         .fn()
-        .mockImplementation((_g: string, _m: string, _k: string, raw: unknown) => ({
+        .mockImplementation((_c: unknown, _g: string, _m: string, _k: string, raw: unknown) => ({
           coerced: raw === "5" ? 5 : raw,
         })),
     };
 
-    const modulesStore = {
-      loaded: () => [],
+    (container as any).moduleStore = {
       get: vi.fn().mockImplementation((name: string) =>
         name === "afk" ? { meta: { name: "afk" } } : undefined,
       ),
-      isAddonModule: () => false,
+      loaded: () => [],
     };
-    const utilitiesStore = {
-      get: (key: string) => (key === "config" ? configUtility : undefined),
-    };
-
-    container.stores = {
-      get: vi.fn().mockImplementation((store: string) =>
-        store === "modules" ? modulesStore : utilitiesStore,
-      ),
-    } as any;
 
     registerRpcHandlers();
   });
@@ -191,6 +186,7 @@ describe("dashboard module config write RPC handlers", () => {
 
       expect(res).toEqual({ success: true, key: "maxMultiTargets", value: 5 });
       expect(configUtility.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "mod",
         "maxMultiTargets",
@@ -230,6 +226,7 @@ describe("dashboard module config write RPC handlers", () => {
       await call("guild.config.set", { moduleName: "mod", key: "k", value: "v" });
 
       expect(configUtility.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "mod",
         "k",
@@ -270,6 +267,7 @@ describe("dashboard module config write RPC handlers", () => {
       });
       expect(configUtility.setConfig).toHaveBeenCalledTimes(2);
       expect(configUtility.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "security",
         "max_bans",
@@ -277,6 +275,7 @@ describe("dashboard module config write RPC handlers", () => {
         OWNER_ID,
       );
       expect(configUtility.setConfig).toHaveBeenCalledWith(
+        container,
         GUILD_ID,
         "security",
         "window_seconds",
