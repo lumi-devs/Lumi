@@ -20,7 +20,7 @@ import { ButtonStyle } from "discord.js";
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
 // components once nested, and card chrome already eats ~10-19 of Discord's
 // 40-component budget per message, so page sizes stay well under naive counts.
-const AddonRowsPerPage = 5;
+const AddonRowsPerPage = 3;
 
 export interface AddonDashboardStats {
   repoCount: number;
