@@ -385,7 +385,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
-    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:55');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-55');
   });
 
   it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
@@ -459,7 +459,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
-    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:77');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-77');
   });
 
   it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {

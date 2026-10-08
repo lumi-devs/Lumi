@@ -449,7 +449,7 @@ const Methods = {
       id: channel.id,
       guildId: (channel as { guildId: string }).guildId,
       type: channel.type,
-      name: "name" in channel ? (channel.name as string) : null,
+      name: "name" in channel ? (channel.name) : null,
     };
   },
 
