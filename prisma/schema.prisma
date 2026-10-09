@@ -1,7 +1,3 @@
-// Lumi — Prisma schema
-// Single file, partitioned by domain. Module-owned tables live alongside the
-// module section that owns them; only Core types live in the Core section.
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
@@ -12,10 +8,6 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────────────────────────────────────
 
 enum PermitKind {
   enforced
@@ -33,9 +25,6 @@ enum PermitTargetType {
   channel
 }
 
-/// Shared by ModerationCase.action and WarnThreshold.action. "voice_mute" is
-/// the vcmute action's real name (the module command is called vcmute, the
-/// case/threshold action is not — keep them distinct).
 enum CaseAction {
   ban
   unban
@@ -90,10 +79,6 @@ enum EconomyTxnKind {
   admin_remove
   admin_set
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CORE — global + guild config, permissions, moderation, blocklist, ignore
-// ─────────────────────────────────────────────────────────────────────────────
 
 model Global {
   id                        Int       @id @default(1)
@@ -187,13 +172,6 @@ model GuildModuleConfig {
   @@map("guild_module_config")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PERMITS (Wick-style Permit System)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// A named, reusable bundle of permit nodes. "enforced" permits are the two
-/// fixed, non-deletable, user-assignable tiers (immune to Anti-Nuke Quarantine);
-/// "custom" permits are admin-defined, role-assignable, fully editable bundles.
 model Permit {
   id        Int            @id @default(autoincrement())
   guildId   String         @map("guild_id") @db.VarChar(20)
@@ -213,10 +191,6 @@ model Permit {
   @@map("permits")
 }
 
-/// Assigns a Permit to a user, role, or channel. Enforced permits only ever
-/// have targetType=user rows; custom permits may have targetType=user,
-/// role, or channel rows — enforced at the service layer (see
-/// KindTargetTypes in PermissionRepository.ts), not by a DB constraint.
 model PermitAssignment {
   id         Int              @id @default(autoincrement())
   permitId   Int              @map("permit_id")
@@ -235,7 +209,6 @@ model PermitAssignment {
   @@map("permit_assignments")
 }
 
-// Atomic per-guild case-number counter to avoid duplicate caseNumber races.
 model GuildCaseCounter {
   guildId String @id @map("guild_id") @db.VarChar(20)
   next    Int    @default(1)
@@ -249,8 +222,8 @@ model ModerationCase {
   id          Int        @id @default(autoincrement())
   guildId     String     @map("guild_id") @db.VarChar(20)
   caseNumber  Int        @map("case_number")
-  userId      String     @map("user_id") @db.VarChar(20) // '0' = anonymized (GDPR)
-  moderatorId String     @map("moderator_id") @db.VarChar(20) // '0' = anonymized (GDPR)
+  userId      String     @map("user_id") @db.VarChar(20)
+  moderatorId String     @map("moderator_id") @db.VarChar(20)
   action      CaseAction
   reason      String?    @db.VarChar(1000)
   duration    Int?       @map("duration_seconds")
@@ -267,24 +240,16 @@ model ModerationCase {
   @@index([guildId, moderatorId])
   @@index([guildId, action])
   @@index([userId])
-  @@index([moderatorId]) // GDPR anonymization + cross-guild moderator lookups
-  @@index([guildId, active, expiresAt]) // per-guild expiry sweep
-  // The startup re-arm and warn decay sweep every guild at once, so they cannot
-  // use any guildId-leading index. Both paginate on id, so id is part of the
-  // index: without it Postgres index-scans and then sorts every matching row
-  // just to take one page.
+  @@index([moderatorId])
+  @@index([guildId, active, expiresAt])
+
   @@index([active, id])
   @@index([action, active, id])
-  // Cross-guild retention sweep: lifted cases (active = false) older than the
-  // configured window, paginated by id the same way the id-ordered sweeps
-  // above are.
+
   @@index([active, createdAt, id])
   @@map("moderation_cases")
 }
 
-// Ban/timeout appeal, submitted through a signed link DMed to the punished
-// user on punishment (see packages/core/src/lib/appeals/token.ts). One
-// appeal per case - a case that already has one is not appealable again.
 model Appeal {
   id         Int          @id @default(autoincrement())
   guildId    String       @map("guild_id") @db.VarChar(20)
@@ -301,19 +266,15 @@ model Appeal {
 
   @@index([guildId, status, createdAt])
   @@index([guildId, createdAt])
-  // Keyset pagination on `guild.appeals.list` orders by (createdAt, id) desc;
-  // the tie-break index isn't covered by the two above.
+
   @@index([guildId, createdAt, id])
   @@index([userId])
   @@index([reviewedBy])
-  // Cross-guild retention sweep: resolved appeals (status != pending) older
-  // than the configured window, paginated by id.
+
   @@index([status, createdAt, id])
   @@map("appeals")
 }
 
-// Persistent staff-only note on a member, separate from warns/cases - never
-// shown to the member and not counted toward warn thresholds.
 model ModNote {
   id        Int      @id @default(autoincrement())
   guildId   String   @map("guild_id") @db.VarChar(20)
@@ -330,7 +291,6 @@ model ModNote {
   @@map("mod_notes")
 }
 
-// Global blocklist: keyed on the user, no guild scope at all.
 model GlobalBlock {
   userId    String   @id @map("user_id") @db.VarChar(20)
   reason    String?  @db.VarChar(500)
@@ -357,9 +317,6 @@ model Blocklist {
   @@map("blocklist")
 }
 
-/**
- * Global kill switch + percentage rollout for an experimental code path, with optional per-guild overrides.
- */
 model FeatureFlag {
   key            String                @id @db.VarChar(100)
   description    String?               @db.VarChar(500)
@@ -372,9 +329,6 @@ model FeatureFlag {
   @@map("feature_flags")
 }
 
-/**
- * Forces a flag on/off for one guild regardless of its global rollout percentage.
- */
 model FeatureFlagOverride {
   id        Int         @id @default(autoincrement())
   flagKey   String      @map("flag_key") @db.VarChar(100)
@@ -388,9 +342,6 @@ model FeatureFlagOverride {
   @@map("feature_flag_overrides")
 }
 
-// Async GDPR export jobs (ADR: large exports move off the request path onto
-// the scheduled-tasks queue). Global like GlobalBlock - keyed on the
-// requesting user, no guild scope.
 model GdprExportJob {
   id          String              @id @default(uuid())
   userId      String              @map("user_id") @db.VarChar(20)
@@ -408,7 +359,6 @@ model GdprExportJob {
   @@map("gdpr_export_jobs")
 }
 
-// Whole-guild ignore is Guild.ignored; every row here is one ignored channel.
 model IgnoreEntry {
   id        Int      @id @default(autoincrement())
   guildId   String   @map("guild_id") @db.VarChar(20)
@@ -422,10 +372,6 @@ model IgnoreEntry {
   @@map("ignore_list")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: afk
-// ─────────────────────────────────────────────────────────────────────────────
-
 model AfkEntry {
   userId  String   @map("user_id") @db.VarChar(20)
   guildId String   @map("guild_id") @db.VarChar(20)
@@ -435,23 +381,18 @@ model AfkEntry {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([userId, guildId])
-  // userId is already the PK's leading column; guildId is not, so per-guild
-  // reads need their own index.
+
   @@index([guildId])
   @@map("afk_entries")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: downloader
-// ─────────────────────────────────────────────────────────────────────────────
 
 model DownloaderRepo {
   id        Int      @id @default(autoincrement())
   name      String   @unique @db.VarChar(64)
   url       String   @db.VarChar(200)
   branch    String   @default("master") @db.VarChar(64)
-  commit    String?  @db.VarChar(40) // Pinned commit hash
-  signedBy  String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
+  commit    String?  @db.VarChar(40)
+  signedBy  String?  @map("signed_by") @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -464,9 +405,9 @@ model DownloaderModule {
   repoId      Int      @map("repo_id")
   moduleName  String   @map("module_name") @db.VarChar(64)
   version     String?  @db.VarChar(32)
-  commit      String?  @db.VarChar(40) // Commit at time of install
-  signedBy    String?  @map("signed_by") @db.VarChar(255) // Verified SSH signer principal for `commit`, if ADDON_SIGNATURE_POLICY checked it
-  pinned      Boolean  @default(false) // Frozen against ,module update / updateall
+  commit      String?  @db.VarChar(40)
+  signedBy    String?  @map("signed_by") @db.VarChar(255)
+  pinned      Boolean  @default(false)
   installedAt DateTime @default(now()) @map("installed_at")
 
   repo DownloaderRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
@@ -475,10 +416,6 @@ model DownloaderModule {
   @@index([moduleName])
   @@map("downloader_modules")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AUDIT LEDGER
-// ─────────────────────────────────────────────────────────────────────────────
 
 model AuditLedger {
   id        Int           @id @default(autoincrement())
@@ -492,28 +429,21 @@ model AuditLedger {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
-  // Keyset pagination on `guild.audit.list` orders by (createdAt, id) desc to
-  // break ties between rows the batched flush inserts with the same
-  // createdAt - the plain (guildId, createdAt) index above can't serve that
-  // tie-break without a sort.
+
   @@index([guildId, createdAt, id])
   @@index([guildId, userId])
   @@index([createdAt])
-  // GDPR delete/export filter on userId across every guild.
+
   @@index([userId])
   @@map("audit_ledger")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE DATA (KV STORE)
-// ─────────────────────────────────────────────────────────────────────────────
-
 model ModuleData {
   guildId    String @map("guild_id") @db.VarChar(20)
   moduleName String @map("module_name") @db.VarChar(64)
-  targetId   String @map("target_id") @db.VarChar(191) // User/Channel ID, 'global', or a module-defined key (prefixed id, author hash, …)
+  targetId   String @map("target_id") @db.VarChar(191)
   key        String @db.VarChar(64)
-  value      Json // The dynamic payload
+  value      Json
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
@@ -523,10 +453,6 @@ model ModuleData {
   @@index([value(ops: JsonbOps)], type: Gin)
   @@map("module_dynamic_data")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG HISTORY (#10)
-// ─────────────────────────────────────────────────────────────────────────────
 
 model ModuleConfigHistory {
   id         Int      @id @default(autoincrement())
@@ -541,20 +467,14 @@ model ModuleConfigHistory {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
-  // Keyset pagination on `guild.history.list` orders by (createdAt, id) desc;
-  // the tie-break index isn't covered by the two above.
+
   @@index([guildId, createdAt, id])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
-  // Cross-guild retention sweep, paginated by id - mirrors AuditLedger's
-  // plain `createdAt` index.
+
   @@index([createdAt])
   @@map("module_config_history")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG OVERRIDES (#11)
-// ─────────────────────────────────────────────────────────────────────────────
 
 model ModuleConfigOverride {
   id         Int                @id @default(autoincrement())
@@ -573,10 +493,6 @@ model ModuleConfigOverride {
   @@map("module_config_overrides")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: mod (Warn Threshold Rules)
-// ─────────────────────────────────────────────────────────────────────────────
-
 model WarnThreshold {
   guildId   String     @map("guild_id") @db.VarChar(20)
   warnCount Int        @map("warn_count")
@@ -591,15 +507,11 @@ model WarnThreshold {
   @@map("warn_thresholds")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: security (Panic Mode & Verification)
-// ─────────────────────────────────────────────────────────────────────────────
-
 model PanicState {
   guildId        String   @id @map("guild_id") @db.VarChar(20)
   actorId        String   @map("actor_id") @db.VarChar(20)
   invitesPaused  Boolean  @default(false) @map("invites_paused")
-  lockedChannels Json     @map("locked_channels") // channelId -> prior @everyone SendMessages allow state (true | false | null)
+  lockedChannels Json     @map("locked_channels")
   startedAt      DateTime @default(now()) @map("started_at")
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
@@ -619,9 +531,6 @@ model VerificationPanel {
   @@map("verification_panels")
 }
 
-// Structural snapshot for the anti-nuke Restore System - roles and channels
-// only, never messages or member role assignments (matches Wick's documented
-// scope). `data` shape: { roles: RoleSnapshot[], channels: ChannelSnapshot[] }.
 model GuildBackup {
   id        Int      @id @default(autoincrement())
   guildId   String   @map("guild_id") @db.VarChar(20)
@@ -634,15 +543,11 @@ model GuildBackup {
   @@map("guild_backups")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: tempvc (Temporary Voice Channels)
-// ─────────────────────────────────────────────────────────────────────────────
-
 model TempVcGenerator {
   guildId   String @map("guild_id") @db.VarChar(20)
   channelId String @map("channel_id") @db.VarChar(20)
-  name      String @db.VarChar(100) // Name template; "{}" is the number slot.
-  limit     Int    @default(0) // User limit for created channels (0 = unlimited).
+  name      String @db.VarChar(100)
+  limit     Int    @default(0)
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
@@ -664,13 +569,9 @@ model TempVcRecord {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, channelId])
-  @@index([ownerId]) // GDPR cross-guild deletes
+  @@index([ownerId])
   @@map("tempvc_records")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: economy (guild-scoped bank + audited transaction ledger)
-// ─────────────────────────────────────────────────────────────────────────────
 
 model EconomyAccount {
   guildId      String    @map("guild_id") @db.VarChar(20)
@@ -682,8 +583,7 @@ model EconomyAccount {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, userId])
-  // guildId leads the PK so per-guild reads are covered; cross-guild GDPR
-  // lookups by userId need their own index.
+
   @@index([userId])
   @@map("economy_accounts")
 }
@@ -702,14 +602,10 @@ model EconomyTransaction {
 
   @@index([guildId, userId, createdAt])
   @@index([guildId, createdAt])
-  // GDPR delete/export filter on userId across every guild.
+
   @@index([userId])
   @@map("economy_transactions")
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: reactionroles
-// ─────────────────────────────────────────────────────────────────────────────
 
 model ReactionRoleMenu {
   id          String   @id @db.VarChar(32)
@@ -717,7 +613,7 @@ model ReactionRoleMenu {
   title       String   @db.VarChar(100)
   description String?  @db.VarChar(1000)
   color       String?  @db.VarChar(7)
-  mode        String   @db.VarChar(16) // "buttons" | "select" | "reactions"
+  mode        String   @db.VarChar(16)
   exclusive   Boolean  @default(false)
   maxRoles    Int      @default(1) @map("max_roles")
   channelId   String?  @map("channel_id") @db.VarChar(20)
@@ -736,9 +632,7 @@ model ReactionRoleMenu {
 model ReactionRoleOption {
   id             Int     @id @default(autoincrement())
   menuId         String  @map("menu_id") @db.VarChar(32)
-  // Caller-assigned slug, stable across a menu's full-option-array
-  // replacement on every save - baked into already-posted Discord
-  // button/select customIds, so it must never change once assigned.
+
   slug           String  @db.VarChar(32)
   position       Int     @default(0)
   label          String  @db.VarChar(80)
@@ -754,15 +648,6 @@ model ReactionRoleOption {
   @@map("reactionrole_options")
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE: sticky
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Unused for now: sticky entries are still edited entirely through the generic
-// module-config-schema mechanism (dashboard support is auto-derived from that
-// schema), and moving storage here would either break that or require a
-// config-schema/table dual-write the zero-cross-module-import law makes awkward.
-// Left in place for a future phase that builds the dashboard-side work to use it.
 model StickyMessage {
   id           Int      @id @default(autoincrement())
   guildId      String   @map("guild_id") @db.VarChar(20)
