@@ -83,7 +83,9 @@ function buildContainer(
         new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
       );
     }
-    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
+    c.addSeparatorComponents((sep) =>
+      sep.setSpacing(1).setDivider(opts.divider ?? false),
+    );
   }
 
   const headerUrls = (opts.headerImages ?? [])
@@ -120,14 +122,13 @@ function buildContainer(
     }
     c.addSectionComponents(thumbSec);
     for (const part of parts.filter((p) => p && p.length > 0).slice(3)) {
-      c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      c.addSeparatorComponents((sep) => sep.setSpacing(1));
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
     }
   } else {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if (i > 0)
-        c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      if (i > 0) c.addSeparatorComponents((sep) => sep.setSpacing(1));
       if (part && part.length > 0) {
         c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
       }
@@ -135,7 +136,7 @@ function buildContainer(
   }
 
   if (opts.footer) {
-    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(false));
+    c.addSeparatorComponents((sep) => sep.setSpacing(1));
     c.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
     );
@@ -147,11 +148,11 @@ function buildContainer(
 
   const actionRows = opts.actionRows ?? [];
   if (opts.separatorAboveActionRows && actionRows.length > 0) {
-    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+    c.addSeparatorComponents((sep) => sep.setSpacing(1));
   }
   for (let r = 0; r < actionRows.length; r++) {
     if (r > 0) {
-      c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      c.addSeparatorComponents((sep) => sep.setSpacing(1));
     }
     const row = actionRows[r]!;
     c.addActionRowComponents((builder) => {
