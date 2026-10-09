@@ -1,5 +1,5 @@
 ---
-"@lumi-devs/contracts": patch
+"@lumi/contracts": patch
 "@lumi/core": patch
 ---
 
