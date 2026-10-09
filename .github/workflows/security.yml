@@ -50,9 +50,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          install: "false"
+          bun-version: 1.4.2
 
       - name: Audit dependencies
         run: bun audit || true

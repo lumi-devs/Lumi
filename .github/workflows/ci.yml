@@ -64,10 +64,24 @@ jobs:
         with:
           fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
-          turbo-scope: lint
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-lint-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-lint-
+            ${{ runner.os }}-turbo-
       - name: Turbo Filtered Lint
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -91,10 +105,24 @@ jobs:
         with:
           fetch-depth: 0
       - run: echo "::add-matcher::.github/problemMatchers/tsc.json"
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
-          turbo-scope: typecheck
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-typecheck-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-typecheck-
+            ${{ runner.os }}-turbo-
       - name: Turbo Filtered Typecheck
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -117,9 +145,17 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
       - run: bun run test:coverage
       - uses: actions/upload-artifact@v7
         with:
@@ -182,9 +218,17 @@ jobs:
       LUMI_TEST_VALKEY_URL: valkey://localhost:6379/1
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
       - name: Apply Prisma migrations to the CI Postgres service
         run: bunx prisma migrate deploy
       - run: bun run test:integration
@@ -198,10 +242,24 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
-          turbo-scope: build
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-build-
+            ${{ runner.os }}-turbo-
       - name: Build Monorepo Packages & Apps
         run: bun turbo run build
 

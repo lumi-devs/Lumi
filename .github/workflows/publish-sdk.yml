@@ -63,10 +63,17 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
 
-      - uses: ./.github/actions/setup-bun
+      - uses: oven-sh/setup-bun@v2
         with:
-          db-generate: "true"
-
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
