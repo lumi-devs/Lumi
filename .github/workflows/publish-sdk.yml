@@ -64,14 +64,13 @@ jobs:
           echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
 
       - uses: ./.github/actions/setup-bun
+        with:
+          db-generate: "true"
 
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-
-      - name: Generate Prisma Client
-        run: bunx prisma generate
 
       - name: Build SDK type declarations
         run: bun run sdk:build
