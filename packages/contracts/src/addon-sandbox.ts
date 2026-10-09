@@ -15,6 +15,7 @@ export const AddonDiscordCapabilities = [
   "fetchMessage",
   "moderateMembers",
   "clientPresence",
+  "sendDirectMessage",
 ] as const;
 
 export type AddonDiscordCapability = (typeof AddonDiscordCapabilities)[number];
@@ -62,6 +63,7 @@ export type AddonRpcMethod =
   | "discord.messages.edit"
   | "discord.guilds.get"
   | "discord.guilds.members.fetch"
+  | "discord.users.send"
   | "discord.members.roles.add"
   | "discord.members.roles.remove"
   | "discord.members.move"

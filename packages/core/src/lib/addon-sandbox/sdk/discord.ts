@@ -171,6 +171,12 @@ export interface PrimaryGuildInfo {
   tag: string | null;
 }
 
+export const users = {
+  send(userId: string, payload: MessagePayload): Promise<SentMessage> {
+    return call("discord.users.send", { userId, payload });
+  },
+};
+
 export const guilds = {
   get(guildId: string): Promise<{ id: string; name: string; memberCount: number | null } | null> {
     return call("discord.guilds.get", { guildId });

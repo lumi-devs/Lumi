@@ -35,6 +35,7 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "discord.messages.edit": "editMessage",
   "discord.guilds.get": null,
   "discord.guilds.members.fetch": "manageRoles",
+  "discord.users.send": "sendDirectMessage",
   "discord.members.roles.add": "manageRoles",
   "discord.members.roles.remove": "manageRoles",
   "discord.members.move": "manageVoice",

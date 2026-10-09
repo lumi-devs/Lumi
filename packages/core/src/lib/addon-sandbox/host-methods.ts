@@ -226,6 +226,11 @@ const ParamSchemas: Record<string, z.ZodType> = {
     userId: z.string(),
   }),
 
+  "discord.users.send": z.object({
+    userId: z.string(),
+    payload: z.unknown(),
+  }),
+
   "discord.members.move": z.object({
     guildId: z.string(),
     userId: z.string(),
@@ -649,6 +654,15 @@ const Methods = {
           }
         : null,
     };
+  },
+
+  async "discord.users.send"(
+    { userId, payload }: { userId: string; payload: MessagePayload },
+    _scope: HostCallScope,
+  ) {
+    const user = await container.client.users.fetch(userId);
+    const message = await user.send(payload as never);
+    return { id: message.id, channelId: message.channelId };
   },
 
   async "discord.members.roles.add"(
