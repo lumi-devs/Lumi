@@ -4,6 +4,7 @@ import {
   resolver,
   AddonModulesRoot,
   ModuleRoot,
+  PinRoot,
   RepoAlreadyInstalledError,
   type RepoUpdateResult,
 } from "#lib/downloader/resolver.js";
@@ -150,6 +151,8 @@ async function uninstallModule(services: Container, moduleName: string) {
         err,
       );
     });
+
+  await bustUpdateCheckCache(services);
 }
 
 async function addRepo(
@@ -173,6 +176,59 @@ async function addRepo(
   }
   await services.db.downloader.writeDownloaderRepo(name, url, branch, sha, signedBy);
   return { sha, signatureWarning };
+}
+
+async function bustUpdateCheckCache(services: Container): Promise<void> {
+  await services.valkey.del(ValkeyKeys.addonUpdateCheck()).catch(() => undefined);
+}
+
+/** Single fetch + hash resolution behind every update check, so the hub badge,
+ * the explicit check button and updateModule() all compare the same numbers. */
+async function fetchRepoHashes(
+  services: Container,
+  repoName: string,
+  repoPath: string,
+  branch: string,
+): Promise<{ localHash: string; remoteHash: string; targetRef: string; fetchFailed: boolean }> {
+  const fetchFailed = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "fetch",
+    "origin",
+  ])
+    .then(() => false)
+    .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
+      services.logger.warn(
+        `[DownloaderUtility] git fetch failed for ${repoName}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+      );
+      return true;
+    });
+
+  const localHash = (
+    await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
+  ).stdout.trim();
+
+  const remoteRefResult = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "rev-parse",
+    "--abbrev-ref",
+    "@{u}",
+  ]).catch(() => ({ stdout: "" }));
+  const remoteRef = remoteRefResult.stdout.trim();
+
+  const targetRef =
+    remoteRef && !remoteRef.includes("@{u}")
+      ? remoteRef
+      : `origin/${branch === "default" ? "master" : branch}`;
+
+  const { stdout: remoteOut } = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "rev-parse",
+    targetRef,
+  ]);
+  return { localHash, remoteHash: remoteOut.trim(), targetRef, fetchFailed };
 }
 
 /** Read-only check: fetches and compares hashes, never pulls. Shared by updateModule() and checkForUpdates(). */
@@ -213,53 +269,26 @@ async function checkForModuleUpdate(
     await addRepo(services, repo.name, repo.url, branch);
   }
 
-  const fetchFailed = await execFileAsync("git", [
-    "-C",
-    repoPath,
-    "fetch",
-    "origin",
-  ])
-    .then(() => false)
-    .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
-      services.logger.warn(
-        `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
-      );
-      return true;
-    });
+  const { localHash, remoteHash, targetRef, fetchFailed } =
+    await fetchRepoHashes(services, repo.name, repoPath, branch);
 
-  const localHash = (
-    await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
-  ).stdout.trim();
-
-  const remoteRefResult = await execFileAsync("git", [
-    "-C",
-    repoPath,
-    "rev-parse",
-    "--abbrev-ref",
-    "@{u}",
-  ]).catch(() => ({ stdout: "" }));
-  const remoteRef = remoteRefResult.stdout.trim();
-
-  const targetRef =
-    remoteRef && !remoteRef.includes("@{u}")
-      ? remoteRef
-      : `origin/${branch === "default" ? "master" : branch}`;
-
-  const { stdout: remoteOut } = await execFileAsync("git", [
-    "-C",
-    repoPath,
-    "rev-parse",
-    targetRef,
-  ]);
-  const remoteHash = remoteOut.trim();
+  const linkTarget = await fs
+    .realpath(path.join(AddonModulesRoot, moduleName))
+    .catch(() => null);
+  const pinned =
+    linkTarget !== null &&
+    (linkTarget === PinRoot || linkTarget.startsWith(PinRoot + path.sep));
 
   const installedHash = installed.commit ?? null;
-  const upToDate =
-    installedHash !== null &&
-    installedHash === remoteHash &&
-    localHash === remoteHash;
-
-  if (upToDate) {
+  const servedHash = pinned ? installedHash : localHash;
+  if (servedHash !== null && servedHash === remoteHash) {
+    if (!pinned && installedHash !== remoteHash) {
+      await services.db.downloader.updateInstalledDownloaderModuleCommit(
+        repo.id,
+        moduleName,
+        remoteHash,
+      );
+    }
     return { ok: true, hasUpdate: false };
   }
 
@@ -424,6 +453,7 @@ export const downloaderUtility = defineUtility({
           info.signedBy,
         );
       }
+      await bustUpdateCheckCache(services);
     } catch (err: unknown) {
       await services.moduleStore
         .unload(moduleName)
@@ -467,24 +497,15 @@ export const downloaderUtility = defineUtility({
       return { ok: true, hasUpdate: true, changelog: "" };
     }
 
-    await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(
-      (err: NodeJS.ErrnoException & { stderr?: string }) => {
-        services.logger.warn(
-          `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
-        );
-      },
-    );
-
     const branch = repo.branch || "default";
-    const targetRef = `origin/${branch === "default" ? "master" : branch}`;
 
     try {
-      const localHash = (
-        await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
-      ).stdout.trim();
-      const remoteHash = (
-        await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef])
-      ).stdout.trim();
+      const { localHash, remoteHash, targetRef } = await fetchRepoHashes(
+        services,
+        repo.name,
+        repoPath,
+        branch,
+      );
 
       if (localHash === remoteHash) {
         return { ok: true, hasUpdate: false };
