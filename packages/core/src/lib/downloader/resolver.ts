@@ -295,11 +295,16 @@ export class DownloadResolver {
           `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
         );
         recloned = true;
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+        const tmpClone = `${repoPath}.reclone-${randomUUID()}`;
+        const cloneArgs = buildGitCloneArgs(branch, url, tmpClone);
         await execGit(cloneArgs).catch(async (cloneErr) => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          await fs.rm(tmpClone, { recursive: true, force: true }).catch(() => { });
           execError("Git clone failed")(cloneErr);
+        });
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        await fs.rename(tmpClone, repoPath).catch(async (renameErr) => {
+          await fs.rm(tmpClone, { recursive: true, force: true }).catch(() => { });
+          throw renameErr;
         });
       });
 

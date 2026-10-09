@@ -399,31 +399,45 @@ async function countDeps() {
 
 async function countCodeLines() {
   if (cachedCodeLines !== null) return cachedCodeLines;
-  let srcPath = path.join(RepoRoot, "packages", "core", "src");
-  if (!existsSync(srcPath)) {
-    srcPath = path.join(process.cwd(), "packages", "core", "src");
-  }
-  if (!existsSync(srcPath)) {
-    srcPath = path.join("/app", "packages", "core", "src");
-  }
-  let total = 0;
-  const walk = async (dir: string): Promise<void> => {
+  const roots = [RepoRoot, process.cwd(), "/app"].filter(
+    (r, i, a) => a.indexOf(r) === i,
+  );
+  const walk = async (dir: string): Promise<number> => {
+    let total = 0;
     const entries = await fs
       .readdir(dir, { withFileTypes: true })
       .catch(() => []);
     for (const e of entries) {
+      if (
+        e.name === "node_modules" ||
+        e.name === "dist" ||
+        e.name.startsWith(".")
+      )
+        continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) {
-        await walk(full);
+        total += await walk(full);
         continue;
       }
-      if (!e.name.endsWith(".ts")) continue;
+      if (!e.name.endsWith(".ts") || e.name.endsWith(".d.ts")) continue;
       const content = await fs.readFile(full, "utf-8").catch(() => "");
       total += content.split("\n").length;
     }
+    return total;
   };
-  await walk(srcPath);
-  cachedCodeLines = total > 0 ? total : 20_000;
+  let total = 0;
+  for (const root of roots) {
+    for (const sub of ["packages", "apps"]) {
+      const base = path.join(root, sub);
+      const workspaces = await fs.readdir(base).catch(() => [] as string[]);
+      for (const ws of workspaces) {
+        if (ws.startsWith(".")) continue;
+        total += await walk(path.join(base, ws, "src"));
+      }
+    }
+    if (total > 0) break;
+  }
+  cachedCodeLines = total;
   return cachedCodeLines;
 }
 
