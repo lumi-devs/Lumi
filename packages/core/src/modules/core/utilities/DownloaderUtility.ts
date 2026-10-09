@@ -352,7 +352,7 @@ async function syncApplicationCommands(services: Container) {
         globalData.push(
           typeof built.toJSON === "function"
             ? (built.toJSON as () => object)()
-            : (built as object),
+            : built,
         );
       }
       const menu = def.contextMenu?.build();

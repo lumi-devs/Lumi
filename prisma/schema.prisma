@@ -140,7 +140,6 @@ model Guild {
   economyAccounts   EconomyAccount[]
   economyTxns       EconomyTransaction[]
   reactionRoleMenus ReactionRoleMenu[]
-  stickyMessages    StickyMessage[]
 
   @@index([leftAt])
   @@map("guilds")
@@ -646,23 +645,4 @@ model ReactionRoleOption {
   @@unique([menuId, slug])
   @@index([menuId, position])
   @@map("reactionrole_options")
-}
-
-model StickyMessage {
-  id           Int      @id @default(autoincrement())
-  guildId      String   @map("guild_id") @db.VarChar(20)
-  channelId    String   @map("channel_id") @db.VarChar(20)
-  enabled      Boolean  @default(true)
-  content      String   @db.VarChar(2000)
-  accentColor  String?  @map("accent_color") @db.VarChar(7)
-  imageUrls    String[] @map("image_urls")
-  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(500)
-  richContent  Json?    @map("rich_content")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([guildId, channelId], name: "uq_sticky_guild_channel")
-  @@map("sticky_messages")
 }

@@ -3,7 +3,6 @@
 import { container } from "#lib/services.js";
 import { z } from "zod";
 import type {
-  ChatInputCommandInteraction,
   MessageComponentInteraction,
   ModalSubmitInteraction,
   RepliableInteraction,
@@ -496,7 +495,7 @@ const Methods = {
     if (!ctx.isSlash) {
       throw new Error("showModal needs an open slash command or component interaction");
     }
-    await (ctx.interaction as ChatInputCommandInteraction).showModal(modal as never);
+    await ctx.interaction.showModal(modal as never);
   },
 
   async "valkey.sadd"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
@@ -906,7 +905,7 @@ const Methods = {
   ) {
     container.client.user?.setPresence({
       ...(status ? { status } : {}),
-      ...(activities ? { activities: activities as never } : {}),
+      ...(activities ? { activities } : {}),
     });
   },
 
