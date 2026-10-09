@@ -25,6 +25,7 @@ export class CommandContext {
   readonly user: SerialisedUser;
   readonly member: SerialisedMember | null;
   readonly subcommand: string | null;
+  readonly repliedToId: string | null;
 
   constructor(invocation: AddonCommandInvocation) {
     this.isSlash = invocation.isSlash;
@@ -33,6 +34,7 @@ export class CommandContext {
     this.user = invocation.user;
     this.member = invocation.member;
     this.subcommand = invocation.subcommand;
+    this.repliedToId = invocation.repliedToId ?? null;
   }
 
   getString(name: string, spec: CtxOptionSpec = {}): Promise<string | null> {
@@ -67,8 +69,18 @@ export class CommandContext {
     return call("ctx.defer", { ephemeral: opts.ephemeral });
   }
 
+  /** Must be the first response — never defer beforehand. */
+  showModal(modal: { toJSON(): unknown }): Promise<void> {
+    return call("ctx.showModal", { modal: modal.toJSON() });
+  }
+
   reply(card: CardReply, opts: CtxReplyOptions = {}): Promise<void> {
     return call("ctx.reply", { card, ephemeral: opts.ephemeral });
+  }
+
+  /** Edit the original response in place. Must reply or defer first. */
+  editReply(card: CardReply, opts: CtxReplyOptions = {}): Promise<void> {
+    return call("ctx.editReply", { card, ephemeral: opts.ephemeral });
   }
 
   replySuccess(title: string, body: string, opts?: CtxReplyOptions): Promise<void> {

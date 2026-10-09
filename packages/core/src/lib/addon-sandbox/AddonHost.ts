@@ -66,6 +66,18 @@ function serialiseUser(user: User): SerialisedUser {
   };
 }
 
+function serialisePrimaryGuild(
+  user: { primaryGuild?: { identityGuildId?: string | null; identityEnabled?: boolean | null; tag?: string | null } | null } | null,
+): SerialisedMember["primaryGuild"] {
+  const primary = user?.primaryGuild;
+  if (!primary) return null;
+  return {
+    identityGuildId: primary.identityGuildId ?? null,
+    identityEnabled: primary.identityEnabled ?? null,
+    tag: primary.tag ?? null,
+  };
+}
+
 function serialiseMember(member: GuildMember | null): SerialisedMember | null {
   if (!member) return null;
   return {
@@ -74,6 +86,8 @@ function serialiseMember(member: GuildMember | null): SerialisedMember | null {
     roles: [...member.roles.cache.keys()],
     joinedTimestamp: member.joinedTimestamp,
     permissions: member.permissions.bitfield.toString(),
+    isOwner: member.guild.ownerId === member.id,
+    primaryGuild: serialisePrimaryGuild(member.user),
   };
 }
 
@@ -306,6 +320,7 @@ export class AddonHost {
         subcommand: ctx.isSlash ? ctx.interaction.options.getSubcommand(false) : null,
         user: serialiseUser(ctx.user),
         member: serialiseMember(ctx.member),
+        repliedToId: ctx.isSlash ? null : (ctx.message.reference?.messageId ?? null),
       },
       { ctx, guildId: ctx.guildId },
     );

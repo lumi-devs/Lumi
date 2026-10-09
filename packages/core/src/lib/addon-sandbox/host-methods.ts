@@ -32,11 +32,6 @@ function requireCtx(scope: HostCallScope): CommandContext {
   return scope.ctx;
 }
 
-function requireInteraction(scope: HostCallScope): AddonInteraction {
-  if (!scope.interaction) throw new Error("No active interaction for this call");
-  return scope.interaction;
-}
-
 // Prefixed with the calling addon's name so one addon's keys can never collide
 // with, or read, another's or core's.
 function addonKey(scope: HostCallScope, key: string): string {
@@ -108,7 +103,8 @@ const ParamSchemas: Record<string, z.ZodType> = {
   }),
 
   "ctx.editReply": z.object({
-    payload: z.unknown(),
+    card: z.unknown(),
+    ephemeral: z.boolean().optional(),
   }),
 
   "ctx.checkPermit": z.object({
@@ -259,6 +255,20 @@ const ParamSchemas: Record<string, z.ZodType> = {
     reason: z.string().optional(),
   }),
 
+  "discord.stickers.create": z.object({
+    guildId: z.string(),
+    name: z.string(),
+    attachment: z.string(),
+    tags: z.string().optional(),
+    description: z.string().optional(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.stickers.fetch": z.object({
+    guildId: z.string(),
+    stickerId: z.string(),
+  }),
+
   "discord.channels.create": z.object({
     guildId: z.string(),
     name: z.string(),
@@ -314,6 +324,8 @@ const ParamSchemas: Record<string, z.ZodType> = {
     })).optional(),
   }),
 
+  "discord.client.stats": z.object({}),
+
   "log": z.object({
     level: z.union([z.literal("info"), z.literal("warn"), z.literal("error")]),
     message: z.string(),
@@ -368,8 +380,19 @@ const Methods = {
     await requireCtx(scope).reply(card, { ephemeral });
   },
 
-  async "ctx.editReply"({ payload }: { payload: MessagePayload }, scope: HostCallScope) {
-    await requireInteraction(scope).editReply(payload as never);
+  async "ctx.editReply"(
+    { card, ephemeral }: { card: CardReply; ephemeral?: boolean },
+    scope: HostCallScope,
+  ) {
+    if (scope.interaction) {
+      await sendInteractionReply(
+        scope.interaction as RepliableInteraction,
+        ephemeral === false ? card : ephemeralCard(card),
+        "edit",
+      );
+      return;
+    }
+    await requireCtx(scope).reply(card, { ephemeral });
   },
 
   async "ctx.checkPermit"({ node }: { node: string }, scope: HostCallScope) {
@@ -530,6 +553,12 @@ const Methods = {
         channelId: message.channelId,
         content: message.content,
         repliedToId: message.reference?.messageId ?? null,
+        attachments: [...message.attachments.values()].map((attachment) => ({
+          id: attachment.id,
+          url: attachment.url,
+          contentType: attachment.contentType ?? null,
+          size: attachment.size,
+        })),
       }
     );
   },
@@ -556,10 +585,18 @@ const Methods = {
     if (!g) return null;
     const m = await g.members.fetch(userId).catch(() => null);
     if (!m) return null;
+    const primary = m.user.primaryGuild;
     return {
       id: m.id,
       roles: [...m.roles.cache.keys()],
       premiumSince: m.premiumSinceTimestamp,
+      primaryGuild: primary
+        ? {
+            identityGuildId: primary.identityGuildId ?? null,
+            identityEnabled: primary.identityEnabled ?? null,
+            tag: primary.tag ?? null,
+          }
+        : null,
     };
   },
 
@@ -664,6 +701,33 @@ const Methods = {
     if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
     const emoji = await guild.emojis.create({ attachment, name, ...(reason ? { reason } : {}) });
     return { id: emoji.id };
+  },
+
+  async "discord.stickers.create"(
+    { guildId, name, attachment, tags, description, reason }: { guildId: string; name: string; attachment: string; tags?: string; description?: string; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const sticker = await guild.stickers.create({
+      file: attachment,
+      name,
+      tags: tags ?? name,
+      ...(description ? { description } : {}),
+      ...(reason ? { reason } : {}),
+    });
+    return { id: sticker.id };
+  },
+
+  async "discord.stickers.fetch"(
+    { guildId, stickerId }: { guildId: string; stickerId: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const sticker = await guild.stickers.fetch(stickerId).catch(() => null);
+    if (!sticker) return null;
+    return { id: sticker.id, name: sticker.name, tags: sticker.tags, url: sticker.url };
   },
 
   async "discord.channels.create"(
@@ -779,6 +843,14 @@ const Methods = {
       ...(status ? { status } : {}),
       ...(activities ? { activities: activities as never } : {}),
     });
+  },
+
+  "discord.client.stats"(_data: Record<string, never>, _scope: HostCallScope) {
+    const guilds = container.client.guilds.cache;
+    return {
+      guilds: guilds.size,
+      users: guilds.reduce((total, guild) => total + (guild.memberCount ?? 0), 0),
+    };
   },
 
   async "discord.messages.delete"(

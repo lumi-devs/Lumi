@@ -30,11 +30,14 @@ export const channels = {
   },
 };
 
+export interface FetchedMessage extends SentMessage {
+  content: string;
+  repliedToId: string | null;
+  attachments: { id: string; url: string; contentType: string | null; size: number }[];
+}
+
 export const messages = {
-  fetch(
-    channelId: string,
-    messageId: string,
-  ): Promise<(SentMessage & { content: string }) | null> {
+  fetch(channelId: string, messageId: string): Promise<FetchedMessage | null> {
     return call("discord.messages.fetch", { channelId, messageId });
   },
 
@@ -98,6 +101,28 @@ export const emoji = {
   },
 };
 
+export interface StickerInfo {
+  id: string;
+  name: string;
+  tags: string;
+  url: string;
+}
+
+export const stickers = {
+  create(
+    guildId: string,
+    name: string,
+    attachment: string,
+    options: { tags?: string; description?: string; reason?: string } = {},
+  ): Promise<{ id: string }> {
+    return call("discord.stickers.create", { guildId, name, attachment, ...options });
+  },
+
+  fetch(guildId: string, stickerId: string): Promise<StickerInfo | null> {
+    return call("discord.stickers.fetch", { guildId, stickerId });
+  },
+};
+
 export const voiceChannels = {
   members(channelId: string): Promise<string[]> {
     return call("discord.channels.members", { channelId });
@@ -124,18 +149,28 @@ export const presence = {
   },
 };
 
+export function clientStats(): Promise<{ guilds: number; users: number }> {
+  return call("discord.client.stats", {});
+}
+
 export const modules = {
   enabled(guildId: string, names: string[]): Promise<Record<string, boolean>> {
     return call("modules.enabled", { guildId, names });
   },
 };
 
+export interface PrimaryGuildInfo {
+  identityGuildId: string | null;
+  identityEnabled: boolean | null;
+  tag: string | null;
+}
+
 export const guilds = {
   get(guildId: string): Promise<{ id: string; name: string; memberCount: number | null } | null> {
     return call("discord.guilds.get", { guildId });
   },
 
-  fetchMember(guildId: string, userId: string): Promise<{ id: string; roles: string[]; premiumSince: number | null } | null> {
+  fetchMember(guildId: string, userId: string): Promise<{ id: string; roles: string[]; premiumSince: number | null; primaryGuild: PrimaryGuildInfo | null } | null> {
     return call("discord.guilds.members.fetch", { guildId, userId });
   },
 };

@@ -4,15 +4,31 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle } from "discord.js";
+
+export const ButtonStyle = {
+  Primary: 1,
+  Secondary: 2,
+  Success: 3,
+  Danger: 4,
+  Link: 5,
+} as const;
+
+export type ButtonStyleValue = (typeof ButtonStyle)[keyof typeof ButtonStyle];
 
 export interface ActionButtonSpec {
   customId: string;
   label: string;
-  style?: ButtonStyle;
+  style?: ButtonStyleValue | "primary" | "secondary" | "success" | "danger";
   emoji?: string;
   disabled?: boolean;
 }
+
+const NamedStyles = {
+  primary: ButtonStyle.Primary,
+  secondary: ButtonStyle.Secondary,
+  success: ButtonStyle.Success,
+  danger: ButtonStyle.Danger,
+} as const;
 
 function toEmoji(emoji: string): { animated?: boolean; name?: string; id?: string } {
   const custom = /^<(a?):([a-zA-Z0-9_]+):(\d+)>$/.exec(emoji);
@@ -26,7 +42,7 @@ export function actionRow(buttons: ActionButtonSpec[]): ActionRowBuilder<ButtonB
     const button = new ButtonBuilder()
       .setCustomId(spec.customId)
       .setLabel(spec.label)
-      .setStyle(spec.style ?? ButtonStyle.Secondary);
+      .setStyle(typeof spec.style === "string" ? NamedStyles[spec.style] : (spec.style ?? ButtonStyle.Secondary));
     if (spec.emoji) button.setEmoji(toEmoji(spec.emoji));
     if (spec.disabled !== undefined) button.setDisabled(spec.disabled);
     row.addComponents(button);

@@ -30,6 +30,7 @@ describe("addon child process", () => {
         subcommand: null,
         user: { id: "7", username: "u", displayName: "U", bot: false, avatarUrl: null },
         member: null,
+        repliedToId: null,
       });
 
       expect(host.rpcCalls()).toContain("config.get");

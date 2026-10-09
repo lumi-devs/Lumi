@@ -155,6 +155,7 @@ async function runAddonTest(argv: string[]): Promise<number> {
         channelId: "test-channel",
         isSlash: true,
         subcommand: null,
+        repliedToId: null,
         user: { id: "1", username: "tester", displayName: "Tester", bot: false, avatarUrl: null },
         member: null,
       };

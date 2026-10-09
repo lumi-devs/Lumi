@@ -40,6 +40,8 @@ export function attachAddonEventRelay(client: Client, services: Container): void
     const guild = presence?.guild;
     const member = presence?.member ?? null;
     if (!guild || !presence) return;
+    const primaryUser = member?.user ?? presence.user;
+    const primary = primaryUser && "primaryGuild" in primaryUser ? primaryUser.primaryGuild : null;
     emit(services, "presenceUpdate", guild.id, {
       userId: presence.userId,
       guildId: guild.id,
@@ -50,6 +52,13 @@ export function attachAddonEventRelay(client: Client, services: Container): void
         state: a.state ?? null,
       })),
       roles: rolesOf(member),
+      primaryGuild: primary
+        ? {
+            identityGuildId: primary.identityGuildId ?? null,
+            identityEnabled: primary.identityEnabled ?? null,
+            tag: primary.tag ?? null,
+          }
+        : null,
     });
   });
 
@@ -89,6 +98,7 @@ export function attachAddonEventRelay(client: Client, services: Container): void
       authorId: message.author.id,
       authorBot: message.author.bot,
       content,
+      repliedToId: message.reference?.messageId ?? null,
       userMentionIds: [...content.matchAll(/<@!?(\d+)>/g)].map((m) => m[1]!),
       roleMentionIds: [...content.matchAll(/<@&(\d+)>/g)].map((m) => m[1]!),
     });
@@ -107,11 +117,19 @@ export function attachAddonEventRelay(client: Client, services: Container): void
   client.on(Events.UserUpdate, (oldUser: User | PartialUser, newUser: User) => {
     const user = newUser ?? oldUser;
     if (!user || !("username" in user) || user.username == null) return;
+    const primary = "primaryGuild" in user ? user.primaryGuild : null;
     emit(services, "userUpdate", null, {
       userId: user.id,
       username: user.username,
       globalName: user.globalName ?? null,
       avatar: user.avatar ?? null,
+      primaryGuild: primary
+        ? {
+            identityGuildId: primary.identityGuildId ?? null,
+            identityEnabled: primary.identityEnabled ?? null,
+            tag: primary.tag ?? null,
+          }
+        : null,
     });
   });
 }

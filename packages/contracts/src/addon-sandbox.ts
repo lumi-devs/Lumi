@@ -10,6 +10,8 @@ export const AddonDiscordCapabilities = [
   "manageChannels",
   "manageThreads",
   "manageEmoji",
+  "manageStickers",
+  "fetchMessage",
   "moderateMembers",
   "clientPresence",
 ] as const;
@@ -68,10 +70,13 @@ export type AddonRpcMethod =
   | "discord.roles.remove"
   | "discord.roles.fetch"
   | "discord.emoji.create"
+  | "discord.stickers.create"
+  | "discord.stickers.fetch"
   | "discord.threads.create"
   | "discord.threads.archive"
   | "discord.threads.remove"
   | "discord.client.presence"
+  | "discord.client.stats"
   | "discord.messages.delete"
   | "discord.channels.fetch"
   | "modules.enabled"
@@ -103,6 +108,7 @@ export interface AddonCommandInvocation extends InvocationBase {
   subcommand: string | null;
   user: SerialisedUser;
   member: SerialisedMember | null;
+  repliedToId: string | null;
 }
 
 export interface AddonInteractionInvocation extends InvocationBase {
@@ -182,11 +188,18 @@ export interface SerialisedThread {
   name: string;
 }
 
+export interface SerialisedPrimaryGuild {
+  identityGuildId: string | null;
+  identityEnabled: boolean | null;
+  tag: string | null;
+}
+
 export interface SerialisedUserUpdate {
   userId: string;
   username: string;
   globalName: string | null;
   avatar: string | null;
+  primaryGuild: SerialisedPrimaryGuild | null;
 }
 
 export interface SerialisedUser {
@@ -204,6 +217,8 @@ export interface SerialisedMember {
   joinedTimestamp: number | null;
   /** Discord permission bitfield, as a decimal string. */
   permissions: string;
+  isOwner: boolean;
+  primaryGuild: SerialisedPrimaryGuild | null;
 }
 
 export interface AddonReady {
