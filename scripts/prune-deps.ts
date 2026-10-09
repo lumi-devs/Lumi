@@ -113,6 +113,8 @@ if (existsSync("/tmp")) {
         rmSync(path.join("/tmp", file), { recursive: true, force: true });
       } catch {}
     }
+  } catch {}
+}
 // 5. Remove tests, spec files, and docs in packages and apps
 function removeTestsAndDocs(dir: string) {
   if (!existsSync(dir)) return;
