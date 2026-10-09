@@ -70,6 +70,9 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Generate Prisma Client
+        run: bunx prisma generate
+
       - name: Build SDK type declarations
         run: bun run sdk:build
 
