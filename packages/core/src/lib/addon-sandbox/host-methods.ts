@@ -554,7 +554,7 @@ const Methods = {
       (replyTo
         ? {
             ...payload as object,
-            messageReference: { messageId: replyTo },
+            reply: { messageReference: replyTo, failIfNotExists: false },
             allowedMentions: { ...((payload as { allowedMentions?: object }).allowedMentions ?? {}), repliedUser: false },
           }
         : payload) as never,
