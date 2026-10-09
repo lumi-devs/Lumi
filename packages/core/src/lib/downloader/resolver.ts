@@ -360,11 +360,7 @@ export class DownloadResolver {
         };
       }
 
-      const diffStat = oldSha
-        ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
-            .then(({ stdout }) => stdout.trim())
-            .catch(() => "")
-        : "";
+      const diffStat = await this._buildDiffStat(repoPath, oldSha, newSha);
 
       // Materialize the fetched revision into a throwaway worktree so the
       // validator can run against it without ever checking it out live.
@@ -395,6 +391,18 @@ export class DownloadResolver {
 
       return { oldSha, newSha, changed: true, diffStat, recloned: false, signedBy, signatureWarning };
     });
+  }
+
+  private async _buildDiffStat(repoPath: string, oldSha: string | null, newSha: string): Promise<string> {
+    if (!oldSha) return "";
+    const raw = await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+      .then(({ stdout }) => stdout.trim())
+      .catch(() => "");
+    if (!raw) return "";
+    const files = raw.split("\n").filter(Boolean);
+    if (files.length <= 5) return files.join("\n");
+    const names = files.slice(0, -1).map((line) => line.split("|")[0]!.trim());
+    return `**${files.length - 1} files changed**\n${names.slice(0, 5).join(", ")}${names.length > 5 ? `, +${names.length - 5} more` : ""}`;
   }
 
   /** Resolves the ref that a just-completed `git fetch` landed on, without a checkout. */
