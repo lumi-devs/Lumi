@@ -7,7 +7,12 @@ import { LumiEvents } from "#lib/types/common.js";
 export const guildUserMessageRouterListener = defineListener({
   name: "guildUserMessageRouterListener",
   event: Events.MessageCreate,
-  execute(services: Container, message: Message): void {
+  async execute(services: Container, message: Message): Promise<void> {
+    if (message.partial) {
+      const full = await message.fetch().catch(() => null);
+      if (!full) return;
+      message = full;
+    }
     if (message.webhookId !== null) return;
     if (message.system) return;
     if (message.author.bot) return;

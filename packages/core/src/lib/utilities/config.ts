@@ -3,6 +3,7 @@ import { ActivityType } from "discord.js";
 import { z } from "zod";
 import { mergeDefault } from "@lumi/shared";
 import { BrandColors } from '#lib/branding/colors.js';
+import { getRepoRoot } from "#lib/env.js";
 
 const colorRecord = z.record(z.string(), z.number().int()).optional();
 
@@ -58,7 +59,7 @@ const defaultConfig = {
 let userConfig: Record<string, unknown> = {};
 
 try {
-  const configPath = join(process.cwd(), "config", "bot.ts");
+  const configPath = join(getRepoRoot(), "config", "bot.ts");
   const mod = await import(configPath);
   const raw: unknown = mod?.default ?? {};
   if (typeof raw === "object" && raw !== null) {

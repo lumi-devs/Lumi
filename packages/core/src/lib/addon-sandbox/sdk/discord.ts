@@ -9,8 +9,8 @@ export interface SentMessage {
 }
 
 export const channels = {
-  send(channelId: string, payload: MessagePayload): Promise<SentMessage> {
-    return call("discord.channels.send", { channelId, payload });
+  send(channelId: string, payload: MessagePayload, opts: { replyTo?: string } = {}): Promise<SentMessage> {
+    return call("discord.channels.send", { channelId, payload, replyTo: opts.replyTo });
   },
 
   createVoice(guildId: string, name: string, options: { parentId?: string; reason?: string } = {}): Promise<{ id: string }> {
@@ -120,6 +120,12 @@ export const stickers = {
 
   fetch(guildId: string, stickerId: string): Promise<StickerInfo | null> {
     return call("discord.stickers.fetch", { guildId, stickerId });
+  },
+};
+
+export const attachments = {
+  rehost(url: string, filename: string, channelId: string): Promise<{ url: string; messageId: string }> {
+    return call("discord.attachments.rehost", { url, filename, channelId });
   },
 };
 

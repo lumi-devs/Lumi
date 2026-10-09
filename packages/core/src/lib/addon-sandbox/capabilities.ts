@@ -57,6 +57,7 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "discord.client.stats": null,
   "discord.messages.delete": "editMessage",
   "discord.channels.fetch": null,
+  "discord.attachments.rehost": "sendMessage",
   "modules.enabled": null,
 };
 

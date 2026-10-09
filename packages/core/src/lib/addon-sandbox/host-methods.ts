@@ -192,6 +192,13 @@ const ParamSchemas: Record<string, z.ZodType> = {
   "discord.channels.send": z.object({
     channelId: z.string(),
     payload: z.unknown(),
+    replyTo: z.string().optional(),
+  }),
+
+  "discord.attachments.rehost": z.object({
+    url: z.string(),
+    filename: z.string(),
+    channelId: z.string(),
   }),
 
   "discord.messages.fetch": z.object({
@@ -203,6 +210,11 @@ const ParamSchemas: Record<string, z.ZodType> = {
     channelId: z.string(),
     messageId: z.string(),
     payload: z.unknown(),
+  }),
+
+  "discord.messages.delete": z.object({
+    channelId: z.string(),
+    messageId: z.string(),
   }),
 
   "discord.guilds.get": z.object({
@@ -353,6 +365,7 @@ const Methods = {
 
   async "ctx.defer"({ ephemeral, update }: { ephemeral?: boolean; update?: boolean }, scope: HostCallScope) {
     if (scope.interaction) {
+      if (scope.interaction.deferred || scope.interaction.replied) return;
       if (update && scope.interaction.isMessageComponent()) {
         await scope.interaction.deferUpdate();
       } else {
@@ -370,14 +383,15 @@ const Methods = {
     scope: HostCallScope,
   ) {
     if (scope.interaction) {
-      await sendInteractionReply(
-        scope.interaction as RepliableInteraction,
+      const target = scope.interaction as RepliableInteraction;
+      if (!target.deferred && !target.replied) await target.deferReply({ flags: MessageFlags.Ephemeral });
+      return sendInteractionReply(
+        target,
         ephemeral === false ? card : ephemeralCard(card),
         "edit",
       );
-      return;
     }
-    await requireCtx(scope).reply(card, { ephemeral });
+    return requireCtx(scope).reply(card, { ephemeral });
   },
 
   async "ctx.editReply"(
@@ -531,13 +545,50 @@ const Methods = {
   // delete core's tempban expiries. Revisit when schedule.add returns an owned id.
 
   async "discord.channels.send"(
-    { channelId, payload }: { channelId: string; payload: MessagePayload },
+    { channelId, payload, replyTo }: { channelId: string; payload: MessagePayload; replyTo?: string },
     _scope: HostCallScope,
   ) {
     const channel = await container.client.channels.fetch(channelId);
     if (!channel?.isSendable()) throw new Error(`Channel ${channelId} is not sendable`);
-    const message = await channel.send(payload as never);
+    const message = await channel.send(
+      (replyTo
+        ? {
+            ...payload as object,
+            messageReference: { messageId: replyTo },
+            allowedMentions: { ...((payload as { allowedMentions?: object }).allowedMentions ?? {}), repliedUser: false },
+          }
+        : payload) as never,
+    );
     return { id: message.id, channelId: message.channelId };
+  },
+
+  async "discord.attachments.rehost"(
+    { url, filename, channelId }: { url: string; filename: string; channelId: string },
+    _scope: HostCallScope,
+  ) {
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      throw new Error("Refusing to fetch that URL");
+    }
+    if (parsed.protocol !== "https:" || !/^(cdn|media)\.discordapp\.(com|net)$/.test(parsed.hostname)) {
+      throw new Error("Only Discord attachment URLs can be re-hosted");
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Could not download that attachment");
+    const data = Buffer.from(await res.arrayBuffer());
+    if (data.length === 0 || data.length > 8_000_000) {
+      throw new Error("Attachment is empty or larger than 8MB");
+    }
+    const channel = await container.client.channels.fetch(channelId);
+    if (!channel?.isSendable()) throw new Error(`Channel ${channelId} is not sendable`);
+    const message = await channel.send({
+      files: [{ attachment: data, name: filename.slice(0, 100) || "upload" }],
+    });
+    const rehosted = message.attachments.first();
+    if (!rehosted) throw new Error("Re-upload produced no attachment");
+    return { url: rehosted.url, messageId: message.id };
   },
 
   async "discord.messages.fetch"(

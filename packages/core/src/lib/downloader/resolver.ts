@@ -15,7 +15,7 @@ import {
 } from "#lib/module-system/manifest.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
-import { getAddonAllowedSignersFile, getAddonSignaturePolicy } from "#lib/env.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "#lib/env.js";
 import { verifyCommitSignature, type SignatureVerification } from "./signature.js";
 
 const execGit = (args: string[]) =>
@@ -131,18 +131,20 @@ function parseUrl(val: string): string {
 }
 
 const reqsSchema = z.array(
-  z.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
+  z.string().regex(/^[a-zA-Z0-9_.@\/][a-zA-Z0-9_.@\/\-^~>=<*]*$/),
 );
 
+// ponytail: anchored to repo root, not cwd — launching from apps/worker once split data/ in two.
+export const RepoRoot = getRepoRoot();
+export const DataRoot = path.join(RepoRoot, "data");
+
 export const ModuleRoot = path.join(
-  process.cwd(),
-  "data",
+  DataRoot,
   "3rd-party-modules",
 );
 /** Where symlinks for installed addons live - registered as a second ModuleStore root. */
 export const AddonModulesRoot = path.join(
-  process.cwd(),
-  "data",
+  DataRoot,
   "installed-modules",
 );
 /**
@@ -656,7 +658,7 @@ export class DownloadResolver {
           recursive: true,
         });
         await fs
-          .symlink(process.cwd(), nodeModulesLumiPath, "dir")
+          .symlink(ModuleRoot, nodeModulesLumiPath, "dir")
           .catch(() => { });
       }
     }

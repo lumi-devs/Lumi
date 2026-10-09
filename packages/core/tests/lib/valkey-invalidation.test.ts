@@ -96,6 +96,15 @@ describe("InvalidationBus", () => {
       expect(container.valkey.publish).not.toHaveBeenCalled();
     });
 
+    it("notifies local listeners synchronously so a re-read in the same tick is fresh", async () => {
+      const seen: string[][] = [];
+      bus.onInvalidate((keys) => void seen.push(keys));
+
+      await bus.invalidate("k");
+
+      expect(seen).toEqual([["k"]]);
+    });
+
     it("never rewrites a key in place", async () => {
       await bus.invalidate("lumi:cfg:mod:guild:1");
 

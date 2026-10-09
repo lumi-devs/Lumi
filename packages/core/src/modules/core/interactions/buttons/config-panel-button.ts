@@ -43,6 +43,7 @@ import { TextInputStyle, type ButtonInteraction } from "discord.js";
 
 export const configPanelButton = defineInteraction({
   prefix: ConfigButtonId.prefix,
+  kinds: ["button"],
   async run(services: Container, interaction: ButtonInteraction) {
     const parsed = ConfigButtonId.parse(interaction.customId);
     if (!parsed) return;

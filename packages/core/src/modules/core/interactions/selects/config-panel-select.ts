@@ -30,6 +30,7 @@ function isOverrideTargetType(
 
 export const configPanelSelect = defineInteraction({
   prefix: ConfigSelectId.prefix,
+  kinds: ["select"],
   async run(services: Container, interaction: AnySelectMenuInteraction) {
     const parsed = ConfigSelectId.parse(interaction.customId);
     if (!parsed) return;

@@ -37,6 +37,7 @@ import {
 export const tempVcPanelButton = defineInteraction({
   prefix: TempVcPanelId.prefix,
   module: "tempvc",
+  kinds: ["button"],
   async run(services: Container, interaction: ButtonInteraction): Promise<void> {
     if (!interaction.isButton()) return;
     const parsed = TempVcPanelId.parse(interaction.customId);

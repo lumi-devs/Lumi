@@ -18,6 +18,7 @@ const ModalKinds = new Set(["namem", "limitm"]);
 export const tempVcPanelModal = defineInteraction({
   prefix: TempVcPanelId.prefix,
   module: "tempvc",
+  kinds: ["modal"],
   async run(services: Container, interaction: ModalSubmitInteraction): Promise<void> {
     const parsed = TempVcPanelId.parse(interaction.customId);
     if (!parsed || !ModalKinds.has(parsed.action)) return;

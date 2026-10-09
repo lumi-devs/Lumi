@@ -17,6 +17,7 @@
     "./commands": "./packages/core/src/lib/addon-sandbox/sdk/commands.ts",
     "./config": "./packages/core/src/lib/addon-sandbox/sdk/config.ts",
     "./discord": "./packages/core/src/lib/addon-sandbox/sdk/discord.ts",
+    "./events": "./packages/core/src/lib/addon-sandbox/sdk/events.ts",
     "./interactions": "./packages/core/src/lib/addon-sandbox/sdk/interactions.ts",
     "./kv": "./packages/core/src/lib/addon-sandbox/sdk/kv.ts",
     "./permissions": "./packages/core/src/lib/addon-sandbox/sdk/permissions.ts",

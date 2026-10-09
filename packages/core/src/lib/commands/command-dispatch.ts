@@ -239,6 +239,11 @@ export async function dispatchMessage(
   client: Client,
   message: Message,
 ): Promise<void> {
+  if (message.partial) {
+    const full = await message.fetch().catch(() => null);
+    if (!full) return;
+    message = full;
+  }
   if (message.author.bot || !message.guild) return;
   const prefix = await resolvePrefix(services, client, message);
   if (!prefix) return;
@@ -389,7 +394,15 @@ export async function dispatchAutocomplete(
       return;
     }
   }
-  await def.autocomplete(services, interaction);
+  try {
+    await def.autocomplete(services, interaction);
+  } catch (err) {
+    services.logger.warn(
+      `[CommandDispatch:${interaction.commandName}] autocomplete failed:`,
+      err,
+    );
+    await interaction.respond([]).catch(() => undefined);
+  }
 }
 
 export function finalizeBuilder(def: CommandDef) {

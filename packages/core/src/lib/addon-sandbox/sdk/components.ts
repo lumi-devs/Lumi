@@ -79,7 +79,8 @@ export function selectRow(spec: SelectRowSpec): ActionRowBuilder<StringSelectMen
   return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }
 
-export interface ModalFieldSpec {
+export interface ModalTextSpec {
+  kind?: "text";
   customId: string;
   label: string;
   style?: "short" | "paragraph";
@@ -90,10 +91,52 @@ export interface ModalFieldSpec {
   value?: string;
 }
 
+export interface ModalUploadSpec {
+  kind: "upload";
+  customId: string;
+  label: string;
+  required?: boolean;
+}
+
+export type ModalFieldSpec = ModalTextSpec | ModalUploadSpec;
+
 export interface ModalSpec {
   title: string;
   customId: string;
   fields: ModalFieldSpec[];
+}
+
+function textComponent(field: ModalTextSpec): unknown {
+  return {
+    type: 1,
+    components: [
+      {
+        type: 4,
+        custom_id: field.customId,
+        label: field.label,
+        style: field.style === "paragraph" ? 2 : 1,
+        required: field.required ?? true,
+        ...(field.maxLength !== undefined ? { max_length: field.maxLength } : {}),
+        ...(field.minLength !== undefined ? { min_length: field.minLength } : {}),
+        ...(field.placeholder ? { placeholder: field.placeholder } : {}),
+        ...(field.value !== undefined ? { value: field.value } : {}),
+      },
+    ],
+  };
+}
+
+function uploadComponent(field: ModalUploadSpec): unknown {
+  return {
+    type: 18,
+    label: field.label.slice(0, 45),
+    component: {
+      type: 19,
+      custom_id: field.customId,
+      required: field.required ?? false,
+      min_values: 0,
+      max_values: 1,
+    },
+  };
 }
 
 export function modal(spec: ModalSpec): { toJSON(): unknown } {
@@ -101,22 +144,9 @@ export function modal(spec: ModalSpec): { toJSON(): unknown } {
     toJSON: () => ({
       title: spec.title,
       custom_id: spec.customId,
-      components: spec.fields.slice(0, 5).map((field) => ({
-        type: 1,
-        components: [
-          {
-            type: 4,
-            custom_id: field.customId,
-            label: field.label,
-            style: field.style === "paragraph" ? 2 : 1,
-            required: field.required ?? true,
-            ...(field.maxLength !== undefined ? { max_length: field.maxLength } : {}),
-            ...(field.minLength !== undefined ? { min_length: field.minLength } : {}),
-            ...(field.placeholder ? { placeholder: field.placeholder } : {}),
-            ...(field.value !== undefined ? { value: field.value } : {}),
-          },
-        ],
-      })),
+      components: spec.fields.slice(0, 5).map((field) =>
+        field.kind === "upload" ? uploadComponent(field) : textComponent(field),
+      ),
     }),
   };
 }

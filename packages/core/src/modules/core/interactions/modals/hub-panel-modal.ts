@@ -35,7 +35,7 @@ export const hubPanelModal = defineInteraction({
     // the originating panel message; "prefix" edits it in place.
     if (data.kind === "addon") {
       await interaction.deferReply({
-        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+        flags: MessageFlags.Ephemeral,
       });
       if (!(await hasOwnerPermit(interaction)))
         return interaction.editReply(

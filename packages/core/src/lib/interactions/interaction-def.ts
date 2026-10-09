@@ -6,6 +6,8 @@ import {
 import type { Container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
+export type InteractionKind = "button" | "select" | "modal";
+
 export interface InteractionDef<I extends Interaction = Interaction> {
   /** customId prefix (or prefixes); matches `prefix` or `prefix:...`. */
   prefix?: string | string[];
@@ -13,7 +15,17 @@ export interface InteractionDef<I extends Interaction = Interaction> {
   match?: (customId: string) => boolean;
   /** Module whose enabled state gates this handler (checked per event). */
   module?: string;
+  /** Component kinds this handler serves. Omit to serve all kinds. Defs sharing
+   * one prefix must set disjoint kinds or all but the first are dropped. */
+  kinds?: InteractionKind[];
   run: (services: Container, interaction: I) => unknown;
+}
+
+export function kindOfInteraction(interaction: Interaction): InteractionKind | null {
+  if (interaction.isButton()) return "button";
+  if (interaction.isAnySelectMenu()) return "select";
+  if (interaction.isModalSubmit()) return "modal";
+  return null;
 }
 
 export function defineInteraction<I extends Interaction>(
@@ -30,6 +42,17 @@ function specificity(def: InteractionDef<any>): number {
   return Math.max(...prefixes.map((p) => p?.length ?? -1));
 }
 
+function kindsKey(def: InteractionDef<any>): string {
+  return def.kinds ? [...def.kinds].sort().join(",") : "*";
+}
+
+function sameIdentity(a: InteractionDef<any>, b: InteractionDef<any>): boolean {
+  if (kindsKey(a) !== kindsKey(b)) return false;
+  const pa = Array.isArray(a.prefix) ? a.prefix : [a.prefix];
+  const pb = Array.isArray(b.prefix) ? b.prefix : [b.prefix];
+  return pa.some((p) => pb.includes(p));
+}
+
 export function addInteractionDef(def: InteractionDef<any>): void {
   if (def.match) {
     if (!registry.includes(def)) {
@@ -38,16 +61,14 @@ export function addInteractionDef(def: InteractionDef<any>): void {
     }
     return;
   }
-  const prefixes = Array.isArray(def.prefix) ? def.prefix : [def.prefix];
-  if (
-    !registry.some((d) => {
-      const ps = Array.isArray(d.prefix) ? d.prefix : [d.prefix];
-      return ps.some((p) => prefixes.includes(p));
-    })
-  ) {
+  if (!registry.some((d) => sameIdentity(d, def))) {
     registry.push(def);
     registry.sort((a, b) => specificity(b) - specificity(a));
   }
+}
+
+export function clearInteractionDefsForTest(): void {
+  registry.length = 0;
 }
 
 export function interactionDefs(): readonly InteractionDef[] {
@@ -82,10 +103,13 @@ export async function acknowledge(interaction: Interaction): Promise<void> {
   if ("replied" in interaction && interaction.replied) return;
   if ("deferred" in interaction && interaction.deferred) return;
 
+  const ackable = interaction as unknown as {
+    deferUpdate?: () => Promise<unknown>;
+    deferReply?: () => Promise<unknown>;
+  };
   try {
-    if ("deferUpdate" in interaction) {
-      await interaction.deferUpdate();
-    }
+    if (ackable.deferUpdate) await ackable.deferUpdate();
+    else if (ackable.deferReply) await ackable.deferReply();
   } catch (err: unknown) {
     if (
       err instanceof DiscordAPIError &&

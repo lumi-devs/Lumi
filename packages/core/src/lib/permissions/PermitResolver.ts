@@ -1,3 +1,4 @@
+import { PermissionFlagsBits } from "discord.js";
 import { UserError } from "@lumi/shared";
 import { container } from "#lib/services.js";
 import { envParseString } from "#lib/env.js";
@@ -93,7 +94,7 @@ export class PermitResolver {
     if (container.client?.guilds?.cache) {
       const g = container.client.guilds.cache.get(guildId);
       const m = g?.members?.cache?.get(userId);
-      if (m?.permissions?.has(1n << 3n) || m?.permissions?.has(1n << 5n)) {
+      if (m?.permissions?.has(PermissionFlagsBits.Administrator) || m?.permissions?.has(PermissionFlagsBits.ManageGuild)) {
         return true;
       }
     }

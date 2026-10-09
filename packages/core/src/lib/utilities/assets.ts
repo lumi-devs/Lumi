@@ -8,6 +8,7 @@
 import { join } from "node:path";
 import { parseEmoji } from "discord.js";
 import { errorCode } from "#lib/utilities/errors.js";
+import { getRepoRoot } from "#lib/env.js";
 
 const defaultEmojis = {
   Success: "🟢",
@@ -78,7 +79,7 @@ const defaultEmojis = {
 
 let customEmojis = {};
 try {
-  const configPath = join(process.cwd(), "config", "emojis.ts");
+  const configPath = join(getRepoRoot(), "config", "emojis.ts");
   const mod = await import(configPath);
   const raw: unknown = mod?.default ?? {};
   if (typeof raw === "object" && raw !== null) {

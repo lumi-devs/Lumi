@@ -1,3 +1,4 @@
+import type { ConfigField } from "./config.js";
 import type { RpcRequest, RpcResponse } from "./rpc/envelope.js";
 
 export const AddonDiscordCapabilities = [
@@ -79,6 +80,7 @@ export type AddonRpcMethod =
   | "discord.client.stats"
   | "discord.messages.delete"
   | "discord.channels.fetch"
+  | "discord.attachments.rehost"
   | "modules.enabled"
   | "log";
 
@@ -111,6 +113,14 @@ export interface AddonCommandInvocation extends InvocationBase {
   repliedToId: string | null;
 }
 
+export interface SerialisedAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string | null;
+}
+
 export interface AddonInteractionInvocation extends InvocationBase {
   kind: "interaction";
   channelId: string;
@@ -119,6 +129,7 @@ export interface AddonInteractionInvocation extends InvocationBase {
   member: SerialisedMember | null;
   values: string[];
   fields: Record<string, string>;
+  attachments: Record<string, SerialisedAttachment[]>;
 }
 
 export interface AddonTaskFireInvocation extends InvocationBase {
@@ -227,6 +238,7 @@ export interface AddonReady {
   interactionPrefixes: string[];
   tasks: string[];
   events: AddonEventName[];
+  configFields: ConfigField[];
 }
 
 export interface AddonCommandDescriptor {

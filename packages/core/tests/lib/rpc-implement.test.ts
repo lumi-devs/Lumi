@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { PermissionFlagsBits } from "discord.js";
 import { container } from "#lib/services.js";
 import { rpcRouter, type RpcActionName } from "@lumi/contracts/rpc";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
@@ -29,9 +30,8 @@ const DiscordErrors = {
   timeout: () => new Error("ETIMEDOUT: connect timed out"),
 };
 
-/** discord.js's ManageGuild bit, used to build a fake role permission string. */
-const ManageGuildBit = (1n << 5n).toString();
-const AdministratorBit = (1n << 3n).toString();
+const ManageGuildBit = PermissionFlagsBits.ManageGuild.toString();
+const AdministratorBit = PermissionFlagsBits.Administrator.toString();
 
 function everyoneRole(permissions = "0") {
   return { id: GUILD_ID, permissions };

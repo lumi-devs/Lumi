@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
@@ -28,6 +29,26 @@ export const isDevelopment = (): boolean => getNodeEnv() === "development";
 export const isProduction = (): boolean => getNodeEnv() === "production";
 
 export const DEFAULT_BOT_PREFIX = ".";
+
+let cachedRepoRoot: string | null = null;
+
+// Repo root, independent of process cwd (worker is sometimes launched from apps/worker).
+export function getRepoRoot(): string {
+  if (cachedRepoRoot) return cachedRepoRoot;
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  while (true) {
+    if (existsSync(path.join(dir, "packages", "core", "package.json"))) {
+      cachedRepoRoot = dir;
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      cachedRepoRoot = process.cwd();
+      return cachedRepoRoot;
+    }
+    dir = parent;
+  }
+}
 
 export function getDefaultPrefix(): string {
   return envParseString("DEFAULT_PREFIX", DEFAULT_BOT_PREFIX);
@@ -424,7 +445,7 @@ export const getAuditArchiveDir = (): string | null => {
 export function getGdprExportDir(): string {
   return envParseString(
     "GDPR_EXPORT_DIR",
-    path.join(process.cwd(), "data", "gdpr-exports"),
+    path.join(getRepoRoot(), "data", "gdpr-exports"),
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   AddonCommandDescriptor,
   AddonInvocation,
   ChildToHost,
+  ConfigField,
   HostToChild,
 } from "@lumi/contracts";
 import { CommandContext, type AddonCommandDefinition } from "#lib/addon-sandbox/sdk/commands.js";
@@ -62,6 +63,7 @@ async function loadDefs<T>(dir: string, guard: (value: unknown) => value is T): 
 async function load(): Promise<{
   commands: AddonCommandDescriptor[];
   interactionPrefixes: string[];
+  configFields: ConfigField[];
 }> {
   if (!(await exists(addonDir!))) throw new Error(`Addon directory ${addonDir} does not exist`);
 
@@ -75,7 +77,11 @@ async function load(): Promise<{
     )),
   );
   const index = path.join(addonDir!, "index.ts");
-  if (await exists(index)) await import(index);
+  let configFields: ConfigField[] = [];
+  if (await exists(index)) {
+    const meta = (await import(index) as { meta?: { configFields?: unknown } }).meta;
+    if (Array.isArray(meta?.configFields)) configFields = meta.configFields as ConfigField[];
+  }
 
   return {
     commands: [...commands.values()].map((command) => ({
@@ -84,6 +90,7 @@ async function load(): Promise<{
       builder: command.build?.() ?? null,
     })),
     interactionPrefixes: handlers.map((handler) => handler.prefix),
+    configFields,
   };
 }
 

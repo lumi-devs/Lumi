@@ -343,8 +343,10 @@ export class ModuleStore {
     if (this.#addonRoutingReady) return;
     this.#addonRoutingReady = true;
 
-    this.#addons.onRespawn = (record, commands) =>
+    this.#addons.onRespawn = (record, commands) => {
       registerProxyCommands(this.#addons, record.name, record.dir, commands);
+      this.#applyAddonConfigFields(record);
+    };
     this.#addons.onFailed = (record) => unregisterProxyCommands(record.dir);
 
     registerAddonInteractionRouting(this.#addons);
@@ -354,11 +356,17 @@ export class ModuleStore {
     });
   }
 
+  #applyAddonConfigFields(record: ModuleRecord): void {
+    const fields = this.#addons.configFieldsFor(record.name);
+    if (fields.length > 0) record.meta = { ...record.meta, configFields: fields };
+  }
+
   async #loadAddon(record: ModuleRecord) {
     this.#ensureAddonRouting();
     try {
       const commands = await this.#addons.start(record);
       registerProxyCommands(this.#addons, record.name, record.dir, commands);
+      this.#applyAddonConfigFields(record);
       const module = createProxyModule(record.name, record.dir, record.meta);
       await module.onLoad?.(this.#services);
       this.#modules.set(record.name, module);

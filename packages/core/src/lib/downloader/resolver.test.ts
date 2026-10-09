@@ -10,6 +10,7 @@ import { fakeSpawnResult } from "../../../tests/helpers/mock-bun-spawn.js";
 vi.spyOn(Bun, "spawn").mockImplementation(() => fakeSpawnResult("") as any);
 
 const { resolver, ModuleRoot, AddonModulesRoot } = await import("./resolver.js");
+const { ensureAddonLumiLink } = await import("../addon-sandbox/sandbox-root.js");
 
 const RepoName = "resolver-test-repo";
 const ModuleName = "resolver-test-addon";
@@ -60,15 +61,26 @@ describe("DownloadResolver.installModule - requirements package boundary", () =>
 
     await resolver.installModule(RepoName, ModuleName);
 
-    // Regression: this synthetic package.json becomes the nearest package
-    // boundary for the addon's own files, which - without the symlink -
-    // silently breaks both "lumi" and the legacy #core/#lib/#utilities
-    // aliases by shadowing root's package.json (see resolver.ts).
     const nodeModulesLumi = path.join(sourceDir, "node_modules", "lumi");
     const stat = await fs.lstat(nodeModulesLumi);
     expect(stat.isSymbolicLink()).toBe(true);
 
     const target = await fs.readlink(nodeModulesLumi);
-    expect(path.resolve(path.dirname(nodeModulesLumi), target)).toBe(process.cwd());
+    expect(path.resolve(path.dirname(nodeModulesLumi), target)).toBe(ModuleRoot);
+  });
+
+  it("links node_modules/lumi for addons without requirements too", async () => {
+    const sourceDir = await writeFixtureAddon();
+    await fs.writeFile(
+      path.join(sourceDir, "package.json"),
+      JSON.stringify({ name: `lumi-module-${ModuleName}`, version: "1.0.0", private: true }),
+    );
+
+    await ensureAddonLumiLink(sourceDir);
+
+    const link = path.join(sourceDir, "node_modules", "lumi");
+    expect((await fs.lstat(link)).isSymbolicLink()).toBe(true);
+    const target = await fs.readlink(link);
+    expect(path.resolve(path.dirname(link), target)).toBe(ModuleRoot);
   });
 });

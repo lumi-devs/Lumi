@@ -7,6 +7,7 @@ import {
   addInteractionDef,
   InteractionAccessDeniedError,
   interactionDefs,
+  kindOfInteraction,
   matchesPrefix,
 } from "#lib/interactions/interaction-def.js";
 import { resolveErrorCard, respond } from "#lib/utilities/command-response.js";
@@ -95,7 +96,9 @@ export async function dispatchInteraction(
       ? interaction.customId
       : null;
   if (!customId) return;
+  const kind = kindOfInteraction(interaction);
   for (const def of interactionDefs()) {
+    if (def.kinds && (kind === null || !def.kinds.includes(kind))) continue;
     const hit = def.match
       ? def.match(customId)
       : (Array.isArray(def.prefix) ? def.prefix : [def.prefix]).some(

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { PermissionFlagsBits } from "discord.js";
 import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
@@ -12,8 +13,7 @@ const INTRUDER_ID = "333333333333333333";
 const MOD_ROLE_ID = "444444444444444444";
 const BOT_ID = "999999999999999999";
 
-/** discord.js's ManageGuild bit, used to build a fake role permission string. */
-const ManageGuildBit = (1n << 5n).toString();
+const ManageGuildBit = PermissionFlagsBits.ManageGuild.toString();
 
 const afkModule = {
   meta: {

@@ -53,4 +53,6 @@ export {
   type SelectRowSpec,
   type ModalFieldSpec,
   type ModalSpec,
+  type ModalTextSpec,
+  type ModalUploadSpec,
 } from "./components.js";

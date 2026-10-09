@@ -70,6 +70,7 @@ const AccessVerbKeys = {
 export const tempVcPanelSelect = defineInteraction({
   prefix: TempVcPanelId.prefix,
   module: "tempvc",
+  kinds: ["select"],
   async run(services: Container, interaction: AnySelectMenuInteraction): Promise<void> {
     const parsed = TempVcPanelId.parse(interaction.customId);
     if (!parsed || !SelectActions.has(parsed.action)) return;

@@ -1,4 +1,4 @@
-import type { ButtonInteraction } from "discord.js";
+import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { defineInteraction } from "#lib/interactions/interaction-def.js";
 import { defineCustomId } from "#lib/interactions/custom-id.js";
 import type { Container } from "#lib/services.js";
@@ -21,7 +21,7 @@ export const caseActionButton = defineInteraction({
     if (!guildId) return;
     if (!(await isModuleEnabled(services, guildId, "mod"))) return;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const caseNumber = Number.parseInt(caseId, 10);
     if (Number.isNaN(caseNumber)) {

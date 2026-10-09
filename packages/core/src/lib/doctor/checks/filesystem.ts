@@ -1,13 +1,12 @@
 import { promises as fs, constants as fsConstants } from "node:fs";
-import path from "node:path";
-import { ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
+import { DataRoot, ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
 import { runCheck } from "#lib/doctor/util.js";
 import type { DoctorCheckResult } from "#lib/doctor/types.js";
 
 export const FilesystemCheckName = "filesystem";
 
 export interface FilesystemCheckDeps {
-  /** Override for tests; defaults to `{data: <cwd>/data, addons: ModuleRoot, installed: AddonModulesRoot}`. */
+  /** Override for tests; defaults to `{data: DataRoot, addons: ModuleRoot, installed: AddonModulesRoot}`. */
   dirs?: Record<string, string>;
   /** Override for tests; defaults to `fs.access(dir, W_OK)`. */
   checkWritable?: (dir: string) => Promise<void>;
@@ -25,7 +24,7 @@ export async function checkFilesystem(
     const dirs =
       deps.dirs ??
       {
-        data: path.join(process.cwd(), "data"),
+        data: DataRoot,
         addons: ModuleRoot,
         "installed-addons": AddonModulesRoot,
       };

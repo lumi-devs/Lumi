@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { container } from "#lib/services.js";
 import { Ms } from "@lumi/shared";
-import { GuildMember } from "discord.js";
+import { ComponentType, GuildMember, MessageFlags } from "discord.js";
 import type { MessageComponentInteraction, ModalSubmitInteraction, User } from "discord.js";
 import type {
   AddonCapabilities,
@@ -10,6 +10,8 @@ import type {
   AddonInvocation,
   AddonRpcRequest,
   AddonRpcResponse,
+  ConfigField,
+  SerialisedAttachment,
   SerialisedMember,
   SerialisedUser,
   ChildToHost,
@@ -20,7 +22,7 @@ import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import type { CommandContext } from "#lib/commands/context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
 import { callHostMethod, type HostCallScope } from "./host-methods.js";
-import { ensureSandboxRoot } from "./sandbox-root.js";
+import { ensureAddonLumiLink, ensureSandboxRoot } from "./sandbox-root.js";
 
 const ChildEntry = fileURLToPath(new URL("../../runtime/addon-child.ts", import.meta.url));
 
@@ -94,9 +96,29 @@ function serialiseMember(member: GuildMember | null): SerialisedMember | null {
 function serialiseModalFields(interaction: ModalSubmitInteraction): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const [customId, field] of interaction.fields.fields) {
+    if (field.type !== ComponentType.TextInput) continue;
     if ("value" in field && typeof field.value === "string") fields[customId] = field.value;
   }
   return fields;
+}
+
+function serialiseModalAttachments(
+  interaction: ModalSubmitInteraction,
+): Record<string, SerialisedAttachment[]> {
+  const out: Record<string, SerialisedAttachment[]> = {};
+  for (const [customId, field] of interaction.fields.fields) {
+    if (field.type !== ComponentType.FileUpload) continue;
+    const files = interaction.fields.getUploadedFiles(customId)?.values() ?? [];
+    const list = [...files].map((a) => ({
+      id: a.id,
+      filename: a.name,
+      url: a.url,
+      size: a.size,
+      contentType: a.contentType,
+    }));
+    if (list.length > 0) out[customId] = list;
+  }
+  return out;
 }
 
 interface PendingInvocation {
@@ -112,6 +134,7 @@ class AddonProcess {
   interactionPrefixes: string[] = [];
   tasks: string[] = [];
   events: AddonEventName[] = [];
+  configFields: ConfigField[] = [];
 
   #proc: Bun.Subprocess;
   #pending = new Map<string, PendingInvocation>();
@@ -182,6 +205,7 @@ class AddonProcess {
         this.interactionPrefixes = ownPrefixes(this.record.name, raw.interactionPrefixes);
         this.tasks = raw.tasks;
         this.events = raw.events ?? [];
+        this.configFields = raw.configFields ?? [];
         this.#resolveReady(raw.commands);
         return;
       case "load-failed":
@@ -269,6 +293,7 @@ export class AddonHost {
   async start(record: ModuleRecord): Promise<AddonCommandDescriptor[]> {
     this.#rootReady ??= ensureSandboxRoot();
     await this.#rootReady;
+    await ensureAddonLumiLink(record.dir);
 
     this.stop(record.name);
     const proc = new AddonProcess(record, (p, code) => this.#onExit(p, code));
@@ -307,6 +332,10 @@ export class AddonHost {
     return this.#processes.get(name)?.commands ?? [];
   }
 
+  configFieldsFor(name: string): ConfigField[] {
+    return this.#processes.get(name)?.configFields ?? [];
+  }
+
   invokeCommand(name: string, piece: string, ctx: CommandContext): Promise<void> {
     const proc = this.#require(name);
     return proc.invoke(
@@ -335,11 +364,22 @@ export class AddonHost {
     return null;
   }
 
-  invokeInteraction(
+  async invokeInteraction(
     name: string,
     interaction: MessageComponentInteraction | ModalSubmitInteraction,
   ): Promise<void> {
     const proc = this.#require(name);
+    if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
+      try {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      } catch (err) {
+        container.logger.warn(
+          `[addon:${name}] modal ack failed (age ${Date.now() - interaction.createdTimestamp}ms), dropping invocation:`,
+          err,
+        );
+        return;
+      }
+    }
     return proc.invoke(
       {
         kind: "interaction",
@@ -354,6 +394,7 @@ export class AddonHost {
         ),
         values: interaction.isStringSelectMenu() ? interaction.values : [],
         fields: interaction.isModalSubmit() ? serialiseModalFields(interaction) : {},
+        attachments: interaction.isModalSubmit() ? serialiseModalAttachments(interaction) : {},
       },
       { interaction, guildId: interaction.guildId },
     );

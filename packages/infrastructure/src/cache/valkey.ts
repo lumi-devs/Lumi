@@ -363,6 +363,9 @@ export class InvalidationBus {
   /** Delete locally and broadcast to peers. */
   public async invalidate(...keys: string[]): Promise<void> {
     if (keys.length === 0) return;
+    const now = Date.now();
+    if (now > this.#lastInvalidationTime) this.#lastInvalidationTime = now;
+    for (const fn of this.#listeners) fn(keys);
     const publisher = this.#publisher;
     if (!publisher) {
       this.#logger?.warn?.("[InvalidationBus] Invalidation attempted without publisher");
@@ -371,7 +374,7 @@ export class InvalidationBus {
     await delSafe(publisher, keys);
     await publisher.publish(
       InvalidationChannel,
-      JSON.stringify({ keys, time: Date.now() }),
+      JSON.stringify({ keys, time: now }),
     );
   }
 

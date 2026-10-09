@@ -130,10 +130,13 @@ export async function paginateContainer(options: PaginationOptions) {
   const collector = msg.createMessageComponentCollector({
     componentType: ComponentType.Button,
     time,
-    filter: (i) => i.user.id === userId,
   });
 
   collector.on("collect", async (i) => {
+    if (i.user.id !== userId) {
+      await i.deferUpdate().catch(() => undefined);
+      return;
+    }
     if (i.customId === `${customIdPrefix}:prev`) {
       activePage = clampPageIndex(activePage - 1, totalPages);
     } else if (i.customId === `${customIdPrefix}:next`) {
