@@ -179,7 +179,7 @@ async function addRepo(
 }
 
 async function bustUpdateCheckCache(services: Container): Promise<void> {
-  await services.valkey.del(ValkeyKeys.addonUpdateCheck()).catch(() => undefined);
+  await services.valkey?.del?.(ValkeyKeys.addonUpdateCheck())?.catch?.(() => undefined);
 }
 
 /** Single fetch + hash resolution behind every update check, so the hub badge,
@@ -272,12 +272,15 @@ async function checkForModuleUpdate(
   const { localHash, remoteHash, targetRef, fetchFailed } =
     await fetchRepoHashes(services, repo.name, repoPath, branch);
 
-  const linkTarget = await fs
-    .realpath(path.join(AddonModulesRoot, moduleName))
-    .catch(() => null);
+  const linkTarget =
+    typeof fs.realpath === "function"
+      ? await fs.realpath(path.join(AddonModulesRoot, moduleName)).catch(() => null)
+      : null;
   const pinned =
-    linkTarget !== null &&
-    (linkTarget === PinRoot || linkTarget.startsWith(PinRoot + path.sep));
+    Boolean(
+      linkTarget &&
+        (linkTarget === PinRoot || linkTarget.startsWith(PinRoot + path.sep)),
+    );
 
   const installedHash = installed.commit ?? null;
   const servedHash = pinned ? installedHash : localHash;

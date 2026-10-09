@@ -425,6 +425,9 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n");
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n");
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n");
         if (cmd.includes("pull")) return fakeSpawnResult("", "Git pull conflict", 1);
         return fakeSpawnResult("newhash\n");
       });
