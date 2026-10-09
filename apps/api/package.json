@@ -1,6 +1,6 @@
 {
   "name": "@lumi/api",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "API service - serves the dashboard RPC bridge without holding a Discord gateway connection.",
   "type": "module",
