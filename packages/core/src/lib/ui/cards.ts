@@ -84,7 +84,7 @@ function buildContainer(
       );
     }
     c.addSeparatorComponents((sep) =>
-      sep.setSpacing(1).setDivider(opts.divider ?? false),
+      sep.setSpacing(1).setDivider(opts.divider ?? true),
     );
   }
 
