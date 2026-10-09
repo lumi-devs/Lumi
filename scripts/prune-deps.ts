@@ -58,6 +58,10 @@ for (const tool of extraDevTools) {
   devDeps.add(tool);
 }
 
+// The migrate service runs `bunx prisma migrate deploy` from this image,
+// so the pinned CLI must survive pruning - otherwise bunx fetches latest.
+devDeps.delete("prisma");
+
 const bunStore = path.join(nm, ".bun");
 
 for (const dep of devDeps) {
