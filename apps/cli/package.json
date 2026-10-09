@@ -1,6 +1,6 @@
 {
   "name": "@lumi/cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "lumi - the Lumi command-line entrypoint (start/migrate/addon/module/config).",
   "type": "module",

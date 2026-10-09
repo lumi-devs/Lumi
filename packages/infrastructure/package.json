@@ -1,6 +1,6 @@
 {
   "name": "@lumi/infrastructure",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "Lumi infrastructure layer: database, cache, and queue abstractions.",
   "type": "module",

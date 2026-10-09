@@ -1,6 +1,6 @@
 {
   "name": "@lumi/scheduler",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "Scheduler service - owns BullMQ job scheduling without holding a Discord gateway connection.",
   "type": "module",
