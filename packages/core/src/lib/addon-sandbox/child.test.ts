@@ -17,6 +17,7 @@ describe("addon child process", () => {
     try {
       const ready = await host.ready();
       expect(ready.commands.map((c) => c.name)).toEqual(["hello"]);
+      expect(ready.configFields).toMatchObject([{ key: "greeting", type: "STRING" }]);
       // The builder JSON is produced child-side; it is what the host registers.
       expect(ready.commands[0]!.builder).toMatchObject({ name: "hello" });
 
@@ -30,6 +31,7 @@ describe("addon child process", () => {
         subcommand: null,
         user: { id: "7", username: "u", displayName: "U", bot: false, avatarUrl: null },
         member: null,
+        repliedToId: null,
       });
 
       expect(host.rpcCalls()).toContain("config.get");

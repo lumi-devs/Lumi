@@ -1,6 +1,3 @@
-// OpenTelemetry tracing setup and helpers.
-
-
 import {
   diag,
   DiagConsoleLogger,
@@ -78,12 +75,16 @@ export function startTracing(opts: TracingOptions): boolean {
       import("@opentelemetry/instrumentation-pg"),
       import("@opentelemetry/instrumentation-ioredis"),
     ])
-      .then(([http, pg, ioredis]) => {
+      .then(([http, pg, valkey]) => {
         registerInstrumentations({
           instrumentations: [
             new http.HttpInstrumentation(),
             new pg.PgInstrumentation(),
-            new ioredis.IORedisInstrumentation(),
+            new valkey.IORedisInstrumentation({
+              requestHook: (span) => {
+                span.setAttribute("db.system.name", "valkey");
+              },
+            }),
           ],
         });
       })
@@ -111,7 +112,6 @@ export function getTracer() {
   return trace.getTracer(TracerName);
 }
 
-/** Run `fn` inside a new active span; records exceptions + ERROR status, always ends the span. */
 export async function withSpan<T>(
   name: string,
   fn: (span: Span) => Promise<T> | T,

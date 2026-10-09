@@ -1,6 +1,7 @@
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
-import { container, type ILogger } from "@sapphire/framework";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
+import { type ILogger } from "@lumi/shared";
+import { container } from "#lib/services.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
@@ -10,12 +11,12 @@ import type { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository
 export class ModuleRepository extends Repository {
   public constructor(
     prisma: DatabaseClient,
-    redis: RedisClient,
+    valkey: ValkeyClient,
     logger: ILogger,
     db: DatabaseService,
     private readonly config: ConfigRepository,
   ) {
-    super(prisma, redis, logger, db);
+    super(prisma, valkey, logger, db);
   }
 
   #isEssential(name: string): boolean {
@@ -27,8 +28,8 @@ export class ModuleRepository extends Repository {
       return Promise.resolve(true);
     }
     return this.getOrSet(
-      RedisKeys.moduleGlobalEnabled(name),
-      RedisTTL.moduleEnabledCache,
+      ValkeyKeys.moduleGlobalEnabled(name),
+      ValkeyTTL.moduleEnabledCache,
       async () => {
         const state = await this.prisma.globalModuleState.findUnique({
           where: { moduleName: name },
@@ -51,13 +52,13 @@ export class ModuleRepository extends Repository {
       update: { enabled, reason: reason ?? null },
       create: { moduleName: name, enabled, reason: reason ?? null },
     });
-    await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
+    await this.invalidate(ValkeyKeys.moduleGlobalEnabled(name));
   }
 
   /** Deletes the global override row entirely, returning the module to following each guild's own setting. */
   public async clearModuleGlobalState(name: string): Promise<void> {
     await this.prisma.globalModuleState.deleteMany({ where: { moduleName: name } });
-    await this.invalidate(RedisKeys.moduleGlobalEnabled(name));
+    await this.invalidate(ValkeyKeys.moduleGlobalEnabled(name));
   }
 
   public async getGlobalModuleStates(): Promise<Map<string, boolean>> {
@@ -79,8 +80,8 @@ export class ModuleRepository extends Repository {
       return Promise.resolve(true);
     }
     return this.getOrSet(
-      RedisKeys.moduleEnabled(name, guildId),
-      RedisTTL.moduleEnabledCache,
+      ValkeyKeys.moduleEnabled(name, guildId),
+      ValkeyTTL.moduleEnabledCache,
       async () => {
         const state = await this.prisma.guildModuleState.findUnique({
           where: { guildId_moduleName: { guildId, moduleName: name } },
@@ -163,11 +164,10 @@ export class ModuleRepository extends Repository {
       update: { enabled },
       create: { guildId, moduleName: name, enabled },
     });
-    await this.invalidate(RedisKeys.moduleEnabled(name, guildId));
+    await this.invalidate(ValkeyKeys.moduleEnabled(name, guildId));
     return updated;
   }
 
-  /** Resolves a module's config-level enable state. */
   async #configLevelEnabled(guildId: string, name: string): Promise<boolean> {
     const configEnabled = await this.config.getModuleConfig(
       guildId,

@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { FilterMessageListener } from "#modules/filter/listeners/messageCreate.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
 import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
 
-const __actualUtility = await import("#lib/module-system/Utility.js");
 vi.mock("#lib/module-system/Utility.js", () => ({
-  ...__actualUtility,
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
@@ -15,20 +13,15 @@ vi.mock("#lib/utilities/temporary-message.js", () => ({
   deleteMessageLater: vi.fn(),
 }));
 
-const __actualModule15 = await import("#lib/commands.js");
-vi.mock("#lib/commands.js", () => {
-  const actual: any = __actualModule15;
-  return {
-    ...actual,
-    fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
-      if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
-      return key;
-    }),
-  };
-});
+vi.mock("#lib/i18n/index.js", () => ({
+  fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
+    if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
+    return key;
+  }),
+}));
 
 describe("FilterMessageListener", () => {
-  let listener: FilterMessageListener;
+  let listener: typeof FilterMessageListener;
   let mockFilterUtility: any;
   let mockConfigUtility: any;
   let mockGuildLogUtility: any;
@@ -79,15 +72,7 @@ describe("FilterMessageListener", () => {
       },
     } as any;
 
-    listener = new FilterMessageListener(
-      {
-        name: "messageCreate",
-        path: "/path/to/modules/filter/listeners/messageCreate.ts",
-        root: "/path/to/modules",
-        store: { name: "listeners" } as any,
-      },
-      { module: "filter" }
-    );
+    listener = FilterMessageListener;
   });
 
   it("should do nothing if member has ManageMessages permission", async () => {
@@ -99,7 +84,7 @@ describe("FilterMessageListener", () => {
       },
     };
 
-    await (listener as any).handle(mockMessage);
+    await listener.execute(container, mockMessage as any);
     expect(mockFilterUtility.test).not.toHaveBeenCalled();
   });
 
@@ -112,9 +97,9 @@ describe("FilterMessageListener", () => {
       content: "hello world",
     };
 
-    await (listener as any).handle(mockMessage);
-    expect(mockFilterUtility.loadGuild).toHaveBeenCalledWith("G1");
-    expect(mockFilterUtility.test).toHaveBeenCalledWith("G1", "hello world", 0);
+    await listener.execute(container, mockMessage as any);
+    expect(mockFilterUtility.loadGuild).toHaveBeenCalledWith(container, "G1");
+    expect(mockFilterUtility.test).toHaveBeenCalledWith(container, "G1", "hello world", 0);
   });
 
   it("should return early if test does not trigger a hit", async () => {
@@ -125,8 +110,8 @@ describe("FilterMessageListener", () => {
       content: "clean message",
     };
 
-    await (listener as any).handle(mockMessage);
-    expect(mockFilterUtility.test).toHaveBeenCalledWith("G1", "clean message", 2);
+    await listener.execute(container, mockMessage as any);
+    expect(mockFilterUtility.test).toHaveBeenCalledWith(container, "G1", "clean message", 2);
   });
 
   it("should skip action if user has an exempt role", async () => {
@@ -145,7 +130,7 @@ describe("FilterMessageListener", () => {
       delete: vi.fn(),
     };
 
-    await (listener as any).handle(mockMessage);
+    await listener.execute(container, mockMessage as any);
     expect(mockMessage.delete).not.toHaveBeenCalled();
   });
 
@@ -178,13 +163,14 @@ describe("FilterMessageListener", () => {
       channel: { send: mockSend },
     };
 
-    await (listener as any).handle(mockMessage);
+    await listener.execute(container, mockMessage as any);
 
     expect(mockMessage.delete).toHaveBeenCalled();
     expect(mockSend).toHaveBeenCalledWith(expect.stringContaining("<@user-456>"));
     expect(deleteMessageLater).toHaveBeenCalledWith(mockWarnMessageObj, undefined, "Filter: delete warning");
     expect(mockTimeout).toHaveBeenCalledWith(600_000, expect.stringContaining("invite"));
     expect(mockGuildLogUtility.dispatch).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         guildId: "G1",
         moduleName: "filter",
@@ -221,7 +207,7 @@ describe("FilterMessageListener", () => {
       channel: { send: vi.fn().mockResolvedValue(null) },
     };
 
-    await (listener as any).handle(mockMessage);
+    await listener.execute(container, mockMessage as any);
     expect(mockTimeout).toHaveBeenCalledWith(300_000, expect.stringContaining("invite"));
   });
 
@@ -244,7 +230,7 @@ describe("FilterMessageListener", () => {
       channel: { send: vi.fn().mockResolvedValue(null) },
     };
 
-    await expect((listener as any).handle(mockMessage)).resolves.toBeUndefined();
+    await expect(listener.execute(container, mockMessage as any)).resolves.toBeUndefined();
   });
 
   it("should handle empty warn message template without sending warning", async () => {
@@ -270,7 +256,7 @@ describe("FilterMessageListener", () => {
       channel: { send: mockSend },
     };
 
-    await (listener as any).handle(mockMessage);
+    await listener.execute(container, mockMessage as any);
     expect(mockSend).not.toHaveBeenCalled();
   });
 });

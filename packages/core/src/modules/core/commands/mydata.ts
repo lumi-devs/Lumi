@@ -1,70 +1,57 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import { AttachmentBuilder } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { CommandContext } from "#lib/command-context.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import { SlashCommandBuilder, AttachmentBuilder } from "discord.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { makeSuccessCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
-import { container } from "@sapphire/framework";
 import { getUtility } from "#lib/module-system/Utility.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+function downloaderService(): DownloaderUtility {
+  return getUtility("downloader");
+}
+
+export const mydataDef: CommandDef = {
   name: "mydata",
-  description:
-    "View and manage end-user data, privacy disclosures, and GDPR actions",
+  description: "View and manage end-user data, privacy disclosures, and GDPR actions",
   prefixEnabled: true,
-  subcommands: [
-    { name: "whatdata", run: "whatData", default: true },
-    { name: "3rdparty", run: "thirdParty" },
-    { name: "getmydata", run: "getMyData" },
-    { name: "forgetme", run: "forgetMe" },
-  ],
-})
-export class MyDataCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("whatdata")
-            .setDescription(
-              "Learn about end-user data collection, privacy, and GDPR rights",
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("3rdparty")
-            .setDescription(
-              "View privacy & data statements for installed 3rd-party addons",
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("getmydata")
-            .setDescription("Export a complete copy of all your stored data"),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("forgetme")
-            .setDescription(
-              "Have Lumi delete and anonymize all data stored about you",
-            ),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("mydata");
+    return (
+    b
+            .setName("mydata")
+            .setDescription("View and manage end-user data, privacy disclosures, and GDPR actions")
+            .addSubcommand((s) =>
+              s
+                .setName("whatdata")
+                .setDescription(
+                  "Learn about end-user data collection, privacy, and GDPR rights",
+                ),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("3rdparty")
+                .setDescription(
+                  "View privacy & data statements for installed 3rd-party addons",
+                ),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("getmydata")
+                .setDescription("Export a complete copy of all your stored data"),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("forgetme")
+                .setDescription(
+                  "Have Lumi delete and anonymize all data stored about you",
+                ),
+            )
     );
-  }
-
-  private get downloaderService(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  public async whatData(ctx: CommandContext) {
+  },
+  handlers: {
+  "whatdata": async (ctx: CommandContext) => {
     await ctx.replyInfo(
       `${Emojis.Shield} End-User Data & Privacy in Lumi`,
       [
@@ -74,12 +61,11 @@ export class MyDataCommand extends BaseSubcommand {
         "• **Right of Access (`/mydata getmydata`)**: You can request an export of all data associated with your user ID across the bot.",
         "• **Right to Erasure (`/mydata forgetme`)**: You can request permanent deletion and anonymization of your stored data.",
         "• **3rd-Party Addons (`/mydata 3rdparty`)**: You can inspect privacy statements provided by installed community addons.",
-      ].join("\n"),
+      ].join("\n")
     );
-  }
-
-  public async thirdParty(ctx: CommandContext) {
-    const installed = await this.downloaderService.getInstalledModules();
+  },
+  "3rdparty": async (ctx: CommandContext) => {
+    const installed = await downloaderService().getInstalledModules(ctx.services);
 
     if (installed.length === 0) {
       await ctx.replyInfo(
@@ -90,7 +76,7 @@ export class MyDataCommand extends BaseSubcommand {
     }
 
     const lines = installed.map((mod) => {
-      const record = container.moduleStore.getRecord(mod.moduleName);
+      const record = ctx.services.moduleStore.getRecord(mod.moduleName);
       const title = `${record?.meta?.emoji ?? "📦"} **${record?.meta?.displayName ?? mod.moduleName}**`;
       const statement = record?.meta?.endUserDataStatement;
       return statement
@@ -100,11 +86,10 @@ export class MyDataCommand extends BaseSubcommand {
 
     const card = makeListCard("3rd-Party Addon Privacy Statements", lines);
     await ctx.reply(card);
-  }
-
-  public async getMyData(ctx: CommandContext) {
+  },
+  "getmydata": async (ctx: CommandContext) => {
     const userId = ctx.user.id;
-    const exportData = await executeGdprExport(userId);
+    const exportData = await executeGdprExport(ctx.services, userId);
 
     const buffer = Buffer.from(JSON.stringify(exportData, null, 2), "utf-8");
     const attachment = new AttachmentBuilder(buffer, {
@@ -135,9 +120,8 @@ export class MyDataCommand extends BaseSubcommand {
         files: [attachment],
       });
     }
-  }
-
-  public async forgetMe(ctx: CommandContext) {
+  },
+  "forgetme": async (ctx: CommandContext) => {
     const userId = ctx.user.id;
 
     const { confirmed } = await confirmPrompt(ctx, {
@@ -157,7 +141,7 @@ export class MyDataCommand extends BaseSubcommand {
       return;
     }
 
-    const result = await executeGdprDeletion(userId, ctx.user.tag);
+    const result = await executeGdprDeletion(ctx.services, userId, ctx.user.tag);
 
     if (result.failedModules.length > 0) {
       await ctx.replyInfo(
@@ -171,4 +155,6 @@ export class MyDataCommand extends BaseSubcommand {
       );
     }
   }
-}
+  },
+  defaultSub: "whatdata"
+};

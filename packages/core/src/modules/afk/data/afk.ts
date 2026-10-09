@@ -1,9 +1,9 @@
-import { container } from "@sapphire/framework";
-import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#lib/database/cluster-safe.js";
-import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
-import { isNullish, filterNullish, tryParseJSON } from "@sapphire/utilities";
+import type { Container } from "#lib/services.js";
+import { mgetSafe, pipelineBySlot, scanKeysSafe } from "@lumi/infrastructure/database";
+import { claimCooldown, isOnCooldown } from "#lib/valkey/cooldown.js";
+import { isNullish, filterNullish, tryParseJSON } from "@lumi/shared";
 import { AfkKeys, AfkTTL } from "../constants.js";
-import { sanitizeReason } from "../services/format.js";
+import { sanitizeReason } from "@lumi/application/services/afk/format.js";
 import type { AfkEntry } from "@prisma/client";
 
 export interface AfkMention {
@@ -14,12 +14,12 @@ export interface AfkMention {
   ts: number;
 }
 
-function scanKeys(pattern: string) {
-  return scanKeysSafe(container.redis, pattern);
+function scanKeys(services: Container, pattern: string) {
+  return scanKeysSafe(services.valkey, pattern);
 }
 
-async function invalidateKeys(keys: string[]) {
-  await container.invalidation.invalidate(...keys);
+async function invalidateKeys(services: Container, keys: string[]) {
+  await services.invalidation.invalidate(...keys);
 }
 
 const inflight = new Map<string, Promise<unknown>>();
@@ -28,6 +28,7 @@ const negativeUntil = new Map<string, number>();
 const NegativeTtlMs = 15_000;
 
 async function getOrSet<T>(
+  services: Container,
   key: string,
   ttl: number,
   fetcher: () => Promise<T>,
@@ -35,7 +36,7 @@ async function getOrSet<T>(
 ): Promise<T> {
   const neg = negativeUntil.get(key);
   if (neg !== undefined && neg > Date.now()) return null as T;
-  const cached = await container.redis.get(key);
+  const cached = await services.valkey.get(key);
   if (cached) return parser(cached);
 
   const pending = inflight.get(key);
@@ -47,7 +48,7 @@ async function getOrSet<T>(
       negativeUntil.set(key, Date.now() + NegativeTtlMs);
     } else {
       negativeUntil.delete(key);
-      await container.redis.setex(key, ttl, JSON.stringify(data));
+      await services.valkey.setex(key, ttl, JSON.stringify(data));
     }
     return data;
   })();
@@ -60,13 +61,15 @@ async function getOrSet<T>(
 }
 
 export async function getAfkEntry(
+  services: Container,
   guildId: string,
   userId: string,
 ): Promise<AfkEntry | null> {
   return getOrSet(
+    services,
     AfkKeys.afk(guildId, userId),
     AfkTTL.entry,
-    () => container.db.afk.findEntry(guildId, userId),
+    () => services.db.afk.findEntry(guildId, userId),
     (data: string) => {
       const parsed = tryParseJSON(data) as AfkEntry | null;
       if (!parsed) return null;
@@ -76,6 +79,7 @@ export async function getAfkEntry(
 }
 
 export async function getAfkEntriesBatch(
+  services: Container,
   guildId: string,
   userIds: string[],
 ): Promise<Map<string, AfkEntry>> {
@@ -84,7 +88,7 @@ export async function getAfkEntriesBatch(
 
   const now = Date.now();
   const keys = userIds.map((userId) => AfkKeys.afk(guildId, userId));
-  const rawValues = await mgetSafe(container.redis, keys);
+  const rawValues = await mgetSafe(services.valkey, keys);
 
   const missingUserIds: string[] = [];
   rawValues.forEach((raw, i) => {
@@ -101,7 +105,7 @@ export async function getAfkEntriesBatch(
   });
 
   if (missingUserIds.length > 0) {
-    const dbEntries = await container.db.afk.findEntries(guildId, missingUserIds);
+    const dbEntries = await services.db.afk.findEntries(guildId, missingUserIds);
     const found = new Set<string>();
     for (const entry of dbEntries) {
       result.set(entry.userId, entry);
@@ -114,7 +118,7 @@ export async function getAfkEntriesBatch(
       }
     }
     await pipelineBySlot(
-      container.redis,
+      services.valkey,
       dbEntries,
       (entry) => AfkKeys.afk(guildId, entry.userId),
       (pipe, entry) => {
@@ -131,17 +135,18 @@ export async function getAfkEntriesBatch(
 }
 
 export async function setAfkEntry(
+  services: Container,
   guildId: string,
   userId: string,
   reason: string,
 ): Promise<AfkEntry> {
-  const entry = await container.db.afk.upsertEntry(
+  const entry = await services.db.afk.upsertEntry(
     guildId,
     userId,
     sanitizeReason(reason),
   );
   negativeUntil.delete(AfkKeys.afk(guildId, userId));
-  await container.redis.setex(
+  await services.valkey.setex(
     AfkKeys.afk(guildId, userId),
     AfkTTL.entry,
     JSON.stringify(entry),
@@ -150,16 +155,17 @@ export async function setAfkEntry(
 }
 
 export async function clearAfkEntry(
+  services: Container,
   guildId: string,
   userId: string,
 ): Promise<boolean> {
   try {
-    await container.db.afk.deleteEntry(guildId, userId);
+    await services.db.afk.deleteEntry(guildId, userId);
     negativeUntil.delete(AfkKeys.afk(guildId, userId));
-    await invalidateKeys([AfkKeys.afk(guildId, userId)]);
+    await invalidateKeys(services, [AfkKeys.afk(guildId, userId)]);
     return true;
   } catch (err: unknown) {
-    container.logger.error(
+    services.logger.error(
       `[AFK] Failed to clear AFK for ${userId} in ${guildId}:`,
       err,
     );
@@ -167,11 +173,14 @@ export async function clearAfkEntry(
   }
 }
 
-export async function clearAllAfkForUser(userId: string): Promise<number> {
-  const count = await container.db.afk.deleteAllForUser(userId);
-  const keys = await scanKeys(AfkKeys.allForUserPattern(userId));
+export async function clearAllAfkForUser(
+  services: Container,
+  userId: string,
+): Promise<number> {
+  const count = await services.db.afk.deleteAllForUser(userId);
+  const keys = await scanKeys(services, AfkKeys.allForUserPattern(userId));
   if (keys.length) {
-    await invalidateKeys(keys);
+    await invalidateKeys(services, keys);
   }
   for (const key of negativeUntil.keys()) {
     if (key.endsWith(`:${userId}`)) negativeUntil.delete(key);
@@ -179,28 +188,34 @@ export async function clearAllAfkForUser(userId: string): Promise<number> {
   return count;
 }
 
-export function iterateAllAfkEntries(): AsyncGenerator<AfkEntry[]> {
-  return container.db.afk.iterateAll();
+export function iterateAllAfkEntries(
+  services: Container,
+): AsyncGenerator<AfkEntry[]> {
+  return services.db.afk.iterateAll();
 }
 
-export function getAfkEntriesForGuild(guildId: string): Promise<AfkEntry[]> {
-  return container.db.afk.findForGuild(guildId);
+export function getAfkEntriesForGuild(
+  services: Container,
+  guildId: string,
+): Promise<AfkEntry[]> {
+  return services.db.afk.findForGuild(guildId);
 }
 
-export async function getAfkStats(): Promise<{
+export async function getAfkStats(services: Container): Promise<{
   activeEntries: number;
   activeCooldowns: number;
 }> {
-  const activeEntries = await container.db.afk.countAll();
-  const keys = await scanKeys(AfkKeys.removalCooldownPattern());
+  const activeEntries = await services.db.afk.countAll();
+  const keys = await scanKeys(services, AfkKeys.removalCooldownPattern());
   return { activeEntries, activeCooldowns: keys.length };
 }
 
 export async function getAfkMentions(
+  services: Container,
   guildId: string,
   userId: string,
 ): Promise<AfkMention[]> {
-  const raw = await container.redis.lrange(
+  const raw = await services.valkey.lrange(
     AfkKeys.mentions(guildId, userId),
     0,
     -1,
@@ -211,12 +226,13 @@ export async function getAfkMentions(
 }
 
 export async function addAfkMention(
+  services: Container,
   guildId: string,
   userId: string,
   mention: AfkMention,
 ): Promise<void> {
   const key = AfkKeys.mentions(guildId, userId);
-  await container.redis
+  await services.valkey
     .multi()
     .lpush(key, JSON.stringify(mention))
     .ltrim(key, 0, 24)
@@ -225,18 +241,26 @@ export async function addAfkMention(
 }
 
 export async function clearAfkMentions(
+  services: Container,
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.invalidation.invalidate(AfkKeys.mentions(guildId, userId));
+  await services.invalidation.invalidate(AfkKeys.mentions(guildId, userId));
 }
 
-export async function isAfkOnCooldown(key: string): Promise<boolean> {
-  return isOnCooldown(key);
+export async function isAfkOnCooldown(
+  services: Container,
+  key: string,
+): Promise<boolean> {
+  return isOnCooldown(services, key);
 }
 
-export async function setAfkCooldown(key: string, ms: number): Promise<void> {
-  await container.redis.set(key, "1", "PX", ms);
+export async function setAfkCooldown(
+  services: Container,
+  key: string,
+  ms: number,
+): Promise<void> {
+  await services.valkey.set(key, "1", "PX", ms);
 }
 
 /**
@@ -245,23 +269,25 @@ export async function setAfkCooldown(key: string, ms: number): Promise<void> {
  * two messages from the same author both pass the check.
  */
 export async function claimAfkCooldown(
+  services: Container,
   key: string,
   ms: number,
 ): Promise<boolean> {
-  return claimCooldown(key, ms);
+  return claimCooldown(services, key, ms);
 }
 
 /**
- * Batch-writes multiple AFK mentions for different users in a single Redis
+ * Batch-writes multiple AFK mentions for different users in a single Valkey
  * multi/exec transaction instead of one round-trip per mentioned user.
  */
 export async function addAfkMentionsBatch(
+  services: Container,
   guildId: string,
   mentions: { userId: string; mention: AfkMention }[],
 ): Promise<void> {
   if (!mentions.length) return;
   await pipelineBySlot(
-    container.redis,
+    services.valkey,
     mentions,
     ({ userId }) => AfkKeys.mentions(guildId, userId),
     (pipe, { userId, mention }) => {

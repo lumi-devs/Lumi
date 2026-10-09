@@ -1,7 +1,7 @@
 import { disconnectDatabase } from "#lib/prisma/client.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
 import { shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   installSchedulerContainerServices,
   type SchedulerContainerServices,
@@ -14,9 +14,7 @@ export interface BootstrapSchedulerAppOptions {
 let installedRejectionHandler: ((reason: unknown) => void) | null = null;
 let installedExceptionHandler: ((err: unknown) => void) | null = null;
 
-// Same shape as `bootstrap.ts`/`api-bootstrap.ts`'s own copies - kept
-// separate rather than shared since each app's process lifecycle is meant to
-// evolve independently (see `api-bootstrap.ts`'s identical note).
+// Process-level unhandled rejection and uncaught exception handlers for Scheduler.
 function registerProcessErrorHandlers(): void {
   if (installedRejectionHandler) {
     process.off("unhandledRejection", installedRejectionHandler);
@@ -74,7 +72,7 @@ export async function destroySchedulerContainerServices(
   await services.ownedEventBus.close().catch(warnOnCleanupError("EventBus close"));
   await container.invalidation.close().catch(warnOnCleanupError("Invalidation close"));
   await container.signals.close().catch(warnOnCleanupError("Signals close"));
-  await container.redis.quit().catch(warnOnCleanupError("Redis quit"));
+  await container.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
   await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
 }
 

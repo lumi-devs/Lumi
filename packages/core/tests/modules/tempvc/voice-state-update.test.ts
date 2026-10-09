@@ -1,94 +1,134 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import TempVcVoiceStateListener from "#modules/tempvc/listeners/voiceStateUpdate.js";
-import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
-import { trackVoiceState } from "#modules/tempvc/services/voice-occupancy.js";
+import tempvcVoiceStateUpdate from "#modules/tempvc/listeners/voiceStateUpdate.js";
 
-vi.mock("#modules/tempvc/services/registry.js", () => ({
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn(),
+  tryGetUtility: vi.fn(),
+}));
+
+vi.mock("@lumi/application/services/tempvc/registry.js", () => ({
   tempVcRegistry: {
-    isManagedVc: vi.fn().mockResolvedValue(false),
-    getGenerator: vi.fn().mockResolvedValue(null),
+    isManagedVc: vi.fn(),
+    getGenerator: vi.fn(),
   },
 }));
 
-vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
-  trackVoiceState: vi.fn().mockResolvedValue({ prevChannelId: null }),
-  isVoiceChannelEmpty: vi.fn().mockResolvedValue(false),
+vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
+  trackVoiceState: vi.fn(),
+  isVoiceChannelEmpty: vi.fn(),
 }));
 
-function makeVoiceState(overrides: Record<string, unknown> = {}) {
+vi.mock("#lib/utilities/misc.js", () => ({
+  isModuleEnabled: vi.fn().mockResolvedValue(true),
+}));
+
+import { getUtility } from "#lib/module-system/Utility.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import {
+  trackVoiceState,
+  isVoiceChannelEmpty,
+} from "@lumi/application/services/tempvc/voice-occupancy.js";
+
+function makeServices() {
   return {
-    channelId: null,
-    guild: { id: "guild-1" },
-    member: { id: "user-1", user: { bot: false } },
-    ...overrides,
-  };
+    logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() },
+  } as any;
 }
 
-describe("tempvc TempVcVoiceStateListener", () => {
-  let listener: TempVcVoiceStateListener;
+function makeMember(bot: boolean) {
+  return {
+    id: "user-1",
+    user: { bot },
+    voice: { disconnect: vi.fn().mockResolvedValue(undefined) },
+    send: vi.fn().mockResolvedValue(undefined),
+  } as any;
+}
+
+function makeState(overrides: Record<string, any> = {}) {
+  return {
+    channelId: null,
+    member: makeMember(false),
+    guild: { id: "g1", channels: { fetch: vi.fn() } },
+    channel: null,
+    ...overrides,
+  } as any;
+}
+
+describe("tempvcVoiceStateUpdate", () => {
+  let tempvc: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    tempvc = {
+      scheduleCleanup: vi.fn().mockResolvedValue(undefined),
+      onCreateCooldown: vi.fn().mockResolvedValue(false),
+      createVc: vi.fn().mockResolvedValue(undefined),
+    };
+    (getUtility as any).mockReturnValue(tempvc);
     (tempVcRegistry.isManagedVc as any).mockResolvedValue(false);
     (tempVcRegistry.getGenerator as any).mockResolvedValue(null);
-
-    listener = new TempVcVoiceStateListener(
-      {
-        name: "tempvcVoiceStateUpdate",
-        path: "/path/to/modules/tempvc/listeners/voiceStateUpdate.ts",
-        root: "/path/to/modules",
-        store: { name: "listeners" } as any,
-      },
-      { event: "voiceStateUpdate" },
-    );
+    (trackVoiceState as any).mockResolvedValue({ prevChannelId: null });
+    (isVoiceChannelEmpty as any).mockResolvedValue(false);
   });
 
-  it("skips trackVoiceState when neither the old nor the new channel is temp-vc-relevant", async () => {
-    const oldState = makeVoiceState({ channelId: "vc-old" });
-    const newState = makeVoiceState({ channelId: "vc-new" });
+  it("ignores bot members", async () => {
+    const services = makeServices();
+    const oldState = makeState();
+    const newState = makeState({ channelId: "gen-1", member: makeMember(true) });
 
-    await listener.run(oldState as any, newState as any);
-
-    expect(tempVcRegistry.isManagedVc).toHaveBeenCalledWith("guild-1", "vc-old");
-    expect(tempVcRegistry.isManagedVc).toHaveBeenCalledWith("guild-1", "vc-new");
-    expect(tempVcRegistry.getGenerator).toHaveBeenCalledWith("guild-1", "vc-new");
-    expect(trackVoiceState).not.toHaveBeenCalled();
-  });
-
-  it("tracks the move when the old channel is a managed temp VC", async () => {
-    (tempVcRegistry.isManagedVc as any).mockImplementation(
-      (_guildId: string, channelId: string) => Promise.resolve(channelId === "vc-old"),
-    );
-    const oldState = makeVoiceState({ channelId: "vc-old" });
-    const newState = makeVoiceState({ channelId: "vc-new" });
-
-    await listener.run(oldState as any, newState as any);
-
-    expect(trackVoiceState).toHaveBeenCalledWith("user-1", "vc-new");
-  });
-
-  it("tracks the move when the new channel is a managed temp VC", async () => {
-    (tempVcRegistry.isManagedVc as any).mockImplementation(
-      (_guildId: string, channelId: string) => Promise.resolve(channelId === "vc-new"),
-    );
-    const oldState = makeVoiceState({ channelId: "vc-old" });
-    const newState = makeVoiceState({ channelId: "vc-new" });
-
-    await listener.run(oldState as any, newState as any);
-
-    expect(trackVoiceState).toHaveBeenCalledWith("user-1", "vc-new");
-  });
-
-  it("still skips for bots without touching the registry", async () => {
-    const oldState = makeVoiceState({ channelId: "vc-old" });
-    const newState = makeVoiceState({
-      channelId: "vc-new",
-      member: { id: "bot-1", user: { bot: true } },
-    });
-
-    await listener.run(oldState as any, newState as any);
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
 
     expect(tempVcRegistry.isManagedVc).not.toHaveBeenCalled();
+  });
+
+  it("ignores updates that do not change channel", async () => {
+    const services = makeServices();
+    const oldState = makeState({ channelId: "vc-1" });
+    const newState = makeState({ channelId: "vc-1" });
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
+    expect(tempVcRegistry.isManagedVc).not.toHaveBeenCalled();
+  });
+
+  it("ignores channels that are neither managed VCs nor generators", async () => {
+    const services = makeServices();
+    const oldState = makeState();
+    const newState = makeState({ channelId: "random-1" });
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
     expect(trackVoiceState).not.toHaveBeenCalled();
+    expect(tempvc.scheduleCleanup).not.toHaveBeenCalled();
+    expect(tempvc.createVc).not.toHaveBeenCalled();
+  });
+
+  it("schedules cleanup when leaving a managed VC that is now empty", async () => {
+    const services = makeServices();
+    (tempVcRegistry.isManagedVc as any).mockImplementation(
+      async (_g: string, c: string) => c === "vc-9",
+    );
+    (trackVoiceState as any).mockResolvedValue({ prevChannelId: "vc-9" });
+    (isVoiceChannelEmpty as any).mockResolvedValue(true);
+    const oldState = makeState({ channelId: "vc-9" });
+    const newState = makeState({ channelId: null });
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
+    expect(tempvc.scheduleCleanup).toHaveBeenCalledWith("g1", "vc-9");
+  });
+
+  it("creates a VC when joining a generator channel", async () => {
+    const services = makeServices();
+    const generator = { name: "Gaming {}", limit: 0 };
+    (tempVcRegistry.getGenerator as any).mockResolvedValue(generator);
+    const voiceChannel = { id: "gen-1", isVoiceBased: () => true };
+    const member = makeMember(false);
+    const oldState = makeState();
+    const newState = makeState({ channelId: "gen-1", member, channel: voiceChannel });
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
+    expect(tempvc.createVc).toHaveBeenCalledWith(services, member, voiceChannel, generator);
   });
 });

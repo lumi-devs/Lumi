@@ -11,3 +11,7 @@ import pkg from "../package.json" with { type: "json" };
  * `package.json` next to `dist/`, npm includes it regardless of `files`).
  */
 export const CONTRACT_VERSION: string = pkg.version;
+
+export const MIN_COMPATIBLE_CONTRACT_VERSION: string = "0.6.0";
+
+export const COMPATIBLE_CONTRACT_RANGE: string = `>=${MIN_COMPATIBLE_CONTRACT_VERSION} <=${CONTRACT_VERSION}`;

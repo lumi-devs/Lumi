@@ -1,10 +1,9 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry, Result } from "@sapphire/framework";
-import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
-import {
-  ModerationCommand,
-  type ModerationCommand as MC,
-} from "#lib/moderation/ModerationCommand.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import { Result } from "@lumi/shared";
+import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import { runModerationFlow, type ModerationCommand as MC } from "#lib/moderation/ModerationCommand.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import type { GuildMember } from "discord.js";
 
@@ -21,38 +20,14 @@ interface SanitizeOutcome {
   after: string;
 }
 
-@ApplyOptions<MC.Options>({
-  name: "sanitize",
-  description: "Remove hoisting characters from a member's nickname",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "mod.*",
-  prefixEnabled: true,
-  logScope: "sanitize",
-})
-export class SanitizeCommand extends ModerationCommand<
-  GuildMember,
+const sanitizeDefFlow: MC.Flow<GuildMember,
   SanitizeOutcome,
-  string
-> {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      applyLocalizedBuilder(b, "commands:sanitize").addUserOption((o) =>
-        applyLocalizedBuilder(o, "commands:sanitizeMember").setRequired(true),
-      ),
-    );
-  }
-
-  protected override resolveTarget(ctx: MC.RunContext) {
+  string> = {
+  logScope: "sanitize",
+  resolveTarget: (ctx: MC.RunContext) => {
     return ctx.getMembers("member", { required: true });
-  }
-
-  protected override resolveReason(): Promise<string> {
-    return Promise.resolve("Sanitize: removed hoisting characters");
-  }
-
-  protected override preHandle(_ctx: MC.RunContext, t: LumiT, target: GuildMember) {
+  },
+  preHandle: (_ctx: MC.RunContext, t: LumiT, target: GuildMember) => {
     const current = target.nickname ?? target.user.username;
     const sanitized = sanitizeName(current);
     if (sanitized === current) {
@@ -62,21 +37,22 @@ export class SanitizeCommand extends ModerationCommand<
       });
     }
     return Result.ok(sanitized);
-  }
-
-  protected override async action({
+  },
+  resolveReason: () => {
+    return Promise.resolve("Sanitize: removed hoisting characters");
+  },
+  action: async ({
     target,
     prepared,
-  }: MC.ActionContext<GuildMember, string>): Promise<SanitizeOutcome> {
+  }: MC.ActionContext<GuildMember, string>) => {
     const before = target.nickname ?? target.user.username;
     await target.setNickname(prepared, "Sanitize: removed hoisting characters");
     return { before, after: prepared };
-  }
-
-  protected override buildSuccessMessage(
+  },
+  buildSuccessMessage: (
     t: LumiT,
     { target, outcome }: MC.OutcomeContext<GuildMember, SanitizeOutcome, string>,
-  ) {
+  ) => {
     return {
       title: t(`${Root}:sanitizeSuccessTitle`),
       body: t(`${Root}:sanitizeSuccess`, {
@@ -86,4 +62,21 @@ export class SanitizeCommand extends ModerationCommand<
       }),
     };
   }
-}
+};
+
+export const sanitizeDef: CommandDef = {
+  name: "sanitize",
+  description: "Remove hoisting characters from a member's nickname",
+  guildOnly: true,
+  requiredPermit: "mod.*",
+  prefixEnabled: true,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("sanitize");
+    return (
+    applyLocalizedBuilder(b, "commands:sanitize").addUserOption((o) =>
+            applyLocalizedBuilder(o, "commands:sanitizeMember").setRequired(true),
+          )
+    ) as SlashCommandBuilder;
+  },
+  run: (ctx: CommandContext) => runModerationFlow(ctx, sanitizeDefFlow)
+};

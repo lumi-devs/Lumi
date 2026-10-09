@@ -29,7 +29,7 @@ describe("lumi addon SDK resolution", () => {
     "interactions",
     "kv",
     "permissions",
-    "redis",
+    "valkey",
     "scheduling",
     "ui",
     "utils",
@@ -40,8 +40,8 @@ describe("lumi addon SDK resolution", () => {
 
   it.each([
     "#lib/env.js",
-    "#lib/commands.js",
-    "#lib/database/redis.js",
+    "#lib/commands/gates.js",
+    "#lib/valkey/client.js",
     "#lib/utilities/misc.js",
     "#modules/mod/index.js",
     "#root/main.js",
@@ -55,15 +55,13 @@ describe("lumi addon SDK resolution", () => {
 
   it("exposes the module fundamentals from the top-level import", async () => {
     const sdk = await import("./sdk/index.js");
-    expect(sdk.Module).toBeTypeOf("function");
-    expect(sdk.DefineModule).toBeTypeOf("function");
+    expect(sdk.defineModule).toBeTypeOf("function");
     expect(sdk.cfg).toBeDefined();
   });
 
-  it("exposes command base classes from lumi/commands", async () => {
+  it("exposes plain command definitions from lumi/commands", async () => {
     const commands = await import("./sdk/commands.js");
-    expect(commands.BaseCommand).toBeTypeOf("function");
-    expect(commands.BaseSubcommand).toBeTypeOf("function");
+    expect(commands.defineCommand).toBeTypeOf("function");
     expect(commands.CommandContext).toBeTypeOf("function");
   });
 
@@ -74,13 +72,13 @@ describe("lumi addon SDK resolution", () => {
     expect(ui.Emojis).toBeDefined();
   });
 
-  it("hands out no Discord client, database or Redis handle", async () => {
+  it("hands out no Discord client, database or Valkey handle", async () => {
     const sdk = await import("./sdk/index.js");
     const surface = Object.keys(sdk);
     expect(surface).not.toContain("container");
     expect(surface).not.toContain("Utility");
     expect(surface).not.toContain("getUtility");
     const utils = await import("./sdk/utils.js");
-    expect(Object.keys(utils)).not.toContain("acquireRedisLock");
+    expect(Object.keys(utils)).not.toContain("acquireValkeyLock");
   });
 });

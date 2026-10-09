@@ -1,10 +1,10 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { parseDuration } from "#lib/utilities/time.js";
 import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,
   type SlotPayoutKey,
-} from "./services/slots.js";
+} from "@lumi/application/services/economy/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
 export interface EconomyConfig {
@@ -53,10 +53,11 @@ function asDurationMs(value: unknown, fallback: number): number {
 }
 
 export async function getEconomyConfig(
+  services: Container,
   guildId: string,
 ): Promise<EconomyConfig> {
   const get = (key: string) =>
-    container.db.config.getModuleConfig(guildId, EconomyModuleName, key);
+    services.db.config.getModuleConfig(guildId, EconomyModuleName, key);
   const [
     currencyName,
     currencyEmoji,

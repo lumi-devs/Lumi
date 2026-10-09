@@ -1,15 +1,15 @@
-import { container } from "@sapphire/framework";
-import { s, type BaseValidator } from "@sapphire/shapeshift";
+import { container } from "#lib/services.js";
+import { z } from "zod";
 import {
   CodedRpcError,
   RpcFailureCodes,
-  SnowflakeSchema,
   type RpcAuth,
   type RpcInputOf,
   type RpcOutputOf,
   type RpcRequest,
   type RpcSliceEntry,
 } from "@lumi/contracts/rpc";
+import { snowflakeString } from "#lib/module-system/config-schema.js";
 import { authorize } from "#lib/permissions/authorize.js";
 import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
 
@@ -42,8 +42,10 @@ function forbidden(message: string): CodedRpcError {
   return new CodedRpcError(RpcFailureCodes.Forbidden, message);
 }
 
+const GuildIdSchema = snowflakeString();
+
 export function requireGuildId(guildId: string | null | undefined): string {
-  if (guildId && SnowflakeSchema.run(guildId).isOk()) return guildId;
+  if (guildId && GuildIdSchema.safeParse(guildId).success) return guildId;
   throw new CodedRpcError(
     RpcFailureCodes.BadRequest,
     "guildId is required and must be a valid snowflake",
@@ -111,11 +113,15 @@ const authorizers: RpcAuthorizers = {
     Promise.resolve({ actorId: req.actorId, guildId: req.guildId }),
 };
 
-const NoInput = s.unknown().transform((): undefined => undefined);
+const NoInput = z.unknown().transform((): undefined => undefined);
 
-function parseInput<T>(validator: BaseValidator<unknown>, data: unknown): T {
+interface InputValidator {
+  parse(data: unknown): unknown;
+}
+
+function parseInput<T>(validator: InputValidator, data: unknown): T {
   try {
-    return validator.parse<T>(data);
+    return validator.parse(data) as T;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new CodedRpcError(RpcFailureCodes.BadRequest, `Bad payload: ${msg}`);
@@ -123,7 +129,7 @@ function parseInput<T>(validator: BaseValidator<unknown>, data: unknown): T {
 }
 
 function requireModuleLoaded(name: string): void {
-  if (!container.stores.get("modules").get(name)) {
+  if (!container.moduleStore.get(name)) {
     throw new CodedRpcError(
       RpcFailureCodes.ModuleNotLoaded,
       `The ${name} module is not loaded`,
@@ -140,7 +146,7 @@ function withInput<T extends object, I>(auth: T, input: I): T & { input: I } {
 function bindAction<A extends RpcAuth, I, O>(
   entry: {
     auth: A;
-    input?: BaseValidator<unknown>;
+    input?: InputValidator;
     requiresEnabled?: string;
   },
   handler: (context: RpcAuthContexts[A] & { input: I }) => Promise<O> | O,

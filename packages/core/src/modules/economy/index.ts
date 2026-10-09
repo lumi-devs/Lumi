@@ -1,9 +1,10 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import type { Container } from "#lib/services.js";
 import { cfg } from "#lib/module-system/config-schema.js";
-import { defaultSlotPayoutEntries } from "./services/slots.js";
+import { defaultSlotPayoutEntries } from "@lumi/application/services/economy/slots.js";
 import { EconomyModuleName } from "./constants.js";
 
-@DefineModule({
+export const economyModule = defineModule({
   name: EconomyModuleName,
   displayName: "Economy",
   emoji: "🪙",
@@ -114,20 +115,19 @@ import { EconomyModuleName } from "./constants.js";
       group: "Slots",
     }),
   }),
-})
-export class EconomyModule extends Module {
-  public override async deleteUserData(userId: string): Promise<void> {
-    await this.container.db.economy.deleteForUser(userId);
-  }
+  async deleteUserData(services: Container, userId: string): Promise<void> {
+    await services.db.economy.deleteForUser(userId);
+  },
 
-  public override async exportUserData(
+  async exportUserData(
+    services: Container,
     userId: string,
   ): Promise<Record<string, unknown> | null> {
     const [accounts, transactions] = await Promise.all([
-      this.container.db.economy.findAccountsForUser(userId),
-      this.container.db.economy.findTransactionsForUser(userId),
+      services.db.economy.findAccountsForUser(userId),
+      services.db.economy.findTransactionsForUser(userId),
     ]);
     if (accounts.length === 0 && transactions.length === 0) return null;
     return { accounts, transactions };
-  }
-}
+  },
+});

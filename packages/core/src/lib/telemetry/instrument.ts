@@ -7,14 +7,6 @@ import {
   withSpan,
 } from "@lumi/observability";
 
-type RunMethod = "chatInputRun" | "messageRun" | "contextMenuRun";
-
-const TypeLabel: Record<RunMethod, string> = {
-  chatInputRun: "chat",
-  messageRun: "message",
-  contextMenuRun: "context",
-};
-
 interface IdSource {
   guildId?: unknown;
   guild?: { id?: string } | null;
@@ -31,7 +23,7 @@ function extractIds(source: unknown): { guildId?: string; userId?: string } {
   return { guildId, userId };
 }
 
-async function instrumentedRun(
+export async function instrumentedRun(
   command: string,
   type: string,
   source: unknown,
@@ -70,27 +62,4 @@ async function instrumentedRun(
         { kind: SpanKind.SERVER },
       ),
   );
-}
-
-/** Shadow the piece's run methods with instrumented wrappers. Call once, in the base ctor. */
-export function instrumentCommandPiece(piece: { name: string }): void {
-  const target = piece as Record<string, unknown> & { name: string };
-  for (const method of [
-    "chatInputRun",
-    "messageRun",
-    "contextMenuRun",
-  ] as RunMethod[]) {
-    const original = target[method];
-    if (typeof original !== "function") continue;
-    const fn = original as (...args: unknown[]) => unknown;
-    Object.defineProperty(target, method, {
-      configurable: true,
-      writable: true,
-      value(this: unknown, source: unknown, ...rest: unknown[]) {
-        return instrumentedRun(piece.name, TypeLabel[method], source, () =>
-          fn.call(this, source, ...rest),
-        );
-      },
-    });
-  }
 }

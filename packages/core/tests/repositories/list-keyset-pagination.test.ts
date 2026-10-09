@@ -3,7 +3,7 @@ import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
 import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

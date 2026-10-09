@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,
@@ -85,7 +85,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     );
     await fs.writeFile(
       path.join(sourcePath, "index.ts"),
-      `@DefineModule({ name: "${moduleName}" })\nexport class LoaderTestModule {}`,
+      `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "${moduleName}" });`,
     );
 
     const result = await resolver.installModule(repoName, moduleName);
@@ -109,7 +109,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     await fs.mkdir(sourcePath, { recursive: true });
     await fs.writeFile(
       path.join(sourcePath, "index.ts"),
-      `@DefineModule({ name: "${moduleName}" })\nexport class LoaderTestModule {}`,
+      `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "${moduleName}" });`,
     );
 
     await expect(resolver.installModule(repoName, moduleName)).rejects.toThrow(

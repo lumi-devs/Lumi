@@ -2,7 +2,7 @@ import type { DoctorCheckResult } from "#lib/doctor/types.js";
 
 /**
  * Races `promise` against a timer that resolves to a synthetic result instead
- * of rejecting - a check that hangs (a dead Postgres/Redis connection, an
+ * of rejecting - a check that hangs (a dead Postgres/Valkey connection, an
  * unreachable Discord API) must still produce a result for the report rather
  * than stalling `runDoctor()` past its own global timeout.
  */

@@ -1,11 +1,11 @@
 import os from "node:os";
-import type { RedisClient } from "#lib/database/cluster-safe.js";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Prisma } from "@prisma/client";
 import { version as djsVersion } from "discord.js";
-import { container, version as sapphireVersion } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
 import { logError } from "#lib/utilities/errors.js";
 
@@ -71,19 +71,19 @@ export interface PingData {
   dbRollbacks: number | null;
   txRate: number;
 
-  redisReadMs: number | null;
-  redisWriteMs: number | null;
-  redisVersion: string;
-  redisUptimeSecs: number;
-  redisMemUsedBytes: number;
-  redisMemPeakBytes: number;
-  redisFragRatio: number;
-  redisHitRatio: number;
-  redisHits: number;
-  redisMisses: number;
-  redisEvicted: number;
-  redisClients: number;
-  redisTotalKeys: number;
+  valkeyReadMs: number | null;
+  valkeyWriteMs: number | null;
+  valkeyVersion: string;
+  valkeyUptimeSecs: number;
+  valkeyMemUsedBytes: number;
+  valkeyMemPeakBytes: number;
+  valkeyFragRatio: number;
+  valkeyHitRatio: number;
+  valkeyHits: number;
+  valkeyMisses: number;
+  valkeyEvicted: number;
+  valkeyClients: number;
+  valkeyTotalKeys: number;
 
   uptime: number;
   guilds: number;
@@ -100,7 +100,6 @@ export interface PingData {
   messagesPerMin: number;
 
   djsVersion: string;
-  sapphireVersion: string;
   prismaVersion: string;
 }
 
@@ -116,7 +115,7 @@ let cachedCommandsPerSec = 0;
 let cachedMessagesPerMin = 0;
 let cachedTxRate = 0;
 
-function recordInvocation(wsPing: number) {
+function recordInvocation(services: Container, wsPing: number) {
   sessionCommandCount++;
   if (wsPing > 0) {
     PingHistory.push(wsPing);
@@ -129,9 +128,9 @@ function recordInvocation(wsPing: number) {
   if (delta >= 2) {
     cachedCommandsPerSec = (sessionCommandCount - lastCmdCount) / delta;
     cachedMessagesPerMin =
-      ((container.stats.messages - lastMsgCount) / delta) * 60;
+      ((services.stats.messages - lastMsgCount) / delta) * 60;
     lastCmdCount = sessionCommandCount;
-    lastMsgCount = container.stats.messages;
+    lastMsgCount = services.stats.messages;
     lastSampleTime = now;
   }
 }
@@ -184,7 +183,7 @@ async function getGatewayNode(): Promise<string> {
   return cachedGatewayNode;
 }
 
-function parseRedisInfo(raw: string) {
+function parseValkeyInfo(raw: string) {
   const result: Record<string, string> = {};
   for (const line of raw.split("\r\n")) {
     if (line.startsWith("#") || !line.includes(":")) continue;
@@ -194,15 +193,15 @@ function parseRedisInfo(raw: string) {
   return result;
 }
 
-async function probeRedisRead(redis: RedisClient) {
+async function probeValkeyRead(valkey: ValkeyClient) {
   const start = performance.now();
-  await redis.get("lumi:ping:probe");
+  await valkey.get("lumi:ping:probe");
   return performance.now() - start;
 }
 
-async function probeRedisWrite(redis: RedisClient) {
+async function probeValkeyWrite(valkey: ValkeyClient) {
   const start = performance.now();
-  await redis.set("lumi:ping:probe", "1", "EX", 30);
+  await valkey.set("lumi:ping:probe", "1", "EX", 30);
   return performance.now() - start;
 }
 
@@ -227,18 +226,18 @@ const pgStat: TtlCache<ReturnType<typeof postgresStats>> = {
   value: null,
   at: 0,
 };
-const rdStat: TtlCache<ReturnType<typeof redisStats>> = {
+const rdStat: TtlCache<ReturnType<typeof valkeyStats>> = {
   value: null,
   at: 0,
 };
 
-async function probePrisma() {
-  return container.db.probePrisma();
+async function probePrisma(services: Container) {
+  return services.db.probePrisma();
 }
 
-async function postgresStats() {
+async function postgresStats(services: Container) {
   try {
-    const { overview: ov, tables, tx } = await container.db.getPostgresStats();
+    const { overview: ov, tables, tx } = await services.db.getPostgresStats();
 
     const commits = tx ? parseInt(tx.commits, 10) : 0;
     const now = Date.now();
@@ -273,41 +272,41 @@ async function postgresStats() {
   }
 }
 
-async function redisStats(redis: RedisClient) {
+async function valkeyStats(valkey: ValkeyClient) {
   try {
-    const raw = await redis.info();
-    const info = parseRedisInfo(raw);
+    const raw = await valkey.info();
+    const info = parseValkeyInfo(raw);
     const hits = parseInt(info.keyspace_hits ?? "0", 10);
     const misses = parseInt(info.keyspace_misses ?? "0", 10);
     const total = hits + misses;
-    const dbSize = await redis.dbsize().catch(() => 0);
+    const dbSize = await valkey.dbsize().catch(() => 0);
     return {
-      redisVersion: info.redis_version ?? "unknown",
-      redisUptimeSecs: parseInt(info.uptime_in_seconds ?? "0", 10),
-      redisMemUsedBytes: parseInt(info.used_memory ?? "0", 10),
-      redisMemPeakBytes: parseInt(info.used_memory_peak ?? "0", 10),
-      redisFragRatio: parseFloat(info.mem_fragmentation_ratio ?? "1"),
-      redisHitRatio: total > 0 ? (hits / total) * 100 : 0,
-      redisHits: hits,
-      redisMisses: misses,
-      redisEvicted: parseInt(info.evicted_keys ?? "0", 10),
-      redisClients: parseInt(info.connected_clients ?? "0", 10),
-      redisTotalKeys: dbSize,
+      valkeyVersion: info.valkey_version ?? "unknown",
+      valkeyUptimeSecs: parseInt(info.uptime_in_seconds ?? "0", 10),
+      valkeyMemUsedBytes: parseInt(info.used_memory ?? "0", 10),
+      valkeyMemPeakBytes: parseInt(info.used_memory_peak ?? "0", 10),
+      valkeyFragRatio: parseFloat(info.mem_fragmentation_ratio ?? "1"),
+      valkeyHitRatio: total > 0 ? (hits / total) * 100 : 0,
+      valkeyHits: hits,
+      valkeyMisses: misses,
+      valkeyEvicted: parseInt(info.evicted_keys ?? "0", 10),
+      valkeyClients: parseInt(info.connected_clients ?? "0", 10),
+      valkeyTotalKeys: dbSize,
     };
   } catch (err: unknown) {
-    logError("Ping: RedisClient stats failed", err);
+    logError("Ping: ValkeyClient stats failed", err);
     return {
-      redisVersion: "unknown",
-      redisUptimeSecs: 0,
-      redisMemUsedBytes: 0,
-      redisMemPeakBytes: 0,
-      redisFragRatio: 1,
-      redisHitRatio: 0,
-      redisHits: 0,
-      redisMisses: 0,
-      redisEvicted: 0,
-      redisClients: 0,
-      redisTotalKeys: 0,
+      valkeyVersion: "unknown",
+      valkeyUptimeSecs: 0,
+      valkeyMemUsedBytes: 0,
+      valkeyMemPeakBytes: 0,
+      valkeyFragRatio: 1,
+      valkeyHitRatio: 0,
+      valkeyHits: 0,
+      valkeyMisses: 0,
+      valkeyEvicted: 0,
+      valkeyClients: 0,
+      valkeyTotalKeys: 0,
     };
   }
 }
@@ -363,7 +362,7 @@ async function hostStats() {
 function findRepoRoot(startDir: string): string {
   let dir = startDir;
   while (true) {
-    if (existsSync(path.join(dir, "turbo.json"))) return dir;
+    if (existsSync(path.join(dir, "package.json"))) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) return startDir;
     dir = parent;
@@ -377,32 +376,67 @@ let cachedCodeLines: number | null = null;
 
 async function countDeps() {
   if (cachedDepCount !== null) return cachedDepCount;
-  const nmPath = path.join(RepoRoot, "node_modules");
-  const dirs = await fs.readdir(nmPath).catch(() => []);
-  cachedDepCount = dirs.filter((d) => !d.startsWith(".")).length;
-  return cachedDepCount;
+  try {
+    const pkgJsonPath = path.join(RepoRoot, "package.json");
+    const raw = await fs.readFile(pkgJsonPath, "utf-8").catch(() => null);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const deps = Object.keys(parsed.dependencies ?? {}).length +
+        Object.keys(parsed.devDependencies ?? {}).length;
+      if (deps > 0) {
+        cachedDepCount = deps;
+        return cachedDepCount;
+      }
+    }
+    const nmPath = path.join(RepoRoot, "node_modules");
+    const dirs = await fs.readdir(nmPath).catch(() => []);
+    cachedDepCount = dirs.filter((d) => !d.startsWith(".")).length;
+    return cachedDepCount;
+  } catch {
+    return 0;
+  }
 }
 
 async function countCodeLines() {
   if (cachedCodeLines !== null) return cachedCodeLines;
-  const srcPath = path.join(RepoRoot, "packages", "core", "src");
-  let total = 0;
-  const walk = async (dir: string): Promise<void> => {
+  const roots = [RepoRoot, process.cwd(), "/app"].filter(
+    (r, i, a) => a.indexOf(r) === i,
+  );
+  const walk = async (dir: string): Promise<number> => {
+    let total = 0;
     const entries = await fs
       .readdir(dir, { withFileTypes: true })
       .catch(() => []);
     for (const e of entries) {
+      if (
+        e.name === "node_modules" ||
+        e.name === "dist" ||
+        e.name.startsWith(".")
+      )
+        continue;
       const full = path.join(dir, e.name);
       if (e.isDirectory()) {
-        await walk(full);
+        total += await walk(full);
         continue;
       }
-      if (!e.name.endsWith(".ts")) continue;
+      if (!e.name.endsWith(".ts") || e.name.endsWith(".d.ts")) continue;
       const content = await fs.readFile(full, "utf-8").catch(() => "");
       total += content.split("\n").length;
     }
+    return total;
   };
-  await walk(srcPath);
+  let total = 0;
+  for (const root of roots) {
+    for (const sub of ["packages", "apps"]) {
+      const base = path.join(root, sub);
+      const workspaces = await fs.readdir(base).catch(() => [] as string[]);
+      for (const ws of workspaces) {
+        if (ws.startsWith(".")) continue;
+        total += await walk(path.join(base, ws, "src"));
+      }
+    }
+    if (total > 0) break;
+  }
   cachedCodeLines = total;
   return cachedCodeLines;
 }
@@ -419,11 +453,11 @@ let lastCollect: {
 } | null = null;
 const CollectTtlMs = 5_000;
 
-export async function collectPingData(): Promise<Omit<PingData, "roundTrip">> {
+export async function collectPingData(services: Container): Promise<Omit<PingData, "roundTrip">> {
   if (lastCollect && Date.now() - lastCollect.at < CollectTtlMs) {
     return lastCollect.data;
   }
-  const data = await collectPingDataFresh();
+  const data = await collectPingDataFresh(services);
   lastCollect = { at: Date.now(), data };
   return data;
 }
@@ -434,11 +468,11 @@ export function resetPingCachesForTests(): void {
   lastCollect = null;
 }
 
-async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
-  const { client, redis, moduleStore, stats } = container;
+async function collectPingDataFresh(services: Container): Promise<Omit<PingData, "roundTrip">> {
+  const { client, valkey, moduleStore, stats } = services;
   const wsPing = client.ws.ping ?? 0;
 
-  recordInvocation(wsPing);
+  recordInvocation(services, wsPing);
 
   const cpuBefore = process.cpuUsage();
   const nsBefore = process.hrtime.bigint();
@@ -446,8 +480,8 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
   const [
     loopLagMs,
     prismaMs,
-    redisReadMs,
-    redisWriteMs,
+    valkeyReadMs,
+    valkeyWriteMs,
     pgStats,
     rdStats,
     hostData,
@@ -456,11 +490,11 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     gatewayNode,
   ] = await Promise.all([
     measureLoopLag(),
-    probePrisma().catch(() => null),
-    probeRedisRead(redis).catch(() => null),
-    probeRedisWrite(redis).catch(() => null),
-    ttlCached(pgStat, postgresStats),
-    ttlCached(rdStat, () => redisStats(redis)),
+    probePrisma(services).catch(() => null),
+    probeValkeyRead(valkey).catch(() => null),
+    probeValkeyWrite(valkey).catch(() => null),
+    ttlCached(pgStat, () => postgresStats(services)),
+    ttlCached(rdStat, () => valkeyStats(valkey)),
     hostStats(),
     countDeps(),
     countCodeLines(),
@@ -524,8 +558,8 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     prismaMs,
     ...pgStats,
 
-    redisReadMs,
-    redisWriteMs,
+    valkeyReadMs,
+    valkeyWriteMs,
     ...rdStats,
 
     uptime: client.uptime ?? 0,
@@ -544,7 +578,6 @@ async function collectPingDataFresh(): Promise<Omit<PingData, "roundTrip">> {
     messagesPerMin: cachedMessagesPerMin,
 
     djsVersion,
-    sapphireVersion,
     prismaVersion,
   };
 }

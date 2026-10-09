@@ -151,7 +151,7 @@ function indexTs(args: Args): string {
 export class ${className} extends Module {
   public override async deleteUserData(): Promise<void> {
     // TODO: if this addon ever persists anything keyed by a user ID (via
-    // container.db.guildKV or container.redis), delete it here. Until then,
+    // "lumi/kv" or "lumi/valkey"), delete it here. Until then,
     // this no-op is the GDPR-compliant default - see https://lumi-devs.github.io/Lumi-docs/addons/overview.
   }
 }
@@ -161,17 +161,19 @@ export class ${className} extends Module {
 function commandTs(args: Args): string {
   const commandName = args.name.replace(/-/g, "_").slice(0, 32);
   const className = titleCase(args.name).replace(/[^a-zA-Z0-9]/g, "") + "Command";
-  return `import { ApplyOptions } from "@sapphire/decorators";
-import { container, type Command } from "@sapphire/framework";
-import { BaseCommand, type CommandContext } from "lumi/commands";
+  return `import { BaseCommand, type CommandContext, type CommandRegistry } from "lumi/commands";
+import { getModuleConfig } from "lumi/config";
 
-@ApplyOptions<BaseCommand.Options>({
-  name: "${commandName}",
-  description: "${args.displayName} command.",
-  cooldownDelay: 5_000,
-})
 export default class ${className} extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
+  public constructor() {
+    super({
+      name: "${commandName}",
+      description: "${args.displayName} command.",
+      cooldownDelay: 5_000,
+    });
+  }
+
+  public override registerApplicationCommands(registry: CommandRegistry) {
     registry.registerChatInputCommand((builder) =>
       builder.setName(this.name).setDescription(this.description),
     );
@@ -182,11 +184,7 @@ export default class ${className} extends BaseCommand {
       return ctx.replyError("Guild Only", "This command only works inside a server.");
     }
 
-    const messageRaw = await container.db.config.getModuleConfig(
-      ctx.guildId,
-      "${args.name}",
-      "enabled_message",
-    );
+    const messageRaw = await getModuleConfig("enabled_message", ctx.guildId ?? undefined);
     const message = typeof messageRaw === "string" ? messageRaw : null;
 
     return ctx.replySuccess("${args.displayName}", message ?? "Hello from ${args.displayName}!");

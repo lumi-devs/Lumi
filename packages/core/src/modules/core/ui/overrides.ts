@@ -26,7 +26,7 @@ import {
   TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
 import { ConfigButtonId } from "../constants.js";
 

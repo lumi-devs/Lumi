@@ -1,21 +1,17 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import type { GuildMember } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { logError } from "#lib/utilities/errors.js";
-import { loadWelcomeConfig } from "../services/welcome.js";
-import { sendWelcomeCard } from "../services/welcome.js";
-import { buildDmWelcomeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "../services/welcome.js";
+import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
+import { buildDmWelcomeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const WelcomeMemberAddListener = defineListener({
   name: "welcomeMemberAdd",
   event: Events.GuildMemberAdd,
   module: "welcome",
-})
-export class WelcomeMemberAddListener extends ModuleListener<
-  typeof Events.GuildMemberAdd
-> {
-  protected async handle(member: GuildMember): Promise<void> {
+  async execute(_services: Container, member: GuildMember): Promise<void> {
     if (member.user.bot) return;
     const config = await loadWelcomeConfig(member.guild.id);
     const vars = templateVarsFor(
@@ -54,5 +50,5 @@ export class WelcomeMemberAddListener extends ModuleListener<
         )
         .catch((err: unknown) => logError("Welcome: DM send failed", err));
     }
-  }
-}
+  },
+});

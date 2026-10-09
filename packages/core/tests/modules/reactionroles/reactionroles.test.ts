@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   countMenus,
   deleteMenu,
@@ -229,49 +229,49 @@ describe("reactionroles menu CRUD", () => {
   });
 
   it("saves, lists, and fetches menus per guild", async () => {
-    await saveMenu(makeMenu());
-    await saveMenu(makeMenu({ id: "other", guildId: "guild-2", title: "Other" }));
+    await saveMenu(container, makeMenu());
+    await saveMenu(container, makeMenu({ id: "other", guildId: "guild-2", title: "Other" }));
 
-    expect(await countMenus("guild-1")).toBe(1);
-    expect((await listMenus("guild-1")).map((m) => m.id)).toEqual(["game-night"]);
-    expect((await getMenu("guild-1", "game-night"))?.title).toBe("Game Night");
-    expect(await getMenu("guild-1", "missing")).toBeNull();
+    expect(await countMenus(container, "guild-1")).toBe(1);
+    expect((await listMenus(container, "guild-1")).map((m) => m.id)).toEqual(["game-night"]);
+    expect((await getMenu(container, "guild-1", "game-night"))?.title).toBe("Game Night");
+    expect(await getMenu(container, "guild-1", "missing")).toBeNull();
   });
 
   it("resolves unique menu ids", async () => {
-    await saveMenu(makeMenu());
-    expect(await resolveMenuId("guild-1", "Game Night")).toBe("game-night-2");
-    expect(await resolveMenuId("guild-1", "Fresh Title")).toBe("fresh-title");
+    await saveMenu(container, makeMenu());
+    expect(await resolveMenuId(container, "guild-1", "Game Night")).toBe("game-night-2");
+    expect(await resolveMenuId(container, "guild-1", "Fresh Title")).toBe("fresh-title");
   });
 
   it("tracks posted messages and finds menus by message", async () => {
-    const menu = await saveMenu(makeMenu());
-    const tracked = await trackMenuMessage(menu, "channel-9", "message-7");
+    const menu = await saveMenu(container, makeMenu());
+    const tracked = await trackMenuMessage(container, menu, "channel-9", "message-7");
     expect(tracked.messageIds).toContain("message-7");
 
-    const found = await findMenuByMessage("guild-1", "message-7");
+    const found = await findMenuByMessage(container, "guild-1", "message-7");
     expect(found?.id).toBe("game-night");
-    expect(await findMenuByMessage("guild-1", "unknown-message")).toBeNull();
+    expect(await findMenuByMessage(container, "guild-1", "unknown-message")).toBeNull();
   });
 
   it("deletes menus", async () => {
-    const menu = await saveMenu(makeMenu());
-    await trackMenuMessage(menu, "channel-9", "message-7");
-    expect(await deleteMenu("guild-1", "game-night")).toBe(true);
-    expect(await deleteMenu("guild-1", "game-night")).toBe(false);
-    expect(await countMenus("guild-1")).toBe(0);
+    const menu = await saveMenu(container, makeMenu());
+    await trackMenuMessage(container, menu, "channel-9", "message-7");
+    expect(await deleteMenu(container, "guild-1", "game-night")).toBe(true);
+    expect(await deleteMenu(container, "guild-1", "game-night")).toBe(false);
+    expect(await countMenus(container, "guild-1")).toBe(0);
   });
 
   it("does not let one guild read another guild's menu by id", async () => {
-    await saveMenu(makeMenu());
-    expect(await getMenu("guild-2", "game-night")).toBeNull();
+    await saveMenu(container, makeMenu());
+    expect(await getMenu(container, "guild-2", "game-night")).toBeNull();
   });
 
   it("round-trips option add/edit/remove through saveMenu's full-replace semantics", async () => {
-    const menu = await saveMenu(makeMenu({ options: [] }));
+    const menu = await saveMenu(container, makeMenu({ options: [] }));
     expect(menu.options).toEqual([]);
 
-    const withOption = await saveMenu({
+    const withOption = await saveMenu(container, {
       ...menu,
       options: [
         {
@@ -286,7 +286,7 @@ describe("reactionroles menu CRUD", () => {
     });
     expect(withOption.options.map((o) => o.id)).toEqual(["valorant"]);
 
-    const edited = await saveMenu({
+    const edited = await saveMenu(container, {
       ...withOption,
       options: [
         {
@@ -307,8 +307,8 @@ describe("reactionroles menu CRUD", () => {
       },
     ]);
 
-    const removed = await saveMenu({ ...edited, options: [] });
+    const removed = await saveMenu(container, { ...edited, options: [] });
     expect(removed.options).toEqual([]);
-    expect((await getMenu("guild-1", "game-night"))?.options).toEqual([]);
+    expect((await getMenu(container, "guild-1", "game-night"))?.options).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   MaxMassTargets,
   parseSnowflakeList,
@@ -49,7 +49,7 @@ describe("resolveUsers", () => {
       id === "bad" ? Promise.reject(new Error("unknown")) : { id },
     );
     (container as any).client = { users: { fetch } };
-    const users = await resolveUsers(["a", "bad", "b"]);
+    const users = await resolveUsers(container, ["a", "bad", "b"]);
     expect(users.map((u) => u.id).sort()).toEqual(["a", "b"]);
   });
 });

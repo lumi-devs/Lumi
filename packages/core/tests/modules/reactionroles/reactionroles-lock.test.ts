@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,
 } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
 import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
-function mockRedis() {
+function mockValkey() {
   const store = new Map<string, string>();
   return {
     store,
@@ -54,13 +54,13 @@ function installMockDb() {
 }
 
 describe("ReactionRolesUtility menu-write locking", () => {
-  let service: ReactionRolesUtility;
-  let redis: ReturnType<typeof mockRedis>;
+  let service: typeof ReactionRolesUtility;
+  let valkey: ReturnType<typeof mockValkey>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = mockRedis();
-    (container as any).redis = redis;
+    valkey = mockValkey();
+    (container as any).valkey = valkey;
     (container as any).signals = {
       publish: vi.fn().mockResolvedValue(undefined),
     };
@@ -71,21 +71,18 @@ describe("ReactionRolesUtility menu-write locking", () => {
       info: vi.fn(),
     };
     installMockDb();
-    service = new ReactionRolesUtility(
-      { name: "reactionroles", store: { name: "utilities" } } as any,
-      {},
-    );
+    service = ReactionRolesUtility;
   });
 
   it("serializes concurrent addOption calls so both options survive", async () => {
-    await service.createMenu("guild-1", { title: "Game Night", mode: "buttons" });
+    await service.createMenu(container, "guild-1", { title: "Game Night", mode: "buttons" });
 
     await Promise.all([
-      service.addOption("guild-1", "game-night", {
+      service.addOption(container, "guild-1", "game-night", {
         label: "Valorant",
         roleId: "111111111111111111",
       }),
-      service.addOption("guild-1", "game-night", {
+      service.addOption(container, "guild-1", "game-night", {
         label: "Minecraft",
         roleId: "222222222222222222",
       }),
@@ -103,7 +100,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // the underlying data.ts read-modify-write directly - proves the race is real
     // at the storage layer the lock guards, not an artifact of the utility mock.
     const { saveMenu, getMenu: rawGetMenu } = await import("#modules/reactionroles/data/reactionroles.js");
-    await saveMenu({
+    await saveMenu(container, {
       id: "unlocked",
       guildId: "guild-1",
       title: "Unlocked",
@@ -126,7 +123,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // multi-statement delete-then-recreate write and can land on an
     // interleaving where both options survive instead of one being lost;
     // this reproduces the anomaly deterministically instead.)
-    const base = (await rawGetMenu("guild-1", "unlocked"))!;
+    const base = (await rawGetMenu(container, "guild-1", "unlocked"))!;
     const optionFor = (roleId: string) => ({
       id: roleId,
       label: roleId,
@@ -136,10 +133,10 @@ describe("ReactionRolesUtility menu-write locking", () => {
       requiredRoleId: null,
     });
 
-    await saveMenu({ ...base, options: [...base.options, optionFor("111111111111111111")] });
-    await saveMenu({ ...base, options: [...base.options, optionFor("222222222222222222")] });
+    await saveMenu(container, { ...base, options: [...base.options, optionFor("111111111111111111")] });
+    await saveMenu(container, { ...base, options: [...base.options, optionFor("222222222222222222")] });
 
-    const after = await rawGetMenu("guild-1", "unlocked");
+    const after = await rawGetMenu(container, "guild-1", "unlocked");
     expect(after?.options.map((o) => o.roleId)).toEqual(["222222222222222222"]);
   });
 
@@ -147,24 +144,24 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // bun:test has no setTimeout-queue virtualization (only a Date.now() mock),
     // so this can't fast-forward the lock's internal retry backoff — it just
     // waits for the real ~30s acquire timeout to elapse on its own.
-    redis.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
+    valkey.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
 
-    const pending = service.updateMenu("guild-1", "game-night", { title: "Renamed" });
+    const pending = service.updateMenu(container, "guild-1", "game-night", { title: "Renamed" });
     await expect(pending).rejects.toBeInstanceOf(ReactionRoleMenuLockedError);
   }, 35_000);
 
   it("releases the lock on a failed write so the next writer can proceed", async () => {
-    await service.createMenu("guild-1", { title: "Game Night", mode: "buttons" });
+    await service.createMenu(container, "guild-1", { title: "Game Night", mode: "buttons" });
 
     await expect(
-      service.addOption("guild-1", "missing-menu", {
+      service.addOption(container, "guild-1", "missing-menu", {
         label: "Valorant",
         roleId: "111111111111111111",
       }),
     ).rejects.toThrow("no longer exists");
 
     await expect(
-      service.addOption("guild-1", "game-night", {
+      service.addOption(container, "guild-1", "game-night", {
         label: "Valorant",
         roleId: "111111111111111111",
       }),

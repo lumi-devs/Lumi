@@ -200,8 +200,8 @@ reply text via the typed `t(Root.SomeKey)` constant, not a raw string —
 
 Per `agents/conventions/testing.md`, a new command's test goes in
 `packages/core/tests/modules/<module>/`. Mock `@sapphire/framework`'s
-`container` (redis/db/logger as plain `vi.fn()` stubs) rather than hitting
-real Postgres/Redis, and write one `it` per actual behavior
+`container` (valkey/db/logger as plain `vi.fn()` stubs) rather than hitting
+real Postgres/Valkey, and write one `it` per actual behavior
 (`'locks a channel that is not yet locked'`, not `'works'`). If the command's
 own logic is thin (mostly option-reading and a reply), the more valuable test
 usually lives one layer down — on whatever helper it calls (`lockChannel`/

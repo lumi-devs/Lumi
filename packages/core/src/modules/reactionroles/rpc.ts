@@ -1,4 +1,5 @@
 import { clampMessageDocumentV2 } from "@lumi/contracts";
+import { container } from "#lib/services.js";
 import { reactionrolesRpc } from "@lumi/contracts/rpc";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { implementRpc } from "#lib/rpc/implement.js";
@@ -24,7 +25,7 @@ function toView(menu: ReactionRoleMenu) {
 
 export const reactionrolesRpcHandlers = implementRpc(reactionrolesRpc, {
   "guild.reactionroles.menus.list": async ({ guildId }) => {
-    const menus = await getUtility("reactionroles").listMenus(guildId);
+    const menus = await getUtility("reactionroles").listMenus(container, guildId);
     return { menus: menus.map(toView) };
   },
 
@@ -50,15 +51,15 @@ export const reactionrolesRpcHandlers = implementRpc(reactionrolesRpc, {
       richContent: clampMessageDocumentV2(input.richContent),
     };
     const menu = existing
-      ? await service.updateMenu(guildId, input.id, fields)
-      : await service.createMenu(guildId, fields);
+      ? await service.updateMenu(container, guildId, input.id, fields)
+      : await service.createMenu(container, guildId, fields);
 
     const currentIds = new Set(menu.options.map((o) => o.id));
     const wantedIds = new Set(
       options.map((o, i) => o.id ?? menu.options[i]?.id ?? `option-${i + 1}`),
     );
     for (const stale of [...currentIds].filter((id) => !wantedIds.has(id))) {
-      await service.removeOption(guildId, menu.id, stale);
+      await service.removeOption(container, guildId, menu.id, stale);
     }
     let synced = await service.getMenu(guildId, menu.id);
     if (!synced) throw new Error("That role menu no longer exists.");
@@ -68,9 +69,9 @@ export const reactionrolesRpcHandlers = implementRpc(reactionrolesRpc, {
         (wanted.id && synced.options.find((o) => o.id === wanted.id)) ??
         synced.options.find((o) => o.roleId === wanted.roleId);
       if (match) {
-        synced = await service.editOption(guildId, menu.id, match.id, wanted);
+        synced = await service.editOption(container, guildId, menu.id, match.id, wanted);
       } else {
-        synced = await service.addOption(guildId, menu.id, wanted);
+        synced = await service.addOption(container, guildId, menu.id, wanted);
       }
     }
     const finalMenu = await service.getMenu(guildId, menu.id);
@@ -79,7 +80,7 @@ export const reactionrolesRpcHandlers = implementRpc(reactionrolesRpc, {
   },
 
   "guild.reactionroles.menus.delete": async ({ guildId, input }) => {
-    const deleted = await getUtility("reactionroles").deleteMenu(guildId, input.id);
+    const deleted = await getUtility("reactionroles").deleteMenu(container, guildId, input.id);
     return { success: true, id: input.id, deleted };
   },
 });

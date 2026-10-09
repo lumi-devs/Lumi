@@ -1,7 +1,7 @@
 import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { RedisKeys } from "#lib/database/redis.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#lib/env.js";
 import {
@@ -9,15 +9,12 @@ import {
   type RetentionPurgeOptions,
 } from "#lib/retention/archive.js";
 import {
-  createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
-  decodeCreatedAtIdCursor,
-  encodeCreatedAtIdCursor,
-  splitPage,
+  paginateCreatedAtId,
 } from "#lib/prisma/cursor.js";
 
-import { tryParseJSON } from "@sapphire/utilities";
-import { Time } from "@sapphire/time-utilities";
+import { tryParseJSON } from "@lumi/shared";
+import { Ms } from "@lumi/shared";
 
 /**
  * Per-process, so two overlapping workers cannot both read the other's pending
@@ -26,7 +23,7 @@ import { Time } from "@sapphire/time-utilities";
 const AuditConsumer = `${hostname()}:${process.pid}`;
 
 /** How long a delivered-but-unacked entry must sit before another run reclaims it. */
-const StalePendingMs = Time.Minute;
+const StalePendingMs = Ms.Minute;
 
 /**
  * Approximate cap on the buffer stream. If the flush task stops - a crash loop,
@@ -69,13 +66,13 @@ export interface AuditLedgerFilter {
 }
 
 /**
- * Buffered audit log - writes land in a Redis Stream (`auditLogsQueue`) and are
+ * Buffered audit log - writes land in a Valkey Stream (`auditLogsQueue`) and are
  * drained to the `AuditLedger` Postgres table in batches via a consumer group.
  */
 export class AuditRepository extends Repository {
   public async queueAuditLog(payload: AuditLogPayload) {
-    await this.redis.xadd(
-      RedisKeys.auditLogsQueue(WriteBucket),
+    await this.valkey.xadd(
+      ValkeyKeys.auditLogsQueue(WriteBucket),
       "MAXLEN",
       "~",
       AuditStreamMaxlen,
@@ -105,7 +102,7 @@ export class AuditRepository extends Repository {
   }
 
   async #flushBucket(bucket: number, batchSize: number) {
-    const key = RedisKeys.auditLogsQueue(bucket);
+    const key = ValkeyKeys.auditLogsQueue(bucket);
     await this.#ensureGroup(key);
 
     type XReadGroupReply = [string, [string, string[]][]][] | null;
@@ -115,7 +112,7 @@ export class AuditRepository extends Repository {
     // overlapping deploy - before taking anything new. XAUTOCLAIM is used
     // rather than a pending read against our own name because the consumer name
     // is per-process, so the stranded entries belong to a name we no longer use.
-    const claimed = (await this.redis.xautoclaim(
+    const claimed = (await this.valkey.xautoclaim(
       key,
       "audit_workers",
       AuditConsumer,
@@ -128,7 +125,7 @@ export class AuditRepository extends Repository {
     let messages = claimed?.[1] ?? [];
 
     if (!messages.length) {
-      const results = (await this.redis.xreadgroup(
+      const results = (await this.valkey.xreadgroup(
         "GROUP",
         "audit_workers",
         AuditConsumer,
@@ -223,8 +220,8 @@ export class AuditRepository extends Repository {
     }
 
     if (persistedIds.length) {
-      await this.redis.xack(key, "audit_workers", ...persistedIds);
-      await this.redis.xdel(key, ...persistedIds);
+      await this.valkey.xack(key, "audit_workers", ...persistedIds);
+      await this.valkey.xdel(key, ...persistedIds);
     }
 
     return persistedEntryCount;
@@ -240,34 +237,27 @@ export class AuditRepository extends Repository {
       ...(filter.action ? { action: { contains: filter.action } } : {}),
       ...(filter.platform ? { platform: filter.platform } : {}),
     };
-    const take = filter.take ?? 25;
-    const where =
-      filter.cursor !== undefined
-        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
-        : baseWhere;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.auditLedger.findMany({
-        where,
-        orderBy: CreatedAtIdOrderBy,
-        take: take + 1,
-      }),
-      filter.cursor === undefined
-        ? this.prisma.auditLedger.count({ where: baseWhere })
-        : undefined,
-    ]);
-    const { page, hasMore } = splitPage(rows, take);
-    const last = page.at(-1);
+    const result = await paginateCreatedAtId(
+      (where) =>
+        this.prisma.auditLedger.findMany({
+          where: where as Prisma.AuditLedgerWhereInput,
+          orderBy: CreatedAtIdOrderBy,
+          take: (filter.take ?? 25) + 1,
+        }),
+      (where) => this.prisma.auditLedger.count({ where: where as Prisma.AuditLedgerWhereInput }),
+      baseWhere,
+      filter,
+    );
     return {
-      entries: page,
-      total,
-      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      entries: result.rows,
+      total: result.total,
+      nextCursor: result.nextCursor,
     };
   }
 
   async #ensureGroup(key: string) {
     try {
-      await this.redis.xgroup("CREATE", key, "audit_workers", "0", "MKSTREAM");
+      await this.valkey.xgroup("CREATE", key, "audit_workers", "0", "MKSTREAM");
     } catch (err: unknown) {
       if (!(err instanceof Error) || !err.message.includes("BUSYGROUP"))
         throw err;

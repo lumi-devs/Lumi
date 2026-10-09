@@ -1,6 +1,6 @@
 import type { GuildBackup, PanicState, VerificationPanel } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
-import type { GuildBackupData } from "#modules/security/services/backup-types.js";
+import type { GuildBackupData } from "@lumi/application/services/security/backup-types.js";
 
 /** Channel id → prior `@everyone` SendMessages allow state (true/false/null). */
 export type LockedChannelSnapshot = Record<string, boolean | null>;
@@ -99,7 +99,6 @@ export class SecurityRepository extends Repository {
     });
   }
 
-  /** Deletes every backup for the guild past the most recent `keep`. */
   public async pruneBackups(guildId: string, keep: number): Promise<number> {
     const stale = await this.prisma.guildBackup.findMany({
       where: { guildId },

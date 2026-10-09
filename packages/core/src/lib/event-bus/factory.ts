@@ -1,39 +1,41 @@
-// Build the Redis Streams event bus and own the dedicated ioredis connections it needs.
+// Build the Valkey Streams event bus and own the dedicated iovalkey connections it needs.
 //
-// We require TWO Redis connections: ioredis serializes commands per
+// We require TWO Valkey connections: iovalkey serializes commands per
 // connection, and XREADGROUP BLOCK holds the socket. Sharing one connection
 // would stall publishes behind blocking reads.
 
-import { Redis, type RedisOptions } from "ioredis";
-import { RedisStreamsBus, type StreamStats } from "./RedisStreamsBus.js";
+import Valkey, { type RedisOptions } from "iovalkey";
+import { StreamBus, type StreamStats } from "./StreamBus.js";
 import type { EventBus } from "./types.js";
 
+export type ValkeyOptions = RedisOptions;
+
 export interface CreateEventBusOptions {
-  /** Connection options for Redis Streams. Required when creating an event bus. */
-  redis?: RedisOptions;
+  /** Connection options for Valkey Streams. Required when creating an event bus. */
+  valkey?: ValkeyOptions;
   /** Default per-stream MAXLEN cap. */
   defaultMaxLen?: number;
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
-  /** See RedisStreamsBusOptions.maxDeliveries. */
+  /** See StreamBusOptions.maxDeliveries. */
   maxDeliveries?: number;
-  /** See RedisStreamsBusOptions.claimMinIdleMs. */
+  /** See StreamBusOptions.claimMinIdleMs. */
   claimMinIdleMs?: number;
-  /** See RedisStreamsBusOptions.claimIntervalMs. */
+  /** See StreamBusOptions.claimIntervalMs. */
   claimIntervalMs?: number;
-  /** See RedisStreamsBusOptions.onStats. */
+  /** See StreamBusOptions.onStats. */
   onStats?: (stats: StreamStats) => void;
-  /** See RedisStreamsBusOptions.statsIntervalMs. */
+  /** See StreamBusOptions.statsIntervalMs. */
   statsIntervalMs?: number;
 }
 
 export interface OwnedEventBus {
   bus: EventBus;
   /**
-   * Underlying publisher Redis client.
+   * Underlying publisher Valkey client.
    * Exposed so readiness probes can PING the same connection the bus
    * publishes through without standing up a parallel client.
    */
-  publisher: Redis;
+  publisher: Valkey;
   /** Caller invokes on shutdown to close both the bus and any owned connections. */
   close: () => Promise<void>;
 }
@@ -41,20 +43,21 @@ export interface OwnedEventBus {
 export function createEventBus(
   opts: CreateEventBusOptions = {},
 ): OwnedEventBus {
-  if (!opts.redis) {
-    throw new Error("createEventBus(): `redis` options required");
+  const connectionOpts = opts.valkey;
+  if (!connectionOpts) {
+    throw new Error("createEventBus(): `valkey` options required");
   }
 
-  const publisher = new Redis({ ...opts.redis, lazyConnect: true });
-  const subscriber = new Redis({
-    ...opts.redis,
+  const publisher = new Valkey({ ...connectionOpts, lazyConnect: true });
+  const subscriber = new Valkey({
+    ...connectionOpts,
     lazyConnect: true,
     // Blocking XREADGROUP commands must be tolerated by the retry layer.
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   });
 
-  const bus = new RedisStreamsBus({
+  const bus = new StreamBus({
     publisher,
     subscriber,
     defaultMaxLen: opts.defaultMaxLen,

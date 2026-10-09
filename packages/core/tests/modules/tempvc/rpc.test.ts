@@ -1,11 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { TempVcRepository } from "#modules/tempvc/data/TempVcRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+
+let utilities: Map<string, unknown>;
+let loadedModules: Set<string>;
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn().mockImplementation((name: string) => {
+    const utility = utilities.get(name);
+    if (!utility) throw new Error(`Utility "${name}" is not loaded`);
+    return utility;
+  }),
+  tryGetUtility: vi.fn().mockImplementation((name: string) => utilities.get(name)),
+}));
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -36,8 +47,6 @@ function mockRest(opts: {
 describe("tempvc module RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let guild: any;
-  let utilities: Map<string, unknown>;
-  let loadedModules: Set<string>;
   let tempvc: { addGenerator: ReturnType<typeof vi.fn>; removeGenerator: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -64,7 +73,7 @@ describe("tempvc module RPC handlers", () => {
     (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
@@ -80,16 +89,10 @@ describe("tempvc module RPC handlers", () => {
     utilities = new Map<string, unknown>([["tempvc", tempvc]]);
     loadedModules = new Set(["tempvc"]);
 
-    container.stores = {
-      get: vi.fn((name: string) =>
-        name === "utilities"
-          ? { get: (key: string) => utilities.get(key) }
-          : {
-              loaded: () => [],
-              get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
-            },
-      ),
-    } as any;
+    (container as any).moduleStore = {
+      get: (key: string) => (loadedModules.has(key) ? { name: key } : undefined),
+      loaded: () => [...loadedModules].map((name) => ({ name })),
+    };
 
     registerRpcHandlers();
   });
@@ -129,7 +132,7 @@ describe("tempvc module RPC handlers", () => {
       })) as any;
 
       expect(container.db.ensureGuild).toHaveBeenCalledWith(GUILD_ID);
-      expect(tempvc.addGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID, {
+      expect(tempvc.addGenerator).toHaveBeenCalledWith(container, GUILD_ID, CHANNEL_ID, {
         name: "Gaming {}",
         limit: 5,
       });
@@ -142,7 +145,7 @@ describe("tempvc module RPC handlers", () => {
         name: "Gaming {}",
       });
 
-      expect(tempvc.addGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID, {
+      expect(tempvc.addGenerator).toHaveBeenCalledWith(container, GUILD_ID, CHANNEL_ID, {
         name: "Gaming {}",
         limit: 0,
       });
@@ -154,7 +157,7 @@ describe("tempvc module RPC handlers", () => {
         name: null,
       })) as any;
 
-      expect(tempvc.removeGenerator).toHaveBeenCalledWith(GUILD_ID, CHANNEL_ID);
+      expect(tempvc.removeGenerator).toHaveBeenCalledWith(container, GUILD_ID, CHANNEL_ID);
       expect(tempvc.addGenerator).not.toHaveBeenCalled();
       expect(res).toEqual({ success: true, channelId: CHANNEL_ID, deleted: true });
     });

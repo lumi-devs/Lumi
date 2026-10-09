@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { PermissionFlagsBits } from "discord.js";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -12,8 +13,7 @@ const INTRUDER_ID = "333333333333333333";
 const MOD_ROLE_ID = "444444444444444444";
 const BOT_ID = "999999999999999999";
 
-/** discord.js's ManageGuild bit, used to build a fake role permission string. */
-const ManageGuildBit = (1n << 5n).toString();
+const ManageGuildBit = PermissionFlagsBits.ManageGuild.toString();
 
 const afkModule = {
   meta: {
@@ -108,7 +108,7 @@ describe("dashboard module guild read RPC handlers", () => {
     vi.spyOn(discordRest, "fetchMember");
     (container as any).discordRest = discordRest;
 
-    (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 
     (container as any).db = {
       config: {
@@ -120,13 +120,11 @@ describe("dashboard module guild read RPC handlers", () => {
       },
     } as any;
 
-    container.stores = {
-      get: vi.fn().mockReturnValue({
-        loaded: () => [afkModule],
-        get: (name: string) => (name === "afk" ? afkModule : undefined),
-        isAddonModule: () => false,
-      }),
-    } as any;
+    (container as any).moduleStore = {
+      loaded: () => [afkModule],
+      get: (name: string) => (name === "afk" ? afkModule : undefined),
+      isAddonModule: () => false,
+    };
 
     registerRpcHandlers();
   });

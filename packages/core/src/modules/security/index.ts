@@ -1,11 +1,11 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 import { cfg } from "#lib/module-system/config-schema.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleVerifySweepFire } from "./services/verify-sweep-handler.js";
-import { handleBackupSnapshotFire } from "./services/backup-snapshot-handler.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { handleVerifySweepFire } from "@lumi/application/services/security/verify-sweep-handler.js";
+import { handleBackupSnapshotFire } from "@lumi/application/services/security/backup-snapshot-handler.js";
 
-@DefineModule({
+export const securityModule = defineModule({
   name: "security",
   displayName: "Security",
   emoji: "🛡️",
@@ -409,9 +409,7 @@ import { handleBackupSnapshotFire } from "./services/backup-snapshot-handler.js"
       max: 50,
     }),
   }),
-})
-export class SecurityModule extends Module {
-  public override onLoad() {
+  onLoad() {
     registerTaskFireHandler(
       "security-verify-sweep",
       "broadcast",
@@ -422,6 +420,5 @@ export class SecurityModule extends Module {
       "broadcast",
       handleBackupSnapshotFire,
     );
-    return super.onLoad();
-  }
-}
+  },
+});

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { enterPanic, revertPanic } from "#modules/security/services/panic.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const SendMessagesBit = PermissionFlagsBits.SendMessages.toString();
@@ -16,7 +16,7 @@ function setContainer(overrides: {
   discordRest?: FakeDiscordRestPort;
 }) {
   (container as any).discordRest = overrides.discordRest ?? new FakeDiscordRestPort();
-  (container as any).redis = {
+  (container as any).valkey = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),

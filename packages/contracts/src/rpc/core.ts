@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type { BlocklistListData, IgnoredChannelView } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
 import {
@@ -32,22 +32,22 @@ export interface PermitView {
   assignments: PermitAssignmentView[];
 }
 
-const PermitNameSchema = s
+const PermitNameSchema = z
   .string()
-  .lengthGreaterThanOrEqual(1)
-  .lengthLessThanOrEqual(64);
+  .min(1)
+  .max(64);
 
-const PermitNodesSchema = boundedArray(s.string().lengthGreaterThanOrEqual(1), {
+const PermitNodesSchema = boundedArray(z.string().min(1), {
   min: 1,
 });
 
-const PermitTargetSchema = s.object({
-  permitId: s.number().int(),
-  targetType: s.enum(PermitTargetTypes),
+const PermitTargetSchema = z.object({
+  permitId: z.number().int(),
+  targetType: z.enum(PermitTargetTypes),
   targetId: SnowflakeSchema,
 });
 
-const IgnoredChannelSchema = s.object({
+const IgnoredChannelSchema = z.object({
   /** `null` targets the guild-wide ignore row rather than one channel. */
   channelId: SnowflakeSchema.nullable(),
 });
@@ -63,9 +63,9 @@ export const coreRpc = {
     success: boolean;
     permit: { id: number };
   }>()({
-    input: s.object({
+    input: z.object({
       name: PermitNameSchema,
-      kind: s.enum(PermitKinds),
+      kind: z.enum(PermitKinds),
       nodes: PermitNodesSchema,
     }),
     auth: "guildManager",
@@ -76,8 +76,8 @@ export const coreRpc = {
     success: boolean;
     permit: { id: number } | null;
   }>()({
-    input: s.object({
-      permitId: s.number().int(),
+    input: z.object({
+      permitId: z.number().int(),
       name: PermitNameSchema.optional(),
       nodes: PermitNodesSchema.optional(),
     }),
@@ -86,7 +86,7 @@ export const coreRpc = {
     summary: "Rename or re-scope a permit.",
   }),
   "guild.permits.delete": rpcAction<{ success: boolean }>()({
-    input: s.object({ permitId: s.number().int() }),
+    input: z.object({ permitId: z.number().int() }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
     summary: "Delete a permit.",

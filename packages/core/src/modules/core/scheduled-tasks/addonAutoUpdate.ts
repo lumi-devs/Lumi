@@ -1,15 +1,10 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { RelayTask } from "#lib/scheduled-tasks.js";
+import { RelayTask } from "#lib/scheduler/tasks.js";
 
-@ApplyOptions<ScheduledTask.Options>({
-  name: "addon-auto-update",
-  pattern: "*/15 * * * *",
-})
-export class AddonAutoUpdateTask extends RelayTask<"addon-auto-update"> {}
-
-declare module "@sapphire/plugin-scheduled-tasks" {
-  interface ScheduledTasks {
-    "addon-auto-update": Record<string, never>;
+export class AddonAutoUpdateTask extends RelayTask<"addon-auto-update"> {
+  public constructor() {
+    super({
+      name: "addon-auto-update",
+      pattern: "*/15 * * * *"
+    });
   }
 }

@@ -1,6 +1,10 @@
 export * from "./envelope.js";
 export * from "./contract-version.js";
-export { CONTRACT_VERSION } from "../version.js";
+export {
+  CONTRACT_VERSION,
+  MIN_COMPATIBLE_CONTRACT_VERSION,
+  COMPATIBLE_CONTRACT_RANGE,
+} from "../version.js";
 export * from "./define.js";
 export * from "./schemas.js";
 export * from "./router.js";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from '@sapphire/framework';
-import { handleModLiftFire } from '#modules/mod/services/lift-handler.js';
+import { container } from "#lib/services.js";
+import { handleModLiftFire } from '@lumi/application/services/mod/lift-handler.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
@@ -9,7 +9,7 @@ Object.assign(container, {
   invalidation: {
     invalidate: vi.fn().mockResolvedValue(undefined)
   },
-  redis: {
+  valkey: {
     del: vi.fn(),
     set: vi.fn().mockResolvedValue('OK'),
     eval: vi.fn().mockResolvedValue(1)
@@ -38,11 +38,11 @@ describe('handleModLiftFire', () => {
 
   it('does nothing when the case is missing or already inactive', async () => {
     (container.db.moderation.getModerationCaseById as any).mockResolvedValue(null);
-    await handleModLiftFire({ caseId: 1 });
+    await handleModLiftFire(container, { caseId: 1 });
     expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
 
     (container.db.moderation.getModerationCaseById as any).mockResolvedValue({ id: 2, active: false });
-    await handleModLiftFire({ caseId: 2 });
+    await handleModLiftFire(container, { caseId: 2 });
     expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
   });
 
@@ -57,7 +57,7 @@ describe('handleModLiftFire', () => {
     });
     const clearVoiceMute = vi.spyOn(discordRest, 'clearVoiceMute');
 
-    await handleModLiftFire({ caseId: 3 });
+    await handleModLiftFire(container, { caseId: 3 });
 
     expect(clearVoiceMute).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(3);
@@ -74,7 +74,7 @@ describe('handleModLiftFire', () => {
     });
     const clearTimeout = vi.spyOn(discordRest, 'clearTimeout');
 
-    await handleModLiftFire({ caseId: 4 });
+    await handleModLiftFire(container, { caseId: 4 });
 
     expect(clearTimeout).toHaveBeenCalledWith('g1', 'u1', expect.any(String));
     expect(container.db.moderation.liftModerationCase).toHaveBeenCalledWith(4);
@@ -92,7 +92,7 @@ describe('handleModLiftFire', () => {
     const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
     discordRest.failNextWith('clearTimeout', err);
 
-    await expect(handleModLiftFire({ caseId: 5 })).rejects.toThrow('Missing Permissions');
+    await expect(handleModLiftFire(container, { caseId: 5 })).rejects.toThrow('Missing Permissions');
 
     expect(container.db.moderation.liftModerationCase).not.toHaveBeenCalled();
     expect(container.logger.error).toHaveBeenCalledWith(

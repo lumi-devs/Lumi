@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import type { TargetPermitPayload } from "#lib/prisma/repositories/PermissionRepository.js";
 

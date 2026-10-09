@@ -2,7 +2,7 @@ import { Repository } from "#lib/prisma/repositories/Repository.js";
 
 /**
  * Module downloader bookkeeping - `DownloaderRepo` (tracked git repos) and
- * `DownloaderModule` (installed modules per repo).  No Redis caching.
+ * `DownloaderModule` (installed modules per repo).  No Valkey caching.
  */
 export class DownloaderRepository extends Repository {
   public readDownloaderRepo(name: string) {

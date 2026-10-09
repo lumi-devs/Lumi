@@ -15,7 +15,7 @@ refactor(core): drop unused card builders and their context wrappers
 fix(core): resolve library versions via package exports
 feat(dashboard): IA redesign phase 2 - nested guild route paths with legacy redirects
 refactor(core): multi-target moderation, confirm prompts, RPC/error consolidation
-fix(security): path traversal in docs slug resolution, direct Redis access from dashboard (#135)
+fix(security): path traversal in docs slug resolution, direct Valkey access from dashboard (#135)
 perf(core,dashboard): batch appeals moderation lookups, memoize DataTable columns (#134)
 refactor(core,worker): export env subpath and replace raw process.env bypasses (#140)
 chore(deps): bump codecov/codecov-action from 6 to 7

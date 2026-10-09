@@ -1,0 +1,61 @@
+import {
+  acknowledge,
+  defineInteraction,
+} from "#lib/interactions/interaction-def.js";
+import type { Container } from "#lib/services.js";
+import {
+  emptySetupState,
+  finishSetupWizard,
+  hasSetupAccess,
+  normalizeSetupState,
+  setupAccessDenied,
+  stateFromSegments,
+} from "../../services/setup-wizard.js";
+import {
+  buildSetupAgeModal,
+  buildSetupReviewView,
+  buildSetupStepView,
+  buildSetupSuccessCard,
+} from "#modules/core/ui/setup-wizard.js";
+import { SetupId } from "../../constants.js";
+import type { ButtonInteraction } from "discord.js";
+
+export const setupWizardButton = defineInteraction({
+  prefix: SetupId.prefix,
+  async run(services: Container, interaction: ButtonInteraction) {
+    const parsed = SetupId.parse(interaction.customId);
+    if (!parsed) return;
+    const { head, rest } = parsed;
+    if (head !== "step" && head !== "finish" && head !== "agebtn") return;
+    const parts = ["setup", head, ...rest];
+    if (!interaction.inGuild()) return;
+
+    if (head === "agebtn") {
+      if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
+      return interaction.showModal(
+        buildSetupAgeModal(stateFromSegments(parts.slice(2))),
+      );
+    }
+
+    await acknowledge(interaction);
+    if (!(await hasSetupAccess(interaction))) throw setupAccessDenied();
+    const { guildId } = interaction;
+
+    if (head === "finish") {
+      const settled = normalizeSetupState(stateFromSegments(parts.slice(2)));
+      await finishSetupWizard(services, guildId, settled, interaction.user.id);
+      return interaction.editReply(buildSetupSuccessCard(settled));
+    }
+
+    const target = Number(parts[2]);
+    const state = stateFromSegments(parts.slice(3));
+    if (target === 2) return interaction.editReply(buildSetupStepView(2, state));
+    if (target === 3) return interaction.editReply(buildSetupStepView(3, state));
+    if (target === 4) {
+      return interaction.editReply(
+        buildSetupReviewView(normalizeSetupState(state)),
+      );
+    }
+    return interaction.editReply(buildSetupStepView(1, emptySetupState()));
+  },
+});

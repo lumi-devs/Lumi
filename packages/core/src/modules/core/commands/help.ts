@@ -1,37 +1,46 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { Command, container } from "@sapphire/framework";
-import { toTitleCase } from "@sapphire/utilities";
+import type { Container } from "#lib/services.js";
+import { toTitleCase } from "@lumi/shared";
 import { SeparatorBuilder, TextDisplayBuilder } from "@discordjs/builders";
 import {
+  SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type Message,
   MessageFlags,
   SeparatorSpacingSize,
 } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { BaseCommand, fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { commandRegistry } from "#lib/commands/command-def.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { paginateContainer } from "#lib/utilities/pagination.js";
 import type { LumiT } from "#lib/i18n/index.js";
 
-export function getCategories(containerInstance: typeof container) {
-  const commands = [
-    ...containerInstance.stores.get("commands").values(),
-  ] as BaseCommand[];
+export function getCategories(services: Container) {
+  const seen = new Set<CommandDef>();
+  const defs: CommandDef[] = [];
+  for (const def of commandRegistry.values()) {
+    if (seen.has(def)) continue;
+    seen.add(def);
+    defs.push(def);
+  }
 
-  const categories: Record<string, BaseCommand[]> = {};
+  const records = new Map(
+    services.moduleStore.loaded().map((r) => [r.name, r]),
+  );
+
+  const categories: Record<string, CommandDef[]> = {};
   const categoryEmojis: Record<string, string> = {};
   let totalCommandsCount = 0;
 
-  for (const cmd of commands) {
-    if ((cmd.options as { hidden?: boolean }).hidden) continue;
-
-    const rawModule = cmd.options.module ?? "core";
-    const record = containerInstance.moduleStore.getRecord(rawModule);
+  for (const def of defs) {
+    const rawModule = def.module ?? "core";
+    const record = records.get(rawModule);
     const moduleName = record?.meta.displayName ?? toTitleCase(rawModule);
 
     if (!categories[moduleName]) categories[moduleName] = [];
-    categories[moduleName].push(cmd);
+    categories[moduleName].push(def);
     categoryEmojis[moduleName] ??= record?.meta.emoji ?? Emojis.Gear;
     totalCommandsCount++;
   }
@@ -45,107 +54,116 @@ export function getCategories(containerInstance: typeof container) {
   return { categories, categoryEmojis, sortedCategories, totalCommandsCount };
 }
 
-@ApplyOptions<Command.Options>({
+/** Lists a subcommand group's entries from the same mapping that drives dispatch. */
+function subcommandLabels(def: CommandDef): string {
+  const keys = Object.keys(def.handlers ?? {});
+  if (keys.length === 0) return "";
+  const parts = keys.map((k) => k.split(":").join(" "));
+  return ` (${parts.join(", ")})`;
+}
+
+async function showHelp(services: Container, target: ChatInputCommandInteraction | Message) {
+  const t = await fetchTyped(target);
+
+  let prefix = ",";
+  if (target.guildId) {
+    const settings = await services.db.config.getGuildSettings(
+      target.guildId,
+    );
+    prefix = settings.prefix ?? ",";
+  }
+
+  const { categories, categoryEmojis, sortedCategories, totalCommandsCount } =
+    getCategories(services);
+
+  await paginateContainer({
+    interactionOrMessage: target,
+    totalPages: sortedCategories.length,
+    userId: "user" in target ? target.user.id : target.author.id,
+    customIdPrefix: "help",
+    render: (pageIndex, c) =>
+      renderPage(c, t, prefix, {
+        categories,
+        categoryEmojis,
+        sortedCategories,
+        totalCommandsCount,
+        pageIndex,
+      }),
+  });
+}
+
+function renderPage(
+  c: ContainerBuilder,
+  t: LumiT,
+  prefix: string,
+  data: {
+    categories: Record<string, CommandDef[]>;
+    categoryEmojis: Record<string, string>;
+    sortedCategories: string[];
+    totalCommandsCount: number;
+    pageIndex: number;
+  },
+) {
+  const categoryName = data.sortedCategories[data.pageIndex] || "Core";
+  const categoryCommands = data.categories[categoryName] || [];
+  const categoryEmoji = data.categoryEmojis[categoryName] ?? Emojis.Gear;
+
+  c.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `## ${Emojis.Shield} ${t("commands:helpTitle")}`,
+    ),
+  );
+  c.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(true),
+  );
+
+  const commandListText = categoryCommands
+    .map((def) => {
+      const desc =
+        def.description || t("commands:helpNoDescription");
+      return `**\`/${def.name}\`**${subcommandLabels(def)} or **\`${prefix}${def.name}\`** — ${desc}`;
+    })
+    .join("\n");
+
+  c.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `### ${categoryEmoji} ${t("commands:helpModuleHeader", { category: categoryName })}\n\n${commandListText || t("commands:helpNoCommands")}`,
+    ),
+  );
+
+  c.addSeparatorComponents(
+    new SeparatorBuilder()
+      .setSpacing(SeparatorSpacingSize.Small)
+      .setDivider(false),
+  );
+
+  c.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `-# ${t("commands:helpFooter", { page: data.pageIndex + 1, total: data.sortedCategories.length, count: data.totalCommandsCount })}`,
+    ),
+  );
+}
+
+export const helpDef: CommandDef = {
   name: "help",
   description: "Display all available commands with dynamic pagination.",
-})
-export class HelpCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("help");
+    return (
+      b
+        .setName("help")
+        .setDescription("Display all available commands with dynamic pagination.")
     );
-  }
-
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    await this.showHelp(interaction);
-  }
-
-  public override async messageRun(message: Message) {
-    await this.showHelp(message);
-  }
-
-  private async showHelp(target: ChatInputCommandInteraction | Message) {
-    const t = await fetchTyped(target);
-
-    let prefix = ",";
-    if (target.guildId) {
-      const settings = await this.container.db.config.getGuildSettings(
-        target.guildId,
-      );
-      prefix = settings.prefix ?? ",";
+  },
+  run: async (ctx: CommandContext) => {
+    if (ctx.isSlash) {
+      const interaction = ctx.interaction;
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      }
     }
-
-    const { categories, categoryEmojis, sortedCategories, totalCommandsCount } =
-      getCategories(this.container);
-
-    await paginateContainer({
-      interactionOrMessage: target,
-      totalPages: sortedCategories.length,
-      userId: "user" in target ? target.user.id : target.author.id,
-      customIdPrefix: "help",
-      render: (pageIndex, c) =>
-        this.renderPage(c, t, prefix, {
-          categories,
-          categoryEmojis,
-          sortedCategories,
-          totalCommandsCount,
-          pageIndex,
-        }),
-    });
-  }
-
-  private renderPage(
-    c: ContainerBuilder,
-    t: LumiT,
-    prefix: string,
-    data: {
-      categories: Record<string, BaseCommand[]>;
-      categoryEmojis: Record<string, string>;
-      sortedCategories: string[];
-      totalCommandsCount: number;
-      pageIndex: number;
-    },
-  ) {
-    const categoryName = data.sortedCategories[data.pageIndex] || "Core";
-    const categoryCommands = data.categories[categoryName] || [];
-    const categoryEmoji = data.categoryEmojis[categoryName] ?? Emojis.Gear;
-
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `## ${Emojis.Shield} ${t("commands:helpTitle")}`,
-      ),
-    );
-    c.addSeparatorComponents(
-      new SeparatorBuilder()
-        .setSpacing(SeparatorSpacingSize.Small)
-        .setDivider(true),
-    );
-
-    const commandListText = categoryCommands
-      .map((cmd) => {
-        const desc =
-          cmd.description || t("commands:helpNoDescription");
-        return `**\`/${cmd.name}\`** or **\`${prefix}${cmd.name}\`** — ${desc}`;
-      })
-      .join("\n");
-
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `### ${categoryEmoji} ${t("commands:helpModuleHeader", { category: categoryName })}\n\n${commandListText || t("commands:helpNoCommands")}`,
-      ),
-    );
-
-    c.addSeparatorComponents(
-      new SeparatorBuilder()
-        .setSpacing(SeparatorSpacingSize.Small)
-        .setDivider(false),
-    );
-
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `-# ${t("commands:helpFooter", { page: data.pageIndex + 1, total: data.sortedCategories.length, count: data.totalCommandsCount })}`,
-      ),
-    );
-  }
-}
+    return showHelp(ctx.services, ctx.source);
+  },
+};

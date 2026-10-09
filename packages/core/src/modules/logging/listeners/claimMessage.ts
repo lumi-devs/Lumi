@@ -1,10 +1,9 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { Colors } from "discord.js";
-import { fetchTyped } from "#lib/commands.js";
-import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import { fetchTyped } from "#lib/i18n/index.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { memberRoleIds } from "#lib/permissions/subject.js";
-import type { GuildMessage } from "#lib/types/common.js";
+import { LumiEvents, type GuildMessage } from "#lib/types/common.js";
 import { makeCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
 import {
@@ -12,21 +11,20 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "../services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 
-@ApplyOptions<GuildMessageListener.Options>({
+export default defineListener({
   name: "loggingClaimMessage",
+  event: LumiEvents.GuildUserMessage,
   module: "logging",
-})
-export default class LoggingClaimMessageListener extends GuildMessageListener {
-  protected async handle(message: GuildMessage): Promise<void> {
+  async execute(services: Container, message: GuildMessage): Promise<void> {
     const code = normalizeLogClaimCode(message.content);
     if (!code) return;
 
     const guildId = message.guildId;
     if (!(await peekLogClaimCode(guildId, code))) return;
 
-    const hasPermit = await container.permitResolver.hasPermit({
+    const hasPermit = await services.permitResolver.hasPermit({
       guildId,
       userId: message.author.id,
       roleIds: memberRoleIds(message.member),
@@ -37,7 +35,7 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
     if (!hasPermit) return;
     if (!(await consumeLogClaimCode(guildId, code))) return;
 
-    const t = await fetchTyped(message);
+    const t = await fetchTyped(message, services);
     const channel = message.channel;
     const channelId = channel?.isThread()
       ? (channel.parentId ?? message.channelId)
@@ -65,7 +63,7 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
       ...(reply ? { replyMessageId: reply.id } : {}),
     };
     await registerLogClaim(guildId, claim);
-    await container.db.audit
+    await services.db.audit
       .queueAuditLog({
         guildId,
         userId: message.author.id,
@@ -76,5 +74,5 @@ export default class LoggingClaimMessageListener extends GuildMessageListener {
       .catch((err: unknown) =>
         logError("Logging: Claim audit write failed", err),
       );
-  }
-}
+  },
+});

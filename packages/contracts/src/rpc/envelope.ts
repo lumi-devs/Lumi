@@ -1,14 +1,24 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 
 export interface RpcRequest<T = unknown> {
   id: string;
   action: string;
   guildId?: string;
   actorId?: string;
+  /** Explicit idempotency key for mutations. If omitted, deduplication falls back to hashing. */
+  idempotencyKey?: string;
   /** W3C `traceparent` (+ optional `tracestate`) so the handler can continue the caller's trace. */
   traceparent?: string;
   tracestate?: string;
   data?: T;
+}
+
+export interface RpcBatchRequest {
+  requests: RpcRequest<unknown>[];
+}
+
+export interface RpcBatchResponse {
+  responses: RpcResponse<unknown>[];
 }
 
 /**
@@ -75,7 +85,6 @@ export interface CodedRpcErrorOptions {
   retryAfterMs?: number;
 }
 
-/** Thrown inside the RPC pipeline to put a specific `code` on the failure envelope. */
 export class CodedRpcError extends Error {
   public readonly code: RpcFailureCode;
   public readonly retryable: boolean;
@@ -128,17 +137,16 @@ export function makeRpcFailure(
 }
 
 /** Runtime check on the envelope only - dashboard and worker deploy independently, so this is the one shape TypeScript can't guarantee across the wire. */
-const RpcResponseEnvelopeSchema = s.object({
-  id: s.string(),
-  ok: s.boolean(),
-  data: s.unknown().optional(),
-  error: s.string().optional(),
-  code: s.enum(Object.values(RpcFailureCodes)).optional(),
-  retryable: s.boolean().optional(),
-  retryAfterMs: s.number().optional(),
+const RpcResponseEnvelopeSchema = z.object({
+  id: z.string(),
+  ok: z.boolean(),
+  data: z.unknown().optional(),
+  error: z.string().optional(),
+  code: z.enum(RpcFailureCodes).optional(),
+  retryable: z.boolean().optional(),
+  retryAfterMs: z.number().optional(),
 });
 
-/** Throws with a clear message if `raw` isn't a well-formed `RpcResponse` envelope. */
 export function parseRpcResponse(raw: unknown): RpcResponse {
   let envelope;
   try {

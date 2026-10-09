@@ -1,12 +1,12 @@
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
+import { container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
 import { promises as fs } from "node:fs";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { logError } from "#lib/utilities/errors.js";
 import {
   detectSubStores,
@@ -15,7 +15,7 @@ import {
 } from "#lib/module-system/manifest.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
-import { getAddonAllowedSignersFile, getAddonSignaturePolicy } from "#lib/env.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "#lib/env.js";
 import { verifyCommitSignature, type SignatureVerification } from "./signature.js";
 
 const execGit = (args: string[]) =>
@@ -97,8 +97,8 @@ function describeVerification(
 }
 
 
-const repoSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
-const branchSchema = s.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
+const repoSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
+const branchSchema = z.string().regex(/^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/);
 
 function buildGitCloneArgs(
   branch: string,
@@ -130,19 +130,21 @@ function parseUrl(val: string): string {
   );
 }
 
-const reqsSchema = s.array(
-  s.string().regex(/^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/-]*$/),
+const reqsSchema = z.array(
+  z.string().regex(/^[a-zA-Z0-9_.@\/][a-zA-Z0-9_.@\/\-^~>=<*]*$/),
 );
 
+// ponytail: anchored to repo root, not cwd — launching from apps/worker once split data/ in two.
+export const RepoRoot = getRepoRoot();
+export const DataRoot = path.join(RepoRoot, "data");
+
 export const ModuleRoot = path.join(
-  process.cwd(),
-  "data",
+  DataRoot,
   "3rd-party-modules",
 );
 /** Where symlinks for installed addons live - registered as a second ModuleStore root. */
 export const AddonModulesRoot = path.join(
-  process.cwd(),
-  "data",
+  DataRoot,
   "installed-modules",
 );
 /**
@@ -295,18 +297,23 @@ export class DownloadResolver {
           `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
         );
         recloned = true;
-        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-        const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+        const tmpClone = `${repoPath}.reclone-${randomUUID()}`;
+        const cloneArgs = buildGitCloneArgs(branch, url, tmpClone);
         await execGit(cloneArgs).catch(async (cloneErr) => {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+          await fs.rm(tmpClone, { recursive: true, force: true }).catch(() => { });
           execError("Git clone failed")(cloneErr);
+        });
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        await fs.rename(tmpClone, repoPath).catch(async (renameErr) => {
+          await fs.rm(tmpClone, { recursive: true, force: true }).catch(() => { });
+          throw renameErr;
         });
       });
 
       if (recloned) {
         // The clone fallback already replaced the live tree wholesale - there's
         // no pre-fetch checkout left to validate-before-switching, so this is
-        // the one case that still validates in place, same as before.
+        // the one case that still validates in place.
         const newSha = await this._getHeadSha(repoPath);
         if (!newSha) {
           throw new Error(
@@ -355,11 +362,7 @@ export class DownloadResolver {
         };
       }
 
-      const diffStat = oldSha
-        ? await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
-            .then(({ stdout }) => stdout.trim())
-            .catch(() => "")
-        : "";
+      const diffStat = await this._buildDiffStat(repoPath, oldSha, newSha);
 
       // Materialize the fetched revision into a throwaway worktree so the
       // validator can run against it without ever checking it out live.
@@ -392,6 +395,18 @@ export class DownloadResolver {
     });
   }
 
+  private async _buildDiffStat(repoPath: string, oldSha: string | null, newSha: string): Promise<string> {
+    if (!oldSha) return "";
+    const raw = await execGit(["-C", repoPath, "diff", "--stat", `${oldSha}..${newSha}`])
+      .then(({ stdout }) => stdout.trim())
+      .catch(() => "");
+    if (!raw) return "";
+    const files = raw.split("\n").filter(Boolean);
+    if (files.length <= 5) return files.join("\n");
+    const names = files.slice(0, -1).map((line) => line.split("|")[0]!.trim());
+    return `**${files.length - 1} files changed**\n${names.slice(0, 5).join(", ")}${names.length > 5 ? `, +${names.length - 5} more` : ""}`;
+  }
+
   /** Resolves the ref that a just-completed `git fetch` landed on, without a checkout. */
   private async _resolveFetchTarget(
     repoPath: string,
@@ -416,9 +431,17 @@ export class DownloadResolver {
     const repoPath = path.join(ModuleRoot, repoName);
 
     if (!(await this._exists(repoPath))) {
-      throw new Error(
-        `Repository **${repoName}** has not been cloned locally. Run \`,repo add\` first.`,
-      );
+      const dbRepo = await container.db?.downloader?.readDownloaderRepo(repoName);
+      if (dbRepo) {
+        container.logger?.info?.(
+          `[Downloader] Repository ${repoName} tracked in DB but missing from disk. Auto-restoring clone...`,
+        );
+        await this.addRepo(dbRepo.name, dbRepo.url, dbRepo.branch || "default");
+      } else {
+        throw new Error(
+          `Repository **${repoName}** has not been cloned locally. Run \`,repo add\` first.`,
+        );
+      }
     }
 
     const indexPath = path.join(repoPath, "modules.json");
@@ -626,7 +649,7 @@ export class DownloadResolver {
       await execFileAsync(
         "bun",
         ["add", "--ignore-scripts", ...reqs],
-        { cwd: sourcePath, timeout: Time.Minute },
+        { cwd: sourcePath, timeout: Ms.Minute },
       ).catch(execError("Requirement installation failed"));
 
       const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");
@@ -635,7 +658,7 @@ export class DownloadResolver {
           recursive: true,
         });
         await fs
-          .symlink(process.cwd(), nodeModulesLumiPath, "dir")
+          .symlink(ModuleRoot, nodeModulesLumiPath, "dir")
           .catch(() => { });
       }
     }

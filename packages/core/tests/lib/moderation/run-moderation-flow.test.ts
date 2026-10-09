@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "bun:test";
-import { Result } from "@sapphire/framework";
+import { Result } from "@lumi/shared";
 import { runModerationFlow } from "#lib/moderation/ModerationCommand.js";
 
 function fakeContext() {

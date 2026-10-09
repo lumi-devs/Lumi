@@ -1,5 +1,5 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import type { LumiT } from "#lib/i18n/index.js";
@@ -10,7 +10,7 @@ import {
   buildCaptchaRows,
   sequenceDisplay,
   type CaptchaState,
-} from "../services/captcha.js";
+} from "@lumi/application/services/security/captcha.js";
 
 export const VerifyButtonId = "sec:verify";
 
@@ -21,7 +21,6 @@ export interface VerifyPanelContent {
   footer?: string | null;
 }
 
-/** The public, persistent verification card members interact with to gain the verified role. */
 export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardReply {
   const button = createActionButton({
     customId: VerifyButtonId,
@@ -41,9 +40,8 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
   );
 }
 
-/** The fresh challenge shown when a member first clicks Verify. */
 export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
-  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Time.Minute));
+  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Ms.Minute));
   return makeInfoCard(
     t("panels:verifyChallengeTitle"),
     t("panels:verifyChallenge", {
@@ -55,7 +53,6 @@ export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
   );
 }
 
-/** After a correct-but-incomplete click: green solved buttons, progress copy. */
 export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
   const solved = new Set(state.sequence.slice(0, state.progress));
   return makeInfoCard(
@@ -68,7 +65,6 @@ export function buildProgressCard(t: LumiT, state: CaptchaState): CardReply {
   );
 }
 
-/** After a wrong click with attempts remaining: reset to a clean board. */
 export function buildWrongCard(t: LumiT, state: CaptchaState): CardReply {
   return makeWarningCard(
     t("panels:verifyWrongTitle"),

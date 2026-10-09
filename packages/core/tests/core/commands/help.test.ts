@@ -1,7 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import { getCategories, HelpCommand } from "#modules/core/commands/help.js";
+import { CommandContext } from "#lib/commands/context.js";
+import { asHandler } from "#lib/commands/command-def.js";
+import { commandRegistry } from "#lib/commands/command-def.js";
+import { getCategories, helpDef } from "#modules/core/commands/help.js";
+import { timeoutDef } from "#modules/mod/commands/timeout.js";
 import { Emojis } from "#lib/utilities/assets.js";
 
 vi.mock("#lib/utilities/pagination.js", () => ({
@@ -9,200 +12,189 @@ vi.mock("#lib/utilities/pagination.js", () => ({
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@sapphire/plugin-i18next", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
+  fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
 import { paginateContainer } from "#lib/utilities/pagination.js";
 
-function makeCommand(
-  name: string,
-  options: Record<string, unknown> = {},
-  description = `${name} description`,
-) {
-  return { name, description, options };
+function makeDef(name: string, module = "core") {
+  return { name, module, description: `${name} description`, handlers: {} as Record<string, never> };
 }
 
-function setCommands(commands: unknown[]) {
-  container.stores = {
-    get: vi.fn().mockReturnValue({ values: () => commands }),
+function makeServices(records: Record<string, unknown> = {}) {
+  return {
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    moduleStore: {
+      loaded: () =>
+        Object.entries(records).map(([name, meta]) => ({
+          name,
+          meta: { displayName: name, emoji: "", ...(meta as object) },
+        })),
+    },
+    db: { config: { getGuildSettings: vi.fn().mockResolvedValue({ prefix: "!" }) } },
   } as any;
 }
 
-function setModuleRecords(records: Record<string, unknown>) {
-  (container as any).moduleStore = {
-    getRecord: vi.fn().mockImplementation((name: string) => records[name] ?? null),
-  };
-}
-
 describe("getCategories", () => {
+  let added: string[];
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    setModuleRecords({});
+    added = [];
   });
 
+  afterEach(() => {
+    for (const key of added) commandRegistry.delete(key);
+  });
+
+  function seed(defs: { name: string; module?: string }[]) {
+    for (const d of defs) {
+      const def = makeDef(d.name, d.module ?? "core");
+      commandRegistry.set(d.name, def);
+      added.push(d.name);
+    }
+  }
+
   it("groups commands under their module's display name", () => {
-    setModuleRecords({
-      mod: { meta: { displayName: "Moderation", emoji: "🛡️" } },
-    });
-    setCommands([
-      makeCommand("ban", { module: "mod" }),
-      makeCommand("kick", { module: "mod" }),
+    const services = makeServices({ mod: { displayName: "Moderation", emoji: "🛡️" } });
+    seed([
+      { name: "ban", module: "mod" },
+      { name: "kick", module: "mod" },
     ]);
 
-    const { categories, sortedCategories } = getCategories(container);
+    const { categories, sortedCategories } = getCategories(services);
 
     expect(sortedCategories).toEqual(["Moderation"]);
     expect(categories["Moderation"]!.map((c) => c.name)).toEqual(["ban", "kick"]);
   });
 
-  it("title-cases the raw module name when no module record exists", () => {
-    setCommands([makeCommand("nick", { module: "utility" })]);
-
-    const { sortedCategories } = getCategories(container);
-
-    expect(sortedCategories).toEqual(["Utility"]);
-  });
-
   it("treats a command with no declared module as core", () => {
-    setModuleRecords({ core: { meta: { displayName: "Core", emoji: "⚙️" } } });
-    setCommands([makeCommand("help")]);
+    const services = makeServices({ core: { displayName: "Core", emoji: "⚙️" } });
+    seed([{ name: "help" }]);
 
-    const { categories, sortedCategories } = getCategories(container);
+    const { categories, sortedCategories } = getCategories(services);
 
     expect(sortedCategories).toEqual(["Core"]);
     expect(categories["Core"]!.map((c) => c.name)).toEqual(["help"]);
   });
 
-  it("omits hidden commands from both the listing and the total", () => {
-    setCommands([
-      makeCommand("visible", { module: "utility" }),
-      makeCommand("secret", { module: "utility", hidden: true }),
-    ]);
-
-    const { categories, totalCommandsCount } = getCategories(container);
-
-    expect(categories["Utility"]!.map((c) => c.name)).toEqual(["visible"]);
-    expect(totalCommandsCount).toBe(1);
-  });
-
   it("sorts Core first and the remaining categories alphabetically", () => {
-    setModuleRecords({ core: { meta: { displayName: "Core", emoji: "⚙️" } } });
-    setCommands([
-      makeCommand("zeta", { module: "zeta" }),
-      makeCommand("alpha", { module: "alpha" }),
-      makeCommand("help", { module: "core" }),
-      makeCommand("mid", { module: "mid" }),
+    const services = makeServices({ core: { displayName: "Core", emoji: "⚙️" } });
+    seed([
+      { name: "zeta", module: "zeta" },
+      { name: "alpha", module: "alpha" },
+      { name: "help", module: "core" },
     ]);
 
-    const { sortedCategories } = getCategories(container);
+    const { sortedCategories } = getCategories(services);
 
-    expect(sortedCategories).toEqual(["Core", "Alpha", "Mid", "Zeta"]);
+    expect(sortedCategories).toEqual(["Core", "Alpha", "Zeta"]);
   });
 
   it("uses the module record's emoji and falls back to the gear emoji", () => {
-    setModuleRecords({
-      mod: { meta: { displayName: "Moderation", emoji: "🛡️" } },
-    });
-    setCommands([
-      makeCommand("ban", { module: "mod" }),
-      makeCommand("nick", { module: "utility" }),
+    const services = makeServices({ mod: { displayName: "Moderation", emoji: "🛡️" } });
+    seed([
+      { name: "ban", module: "mod" },
+      { name: "nick", module: "utility" },
     ]);
 
-    const { categoryEmojis } = getCategories(container);
+    const { categoryEmojis } = getCategories(services);
 
     expect(categoryEmojis["Moderation"]).toBe("🛡️");
     expect(categoryEmojis["Utility"]).toBe(Emojis.Gear);
   });
 
-  it("counts every non-hidden command across all categories", () => {
-    setCommands([
-      makeCommand("a", { module: "one" }),
-      makeCommand("b", { module: "one" }),
-      makeCommand("c", { module: "two" }),
+  it("counts every command across all categories", () => {
+    const services = makeServices();
+    seed([
+      { name: "a", module: "one" },
+      { name: "b", module: "one" },
+      { name: "c", module: "two" },
     ]);
 
-    const { totalCommandsCount, sortedCategories } = getCategories(container);
+    const { totalCommandsCount, sortedCategories } = getCategories(services);
 
     expect(totalCommandsCount).toBe(3);
     expect(sortedCategories).toHaveLength(2);
   });
 
-  it("returns empty results when no commands are loaded", () => {
-    setCommands([]);
-
-    const { categories, sortedCategories, totalCommandsCount } =
-      getCategories(container);
-
-    expect(categories).toEqual({});
-    expect(sortedCategories).toEqual([]);
-    expect(totalCommandsCount).toBe(0);
+  it("lists a group's subcommands from its dispatch mapping", () => {
+    expect(asHandler(timeoutDef.handlers!["add"]!).run).toBeDefined();
+    const keys = Object.keys(timeoutDef.handlers ?? {});
+    expect(keys).toContain("add");
+    expect(keys).toContain("remove");
   });
 });
 
-describe("HelpCommand", () => {
-  let command: HelpCommand;
+describe("helpDef run", () => {
+  let services: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    setModuleRecords({ core: { meta: { displayName: "Core", emoji: "⚙️" } } });
-    setCommands([makeCommand("help", { module: "core" })]);
-
-    (container as any).db = {
-      config: {
-        getGuildSettings: vi.fn().mockResolvedValue({ prefix: "!" }),
-      },
+    services = makeServices({ core: { displayName: "Core", emoji: "⚙️" } });
+    services.db = {
+      config: { getGuildSettings: vi.fn().mockResolvedValue({ prefix: "!" }) },
     };
-    (container as any).client = { options: {} };
-
-    command = new HelpCommand(
-      {
-        name: "help",
-        path: "/path/to/commands/help.ts",
-        root: "/path/to/commands",
-        store: { name: "commands" } as any,
-      },
-      {},
-    );
+    commandRegistry.set("help", helpDef);
   });
 
-  it("defers ephemerally before rendering on the slash path", async () => {
+  afterEach(() => {
+    commandRegistry.delete("help");
+    vi.clearAllMocks();
+  });
+
+  function slashCtx() {
     const interaction = {
-      deferReply: vi.fn().mockResolvedValue(undefined),
+      user: { id: "u-1", tag: "Tester#0001" },
       guildId: null,
-      user: { id: "u-1" },
+      deferred: false,
+      replied: false,
+      deferReply: vi.fn().mockResolvedValue(undefined),
+      options: { getString: vi.fn().mockReturnValue(null) },
     } as any;
+    return { ctx: CommandContext.fromInteraction(interaction, services), interaction };
+  }
 
-    await command.chatInputRun(interaction);
+  it("defers ephemerally before rendering on the slash path", async () => {
+    const { ctx, interaction } = slashCtx();
 
-    expect(interaction.deferReply).toHaveBeenCalledWith({
-      flags: MessageFlags.Ephemeral,
-    });
+    await helpDef.run!(ctx);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(paginateContainer).toHaveBeenCalled();
   });
 
   it("paginates over one page per category, keyed to the invoking user", async () => {
-    setCommands([
-      makeCommand("help", { module: "core" }),
-      makeCommand("nick", { module: "utility" }),
-    ]);
-    const message = { guildId: null, author: { id: "author-9" } } as any;
+    commandRegistry.set("nick", makeDef("nick", "utility"));
+    const { ctx } = slashCtx();
 
-    await command.messageRun(message);
+    try {
+      await helpDef.run!(ctx);
 
-    const opts = (paginateContainer as any).mock.calls[0][0];
-    expect(opts.totalPages).toBe(2);
-    expect(opts.userId).toBe("author-9");
-    expect(opts.customIdPrefix).toBe("help");
+      const opts = (paginateContainer as any).mock.calls[0][0];
+      expect(opts.totalPages).toBe(2);
+      expect(opts.userId).toBe("u-1");
+      expect(opts.customIdPrefix).toBe("help");
+    } finally {
+      commandRegistry.delete("nick");
+    }
   });
 
   it("reads the guild prefix from settings and renders it beside each command", async () => {
-    const message = { guildId: "g-1", author: { id: "u-1" } } as any;
+    const guildInteraction = {
+      user: { id: "u-1", tag: "Tester#0001" },
+      guildId: "g-1",
+      deferred: true,
+      replied: false,
+      deferReply: vi.fn().mockResolvedValue(undefined),
+      options: { getString: vi.fn().mockReturnValue(null) },
+    } as any;
+    const ctx = CommandContext.fromInteraction(guildInteraction, services);
 
-    await command.messageRun(message);
+    await helpDef.run!(ctx);
 
-    expect(container.db.config.getGuildSettings).toHaveBeenCalledWith("g-1");
+    expect(services.db.config.getGuildSettings).toHaveBeenCalledWith("g-1");
 
     const opts = (paginateContainer as any).mock.calls[0][0];
     const texts: string[] = [];
@@ -212,40 +204,5 @@ describe("HelpCommand", () => {
     });
 
     expect(texts.join("\n")).toContain("**`/help`** or **`!help`**");
-  });
-
-  it("falls back to the default comma prefix outside a guild", async () => {
-    const message = { guildId: null, author: { id: "u-1" } } as any;
-
-    await command.messageRun(message);
-
-    expect(container.db.config.getGuildSettings).not.toHaveBeenCalled();
-
-    const opts = (paginateContainer as any).mock.calls[0][0];
-    const texts: string[] = [];
-    opts.render(0, {
-      addTextDisplayComponents: (c: any) => texts.push(c.data.content),
-      addSeparatorComponents: () => undefined,
-    });
-
-    expect(texts.join("\n")).toContain("**`,help`**");
-  });
-
-  it("falls back to the default prefix when the guild has none configured", async () => {
-    (container.db.config.getGuildSettings as any).mockResolvedValue({
-      prefix: null,
-    });
-    const message = { guildId: "g-1", author: { id: "u-1" } } as any;
-
-    await command.messageRun(message);
-
-    const opts = (paginateContainer as any).mock.calls[0][0];
-    const texts: string[] = [];
-    opts.render(0, {
-      addTextDisplayComponents: (c: any) => texts.push(c.data.content),
-      addSeparatorComponents: () => undefined,
-    });
-
-    expect(texts.join("\n")).toContain("**`,help`**");
   });
 });

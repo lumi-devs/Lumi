@@ -109,7 +109,6 @@ export interface VerificationPanelView {
   createdAt: string;
 }
 
-/** Result of posting-or-editing the verification panel message. */
 export interface VerificationPanelSetResult {
   success: boolean;
   channelId: string;

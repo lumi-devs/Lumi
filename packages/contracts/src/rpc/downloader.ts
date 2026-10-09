@@ -1,15 +1,15 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type { DownloaderRepoView, RepoModuleView } from "../views.js";
 import { rpcAction, RpcTimeouts } from "./define.js";
 
-const SafeNameSchema = s.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
+const SafeNameSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 
 export const downloaderRpc = {
   "downloader.repo.add": rpcAction<{ success: boolean }>()({
-    input: s.object({
-      name: s.string().lengthGreaterThanOrEqual(1),
-      url: s.string().url(),
-      branch: s.string().optional(),
+    input: z.object({
+      name: z.string().min(1),
+      url: z.url(),
+      branch: z.string().optional(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
@@ -25,7 +25,7 @@ export const downloaderRpc = {
     repoName: string;
     modules: RepoModuleView[];
   }>()({
-    input: s.object({ repoName: s.string().lengthGreaterThanOrEqual(1) }),
+    input: z.object({ repoName: z.string().min(1) }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "List modules a repo offers.",
@@ -35,10 +35,10 @@ export const downloaderRpc = {
     success: boolean;
     moduleName: string;
   }>()({
-    input: s.object({
-      repoName: s.string().lengthGreaterThanOrEqual(1),
-      moduleName: s.string().lengthGreaterThanOrEqual(1),
-      revision: s.string().lengthGreaterThanOrEqual(4).optional(),
+    input: z.object({
+      repoName: z.string().min(1),
+      moduleName: z.string().min(1),
+      revision: z.string().min(4).optional(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
@@ -48,7 +48,7 @@ export const downloaderRpc = {
     success: boolean;
     moduleName: string;
   }>()({
-    input: s.object({ moduleName: SafeNameSchema }),
+    input: z.object({ moduleName: SafeNameSchema }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Uninstall a module.",
@@ -58,9 +58,9 @@ export const downloaderRpc = {
     moduleName: string;
     commit: string | null;
   }>()({
-    input: s.object({
+    input: z.object({
       moduleName: SafeNameSchema,
-      revision: s.string().lengthGreaterThanOrEqual(4),
+      revision: z.string().min(4),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,

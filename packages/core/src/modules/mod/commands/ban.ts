@@ -1,22 +1,28 @@
-import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
+import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
+import type { Container } from "#lib/services.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { ModerationSubcommand } from "#lib/moderation/ModerationSubcommand.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import {
+  runModerationFlow,
+  type ModerationCommand as MC,
+} from "#lib/moderation/ModerationCommand.js";
 import { parseSnowflakeList, resolveUsers } from "#lib/moderation/multi-target.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import { Result } from "@sapphire/framework";
-import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { Result } from "@lumi/shared";
+import { applyLocalizedBuilder } from "#lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import { isSnowflakeId } from "#lib/utilities/misc.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "#modules/mod/services/actions/BanAction.js";
+import { BanAction } from "@lumi/application/services/mod/actions/BanAction.js";
 
 const Root = "commands";
 const SecondsPerDay = 86400;
 
 /** Merges the single `user` option with the `users` mass-target string, deduped and capped. */
 async function resolveBanTargets(
-  ctx: ModerationSubcommand.RunContext,
+  ctx: MC.RunContext,
 ): Promise<User[]> {
   if (!ctx.isSlash) return ctx.getUsers("user", { required: true });
 
@@ -26,13 +32,13 @@ async function resolveBanTargets(
   if (single) ids.add(single.id);
   if (ids.size === 0) return [];
 
-  const resolved = await resolveUsers([...ids]);
+  const resolved = await resolveUsers(ctx.services, [...ids]);
   return single && !resolved.some((u) => u.id === single.id)
     ? [single, ...resolved]
     : resolved;
 }
 
-const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
+const BanAdd: MC.Flow<User, ModerationCase, number> = {
   logScope: "ban",
   duplicateCaseAction: "ban",
   resolveTarget: (ctx) => resolveBanTargets(ctx),
@@ -61,7 +67,7 @@ const BanAdd: ModerationSubcommand.Flow<User, ModerationCase, number> = {
   }),
 };
 
-const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
+const BanRemove: MC.Flow<string, ModerationCase> = {
   logScope: "unban",
   resolveTarget: async (ctx) => {
     const raw = await ctx.getString("user_id", { required: true });
@@ -86,30 +92,16 @@ const BanRemove: ModerationSubcommand.Flow<string, ModerationCase> = {
   }),
 };
 
-@ApplyOptions<ModerationSubcommand.Options>({
+export const banDef: CommandDef = {
   name: "ban",
   description: "Ban or unban a user",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.*",
   prefixEnabled: true,
-  cooldownLimit: 3,
-  cooldownDelay: 5000,
-  subcommands: [
-    { name: "add", run: "add", default: true },
-    { name: "remove", run: "remove" },
-  ],
-})
-export class BanCommand extends ModerationSubcommand {
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
-    return respondWithReasonChoices(interaction);
-  }
-
-  public override registerApplicationCommands(
-    registry: ModerationSubcommand.Registry,
-  ) {
-    registry.registerChatInputCommand((b) =>
+  cooldownMs: 5000,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("ban");
+    return (
       applyLocalizedBuilder(b, "commands:ban")
         .addSubcommand((s) =>
           applyLocalizedBuilder(s, "commands:banAdd")
@@ -137,15 +129,21 @@ export class BanCommand extends ModerationSubcommand {
             .addStringOption((o) =>
               applyLocalizedBuilder(o, "commands:modReason").setRequired(false).setAutocomplete(true),
             ),
-        ),
+        )
     );
-  }
-
-  public add(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, BanAdd);
-  }
-
-  public remove(ctx: ModerationSubcommand.RunContext) {
-    return this.runFlow(ctx, BanRemove);
-  }
-}
+  },
+  handlers: {
+    add: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, BanAdd),
+      requiredPermit: "mod.ban",
+    },
+    remove: {
+      run: (ctx: CommandContext) => runModerationFlow(ctx, BanRemove),
+      requiredPermit: "mod.unban",
+    },
+  },
+  defaultSub: "add",
+  autocomplete: (_services: Container, interaction: AutocompleteInteraction) => {
+    return respondWithReasonChoices(interaction);
+  },
+};

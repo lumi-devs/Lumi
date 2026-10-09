@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import fc from "fast-check";
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { boundedArray, PageSchema, PageSizeSchema, SnowflakeSchema } from "./schemas.js";
 
 describe("SnowflakeSchema (property)", () => {
@@ -49,7 +49,7 @@ describe("PageSchema / PageSizeSchema (property)", () => {
   it("accepts every integer >= 1 for page", () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 1_000_000 }), (page) => {
-        expect(PageSchema.parse<number | undefined>(page)).toBe(page);
+        expect(PageSchema.parse(page)).toBe(page);
       }),
     );
   });
@@ -72,7 +72,7 @@ describe("PageSchema / PageSizeSchema (property)", () => {
     fc.assert(
       fc.property(fc.integer({ min: -1000, max: 1000 }), (value) => {
         if (value >= 1 && value <= 100) {
-          expect(PageSizeSchema.parse<number | undefined>(value)).toBe(value);
+          expect(PageSizeSchema.parse(value)).toBe(value);
         } else {
           expect(() => PageSizeSchema.parse(value)).toThrow();
         }
@@ -90,7 +90,7 @@ describe("boundedArray (property)", () => {
         ([a, b], items) => {
           const min = Math.min(a, b);
           const max = Math.max(a, b);
-          const schema = boundedArray(s.number(), { min, max });
+          const schema = boundedArray(z.number(), { min, max });
           if (items.length >= min && items.length <= max) {
             expect(schema.parse(items)).toEqual(items);
           } else {

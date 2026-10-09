@@ -1,15 +1,9 @@
 import type { User, Message } from "discord.js";
 import { PermissionsBitField } from "discord.js";
-import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
-import { createRequire } from "node:module";
-
-const _req = createRequire(import.meta.url);
-// Changesets bumps packages/core/package.json on every release merge - the
-// single source of truth for this number, never hand-edit it elsewhere.
-export const CoreVersion = (
-  _req("../../../package.json") as { version: string }
-).version;
+import type { Container } from "#lib/services.js";
+import { Mutex } from "@lumi/shared";
+import pkg from "../../../package.json" with { type: "json" };
+export const CoreVersion = pkg.version;
 
 export function cleanMention(raw: string): string {
   return raw.replace(/[<@&#!>]/g, "");
@@ -41,14 +35,8 @@ export function formatAuditReason(
 
 export const LumiInfo = {
   version: CoreVersion,
-  codename: "Elysian",
   tagline: "The next-generation modular Discord command center",
-  inception: new Date("2026-07-11T07:50:00Z"),
   github: "https://github.com/lumi-devs/lumi",
-  getAgeInDays(): number {
-    const diff = Date.now() - this.inception.getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  },
 };
 
 /**
@@ -57,10 +45,11 @@ export const LumiInfo = {
 export const fmtId = (id: unknown): string => (id ? String(id) : "unknown");
 
 export async function isModuleEnabled(
+  services: Container,
   guildId: string,
   module: string,
 ): Promise<boolean> {
-  return container.db.modules.isModuleEnabled(guildId, module);
+  return services.db.modules.isModuleEnabled(guildId, module);
 }
 
 export function canSendMessages(message: Message<true>): boolean {
@@ -73,11 +62,11 @@ export function canSendMessages(message: Message<true>): boolean {
   );
 }
 
-const queues = new Map<string, AsyncQueue>();
+const queues = new Map<string, Mutex>();
 
-function queueFor(key: string): AsyncQueue {
+function queueFor(key: string): Mutex {
   let queue = queues.get(key);
-  if (!queue) queues.set(key, (queue = new AsyncQueue()));
+  if (!queue) queues.set(key, (queue = new Mutex()));
   return queue;
 }
 

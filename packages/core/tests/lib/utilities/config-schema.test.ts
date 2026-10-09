@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { ChannelType } from "discord.js";
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import {
   cfg,
   fieldsFromSchema,
@@ -33,7 +33,7 @@ describe("Config Schema Utilities", () => {
         enabled: true,
         maxLimit: 10,
         greeting: "Hi there",
-        mode: "hard",
+        mode: "hard" as const,
         logChannel: "123456789012345678",
         modRole: "987654321098765432",
         adminUser: "112233445566778899",
@@ -119,12 +119,12 @@ describe("Config Schema Utilities", () => {
     });
 
     it("handles schemas without shape or containing untagged fields in fieldsFromSchema", () => {
-      const primitiveSchema = s.string() as any;
+      const primitiveSchema = z.string() as any;
       expect(fieldsFromSchema(primitiveSchema)).toEqual([]);
 
-      const mixedSchema = s.object({
+      const mixedSchema = z.object({
         tagged: cfg.boolean({ label: "Tagged", description: "Tagged field" }),
-        untagged: s.string(),
+        untagged: z.string(),
       }) as any;
 
       const fields = fieldsFromSchema(mixedSchema);

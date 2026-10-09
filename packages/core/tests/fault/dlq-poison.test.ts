@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
+import { StreamBus } from "#lib/event-bus/StreamBus.js";
 
-describe("Chaos Suite: Redis Stream Poison Pill & DLQ Routing", () => {
+describe("Chaos Suite: Stream Poison Pill & DLQ Routing", () => {
   let publisher: any;
   let subscriber: any;
-  let eventBus: RedisStreamsBus;
+  let eventBus: StreamBus;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,7 +24,7 @@ describe("Chaos Suite: Redis Stream Poison Pill & DLQ Routing", () => {
     subscriber = {
       duplicate: vi.fn().mockReturnValue(readConn),
     };
-    eventBus = new RedisStreamsBus({
+    eventBus = new StreamBus({
       publisher,
       subscriber,
       claimIntervalMs: 0,

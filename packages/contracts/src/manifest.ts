@@ -1,17 +1,14 @@
 import type { AddonCapabilities } from "./addon-sandbox.js";
 import type { ConfigField } from "./config.js";
 
-// Serializable module manifest contract for discovery and lifecycle metadata.
-
-
 /** Which deployable service runs a module. Workers run feature modules. */
 export type TargetUtility = "worker" | "gateway" | "scheduler" | "api";
 
-/** Sub-store directory names a module may declare (each = a Sapphire store name). */
+/** Module piece directory names a module may declare (`interactions/` fans out to the `interaction-handlers` store). */
 export const KnownSubstores = [
   "commands",
   "listeners",
-  "interaction-handlers",
+  "interactions",
   "preconditions",
   "utilities",
   "scheduled-tasks",

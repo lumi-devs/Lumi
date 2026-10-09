@@ -1,24 +1,16 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { container, Events } from "@sapphire/framework";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import type { VoiceState } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const VoiceStateUpdateListener = defineListener({
   name: "modVoiceStateUpdate",
   event: Events.VoiceStateUpdate,
   module: "mod",
-})
-export class VoiceStateUpdateListener extends ModuleListener<
-  typeof Events.VoiceStateUpdate
-> {
-  protected override resolveGuildId(
-    oldState: VoiceState,
-    newState: VoiceState,
-  ): string | null {
-    return newState.guild?.id ?? oldState.guild?.id ?? null;
-  }
-
-  protected async handle(
+  guildId: (oldState: VoiceState, newState: VoiceState) =>
+    newState.guild?.id ?? oldState.guild?.id ?? null,
+  async execute(
+    services: Container,
     oldState: VoiceState,
     newState: VoiceState,
   ): Promise<void> {
@@ -33,10 +25,10 @@ export class VoiceStateUpdateListener extends ModuleListener<
     const guildId = newState.guild.id;
     const userId = newState.member.id;
 
-    if (!(await container.db.moderation.isVoiceMuted(guildId, userId))) return;
+    if (!(await services.db.moderation.isVoiceMuted(guildId, userId))) return;
 
     await newState
       .disconnect("User is currently voice muted.")
       .catch(() => null);
-  }
-}
+  },
+});

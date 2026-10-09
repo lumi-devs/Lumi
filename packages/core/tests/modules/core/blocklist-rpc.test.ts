@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
@@ -68,20 +68,16 @@ describe("core module guild blocklist RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
-
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
 
     registerRpcHandlers();
   });

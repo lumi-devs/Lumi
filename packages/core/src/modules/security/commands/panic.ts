@@ -1,8 +1,7 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { enterPanic } from "../services/panic.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { enterPanic } from "@lumi/application/services/security/panic.js";
 import { toStringArray } from "#lib/module-system/config-schema.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import {
@@ -11,27 +10,23 @@ import {
   buildPanicStatusCard,
 } from "../ui/panic-card.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const panicDef: CommandDef = {
   name: "panic",
   description: "Lock down the server: pause invites and mute @everyone in text channels.",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "admin.*",
-})
-export class PanicCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b.setName(this.name).setDescription(this.description),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("panic");
+    return (
+    b.setName("panic").setDescription("Lock down the server: pause invites and mute @everyone in text channels.")
     );
-  }
-
-  public override async run(ctx: CommandContext) {
+  },
+  run: async (ctx: CommandContext) => {
     await ctx.defer();
     const t = await ctx.fetchT();
     const guild = ctx.guild!;
 
-    const existing = await this.container.db.security.getPanicState(guild.id);
+    const existing = await ctx.services.db.security.getPanicState(guild.id);
     if (existing) {
       return ctx.reply(
         buildPanicAlreadyActiveCard(t, existing.startedAt),
@@ -49,7 +44,7 @@ export class PanicCommand extends BaseCommand {
       return ctx.reply(buildPanicCancelledCard(t));
     }
 
-    const raw = await this.container.db.config.getAllModuleConfig(
+    const raw = await ctx.services.db.config.getAllModuleConfig(
       guild.id,
       "security",
     );
@@ -63,4 +58,4 @@ export class PanicCommand extends BaseCommand {
 
     return ctx.reply(buildPanicStatusCard(t, result));
   }
-}
+};

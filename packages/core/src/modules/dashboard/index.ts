@@ -1,7 +1,7 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { NoEndUserData } from "#lib/module-system/meta.js";
 
-@DefineModule({
+export const dashboardModule = defineModule({
   name: "dashboard",
   displayName: "Dashboard",
   emoji: "🖥️",
@@ -10,5 +10,4 @@ import { NoEndUserData } from "#lib/module-system/meta.js";
   short: "Web dashboard integration and RPC management endpoints.",
   endUserDataStatement: NoEndUserData(),
   category: "System",
-})
-export class DashboardModule extends Module {}
+});

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import {
   AuditFilterShape,
   boundedArray,
@@ -45,7 +45,7 @@ describe("PageSchema and PageSizeSchema", () => {
   });
 
   it("accepts the first page", () => {
-    expect(PageSchema.parse<number | undefined>(1)).toBe(1);
+    expect(PageSchema.parse(1)).toBe(1);
   });
 
   it.each([0, -1, 1.5])("rejects page %s", (value) => {
@@ -53,7 +53,7 @@ describe("PageSchema and PageSizeSchema", () => {
   });
 
   it("accepts a page size at the cap", () => {
-    expect(PageSizeSchema.parse<number | undefined>(MaxPageSize)).toBe(MaxPageSize);
+    expect(PageSizeSchema.parse(MaxPageSize)).toBe(MaxPageSize);
   });
 
   it("rejects a page size above the cap", () => {
@@ -71,7 +71,7 @@ describe("CursorSchema", () => {
   });
 
   it("accepts a non-empty string", () => {
-    expect(CursorSchema.parse<string | undefined>("eyJhIjoxfQ")).toBe("eyJhIjoxfQ");
+    expect(CursorSchema.parse("eyJhIjoxfQ")).toBe("eyJhIjoxfQ");
   });
 
   it("rejects an empty string", () => {
@@ -84,7 +84,7 @@ describe("CursorSchema", () => {
 
   it("accepts a cursor at the length cap", () => {
     const value = "a".repeat(512);
-    expect(CursorSchema.parse<string | undefined>(value)).toBe(value);
+    expect(CursorSchema.parse(value)).toBe(value);
   });
 
   it("rejects a non-string cursor", () => {
@@ -93,7 +93,7 @@ describe("CursorSchema", () => {
 });
 
 describe("AuditFilterShape (cursor-only)", () => {
-  const AuditFilter = s.object(AuditFilterShape);
+  const AuditFilter = z.object(AuditFilterShape);
 
   it("strips an unrecognized page field", () => {
     const payload = { userId: "123456789012345678", page: 2, pageSize: 10 };
@@ -114,7 +114,7 @@ describe("AuditFilterShape (cursor-only)", () => {
 });
 
 describe("boundedArray", () => {
-  const schema = boundedArray(s.string(), { min: 1, max: 2 });
+  const schema = boundedArray(z.string(), { min: 1, max: 2 });
 
   it("accepts a length within the bounds as a plain array", () => {
     const parsed: string[] = schema.parse(["a", "b"]);
@@ -122,11 +122,11 @@ describe("boundedArray", () => {
   });
 
   it("rejects fewer items than the minimum", () => {
-    expect(() => schema.parse([])).toThrow("at least 1");
+    expect(() => schema.parse([])).toThrow("expected array to have >=1 items");
   });
 
   it("rejects more items than the maximum", () => {
-    expect(() => schema.parse(["a", "b", "c"])).toThrow("at most 2");
+    expect(() => schema.parse(["a", "b", "c"])).toThrow("expected array to have <=2 items");
   });
 
   it("still validates each item", () => {

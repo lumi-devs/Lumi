@@ -1,4 +1,4 @@
-import { s, type BaseValidator } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type { ChannelType } from "discord.js";
 import {
   FieldType,
@@ -10,19 +10,19 @@ import {
 export { FieldType, type ConfigField };
 
 /** A validated object schema produced by `cfg.object(...)`. */
-export type ModuleConfigSchema = BaseValidator<Record<string, unknown>>;
+export type ModuleConfigSchema = z.ZodType<Record<string, unknown>>;
 
 type FieldMeta = Omit<ConfigField, "key">;
 
-/** UI/coercion metadata keyed by the exact Shapeshift schema instance it decorates. */
-const Registry = new WeakMap<BaseValidator<any>, FieldMeta>();
+/** UI/coercion metadata keyed by the exact schema instance it decorates. */
+const Registry = new WeakMap<z.ZodType, FieldMeta>();
 
-function tag<T extends BaseValidator<any>>(schema: T, meta: FieldMeta): T {
+function tag<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
   Registry.set(schema, meta);
   return schema;
 }
 
-const snowflake = () => s.string().regex(/^\d{17,20}$/);
+const snowflake = () => z.string().regex(/^\d{17,20}$/);
 
 interface BaseOpts {
   label: string;
@@ -52,12 +52,12 @@ const base = (o: BaseOpts) => ({
 
 /** Config field builders tagged with UI metadata. */
 export const cfg = {
-  object<T extends Record<string, BaseValidator<any>>>(shape: T) {
-    return s.object(shape);
+  object<T extends Record<string, z.ZodType>>(shape: T) {
+    return z.object(shape);
   },
 
   boolean(o: BaseOpts & { default?: boolean; pairedWith?: string }) {
-    return tag(s.boolean(), {
+    return tag(z.boolean(), {
       type: FieldType.Boolean,
       ...base(o),
       default: o.default,
@@ -66,9 +66,9 @@ export const cfg = {
   },
 
   number(o: BaseOpts & { default?: number; min?: number; max?: number; step?: number }) {
-    let schema = s.number();
-    if (o.min !== undefined) schema = schema.greaterThanOrEqual(o.min);
-    if (o.max !== undefined) schema = schema.lessThanOrEqual(o.max);
+    let schema = z.number();
+    if (o.min !== undefined) schema = schema.min(o.min);
+    if (o.max !== undefined) schema = schema.max(o.max);
     return tag(schema, {
       type: FieldType.Number,
       ...base(o),
@@ -94,7 +94,7 @@ export const cfg = {
       };
     },
   ) {
-    return tag(s.string(), {
+    return tag(z.string(), {
       type: FieldType.String,
       ...base(o),
       default: o.default,
@@ -108,7 +108,7 @@ export const cfg = {
     choices: C,
     o: BaseOpts & { default?: C[number] },
   ) {
-    return tag(s.enum(choices), {
+    return tag(z.enum(choices), {
       type: FieldType.Enum,
       ...base(o),
       default: o.default,
@@ -160,7 +160,7 @@ export const cfg = {
 
   /** Stored as `string[]` of role snowflakes. */
   multiRole(o: BaseOpts & { default?: string[] }) {
-    return tag(s.array(snowflake()), {
+    return tag(z.array(snowflake()), {
       type: FieldType.MultiRole,
       ...base(o),
       default: o.default,
@@ -169,7 +169,7 @@ export const cfg = {
 
   /** Stored as `string[]` of channel snowflakes. */
   multiChannel(o: BaseOpts & { default?: string[]; channelTypes?: ChannelType[] }) {
-    return tag(s.array(snowflake()), {
+    return tag(z.array(snowflake()), {
       type: FieldType.MultiChannel,
       ...base(o),
       default: o.default,
@@ -179,7 +179,7 @@ export const cfg = {
 
   /** Stored as `string[]` of user snowflakes. */
   multiUser(o: BaseOpts & { default?: string[] }) {
-    return tag(s.array(snowflake()), {
+    return tag(z.array(snowflake()), {
       type: FieldType.MultiUser,
       ...base(o),
       default: o.default,
@@ -188,7 +188,7 @@ export const cfg = {
 
   /** Stored as `string[]` of free-text entries. */
   stringList(o: BaseOpts & { default?: string[] }) {
-    return tag(s.array(s.string()), {
+    return tag(z.array(z.string()), {
       type: FieldType.StringList,
       ...base(o),
       default: o.default,
@@ -204,7 +204,7 @@ export const cfg = {
   componentsV2Blocks(
     o: BaseOpts & { default?: MessageDocumentV2; templateVars?: string[] },
   ) {
-    return tag(s.object({ accentColor: s.string().optional(), blocks: s.array(s.any()) }), {
+    return tag(z.object({ accentColor: z.string().optional(), blocks: z.array(z.any()) }), {
       type: FieldType.ComponentsV2Blocks,
       ...base(o),
       default: o.default ?? { blocks: [] },
@@ -217,7 +217,7 @@ export const cfg = {
    * UI metadata is known; both validation and the dashboard entries editor
    * derive from the same shape.
    */
-  objectArray<T extends Record<string, BaseValidator<any>>>(
+  objectArray<T extends Record<string, z.ZodType>>(
     shape: T,
     o: BaseOpts & { default?: Array<Record<string, unknown>> },
   ) {
@@ -228,7 +228,7 @@ export const cfg = {
         throw new Error(`cfg.objectArray: "${key}" is nested — one level only`);
       return { key, ...meta };
     });
-    return tag(s.array(s.object(shape)), {
+    return tag(z.array(z.object(shape)), {
       type: FieldType.ObjectArray,
       ...base(o),
       default: o.default,
@@ -237,7 +237,7 @@ export const cfg = {
   },
 };
 
-type ObjectLike = { shape?: Record<string, BaseValidator<unknown>> };
+type ObjectLike = { shape?: Record<string, z.ZodType> };
 
 /** Derive the flat `ConfigField[]` the panel/dashboard consume from a module's schema. */
 export function fieldsFromSchema(schema: ModuleConfigSchema): ConfigField[] {
@@ -294,10 +294,10 @@ export function toStringArray(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string");
 }
 
-export const snowflakeString = () => s.string().regex(/^\d{17,20}$/);
+export const snowflakeString = () => z.string().regex(/^\d{17,20}$/);
 
-export const durationString = () => s.string().regex(/^\d+[smhd]$/);
+export const durationString = () => z.string().regex(/^\d+[smhd]$/);
 
 export function choiceEnum<T extends string>(opts: readonly T[]) {
-  return s.enum(opts);
+  return z.enum(opts as [T, ...T[]]);
 }

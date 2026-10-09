@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
+import { container } from "#lib/services.js";
+import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
 
 describe("schedule-task", () => {
   beforeEach(() => {

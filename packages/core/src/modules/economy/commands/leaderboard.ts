@@ -1,41 +1,38 @@
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { userMention } from "@discordjs/formatters";
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
-import { BankService } from "../services/BankService.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const leaderboardDef: CommandDef = {
   name: "leaderboard",
-  description: "Show the richest members on this server.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "economy",
+  description: "Show the richest members on this server.",
+  guildOnly: true,
   prefixEnabled: true,
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export default class LeaderboardCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addIntegerOption((opt) =>
-          opt
-            .setName("count")
-            .setDescription("How many entries to show. Defaults to 10.")
-            .setMinValue(1)
-            .setMaxValue(50)
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  cooldownMs: 5000,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("leaderboard");
+    return (
+    builder
+            .setName("leaderboard")
+            .setDescription("Show the richest members on this server.")
+            .addIntegerOption((opt) =>
+              opt
+                .setName("count")
+                .setDescription("How many entries to show. Defaults to 10.")
+                .setMinValue(1)
+                .setMaxValue(50)
+                .setRequired(false),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(guildId);
+    const config = await getEconomyConfig(ctx.services, guildId);
     const count = (await ctx.getInteger("count")) ?? 10;
     try {
       const { entries } = await new BankService().leaderboard(
@@ -67,4 +64,4 @@ export default class LeaderboardCommand extends BaseCommand {
       await reportEconomyError(ctx, err);
     }
   }
-}
+};

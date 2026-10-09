@@ -17,10 +17,10 @@
  * Discord's 15-minute token and are the one path a user is actually waiting on.
  * The rule is *if no user is waiting on it, queue it*.
  */
-import { AsyncQueue } from "@sapphire/async-queue";
-import { container } from "@sapphire/framework";
+import { Mutex } from "@lumi/shared";
+import { type Container } from "#lib/services.js";
 import { queueDepth } from "@lumi/observability";
-import { scheduleTask, QueuePriority } from "#lib/schedule-task.js";
+import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
 import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "./render.js";
 
 const QueueLabel = "outbound-send";
@@ -41,32 +41,33 @@ export interface OutboundSendPayload {
  * Hand a send to the queue. Falls back to sending inline if the queue itself is
  * unreachable - a degraded send beats a dropped one.
  */
-export async function queueSend(payload: OutboundSendPayload): Promise<void> {
+export async function queueSend(services: Container, payload: OutboundSendPayload): Promise<void> {
   payload.at ??= Date.now();
   try {
     await scheduleTask("send-message", payload, {
       customJobOptions: { priority: QueuePriority.UTILITY },
     });
   } catch (err: unknown) {
-    container.logger.warn(
+    services.logger.warn(
       `[OutboundSend] Could not queue a send for channel ${payload.channelId}; sending inline:`,
       err,
     );
-    await deliver(payload);
+    await deliver(services, payload);
   }
 }
 
 /** One in-flight send per channel; distinct channels still run concurrently. */
-const channelQueues = new Map<string, AsyncQueue>();
+const channelQueues = new Map<string, Mutex>();
 let pending = 0;
 
 export async function handleSendMessageFire(
+  services: Container,
   payload: OutboundSendPayload,
 ): Promise<void> {
   const { channelId } = payload;
   let queue = channelQueues.get(channelId);
   if (!queue) {
-    queue = new AsyncQueue();
+    queue = new Mutex();
     channelQueues.set(channelId, queue);
   }
 
@@ -74,7 +75,7 @@ export async function handleSendMessageFire(
   queueDepth.set({ queue: QueueLabel }, pending);
   await queue.wait();
   try {
-    await deliver(payload);
+    await deliver(services, payload);
   } finally {
     queue.shift();
     pending--;
@@ -88,15 +89,15 @@ export async function handleSendMessageFire(
  * consumer) nacks and the message is redelivered; a channel that no longer
  * exists is not an error, just a dead letter.
  */
-async function deliver(payload: OutboundSendPayload): Promise<void> {
+async function deliver(services: Container, payload: OutboundSendPayload): Promise<void> {
   const channel =
-    container.client.channels.cache.get(payload.channelId) ??
-    (await container.client.channels
+    services.client.channels.cache.get(payload.channelId) ??
+    (await services.client.channels
       .fetch(payload.channelId)
       .catch(() => null));
 
   if (!channel || !channel.isTextBased() || !("send" in channel)) {
-    container.logger.debug(
+    services.logger.debug(
       `[OutboundSend] Dropping send for unresolvable channel ${payload.channelId}.`,
     );
     return;

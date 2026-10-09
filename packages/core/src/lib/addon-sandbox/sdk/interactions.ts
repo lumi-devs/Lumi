@@ -1,4 +1,4 @@
-import type { AddonInteractionInvocation, SerialisedMember, SerialisedUser } from "@lumi/contracts";
+import type { AddonInteractionInvocation, SerialisedAttachment, SerialisedMember, SerialisedUser } from "@lumi/contracts";
 import type { CardReply } from "#lib/ui/cards.js";
 import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard } from "#lib/ui/cards.js";
 import { call } from "./rpc.js";
@@ -11,6 +11,7 @@ export class InteractionContext {
   readonly member: SerialisedMember | null;
   readonly values: string[];
   readonly fields: Record<string, string>;
+  readonly attachments: Record<string, SerialisedAttachment[]>;
 
   constructor(invocation: AddonInteractionInvocation) {
     this.customId = invocation.customId;
@@ -20,6 +21,7 @@ export class InteractionContext {
     this.member = invocation.member;
     this.values = invocation.values;
     this.fields = invocation.fields;
+    this.attachments = invocation.attachments ?? {};
   }
 
   reply(card: CardReply, opts: { ephemeral?: boolean } = {}): Promise<void> {
@@ -52,11 +54,9 @@ export class InteractionContext {
   }
 }
 
-export abstract class BaseInteractionHandler {
-  // Must start with "<your-addon-name>:" — the host ignores anything else.
-  abstract readonly prefix: string;
-
-  abstract run(ctx: InteractionContext): unknown | Promise<unknown>;
+export interface InteractionHandler {
+  prefix: string;
+  run: (ctx: InteractionContext) => unknown | Promise<unknown>;
 }
 
 export function deferUpdate(): Promise<void> {

@@ -1,13 +1,13 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { SnowflakeSchema, securityRpc } from "@lumi/contracts/rpc";
-import type { GuildBackupData } from "./services/backup-types.js";
-import { restoreGuildFromBackup } from "./services/restore-guild.js";
-import { enterPanic, revertPanic } from "./services/panic.js";
+import type { GuildBackupData } from "@lumi/application/services/security/backup-types.js";
+import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
+import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
 import {
   postOrEditVerifyPanel,
   loadVerificationConfig,
   grantVerified,
-} from "./services/verification.js";
+} from "@lumi/application/services/security/verification.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { withIdempotency } from "#lib/rpc/idempotency.js";
 
@@ -80,7 +80,7 @@ export const securityRpcHandlers = implementRpc(securityRpc, {
       input,
       async () => {
         await container.db.ensureGuild(guildId);
-        const result = await postOrEditVerifyPanel(guildId, {
+        const result = await postOrEditVerifyPanel(container, guildId, {
           channelId: input.channelId,
           createChannel: input.createChannel,
           deleteOldMessage: input.deleteOldMessage,

@@ -53,8 +53,7 @@ export async function manifestFromMeta(
 }
 
 /** Build a runtime `ModuleMeta` from a static manifest (no `configSchema`). */
-export function metaFromManifest(manifest: ModuleManifest): ModuleMeta {
-  return {
+export function metaFromManifest(manifest: ModuleManifest): ModuleMeta {  return {
     name: manifest.name,
     displayName: manifest.displayName,
     emoji: manifest.emoji,

@@ -1,25 +1,15 @@
 import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
 import { formatSubtitle, formatPageFooter } from "#lib/ui/layout.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import {
-  ActionRowBuilder,
-  type MessageActionRowComponentBuilder,
-} from "@discordjs/builders";
+import { row, type Row } from "#lib/ui/panels.js";
 import {
   channelMention,
   roleMention,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 
-export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
-
-/** Wraps components in an action row, saving the generic parameter at every call site. */
-export function row(...components: MessageActionRowComponentBuilder[]): Row {
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    ...components,
-  );
-}
+export { row, type Row };
 
 export { formatSubtitle, formatPageFooter };
 

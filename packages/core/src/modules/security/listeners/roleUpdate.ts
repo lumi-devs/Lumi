@@ -1,20 +1,16 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { AuditLogEvent, type Role } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { resolveAuditLogExecutor } from "../services/audit.js";
-import { DangerousPermissions, evaluateNukeEvent } from "../services/anti-nuke.js";
+import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
+import { DangerousPermissions, evaluateNukeEvent } from "@lumi/application/services/security/anti-nuke.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const SecurityRoleUpdateListener = defineListener({
   name: "securityRoleUpdate",
   event: Events.GuildRoleUpdate,
   module: "security",
-})
-export class SecurityRoleUpdateListener extends ModuleListener<
-  typeof Events.GuildRoleUpdate
-> {
-  protected async handle(oldRole: Role, newRole: Role): Promise<void> {
+  async execute(_services: Container, oldRole: Role, newRole: Role): Promise<void> {
     if (newRole.id !== newRole.guild.roles.everyone.id) return;
 
     const grantedDangerous = DangerousPermissions.filter(
@@ -32,6 +28,5 @@ export class SecurityRoleUpdateListener extends ModuleListener<
     await evaluateNukeEvent(newRole.guild, "dangerous_permission_grant", () =>
       resolveAuditLogExecutor(newRole.guild, AuditLogEvent.RoleUpdate, newRole.id),
     );
-  }
-
-}
+  },
+});

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readlink, rm, symlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { ModuleRoot } from "#lib/downloader/resolver.js";
 
@@ -10,10 +10,11 @@ const Subpaths: Record<string, string> = {
   "./commands": "commands.ts",
   "./config": "config.ts",
   "./discord": "discord.ts",
+  "./events": "events.ts",
   "./interactions": "interactions.ts",
   "./kv": "kv.ts",
   "./permissions": "permissions.ts",
-  "./redis": "redis.ts",
+  "./valkey": "valkey.ts",
   "./scheduling": "scheduling.ts",
   "./ui": "ui.ts",
   "./utils": "utils.ts",
@@ -25,10 +26,8 @@ function shimFile(subpath: string): string {
   return `${subpath === "." ? "index" : subpath.slice(2)}.ts`;
 }
 
-// The nearest package.json to every addon file. Named "lumi" so `import "lumi"`
-// self-resolves here rather than at the repo root, and carries no `imports` map
-// so `#lib/*` and `#modules/*` do not resolve from addon code. Targets point at
-// generated shims because an exports target may not escape its own package.
+// Nearest package.json to addon files. Named "lumi" for self-resolution; no
+// `imports` map so `#lib/*` stays unreachable from addon code.
 export async function ensureSandboxRoot(): Promise<void> {
   await mkdir(path.join(ModuleRoot, ShimDir), { recursive: true });
   const writes: Promise<unknown>[] = [];
@@ -60,4 +59,18 @@ export async function ensureSandboxRoot(): Promise<void> {
   );
 
   await Promise.all(writes);
+}
+
+// `node_modules/lumi` inside the addon beats any ancestor package.json (e.g. a repo
+// root's) that would otherwise shadow the sandbox root's self-referencing `lumi` package.
+export async function ensureAddonLumiLink(addonDir: string): Promise<void> {
+  const nmDir = path.join(addonDir, "node_modules");
+  await mkdir(nmDir, { recursive: true });
+  const link = path.join(nmDir, "lumi");
+  const current = await readlink(link).catch(() => null);
+  if (current && path.resolve(nmDir, current) === ModuleRoot) return;
+  const stat = await lstat(link).catch(() => null);
+  if (stat && !stat.isSymbolicLink()) return;
+  await rm(link, { recursive: true, force: true }).catch(() => undefined);
+  await symlink(ModuleRoot, link, "dir");
 }

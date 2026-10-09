@@ -1,11 +1,5 @@
-import {
-  getScheduledTasksConnectionOptions,
-  SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
-} from "#lib/client/scheduled-tasks-queue.js";
-import { buildRestOptions } from "#lib/discord-rest.js";
-import { envParseInteger, envParseString } from "#lib/env.js";
-import { buildI18nOptions } from "#lib/i18n/index.js";
-import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
+import { buildRestOptions } from "#lib/discord/options.js";
+import { envParseInteger } from "#lib/env.js";
 import { BotConfig } from "#lib/utilities/config.js";
 import {
   GatewayIntentBits,
@@ -16,17 +10,6 @@ import {
   type PresenceStatusData,
 } from "discord.js";
 
-/**
- * Assembles the discord.js + Sapphire options the client is constructed with.
- *
- * @remarks
- *
- * Kept as a free function because it has to be evaluated inside the `super()`
- * argument list, before `this` exists. Shard id/count are deliberately left
- * unset here - discord.js's `Client` constructor reads them itself from the
- * `SHARDS`/`SHARD_COUNT` env vars `ShardingManager` injects into each spawned
- * child (see `apps/worker/src/main.ts`).
- */
 export function buildClientOptions(): ClientOptions {
   return {
     makeCache: Options.cacheWithLimits({
@@ -46,6 +29,8 @@ export function buildClientOptions(): ClientOptions {
       BaseGuildEmojiManager: 0,
       ApplicationCommandManager: 0,
       ApplicationEmojiManager: 0,
+      PresenceManager: 0,
+      VoiceStateManager: 0,
     }),
     sweepers: {
       ...Options.DefaultSweeperSettings,
@@ -58,6 +43,7 @@ export function buildClientOptions(): ClientOptions {
         filter: () => (user) => user.bot && user.id !== user.client.user.id,
       },
       threads: { interval: 3600, lifetime: 3600 },
+      presences: { interval: 3600, filter: () => () => true },
       guildMembers: {
         interval: envParseInteger("SWEEPER_MEMBERS_INTERVAL", 1800),
         filter: Sweepers.filterByLifetime({
@@ -88,25 +74,6 @@ export function buildClientOptions(): ClientOptions {
         },
       ],
       status: BotConfig.presence.status as PresenceStatusData,
-    },
-    loadMessageCommandListeners: true,
-    loadDefaultErrorListeners: false,
-    loadScheduledTaskErrorListeners: false,
-    baseUserDirectory: new URL("../../", import.meta.url),
-    defaultPrefix: envParseString("DEFAULT_PREFIX", ","),
-    logger: {
-      instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi")),
-    },
-    // Off even in development: under Bun's loader the plugin fails to re-read
-    // pieces and logs MissingExportsError for each one instead of reloading it.
-    // `bun --watch` (the worker's dev script) restarts the process anyway.
-    hmr: { enabled: false },
-    i18n: buildI18nOptions(),
-    tasks: {
-      bull: {
-        connection: getScheduledTasksConnectionOptions(),
-        defaultJobOptions: SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
-      },
     },
     rest: buildRestOptions(),
   };

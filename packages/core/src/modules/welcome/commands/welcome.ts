@@ -1,11 +1,9 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { Command } from "@sapphire/framework";
-import { ChannelType } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { sendWelcomeCard } from "../services/welcome.js";
-import { loadWelcomeConfig } from "../services/welcome.js";
-import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "../services/welcome.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import { SlashCommandBuilder, ChannelType } from "discord.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
+import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { buildDmWelcomeCard, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";
 
 const PreviewKinds = ["welcome", "goodbye", "dm"] as const;
 type PreviewKind = (typeof PreviewKinds)[number];
@@ -16,53 +14,51 @@ function parseKind(raw: string | null): PreviewKind {
     : "welcome";
 }
 
-@ApplyOptions<BaseCommand.Options>({
+export const welcomeDef: CommandDef = {
   name: "welcome",
-  description: "Preview the welcome, goodbye, or DM greeting card.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "welcome",
+  description: "Preview the welcome, goodbye, or DM greeting card.",
+  guildOnly: true,
   requiredPermit: "admin.welcome",
   prefixEnabled: true,
-})
-export class WelcomeCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((opt) =>
-          opt
-            .setName("message")
-            .setDescription("Which card to preview.")
-            .addChoices(
-              { name: "Welcome", value: "welcome" },
-              { name: "Goodbye", value: "goodbye" },
-              { name: "DM greeting", value: "dm" },
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("welcome");
+    return (
+    builder
+            .setName("welcome")
+            .setDescription("Preview the welcome, goodbye, or DM greeting card.")
+            .addStringOption((opt) =>
+              opt
+                .setName("message")
+                .setDescription("Which card to preview.")
+                .addChoices(
+                  { name: "Welcome", value: "welcome" },
+                  { name: "Goodbye", value: "goodbye" },
+                  { name: "DM greeting", value: "dm" },
+                )
+                .setRequired(false),
             )
-            .setRequired(false),
-        )
-        .addUserOption((opt) =>
-          opt
-            .setName("member")
-            .setDescription("Member to render the card for (defaults to you).")
-            .setRequired(false),
-        )
-        .addChannelOption((opt) =>
-          opt
-            .setName("channel")
-            .setDescription(
-              "Post the preview into this channel (defaults to an ephemeral reply).",
+            .addUserOption((opt) =>
+              opt
+                .setName("member")
+                .setDescription("Member to render the card for (defaults to you).")
+                .setRequired(false),
             )
-            .addChannelTypes(
-              ChannelType.GuildText,
-              ChannelType.GuildAnnouncement,
+            .addChannelOption((opt) =>
+              opt
+                .setName("channel")
+                .setDescription(
+                  "Post the preview into this channel (defaults to an ephemeral reply).",
+                )
+                .addChannelTypes(
+                  ChannelType.GuildText,
+                  ChannelType.GuildAnnouncement,
+                )
+                .setRequired(false),
             )
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const guild = ctx.guild;
     if (!guild) {
       return ctx.replyError("No server", "This command can only be used in a server.");
@@ -113,4 +109,4 @@ export class WelcomeCommand extends BaseCommand {
     }
     return ctx.reply(card);
   }
-}
+};

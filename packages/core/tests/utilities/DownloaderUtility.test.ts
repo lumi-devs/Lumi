@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { DownloaderUtility, ModuleAlreadyInstalledError } from "#modules/core/utilities/DownloaderUtility.js";
-import { container } from "@sapphire/framework";
+import { downloaderUtility, ModuleAlreadyInstalledError } from "#modules/core/utilities/DownloaderUtility.js";
+import { container } from "#lib/services.js";
 import { resolver } from "#lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
 
@@ -48,13 +48,12 @@ vi.mock("node:fs", () => ({
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 describe("DownloaderUtility", () => {
-  let service: DownloaderUtility;
+  let service: typeof downloaderUtility;
   let mockDb: any;
   let mockModuleStore: any;
   let mockLogger: any;
   let mockClient: any;
-  let mockCommandStore: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let spawnSpy: { mockImplementation: (fn: (cmd: string[]) => unknown) => void };
 
   beforeEach(() => {
@@ -89,7 +88,7 @@ describe("DownloaderUtility", () => {
       setEnabled: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue(undefined),
     };
@@ -100,8 +99,6 @@ describe("DownloaderUtility", () => {
       error: vi.fn(),
       debug: vi.fn(),
     };
-
-    mockCommandStore = new Map();
 
     mockClient = {
       application: {
@@ -115,15 +112,9 @@ describe("DownloaderUtility", () => {
     (container as any).moduleStore = mockModuleStore;
     container.logger = mockLogger;
     container.client = mockClient;
-    (container as any).redis = mockRedis;
-    container.stores = {
-      get: vi.fn().mockReturnValue(mockCommandStore),
-    } as any;
+    (container as any).valkey = mockValkey;
 
-    service = new DownloaderUtility(
-      { name: "downloader", store: { name: "utilities" } } as any,
-      {}
-    );
+    service = downloaderUtility;
   });
 
   describe("ModuleAlreadyInstalledError", () => {
@@ -138,8 +129,12 @@ describe("DownloaderUtility", () => {
   describe("onLoad", () => {
     it("invokes syncInstalledModulesOnStartup and logs error on failure", async () => {
       const syncSpy = vi.spyOn(service, "syncInstalledModulesOnStartup").mockRejectedValue(new Error("Sync error"));
-      await service.onLoad();
-      expect(syncSpy).toHaveBeenCalled();
+      try {
+        await service.onLoad();
+        expect(syncSpy).toHaveBeenCalled();
+      } finally {
+        syncSpy.mockRestore();
+      }
       expect(mockLogger.error).toHaveBeenCalledWith(
         "[DownloaderUtility] Failed to sync installed modules on startup:",
         expect.any(Error)
@@ -150,7 +145,7 @@ describe("DownloaderUtility", () => {
   describe("syncInstalledModulesOnStartup", () => {
     it("returns early if no installed modules found", async () => {
       mockDb.downloader.readAllInstalledDownloaderModulesWithRepo.mockResolvedValue([]);
-      await service.syncInstalledModulesOnStartup();
+      await service.syncInstalledModulesOnStartup(container);
       expect(fs.mkdir).toHaveBeenCalledWith("/mock/addon_modules", { recursive: true });
       expect(mockModuleStore.discover).not.toHaveBeenCalled();
     });
@@ -169,7 +164,7 @@ describe("DownloaderUtility", () => {
         .mockRejectedValueOnce(new Error("ENOENT"))
         .mockResolvedValueOnce(true);
 
-      await service.syncInstalledModulesOnStartup();
+      await service.syncInstalledModulesOnStartup(container);
 
       expect(resolver.addRepo).toHaveBeenCalledWith("repo1", "https://example.com/repo1.git", "main");
       expect(fs.symlink).toHaveBeenCalled();
@@ -191,7 +186,7 @@ describe("DownloaderUtility", () => {
 
       (fs.symlink as any).mockRejectedValueOnce(new Error("Symlink failed"));
 
-      await service.syncInstalledModulesOnStartup();
+      await service.syncInstalledModulesOnStartup(container);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         "[DownloaderUtility] Failed to restore symlink for mod1:",
@@ -203,24 +198,24 @@ describe("DownloaderUtility", () => {
   describe("installModule", () => {
     it("throws error if repo not found", async () => {
       mockDb.downloader.readDownloaderRepo.mockResolvedValue(null);
-      await expect(service.installModule("r1", "m1")).rejects.toThrow("Repository **r1** has not been added");
+      await expect(service.installModule(container, "r1", "m1")).rejects.toThrow("Repository **r1** has not been added");
     });
 
     it("throws ModuleAlreadyInstalledError if module is already installed", async () => {
       mockDb.downloader.readDownloaderRepo.mockResolvedValue({ id: "r1-id" });
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
-      await expect(service.installModule("r1", "m1")).rejects.toThrow(ModuleAlreadyInstalledError);
+      await expect(service.installModule(container, "r1", "m1")).rejects.toThrow(ModuleAlreadyInstalledError);
     });
 
     it("successfully installs module and writes database entry", async () => {
       mockDb.downloader.readDownloaderRepo.mockResolvedValue({ id: "r1-id" });
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
 
-      await service.installModule("r1", "m1");
+      await service.installModule(container, "r1", "m1");
 
       expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
-      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
+      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1", true);
       expect(mockDb.downloader.writeInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1", "1.0.0", null);
     });
 
@@ -229,7 +224,7 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
       mockModuleStore.loadModule.mockRejectedValue(new Error("Load failed"));
 
-      await expect(service.installModule("r1", "m1")).rejects.toThrow("Load failed");
+      await expect(service.installModule(container, "r1", "m1")).rejects.toThrow("Load failed");
 
       expect(mockModuleStore.unload).toHaveBeenCalledWith("m1");
       expect(fs.unlink).toHaveBeenCalledWith("/mock/addon_modules/m1");
@@ -245,7 +240,7 @@ describe("DownloaderUtility", () => {
         signatureWarning: null,
       });
 
-      await service.installModule("r1", "m1", "abc1234");
+      await service.installModule(container, "r1", "m1", "abc1234");
 
       expect(resolver.installModule).toHaveBeenCalledWith("r1", "m1", "abc1234");
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
@@ -260,13 +255,13 @@ describe("DownloaderUtility", () => {
   describe("uninstallModule", () => {
     it("throws error if module not installed via downloader", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
-      await expect(service.uninstallModule("m1")).rejects.toThrow("was not installed via the downloader");
+      await expect(service.uninstallModule(container, "m1")).rejects.toThrow("was not installed via the downloader");
     });
 
     it("uninstalls module, removes directory, and deletes DB record", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
 
-      await service.uninstallModule("m1");
+      await service.uninstallModule(container, "m1");
 
       expect(mockModuleStore.unload).toHaveBeenCalledWith("m1");
       expect(fs.rm).toHaveBeenCalledWith("/mock/addon_modules/m1", { recursive: true, force: true });
@@ -277,7 +272,7 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       mockModuleStore.unload.mockRejectedValue(new Error("Module does not exist in store"));
 
-      await service.uninstallModule("m1");
+      await service.uninstallModule(container, "m1");
 
       expect(fs.rm).toHaveBeenCalled();
       expect(mockDb.downloader.deleteInstalledDownloaderModule).toHaveBeenCalledWith("r1-id", "m1");
@@ -287,7 +282,7 @@ describe("DownloaderUtility", () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       mockModuleStore.unload.mockRejectedValue(new Error("Unload crash"));
 
-      await expect(service.uninstallModule("m1")).rejects.toThrow("Unload crash");
+      await expect(service.uninstallModule(container, "m1")).rejects.toThrow("Unload crash");
     });
   });
 
@@ -298,7 +293,7 @@ describe("DownloaderUtility", () => {
         signedBy: null,
         signatureWarning: null,
       });
-      await service.addRepo("r1", "https://url", "main");
+      await service.addRepo(container, "r1", "https://url", "main");
       expect(resolver.addRepo).toHaveBeenCalledWith("r1", "https://url", "main");
       expect(mockDb.downloader.writeDownloaderRepo).toHaveBeenCalledWith(
         "r1",
@@ -313,7 +308,7 @@ describe("DownloaderUtility", () => {
       (resolver.addRepo as any).mockRejectedValueOnce(
         new MockRepoAlreadyInstalledError("r1", "deadbeef"),
       );
-      await expect(service.addRepo("r1", "https://url", "main")).rejects.toThrow(
+      await expect(service.addRepo(container, "r1", "https://url", "main")).rejects.toThrow(
         /already installed at commit `deadbeef`.*,repo update r1/s,
       );
       expect(mockDb.downloader.writeDownloaderRepo).not.toHaveBeenCalled();
@@ -321,7 +316,7 @@ describe("DownloaderUtility", () => {
 
     it("updateRepo throws error if repo missing in DB", async () => {
       mockDb.downloader.readDownloaderRepo.mockResolvedValue(null);
-      await expect(service.updateRepo("r1")).rejects.toThrow("Repository **r1** not found");
+      await expect(service.updateRepo(container, "r1")).rejects.toThrow("Repository **r1** not found");
     });
 
     it("updateRepo pulls via resolver.updateRepo and persists the new commit to the DB", async () => {
@@ -341,7 +336,7 @@ describe("DownloaderUtility", () => {
         signatureWarning: null,
       });
 
-      const result = await service.updateRepo("r1");
+      const result = await service.updateRepo(container, "r1");
 
       expect(resolver.updateRepo).toHaveBeenCalledWith("r1", "http://url", "dev");
       expect(mockDb.downloader.updateDownloaderRepoCommit).toHaveBeenCalledWith(
@@ -354,7 +349,7 @@ describe("DownloaderUtility", () => {
 
     it("listRepos delegates to DB", async () => {
       mockDb.downloader.readAllDownloaderRepos.mockResolvedValue(["repo1"]);
-      const res = await service.listRepos();
+      const res = await service.listRepos(container);
       expect(res).toEqual(["repo1"] as any);
     });
 
@@ -383,13 +378,13 @@ describe("DownloaderUtility", () => {
   describe("updateModule", () => {
     it("throws error if module not installed", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
-      await expect(service.updateModule("m1")).rejects.toThrow("was not installed via the downloader");
+      await expect(service.updateModule(container, "m1")).rejects.toThrow("was not installed via the downloader");
     });
 
     it("throws error if repo not found", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id" });
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue(null);
-      await expect(service.updateModule("m1")).rejects.toThrow("Repository for module **m1** could not be found");
+      await expect(service.updateModule(container, "m1")).rejects.toThrow("Repository for module **m1** could not be found");
     });
 
     it("returns updated: false if up to date", async () => {
@@ -402,7 +397,7 @@ describe("DownloaderUtility", () => {
         return fakeSpawnResult("");
       });
 
-      const res = await service.updateModule("m1");
+      const res = await service.updateModule(container, "m1");
       expect(res).toEqual({ updated: false });
     });
 
@@ -419,7 +414,7 @@ describe("DownloaderUtility", () => {
         return fakeSpawnResult("");
       });
 
-      const res = await service.updateModule("m1");
+      const res = await service.updateModule(container, "m1");
       expect(res).toEqual({ updated: true, changelog: "feat: new feature", needsRestart: true });
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith("r1-id", "m1", "newhash");
     });
@@ -430,11 +425,14 @@ describe("DownloaderUtility", () => {
 
       (fs.access as any).mockResolvedValue(true);
       spawnSpy.mockImplementation((cmd: string[]) => {
+        if (cmd.includes("rev-parse") && cmd.includes("HEAD")) return fakeSpawnResult("oldhash\n");
+        if (cmd.includes("rev-parse") && cmd.includes("@{u}")) return fakeSpawnResult("origin/main\n");
+        if (cmd.includes("rev-parse") && cmd.includes("origin/main")) return fakeSpawnResult("newhash\n");
         if (cmd.includes("pull")) return fakeSpawnResult("", "Git pull conflict", 1);
         return fakeSpawnResult("newhash\n");
       });
 
-      await expect(service.updateModule("m1")).rejects.toThrow("Git pull failed: Git pull conflict");
+      await expect(service.updateModule(container, "m1")).rejects.toThrow("Git pull failed: Git pull conflict");
     });
 
     it("serializes concurrent updateModule calls that touch the same repo checkout", async () => {
@@ -467,8 +465,8 @@ describe("DownloaderUtility", () => {
       });
 
       const [res1, res2] = await Promise.all([
-        service.updateModule("m1"),
-        service.updateModule("m2"),
+        service.updateModule(container, "m1"),
+        service.updateModule(container, "m2"),
       ]);
 
       expect(res1).toEqual({ updated: true, changelog: "feat: change", needsRestart: true });
@@ -483,7 +481,7 @@ describe("DownloaderUtility", () => {
         pinned: true,
       });
 
-      const res = await service.updateModule("m1");
+      const res = await service.updateModule(container, "m1");
       expect(res).toEqual({ updated: false, pinned: true });
     });
 
@@ -505,7 +503,7 @@ describe("DownloaderUtility", () => {
         signatureWarning: null,
       });
 
-      const res = await service.updateModule("m1", "pinnedhash");
+      const res = await service.updateModule(container, "m1", "pinnedhash");
 
       expect(res).toEqual({ updated: true, needsRestart: true, signatureWarning: null });
       expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "pinnedhash");
@@ -521,7 +519,7 @@ describe("DownloaderUtility", () => {
   describe("rollbackModule", () => {
     it("throws error if module not installed via the downloader", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
-      await expect(service.rollbackModule("m1", "oldhash")).rejects.toThrow(
+      await expect(service.rollbackModule(container, "m1", "oldhash")).rejects.toThrow(
         "was not installed via the downloader",
       );
     });
@@ -529,7 +527,7 @@ describe("DownloaderUtility", () => {
     it("throws error if the repository can't be found", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ repoId: "r1-id" });
       mockDb.downloader.readDownloaderRepoById.mockResolvedValue(null);
-      await expect(service.rollbackModule("m1", "oldhash")).rejects.toThrow(
+      await expect(service.rollbackModule(container, "m1", "oldhash")).rejects.toThrow(
         "Repository for module **m1** could not be found",
       );
     });
@@ -544,11 +542,11 @@ describe("DownloaderUtility", () => {
         signatureWarning: null,
       });
 
-      const res = await service.rollbackModule("m1", "oldhash");
+      const res = await service.rollbackModule(container, "m1", "oldhash");
 
       expect(resolver.installModule).toHaveBeenCalledWith("repo1", "m1", "oldhash");
       expect(mockModuleStore.discover).toHaveBeenCalledWith(true);
-      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1");
+      expect(mockModuleStore.loadModule).toHaveBeenCalledWith("m1", true);
       expect(mockDb.downloader.updateInstalledDownloaderModuleCommit).toHaveBeenCalledWith(
         "r1-id",
         "m1",
@@ -560,18 +558,18 @@ describe("DownloaderUtility", () => {
   });
 
   describe("checkForUpdates", () => {
-    it("returns the cached result from Redis without hitting the DB or git", async () => {
-      mockRedis.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
+    it("returns the cached result from Valkey without hitting the DB or git", async () => {
+      mockValkey.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
 
-      const res = await service.checkForUpdates();
+      const res = await service.checkForUpdates(container);
 
       expect(res).toEqual(["cached-mod"]);
       expect(mockDb.downloader.readAllInstalledDownloaderModules).not.toHaveBeenCalled();
-      expect(mockRedis.setex).not.toHaveBeenCalled();
+      expect(mockValkey.setex).not.toHaveBeenCalled();
     });
 
     it("swallows a per-module failure with a warning and still caches the modules that succeeded", async () => {
-      mockRedis.get.mockResolvedValue(null);
+      mockValkey.get.mockResolvedValue(null);
       mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue([
         { moduleName: "modA" },
         { moduleName: "modB" },
@@ -596,13 +594,13 @@ describe("DownloaderUtility", () => {
         return fakeSpawnResult("");
       });
 
-      const res = await service.checkForUpdates();
+      const res = await service.checkForUpdates(container);
 
       expect(res).toEqual(["modA"]);
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining("[DownloaderUtility] Update check failed for modB:")
       );
-      expect(mockRedis.setex).toHaveBeenCalledWith(
+      expect(mockValkey.setex).toHaveBeenCalledWith(
         "lumi:addon:update-check",
         300,
         JSON.stringify(["modA"])
@@ -613,7 +611,7 @@ describe("DownloaderUtility", () => {
   describe("toggleModule", () => {
     it("throws error if module was not installed via the downloader", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue(null);
-      await expect(service.toggleModule("m1", true)).rejects.toThrow(
+      await expect(service.toggleModule(container, "m1", true)).rejects.toThrow(
         "was not installed via the downloader"
       );
       expect(mockModuleStore.setEnabled).not.toHaveBeenCalled();
@@ -621,35 +619,44 @@ describe("DownloaderUtility", () => {
 
     it("enables/disables the module via the ModuleStore and re-syncs commands", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
-      const syncSpy = vi.spyOn(service, "syncApplicationCommands").mockResolvedValue(undefined);
-
-      await service.toggleModule("m1", false);
+      const { commandRegistry } = await import(
+        "#lib/commands/command-def.js"
+      );
+      commandRegistry.set("ut-toggle-cmd", {
+        name: "ut-toggle-cmd",
+        build: () => ({ toJSON: () => ({ name: "ut-toggle-cmd" }) }) as any,
+      });
+      try {
+        await service.toggleModule(container, "m1", false);
+      } finally {
+        commandRegistry.delete("ut-toggle-cmd");
+      }
 
       expect(mockModuleStore.setEnabled).toHaveBeenCalledWith(
         "m1",
         false,
         "toggled via addons panel"
       );
-      expect(syncSpy).toHaveBeenCalled();
+      expect(mockClient.application.commands.set).toHaveBeenCalled();
     });
   });
 
   describe("getInstalledModules & getInstalledModulesDetailed", () => {
     it("getInstalledModules calls DB", async () => {
       mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue(["mod1"]);
-      expect(await service.getInstalledModules()).toEqual(["mod1"] as any);
+      expect(await service.getInstalledModules(container)).toEqual(["mod1"] as any);
     });
 
     it("getInstalledModulesDetailed calls DB", async () => {
       mockDb.downloader.readAllInstalledDownloaderModulesWithRepo.mockResolvedValue([{ moduleName: "mod1" }]);
-      expect(await service.getInstalledModulesDetailed()).toEqual([{ moduleName: "mod1" }] as any);
+      expect(await service.getInstalledModulesDetailed(container)).toEqual([{ moduleName: "mod1" }] as any);
     });
   });
 
   describe("removeRepo", () => {
     it("throws error if repo not found", async () => {
       mockDb.downloader.readDownloaderRepoWithModules.mockResolvedValue(null);
-      await expect(service.removeRepo("r1")).rejects.toThrow("Repository **r1** not found.");
+      await expect(service.removeRepo(container, "r1")).rejects.toThrow("Repository **r1** not found.");
     });
 
     it("uninstalls modules and deletes repo", async () => {
@@ -659,7 +666,7 @@ describe("DownloaderUtility", () => {
       });
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
 
-      await service.removeRepo("r1");
+      await service.removeRepo(container, "r1");
 
       expect(mockModuleStore.unload).toHaveBeenCalledWith("m1");
       expect(mockDb.downloader.deleteDownloaderRepo).toHaveBeenCalledWith("r1");
@@ -669,59 +676,35 @@ describe("DownloaderUtility", () => {
   describe("syncApplicationCommands", () => {
     it("skips sync with warning if client.application is missing", async () => {
       container.client = {} as any;
-      await service.syncApplicationCommands();
+      await service.syncApplicationCommands(container);
       expect(mockLogger.warn).toHaveBeenCalledWith(
         "[DownloaderUtility] client.application not ready; slash command sync skipped"
       );
     });
 
-    it("registers and sets global and guild commands", async () => {
-      const mockCmd1 = {
-        name: "global-cmd",
-        registerApplicationCommands: vi.fn(),
-        applicationCommandRegistry: {
-          apiCalls: [
-            {
-              registerOptions: {},
-              builtData: { name: "global-cmd", description: "Global" },
-            },
-          ],
-        },
-      };
-
-      const mockCmd2 = {
-        name: "guild-cmd",
-        registerApplicationCommands: vi.fn(),
-        applicationCommandRegistry: {
-          apiCalls: [
-            {
-              registerOptions: { guildIds: ["g1", "g2"] },
-              builtData: { name: "guild-cmd", description: "Guild" },
-            },
-          ],
-        },
-      };
-
-      const commandMap = new Map([
-        ["cmd1", mockCmd1],
-        ["cmd2", mockCmd2],
-      ]);
-
-      (container.stores.get as any).mockReturnValue(commandMap);
-
-      await service.syncApplicationCommands();
-
-      expect(mockClient.application.commands.set).toHaveBeenCalledWith([
-        { name: "global-cmd", description: "Global" },
-      ]);
-      expect(mockClient.application.commands.set).toHaveBeenCalledWith(
-        [{ name: "guild-cmd", description: "Guild" }],
-        "g1"
+    it("builds registered defs and sets global commands", async () => {
+      const { commandRegistry } = await import(
+        "#lib/commands/command-def.js"
       );
-      expect(mockClient.application.commands.set).toHaveBeenCalledWith(
-        [{ name: "guild-cmd", description: "Guild" }],
-        "g2"
-      );
+      commandRegistry.set("ut-cmd1", {
+        name: "ut-cmd1",
+        build: () => ({ toJSON: () => ({ name: "ut-cmd1" }) }) as any,
+      });
+      commandRegistry.set("ut-cmd2", {
+        name: "ut-cmd2",
+        build: () => ({ toJSON: () => ({ name: "ut-cmd2" }) }) as any,
+      });
+      try {
+        await service.syncApplicationCommands(container);
+
+        expect(mockClient.application.commands.set).toHaveBeenCalledWith([
+          { name: "ut-cmd1" },
+          { name: "ut-cmd2" },
+        ]);
+      } finally {
+        commandRegistry.delete("ut-cmd1");
+        commandRegistry.delete("ut-cmd2");
+      }
     });
   });
 });

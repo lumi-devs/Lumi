@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { afkRpc } from "@lumi/contracts/rpc";
 import { implementRpc } from "#lib/rpc/implement.js";
 

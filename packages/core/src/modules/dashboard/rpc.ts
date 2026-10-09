@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
@@ -58,7 +58,7 @@ function highestRoleId(
 
 export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   "guild.shell.get": async ({ guildId }) => {
-    const modules = container.stores.get("modules").loaded();
+    const modules = container.moduleStore.loaded();
     const [settings, enabled, apiGuild] = await Promise.all([
       container.db.config.getGuildSettings(guildId),
       container.db.modules.areModulesEnabled(
@@ -86,8 +86,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   },
 
   "guild.module.get": async ({ guildId, input }) => {
-    const module = container.stores
-      .get("modules")
+    const module = container.moduleStore
       .loaded()
       .find((m) => m.meta.name === input.module);
     if (!module) return { module: null };
@@ -186,7 +185,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     if (input.moduleName === "core") {
       throw new Error("Cannot disable the core module");
     }
-    if (!container.stores.get("modules").get(input.moduleName)) {
+    if (!container.moduleStore.get(input.moduleName)) {
       throw new Error(`No module named \`${input.moduleName}\`.`);
     }
     await container.db.modules.setModuleGuildEnabled(
@@ -194,7 +193,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       input.moduleName,
       input.enabled,
     );
-    await publishDashboardEvent({
+    await publishDashboardEvent(container, {
       type: "module.stateChanged",
       guildId,
       moduleName: input.moduleName,
@@ -329,6 +328,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     }
 
     const { coerced } = await getUtility("config").setConfig(
+      container,
       guildId,
       entry.moduleName,
       entry.key,
@@ -422,7 +422,7 @@ function moduleSummary(
     dependencies: meta.dependencies ?? [],
     enabled,
     configFields: meta.configFields || [],
-    isAddon: container.stores.get("modules").isAddonModule(module),
+    isAddon: container.moduleStore.isAddonModule(module),
     category: meta.category ?? "System",
     dashboardHref: meta.dashboardHref ?? null,
   };
@@ -440,7 +440,7 @@ async function applyConfigSet(
 ): Promise<unknown> {
   if (value === null || value === undefined || value === "") {
     await container.db.config.deleteModuleConfigKey(guildId, moduleName, key);
-    await publishDashboardEvent({
+    await publishDashboardEvent(container, {
       type: "config.changed",
       guildId,
       moduleName,
@@ -452,13 +452,14 @@ async function applyConfigSet(
   }
 
   const { coerced } = await getUtility("config").setConfig(
+    container,
     guildId,
     moduleName,
     key,
     toRawConfigValue(value),
     actorId,
   );
-  await publishDashboardEvent({
+  await publishDashboardEvent(container, {
     type: "config.changed",
     guildId,
     moduleName,

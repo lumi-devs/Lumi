@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { scheduledJobsGauge } from "@lumi/observability";
-import { watchQueueDepth } from "#lib/scheduler-queue-metrics.js";
+import { watchQueueDepth } from "#lib/scheduler/queue-metrics.js";
 
 describe("scheduler-queue-metrics", () => {
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe("scheduler-queue-metrics", () => {
   });
 
   it("warns instead of throwing when the queue read fails", async () => {
-    const getJobCounts = vi.fn().mockRejectedValue(new Error("redis down"));
+    const getJobCounts = vi.fn().mockRejectedValue(new Error("valkey down"));
     const fakeHandler = { client: { getJobCounts } } as any;
 
     const watcher = watchQueueDepth(fakeHandler);

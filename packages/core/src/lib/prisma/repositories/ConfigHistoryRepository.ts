@@ -5,11 +5,8 @@ import {
   type RetentionPurgeOptions,
 } from "#lib/retention/archive.js";
 import {
-  createdAtIdKeysetWhere,
   CreatedAtIdOrderBy,
-  decodeCreatedAtIdCursor,
-  encodeCreatedAtIdCursor,
-  splitPage,
+  paginateCreatedAtId,
 } from "#lib/prisma/cursor.js";
 
 export interface ConfigHistoryEntry {
@@ -76,28 +73,24 @@ export class ConfigHistoryRepository extends Repository {
       ...(filter.key ? { key: filter.key } : {}),
       ...(filter.actorId ? { actorId: filter.actorId } : {}),
     };
-    const take = filter.take ?? 25;
-    const where =
-      filter.cursor !== undefined
-        ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
-        : baseWhere;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.moduleConfigHistory.findMany({
-        where,
-        orderBy: CreatedAtIdOrderBy,
-        take: take + 1,
-      }),
-      filter.cursor === undefined
-        ? this.prisma.moduleConfigHistory.count({ where: baseWhere })
-        : undefined,
-    ]);
-    const { page, hasMore } = splitPage(rows, take);
-    const last = page.at(-1);
+    const result = await paginateCreatedAtId(
+      (where) =>
+        this.prisma.moduleConfigHistory.findMany({
+          where: where as Prisma.ModuleConfigHistoryWhereInput,
+          orderBy: CreatedAtIdOrderBy,
+          take: (filter.take ?? 25) + 1,
+        }),
+      (where) =>
+        this.prisma.moduleConfigHistory.count({
+          where: where as Prisma.ModuleConfigHistoryWhereInput,
+        }),
+      baseWhere,
+      filter,
+    );
     return {
-      entries: page,
-      total,
-      nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+      entries: result.rows,
+      total: result.total,
+      nextCursor: result.nextCursor,
     };
   }
 

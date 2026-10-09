@@ -1,6 +1,4 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { RelayTask, type CatchUpMeta } from "#lib/scheduled-tasks.js";
+import { RelayTask, type CatchUpMeta } from "#lib/scheduler/tasks.js";
 
 export interface AfkDeleteMessagePayload extends CatchUpMeta {
   channelId: string;
@@ -9,11 +7,8 @@ export interface AfkDeleteMessagePayload extends CatchUpMeta {
   clearMentions?: { guildId: string; userId: string };
 }
 
-@ApplyOptions<ScheduledTask.Options>({ name: "afk-delete-message" })
-export class AfkDeleteMessageTask extends RelayTask<"afk-delete-message"> {}
-
-declare module "@sapphire/plugin-scheduled-tasks" {
-  interface ScheduledTasks {
-    "afk-delete-message": AfkDeleteMessagePayload;
+export class AfkDeleteMessageTask extends RelayTask<"afk-delete-message"> {
+  public constructor() {
+    super({ name: "afk-delete-message" });
   }
 }

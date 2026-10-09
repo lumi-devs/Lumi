@@ -1,6 +1,6 @@
 import { CacheStore } from "#lib/cache/CacheStore.js";
-import { InvalidationBus } from "#lib/database/redis.js";
-import { container } from "@sapphire/framework";
+import { InvalidationBus } from "#lib/valkey/buses.js";
+import { container } from "#lib/services.js";
 import { describe, expect, test, vi, beforeEach } from "bun:test";
 
 vi.mock("@lumi/observability", () => ({
@@ -9,27 +9,28 @@ vi.mock("@lumi/observability", () => ({
 }));
 
 describe("CacheStore", () => {
-  let mockRedis: any;
+  let mockValkey: any;
 
   beforeEach(() => {
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
+      del: vi.fn().mockResolvedValue(1),
     };
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
   });
 
-  test("L1 hit avoids a second redis.get call", async () => {
+  test("L1 hit avoids a second valkey.get call", async () => {
     const cache = new CacheStore();
     const loader = vi.fn().mockResolvedValue({ n: 1 });
 
     const first = await cache.getOrLoad("prefix:key:1", 60_000, loader);
     expect(first).toEqual({ n: 1 });
-    expect(mockRedis.get).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).toHaveBeenCalledTimes(1);
 
     const second = await cache.getOrLoad("prefix:key:1", 60_000, loader);
     expect(second).toEqual({ n: 1 });
-    expect(mockRedis.get).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).toHaveBeenCalledTimes(1);
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
@@ -80,7 +81,7 @@ describe("CacheStore", () => {
     const result = await flight;
     expect(result).toEqual({ n: 7 });
     expect(cache.peek("prefix:race:1")).toBeUndefined();
-    expect(mockRedis.setex).not.toHaveBeenCalledWith(
+    expect(mockValkey.setex).not.toHaveBeenCalledWith(
       "prefix:race:1",
       expect.anything(),
       expect.stringContaining("7"),
@@ -131,5 +132,77 @@ describe("CacheStore", () => {
     (fakeSubscriber as any)._ready();
 
     expect(cache.peek<string>("prefix:y:1")).toBeUndefined();
+  });
+
+  test("an explicitly injected valkey client is used instead of the global", async () => {
+    const injected = {
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn().mockResolvedValue("OK"),
+    };
+    const cache = new CacheStore({ valkey: injected as any });
+
+    await cache.getOrLoad("prefix:injected:1", 60_000, async () => "v");
+
+    expect(injected.get).toHaveBeenCalledTimes(1);
+    expect(injected.setex).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).not.toHaveBeenCalled();
+  });
+
+  test("setValkeyClient overrides the L2 client after construction", async () => {
+    const injected = {
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn().mockResolvedValue("OK"),
+    };
+    const cache = new CacheStore();
+    cache.setValkeyClient(injected as any);
+
+    await cache.getOrLoad("prefix:override:1", 60_000, async () => "v");
+
+    expect(injected.get).toHaveBeenCalledTimes(1);
+    expect(mockValkey.get).not.toHaveBeenCalled();
+  });
+
+  test("set with null also deletes the L2 entry so peers never read it stale", () => {
+    const cache = new CacheStore();
+
+    cache.set("prefix:stale:1", null, 60_000);
+
+    expect(mockValkey.del).toHaveBeenCalledWith("prefix:stale:1");
+    expect(cache.peek("prefix:stale:1")).toBeNull();
+  });
+
+  test("sub-second TTLs clamp to 1s instead of sending SETEX 0", async () => {
+    const cache = new CacheStore();
+
+    await cache.getOrLoad("prefix:subsecond:1", 500, async () => "v");
+
+    expect(mockValkey.setex).toHaveBeenCalledWith(
+      "prefix:subsecond:1",
+      1,
+      expect.anything(),
+    );
+  });
+
+  test("a hung L2 fill does not block or fail the read-miss path", async () => {
+    mockValkey.setex.mockReturnValue(new Promise(() => {}));
+    const cache = new CacheStore();
+
+    const result = await cache.getOrLoad("prefix:slow-l2:1", 60_000, async () => "v");
+
+    expect(result).toBe("v");
+    expect(cache.peek<string>("prefix:slow-l2:1")).toBe("v");
+  });
+
+  test("negative entries are capped at maxEntries instead of growing forever", async () => {
+    const cache = new CacheStore({ maxEntries: 2 });
+    const loader = vi.fn().mockResolvedValue(null);
+
+    await cache.getOrLoad("prefix:n:a", 60_000, loader);
+    await cache.getOrLoad("prefix:n:b", 60_000, loader);
+    await cache.getOrLoad("prefix:n:c", 60_000, loader);
+    // "a" was FIFO-evicted from the negative map, so it reloads.
+    await cache.getOrLoad("prefix:n:a", 60_000, loader);
+
+    expect(loader).toHaveBeenCalledTimes(4);
   });
 });

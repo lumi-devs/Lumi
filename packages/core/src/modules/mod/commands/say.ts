@@ -1,47 +1,41 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { ChannelType, PermissionFlagsBits, type GuildTextBasedChannel } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { SlashCommandBuilder, ChannelType, PermissionFlagsBits, type GuildTextBasedChannel } from "discord.js";
 
 const MaxMessageLength = 2000;
 
-@ApplyOptions<BaseCommand.Options>({
+export const sayDef: CommandDef = {
   name: "say",
   description: "Relay a message through the bot into a channel",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.say",
   prefixEnabled: true,
-})
-export class SayCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((o) =>
-          o
-            .setName("message")
-            .setDescription("Message to send")
-            .setRequired(true)
-            .setMaxLength(MaxMessageLength),
-        )
-        .addChannelOption((o) =>
-          o
-            .setName("channel")
-            .setDescription("Channel to send in (defaults to this one)")
-            .addChannelTypes(
-              ChannelType.GuildText,
-              ChannelType.GuildAnnouncement,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("say");
+    return (
+    b
+            .setName("say")
+            .setDescription("Relay a message through the bot into a channel")
+            .addStringOption((o) =>
+              o
+                .setName("message")
+                .setDescription("Message to send")
+                .setRequired(true)
+                .setMaxLength(MaxMessageLength),
             )
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+            .addChannelOption((o) =>
+              o
+                .setName("channel")
+                .setDescription("Channel to send in (defaults to this one)")
+                .addChannelTypes(
+                  ChannelType.GuildText,
+                  ChannelType.GuildAnnouncement,
+                )
+                .setRequired(false),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const message = await ctx.getString("message", {
       required: true,
       rest: true,
@@ -74,4 +68,4 @@ export class SayCommand extends BaseCommand {
     await channel.send({ content: message!, allowedMentions: { parse: [] } });
     return ctx.replySuccess("Message Sent", `Relayed your message to ${channel}.`);
   }
-}
+};

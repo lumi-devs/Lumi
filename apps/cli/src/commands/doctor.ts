@@ -3,7 +3,7 @@ import { doctorExitCode, formatDoctorReport, runDoctor } from "@lumi/core/doctor
 
 export const help = `Usage: lumi doctor [--json]
 
-Run the doctor check suite: validates Discord token, database, Redis, RPC,
+Run the doctor check suite: validates Discord token, database, Valkey, RPC,
 dashboard OAuth configuration, filesystem, addons, and job queue health.
 
 Prints a line per check, exit code 1 if any fail, 0 otherwise (warnings

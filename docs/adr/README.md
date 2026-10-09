@@ -27,6 +27,7 @@ is the doc" don't need an ADR.
 | [0010](0010-single-process-install-is-a-supervisor.md) | Single-process install is a supervisor, not one address space | Accepted |
 | [0011](0011-single-authorization-evaluator.md) | One `authorize()` evaluator for commands, RPC and the addon SDK | Accepted |
 | [0012](0012-feature-flags-hash-rollout-not-sticky-bucketing.md) | Feature-flag rollout buckets a stable hash, not a stored assignment | Accepted |
+| [0013](0013-replace-sapphire-with-lumi-runtime.md) | Replace Sapphire with a discord.js-native Lumi runtime | Proposed |
 
 ## Adding a new ADR
 

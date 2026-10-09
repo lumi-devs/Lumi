@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
-import { container } from "@sapphire/framework";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { container } from "#lib/services.js";
 
 vi.mock("@lumi/observability", () => ({
   cacheHits: { inc: vi.fn() },
@@ -11,7 +11,7 @@ vi.mock("@lumi/observability", () => ({
 describe("ModerationRepository.isVoiceMuted", () => {
   let repo: ModerationRepository;
   let mockPrisma: any;
-  let mockRedis: any;
+  let mockValkey: any;
 
   beforeEach(() => {
     mockPrisma = {
@@ -20,18 +20,18 @@ describe("ModerationRepository.isVoiceMuted", () => {
       },
     };
 
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
     };
 
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     repositoryCache.clear();
 
     const mockDb: any = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
-    repo = new ModerationRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new ModerationRepository(mockPrisma, mockValkey, mockLogger, mockDb);
   });
 
   it("queries active voice_mute cases with the same predicate as getActiveCases", async () => {

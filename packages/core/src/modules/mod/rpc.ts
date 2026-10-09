@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
 import {
   CodedRpcError,
@@ -7,8 +7,8 @@ import {
   warnThresholdNeedsDuration,
 } from "@lumi/contracts/rpc";
 import type { AppealVerifyResult } from "@lumi/contracts/views";
-import { verifyAppealToken } from "./services/appeal-token.js";
-import { liftModerationCaseWithUndo } from "./services/case-lift.js";
+import { verifyAppealToken } from "@lumi/application/services/mod/appeal-token.js";
+import { liftModerationCaseWithUndo } from "@lumi/application/services/mod/case-lift.js";
 import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
 import { resolvePageSize } from "#lib/rpc/validation.js";
 import { formatDuration, parseDuration } from "#lib/utilities/time.js";
@@ -16,7 +16,7 @@ import { errorCode } from "#lib/utilities/errors.js";
 import {
   removeThresholdRule,
   setThresholdRule,
-} from "./services/threshold-rules.js";
+} from "@lumi/application/services/mod/threshold-rules.js";
 
 // Only ban/timeout cases are appealable - matches BanAction/MuteAction, the
 // only two call sites that ever DM an appeal link.

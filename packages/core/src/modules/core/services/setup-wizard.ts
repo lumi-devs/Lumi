@@ -1,7 +1,8 @@
 import { authorize } from "#lib/permissions/authorize.js";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
 import { Emojis } from "#lib/utilities/assets.js";
-import { UserError } from "@sapphire/framework";
+import { UserError } from "@lumi/shared";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
@@ -127,6 +128,7 @@ export const setupAccessDenied = () =>
   });
 
 export async function finishSetupWizard(
+  services: Container,
   guildId: string,
   state: SetupWizardState,
   actorId: string,
@@ -134,6 +136,7 @@ export async function finishSetupWizard(
   const cfg = getUtility("config");
   if (state.logChannelId) {
     await cfg.setConfig(
+      services,
       guildId,
       "security",
       "log_channel_id",
@@ -143,6 +146,7 @@ export async function finishSetupWizard(
   }
   if (state.verificationMode) {
     await cfg.setConfig(
+      services,
       guildId,
       "security",
       "verification_mode",
@@ -152,6 +156,7 @@ export async function finishSetupWizard(
   }
   if (state.joinGateEnabled !== null) {
     await cfg.setConfig(
+      services,
       guildId,
       "security",
       "joingate_enabled",
@@ -161,6 +166,7 @@ export async function finishSetupWizard(
   }
   if (state.joinGateEnabled === true && state.minAgeHours !== null) {
     await cfg.setConfig(
+      services,
       guildId,
       "security",
       "min_account_age_hours",

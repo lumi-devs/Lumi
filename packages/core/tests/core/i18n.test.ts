@@ -2,23 +2,28 @@ import { describe, it, expect, beforeAll } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { InternationalizationHandler } from "@sapphire/plugin-i18next";
+import { SlashCommandBuilder } from "discord.js";
 import { rpcRouter } from "@lumi/contracts/rpc";
 import {
-  buildI18nOptions,
+  applyLocalizedBuilder,
   DefaultLanguage,
+  fetchLanguage,
+  fetchT,
+  getT,
+  initI18n,
   isSupportedLanguage,
+  resolveKey,
   SupportedLanguages,
+  translate,
 } from "#lib/i18n/index.js";
 
 /**
- * `s.enum(...).optional()` builds a `UnionValidator` whose `validators` array
- * is TS-private but a plain runtime property: a `LiteralValidator(undefined)`
- * (from `.optional()`) followed by one `LiteralValidator` per allowed value,
- * each carrying its literal on `.expected`.
+ * `z.enum(...).optional()` is a `ZodOptional` wrapping a `ZodEnum`: unwrap to
+ * the inner type and read its `options`.
  */
 interface IntrospectableEnum {
-  readonly validators: readonly { readonly expected: unknown }[];
+  readonly unwrap?: () => { readonly options?: readonly string[] };
+  readonly options?: readonly string[];
 }
 
 const LANGUAGE_ROOT = fileURLToPath(
@@ -54,11 +59,8 @@ async function namespaceKeys(language: string): Promise<Map<string, string[]>> {
 }
 
 describe("i18n framework", () => {
-  let handler: InternationalizationHandler;
-
   beforeAll(async () => {
-    handler = new InternationalizationHandler(buildI18nOptions());
-    await handler.init();
+    await initI18n();
   });
 
   it("declares en-US as the default language", () => {
@@ -71,15 +73,8 @@ describe("i18n framework", () => {
     expect(isSupportedLanguage("xx-YY")).toBe(false);
   });
 
-  it("loads every supported language directory", () => {
-    const loaded = [...handler.languages.keys()];
-    for (const lang of SupportedLanguages) {
-      expect(loaded).toContain(lang);
-    }
-  });
-
   it("translates keys across namespaces with interpolation", () => {
-    const t = handler.getT(DefaultLanguage);
+    const t = getT(DefaultLanguage);
     expect(t("common:success")).toBe("Success");
     expect(t("commands:languageCurrent", { language: "en-US" })).toContain(
       "en-US",
@@ -87,11 +82,20 @@ describe("i18n framework", () => {
     expect(t("preconditions:administrator")).toContain("Administrator");
   });
 
+  it("translate() resolves per-guild language at call time", () => {
+    expect(translate("common:success", undefined, "en-US")).toBe("Success");
+    expect(translate("common:success")).toBe("Success");
+  });
+
+  it("falls back to en-US for unknown languages", () => {
+    expect(getT("xx-YY")("common:success")).toBe("Success");
+  });
+
   it("resolves every i18n key referenced by the denial path", () => {
     // These keys are passed as UserError context.i18nKey by the preconditions
-    // and resolved by handleDenied. A typo here would silently fall back to the
-    // English message, so assert they exist (don't return the missing-key tag).
-    const t = handler.getT(DefaultLanguage);
+    // and resolved by handleDenied. A typo here would silently fall back to
+    // the raw key, so assert they exist (don't return the key itself).
+    const t = getT(DefaultLanguage);
     const keys = [
       "preconditions:administrator",
       "preconditions:moderator",
@@ -103,8 +107,22 @@ describe("i18n framework", () => {
     for (const key of keys) {
       const value = t(key, { level: "X", module: "y" });
       expect(value).not.toBe("");
-      expect(value).not.toContain("has not been localized");
+      expect(value).not.toBe(key);
     }
+  });
+
+  it("applyLocalizedBuilder localizes name and description", () => {
+    const builder = applyLocalizedBuilder(
+      new SlashCommandBuilder(),
+      "commands:afk",
+    );
+    expect(builder.name).toBe("afk");
+    expect(builder.description).toBe(
+      "Set yourself AFK with an optional reason.",
+    );
+    expect(builder.toJSON().name_localizations).toEqual({
+      "en-US": "afk",
+    });
   });
 
   it("has no keys on disk that aren't also in en-US", async () => {
@@ -127,16 +145,22 @@ describe("i18n framework", () => {
     }
   });
 
+  it("fetchLanguage and fetchT resolve target context and resolveKey translates key", async () => {
+    expect(await fetchLanguage(null)).toBe(DefaultLanguage);
+    const t = await fetchT(null);
+    expect(t("common:success")).toBe("Success");
+    expect(await resolveKey(null, "common:success", undefined)).toBe("Success");
+  });
+
   it("keeps the dashboard locale enum in sync with SupportedLanguages", () => {
     const localeValidator = rpcRouter["guild.settings.set"].input as
       | { shape: { locale: IntrospectableEnum } }
       | undefined;
     if (!localeValidator) throw new Error("guild.settings.set has no input validator");
+    const inner = localeValidator.shape.locale.unwrap?.() ?? localeValidator.shape.locale;
+    const options = inner.options;
+    if (!options) throw new Error("guild.settings.set locale is not an enum");
 
-    const allowed = localeValidator.shape.locale.validators
-      .map((v) => v.expected)
-      .filter((value) => value !== undefined)
-      .sort();
-    expect(allowed).toEqual([...SupportedLanguages].sort());
+    expect([...options].sort()).toEqual([...SupportedLanguages].sort());
   });
 });

@@ -1,22 +1,16 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import type { GuildMember, PartialGuildMember } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { loadWelcomeConfig } from "../services/welcome.js";
-import { sendWelcomeCard } from "../services/welcome.js";
-import { renderGoodbyeCard, templateVarsFor } from "../services/welcome.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
+import { renderGoodbyeCard, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const WelcomeMemberRemoveListener = defineListener({
   name: "welcomeMemberRemove",
   event: Events.GuildMemberRemove,
   module: "welcome",
-})
-export class WelcomeMemberRemoveListener extends ModuleListener<
-  typeof Events.GuildMemberRemove
-> {
-  protected async handle(
-    member: GuildMember | PartialGuildMember,
-  ): Promise<void> {
+  async execute(_services: Container, member: GuildMember | PartialGuildMember): Promise<void> {
     if (member.user?.bot) return;
     const config = await loadWelcomeConfig(member.guild.id);
     if (!config.goodbyeEnabled || !config.goodbyeChannel) return;
@@ -37,5 +31,5 @@ export class WelcomeMemberRemoveListener extends ModuleListener<
       renderGoodbyeCard(config, vars),
       "Welcome: Goodbye send failed",
     );
-  }
-}
+  },
+});

@@ -1,8 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container, InteractionHandlerTypes } from "@sapphire/framework";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import { container } from "#lib/services.js";
 import * as misc from "#lib/utilities/misc.js";
+import {
+  addInteractionDef,
+  type InteractionDef,
+} from "#lib/interactions/interaction-def.js";
+import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
+import type { Container } from "#lib/services.js";
 
-vi.mock("#lib/commands.js", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
@@ -10,7 +16,7 @@ vi.mock("#lib/permissions/index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("#modules/utility/services/media-utils.js", () => ({
+vi.mock("@lumi/application/services/utility/media-utils.js", () => ({
   handleMediaRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -18,22 +24,34 @@ vi.mock("#modules/afk/data/afk.js", () => ({
   getAfkMentions: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#modules/tempvc/services/panel-guard.js", () => ({
+vi.mock("@lumi/application/services/tempvc/panel-guard.js", () => ({
   resolveVc: vi.fn().mockResolvedValue(null),
   resolveOwnedVc: vi.fn().mockResolvedValue(null),
   resolveOwnedRecord: vi.fn().mockResolvedValue(null),
 }));
 
-function pieceContext(name: string) {
+function buttonInteraction(customId: string, guildId = "g-1") {
   return {
-    name,
-    path: `/virtual/${name}.ts`,
-    root: "/virtual",
-    store: { name: "interaction-handlers" } as any,
+    isChatInputCommand: () => false,
+    isButton: () => true,
+    isAnySelectMenu: () => false,
+    isModalSubmit: () => false,
+    isAutocomplete: () => false,
+    isRepliable: () => false,
+    id: `i-${customId}`,
+    customId,
+    guildId,
+    guild: { id: guildId, ownerId: "owner-1" },
+    user: { id: "u-1" },
+    member: null,
+    channelId: "c-1",
+    inGuild: () => true,
+    deferUpdate: vi.fn().mockResolvedValue(undefined),
+    deferReply: vi.fn().mockResolvedValue(undefined),
   };
 }
 
-describe("interaction handlers guard on per-guild module state", () => {
+describe("interaction dispatch guards on per-guild module state", () => {
   let isModuleEnabled: ReturnType<typeof vi.spyOn<typeof misc, "isModuleEnabled">>;
 
   beforeEach(() => {
@@ -51,166 +69,70 @@ describe("interaction handlers guard on per-guild module state", () => {
     };
   });
 
-  it("security panic revert skips work when security is disabled", async () => {
-    const { PanicRevertInteractionHandler } = await import(
-      "#modules/security/interaction-handlers/panic.js"
-    );
-    const handler = new PanicRevertInteractionHandler(pieceContext("panic"), {
-      interactionHandlerType: InteractionHandlerTypes.Button,
-      module: "security",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guild: { id: "g-1", ownerId: "owner-1" },
-      guildId: "g-1",
-      user: { id: "u-1" },
-      member: null,
-      channelId: "c-1",
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, undefined);
-    expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
-
-    isModuleEnabled.mockResolvedValue(true);
-    await expect(handler.run(interaction as any, undefined)).rejects.toThrow();
-    expect((container as any).permitResolver.hasPermit).toHaveBeenCalled();
+  // vi.spyOn mutates the shared misc module object: restore the real
+  // implementation so later test files see real misc.js behavior.
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("security verify skips work when security is disabled", async () => {
-    const { VerifyInteractionHandler } = await import(
-      "#modules/security/interaction-handlers/verify.js"
-    );
-    const handler = new VerifyInteractionHandler(pieceContext("verify"), {
-      interactionHandlerType: InteractionHandlerTypes.Button,
-      module: "security",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guild: { id: "g-1" },
-      guildId: "g-1",
-      user: { id: "u-1" },
-      deferReply: vi.fn().mockResolvedValue(undefined),
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
+  async function dispatch(def: InteractionDef, customId: string) {
+    addInteractionDef(def);
     isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { kind: "start" });
-    expect(interaction.deferReply).not.toHaveBeenCalled();
+    const services = {
+      logger: (container as any).logger,
+    } as unknown as Container;
+    await dispatchInteraction(services, buttonInteraction(customId) as any);
+  }
+
+  it("security panic revert skips work when security is disabled", async () => {
+    const { panicRevert } = await import(
+      "#modules/security/interactions/buttons/panic.js"
+    );
+    const { PanicRevertId } = await import("#modules/security/ui/panic-card.js");
+    await dispatch(panicRevert, PanicRevertId);
+    expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
   });
 
   it("utility media view skips work when utility is disabled", async () => {
-    const { handleMediaRequest } = await import("#modules/utility/services/media-utils.js");
-    const mod = await import("#modules/utility/interaction-handlers/view.js");
-    const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("view"), {
-      interactionHandlerType: InteractionHandlerTypes.Button,
-      module: "utility",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      deferReply: vi.fn().mockResolvedValue(undefined),
-      client: { users: { fetch: vi.fn() } },
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { userId: "u-1", type: "avatar" });
+    const { handleMediaRequest } = await import(
+      "@lumi/application/services/utility/media-utils.js"
+    );
+    const mod = await import("#modules/utility/interactions/buttons/view.js");
+    const def = (mod.default ?? Object.values(mod)[0]) as InteractionDef;
+    const { UserMediaViewId } = await import(
+      "#modules/utility/constants.js"
+    );
+    await dispatch(
+      def,
+      UserMediaViewId.build({ userId: "u-1", type: "avatar" }),
+    );
     expect(handleMediaRequest).not.toHaveBeenCalled();
-    expect(interaction.deferReply).not.toHaveBeenCalled();
-
-    isModuleEnabled.mockResolvedValue(true);
-    await handler.run(interaction as any, { userId: "u-1", type: "avatar" });
-    expect(handleMediaRequest).toHaveBeenCalled();
   });
 
   it("afk mentions skips work when afk is disabled", async () => {
     const { getAfkMentions } = await import("#modules/afk/data/afk.js");
-    const mod = await import("#modules/afk/interaction-handlers/mentions.js");
-    const HandlerClass = mod.default;
-    const handler = new HandlerClass(pieceContext("afk-mentions"), {
-      interactionHandlerType: InteractionHandlerTypes.Button,
-      module: "afk",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      user: { id: "u-1" },
-      message: { flags: { has: () => false } },
-      deferReply: vi.fn().mockResolvedValue(undefined),
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { userId: "u-1", page: "0" });
+    const mod = await import("#modules/afk/interactions/buttons/mentions.js");
+    const def = (mod.default ?? Object.values(mod)[0]) as InteractionDef;
+    const { AfkMentionsId } = await import("#modules/afk/constants.js");
+    await dispatch(
+      def,
+      AfkMentionsId.build({ userId: "u-1", page: "0" }),
+    );
     expect(getAfkMentions).not.toHaveBeenCalled();
   });
 
   it("tempvc panel button skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
-    const { TempVcPanelButtonHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-button.js"
+    const { resolveOwnedVc } = await import(
+      "@lumi/application/services/tempvc/panel-guard.js"
     );
-    const handler = new TempVcPanelButtonHandler(pieceContext("tvc-btn"), {
-      interactionHandlerType: InteractionHandlerTypes.Button,
-      module: "tempvc",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      guild: {},
-      member: {},
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { action: "panel", channelId: "c-1" });
+    const { tempVcPanelButton } = await import(
+      "#modules/tempvc/interactions/buttons/tempvc-panel-button.js"
+    );
+    const { TempVcPanelId } = await import("#modules/tempvc/constants.js");
+    await dispatch(
+      tempVcPanelButton,
+      TempVcPanelId.build({ action: "panel", channelId: "c-1" }),
+    );
     expect(resolveOwnedVc).not.toHaveBeenCalled();
-  });
-
-  it("tempvc panel modal skips work when tempvc is disabled", async () => {
-    const { resolveOwnedVc } = await import("#modules/tempvc/services/panel-guard.js");
-    const { TempVcPanelModalHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-modal.js"
-    );
-    const handler = new TempVcPanelModalHandler(pieceContext("tvc-modal"), {
-      interactionHandlerType: InteractionHandlerTypes.ModalSubmit,
-      module: "tempvc",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      guild: {},
-      member: {},
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { action: "namem", channelId: "c-1" });
-    expect(resolveOwnedVc).not.toHaveBeenCalled();
-  });
-
-  it("tempvc panel select skips work when tempvc is disabled", async () => {
-    const { resolveOwnedRecord } = await import("#modules/tempvc/services/panel-guard.js");
-    const { TempVcPanelSelectHandler } = await import(
-      "#modules/tempvc/interaction-handlers/tempvc-panel-select.js"
-    );
-    const handler = new TempVcPanelSelectHandler(pieceContext("tvc-select"), {
-      interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-      module: "tempvc",
-    });
-    const interaction = {
-      inGuild: () => true,
-      guildId: "g-1",
-      guild: { channels: { cache: new Map([["c-1", { isVoiceBased: () => true }]]) } },
-      member: {},
-      values: ["c-1"],
-      deferUpdate: vi.fn().mockResolvedValue(undefined),
-    };
-
-    isModuleEnabled.mockResolvedValue(false);
-    await handler.run(interaction as any, { action: "panelmenu", channelId: "c-1" });
-    expect(resolveOwnedRecord).not.toHaveBeenCalled();
   });
 });

@@ -1,453 +1,148 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { ModuleCommand } from "#modules/core/commands/module.js";
-import { ModuleAlreadyInstalledError } from "#modules/core/utilities/DownloaderUtility.js";
+import { CommandContext } from "#lib/commands/context.js";
+import { asHandler } from "#lib/commands/command-def.js";
+import { moduleDef } from "#modules/core/commands/module.js";
 
-const __actualModule5 = await import("#lib/module-system/Utility.js");
-vi.mock("#lib/module-system/Utility.js", () => {
-  const actual: any = __actualModule5;
-  return {
-    ...actual,
-    getUtility: vi.fn(),
-  };
-});
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn(),
+  tryGetUtility: vi.fn(),
+}));
+
+vi.mock("#lib/i18n/index.js", () => ({
+  fetchT: vi.fn().mockResolvedValue((key: string) => key),
+  fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
+}));
+
+vi.mock("#lib/utilities/command-response.js", () => ({
+  sendInteractionReply: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("#lib/utilities/pagination.js", () => ({
+  paginateContainer: vi.fn().mockResolvedValue(undefined),
+  paginateList: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@lumi/application/services/core/module-command/operations.js", () => ({
+  installModule: vi.fn(),
+  pinModule: vi.fn(),
+  reloadModule: vi.fn(),
+  setModuleEnabled: vi.fn(),
+  uninstallModule: vi.fn(),
+  unpinModule: vi.fn(),
+  updateAllModules: vi.fn(),
+  updateModule: vi.fn(),
+}));
+
+vi.mock("@lumi/application/services/core/module-command/pieces.js", () => ({
+  getModulePiecesInfo: vi.fn().mockResolvedValue({ totalPieces: 0, piecesByStore: {} }),
+}));
 
 import { getUtility } from "#lib/module-system/Utility.js";
+import { sendInteractionReply } from "#lib/utilities/command-response.js";
+import { paginateList } from "#lib/utilities/pagination.js";
+import { setModuleEnabled } from "@lumi/application/services/core/module-command/operations.js";
 
-/** Extracts the rendered text content of a CardReply (title + body) for content assertions. */
-function cardText(card: any): string {
-  return JSON.stringify(card.components[0].toJSON());
+function makeServices(records: any[] = []) {
+  return {
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    moduleStore: {
+      all: vi.fn().mockReturnValue(records),
+      getRecord: vi.fn().mockImplementation((name: string) => records.find((r) => r.name === name)),
+    },
+  } as any;
 }
 
-describe("ModuleCommand", () => {
-  let command: ModuleCommand;
-  let mockModuleStore: any;
-  let mockDownloaderUtility: any;
-  let mockStores: any;
+function slashCtx(options: Record<string, unknown>, services: any) {
+  const interaction = {
+    user: { id: "u-1", tag: "Tester#0001" },
+    guildId: "g-1",
+    deferred: false,
+    replied: false,
+    deferReply: vi.fn().mockResolvedValue(undefined),
+    options: {
+      getString: vi.fn().mockImplementation((name: string) => options[name] ?? null),
+    },
+  } as any;
+  return CommandContext.fromInteraction(interaction, services);
+}
+
+type HandlerName = "list" | "info" | "enable" | "disable" | "help";
+
+function runHandler(name: HandlerName, ctx: CommandContext) {
+  return asHandler(moduleDef.handlers![name]!).run(ctx);
+}
+
+function lastCardJson() {
+  const calls = (sendInteractionReply as any).mock.calls;
+  return JSON.stringify(calls[calls.length - 1][1]);
+}
+
+describe("moduleDef", () => {
+  let services: any;
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-
-    mockModuleStore = {
-      all: vi.fn().mockReturnValue([
-        {
-          name: "afk",
-          enabled: true,
-          state: "loaded",
-          failureReason: null,
-          meta: {
-            name: "afk",
-            displayName: "AFK",
-            emoji: "💤",
-            version: "1.0.0",
-            description: "AFK desc",
-            isCore: false,
-            dependencies: ["core"],
-            conflicts: [],
-            configFields: [{ key: "enabled", type: "boolean", description: "Enable AFK" }],
-          },
-        },
-        {
-          name: "mod",
-          enabled: false,
-          state: "failed",
-          failureReason: "Missing dependency",
-          meta: {
-            name: "mod",
-            displayName: "Moderation",
-            emoji: "🛡️",
-            version: "1.2.0",
-            description: "Mod desc",
-            isCore: true,
-            dependencies: [],
-            conflicts: [],
-          },
-        },
-      ]),
-      getRecord: vi.fn().mockImplementation((name: string) => {
-        if (name === "afk") {
-          return {
-            name: "afk",
-            enabled: true,
-            state: "loaded",
-            failureReason: null,
-            meta: {
-              name: "afk",
-              displayName: "AFK",
-              emoji: "💤",
-              version: "1.0.0",
-              description: "AFK desc",
-              isCore: false,
-              dependencies: ["core"],
-              conflicts: [],
-              configFields: [{ key: "enabled", type: "boolean", description: "Enable AFK" }],
-            },
-          };
-        }
-        if (name === "mod") {
-          return {
-            name: "mod",
-            enabled: false,
-            state: "failed",
-            failureReason: "Missing dependency",
-            meta: {
-              name: "mod",
-              displayName: "Moderation",
-              emoji: "🛡️",
-              version: "1.2.0",
-              description: "Mod desc",
-              isCore: true,
-              dependencies: [],
-              conflicts: [],
-            },
-          };
-        }
-        return null;
-      }),
-      setEnabled: vi.fn().mockResolvedValue(undefined),
-      isModuleDisableable: vi.fn().mockImplementation((name: string) => {
-        const rec = mockModuleStore.getRecord(name);
-        if (!rec) return true;
-        return rec.meta.disableable !== false;
-      }),
-      moduleNameForLocation: vi.fn().mockImplementation((path: string) => {
-        if (path.includes("afk")) return "afk";
-        if (path.includes("mod")) return "mod";
-        return null;
-      }),
-      reload: vi.fn().mockResolvedValue(undefined),
-    };
-
-    mockDownloaderUtility = {
-      installModule: vi.fn().mockResolvedValue(undefined),
-      uninstallModule: vi.fn().mockResolvedValue(undefined),
-      updateModule: vi.fn().mockResolvedValue({ updated: true, needsRestart: false }),
-      syncApplicationCommands: vi.fn().mockResolvedValue(undefined),
-      getInstalledModules: vi.fn().mockResolvedValue([]),
-    };
-
-    (getUtility as any).mockImplementation((svcName: string) => {
-      if (svcName === "downloader") return mockDownloaderUtility;
-      return null;
-    });
-
-    const mockCommandsStore = {
-      name: "commands",
-      values: vi.fn().mockReturnValue([
-        { name: "afk_cmd", location: { full: "/path/to/modules/afk/commands/afk.ts" } },
-        { name: "ban", location: { full: "/path/to/modules/mod/commands/ban.ts" } },
-      ]),
-    };
-
-    const mockListenersStore = {
-      name: "listeners",
-      values: vi.fn().mockReturnValue([
-        { name: "afk_listener", location: { full: "/path/to/modules/afk/listeners/afk.ts" } },
-      ]),
-    };
-
-    mockStores = {
-      get: vi.fn().mockImplementation((storeName: string) => {
-        if (storeName === "commands") return mockCommandsStore;
-        if (storeName === "listeners") return mockListenersStore;
-        return null;
-      }),
-      values: vi.fn().mockReturnValue([mockCommandsStore, mockListenersStore]),
-    };
-
-    (container as any).moduleStore = mockModuleStore;
-    container.stores = mockStores;
-    container.logger = {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    } as any;
-    (container as any).client = {
-      options: {},
-    } as any;
-
-    command = new ModuleCommand(
-      {
-        name: "module",
-        path: "/path/to/commands/module.ts",
-        root: "/path/to/commands",
-        store: { name: "commands" } as any,
-      },
-      { prefixEnabled: true }
-    );
+    vi.clearAllMocks();
+    services = makeServices();
+    (getUtility as any).mockReturnValue({ getInstalledModules: vi.fn().mockResolvedValue([]) });
   });
 
-  function createMockCtx(overrides: Partial<any> = {}) {
-    return {
-      defer: vi.fn().mockResolvedValue(undefined),
-      reply: vi.fn().mockResolvedValue(undefined),
-      getString: vi.fn().mockImplementation((key: string) => overrides[key] ?? null),
-      isSlash: false,
-      user: { id: "u-123", tag: "TestUser#0001" },
-      source: {
-        reply: vi.fn().mockResolvedValue({
-          createMessageComponentCollector: vi.fn().mockReturnValue({ on: vi.fn() }),
-        }),
-      },
-      ...overrides,
-    };
-  }
+  describe("list", () => {
+    it("reports when no modules were discovered", async () => {
+      await runHandler("list", slashCtx({}, services));
 
-  it("should register application chat input subcommands", () => {
-    const subNames: string[] = [];
-    const makeSubBuilder = () => {
-      const sub: any = {
-        setName: vi.fn((n: string) => {
-          subNames.push(n);
-          return sub;
-        }),
-        setDescription: vi.fn().mockReturnThis(),
-        addStringOption: vi.fn((cb: any) => {
-          cb({
-            setName: vi.fn().mockReturnThis(),
-            setDescription: vi.fn().mockReturnThis(),
-            setRequired: vi.fn().mockReturnThis(),
-            setAutocomplete: vi.fn().mockReturnThis(),
-          });
-          return sub;
-        }),
-      };
-      return sub;
-    };
-    const mockBuilder = {
-      setName: vi.fn().mockReturnThis(),
-      setDescription: vi.fn().mockReturnThis(),
-      addSubcommand: vi.fn((cb: any) => {
-        cb(makeSubBuilder());
-        return mockBuilder;
-      }),
-      setDefaultMemberPermissions: vi.fn().mockReturnThis(),
-      setContexts: vi.fn().mockReturnThis(),
-      setIntegrationTypes: vi.fn().mockReturnThis(),
-    };
-    const spy = vi.fn().mockImplementation((cb) => cb(mockBuilder));
-    const mockRegistry = {
-      registerChatInputCommand: spy,
-    };
-
-    command.registerApplicationCommands(mockRegistry as any);
-
-    expect(spy).toHaveBeenCalled();
-    expect(mockBuilder.addSubcommand).toHaveBeenCalledTimes(11);
-    expect(subNames).toEqual([
-      "list",
-      "info",
-      "enable",
-      "disable",
-      "reload",
-      "install",
-      "uninstall",
-      "update",
-      "pin",
-      "unpin",
-      "help",
-    ]);
-  });
-
-  describe("list subcommand", () => {
-    it("should display message when no modules discovered", async () => {
-      mockModuleStore.all.mockReturnValue([]);
-      const ctx = createMockCtx();
-      await command.list(ctx as any);
-      expect(ctx.reply).toHaveBeenCalled();
+      expect(paginateList).not.toHaveBeenCalled();
+      expect(lastCardJson()).toContain("No modules discovered.");
     });
 
-    it("should paginate list of discovered modules", async () => {
-      const ctx = createMockCtx();
-      await command.list(ctx as any);
-      expect(ctx.source.reply).toHaveBeenCalled();
+    it("paginates discovered modules for the invoker", async () => {
+      const records = [
+        { name: "afk", enabled: true, meta: { emoji: "💤", displayName: "AFK", version: "1.0.0" } },
+        { name: "mod", enabled: false, meta: { emoji: "🛡️", displayName: "Moderation", version: "1.0.0" } },
+      ];
+      services = makeServices(records);
+
+      await runHandler("list", slashCtx({}, services));
+
+      const opts = (paginateList as any).mock.calls[0][0];
+      expect(opts.userId).toBe("u-1");
+      expect(opts.title).toBe("Discovered Modules");
+      expect(opts.items).toHaveLength(2);
     });
   });
 
-  describe("info subcommand", () => {
-    it("should return detailed module info card", async () => {
-      const ctx = createMockCtx({ module: "afk" });
-      await command.info(ctx as any);
-      expect(ctx.defer).toHaveBeenCalled();
-      expect(ctx.reply).toHaveBeenCalledWith(expect.objectContaining({ components: expect.any(Array) }));
+  describe("info", () => {
+    it("reports unknown modules", async () => {
+      await runHandler("info", slashCtx({ module: "ghost" }, services));
+
+      expect(lastCardJson()).toContain("ghost");
     });
 
-    it("should return error card if module not found", async () => {
-      const ctx = createMockCtx({ module: "unknown" });
-      await command.info(ctx as any);
-      const text = cardText(ctx.reply.mock.calls[0]![0]);
-      expect(text).toContain("Not Found");
-      expect(text).toContain("Module **unknown** was not discovered.");
-    });
-  });
-
-  describe("enable & disable subcommands", () => {
-    it("should enable module globally", async () => {
-      const ctx = createMockCtx({ module: "afk" });
-      await command.enable(ctx as any);
-      expect(mockModuleStore.setEnabled).toHaveBeenCalledWith("afk", true);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it("should disable non-core module globally", async () => {
-      const ctx = createMockCtx({ module: "afk" });
-      await command.disable(ctx as any);
-      expect(mockModuleStore.setEnabled).toHaveBeenCalledWith("afk", false);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it("should prevent disabling non-disableable module", async () => {
-      mockModuleStore.isModuleDisableable.mockReturnValueOnce(false);
-      const ctx = createMockCtx({ module: "mod" });
-      await command.disable(ctx as any);
-      expect(mockModuleStore.setEnabled).not.toHaveBeenCalled();
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-  });
-
-  describe("install subcommand", () => {
-    it("should install third-party module successfully", async () => {
-      const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: false });
-      await command.install(ctx as any);
-      expect(ctx.reply).toHaveBeenCalledTimes(2); // Initial info card + success card
-      expect(mockDownloaderUtility.installModule).toHaveBeenCalledWith("official", "economy");
-    });
-
-    it("should handle ModuleAlreadyInstalledError with update button option", async () => {
-      mockDownloaderUtility.installModule.mockRejectedValue(new ModuleAlreadyInstalledError("economy"));
-      const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: true });
-      await command.install(ctx as any);
-      expect(ctx.reply).toHaveBeenCalledWith(
-        expect.objectContaining({
-          components: expect.arrayContaining([
-            expect.objectContaining({
-              toJSON: expect.any(Function),
-            }),
-          ]),
-        })
-      );
-    });
-
-    it("should handle generic install error", async () => {
-      mockDownloaderUtility.installModule.mockRejectedValue(new Error("Git clone failed"));
-      const ctx = createMockCtx({ repo: "official", module: "economy", isSlash: true });
-      await command.install(ctx as any);
-      expect(container.logger.warn).toHaveBeenCalled();
-      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
-      expect(text).toContain("Failed to Install Module");
-      expect(text).toContain("Git clone failed");
-    });
-  });
-
-  describe("uninstall subcommand", () => {
-    it("should uninstall third-party module successfully", async () => {
-      const ctx = createMockCtx({ module: "economy", isSlash: false });
-      await command.uninstall(ctx as any);
-      expect(mockDownloaderUtility.uninstallModule).toHaveBeenCalledWith("economy");
-      expect(ctx.reply).toHaveBeenCalledTimes(2);
-    });
-
-    it("should handle uninstall failure", async () => {
-      mockDownloaderUtility.uninstallModule.mockRejectedValue(new Error("Module not found on disk"));
-      const ctx = createMockCtx({ module: "economy", isSlash: true });
-      await command.uninstall(ctx as any);
-      expect(container.logger.warn).toHaveBeenCalled();
-      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
-      expect(text).toContain("Failed to Uninstall Module");
-      expect(text).toContain("Module not found on disk");
-    });
-  });
-
-  describe("reload subcommand", () => {
-    it("should reload module and re-sync slash commands", async () => {
-      const ctx = createMockCtx({ module: "afk", isSlash: false });
-      await command.reloadModuleCmd(ctx as any);
-      expect(mockModuleStore.reload).toHaveBeenCalledWith("afk");
-      expect(mockDownloaderUtility.syncApplicationCommands).toHaveBeenCalled();
-      expect(container.logger.info).toHaveBeenCalled();
-    });
-
-    it("should handle reload error gracefully", async () => {
-      mockModuleStore.reload.mockRejectedValue(new Error("Syntax error in module"));
-      const ctx = createMockCtx({ module: "afk", isSlash: true });
-      await command.reloadModuleCmd(ctx as any);
-      expect(container.logger.warn).toHaveBeenCalled();
-      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
-      expect(text).toContain("Reload Failed");
-      expect(text).toContain("Syntax error in module");
-    });
-  });
-
-  describe("update subcommand", () => {
-    it("should update single module when module parameter is passed", async () => {
-      mockDownloaderUtility.updateModule.mockResolvedValue({ updated: true, needsRestart: true });
-      const ctx = createMockCtx({ module: "afk", isSlash: false });
-      await command.update(ctx as any);
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("afk");
-      expect(ctx.reply).toHaveBeenCalledTimes(2);
-    });
-
-    it("should handle error during single module update", async () => {
-      mockDownloaderUtility.updateModule.mockRejectedValue(new Error("Network error"));
-      const ctx = createMockCtx({ module: "afk", isSlash: true });
-      await command.update(ctx as any);
-      expect(ctx.reply).toHaveBeenCalled();
-    });
-
-    it("should update all modules when module parameter is omitted", async () => {
-      mockDownloaderUtility.getInstalledModules.mockResolvedValue([
-        { moduleName: "economy" },
-        { moduleName: "music" },
-        { moduleName: "levels" },
+    it("shows the info card for a known module", async () => {
+      services = makeServices([
+        { name: "afk", enabled: true, meta: { displayName: "AFK" }, dir: "/m/afk" },
       ]);
-      mockDownloaderUtility.updateModule
-        .mockResolvedValueOnce({ updated: true, needsRestart: true }) // economy
-        .mockResolvedValueOnce({ updated: false, needsRestart: false }) // music
-        .mockRejectedValueOnce(new Error("Git pull failed")); // levels
 
-      const ctx = createMockCtx({ module: null, isSlash: false });
-      await command.update(ctx as any);
+      await runHandler("info", slashCtx({ module: "afk" }, services));
 
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("economy");
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("music");
-      expect(mockDownloaderUtility.updateModule).toHaveBeenCalledWith("levels");
-      expect(ctx.reply).toHaveBeenCalledTimes(2);
-    });
-
-    it("should warn when no third-party modules are installed for multi-update", async () => {
-      mockDownloaderUtility.getInstalledModules.mockResolvedValue([]);
-      const ctx = createMockCtx({ module: null, isSlash: true });
-      await command.update(ctx as any);
-      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
-      expect(text).toContain("No Modules Installed");
-      expect(text).toContain("You have not installed any third-party modules via the Downloader.");
-    });
-
-    it("should handle error in runAllModulesUpdate when getInstalledModules fails", async () => {
-      mockDownloaderUtility.getInstalledModules.mockRejectedValue(new Error("Database offline"));
-      const ctx = createMockCtx({ module: null, isSlash: true });
-      await command.update(ctx as any);
-      const text = cardText(ctx.reply.mock.calls.at(-1)![0]);
-      expect(text).toContain("Multi-Update Failed");
-      expect(text).toContain("Database offline");
+      expect(lastCardJson()).toContain("AFK");
     });
   });
 
-  describe("help subcommand", () => {
-    it("should reply with help card and action row panel buttons", async () => {
-      const ctx = createMockCtx();
-      await command.help(ctx as any);
-      expect(ctx.defer).toHaveBeenCalled();
-      expect(ctx.reply).toHaveBeenCalledWith(
-        expect.objectContaining({
-          components: expect.arrayContaining([
-            expect.objectContaining({
-              toJSON: expect.any(Function),
-            }),
-          ]),
-        })
-      );
+  describe("enable/disable", () => {
+    it("enables through the operations service", async () => {
+      (setModuleEnabled as any).mockResolvedValue({ ok: true });
+
+      await runHandler("enable", slashCtx({ module: "afk" }, services));
+
+      expect(setModuleEnabled).toHaveBeenCalledWith("afk", true);
+    });
+
+    it("disables through the operations service", async () => {
+      (setModuleEnabled as any).mockResolvedValue({ ok: true });
+
+      await runHandler("disable", slashCtx({ module: "afk" }, services));
+
+      expect(setModuleEnabled).toHaveBeenCalledWith("afk", false);
     });
   });
 });

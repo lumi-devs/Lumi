@@ -1,17 +1,32 @@
-# RPC bridge (dashboard ↔ worker)
+# RPC bridge (dashboard ↔ api)
 
 > The dashboard now lives in its own repo, [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard).
 > Paths below that used to be `apps/dashboard/...` in this repo are now repo-root-relative
-> there (e.g. `apps/dashboard/src/lib/rpc.ts` is now `src/lib/rpc.ts` in `lumi-dashboard`);
-> line numbers may have drifted since the move.
+> there (e.g. `src/lib/rpc.ts` in `lumi-dashboard`).
 
-The dashboard never opens a Postgres/Redis connection or holds the bot token. Every read and
-write goes over one internal HTTP endpoint on the worker: `POST /rpc`, a flat action-string
-dispatch table, not per-resource REST routes.
+The dashboard never opens a Postgres/Valkey connection or holds the bot token. Every read and
+write goes over internal HTTP endpoints served by the headless `apps/api` process (`POST /rpc` and `POST /rpc/batch`),
+dispatching to a typed router backed by `@lumi/contracts`.
+
+## Architecture Topology
+
+```text
+lumi-dashboard (Next.js)
+       ↓
+@lumi/contracts RPC Client
+       ↓  (HTTP POST /rpc or POST /rpc/batch with Bearer RPC_INTERNAL_TOKEN)
+apps/api (rpc-http-server.ts)
+       ↓
+dispatchRpc()
+       ↓
+implementRpc() typed handlers
+       ↓
+Database / Cache / Domain Services
+```
 
 ## The wire shape
 
-`packages/contracts/src/rpc.ts:3-19`:
+`packages/contracts/src/rpc/envelope.ts`:
 
 ```ts
 export interface RpcRequest<T = unknown> {
@@ -19,6 +34,7 @@ export interface RpcRequest<T = unknown> {
   action: string;
   guildId?: string;
   actorId?: string;
+  idempotencyKey?: string;
   traceparent?: string;
   tracestate?: string;
   data?: T;
@@ -29,193 +45,93 @@ export interface RpcResponse<T = unknown> {
   ok: boolean;
   data?: T;
   error?: string;
+  code?: RpcFailureCode;
+  retryable?: boolean;
+  retryAfterMs?: number;
+}
+
+export interface RpcBatchRequest {
+  requests: RpcRequest<unknown>[];
+}
+
+export interface RpcBatchResponse {
+  responses: RpcResponse<unknown>[];
 }
 ```
 
-`RpcRequestPayloads` (`rpc.ts:512-587`) is the single map from action string to its `data`
-payload type — count its own keys rather than trusting a hardcoded number here, it grows
-with every dashboard capability (74 at last audit, including the three
-`guild.reactionroles.menus.*` actions). `RpcActions` (`rpc.ts:598-673`) is the parallel object of camelCase
-constants the caller actually imports, e.g. `RpcActions.guildModNotesAdd ===
-"guild.modNotes.add"`. There is no `RPC_ACTIONS` export — the real name is `RpcActions`
-(worth noting since it's easy to guess the SCREAMING_CASE name by analogy with other
-constant maps in this repo).
+## Typed Routers & Slices
 
-## End-to-end walkthrough of one real action: `guild.modNotes.add`
+Contracts are split per module domain in `packages/contracts/src/rpc/*.ts` (e.g. `mod.ts`, `afk.ts`, `system.ts`)
+and merged into `rpcRouter` in `packages/contracts/src/rpc/router.ts`.
 
-**1. Contract entry** (`packages/contracts/src/rpc.ts:401-404` and `:564`):
+Each route specifies:
+- `auth`: `"guildManager"` | `"botOwner"` | `"session"` | `"public"`
+- `permission?`: fine-grained permit string required
+- `input?`: Shapeshift validator for runtime payload validation
+- `timeoutMs`: action deadline
+- `readOnly?`: whether the call is safe to retry on transport errors
+- `idempotent?`: whether the mutation accepts idempotency deduplication
 
-```ts
-export interface ModNoteAddPayload {
-  userId: string;
-  message: string;
-}
-// ...
-"guild.modNotes.add": ModNoteAddPayload;
-```
+## Handler Implementation with `implementRpc()`
 
-plus the constant, `guildModNotesAdd: "guild.modNotes.add"` (`rpc.ts:650`).
-
-**2. Handler**, registered in
-`packages/core/src/modules/dashboard/rpc/moderation-rpc.ts:92-114`:
+Handlers never process untyped request objects manually. `implementRpc()` handles authentication,
+tenant verification, payload parsing, and module enablement checks automatically:
 
 ```ts
-registerRpcHandler(RpcActions.guildModNotesAdd, async (req) => {
-  const guildId = requireGuildId(req.guildId);
-  const actorId = await requireGuildManager(guildId, req.actorId);
-  const { userId, message } = parsePayload(ModNoteAddSchema, req.data);
-
-  await container.db.ensureGuild(guildId);
-  const note = await container.db.modNotes.create(guildId, userId, actorId, message);
-  return {
-    success: true,
-    note: {
-      id: note.id, userId: note.userId, authorId: note.authorId,
-      message: note.message, createdAt: note.createdAt.toISOString(),
-    },
-  };
+export const modRpcHandlers = implementRpc(modRpc, {
+  "guild.modNotes.add": async ({ guildId, actorId, input }) => {
+    const { userId, message } = input;
+    const note = await container.db.modNotes.create(guildId, userId, actorId, message);
+    return {
+      note: {
+        id: note.id,
+        userId: note.userId,
+        authorId: note.authorId,
+        message: note.message,
+        createdAt: note.createdAt.toISOString(),
+      },
+    };
+  },
 });
 ```
 
-`ModNoteAddSchema` (a Shapeshift schema, `packages/core/src/modules/dashboard/lib/helpers.ts:410-413`)
-re-validates the payload server-side — the contract's TypeScript type is compile-time only and
-gives zero runtime guarantee across a wire boundary the dashboard and worker deploy
-independently across. `requireGuildManager` (`helpers.ts:47-64`) is the authorization check:
-it re-fetches the actor's live guild membership from the bot's own cache (`ManageGuild` or
-`Administrator`, or guild owner) rather than trusting anything cached in the dashboard
-session, since that session can be stale up to `SESSION_TTL_MS`.
+## Batch Processing (`POST /rpc/batch`)
 
-Handlers for one domain are grouped into one file with a `register*RpcHandlers()` /
-`unregister*RpcHandlers()` pair (moderation, guild, permits, cases, security, tempvc,
-reactionroles, audit, logging — see `packages/core/src/modules/dashboard/rpc/*.ts`), wired up
-from the `dashboard` module's own `onLoad`/`onUnload`
-(`packages/core/src/modules/dashboard/index.ts:55-85`). Reaction-role menus
-(`guild.reactionroles.menus.list/set/delete` in `reactionroles-rpc.ts`) are the canonical
-example of a domain that must resolve its utility via `getUtility("reactionroles")` rather
-than importing from a sibling module. A handful of bot-owner-only,
-non-guild-scoped actions (GDPR, downloader/repo management, system panel) live directly in
-`packages/core/src/lib/rpc/core-rpc.ts` and are registered once from `LumiClient`'s boot
-sequence instead, not from the `dashboard` module's lifecycle.
+`apps/api` accepts batches of requests concurrently in a single HTTP round-trip:
 
-**3. Caller** — this is a *mutation*, so it lives in a Server Action, not `dashboard-fetch.ts`
-(`src/actions/mod-notes-actions.ts:18-33`):
-
-```ts
-"use server";
-
-export async function addModNote(guildId: string, userId: string, message: string) {
-  return runAction(async () => {
-    const session = await guardedModNotesAction(guildId); // requireGuild() + rate limit
-    await rpcCall(RpcActions.guildModNotesAdd, {
-      guildId,
-      actorId: session.userId,
-      data: { userId, message },
-    });
-    revalidatePath(`/guild/${guildId}/moderation/notes`);
-    return { ok: true };
-  });
+```json
+{
+  "requests": [
+    { "id": "1", "action": "guild.modules.list", "guildId": "..." },
+    { "id": "2", "action": "guild.config.get", "guildId": "...", "data": { "key": "prefix" } }
+  ]
 }
 ```
 
-`session.userId` — never a client-supplied `actorId` — becomes the wire `actorId`. This is
-the trust chain the whole bridge rests on: the dashboard authenticates the *human* via
-next-auth session (`requireGuild`, `src/lib/auth-guards.ts:20-24`, which 404s
-rather than 403s on an unauthorized guild to avoid confirming the guild exists) and only then
-attaches that session's own user id as `actorId` — the worker trusts `actorId` at all only
-because the transport itself is separately authenticated (next section).
+Each sub-request produces its own `RpcResponse` in `responses`, isolating errors so that one failed
+request does not fail the entire batch.
 
-Adding a new action means exactly these three edits — contract entry, handler
-registration, caller — and nothing else; there's no code generation step, no schema registry
-to update elsewhere.
+## Idempotency
 
-## Reads vs. mutations
+Mutations can pass `idempotencyKey` in `RpcRequest`. `withIdempotency()` acquires a distributed Valkey lock,
+returning cached results on replay or rejecting concurrent duplicates with `CONFLICT`.
 
-- **Reads** go through `src/lib/dashboard-fetch.ts`, wrapped in React's
-  `cache()` (e.g. `getGuildDashboard`) so multiple Server
-  Components rendering the same request-scoped data don't refetch. These are plain async
-  functions, not Server Actions — no `"use server"`, no rate limiting, no
-  `revalidatePath`. RPC timeouts are per-action (`guild.dashboard.get` and audit lists get
-  12s, plain lists 8s, mutations 15s) and surface as typed `RpcError` with
-  `TIMEOUT | WORKER_DOWN | RPC_ERROR | MALFORMED` codes — catch by `code`, not message match.
-- **Mutations** live under `src/actions/*.ts`, each file `"use server"`,
-  each exported function wrapped in `runAction` (`src/lib/action-result.ts:8-19`)
-  which converts a thrown `Error` into `{ ok: false, error }` while still letting
-  Next's `redirect()`/`notFound()` control-flow throws pass through via `unstable_rethrow`.
-  Mutations also typically rate-limit via `isRateLimited` and call `revalidatePath` after a
-  successful write — reads never do either.
+## Contract Versioning & Compatibility Handshake
 
-## Transport auth: `RPC_INTERNAL_TOKEN`
+The dashboard and `apps/api` are deployed independently and cross network boundaries. To ensure stability
+without breaking during independent release cadences, `apps/api` validates callers using an npm-style
+semver range handshake:
 
-`apps/api/src/rpc-http-server.ts` is the actual HTTP surface — a raw `Bun.serve`,
-not Express/Fastify. Two routes only: unauthenticated `GET /healthz` (liveness/readiness
-probes have no way to hold a secret, and it discloses nothing beyond "process is up",
-`rpc-http-server.ts:81-85`) and `POST /rpc` for everything else.
+1. **Wire Handshake**: Every request carries the caller's contract version in `x-lumi-contract-version` (`packages/contracts/src/rpc/client.ts`).
+2. **Compatibility Resolution (`packages/contracts/src/rpc/contract-version.ts`)**:
+   - `CONTRACT_VERSION`: The package's current release version.
+   - `MIN_COMPATIBLE_CONTRACT_VERSION`: The backwards-compatibility floor (e.g. `0.6.0`).
+   - `COMPATIBLE_CONTRACT_RANGE`: Formatted semver range (e.g. `>=0.6.0 <=0.7.0`).
+   - Callers reporting concrete versions or semver ranges within this range are admitted.
+   - Differing major versions are always rejected.
+   - In 0.x, bumping minor versions no longer breaks existing callers unless `MIN_COMPATIBLE_CONTRACT_VERSION` is explicitly raised.
+3. **Structured Failure & Logging**:
+   - Incompatible or missing versions yield HTTP `409` with code `CONTRACT_MISMATCH`.
+   - The response includes headers `x-lumi-contract-version` and `x-lumi-contract-range` so clients can inspect server compatibility.
+   - Failures are logged with structured metadata (`clientVersion`, `serverVersion`, `supportedRange`) on both server (`apps/api`) and client (`RpcClient`).
 
-Every `/rpc` call must carry `Authorization: Bearer <RPC_INTERNAL_TOKEN>`, checked with a
-constant-time comparison over SHA-256 digests of the token, not the raw strings
-(`tokenMatches`, `rpc-http-server.ts:39-42`) — deliberately so neither the byte values nor the
-token's *length* leak through response timing. `readInternalToken` (`rpc-http-server.ts:51-74`)
-refuses to boot in production if `RPC_INTERNAL_TOKEN` is unset; in development it logs a loud
-warning and runs unauthenticated instead. `startRpcHttpServer` additionally refuses to bind to
-any non-loopback host without a token set (`rpc-http-server.ts:131-137`) — binding
-`RPC_HTTP_HOST` beyond `127.0.0.1` with no token throws at startup rather than silently serving
-open. On the dashboard side, `RpcClient.call` (`src/lib/rpc.ts:34-100`) always
-attaches the bearer header (`rpc.ts:66-69`) and is itself `server-only` — the module import
-throws if anything tries to pull it into a client bundle.
-
-Reachability is explicitly *not* treated as authorization — the `rpc-http-server.ts` file's own
-top comment spells out that anything on the docker network (or with an SSRF primitive aimed at
-it) can open a socket to `/rpc`, and `actorId` in the body is an *unsigned claim* the handlers
-act on. The token check is what makes trusting `actorId` downstream (as `guild.modNotes.add`'s
-handler does above) safe at all.
-
-## `dispatchRpc` — the transport-agnostic core
-
-`packages/core/src/lib/rpc/dispatch.ts:34-89`. `rpc-http-server.ts` is presently the only caller,
-but the split exists so a future transport (the file comment mentions this) just needs its own
-auth before calling in. Two checks happen before the handler runs:
-
-1. Handler lookup by exact `action` string; unknown action returns `{ ok: false, error: ... }`
-   with **no HTTP-level distinction** — this always comes back as HTTP 200 with `ok: false` in
-   the JSON body, not a 404. Only auth failures (401) and malformed JSON/missing `action`
-   (400) get non-200 status codes (`rpc-http-server.ts:89-109`); everything else, including
-   "handler not found" and any handler-thrown error, is 200 with `ok: false`.
-2. `req.guildId && !(await container.db.config.isDashboardEnabled(req.guildId))` — a guild can
-   opt out of the dashboard entirely; every guild-scoped action respects this uniformly at the
-   dispatch layer rather than each handler re-checking it.
-
-Handler execution runs inside `runWithContext(...)` for tracing/correlation
-(`dispatch.ts:51-88`), and Prisma errors get a dedicated `handlePrismaError` scrub
-(`dispatch.ts:76-80`) before the error message crosses the wire — the comment is explicit that
-a raw Prisma error message can carry the query/file path/line, while a plain thrown
-`Error("...")` from application code (e.g. `"A permit named X already exists."`) is meant to
-reach the caller verbatim. If you throw inside a handler for a user-facing reason, throw a
-plain `Error` with a clean message; don't let a raw Prisma exception escape uncaught.
-
-## Gotchas actually found in the code
-
-- **8s default client-side timeout, per-action overrides.**
-  `RpcClient.call` aborts via
-  `AbortController` and throws `RpcError("TIMEOUT")` — a slow handler (large `guild.audit.list`
-  page, a big backup restore) gets 12s/15s via `defaultTimeoutFor()`, or an explicit `timeoutMs` override
-  passed through `CallOptions`, not just "it'll be fine."
-- **A malformed response is deliberately swallowed, not surfaced verbatim.** If the worker's
-  JSON body doesn't parse or doesn't match the `RpcResponse` envelope (`parseRpcResponse`,
-  `packages/contracts/src/rpc.ts:30-37`, itself Shapeshift-validated since dashboard and
-  worker can be on different deployed versions), `RpcClient.call` logs and throws a generic
-  `RPC <action>: malformed response` rather than leaking the raw body (`rpc.ts:82-96`).
-- **Every action's `data` payload is trusted exactly once — at the handler, not the wire
-  layer.** `dispatchRpc` never validates `req.data` against anything; each handler owns its own
-  `parsePayload(SomeSchema, req.data)` call. A new handler that skips this has zero
-  request-shape validation, contract types notwithstanding.
-- **`req.actorId` absence is a handler-by-handler decision, not automatic.** Some actions are
-  intentionally public/unauthenticated — `guild.appeals.verify` and `guild.appeals.submit`
-  (`moderation-rpc.ts:126,147`, both explicitly commented "Public, unauthenticated: reachable
-  by a punished user with no dashboard access at all") rely on a signed per-case appeal token
-  instead of `actorId`/session. Don't assume every guild-scoped action requires
-  `requireGuildManager`; check the specific handler.
-- **Bot-owner checks re-derive from `PermitResolver.isBotOwner`, not an env var list.**
-  `requireBotOwner` (`packages/core/src/lib/rpc/core-rpc.ts:29-34`) and `auth.whoami`'s handler
-  (`core-rpc.ts:127-129`) both defer to the same resolver so the dashboard doesn't need its
-  own hardcoded owner list — `auth.whoami` exists specifically so the dashboard can ask the
-  worker "is this actorId the owner" instead of guessing.

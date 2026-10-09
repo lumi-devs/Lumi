@@ -1,3 +1,4 @@
+import type { ConfigField } from "./config.js";
 import type { RpcRequest, RpcResponse } from "./rpc/envelope.js";
 
 export const AddonDiscordCapabilities = [
@@ -7,6 +8,14 @@ export const AddonDiscordCapabilities = [
   "manageRoles",
   "manageVoice",
   "manageAutomod",
+  "manageChannels",
+  "manageThreads",
+  "manageEmoji",
+  "manageStickers",
+  "fetchMessage",
+  "moderateMembers",
+  "clientPresence",
+  "sendDirectMessage",
 ] as const;
 
 export type AddonDiscordCapability = (typeof AddonDiscordCapabilities)[number];
@@ -15,7 +24,7 @@ export interface AddonCapabilities {
   discord?: AddonDiscordCapability[];
   scheduling?: boolean;
   kv?: boolean;
-  redis?: boolean;
+  valkey?: boolean;
 }
 
 export const DefaultAddonCapabilities: AddonCapabilities = {
@@ -36,15 +45,45 @@ export type AddonRpcMethod =
   | "kv.set"
   | "kv.delete"
   | "kv.list"
-  | "redis.sadd"
-  | "redis.srem"
-  | "redis.scard"
-  | "redis.smembers"
-  | "redis.del"
+  | "kv.incr"
+  | "valkey.sadd"
+  | "valkey.srem"
+  | "valkey.scard"
+  | "valkey.smembers"
+  | "valkey.del"
+  | "valkey.set"
+  | "valkey.get"
   | "schedule.add"
   | "discord.channels.send"
+  | "discord.channels.create"
+  | "discord.channels.remove"
+  | "discord.channels.permissions"
+  | "discord.channels.members"
   | "discord.messages.fetch"
   | "discord.messages.edit"
+  | "discord.guilds.get"
+  | "discord.guilds.members.fetch"
+  | "discord.users.send"
+  | "discord.members.roles.add"
+  | "discord.members.roles.remove"
+  | "discord.members.move"
+  | "discord.members.timeout"
+  | "discord.roles.create"
+  | "discord.roles.edit"
+  | "discord.roles.remove"
+  | "discord.roles.fetch"
+  | "discord.emoji.create"
+  | "discord.stickers.create"
+  | "discord.stickers.fetch"
+  | "discord.threads.create"
+  | "discord.threads.archive"
+  | "discord.threads.remove"
+  | "discord.client.presence"
+  | "discord.client.stats"
+  | "discord.messages.delete"
+  | "discord.channels.fetch"
+  | "discord.attachments.rehost"
+  | "modules.enabled"
   | "log";
 
 export type AddonRpcRequest<T = unknown> = RpcRequest<T> & {
@@ -57,7 +96,8 @@ export type AddonRpcResponse<T = unknown> = RpcResponse<T>;
 export type AddonInvocation =
   | AddonCommandInvocation
   | AddonInteractionInvocation
-  | AddonTaskFireInvocation;
+  | AddonTaskFireInvocation
+  | AddonEventInvocation;
 
 interface InvocationBase {
   invocationId: string;
@@ -72,6 +112,15 @@ export interface AddonCommandInvocation extends InvocationBase {
   subcommand: string | null;
   user: SerialisedUser;
   member: SerialisedMember | null;
+  repliedToId: string | null;
+}
+
+export interface SerialisedAttachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string | null;
 }
 
 export interface AddonInteractionInvocation extends InvocationBase {
@@ -82,12 +131,88 @@ export interface AddonInteractionInvocation extends InvocationBase {
   member: SerialisedMember | null;
   values: string[];
   fields: Record<string, string>;
+  attachments: Record<string, SerialisedAttachment[]>;
 }
 
 export interface AddonTaskFireInvocation extends InvocationBase {
   kind: "task-fire";
   task: string;
   payload: Record<string, unknown>;
+}
+
+export type AddonEventName =
+  | "presenceUpdate"
+  | "voiceStateUpdate"
+  | "guildMemberUpdate"
+  | "messageCreate"
+  | "threadCreate"
+  | "userUpdate";
+
+export interface AddonEventInvocation extends InvocationBase {
+  kind: "event";
+  event: AddonEventName;
+  data: Record<string, unknown>;
+}
+
+export interface SerialisedActivity {
+  name: string;
+  type: number;
+  state: string | null;
+}
+
+export interface SerialisedPresence {
+  userId: string;
+  guildId: string;
+  status: string;
+  activities: SerialisedActivity[];
+  roles: string[];
+}
+
+export interface SerialisedVoiceState {
+  guildId: string;
+  userId: string;
+  oldChannelId: string | null;
+  newChannelId: string | null;
+  roles: string[];
+}
+
+export interface SerialisedGuildMemberUpdate {
+  guildId: string;
+  userId: string;
+  oldRoles: string[];
+  newRoles: string[];
+  nickname: string | null;
+  pending: boolean;
+}
+
+export interface SerialisedMessage {
+  guildId: string;
+  channelId: string;
+  messageId: string;
+  authorId: string;
+  authorBot: boolean;
+  content: string;
+}
+
+export interface SerialisedThread {
+  guildId: string;
+  parentId: string;
+  threadId: string;
+  name: string;
+}
+
+export interface SerialisedPrimaryGuild {
+  identityGuildId: string | null;
+  identityEnabled: boolean | null;
+  tag: string | null;
+}
+
+export interface SerialisedUserUpdate {
+  userId: string;
+  username: string;
+  globalName: string | null;
+  avatar: string | null;
+  primaryGuild: SerialisedPrimaryGuild | null;
 }
 
 export interface SerialisedUser {
@@ -105,6 +230,8 @@ export interface SerialisedMember {
   joinedTimestamp: number | null;
   /** Discord permission bitfield, as a decimal string. */
   permissions: string;
+  isOwner: boolean;
+  primaryGuild: SerialisedPrimaryGuild | null;
 }
 
 export interface AddonReady {
@@ -112,6 +239,8 @@ export interface AddonReady {
   commands: AddonCommandDescriptor[];
   interactionPrefixes: string[];
   tasks: string[];
+  events: AddonEventName[];
+  configFields: ConfigField[];
 }
 
 export interface AddonCommandDescriptor {

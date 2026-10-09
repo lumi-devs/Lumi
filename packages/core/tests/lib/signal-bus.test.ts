@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { SignalBus } from "#lib/database/redis.js";
+import { container } from "#lib/services.js";
+import { SignalBus } from "#lib/valkey/buses.js";
 
 const CHANNEL = "lumi:signals";
 
-/** Minimal stand-in for the dedicated ioredis subscriber connection the bus owns. */
+/** Minimal stand-in for the dedicated iovalkey subscriber connection the bus owns. */
 function createMockSubscriber() {
   const handlers = new Map<string, (...args: any[]) => void>();
   return {
@@ -36,22 +36,22 @@ describe("SignalBus", () => {
       debug: vi.fn(),
     } as any;
 
-    (container as any).redis = {
+    (container as any).valkey = {
       del: vi.fn().mockResolvedValue(1),
       publish: vi.fn().mockResolvedValue(1),
     };
 
     subscriber = createMockSubscriber();
-    bus = new SignalBus(subscriber as any);
+    bus = new SignalBus(subscriber as any, (container as any).valkey);
   });
 
   describe("publish", () => {
     it("publishes a JSON-encoded topic/payload/time envelope, no delete", async () => {
       await bus.publish("tempvc", { kind: "vcadd", g: "1", c: "2" });
 
-      expect((container.redis as any).del).not.toHaveBeenCalled();
+      expect((container.valkey as any).del).not.toHaveBeenCalled();
 
-      const [channel, message] = (container.redis.publish as any).mock
+      const [channel, message] = (container.valkey.publish as any).mock
         .calls[0];
       expect(channel).toBe(CHANNEL);
       const parsed = JSON.parse(message);
@@ -63,7 +63,7 @@ describe("SignalBus", () => {
     it("never calls delSafe/del as part of publishing", async () => {
       await bus.publish("reactionroles", { kind: "menusreload", g: "1" });
 
-      expect((container.redis as any).del).not.toHaveBeenCalled();
+      expect((container.valkey as any).del).not.toHaveBeenCalled();
     });
   });
 

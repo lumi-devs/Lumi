@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { coreRpc, downloaderRpc } from "@lumi/contracts/rpc";
 import { resolver } from "#lib/downloader/resolver.js";
 import { getUtility } from "#lib/module-system/Utility.js";
@@ -7,11 +7,12 @@ import { paginate } from "#lib/rpc/validation.js";
 
 export const coreRpcHandlers = implementRpc(coreRpc, {
   "guild.permits.list": async ({ guildId }) => ({
-    permits: await getUtility("permissions").listPermits(guildId),
+    permits: await getUtility("permissions").listPermits(container, guildId),
   }),
 
   "guild.permits.create": async ({ guildId, input }) => {
     const permit = await getUtility("permissions").createPermit(
+      container,
       guildId,
       input.name,
       input.kind,
@@ -23,22 +24,23 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
   "guild.permits.update": async ({ guildId, input }) => {
     const permissions = getUtility("permissions");
     if (input.name !== undefined) {
-      await permissions.renamePermit(guildId, input.permitId, input.name);
+      await permissions.renamePermit(container, guildId, input.permitId, input.name);
     }
     const permit =
       input.nodes !== undefined
-        ? await permissions.updatePermitNodes(guildId, input.permitId, input.nodes)
-        : await permissions.getPermit(guildId, input.permitId);
+        ? await permissions.updatePermitNodes(container, guildId, input.permitId, input.nodes)
+        : await permissions.getPermit(container, guildId, input.permitId);
     return { success: true, permit };
   },
 
   "guild.permits.delete": async ({ guildId, input }) => {
-    await getUtility("permissions").deletePermit(guildId, input.permitId);
+    await getUtility("permissions").deletePermit(container, guildId, input.permitId);
     return { success: true };
   },
 
   "guild.permits.assign": async ({ guildId, input }) => {
     await getUtility("permissions").assignPermit(
+      container,
       guildId,
       input.permitId,
       input.targetType,
@@ -49,6 +51,7 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
 
   "guild.permits.unassign": async ({ guildId, input }) => {
     await getUtility("permissions").unassignPermit(
+      container,
       guildId,
       input.permitId,
       input.targetType,
@@ -135,6 +138,7 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
 export const downloaderRpcHandlers = implementRpc(downloaderRpc, {
   "downloader.repo.add": async ({ input }) => {
     await getUtility("downloader").addRepo(
+      container,
       input.name,
       input.url,
       input.branch || "default",
@@ -175,6 +179,7 @@ export const downloaderRpcHandlers = implementRpc(downloaderRpc, {
 
   "downloader.module.install": async ({ input }) => {
     await getUtility("downloader").installModule(
+      container,
       input.repoName,
       input.moduleName,
       input.revision,
@@ -183,12 +188,13 @@ export const downloaderRpcHandlers = implementRpc(downloaderRpc, {
   },
 
   "downloader.module.uninstall": async ({ input }) => {
-    await getUtility("downloader").uninstallModule(input.moduleName);
+    await getUtility("downloader").uninstallModule(container, input.moduleName);
     return { success: true, moduleName: input.moduleName };
   },
 
   "downloader.module.rollback": async ({ input }) => {
     const result = await getUtility("downloader").rollbackModule(
+      container,
       input.moduleName,
       input.revision,
     );

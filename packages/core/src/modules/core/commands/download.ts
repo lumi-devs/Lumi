@@ -1,9 +1,8 @@
-import { ApplyOptions } from "@sapphire/decorators";
+import type { Container } from "#lib/services.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
-import type { AutocompleteInteraction } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { CommandContext } from "#lib/command-context.js";
+import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,
@@ -22,28 +21,158 @@ import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+function downloaderService(): DownloaderUtility {
+  return getUtility("downloader");
+}
+
+async function panel(ctx: CommandContext): Promise<void> {
+  const t = await ctx.fetchT();
+  const row =
+    new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId("lumi:tab:addons")
+        .setLabel(t("core:openAddonsManager"))
+        .setEmoji(Emojis.parse(Emojis.Repo))
+        .setStyle(ButtonStyle.Primary),
+    );
+
+  await ctx.reply(
+    makeInfoCard(
+      t("core:addonDownloadsTitle"),
+      t("core:addonDownloadsText"),
+      { actionRows: [row] },
+    ),
+  );
+}
+
+async function install(ctx: CommandContext): Promise<void> {
+  const t = await ctx.fetchT();
+  const repoName = (await ctx.getString("repo", { required: true }))!;
+  const moduleName = (await ctx.getString("module", { required: true }))!;
+  const revision =
+    (await ctx.getString("revision", { required: false })) ?? undefined;
+
+  await ctx.replyInfo(
+    t("core:installingModuleTitle"),
+    t("core:installingModuleText", { moduleName, repoName }),
+  );
+
+  try {
+    await downloaderService().installModule(
+      ctx.services,
+      repoName,
+      moduleName,
+      revision,
+    );
+    ctx.services.logger.info(
+      `[Download] ${Emojis.Download} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
+    );
+    await ctx.replySuccess(
+      `${Emojis.Install} ${t("core:moduleInstalledTitle")}`,
+      t("core:moduleInstalledText", { moduleName, repoName }),
+    );
+  } catch (err: unknown) {
+    const msg_ = errorFrom(err).message;
+    ctx.services.logger.warn(
+      `[Download] ${Emojis.Error} Install failed: ${moduleName} - ${msg_}`,
+    );
+    await ctx.replyError(
+      `${Emojis.Error} ${t("core:failedInstallModuleTitle")}`,
+      msg_,
+    );
+  }
+}
+
+async function uninstall(ctx: CommandContext): Promise<void> {
+  const t = await ctx.fetchT();
+  const moduleName = (await ctx.getString("module", { required: true }))!;
+
+  await ctx.replyInfo(
+    t("core:uninstallingModuleTitle"),
+    t("core:uninstallingModuleText", { moduleName }),
+  );
+
+  try {
+    await downloaderService().uninstallModule(ctx.services, moduleName);
+    ctx.services.logger.info(
+      `[Download] Uninstalled ${moduleName} by ${ctx.user.tag}`,
+    );
+    await ctx.replySuccess(
+      t("core:moduleUninstalledTitle"),
+      t("core:moduleUninstalledText", { moduleName }),
+    );
+  } catch (err: unknown) {
+    const msg_ = errorFrom(err).message;
+    ctx.services.logger.warn(
+      `[Download] Uninstall failed: ${moduleName} - ${msg_}`,
+    );
+    await ctx.replyError(t("core:failedUninstallModuleTitle"), msg_);
+  }
+}
+
+async function rollback(ctx: CommandContext): Promise<void> {
+  const t = await ctx.fetchT();
+  const moduleName = (await ctx.getString("module", { required: true }))!;
+  const revision = (await ctx.getString("revision", { required: true }))!;
+
+  const { confirmed } = await confirmPrompt(ctx, {
+    title: `${Emojis.WarningSign} Rollback Warning`,
+    body: [
+      `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
+      "This runs whatever code exists at that commit inside the bot process. A restart is required to fully apply the change.",
+    ].join("\n\n"),
+    confirmLabel: "I understand, roll it back",
+  });
+  if (!confirmed) {
+    await ctx.replyError("Cancelled", `Module **${moduleName}** was not rolled back.`);
+    return;
+  }
+
+  await ctx.replyInfo(
+    t("core:rollingBackModuleTitle"),
+    t("core:rollingBackModuleText", { moduleName, revision }),
+  );
+
+  try {
+    const result = await downloaderService().rollbackModule(
+      ctx.services,
+      moduleName,
+      revision,
+    );
+    ctx.services.logger.info(
+      `[Download] Rolled back ${moduleName} to ${revision} (${result.commit ?? "unknown"}) by ${ctx.user.tag}`,
+    );
+    await ctx.replySuccess(
+      t("core:moduleRolledBackTitle"),
+      t("core:moduleRolledBackText", {
+        moduleName,
+        commit: result.commit ?? revision,
+      }),
+    );
+  } catch (err: unknown) {
+    const msg_ = errorFrom(err).message;
+    ctx.services.logger.warn(
+      `[Download] Rollback failed: ${moduleName} - ${msg_}`,
+    );
+    await ctx.replyError(t("core:failedRollbackModuleTitle"), msg_);
+  }
+}
+
+export const downloadDef: CommandDef = {
   name: "download",
   aliases: ["dl"],
   description:
     "Install or uninstall a module from a repository (Bot Owner Only)",
-  preconditions: ["BotOwner"],
+  botOwner: true,
   prefixEnabled: true,
-  subcommands: [
-    { name: "panel", run: "panel", default: true },
-    { name: "install", run: "install" },
-    { name: "uninstall", run: "uninstall" },
-    { name: "rollback", run: "rollback" },
-  ],
-})
-export class DownloadCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
+  build: () => {
+    const b = new SlashCommandBuilder().setName("download");
+    return (
       b
-        .setName(this.name)
-        .setDescription(this.description)
+        .setName("download")
+        .setDescription(
+          "Install or uninstall a module from a repository (Bot Owner Only)",
+        )
         .addSubcommand((s) =>
           s.setName("panel").setDescription("Open the Add-ons Manager panel"),
         )
@@ -105,23 +234,26 @@ export class DownloadCommand extends BaseSubcommand {
                 .setDescription("Commit/branch/tag to roll back to")
                 .setRequired(true),
             ),
-        ),
+        )
     );
-  }
-
-  private get downloaderService(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  public override async autocompleteRun(
+  },
+  handlers: {
+    panel: (ctx: CommandContext) => panel(ctx),
+    install: (ctx: CommandContext) => install(ctx),
+    uninstall: (ctx: CommandContext) => uninstall(ctx),
+    rollback: (ctx: CommandContext) => rollback(ctx),
+  },
+  defaultSub: "panel",
+  autocomplete: async (
+    services: Container,
     interaction: AutocompleteInteraction,
-  ): Promise<void> {
+  ): Promise<void> => {
     const focused = interaction.options.getFocused(true);
 
     if (focused.name === "repo") {
       return respondWithChoices(
         interaction,
-        await repoNameChoices(this.downloaderService, focused.value),
+        await repoNameChoices(services, downloaderService(), focused.value),
       );
     }
 
@@ -132,7 +264,8 @@ export class DownloadCommand extends BaseSubcommand {
       return respondWithChoices(
         interaction,
         await repoModuleChoices(
-          this.downloaderService,
+          services,
+          downloaderService(),
           interaction,
           "repo",
           focused.value,
@@ -142,138 +275,7 @@ export class DownloadCommand extends BaseSubcommand {
 
     return respondWithChoices(
       interaction,
-      await installedModuleChoices(this.downloaderService, focused.value),
+      await installedModuleChoices(services, downloaderService(), focused.value),
     );
-  }
-
-  public async panel(ctx: CommandContext): Promise<void> {
-    const t = await ctx.fetchT();
-    const row =
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId("lumi:tab:addons")
-          .setLabel(t("core:openAddonsManager"))
-          .setEmoji(Emojis.parse(Emojis.Repo))
-          .setStyle(ButtonStyle.Primary),
-      );
-
-    await ctx.reply(
-      makeInfoCard(
-        t("core:addonDownloadsTitle"),
-        t("core:addonDownloadsText"),
-        { actionRows: [row] },
-      ),
-    );
-  }
-
-  public async install(ctx: CommandContext): Promise<void> {
-    const t = await ctx.fetchT();
-    const repoName = (await ctx.getString("repo", { required: true }))!;
-    const moduleName = (await ctx.getString("module", { required: true }))!;
-    const revision =
-      (await ctx.getString("revision", { required: false })) ?? undefined;
-
-    await ctx.replyInfo(
-      t("core:installingModuleTitle"),
-      t("core:installingModuleText", { moduleName, repoName }),
-    );
-
-    try {
-      await this.downloaderService.installModule(
-        repoName,
-        moduleName,
-        revision,
-      );
-      this.container.logger.info(
-        `[Download] ${Emojis.Download} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
-      );
-      await ctx.replySuccess(
-        `${Emojis.Install} ${t("core:moduleInstalledTitle")}`,
-        t("core:moduleInstalledText", { moduleName, repoName }),
-      );
-    } catch (err: unknown) {
-      const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
-        `[Download] ${Emojis.Error} Install failed: ${moduleName} - ${msg_}`,
-      );
-      await ctx.replyError(
-        `${Emojis.Error} ${t("core:failedInstallModuleTitle")}`,
-        msg_,
-      );
-    }
-  }
-
-  public async uninstall(ctx: CommandContext): Promise<void> {
-    const t = await ctx.fetchT();
-    const moduleName = (await ctx.getString("module", { required: true }))!;
-
-    await ctx.replyInfo(
-      t("core:uninstallingModuleTitle"),
-      t("core:uninstallingModuleText", { moduleName }),
-    );
-
-    try {
-      await this.downloaderService.uninstallModule(moduleName);
-      this.container.logger.info(
-        `[Download] Uninstalled ${moduleName} by ${ctx.user.tag}`,
-      );
-      await ctx.replySuccess(
-        t("core:moduleUninstalledTitle"),
-        t("core:moduleUninstalledText", { moduleName }),
-      );
-    } catch (err: unknown) {
-      const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
-        `[Download] Uninstall failed: ${moduleName} - ${msg_}`,
-      );
-      await ctx.replyError(t("core:failedUninstallModuleTitle"), msg_);
-    }
-  }
-
-  public async rollback(ctx: CommandContext): Promise<void> {
-    const t = await ctx.fetchT();
-    const moduleName = (await ctx.getString("module", { required: true }))!;
-    const revision = (await ctx.getString("revision", { required: true }))!;
-
-    const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WarningSign} Rollback Warning`,
-      body: [
-        `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
-        "This runs whatever code exists at that commit inside the bot process. A restart is required to fully apply the change.",
-      ].join("\n\n"),
-      confirmLabel: "I understand, roll it back",
-    });
-    if (!confirmed) {
-      await ctx.replyError("Cancelled", `Module **${moduleName}** was not rolled back.`);
-      return;
-    }
-
-    await ctx.replyInfo(
-      t("core:rollingBackModuleTitle"),
-      t("core:rollingBackModuleText", { moduleName, revision }),
-    );
-
-    try {
-      const result = await this.downloaderService.rollbackModule(
-        moduleName,
-        revision,
-      );
-      this.container.logger.info(
-        `[Download] Rolled back ${moduleName} to ${revision} (${result.commit ?? "unknown"}) by ${ctx.user.tag}`,
-      );
-      await ctx.replySuccess(
-        t("core:moduleRolledBackTitle"),
-        t("core:moduleRolledBackText", {
-          moduleName,
-          commit: result.commit ?? revision,
-        }),
-      );
-    } catch (err: unknown) {
-      const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
-        `[Download] Rollback failed: ${moduleName} - ${msg_}`,
-      );
-      await ctx.replyError(t("core:failedRollbackModuleTitle"), msg_);
-    }
-  }
-}
+  },
+};

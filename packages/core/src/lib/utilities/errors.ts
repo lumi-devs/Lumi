@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 export function errorFrom(err: unknown): Error {
   if (err instanceof Error) return err;

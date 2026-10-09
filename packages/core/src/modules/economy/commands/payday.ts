@@ -1,29 +1,26 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { BankService } from "../services/BankService.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const paydayDef: CommandDef = {
   name: "payday",
-  description: "Claim free currency. Cooldown applies between claims.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "economy",
+  description: "Claim free currency. Cooldown applies between claims.",
+  guildOnly: true,
   prefixEnabled: true,
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export default class PaydayCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
+  cooldownMs: 5000,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("payday");
+    return (
+    builder.setName("payday").setDescription("Claim free currency. Cooldown applies between claims.")
     );
-  }
-
-  public override async run(ctx: CommandContext) {
+  },
+  run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(guildId);
+    const config = await getEconomyConfig(ctx.services, guildId);
     try {
       const { balance, amount, capped } = await new BankService().payday(
         guildId,
@@ -42,4 +39,4 @@ export default class PaydayCommand extends BaseCommand {
       await reportEconomyError(ctx, err);
     }
   }
-}
+};

@@ -1,48 +1,35 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { Args, Command } from "@sapphire/framework";
-import { Message, type ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
-import { handleMediaRequest } from "../services/media-utils.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const avatarDef: CommandDef = {
   name: "avatar",
   aliases: ["av"],
   description: "Displays a user's avatar.",
-  preconditions: ["GuildOnly"],
-})
-export class AvatarCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
+  guildOnly: true,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("avatar");
+    return (
+      b
+        .setName("avatar")
+        .setDescription("Displays a user's avatar.")
         .addUserOption((option) =>
           option
             .setName("user")
             .setDescription(
               "The user whose avatar to display (defaults to you).",
             ),
-        ),
-    );
-  }
-
-  public override async messageRun(message: Message, args: Args) {
-    const user = await args.pick("user").catch(() => message.author);
+        )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
+    const user = (await ctx.getUser("user")) ?? ctx.user;
     return handleMediaRequest({
-      context: message,
+      context: ctx.source,
       targetUser: user,
       mediaType: "avatar",
-      container: this.container,
+      container: ctx.services,
     });
-  }
-
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const user = interaction.options.getUser("user") ?? interaction.user;
-    return handleMediaRequest({
-      context: interaction,
-      targetUser: user,
-      mediaType: "avatar",
-      container: this.container,
-    });
-  }
-}
+  },
+};

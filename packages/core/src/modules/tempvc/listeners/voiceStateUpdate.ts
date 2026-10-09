@@ -1,30 +1,25 @@
-import { Listener, Events } from "@sapphire/framework";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
+import { makeWarningCard } from "#lib/ui/cards.js";
 import { logError } from "#lib/utilities/errors.js";
+import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { TempvcCreateCooldownMs } from "../constants.js";
-import { tempVcRegistry } from "../services/registry.js";
-import type TempVcUtility from "../utilities/TempVcUtility.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import type { TempVcUtility } from "../utilities/TempVcUtility.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
-} from "../services/voice-occupancy.js";
+} from "@lumi/application/services/tempvc/voice-occupancy.js";
 
-@ApplyOptions<Listener.Options>({
+const tempvcVoiceStateUpdate = defineListener({
   name: "tempvcVoiceStateUpdate",
   event: Events.VoiceStateUpdate,
-})
-export default class TempVcVoiceStateListener extends Listener<
-  typeof Events.VoiceStateUpdate
-> {
-  private get service(): TempVcUtility {
-    return getUtility("tempvc");
-  }
-
-  public async run(oldState: VoiceState, newState: VoiceState) {
+  async execute(services: Container, oldState: VoiceState, newState: VoiceState) {
+    const service: TempVcUtility = getUtility("tempvc");
     const member = newState.member ?? oldState.member;
     if (!member || member.user.bot) return;
     if (oldState.channelId === newState.channelId) return;
@@ -52,7 +47,7 @@ export default class TempVcVoiceStateListener extends Listener<
       (await tempVcRegistry.isManagedVc(guildId, prevChannelId))
     ) {
       if (await isVoiceChannelEmpty(prevChannelId)) {
-        await this.service.scheduleCleanup(guildId, prevChannelId);
+        await service.scheduleCleanup(guildId, prevChannelId);
       }
     }
 
@@ -62,16 +57,19 @@ export default class TempVcVoiceStateListener extends Listener<
         newState.channelId,
       );
       if (generator) {
-        if (!(await isModuleEnabled(guildId, "tempvc"))) return;
+        if (!(await isModuleEnabled(services, guildId, "tempvc"))) return;
 
-        if (await this.service.onCreateCooldown(guildId, member.id)) {
+        if (await service.onCreateCooldown(services, guildId, member.id)) {
           await member.voice.disconnect().catch(() => null);
-          const t = await fetchTyped(newState.guild);
+          const t = await fetchTyped(newState.guild, services);
           await member
             .send(
-              `⏳ ${t("tempvc:createCooldownDm", {
-                seconds: Math.round(TempvcCreateCooldownMs / 1000),
-              })}`,
+              makeWarningCard(
+                "⏳ Slow Down",
+                t("tempvc:createCooldownDm", {
+                  seconds: Math.round(TempvcCreateCooldownMs / 1000),
+                }),
+              ),
             )
             .catch(() => null);
           return;
@@ -84,11 +82,13 @@ export default class TempVcVoiceStateListener extends Listener<
             .catch(() => null));
 
         if (channel && channel.isVoiceBased()) {
-          await this.service
-            .createVc(member, channel, generator)
+          await service
+            .createVc(services, member, channel, generator)
             .catch((err: unknown) => logError("TempVC: create failed", err));
         }
       }
     }
-  }
-}
+  },
+});
+
+export default tempvcVoiceStateUpdate;

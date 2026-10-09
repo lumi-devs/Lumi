@@ -1,7 +1,5 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import {
   isChannelLocked,
   lockChannel,
@@ -9,7 +7,7 @@ import {
   type LockableChannel,
 } from "#lib/moderation/lockdown.js";
 import { formatAuditReason } from "#lib/utilities/misc.js";
-import { ChannelType } from "discord.js";
+import { SlashCommandBuilder, ChannelType } from "discord.js";
 
 function isLockable(
   channel: unknown,
@@ -23,59 +21,59 @@ function resolveTargetChannel(ctx: CommandContext): LockableChannel | null {
   return isLockable(channel) ? channel : null;
 }
 
-@ApplyOptions<BaseSubcommand.Options>({
+async function resolveChannelOption(
+  ctx: CommandContext,
+): Promise<LockableChannel | null> {
+  const channel = await ctx.getChannel("channel");
+  return isLockable(channel) ? channel : null;
+}
+
+export const lockDef: CommandDef = {
   name: "lock",
   description: "Lock or unlock one channel, unlike /lockdown which covers the whole server",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.lockdown",
   prefixEnabled: true,
-  subcommands: [
-    { name: "enable", run: "enable", default: true },
-    { name: "disable", run: "disable" },
-  ],
-})
-export class LockCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("enable")
-            .setDescription("Deny @everyone SendMessages in a channel")
-            .addChannelOption((o) =>
-              o
-                .setName("channel")
-                .setDescription("Channel to lock (defaults to this one)")
-                .addChannelTypes(
-                  ChannelType.GuildText,
-                  ChannelType.GuildAnnouncement,
-                )
-                .setRequired(false),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("disable")
-            .setDescription("Restore @everyone SendMessages in a channel")
-            .addChannelOption((o) =>
-              o
-                .setName("channel")
-                .setDescription("Channel to unlock (defaults to this one)")
-                .addChannelTypes(
-                  ChannelType.GuildText,
-                  ChannelType.GuildAnnouncement,
-                )
-                .setRequired(false),
-            ),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("lock");
+    return (
+    b
+            .setName("lock")
+            .setDescription("Lock or unlock one channel, unlike /lockdown which covers the whole server")
+            .addSubcommand((s) =>
+              s
+                .setName("enable")
+                .setDescription("Deny @everyone SendMessages in a channel")
+                .addChannelOption((o) =>
+                  o
+                    .setName("channel")
+                    .setDescription("Channel to lock (defaults to this one)")
+                    .addChannelTypes(
+                      ChannelType.GuildText,
+                      ChannelType.GuildAnnouncement,
+                    )
+                    .setRequired(false),
+                ),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("disable")
+                .setDescription("Restore @everyone SendMessages in a channel")
+                .addChannelOption((o) =>
+                  o
+                    .setName("channel")
+                    .setDescription("Channel to unlock (defaults to this one)")
+                    .addChannelTypes(
+                      ChannelType.GuildText,
+                      ChannelType.GuildAnnouncement,
+                    )
+                    .setRequired(false),
+                ),
+            )
     );
-  }
-
-  public async enable(ctx: CommandContext) {
+  },
+  handlers: {
+  "enable": async (ctx: CommandContext) => {
     const channel = (await resolveChannelOption(ctx)) ?? resolveTargetChannel(ctx);
     if (!channel) {
       return ctx.replyError(
@@ -90,11 +88,10 @@ export class LockCommand extends BaseSubcommand {
     await lockChannel(channel, formatAuditReason(ctx.user, "Channel locked"));
     return ctx.replySuccess(
       "Channel Locked",
-      `${channel} is now locked - @everyone can no longer send messages there.`,
+      `${channel} is now locked - @everyone can no longer send messages there.`
     );
-  }
-
-  public async disable(ctx: CommandContext) {
+  },
+  "disable": async (ctx: CommandContext) => {
     const channel = (await resolveChannelOption(ctx)) ?? resolveTargetChannel(ctx);
     if (!channel) {
       return ctx.replyError(
@@ -112,11 +109,6 @@ export class LockCommand extends BaseSubcommand {
       `${channel} is now unlocked - @everyone can send messages there again.`,
     );
   }
-}
-
-async function resolveChannelOption(
-  ctx: CommandContext,
-): Promise<LockableChannel | null> {
-  const channel = await ctx.getChannel("channel");
-  return isLockable(channel) ? channel : null;
-}
+  },
+  defaultSub: "enable"
+};

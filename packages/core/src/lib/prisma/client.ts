@@ -24,6 +24,9 @@ const pool = new Pool({
   application_name: appName,
 });
 
+// Warm up initial connection to eliminate cold-start query latency spike
+pool.query("SELECT 1").catch(() => undefined);
+
 const adapter = new PrismaPg(pool);
 
 pgPoolSize.set(pool.options.max ?? 10);

@@ -1,23 +1,19 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { Colors, type GuildBan } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { isToggleEnabled, sendLog } from "../services/send.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import { isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const LoggingBanRemoveListener = defineListener({
   name: "loggingBanRemove",
   event: Events.GuildBanRemove,
   module: "logging",
-})
-export class LoggingBanRemoveListener extends ModuleListener<
-  typeof Events.GuildBanRemove
-> {
-  protected async handle(ban: GuildBan): Promise<void> {
-    if (!(await isToggleEnabled(ban.guild.id, "member_unbans"))) return;
+  async execute(services: Container, ban: GuildBan): Promise<void> {
+    if (!(await isToggleEnabled(services, ban.guild.id, "member_unbans"))) return;
 
-    await sendLog(ban.guild.id, "member_unbans", Colors.Green, "Member Unbanned", [
+    await sendLog(services, ban.guild.id, "member_unbans", Colors.Green, "Member Unbanned", [
       `**Member**: ${userMention(ban.user.id)} (${ban.user.id})`,
     ]);
-  }
-}
+  },
+});

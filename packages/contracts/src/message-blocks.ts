@@ -1,7 +1,4 @@
-// Components V2 block-authoring document. This is what the dashboard's
-// visual block editor edits and what the bot renders — an ordered list of
-// real Discord Components V2 primitives (Section, MediaGallery, Separator,
-// ActionRow), wrapped in one Container. Deliberately a subset of the full
+// Deliberately a subset of the full
 // Components V2 surface: only what the block editor exposes.
 
 export type MessageBlockButtonStyle =
@@ -68,7 +65,6 @@ export interface MessageDocumentV2 {
 
 export const EmptyMessageDocumentV2: MessageDocumentV2 = { blocks: [] };
 
-// Discord's real structural limits for a Components V2 message.
 export const MessageBlockLimits = {
   maxTextsPerSection: 3,
   maxButtonsPerActionRow: 5,

@@ -1,15 +1,16 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import { container, type Container } from "#lib/services.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import {
   ModuleName,
   PanelMessageDefault,
   PanelTitleDefault,
 } from "./constants.js";
-import { tempVcRegistry } from "./services/registry.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleTempVcCleanupFire } from "./services/cleanup-handler.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { handleTempVcCleanupFire } from "@lumi/application/services/tempvc/cleanup-handler.js";
 
-@DefineModule({
+export const tempVcModule = defineModule({
   name: ModuleName,
   displayName: "Temp Voice Channels",
   emoji: "🔊",
@@ -68,30 +69,28 @@ import { handleTempVcCleanupFire } from "./services/cleanup-handler.js";
       templateVars: ["channel", "owner", "limit", "status"],
     }),
   }),
-})
-export class TempVcModule extends Module {
-  public override onLoad() {
+  onLoad(_services: Container = container) {
     registerTaskFireHandler(
       "tempvc-cleanup",
       "unicast",
       handleTempVcCleanupFire,
     );
-    return super.onLoad();
-  }
+  },
 
-  public override async deleteUserData(userId: string): Promise<void> {
-    const owned = await this.container.db.tempvc.findRecordsForOwner(userId);
+  async deleteUserData(services: Container, userId: string): Promise<void> {
+    const owned = await services.db.tempvc.findRecordsForOwner(userId);
     if (owned.length === 0) return;
-    await this.container.db.tempvc.deleteRecordsForOwner(userId);
+    await services.db.tempvc.deleteRecordsForOwner(userId);
     for (const guildId of new Set(owned.map((r) => r.guildId))) {
       await tempVcRegistry.reloadVcs(guildId);
     }
-  }
+  },
 
-  public override async exportUserData(
+  async exportUserData(
+    services: Container,
     userId: string,
   ): Promise<Record<string, unknown> | null> {
-    const owned = await this.container.db.tempvc.findRecordsForOwner(userId);
+    const owned = await services.db.tempvc.findRecordsForOwner(userId);
     return owned.length > 0 ? { ownedChannels: owned } : null;
-  }
-}
+  },
+});

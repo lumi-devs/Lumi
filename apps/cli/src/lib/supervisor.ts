@@ -34,15 +34,10 @@ function pumpPrefixed(
 }
 
 /**
- * Spawns every child, prefixes each output line with `[name]`, forwards
- * SIGINT/SIGTERM to every child, and - the moment any child exits non-zero -
- * terminates the rest and resolves with that child's exit code. If every
- * child exits zero, resolves with 0.
- *
  * This is the `lumi start all` supervisor (#33/#99's single-process-install
  * story): one command, three still-separate processes. True single-address-
- * space isn't done because `@sapphire/framework`'s `container` is a process-
- * wide global singleton - three in-process bootstraps (worker/api/scheduler)
+ * space isn't done because `container` (`packages/core/src/lib/services.ts`)
+ * is a process-wide global singleton - three in-process bootstraps (worker/api/scheduler)
  * would each overwrite the others' `container.client`/`container.db`/etc.
  * Sharing a process would need the module system, RPC server, and BullMQ
  * worker to all agree on one container, which they don't today.
@@ -73,7 +68,6 @@ export async function runSupervisor(children: ChildSpec[]): Promise<number> {
       try {
         proc.kill("SIGTERM");
       } catch {
-        // already exited
       }
     }
   };
@@ -83,7 +77,6 @@ export async function runSupervisor(children: ChildSpec[]): Promise<number> {
       try {
         proc.kill(signal);
       } catch {
-        // already exited
       }
     }
   };

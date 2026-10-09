@@ -3,7 +3,8 @@ import {
   PermitResolver,
   evaluateNodeMatch,
 } from "#lib/permissions/PermitResolver.js";
-import { container, UserError } from "@sapphire/framework";
+import { container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
 
 describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
   let resolver: PermitResolver;

@@ -2,6 +2,11 @@ import "./src/lib/types/common.js";
 
 export { bootstrapClientApp } from "./src/lib/client/bootstrap.js";
 export {
+  createClient,
+  loginLumi,
+  destroyLumi,
+} from "./src/lib/client/LumiClient.js";
+export {
   bootstrapApiApp,
   destroyApiContainerServices,
 } from "./src/lib/client/api-bootstrap.js";
@@ -24,10 +29,14 @@ export { logError } from "./src/lib/utilities/errors.js";
 export {
   signGdprExportToken,
   verifyGdprExportToken,
+  findGdprExportJob,
+  type GdprExportJobRecord,
   GdprExportSigningKeyUnavailable,
 } from "./src/lib/gdpr-export-token.js";
 export {
   registerInfrastructureReadinessProbes,
   registerRpcReadinessProbe,
   registerSchedulerReadinessProbe,
+  registerWorkerProbes,
 } from "./src/lib/client/ReadinessProbes.js";
+export { container } from "./src/lib/services.js";

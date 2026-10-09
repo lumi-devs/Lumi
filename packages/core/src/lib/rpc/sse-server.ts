@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
@@ -35,7 +35,7 @@ interface Connection {
  * Every open connection, keyed by the guild it's scoped to, for in-memory
  * fan-out. All state below is process-local - `apps/api` runs single-
  * threaded per replica, so no cross-process coordination is needed beyond
- * the one shared Redis subscription itself.
+ * the one shared Valkey subscription itself.
  */
 const connectionsByGuild = new Map<string, Set<Connection>>();
 const allConnections = new Set<Connection>();
@@ -47,28 +47,28 @@ interface SharedSubscription {
 
 /**
  * One shared consumer group per apps/api process, not one per SSE
- * connection: `RedisStreamsBus.consume()` opens a dedicated blocking Redis
- * connection per call (see `RedisStreamsBus.ts`'s `readConn = this.subscriber.duplicate()`),
- * so a per-connection group would mean one Redis connection per open
+ * connection: `StreamBus.consume()` opens a dedicated blocking Valkey
+ * connection per call (see `StreamBus.ts`'s `readConn = this.subscriber.duplicate()`),
+ * so a per-connection group would mean one connection per open
  * dashboard tab. Started lazily on the first connection
  * (`ensureSubscriptionStarted`) and torn down once the last one closes
  * (`releaseSubscriptionIfIdle`), with events fanned out in-memory via
- * `connectionsByGuild` instead of one Redis read per tab.
+ * `connectionsByGuild` instead of one read per tab.
  */
 let subscription: SharedSubscription | null = null;
 let starting: Promise<void> | null = null;
 
 async function handleIncoming(msg: BusMessage<DashboardEvent>): Promise<void> {
   await msg.ack();
-  const validated = DashboardEventSchema.run(msg.body);
-  if (validated.isErr()) {
+  const validated = DashboardEventSchema.safeParse(msg.body);
+  if (!validated.success) {
     dashboardEventPublishFailures.inc({ reason: "invalid" });
     container.logger?.warn?.("[Sse] dropping malformed dashboard event", {
       err: validated.error.message,
     });
     return;
   }
-  const body = validated.unwrap();
+  const body = validated.data;
   const conns = connectionsByGuild.get(body.guildId);
   if (!conns || conns.size === 0) return;
   const chunk = `data: ${JSON.stringify(body)}\n\n`;
@@ -178,10 +178,19 @@ export async function handleSseRequest(req: Request): Promise<Response> {
   let closed = false;
   let connection: Connection | null = null;
 
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
   const close = async () => {
     if (closed) return;
     closed = true;
     if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (streamController) {
+      try {
+        streamController.close();
+      } catch {
+        // Stream may already be closed by consumer
+      }
+      streamController = null;
+    }
     if (connection) {
       allConnections.delete(connection);
       const guildSet = connectionsByGuild.get(guildId);
@@ -193,10 +202,13 @@ export async function handleSseRequest(req: Request): Promise<Response> {
 
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
+      streamController = controller;
       connection = {
         guildId,
         queued: 0,
-        send: (chunk) => controller.enqueue(encoder.encode(chunk)),
+        send: (chunk) => {
+          controller.enqueue(encoder.encode(chunk));
+        },
         close,
       };
       allConnections.add(connection);
@@ -244,9 +256,9 @@ export async function handleSseRequest(req: Request): Promise<Response> {
 
 /**
  * Closes every open SSE connection. Called from `apps/api`'s drain sequence
- * ahead of the event-bus/redis teardown (`api-bootstrap.ts`'s
+ * ahead of the event-bus/valkey teardown (`api-bootstrap.ts`'s
  * `extraDrainSteps`), so each connection's own cleanup runs, and the last
- * one to go tears down the shared subscription, while Redis is still
+ * one to go tears down the shared subscription, while Valkey is still
  * reachable, instead of racing a hard connection close.
  */
 export async function closeAllSseConnections(): Promise<void> {

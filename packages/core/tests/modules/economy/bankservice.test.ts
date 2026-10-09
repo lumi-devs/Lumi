@@ -6,7 +6,7 @@ import {
   EconomyLimitError,
   InsufficientFundsError,
   InvalidAmountError,
-} from "#modules/economy/services/BankService.js";
+} from "@lumi/application/services/economy/BankService.js";
 import type { EconomyConfig } from "#modules/economy/config.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 

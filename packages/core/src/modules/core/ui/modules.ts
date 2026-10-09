@@ -1,4 +1,4 @@
-import { chunk } from "@sapphire/utilities";
+import { chunk } from "@lumi/shared";
 import type { LumiT } from "#lib/i18n/index.js";
 import { resolveChannelTypeIds, sectionsOf } from "@lumi/contracts";
 import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
@@ -26,7 +26,7 @@ import {
   settingRow,
 } from "#lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { ButtonStyle, ChannelType } from "discord.js";
 import { ConfigButtonId } from "../constants.js";
 
@@ -49,7 +49,6 @@ const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
     ? `${Emojis.Success} \`${t ? t("panels:detailEnabled") : "ENABLED"}\``
     : `${Emojis.Error} \`${t ? t("panels:detailDisabled") : "DISABLED"}\``;
 
-/** True when the stored value (or schema default) counts as configured. */
 const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
   const current = value ?? field.default ?? null;
   if (current === null || current === "") return false;
@@ -57,7 +56,6 @@ const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
   return true;
 };
 
-/** Per-field status glyph for the detail row headline. */
 const statusGlyphFor = (field: ConfigField, value: unknown): string => {
   if (field.type === FieldType.Boolean) {
     const fallback =
@@ -68,7 +66,6 @@ const statusGlyphFor = (field: ConfigField, value: unknown): string => {
   return hasStoredValue(field, value) ? Emojis.Success : Emojis.Error;
 };
 
-/** ENUM fields with a bounded choice set render as an in-place select. */
 const isEnumField = (field: ConfigField): boolean =>
   field.type === FieldType.Enum &&
   Array.isArray(field.choices) &&
@@ -84,7 +81,6 @@ const isTextField = (field: ConfigField): boolean =>
   field.type === FieldType.Number ||
   field.type === FieldType.Duration;
 
-/** Detail headline: status glyph + name + current value, description below. */
 const detailRowLines = (
   field: ConfigField,
   value: unknown,

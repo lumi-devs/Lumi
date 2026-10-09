@@ -27,8 +27,8 @@ exits non-zero, the supervisor terminates the other two and exits non-zero
 itself.
 
 Why not one process? worker/api/scheduler each bootstrap their own
-@sapphire/framework \`container\` (the process-wide singleton core hangs
-DB/Redis/client access off). Running all three bootstraps in one process
+\`container\` (the process-wide singleton core hangs
+DB/Valkey/client access off). Running all three bootstraps in one process
 would have the second and third overwrite the first's container - so this
 stays three processes under one command, not truly one address space.
 
@@ -50,7 +50,6 @@ async function startSingle(target: Target): Promise<number> {
     try {
       proc.kill(signal);
     } catch {
-      // already exited
     }
   };
   process.on("SIGINT", forward);

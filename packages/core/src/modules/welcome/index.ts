@@ -1,10 +1,11 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
+import type { Container } from "#lib/services.js";
 import { cfg } from "#lib/module-system/config-schema.js";
 import { ChannelType } from "discord.js";
-import { MessageTemplateVars } from "#lib/message-content.js";
-import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDocs } from "./services/welcome.js";
+import { MessageTemplateDocs, MessageTemplateVars } from "#lib/message-content.js";
+import { WelcomeDefaults } from "@lumi/application/services/welcome/welcome.js";
 
-@DefineModule({
+export const welcomeModule = defineModule({
   name: "welcome",
   displayName: "Welcome",
   emoji: "👋",
@@ -30,7 +31,7 @@ import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDo
     welcomeTemplate: cfg.string({
       group: "Welcome Message",
       label: "Welcome Template",
-      description: `Posted when a member joins. ${WelcomeTemplateDocs}`,
+      description: `Posted when a member joins. ${MessageTemplateDocs}`,
       default: WelcomeDefaults.welcomeTemplate,
       format: "template",
       templateVars: MessageTemplateVars.map((v) => v.name),
@@ -87,7 +88,7 @@ import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDo
     goodbyeTemplate: cfg.string({
       group: "Goodbye Message",
       label: "Goodbye Template",
-      description: `Posted when a member leaves. ${GoodbyeTemplateDocs}`,
+      description: `Posted when a member leaves. ${MessageTemplateDocs}`,
       default: WelcomeDefaults.goodbyeTemplate,
       format: "template",
       templateVars: MessageTemplateVars.map((v) => v.name),
@@ -114,19 +115,18 @@ import { DmTemplateDocs, GoodbyeTemplateDocs, WelcomeDefaults, WelcomeTemplateDo
     dmWelcomeTemplate: cfg.string({
       group: "Join Extras",
       label: "DM Greeting Template",
-      description: `Sent as a DM to new members. ${DmTemplateDocs}`,
+      description: `Sent as a DM to new members. ${MessageTemplateDocs}`,
       default: WelcomeDefaults.dmWelcomeTemplate,
       format: "template",
       templateVars: MessageTemplateVars.map((v) => v.name),
     }),
   }),
-})
-export class WelcomeModule extends Module {
-  public override async deleteUserData(_userId: string): Promise<void> {}
+  async deleteUserData(_services: Container, _userId: string): Promise<void> {},
 
-  public override exportUserData(
+  exportUserData(
+    _services: Container,
     _userId: string,
   ): Record<string, unknown> | null {
     return null;
-  }
-}
+  },
+});

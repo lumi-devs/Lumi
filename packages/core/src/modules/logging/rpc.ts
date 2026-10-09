@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { loggingRpc } from "@lumi/contracts/rpc";
 import { Routes } from "discord-api-types/v10";
 import {
@@ -6,7 +6,7 @@ import {
   issueLogClaimCode,
   listLogClaims,
   LogClaimCodeTtlMs,
-} from "./services/claims.js";
+} from "@lumi/application/services/logging/claims.js";
 import { implementRpc } from "#lib/rpc/implement.js";
 import {
   fetchChannelRest,

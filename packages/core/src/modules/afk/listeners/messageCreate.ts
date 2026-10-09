@@ -1,4 +1,3 @@
-import { ApplyOptions } from "@sapphire/decorators";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -6,14 +5,17 @@ import {
   SeparatorBuilder,
   TextDisplayBuilder,
 } from "@discordjs/builders";
+import type { Container } from "#lib/services.js";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
-import { GuildMessageListener } from "#lib/module-system/GuildMessageListener.js";
+import { LumiEvents } from "#lib/types/common.js";
 import type { GuildMessage } from "#lib/types/common.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import { isCommandMessage } from "#lib/commands/command-dispatch.js";
 import { makeCard } from "#lib/ui/cards.js";
 import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
 import { logError } from "#lib/utilities/errors.js";
 import { canSendMessages } from "#lib/utilities/misc.js";
-import { scheduleTask } from "#lib/schedule-task.js";
+import { scheduleTask } from "#lib/scheduler/schedule.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import {
   AfkKeys,
@@ -23,7 +25,7 @@ import {
   AfkWelcomeCooldownMs,
   NickPrefix,
 } from "../constants.js";
-import { afkDurationSince, sanitizeReason } from "../services/format.js";
+import { afkDurationSince, sanitizeReason } from "@lumi/application/services/afk/format.js";
 import {
   getAfkEntry,
   getAfkEntriesBatch,
@@ -35,45 +37,37 @@ import {
   addAfkMentionsBatch,
 } from "../data/afk.js";
 
-import { fetchTyped } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 
-@ApplyOptions<GuildMessageListener.Options>({
+const afkMessageCreate = defineListener({
   name: "afkMessageCreate",
+  event: LumiEvents.GuildUserMessage,
   module: "afk",
-})
-export default class AFKMessageCreateListener extends GuildMessageListener {
-  protected async handle(message: GuildMessage): Promise<void> {
-    const entry = await getAfkEntry(message.guildId, message.author.id);
-    if (entry) {
-      const prefixes = await this.container.client.fetchPrefix(message);
-      const prefixList = prefixes
-        ? Array.isArray(prefixes)
-          ? prefixes
-          : [prefixes]
-        : [];
-      const isCommand = prefixList.some(
-        (p) => typeof p === "string" && message.content.startsWith(p),
-      );
-
-      if (
-        !isCommand &&
-        !(await isAfkOnCooldown(
-          AfkKeys.removalCooldown(message.guildId, message.author.id),
-        ))
-      ) {
-        await this.#removeAfk(message, entry.since);
-      }
+  async execute(services: Container, message: GuildMessage): Promise<void> {
+    const entry = await getAfkEntry(services, message.guildId, message.author.id);
+    if (
+      entry &&
+      !(await isAfkOnCooldown(
+        services,
+        AfkKeys.removalCooldown(message.guildId, message.author.id),
+      )) &&
+      !(await isCommandMessage(services, services.client, message))
+    ) {
+      await removeAfk(services, message, entry.since);
     }
 
-    if (message.mentions.users.size) await this.#notifyMentioned(message);
-  }
+    if (message.mentions.users.size) await notifyMentioned(services, message);
+  },
+});
 
-  async #removeAfk(message: GuildMessage, since: Date) {
+export default afkMessageCreate;
+
+async function removeAfk(services: Container, message: GuildMessage, since: Date) {
     const { guildId, channelId } = message;
     const userId = message.author.id;
 
-    const mentions = await getAfkMentions(guildId, userId);
-    await clearAfkEntry(guildId, userId).catch((err: unknown) =>
+    const mentions = await getAfkMentions(services, guildId, userId);
+    await clearAfkEntry(services, guildId, userId).catch((err: unknown) =>
       logError("AFK: Clear entry failed", err),
     );
 
@@ -81,13 +75,14 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       const newNick = message.member.displayName
         .slice(NickPrefix.length)
         .trim();
-      void this.#editNick(userId, () =>
+      void editNick(services, userId, () =>
         message.member!.setNickname(newNick || null),
       );
     }
 
     if (
       !(await claimAfkCooldown(
+        services,
         AfkKeys.welcomeCooldown(channelId, userId),
         AfkWelcomeCooldownMs,
       ))
@@ -154,14 +149,15 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
         logError("AFK: Schedule welcome delete failed", err),
       );
     } else {
-      await clearAfkMentions(guildId, userId).catch((err: unknown) =>
+      await clearAfkMentions(services, guildId, userId).catch((err: unknown) =>
         logError("AFK: Clear mentions failed", err),
       );
     }
   }
 
-  async #notifyMentioned(message: GuildMessage) {
+async function notifyMentioned(services: Container, message: GuildMessage) {
     const claimedNotice = await claimAfkCooldown(
+      services,
       AfkKeys.mentionCooldown(message.channelId),
       AfkMentionCooldownMs,
     );
@@ -184,7 +180,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     if (!mentionedUsers.length) return;
 
     const mentionedIds = mentionedUsers.map((u) => u.id);
-    const afkMap = await getAfkEntriesBatch(message.guildId, mentionedIds);
+    const afkMap = await getAfkEntriesBatch(services, message.guildId, mentionedIds);
     const hits: AfkHit[] = [];
     for (const userId of mentionedIds) {
       const entry = afkMap.get(userId);
@@ -196,6 +192,7 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     if (!hits.length) return;
 
     await addAfkMentionsBatch(
+      services,
       message.guildId,
       hits.map(({ userId }) => ({ userId, mention: mentionBase })),
     ).catch((err: unknown) => logError("AFK: Batch mention write failed", err));
@@ -247,9 +244,10 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
       );
   }
 
-  async #editNick(userId: string, fn: () => Promise<unknown>) {
+async function editNick(services: Container, userId: string, fn: () => Promise<unknown>) {
     if (
       !(await claimAfkCooldown(
+        services,
         AfkKeys.nickEditCooldown(userId),
         AfkNickEditCooldownMs,
       ))
@@ -258,5 +256,4 @@ export default class AFKMessageCreateListener extends GuildMessageListener {
     await fn().catch((err: unknown) =>
       logError("AFK: Nickname edit failed", err),
     );
-  }
 }

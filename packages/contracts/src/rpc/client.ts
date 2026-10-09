@@ -132,7 +132,6 @@ class RpcCircuitBreaker {
     return Math.max(0, this.cooldownMs - (Date.now() - this.openedAt));
   }
 
-  /** Reserves a slot to call through, or refuses without mutating state further. */
   public tryAcquire(): boolean {
     const state = this.getState();
     if (state === "open") return false;
@@ -276,6 +275,7 @@ export class RpcClient {
         method: "POST",
         headers: {
           "content-type": "application/json",
+          "connection": "keep-alive",
           "x-lumi-contract-version": CONTRACT_VERSION,
           ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         },
@@ -299,7 +299,6 @@ export class RpcClient {
     }
   }
 
-  /** One attempt: breaker gate, transport call, envelope parse. Records the outcome on the breaker. */
   private async attemptInvoke<A extends RpcActionName>(
     action: A,
     options: CallOptions<A>,
@@ -336,6 +335,9 @@ export class RpcClient {
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
     }
     if (!response.ok) {
+      if (response.code === RpcFailureCodes.ContractMismatch) {
+        this.log(`[RpcClient] Contract version mismatch for action "${action}": ${response.error}`);
+      }
       throw new RpcError(response.code, action, response.error, {
         retryable: response.retryable,
         retryAfterMs: response.retryAfterMs,
@@ -384,7 +386,6 @@ export class RpcClient {
     throw lastError;
   }
 
-  /** Hits the server's `/healthz` — used by readiness probes. */
   public async healthy(): Promise<boolean> {
     try {
       const res = await fetch(`${this.baseUrl}/healthz`, {

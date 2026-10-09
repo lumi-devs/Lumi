@@ -1,7 +1,7 @@
 import path from "node:path";
 import { getDevModulePaths } from "@lumi/core/env";
-import { readManifest } from "../../../../packages/core/src/lib/module-system/manifest.js";
-import { DefaultModuleRoot, walk } from "../../../../packages/core/scripts/generate-manifests.js";
+import { readManifest } from "@lumi/core/manifest";
+import { DefaultModuleRoot, walk } from "@lumi/core/generate-manifests";
 
 export const help = `Usage: lumi module list
 

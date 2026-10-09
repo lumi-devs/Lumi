@@ -1,12 +1,6 @@
-import {
-  UserError,
-  ResultError,
-  container,
-  type ChatInputCommandDeniedPayload,
-  type ContextMenuCommandDeniedPayload,
-  type MessageCommandDeniedPayload,
-} from "@sapphire/framework";
-import { resolveKey } from "@sapphire/plugin-i18next";
+import { container, type Container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
+import { resolveKey } from "#lib/i18n/index.js";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
 import {
   MessageFlags,
@@ -116,7 +110,7 @@ function reportUnexpected(error: unknown): string | undefined {
  * Resolve any thrown value into a user-facing {@link ResolvedCommandError},
  * logging it at the appropriate level as a side effect.
  *
- * Mirrors Skyra's `flattenError`: unwrap `ResultError`, translate `UserError`,
+ * Mirrors Skyra's `flattenError`: unwrap nested `{ error }` results, translate `UserError`,
  * map Discord API/HTTP/abort failures to friendly messages, and capture genuine
  * unhandled errors to OTEL with a trace id for the user.
  *
@@ -130,8 +124,8 @@ export function resolveCommandError(
     return { title: "Command Error", message: error, expected: true };
   }
 
-  if (error instanceof ResultError) {
-    return resolveCommandError(label, error.value);
+  if (error && typeof error === "object" && "error" in error && error.error instanceof Error) {
+    return resolveCommandError(label, error.error);
   }
 
   if (error instanceof UserError) {
@@ -287,14 +281,15 @@ export async function respondMessage(
 
 /** Renders a precondition or command denial to the user. */
 export async function handleDenied(
+  services: Container,
   interactionOrMessage: RepliableInteraction | Message,
   error: UserError,
-  payload:
-    | ChatInputCommandDeniedPayload
-    | ContextMenuCommandDeniedPayload
-    | MessageCommandDeniedPayload,
+  payload?: unknown,
 ): Promise<Message | undefined> {
-  if (payload.context.silent) return;
+  const silent =
+    (payload as { context?: { silent?: boolean } } | undefined)?.context
+      ?.silent === true;
+  if (silent) return;
 
   const title = ErrorTitles[error.identifier] ?? "Command Error";
 
@@ -306,9 +301,9 @@ export async function handleDenied(
       body = await resolveKey(interactionOrMessage, ctx.i18nKey, {
         ...ctx,
         defaultValue: error.message,
-      });
+      }, services);
     } catch (err: unknown) {
-      container.logger.warn("[CommandDenied] i18n resolve failed:", err);
+      services.logger.warn("[CommandDenied] i18n resolve failed:", err);
     }
   }
 
@@ -320,7 +315,7 @@ export async function handleDenied(
     }
     return await respondMessage(interactionOrMessage as Message, card);
   } catch (err: unknown) {
-    container.logger.error("[CommandDenied] Failed to send error card:", err);
+    services.logger.error("[CommandDenied] Failed to send error card:", err);
     return undefined;
   }
 }

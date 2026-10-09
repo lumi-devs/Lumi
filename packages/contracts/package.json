@@ -1,6 +1,6 @@
 {
   "name": "@lumi/contracts",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "license": "AGPL-3.0-only",
   "description": "Shared wire contracts (bus events, RPC payloads, module manifest, config fields) for all Lumi services.",
   "type": "module",
@@ -43,6 +43,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "publishConfig": {
@@ -53,6 +54,10 @@
     "discord.js": "^14.20.0"
   },
   "dependencies": {
-    "@sapphire/shapeshift": "^5.0.0"
+    "semver": "^7.8.5",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.8.0"
   }
 }

@@ -1,11 +1,13 @@
+import type { CommandContext } from "#lib/commands/context.js";
+import type { Container } from "#lib/services.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
 } from "#lib/utilities/autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand, fetchTyped, replyError, replySuccess } from "#lib/commands.js";
+import { fetchTyped } from "#lib/i18n/index.js";
 import {
   ChannelType,
   channelMention,
@@ -13,70 +15,45 @@ import {
   type GuildTextBasedChannel,
 } from "discord.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import type ReactionRolesUtility from "../utilities/ReactionRolesUtility.js";
+import type { ReactionRolesUtility } from "../utilities/ReactionRolesUtility.js";
 import { ReactionRoleMenuLockedError } from "../utilities/ReactionRolesUtility.js";
 
-@ApplyOptions<BaseCommand.Options>({
+function service(): ReactionRolesUtility {
+  return getUtility("reactionroles");
+}
+
+export const reactionrolesDef: CommandDef = {
   name: "reactionroles",
-  description: "Post a role menu card in a channel.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "reactionroles",
+  description: "Post a role menu card in a channel.",
+  guildOnly: true,
   requiredPermit: "reactionroles.manage",
-})
-export class ReactionRolesCommand extends BaseCommand {
-  private get service(): ReactionRolesUtility {
-    return getUtility("reactionroles");
-  }
-
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
-    const focused = interaction.options.getFocused(true);
-    if (focused.name !== "menu") {
-      return respondWithChoices(interaction, []);
-    }
-    const guildId = interaction.guildId;
-    if (!guildId) return respondWithChoices(interaction, []);
-    const menus = await this.service.listMenus(guildId).catch(() => []);
-    return respondWithChoices(
-      interaction,
-      filterAutocompleteChoices(
-        menus.map((m) => m.id),
-        focused.value,
-      ),
-    );
-  }
-
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((opt) =>
-          opt
-            .setName("menu")
-            .setDescription("The menu to post.")
-            .setRequired(true)
-            .setAutocomplete(true),
-        )
-        .addChannelOption((opt) =>
-          opt
-            .setName("channel")
-            .setDescription("Where to post (defaults to this channel).")
-            .addChannelTypes(
-              ChannelType.GuildText,
-              ChannelType.GuildAnnouncement,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("reactionroles");
+    return (
+    builder
+            .setName("reactionroles")
+            .setDescription("Post a role menu card in a channel.")
+            .addStringOption((opt) =>
+              opt
+                .setName("menu")
+                .setDescription("The menu to post.")
+                .setRequired(true)
+                .setAutocomplete(true),
             )
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async chatInputRun(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<void> {
+            .addChannelOption((opt) =>
+              opt
+                .setName("channel")
+                .setDescription("Where to post (defaults to this channel).")
+                .addChannelTypes(
+                  ChannelType.GuildText,
+                  ChannelType.GuildAnnouncement,
+                )
+                .setRequired(false),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => { const interaction: ChatInputCommandInteraction = ctx.interaction;
     const t = await fetchTyped(interaction);
     const guild = interaction.guild!;
     const menuId = interaction.options.getString("menu", true);
@@ -84,16 +61,14 @@ export class ReactionRolesCommand extends BaseCommand {
       (interaction.options.getChannel("channel") as GuildTextBasedChannel | null) ??
       (interaction.channel as GuildTextBasedChannel | null);
     if (!channel || !channel.isTextBased() || channel.isDMBased()) {
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("reactionroles:postChannelTitle"),
         t("reactionroles:postChannelMessage"),
       );
     }
     try {
-      const { message } = await this.service.postMenu(guild, channel, menuId);
-      return replySuccess(
-        interaction,
+      const { message } = await service().postMenu(ctx.services, guild, channel, menuId);
+      return ctx.replySuccess(
         t("reactionroles:menuPostedTitle"),
         t("reactionroles:menuPostedMessage", {
           channel: channelMention(channel.id),
@@ -102,13 +77,28 @@ export class ReactionRolesCommand extends BaseCommand {
       );
     } catch (err: unknown) {
       if (err instanceof ReactionRoleMenuLockedError) {
-        return replyError(interaction, t("reactionroles:menuLockedTitle"), err.message);
+        return ctx.replyError(t("reactionroles:menuLockedTitle"), err.message);
       }
-      return replyError(
-        interaction,
+      return ctx.replyError(
         t("reactionroles:menuPostFailedTitle"),
         err instanceof Error ? err.message : t("reactionroles:genericFailure"),
       );
     }
-  }
-}
+  },
+  autocomplete: async (services: Container, interaction: AutocompleteInteraction,) => {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== "menu") {
+      return respondWithChoices(interaction, []);
+    }
+    const guildId = interaction.guildId;
+    if (!guildId) return respondWithChoices(interaction, []);
+    const menus = await service().listMenus(services, guildId).catch(() => []);
+    return respondWithChoices(
+      interaction,
+      filterAutocompleteChoices(
+        menus.map((m) => m.id),
+        focused.value,
+      )
+    );
+  },
+};

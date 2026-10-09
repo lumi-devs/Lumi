@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import fc from "fast-check";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { evaluateNodeMatch, PermitResolver } from "#lib/permissions/PermitResolver.js";
 import type { TargetPermitPayload } from "#lib/prisma/repositories/PermissionRepository.js";
 

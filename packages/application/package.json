@@ -1,0 +1,29 @@
+{
+  "name": "@lumi/application",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "description": "Application services and domain logic for Lumi.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./services/*": "./src/services/*"
+  },
+  "imports": {
+    "#lib/*.js": "../core/src/lib/*.ts",
+    "#modules/*.js": "../core/src/modules/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@discordjs/builders": "^1.14.1",
+    "@discordjs/formatters": "^0.6.2",
+    "@lumi/contracts": "workspace:*",
+    "@lumi/infrastructure": "workspace:*",
+    "@lumi/shared": "workspace:*",
+    "@prisma/client": "^7.10.0",
+    "ahocorasick": "^1.0.2",
+    "discord-api-types": "^0.38.55",
+    "discord.js": "^14.27.0"
+  }
+}

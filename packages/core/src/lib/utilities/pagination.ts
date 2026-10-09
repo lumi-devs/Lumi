@@ -15,7 +15,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { Emojis } from "#lib/utilities/assets.js";
-import { Time } from "@sapphire/time-utilities";
+import { Ms } from "@lumi/shared";
 import { fitLines, type CardReply } from "#lib/ui/cards.js";
 
 /** Total page count for `itemCount` items shown `perPage` at a time; always at least 1. */
@@ -53,7 +53,7 @@ export async function paginateContainer(options: PaginationOptions) {
     totalPages,
     userId,
     customIdPrefix = "page",
-    time = Time.Minute,
+    time = Ms.Minute,
     ephemeral = false,
     render,
   } = options;
@@ -130,10 +130,13 @@ export async function paginateContainer(options: PaginationOptions) {
   const collector = msg.createMessageComponentCollector({
     componentType: ComponentType.Button,
     time,
-    filter: (i) => i.user.id === userId,
   });
 
   collector.on("collect", async (i) => {
+    if (i.user.id !== userId) {
+      await i.deferUpdate().catch(() => undefined);
+      return;
+    }
     if (i.customId === `${customIdPrefix}:prev`) {
       activePage = clampPageIndex(activePage - 1, totalPages);
     } else if (i.customId === `${customIdPrefix}:next`) {
@@ -175,7 +178,7 @@ export async function paginateList(options: PaginateListOptions) {
     perPage = 10,
     ephemeral = false,
     customIdPrefix = "list",
-    time = Time.Minute,
+    time = Ms.Minute,
   } = options;
 
   const totalPages = computePageCount(items.length, perPage);

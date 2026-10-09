@@ -57,7 +57,7 @@ flowchart TD
     subgraph Data Plane
         PGB[lumi-pgbouncer<br/>:6432<br/>optional: profile pgbouncer/scale]
         PG[(lumi-postgres<br/>PostgreSQL 18)]
-        Redis[(lumi-redis<br/>Redis 8)]
+        V[(lumi-valkey<br/>Valkey 8)]
     end
 
     subgraph Telemetry & Observability Stack
@@ -75,17 +75,17 @@ flowchart TD
     W -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
     WS -.->|REST via DISCORD_PROXY_URL<br/>scale only| NP
 
-    W <-->|Shard telemetry & session state| Redis
-    WS <-->|Shard telemetry & session state| Redis
+    W <-->|Shard telemetry & session state| V
+    WS <-->|Shard telemetry & session state| V
     W -.->|Queries, direct by default| PG
     WS <-->|PgBouncer Pool, scale profile| PGB
     PGB <-->|Scram-SHA-256| PG
 
     Dash <-->|Internal HTTP RPC :8091| Api
     Api -.->|Queries, direct by default| PG
-    Api <-->|Cache & pub/sub| Redis
+    Api <-->|Cache & pub/sub| V
 
-    Sched <-->|BullMQ Job Processing| Redis
+    Sched <-->|BullMQ Job Processing| V
     Sched <-->|Queries| PG
 
     W -->|OTLP Traces / Metrics| OTEL
@@ -160,7 +160,7 @@ Services are organized into distinct Compose **profiles** so you only run what y
 | `dashboard` | `dashboard` | `8080:8080` | Web Administration Dashboard UI, pulled from `ghcr.io/lumi-devs/lumi-dashboard` (built in its own repo). |
 | `postgres` | *(core)* | `127.0.0.1:5432:5432` | PostgreSQL 18 primary database server. |
 | `pgbouncer` | `pgbouncer`, `scale` | `127.0.0.1:6432:6432` | PgBouncer transaction-level connection pooler. Opt-in - see [Deployment Tiers](#-deployment-tiers) below. |
-| `redis` | *(core)* | `127.0.0.1:6379:6379` | Redis 8 data store for entity caching and event streams. |
+| `valkey` | *(core)* | `127.0.0.1:6379:6379` | Valkey 8 data store for entity caching and event streams. |
 | `nirn-proxy` | `scale` | `127.0.0.1:18080`, `:19000` | Shared Discord REST rate-limiting proxy for multi-worker runs. |
 | `backup` | `backup` | - | Periodic `pg_dump -Fc` against `postgres` directly (never PgBouncer). Opt-in - see [Backups & Restore Testing](#-backups--restore-testing). |
 | `otel-collector` | `observability` | `127.0.0.1:4318:4318` | OpenTelemetry Collector endpoint (OTLP HTTP). |
@@ -187,7 +187,7 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | `lumi` | PostgreSQL database password. |
 | `POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Pooled/app connection string. Defaults straight to `postgres` (no pooler). Override to `postgresql://...@pgbouncer:6432/lumi` when the `pgbouncer` profile is enabled - see [Deployment Tiers](#-deployment-tiers). |
 | `DIRECT_POSTGRES_URL` | `postgresql://...@postgres:5432/lumi` | Always points straight at `postgres`, never PgBouncer - Prisma migrations (`migrate` service) need DDL that pooled/transaction-mode connections can't run reliably. |
-| `REDIS_PASSWORD` | `lumi` | Redis password authentication. |
+| `VALKEY_PASSWORD` | `lumi` | Valkey password authentication. |
 | `RPC_HTTP_PORT` | `8091` | Internal HTTP RPC server port the api service binds - never published to the host. |
 | `RPC_HTTP_URL` | `http://api:8091` | Internal RPC bridge URL the dashboard calls into the api service over. |
 | `DASHBOARD_SESSION_SECRET` | - | NextAuth session JWT signing/encryption secret. |
@@ -204,7 +204,7 @@ cp .env.example .env
 
 ### 1. Default Stack
 
-Run a single worker alongside PostgreSQL and Redis (no PgBouncer - `migrate` runs once and exits before `worker`/`api` start):
+Run a single worker alongside PostgreSQL and Valkey (no PgBouncer - `migrate` runs once and exits before `worker`/`api` start):
 
 ```bash
 docker compose up -d

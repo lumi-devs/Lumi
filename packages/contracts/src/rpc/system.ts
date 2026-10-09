@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import type {
   AuditListData,
   BlocklistListData,
@@ -40,6 +40,8 @@ export interface ShardStateView {
   lastReadyAt?: string | null;
   /** True once `lastHeartbeatAt` is older than the fleet's staleness threshold. */
   stale?: boolean;
+  /** Recent in-memory/Valkey buffered log entries for this shard. */
+  logs?: Array<{ timestamp: string; level: string; message: string }>;
 }
 
 /** One gateway process in the cluster. */
@@ -116,7 +118,7 @@ export interface SystemStatusData {
   components: {
     api: SystemApiHealth;
     postgres: SystemLatencyHealth;
-    redis: SystemLatencyHealth;
+    valkey: SystemLatencyHealth;
     scheduler: SystemSchedulerHealth;
     shards: SystemShardsHealth;
     eventBus: SystemEventBusHealth;
@@ -134,9 +136,9 @@ export const systemRpc = {
     success: boolean;
     maintenanceMode: boolean;
   }>()({
-    input: s.object({
-      maintenanceMode: s.boolean(),
-      maintenanceMessage: s.string().optional(),
+    input: z.object({
+      maintenanceMode: z.boolean(),
+      maintenanceMessage: z.string().optional(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
@@ -147,17 +149,17 @@ export const systemRpc = {
     moduleName: string;
     enabled: boolean;
   }>()({
-    input: s.object({
-      moduleName: s.string().lengthGreaterThanOrEqual(1),
-      enabled: s.boolean(),
-      reason: s.string().optional(),
+    input: z.object({
+      moduleName: z.string().min(1),
+      enabled: z.boolean(),
+      reason: z.string().optional(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Globally toggle a module.",
   }),
   "system.module.clear": rpcAction<{ success: boolean; moduleName: string }>()({
-    input: s.object({ moduleName: s.string().lengthGreaterThanOrEqual(1) }),
+    input: z.object({ moduleName: z.string().min(1) }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Clear a module's global state.",
@@ -167,12 +169,8 @@ export const systemRpc = {
     inviteUrl: string | null;
     supportGuildId: string | null;
   }>()({
-    input: s.object({
-      inviteUrl: s
-        .string()
-        .url({ allowedProtocols: ["http:", "https:"] })
-        .nullable()
-        .optional(),
+    input: z.object({
+      inviteUrl: z.url({ protocol: /^https?$/ }).nullable().optional(),
       supportGuildId: SnowflakeSchema.nullable().optional(),
     }),
     auth: "botOwner",
@@ -180,7 +178,7 @@ export const systemRpc = {
     summary: "Set invite URL and support guild.",
   }),
   "system.audit.list": rpcAction<AuditListData>()({
-    input: s.object({ guildId: SnowflakeSchema.optional(), ...AuditFilterShape }),
+    input: z.object({ guildId: SnowflakeSchema.optional(), ...AuditFilterShape }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.medium,
     summary: "Cross-guild audit log.",
@@ -218,10 +216,10 @@ export const systemRpc = {
     readOnly: true,
   }),
   "system.flags.set": rpcAction<{ success: boolean; flag: FeatureFlagView }>()({
-    input: s.object({
+    input: z.object({
       key: FeatureFlagKeySchema,
-      description: s.string().lengthLessThanOrEqual(500).nullable().optional(),
-      enabled: s.boolean(),
+      description: z.string().max(500).nullable().optional(),
+      enabled: z.boolean(),
       rolloutPercent: RolloutPercentSchema,
     }),
     auth: "botOwner",
@@ -232,17 +230,17 @@ export const systemRpc = {
     success: boolean;
     override: FeatureFlagOverrideView;
   }>()({
-    input: s.object({
+    input: z.object({
       flagKey: FeatureFlagKeySchema,
       guildId: SnowflakeSchema,
-      enabled: s.boolean(),
+      enabled: z.boolean(),
     }),
     auth: "botOwner",
     timeoutMs: RpcTimeouts.long,
     summary: "Force a feature flag on/off for one guild.",
   }),
   "system.flags.override.delete": rpcAction<{ success: boolean }>()({
-    input: s.object({
+    input: z.object({
       flagKey: FeatureFlagKeySchema,
       guildId: SnowflakeSchema,
     }),
@@ -253,7 +251,7 @@ export const systemRpc = {
   "system.status.get": rpcAction<SystemStatusData>()({
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
-    summary: "Fleet-wide status page snapshot: api, postgres, redis, scheduler, shards, event bus.",
+    summary: "Fleet-wide status page snapshot: api, postgres, valkey, scheduler, shards, event bus.",
     readOnly: true,
   }),
 };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from '@sapphire/framework';
-import { scheduleCaseLift } from '#modules/mod/services/helpers.js';
+import { container } from "#lib/services.js";
+import { scheduleCaseLift } from '@lumi/application/services/mod/helpers.js';
 import { parseDuration, formatDuration } from '#lib/utilities/time.js';
 import {
   getThresholds,
@@ -8,15 +8,15 @@ import {
   decrementWarnCount,
   resetWarnCount,
   checkThresholds
-} from '#modules/mod/services/thresholds.js';
-import { invalidateThresholds, setThresholdRule } from '#modules/mod/services/threshold-rules.js';
-import { BanAction } from '#modules/mod/services/actions/BanAction.js';
-import { MuteAction } from '#modules/mod/services/actions/MuteAction.js';
-import { VoiceMuteAction } from '#modules/mod/services/actions/VoiceMuteAction.js';
-import { KickAction } from '#modules/mod/services/actions/KickAction.js';
-import { WarnAction } from '#modules/mod/services/actions/WarnAction.js';
+} from '@lumi/application/services/mod/thresholds.js';
+import { invalidateThresholds, setThresholdRule } from '@lumi/application/services/mod/threshold-rules.js';
+import { BanAction } from '@lumi/application/services/mod/actions/BanAction.js';
+import { MuteAction } from '@lumi/application/services/mod/actions/MuteAction.js';
+import { VoiceMuteAction } from '@lumi/application/services/mod/actions/VoiceMuteAction.js';
+import { KickAction } from '@lumi/application/services/mod/actions/KickAction.js';
+import { WarnAction } from '@lumi/application/services/mod/actions/WarnAction.js';
 import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { QueuePriority } from '#lib/schedule-task.js';
+import { QueuePriority } from '#lib/scheduler/schedule.js';
 import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
@@ -25,7 +25,7 @@ Object.assign(container, {
   invalidation: {
     invalidate: vi.fn().mockResolvedValue(undefined)
   },
-  redis: {
+  valkey: {
     get: vi.fn(),
     setex: vi.fn(),
     del: vi.fn(),
@@ -112,57 +112,57 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('getThresholds uses cached values if available', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
     const thresholds = await getThresholds(container, 'g-1');
     expect(thresholds).toEqual({ '3': { action: 'kick' } });
     expect(container.db.moderation.getWarnThresholds).not.toHaveBeenCalled();
   });
 
   it('getThresholds fetches DB when cache miss occurs', async () => {
-    (container.redis.get as any).mockResolvedValue(null);
+    (container.valkey.get as any).mockResolvedValue(null);
     (container.db.moderation.getWarnThresholds as any).mockResolvedValue([
       { warnCount: 5, action: 'ban', duration: null }
     ]);
     const thresholds = await getThresholds(container, 'g-1');
     expect(thresholds).toEqual({ '5': { action: 'ban' } });
-    expect(container.redis.setex).toHaveBeenCalled();
+    expect(container.valkey.setex).toHaveBeenCalled();
   });
 
-  it('invalidateThresholds deletes redis key', async () => {
+  it('invalidateThresholds deletes valkey key', async () => {
     await invalidateThresholds(container, 'g-1');
     expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:thresholds');
   });
 
   it('incrementWarnCount initializes count from DB when key does not exist', async () => {
-    (container.redis.exists as any).mockResolvedValue(0);
+    (container.valkey.exists as any).mockResolvedValue(0);
     (container.db.moderation.countModerationCases as any).mockResolvedValue(2);
     const count = await incrementWarnCount(container, 'g-1', 'u-1');
     expect(count).toBe(2);
-    expect(container.redis.set).toHaveBeenCalled();
+    expect(container.valkey.set).toHaveBeenCalled();
   });
 
   it('incrementWarnCount uses pipeline when count key exists', async () => {
-    (container.redis.exists as any).mockResolvedValue(1);
+    (container.valkey.exists as any).mockResolvedValue(1);
     const mockPipe = {
       incr: vi.fn(),
       expire: vi.fn(),
       exec: vi.fn().mockResolvedValue([[null, 4]])
     };
-    (container.redis.pipeline as any).mockReturnValue(mockPipe);
+    (container.valkey.pipeline as any).mockReturnValue(mockPipe);
     const count = await incrementWarnCount(container, 'g-1', 'u-1');
     expect(count).toBe(4);
   });
 
-  it('decrementWarnCount and resetWarnCount call redis operations', async () => {
+  it('decrementWarnCount and resetWarnCount call valkey operations', async () => {
     await decrementWarnCount(container, 'g-1', 'u-1');
-    expect(container.redis.eval).toHaveBeenCalled();
+    expect(container.valkey.eval).toHaveBeenCalled();
 
     await resetWarnCount(container, 'g-1', 'u-1');
     expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:warns:u-1');
   });
 
   it('checkThresholds executes kick action when threshold matches', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
     const mockMember = { id: 'u-1' };
     const mockGuild = {
       id: 'g-1',
@@ -178,7 +178,7 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('checkThresholds executes quarantine action when threshold matches', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
     const mockMember = { id: 'u-1' };
     const mockGuild = {
       id: 'g-1',
@@ -198,7 +198,7 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('checkThresholds logs instead of throwing when quarantine is unconfigured', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
     (container.client.guilds.cache.get as any).mockReturnValue({
       id: 'g-1',
       members: { fetch: vi.fn().mockResolvedValue({ id: 'u-1' }) }
@@ -214,7 +214,7 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('checkThresholds executes voice_mute action with the configured duration', async () => {
-    (container.redis.get as any).mockResolvedValue(
+    (container.valkey.get as any).mockResolvedValue(
       JSON.stringify({ '2': { action: 'voice_mute', duration: 1800 } })
     );
     const mockMember = { id: 'u-1' };
@@ -231,7 +231,7 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('checkThresholds warns and falls back to an hour for a mute rule with no duration', async () => {
-    (container.redis.get as any).mockResolvedValue(
+    (container.valkey.get as any).mockResolvedValue(
       JSON.stringify({ '3': { action: 'mute' } })
     );
     (container.client.guilds.cache.get as any).mockReturnValue({
@@ -251,7 +251,7 @@ describe('Mod Thresholds Logic', () => {
   });
 
   it('checkThresholds logs an error for an action it cannot apply', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'tempban' } }));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'tempban' } }));
     (container.client.guilds.cache.get as any).mockReturnValue({
       id: 'g-1',
       members: { fetch: vi.fn().mockResolvedValue({ id: 'u-1' }) }
@@ -284,7 +284,7 @@ describe('Mod Thresholds Logic', () => {
 describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (container.redis.exists as any).mockResolvedValue(0);
+    (container.valkey.exists as any).mockResolvedValue(0);
   });
 
   it('BanAction.apply sends DM, bans user, creates case, and logs to channel', async () => {
@@ -385,7 +385,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
-    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:55');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-55');
   });
 
   it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
@@ -459,7 +459,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
     expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
     expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
-    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift:77');
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-77');
   });
 
   it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
@@ -495,7 +495,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
     const mockMod = { id: 'm-1' };
     const mockGuild = { id: 'g-1', name: 'TestGuild' };
     (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 13 });
-    (container.redis.exists as any).mockResolvedValue(0);
+    (container.valkey.exists as any).mockResolvedValue(0);
 
     const result = await WarnAction.apply({
       guild: mockGuild as any,
@@ -509,7 +509,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
 
   it('QuarantineAction.apply assigns quarantine role and saves state', async () => {
     (container.db.config.getModuleConfig as any).mockResolvedValue('q-role');
-    (container.redis.exists as any).mockResolvedValue(0);
+    (container.valkey.exists as any).mockResolvedValue(0);
     const mockMember = {
       id: 'u-1',
       send: vi.fn().mockResolvedValue({}),
@@ -539,7 +539,7 @@ describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
   });
 
   it('QuarantineAction.undo restores original roles', async () => {
-    (container.redis.get as any).mockResolvedValue(JSON.stringify(['r1', 'r2']));
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify(['r1', 'r2']));
     const mockMember = {
       id: 'u-1',
       roles: {

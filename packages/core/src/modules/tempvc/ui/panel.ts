@@ -3,7 +3,7 @@ import {
   ButtonBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { ButtonStyle, MessageFlags, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import {
@@ -38,6 +38,7 @@ export type PanelMessage = CardReply;
  * custom IDs are what the interaction handlers dispatch on.
  */
 export async function buildPanel(
+  services: Container,
   channel: VoiceBasedChannel,
   record: VcRecord,
   t?: LumiT,
@@ -49,7 +50,7 @@ export async function buildPanel(
         ? t("tempvc:unlimited")
         : "Unlimited";
 
-  const configured = await readPanelConfig(channel.guildId);
+  const configured = await readPanelConfig(services, channel.guildId);
   const title =
     configured.title ?? (t ? t("tempvc:panelHeader") : PanelTitleDefault);
 
@@ -200,18 +201,18 @@ interface PanelConfig {
   richContent: MessageDocumentV2;
 }
 
-async function readPanelConfig(guildId: string): Promise<PanelConfig> {
+async function readPanelConfig(services: Container, guildId: string): Promise<PanelConfig> {
   const [title, message, color, richContent] = await Promise.all([
-    readString(guildId, "panel_title"),
-    readString(guildId, "panel_message"),
-    readString(guildId, "panel_color"),
-    container.db.config.getModuleConfig(guildId, ModuleName, "panel_rich_content"),
+    readString(services, guildId, "panel_title"),
+    readString(services, guildId, "panel_message"),
+    readString(services, guildId, "panel_color"),
+    services.db.config.getModuleConfig(guildId, ModuleName, "panel_rich_content"),
   ]);
   return { title, message, color, richContent: clampMessageDocumentV2(richContent) };
 }
 
-async function readString(guildId: string, key: string): Promise<string | null> {
-  const stored = await container.db.config.getModuleConfig(
+async function readString(services: Container, guildId: string, key: string): Promise<string | null> {
+  const stored = await services.db.config.getModuleConfig(
     guildId,
     ModuleName,
     key,
@@ -238,7 +239,6 @@ const backToPanelRow = (channelId: string, t?: LumiT) =>
     ),
   );
 
-/** Standalone "back to panel" row, for cards that carry no other controls. */
 export function buildBackRows(channelId: string) {
   return buildSafeActionRows([backToPanelRow(channelId)]);
 }
@@ -416,7 +416,6 @@ export function buildTransferView(
   );
 }
 
-/** Builds the confirmation card for channel deletion. */
 export function buildDeleteConfirmView(
   channel: VoiceBasedChannel,
   t?: LumiT,

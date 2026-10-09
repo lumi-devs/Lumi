@@ -5,3 +5,5 @@ export * from "./manifest.js";
 export * from "./addon-sandbox.js";
 export * from "./message-blocks.js";
 export * from "./dashboard-shared.js";
+export * from "./events.js";
+export * from "./domain-events.js";

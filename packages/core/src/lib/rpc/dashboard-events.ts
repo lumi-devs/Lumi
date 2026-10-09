@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
@@ -20,12 +20,12 @@ export type DashboardEventInput = DistributiveOmit<DashboardEvent, "v">;
  * most existing RPC unit tests (they don't stand up the event bus), so a
  * missing bus is treated the same as a publish error: log and move on.
  */
-export async function publishDashboardEvent(event: DashboardEventInput): Promise<void> {
+export async function publishDashboardEvent(services: Container, event: DashboardEventInput): Promise<void> {
   const stamped = { ...event, v: 1 };
-  const validated = DashboardEventSchema.run(stamped);
-  if (validated.isErr()) {
+  const validated = DashboardEventSchema.safeParse(stamped);
+  if (!validated.success) {
     dashboardEventPublishFailures.inc({ reason: "invalid" });
-    container.logger?.warn?.("[DashboardEvents] dropping invalid event", {
+    services.logger?.warn?.("[DashboardEvents] dropping invalid event", {
       type: stamped.type,
       guildId: (stamped as { guildId?: unknown }).guildId,
       err: validated.error.message,
@@ -33,12 +33,12 @@ export async function publishDashboardEvent(event: DashboardEventInput): Promise
     return;
   }
 
-  const value = validated.unwrap();
+  const value = validated.data;
   try {
-    await container.eventBus?.publish(DashboardEventStream, value);
+    await services.eventBus?.publish(DashboardEventStream, value);
   } catch (err) {
     dashboardEventPublishFailures.inc({ reason: "publish_failed" });
-    container.logger?.warn?.("[DashboardEvents] publish failed", {
+    services.logger?.warn?.("[DashboardEvents] publish failed", {
       type: value.type,
       guildId: value.guildId,
       err: err instanceof Error ? err.message : String(err),

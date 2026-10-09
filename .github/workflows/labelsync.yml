@@ -10,6 +10,10 @@ on:
       - '.github/workflows/labelsync.yml'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   issues: write
   pull-requests: write

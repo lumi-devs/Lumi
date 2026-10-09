@@ -1,10 +1,11 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { deriveRepoNameFromUrl } from "../services/url-helpers.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { Container } from "#lib/services.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import { deriveRepoNameFromUrl } from "@lumi/contracts";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { ApplicationCommandRegistry } from "@sapphire/framework";
+
 import type { AutocompleteInteraction } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import { paginateList } from "#lib/utilities/pagination.js";
 import { respondWithChoices } from "#lib/utilities/autocomplete.js";
 import { repoNameChoices } from "../services/downloader-autocomplete.js";
@@ -20,154 +21,95 @@ import { errorFrom } from "#lib/utilities/errors.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+function downloaderService(): DownloaderUtility {
+  return getUtility("downloader");
+}
+
+export const repoDef: CommandDef = {
   name: "repo",
   description: "Manage third-party module repositories",
-  preconditions: ["GuildOnly", "BotOwner"],
+  guildOnly: true,
+  botOwner: true,
   prefixEnabled: true,
-  subcommands: [
-    { name: "add", run: "add" },
-    { name: "remove", run: "remove" },
-    { name: "update", run: "update" },
-    { name: "list", run: "list" },
-    { name: "modules", run: "modules" },
-    { name: "help", run: "help", default: true },
-  ],
-})
-export class RepoCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("help")
-            .setDescription("Open Repository Management help and panel"),
-        )
-        .addSubcommand((s) =>
-          s.setName("list").setDescription("List all added repositories"),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("add")
-            .setDescription("Add a repository")
-            .addStringOption((o) =>
-              o
-                .setName("url")
-                .setDescription("Git clone URL")
-                .setRequired(true),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("repo");
+    return (
+    b
+            .setName("repo")
+            .setDescription("Manage third-party module repositories")
+            .addSubcommand((s) =>
+              s
+                .setName("help")
+                .setDescription("Open Repository Management help and panel"),
             )
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription(
-                  "Unique repo name (optional - derived from the URL if omitted)",
+            .addSubcommand((s) =>
+              s.setName("list").setDescription("List all added repositories"),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("add")
+                .setDescription("Add a repository")
+                .addStringOption((o) =>
+                  o
+                    .setName("url")
+                    .setDescription("Git clone URL")
+                    .setRequired(true),
                 )
-                .setRequired(false),
+                .addStringOption((o) =>
+                  o
+                    .setName("name")
+                    .setDescription(
+                      "Unique repo name (optional - derived from the URL if omitted)",
+                    )
+                    .setRequired(false),
+                )
+                .addStringOption((o) =>
+                  o
+                    .setName("branch")
+                    .setDescription("Branch name (default: default)")
+                    .setRequired(false),
+                ),
             )
-            .addStringOption((o) =>
-              o
-                .setName("branch")
-                .setDescription("Branch name (default: default)")
-                .setRequired(false),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("remove")
-            .setDescription("Remove an added repository")
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription("Repo name to remove")
-                .setRequired(true)
-                .setAutocomplete(true),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("update")
-            .setDescription("Update/pull latest changes for a repository")
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription("Repo name to update (or 'all')")
-                .setRequired(true)
-                .setAutocomplete(true),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("modules")
-            .setDescription("List available modules inside a repository")
-            .addStringOption((o) =>
-              o
-                .setName("repo_name")
-                .setDescription("Repository name")
-                .setRequired(true)
-                .setAutocomplete(true),
-            ),
-        ),
+            .addSubcommand((s) =>
+              s
+                .setName("remove")
+                .setDescription("Remove an added repository")
+                .addStringOption((o) =>
+                  o
+                    .setName("name")
+                    .setDescription("Repo name to remove")
+                    .setRequired(true)
+                    .setAutocomplete(true),
+                ),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("update")
+                .setDescription("Update/pull latest changes for a repository")
+                .addStringOption((o) =>
+                  o
+                    .setName("name")
+                    .setDescription("Repo name to update (or 'all')")
+                    .setRequired(true)
+                    .setAutocomplete(true),
+                ),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("modules")
+                .setDescription("List available modules inside a repository")
+                .addStringOption((o) =>
+                  o
+                    .setName("repo_name")
+                    .setDescription("Repository name")
+                    .setRequired(true)
+                    .setAutocomplete(true),
+                ),
+            )
     );
-  }
-
-  private get downloaderService(): DownloaderUtility {
-    return getUtility("downloader");
-  }
-
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
-    const focused = interaction.options.getFocused(true);
-    if (focused.name !== "name" && focused.name !== "repo_name") {
-      return respondWithChoices(interaction, []);
-    }
-
-    const extra =
-      focused.name === "name" &&
-      interaction.options.getSubcommand(false) === "update"
-        ? ["all"]
-        : undefined;
-    return respondWithChoices(
-      interaction,
-      await repoNameChoices(this.downloaderService, focused.value, { extra }),
-    );
-  }
-
-  public async help(ctx: CommandContext): Promise<void> {
-    const t = await ctx.fetchT();
-    const row =
-      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId("lumi:tab:addons")
-          .setLabel(t("core:openAddonsManager"))
-          .setEmoji(Emojis.parse(Emojis.Repo))
-          .setStyle(ButtonStyle.Primary),
-      );
-
-    await ctx.reply(
-      makeInfoCard(
-        t("core:repoManagementTitle"),
-        [
-          "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
-          "Quick command fallback:",
-          "- `,repo add <url> [name] [branch]` (name is derived from the URL if omitted)",
-          "- `,repo remove <name>`",
-          "- `,repo update <name>`",
-          "- `,repo list`",
-          "- `,repo modules <repo_name>`",
-        ],
-        {
-          actionRows: [row],
-        },
-      ),
-    );
-  }
-
-  public async add(ctx: CommandContext): Promise<void> {
+  },
+  handlers: {
+  "add": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
     const url = (await ctx.getString("url", { required: true }))!;
     const rawName = await ctx.getString("name", { required: false });
@@ -195,8 +137,8 @@ export class RepoCommand extends BaseSubcommand {
     );
 
     try {
-      const { signatureWarning } = await this.downloaderService.addRepo(name, url, branch);
-      this.container.logger.info(
+      const { signatureWarning } = await downloaderService().addRepo(ctx.services, name, url, branch);
+      ctx.services.logger.info(
         `[Repo] ${Emojis.Repo} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
       const body = [t("core:repoAddedText", { name }), signatureWarning ? `${Emojis.WarningSign} Signature warning: ${signatureWarning}.` : null]
@@ -205,14 +147,13 @@ export class RepoCommand extends BaseSubcommand {
       await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoAddedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
+      ctx.services.logger.warn(
         `[Repo] ${Emojis.Error} Failed to add repo: ${name} - ${msg_}`,
       );
       await ctx.replyError(`${Emojis.Error} ${t("core:failedAddRepoTitle")}`, msg_);
     }
-  }
-
-  public async remove(ctx: CommandContext): Promise<void> {
+  },
+  "remove": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
@@ -222,8 +163,8 @@ export class RepoCommand extends BaseSubcommand {
     );
 
     try {
-      await this.downloaderService.removeRepo(name);
-      this.container.logger.info(
+      await downloaderService().removeRepo(ctx.services, name);
+      ctx.services.logger.info(
         `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
@@ -233,9 +174,8 @@ export class RepoCommand extends BaseSubcommand {
     } catch (err: unknown) {
       await ctx.replyError(t("core:failedRemoveRepoTitle"), errorFrom(err).message);
     }
-  }
-
-  public async update(ctx: CommandContext): Promise<void> {
+  },
+  "update": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
     const name = (await ctx.getString("name", { required: true }))!;
 
@@ -245,8 +185,8 @@ export class RepoCommand extends BaseSubcommand {
     );
 
     try {
-      const result = await this.downloaderService.updateRepo(name);
-      this.container.logger.info(
+      const result = await downloaderService().updateRepo(ctx.services, name);
+      ctx.services.logger.info(
         `[Repo] ${Emojis.Repo} Updated repository: ${name} by ${ctx.user.tag} (${result.oldSha ?? "?"} -> ${result.newSha})`,
       );
       const shaLine = result.changed
@@ -265,7 +205,7 @@ export class RepoCommand extends BaseSubcommand {
       await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoUpdatedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
-      this.container.logger.warn(
+      ctx.services.logger.warn(
         `[Repo] ${Emojis.Error} Failed to update repo: ${name} - ${msg_}`,
       );
       await ctx.replyError(
@@ -273,11 +213,10 @@ export class RepoCommand extends BaseSubcommand {
         msg_,
       );
     }
-  }
-
-  public async list(ctx: CommandContext): Promise<void> {
+  },
+  "list": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
-    const repos = await this.downloaderService.listRepos();
+    const repos = await downloaderService().listRepos(ctx.services);
     if (!repos.length) {
       await ctx.replyError(t("core:noReposTitle"), t("core:noReposText"));
       return;
@@ -294,16 +233,15 @@ export class RepoCommand extends BaseSubcommand {
       items: list,
       perPage: 5,
     });
-  }
-
-  public async modules(ctx: CommandContext): Promise<void> {
+  },
+  "modules": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
     const repoName = (await ctx.getString("repo_name", { required: true }))!;
 
     try {
       const [modules, installed] = await Promise.all([
-        this.downloaderService.getModulesInRepo(repoName),
-        this.downloaderService.getInstalledModules(),
+        downloaderService().getModulesInRepo(repoName),
+        downloaderService().getInstalledModules(ctx.services),
       ]);
 
       if (!modules.length) {
@@ -333,5 +271,52 @@ export class RepoCommand extends BaseSubcommand {
     } catch (err: unknown) {
       await ctx.replyError(t("core:failedReadRepoTitle"), errorFrom(err).message);
     }
+  },
+  "help": async (ctx: CommandContext) => {
+    const t = await ctx.fetchT();
+    const row =
+      new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId("lumi:tab:addons")
+          .setLabel(t("core:openAddonsManager"))
+          .setEmoji(Emojis.parse(Emojis.Repo))
+          .setStyle(ButtonStyle.Primary),
+      );
+
+    await ctx.reply(
+      makeInfoCard(
+        t("core:repoManagementTitle"),
+        [
+          "Use the Add-ons Manager for the smoothest workflow: browse repositories, inspect modules, and install in a few clicks.",
+          "Quick command fallback:",
+          "- `,repo add <url> [name] [branch]` (name is derived from the URL if omitted)",
+          "- `,repo remove <name>`",
+          "- `,repo update <name>`",
+          "- `,repo list`",
+          "- `,repo modules <repo_name>`",
+        ],
+        {
+          actionRows: [row],
+        },
+      ),
+    );
   }
-}
+  },
+  defaultSub: "help",
+  autocomplete: async (services: Container, interaction: AutocompleteInteraction,) => {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== "name" && focused.name !== "repo_name") {
+      return respondWithChoices(interaction, []);
+    }
+
+    const extra =
+      focused.name === "name" &&
+      interaction.options.getSubcommand(false) === "update"
+        ? ["all"]
+        : undefined;
+    return respondWithChoices(
+      interaction,
+      await repoNameChoices(services, downloaderService(), focused.value, { extra })
+    );
+  },
+};

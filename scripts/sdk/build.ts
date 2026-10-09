@@ -1,11 +1,13 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { generateDtsBundle } from "dts-bundle-generator";
 
-const ROOT = path.resolve(import.meta.dir, "../..");
+const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(DIRNAME, "../..");
 const SDK_DIR = path.join(ROOT, "packages/core/src/lib/addon-sandbox/sdk");
 const OUT_DIR = path.join(ROOT, "dist/sdk");
-const TSCONFIG = path.join(import.meta.dir, "tsconfig.json");
+const TSCONFIG = path.join(DIRNAME, "tsconfig.json");
 
 // Mirrors the root package.json "exports" map's subpaths (the ones addon
 // authors actually import). "builder" and "rpc" are internal to the sandbox
@@ -15,14 +17,29 @@ const ENTRYPOINTS = [
   "commands",
   "config",
   "discord",
+  "events",
   "interactions",
   "kv",
   "permissions",
-  "redis",
+  "valkey",
   "scheduling",
   "ui",
   "utils",
 ] as const;
+
+// Packages that must remain external imports in the generated .d.ts files rather
+// than being inlined. Inlining discord.js causes catastrophic circular AST traversals
+// (e.g. Message -> Guild -> Channel -> Message), hanging dts-bundle-generator indefinitely.
+const IMPORTED_LIBRARIES = [
+  "discord.js",
+  "@discordjs/builders",
+  "@discordjs/formatters",
+  "@discordjs/rest",
+  "discord-api-types",
+  "@lumi/contracts",
+  "@lumi-devs/contracts",
+  "zod",
+];
 
 // Anything matching these in an emitted .d.ts means a type the SDK exposes
 // wasn't inlined and leaked an unresolvable internal specifier instead -
@@ -30,11 +47,15 @@ const ENTRYPOINTS = [
 const FORBIDDEN_SPECIFIERS = [/#lib\//, /#modules\//, /@lumi\/core\b/, /@lumi\/observability\b/];
 
 async function main(): Promise<void> {
+  const startTime = Date.now();
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
   const entries = ENTRYPOINTS.map((name) => ({
     filePath: path.join(SDK_DIR, `${name}.ts`),
+    libraries: {
+      importedLibraries: IMPORTED_LIBRARIES,
+    },
     output: { noBanner: true },
   }));
 
@@ -77,12 +98,18 @@ async function main(): Promise<void> {
 
   await writeSdkPackageJson();
 
-  console.log(`Built ${ENTRYPOINTS.length} SDK type entrypoints into ${path.relative(ROOT, OUT_DIR)}/`);
+  console.log(
+    `Built ${ENTRYPOINTS.length} SDK type entrypoints into ${path.relative(ROOT, OUT_DIR)}/ in ${Date.now() - startTime}ms`,
+  );
 }
 
 async function writeSdkPackageJson(): Promise<void> {
   const contracts = JSON.parse(
     await readFile(path.join(ROOT, "packages/contracts/package.json"), "utf8"),
+  ) as { version: string };
+
+  const rootPkg = JSON.parse(
+    await readFile(path.join(ROOT, "package.json"), "utf8"),
   ) as { version: string };
 
   const exportsMap: Record<string, { types: string }> = {};
@@ -92,7 +119,7 @@ async function writeSdkPackageJson(): Promise<void> {
 
   const pkg = {
     name: "@lumi-devs/sdk",
-    version: "0.0.0-dev",
+    version: rootPkg.version || "0.6.0",
     description:
       "Type declarations for the Lumi addon SDK (the `lumi` package addon code imports at runtime). " +
       "Types only - no runtime code; the host resolves `lumi` itself.",
@@ -104,8 +131,27 @@ async function writeSdkPackageJson(): Promise<void> {
     },
     types: "./index.d.ts",
     exports: exportsMap,
+    typesVersions: {
+      "*": {
+        "*": ["./*.d.ts"],
+      },
+    },
     peerDependencies: {
       "@lumi-devs/contracts": `^${contracts.version}`,
+      "@discordjs/builders": "^1.14.1",
+      "discord.js": "^14.27.0",
+      "zod": "^4",
+    },
+    peerDependenciesMeta: {
+      "@discordjs/builders": {
+        optional: true,
+      },
+      "discord.js": {
+        optional: true,
+      },
+      "zod": {
+        optional: true,
+      },
     },
     publishConfig: {
       access: "public",

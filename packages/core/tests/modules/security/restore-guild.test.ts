@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { restoreGuildFromBackup } from "#modules/security/services/restore-guild.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 
 const GUILD_ID = "111111111111111111";
 const EVERYONE = { id: GUILD_ID, position: 0 };
@@ -37,7 +37,7 @@ function mockContainer(overrides: {
       patch: overrides.restPatch ?? vi.fn(),
     },
   };
-  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+  (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
   (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() };
 }
 

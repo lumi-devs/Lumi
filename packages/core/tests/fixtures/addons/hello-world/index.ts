@@ -1,6 +1,6 @@
-import { cfg, DefineModule, Module } from "lumi";
+import { cfg, defineModule } from "lumi";
 
-@DefineModule({
+export const meta = defineModule({
   name: "hello-world",
   displayName: "Hello World",
   emoji: "👋",
@@ -13,5 +13,4 @@ import { cfg, DefineModule, Module } from "lumi";
       default: "Hello from Lumi!",
     }),
   }),
-})
-export class HelloWorldModule extends Module {}
+});

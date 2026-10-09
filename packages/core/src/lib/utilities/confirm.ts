@@ -80,16 +80,22 @@ export async function confirmPrompt(
     msg = await ctx.message!.reply({ ...card, allowedMentions: {} });
   }
 
-  try {
-    const click = await msg.awaitMessageComponent({
-      filter: (i) => i.user.id === ctx.user.id,
-      componentType: ComponentType.Button,
-      time: opts.time ?? 30_000,
-    });
+  const deadline = Date.now() + (opts.time ?? 30_000);
+  while (Date.now() < deadline) {
+    const click = await msg
+      .awaitMessageComponent({
+        componentType: ComponentType.Button,
+        time: deadline - Date.now(),
+      })
+      .catch(() => null);
+    if (!click) return { confirmed: false, message: msg };
+    if (click.user.id !== ctx.user.id) {
+      await click.deferUpdate().catch(() => undefined);
+      continue;
+    }
     const confirmed = click.customId === confirmId;
-    await click.deferUpdate().catch(() => {});
+    await click.deferUpdate().catch(() => undefined);
     return { confirmed, message: msg };
-  } catch {
-    return { confirmed: false, message: msg };
   }
+  return { confirmed: false, message: msg };
 }

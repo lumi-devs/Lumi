@@ -1,45 +1,42 @@
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import { userMention } from "@discordjs/formatters";
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { BankService } from "../services/BankService.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const payDef: CommandDef = {
   name: "pay",
-  description: "Transfer currency to another member. A tax may apply.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "economy",
+  description: "Transfer currency to another member. A tax may apply.",
+  guildOnly: true,
   prefixEnabled: true,
-  cooldownLimit: 3,
-  cooldownDelay: 5000,
-})
-export default class PayCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addUserOption((opt) =>
-          opt
-            .setName("user")
-            .setDescription("Who receives the currency.")
-            .setRequired(true),
-        )
-        .addIntegerOption((opt) =>
-          opt
-            .setName("amount")
-            .setDescription("How much to send.")
-            .setMinValue(1)
-            .setRequired(true),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  cooldownMs: 5000,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("pay");
+    return (
+    builder
+            .setName("pay")
+            .setDescription("Transfer currency to another member. A tax may apply.")
+            .addUserOption((opt) =>
+              opt
+                .setName("user")
+                .setDescription("Who receives the currency.")
+                .setRequired(true),
+            )
+            .addIntegerOption((opt) =>
+              opt
+                .setName("amount")
+                .setDescription("How much to send.")
+                .setMinValue(1)
+                .setRequired(true),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(guildId);
+    const config = await getEconomyConfig(ctx.services, guildId);
     const target = await ctx.getUser("user", { required: true });
     const amount = await ctx.getInteger("amount", { required: true });
     try {
@@ -63,4 +60,4 @@ export default class PayCommand extends BaseCommand {
       await reportEconomyError(ctx, err);
     }
   }
-}
+};

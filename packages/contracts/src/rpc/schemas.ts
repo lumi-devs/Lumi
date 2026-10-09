@@ -1,33 +1,21 @@
-import { Result, s, type BaseValidator } from "@sapphire/shapeshift";
+import { z } from "zod";
 
-export const SnowflakeSchema = s.string().regex(/^\d{17,20}$/);
+export const SnowflakeSchema = z.string().regex(/^\d{17,20}$/);
 
-/** shapeshift's array length constraints narrow the type to tuples, which
- * callers holding a plain array can't satisfy; this checks the bounds and keeps `T[]`. */
 export function boundedArray<T>(
-  item: BaseValidator<T>,
+  item: z.ZodType<T>,
   bounds: { min?: number; max?: number },
-) {
+): z.ZodType<T[]> {
   const { min = 0, max = Number.POSITIVE_INFINITY } = bounds;
-  return s.array(item).reshape((items): Result<T[]> => {
-    if (items.length < min) {
-      return Result.err(new RangeError(`Expected at least ${min} items`));
-    }
-    if (items.length > max) {
-      return Result.err(new RangeError(`Expected at most ${max} items`));
-    }
-    return Result.ok(items);
-  });
+  let schema = z.array(item);
+  if (min > 0) schema = schema.min(min);
+  if (Number.isFinite(max)) schema = schema.max(max);
+  return schema;
 }
 
-export const PageSchema = s.number().int().greaterThanOrEqual(1).optional();
+export const PageSchema = z.number().int().gte(1).optional();
 
-export const PageSizeSchema = s
-  .number()
-  .int()
-  .greaterThanOrEqual(1)
-  .lessThanOrEqual(100)
-  .optional();
+export const PageSizeSchema = z.number().int().gte(1).lte(100).optional();
 
 /**
  * Opaque keyset-pagination cursor - a base64url string, never interpreted by
@@ -35,54 +23,36 @@ export const PageSizeSchema = s
  * malformed/oversized value fails schema validation before it ever reaches
  * `decodeCreatedAtIdCursor`/`decodeSingleKeyCursor`.
  */
-export const CursorSchema = s
-  .string()
-  .lengthGreaterThanOrEqual(1)
-  .lengthLessThanOrEqual(512)
-  .optional();
+export const CursorSchema = z.string().min(1).max(512).optional();
 
-export const ModuleNameSchema = s
-  .string()
-  .lengthGreaterThanOrEqual(1)
-  .lengthLessThanOrEqual(64);
+export const ModuleNameSchema = z.string().min(1).max(64);
 
-export const ConfigKeySchema = s
-  .string()
-  .lengthGreaterThanOrEqual(1)
-  .lengthLessThanOrEqual(64);
+export const ConfigKeySchema = z.string().min(1).max(64);
 
-export const PaginationSchema = s.object({
+export const PaginationSchema = z.object({
   page: PageSchema,
   pageSize: PageSizeSchema,
 });
 
 export const AuditFilterShape = {
   userId: SnowflakeSchema.optional(),
-  action: s
-    .string()
-    .lengthGreaterThanOrEqual(1)
-    .lengthLessThanOrEqual(128)
-    .optional(),
-  platform: s.enum(["discord", "web"] as const).optional(),
+  action: z.string().min(1).max(128).optional(),
+  platform: z.enum(["discord", "web"] as const).optional(),
   pageSize: PageSizeSchema,
   cursor: CursorSchema,
 };
 
-export const BlocklistAddSchema = s.object({
+export const BlocklistAddSchema = z.object({
   userId: SnowflakeSchema,
-  reason: s.string().lengthLessThanOrEqual(500).optional(),
+  reason: z.string().max(500).optional(),
 });
 
-export const BlocklistRemoveSchema = s.object({
+export const BlocklistRemoveSchema = z.object({
   userId: SnowflakeSchema,
 });
 
-export const FeatureFlagKeySchema = s
+export const FeatureFlagKeySchema = z
   .string()
   .regex(/^[a-z0-9](?:[a-z0-9_-]{0,98}[a-z0-9])?$/);
 
-export const RolloutPercentSchema = s
-  .number()
-  .int()
-  .greaterThanOrEqual(0)
-  .lessThanOrEqual(100);
+export const RolloutPercentSchema = z.number().int().gte(0).lte(100);

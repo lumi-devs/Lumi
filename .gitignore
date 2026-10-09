@@ -25,6 +25,7 @@ indirections.txt
 # embedded git repos — never commit, never add as a submodule.
 /data/
 /packages/core/data/
+/apps/worker/data/
 .agents/
 
 # Archives and binaries

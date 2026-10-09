@@ -1,17 +1,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { ReadyListener } from "#modules/core/listeners/ready.js";
-import { container } from "@sapphire/framework";
+import { readyListener } from "#modules/core/listeners/ready.js";
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-describe("ReadyListener guild reconcile sweep", () => {
+describe("readyListener guild reconcile sweep", () => {
   const originalEnv = { ...process.env };
-  let listener: ReadyListener;
   let mockDb: any;
   let cachedGuildIds: string[];
   let shardIds: number[];
+
+  function makeServices() {
+    return {
+      db: mockDb,
+      logger: {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+      moduleStore: { all: vi.fn().mockReturnValue([]) },
+      client: {
+        user: { tag: "Lumi#0000", fetch: vi.fn() },
+        application: { fetch: vi.fn().mockResolvedValue(undefined) },
+        guilds: { cache: { size: 0, keys: () => cachedGuildIds[Symbol.iterator]() } },
+        shard: { ids: shardIds },
+      },
+    } as any;
+  }
 
   beforeEach(() => {
     process.env.SHARD_COUNT = "2";
@@ -26,32 +43,6 @@ describe("ReadyListener guild reconcile sweep", () => {
 
     cachedGuildIds = [];
     shardIds = [0];
-
-    (container as any).db = mockDb;
-    (container as any).logger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    };
-    (container as any).moduleStore = { all: vi.fn().mockReturnValue([]) };
-    (container as any).stores = { get: vi.fn().mockReturnValue({ size: 0 }) };
-    (container as any).client = {
-      user: { tag: "Lumi#0000", fetch: vi.fn() },
-      application: { fetch: vi.fn().mockResolvedValue(undefined) },
-      guilds: { cache: { size: 0, keys: () => cachedGuildIds[Symbol.iterator]() } },
-      shard: { ids: shardIds },
-    };
-
-    listener = new ReadyListener(
-      {
-        name: "ready",
-        path: "/path/to/modules/core/listeners/ready.ts",
-        root: "/path/to/modules",
-        store: { name: "listeners" } as any,
-      },
-      {},
-    );
   });
 
   afterEach(() => {
@@ -62,7 +53,7 @@ describe("ReadyListener guild reconcile sweep", () => {
     cachedGuildIds = ["g-rejoined"];
     mockDb.findDepartedGuildIds.mockResolvedValue(["g-rejoined"]);
 
-    listener.run();
+    readyListener.execute(makeServices());
     await flush();
 
     expect(mockDb.findDepartedGuildIds).toHaveBeenCalledWith(["g-rejoined"]);
@@ -74,7 +65,7 @@ describe("ReadyListener guild reconcile sweep", () => {
     // process's own shard.
     mockDb.findActiveGuildIds.mockResolvedValue(["0"]);
 
-    listener.run();
+    readyListener.execute(makeServices());
     await flush();
 
     expect(mockDb.markGuildLeft).toHaveBeenCalledWith("0");
@@ -84,7 +75,7 @@ describe("ReadyListener guild reconcile sweep", () => {
     // "4194304" === 2^22, so shardId = Number(1n % 2n) = 1, not in [0].
     mockDb.findActiveGuildIds.mockResolvedValue(["4194304"]);
 
-    listener.run();
+    readyListener.execute(makeServices());
     await flush();
 
     expect(mockDb.markGuildLeft).not.toHaveBeenCalled();

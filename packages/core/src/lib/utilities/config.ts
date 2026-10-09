@@ -1,36 +1,37 @@
 import { join } from "node:path";
 import { ActivityType } from "discord.js";
-import { s } from "@sapphire/shapeshift";
-import { mergeDefault } from "@sapphire/utilities";
+import { z } from "zod";
+import { mergeDefault } from "@lumi/shared";
 import { BrandColors } from '#lib/branding/colors.js';
+import { getRepoRoot } from "#lib/env.js";
 
-const colorRecord = s.record(s.number().int()).optional();
+const colorRecord = z.record(z.string(), z.number().int()).optional();
 
-const userConfigSchema = s
+const userConfigSchema = z
   .object({
-    presence: s
+    presence: z
       .object({
-        activityType: s.nativeEnum(ActivityType).optional(),
-        activityText: s.string().optional(),
-        status: s.enum(["online", "idle", "dnd", "invisible"]).optional(),
+        activityType: z.enum(ActivityType).optional(),
+        activityText: z.string().optional(),
+        status: z.enum(["online", "idle", "dnd", "invisible"]).optional(),
       })
       .optional(),
-    branding: s
+    branding: z
       .object({
         colors: colorRecord,
-        links: s
+        links: z
           .object({
-            supportServer: s.string().optional(),
-            website: s.string().optional(),
-            github: s.string().optional(),
+            supportServer: z.string().optional(),
+            website: z.string().optional(),
+            github: z.string().optional(),
           })
           .optional(),
       })
       .optional(),
 
-    ui: s
+    ui: z
       .object({
-        defaultListPerPage: s.number().int().greaterThan(0).optional(),
+        defaultListPerPage: z.number().int().gt(0).optional(),
       })
       .optional(),
   })
@@ -58,7 +59,7 @@ const defaultConfig = {
 let userConfig: Record<string, unknown> = {};
 
 try {
-  const configPath = join(process.cwd(), "config", "bot.ts");
+  const configPath = join(getRepoRoot(), "config", "bot.ts");
   const mod = await import(configPath);
   const raw: unknown = mod?.default ?? {};
   if (typeof raw === "object" && raw !== null) {

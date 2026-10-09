@@ -137,7 +137,7 @@ describe("package dependency direction", () => {
     const violations: string[] = [];
     // Presentational/formatting-only surfaces the SDK re-exports as `lumi/ui`
     // and `lumi/utils`. Everything else under #lib/ (database, client, rpc,
-    // permissions, redis, ...) stays off-limits — the SDK reaches the host
+    // permissions, valkey, ...) stays off-limits — the SDK reaches the host
     // only through rpc.ts's call().
     const ALLOWED_LIB_PREFIXES = ["#lib/ui/", "#lib/module-system/", "#lib/utilities/", "#lib/branding/"];
     const ALLOWED_EXTERNAL = new Set(["@discordjs/builders"]);
@@ -192,7 +192,7 @@ describe("package dependency direction", () => {
   it("apps/api never imports command/listener/interaction-handler files directly", () => {
     const violations: string[] = [];
     const restrictedRoot = join(REPO_ROOT, "packages/core/src/modules");
-    const restrictedSubdirs = ["commands", "listeners", "interaction-handlers"];
+    const restrictedSubdirs = ["commands", "listeners", "interactions"];
 
     for (const { file, ref } of allImports) {
       const owner = ownerOf(file);

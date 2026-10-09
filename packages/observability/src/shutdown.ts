@@ -4,7 +4,7 @@
 // steps (each with its own internal timeout), then exit. `runDrainSteps` enforces a
 // hard `deadlineMs` ceiling so a hung step can't block exit forever; steps run
 // sequentially because closing order usually matters (detach WS handler → drain queue
-// → close bus → close redis).
+// → close bus → close valkey).
 
 import { markDraining } from "./readiness.js";
 
@@ -16,7 +16,6 @@ export interface DrainStep {
 }
 
 export interface DrainOptions {
-  /** Logger - usually console or a structured logger. */
   log: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
   /** Wait this long after markDraining() before running steps. Default 5s. */
   preCloseGraceMs?: number;

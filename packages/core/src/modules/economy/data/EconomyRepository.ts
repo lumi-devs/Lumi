@@ -47,15 +47,6 @@ export interface EconomyPaydayInput {
   startBank: number;
 }
 
-/**
- * Persistent state owned by the `economy` module: per-guild wallet/bank
- * balances plus the append-only audit ledger. Every balance mutation runs
- * inside a single interactive transaction that also writes its ledger row,
- * and every debit is a guarded conditional update (`wallet >= amount` in the
- * `WHERE` clause) so concurrent mutations serialize on the row instead of
- * overdrawing it. Balances are deliberately never cached in Redis - a stale
- * read here is a double-spend.
- */
 export class EconomyRepository extends Repository {
   public findAccount(
     guildId: string,
@@ -80,12 +71,6 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /**
-   * Applies a single-account wallet/bank delta and appends one ledger row in
-   * the same transaction. Negative deltas fail with an `InsufficientFunds`
-   * error (thrown as a plain `Error` with `code = "InsufficientFunds"`) when
-   * the guarded update matches no row.
-   */
   public async applyMutation(
     input: EconomyMutationInput,
   ): Promise<{ account: EconomyAccount; balanceAfter: number }> {
@@ -142,37 +127,25 @@ export class EconomyRepository extends Repository {
     });
   }
 
-  /**
-   * Moves `amount` wallet credits from one member to another, burning `fee`
-   * credits. Writes the debit/credit ledger pair in the same transaction and
-   * fails with `InsufficientFunds` when the sender cannot cover `amount`.
-   */
   public async applyTransfer(
     input: EconomyTransferInput,
   ): Promise<{ from: EconomyAccount; to: EconomyAccount }> {
     const { guildId, fromUserId, toUserId } = input;
     await this.db.ensureGuild(guildId);
+    const sortedUserIds = [fromUserId, toUserId].sort();
     return this.prisma.$transaction(async (tx) => {
-      await tx.economyAccount.upsert({
-        where: { guildId_userId: { guildId, userId: toUserId } },
-        update: {},
-        create: {
-          guildId,
-          userId: toUserId,
-          wallet: input.startWallet,
-          bank: input.startBank,
-        },
-      });
-      await tx.economyAccount.upsert({
-        where: { guildId_userId: { guildId, userId: fromUserId } },
-        update: {},
-        create: {
-          guildId,
-          userId: fromUserId,
-          wallet: input.startWallet,
-          bank: input.startBank,
-        },
-      });
+      for (const uId of sortedUserIds) {
+        await tx.economyAccount.upsert({
+          where: { guildId_userId: { guildId, userId: uId } },
+          update: {},
+          create: {
+            guildId,
+            userId: uId,
+            wallet: input.startWallet,
+            bank: input.startBank,
+          },
+        });
+      }
 
       const { count } = await tx.economyAccount.updateMany({
         where: {

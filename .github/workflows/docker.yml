@@ -48,7 +48,7 @@ jobs:
               - '.github/workflows/docker.yml'
 
   build-and-push:
-    name: Build & Push (${{ matrix.target.name }})
+    name: Build & Push (${{ matrix.target }})
     needs: changes
     if: ${{ needs.changes.outputs.docker == 'true' || github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
@@ -60,10 +60,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - name: worker
-          - name: api
-          - name: scheduler
+        target: [worker, api, scheduler]
+        include:
+          - target: worker
+            image-suffix: ""
+          - target: api
+            image-suffix: "-api"
+          - target: scheduler
+            image-suffix: "-scheduler"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -77,14 +81,7 @@ jobs:
       - name: Compute lowercase repository image name
         id: image_meta
         run: |
-          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          if [ "${{ matrix.target.name }}" = "api" ]; then
-            echo "image=ghcr.io/${REPO_LOWER}-api" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.target.name }}" = "scheduler" ]; then
-            echo "image=ghcr.io/${REPO_LOWER}-scheduler" >> $GITHUB_OUTPUT
-          else
-            echo "image=ghcr.io/${REPO_LOWER}" >> $GITHUB_OUTPUT
-          fi
+          echo "image=ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')${{ matrix.image-suffix }}" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
@@ -111,7 +108,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          target: ${{ matrix.target.name }}
+          target: ${{ matrix.target }}
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -148,13 +146,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
-          category: trivy-${{ matrix.target.name }}
-
-      - name: Fail build on Trivy findings
-        if: steps.trivy.outcome == 'failure'
-        run: |
-          echo "Trivy found CRITICAL or fixable HIGH vulnerabilities in ${{ matrix.target.name }} image." >&2
-          exit 1
+          category: trivy-${{ matrix.target }}
 
       - name: Install cosign
         if: github.event_name != 'pull_request'

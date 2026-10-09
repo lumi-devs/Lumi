@@ -1,4 +1,3 @@
-import type { SlashCommandBuilder } from "@discordjs/builders";
 import type { AddonCommandInvocation, SerialisedMember, SerialisedUser } from "@lumi/contracts";
 import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/ui/cards.js";
 import { call } from "./rpc.js";
@@ -14,6 +13,11 @@ export interface CtxReplyOptions {
   ephemeral?: boolean;
 }
 
+export interface NamedRef {
+  id: string;
+  name?: string;
+}
+
 export class CommandContext {
   readonly isSlash: boolean;
   readonly guildId: string | null;
@@ -21,6 +25,7 @@ export class CommandContext {
   readonly user: SerialisedUser;
   readonly member: SerialisedMember | null;
   readonly subcommand: string | null;
+  readonly repliedToId: string | null;
 
   constructor(invocation: AddonCommandInvocation) {
     this.isSlash = invocation.isSlash;
@@ -29,6 +34,7 @@ export class CommandContext {
     this.user = invocation.user;
     this.member = invocation.member;
     this.subcommand = invocation.subcommand;
+    this.repliedToId = invocation.repliedToId ?? null;
   }
 
   getString(name: string, spec: CtxOptionSpec = {}): Promise<string | null> {
@@ -47,12 +53,34 @@ export class CommandContext {
     return call("ctx.option", { getter: "getBoolean", name, spec });
   }
 
+  getUser(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getUser", name, spec });
+  }
+
+  getRole(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getRole", name, spec });
+  }
+
+  getChannel(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getChannel", name, spec });
+  }
+
   defer(opts: CtxReplyOptions = {}): Promise<void> {
     return call("ctx.defer", { ephemeral: opts.ephemeral });
   }
 
+  /** Must be the first response — never defer beforehand. */
+  showModal(modal: { toJSON(): unknown }): Promise<void> {
+    return call("ctx.showModal", { modal: modal.toJSON() });
+  }
+
   reply(card: CardReply, opts: CtxReplyOptions = {}): Promise<void> {
     return call("ctx.reply", { card, ephemeral: opts.ephemeral });
+  }
+
+  /** Edit the original response in place. Must reply or defer first. */
+  editReply(card: CardReply, opts: CtxReplyOptions = {}): Promise<void> {
+    return call("ctx.editReply", { card, ephemeral: opts.ephemeral });
   }
 
   replySuccess(title: string, body: string, opts?: CtxReplyOptions): Promise<void> {
@@ -93,62 +121,14 @@ export interface CommandOptions {
   prefixEnabled?: boolean;
 }
 
-export interface CommandRegistry {
-  registerChatInputCommand(
-    build: (builder: SlashCommandBuilder) => { toJSON(): unknown },
-  ): void;
-}
-
-export abstract class BaseCommand {
-  readonly name: string;
-  readonly description: string;
-  readonly options: CommandOptions;
-
-  constructor(options: CommandOptions) {
-    this.name = options.name;
-    this.description = options.description;
-    this.options = options;
-  }
-
-  registerApplicationCommands?(registry: CommandRegistry): void;
-
-  abstract run(ctx: CommandContext): unknown | Promise<unknown>;
-}
-
-export declare namespace BaseCommand {
-  type Options = CommandOptions;
-}
-
-export abstract class BaseSubcommand extends BaseCommand {
-  constructor(options: SubcommandOptions) {
-    super(options);
-    this.subcommands = options.subcommands;
-  }
-
-  readonly subcommands: SubcommandRoute[];
-
-  override run(ctx: CommandContext): unknown | Promise<unknown> {
-    const route = this.subcommands.find((s) => s.name === ctx.subcommand);
-    if (!route) {
-      return ctx.replyError("Unknown Subcommand", `\`${ctx.subcommand ?? "?"}\` is not handled.`);
-    }
-    const handler = (this as unknown as Record<string, (c: CommandContext) => unknown>)[route.run];
-    if (typeof handler !== "function") {
-      throw new Error(`${this.name}: no method "${route.run}" for subcommand "${route.name}"`);
-    }
-    return handler.call(this, ctx);
-  }
-}
-
-export interface SubcommandRoute {
+export interface AddonCommandDefinition {
   name: string;
-  run: string;
+  description: string;
+  build?: () => Record<string, unknown> | null;
+  run: (ctx: CommandContext) => unknown | Promise<unknown>;
+  handlers?: Record<string, (ctx: CommandContext) => unknown | Promise<unknown>>;
 }
 
-export interface SubcommandOptions extends CommandOptions {
-  subcommands: SubcommandRoute[];
-}
-
-export declare namespace BaseSubcommand {
-  type Options = SubcommandOptions;
+export function defineCommand<D extends AddonCommandDefinition>(def: D): D {
+  return def;
 }

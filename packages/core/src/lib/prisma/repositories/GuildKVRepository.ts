@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { ValkeyKeys } from "#lib/valkey/client.js";
 
 /**
  * Generic per-module key/value storage (`ModuleData`), keyed by
@@ -186,5 +187,26 @@ export class GuildKVRepository extends Repository {
       where: { moduleName: module, targetId },
     });
     return count;
+  }
+
+  public async incrModuleData(
+    guildId: string,
+    module: string,
+    targetId: string,
+    key: string,
+    delta = 1,
+  ): Promise<number> {
+    const valkeyKey = ValkeyKeys.moduleData(guildId, module, targetId, key);
+    const newValue = await this.valkey.hincrby(valkeyKey, "value", delta);
+
+    await this.prisma.moduleData.upsert({
+      where: {
+        guildId_moduleName_targetId_key: { guildId, moduleName: module, targetId, key },
+      },
+      update: { value: newValue },
+      create: { guildId, moduleName: module, targetId, key, value: newValue },
+    });
+
+    return newValue;
   }
 }

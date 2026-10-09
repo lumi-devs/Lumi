@@ -1,11 +1,11 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
 import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import type { Container } from "#lib/services.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { isSuspiciousAccount } from "../services/suspicious.js";
-import { loadVerificationConfig, assignPending } from "../services/verification.js";
+import { isSuspiciousAccount } from "@lumi/application/services/security/suspicious.js";
+import { loadVerificationConfig, assignPending } from "@lumi/application/services/security/verification.js";
 import {
   loadJoinGateConfig,
   evaluateJoinFilters,
@@ -14,17 +14,13 @@ import {
   isRaidActive,
   isSuspiciousJoiner,
   recordRecentJoiner,
-} from "../services/join-gate.js";
+} from "@lumi/application/services/security/join-gate.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const SecurityMemberJoinListener = defineListener({
   name: "securityMemberJoin",
   event: Events.GuildMemberAdd,
   module: "security",
-})
-export class SecurityMemberJoinListener extends ModuleListener<
-  typeof Events.GuildMemberAdd
-> {
-  protected async handle(member: GuildMember): Promise<void> {
+  async execute(services: Container, member: GuildMember): Promise<void> {
     if (member.user.bot) return;
 
     const verification = await loadVerificationConfig(member.guild.id);
@@ -55,17 +51,17 @@ export class SecurityMemberJoinListener extends ModuleListener<
     // never reaches the burst threshold that would activate raid mode.
     const raidStarted = await recordJoin(member.guild.id, config);
     if (raidStarted) {
-      this.container.logger.warn(
+      services.logger.warn(
         `[security] Raid mode activated in ${member.guild.id}: ${config.raidJoinCount}+ joins in ${config.raidWindowSeconds}s`,
       );
       const logService = tryGetUtility("guild-log");
       const warnMentions = config.raidWarnRoleIds.map((id) => roleMention(id)).join(" ");
-      await logService?.dispatch({
+      await logService?.dispatch(services, {
         guildId: member.guild.id,
         moduleName: "security",
         action: "🚨 Raid Mode Activated",
         targetId: member.id,
-        actorId: this.container.client.user?.id ?? member.id,
+        actorId: services.client.user?.id ?? member.id,
         reason: `${config.raidJoinCount}+ joins within ${config.raidWindowSeconds}s - gating joiners (${config.raidAction}). Latest: ${userMention(member.id)}`,
         color: Colors.Red,
         extra: warnMentions ? { "Notify": warnMentions } : undefined,
@@ -93,5 +89,5 @@ export class SecurityMemberJoinListener extends ModuleListener<
       username: member.user.username,
       createdTimestamp: member.user.createdTimestamp,
     });
-  }
-}
+  },
+});

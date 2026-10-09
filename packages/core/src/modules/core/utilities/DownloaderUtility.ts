@@ -1,10 +1,10 @@
-import { Utility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import { type Piece } from "@sapphire/framework";
+import { defineUtility } from "#lib/module-system/Utility.js";
+import { container, type Container } from "#lib/services.js";
 import {
   resolver,
   AddonModulesRoot,
   ModuleRoot,
+  PinRoot,
   RepoAlreadyInstalledError,
   type RepoUpdateResult,
 } from "#lib/downloader/resolver.js";
@@ -12,9 +12,10 @@ import { pathExists } from "#lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { errorFrom } from "#lib/utilities/errors.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { withSerializedWork } from "#lib/utilities/misc.js";
 import { execFileAsync } from "#lib/utilities/exec-file.js";
+import { commandRegistry } from "#lib/commands/command-def.js";
 
 export interface AutoUpdateConfig {
   enabled: boolean;
@@ -40,45 +41,6 @@ export type RepoUpdateCheck =
   | { ok: true; hasUpdate: false }
   | { ok: true; hasUpdate: true; changelog: string };
 
-/** One queued registration as Sapphire records it on a command's registry. */
-interface ApiCall {
-  registerOptions: { guildIds?: string[] };
-  builtData: object;
-}
-
-/**
- * The private shape of Sapphire's `ApplicationCommandRegistry` that
- * {@linkcode DownloaderUtility.syncApplicationCommands} depends on.
- *
- * @remarks
- *
- * `apiCalls` is an undocumented, non-public field of Sapphire's
- * `ApplicationCommandRegistry`. It holds the normalized payloads produced by
- * `registerChatInputCommand` / `registerContextMenuCommand` together with the
- * guild scoping each registration asked for. Validated against
- * `@sapphire/framework@5.5.0`.
- *
- * There is no public alternative: the registry exposes only command *names* and
- * *ids* (`chatInputCommands`, `globalChatInputCommandIds`, ...), never the
- * built payloads, and the only public way to push them to Discord is
- * `ApplicationCommandRegistries.registerCommands`, which runs once during the
- * `ready` handshake and cannot be re-driven for a subset of pieces.
- *
- * If Sapphire renames or reshapes this field, live addon installs stop
- * publishing their slash commands until the process is restarted;
- * {@linkcode DownloaderUtility.syncApplicationCommands} degrades to a warning
- * rather than throwing.
- */
-interface RegistryInternal {
-  apiCalls?: ApiCall[];
-}
-
-/** Reads the registry's queued registrations, or `null` if the field is gone. */
-function readApiCalls(registry: unknown): ApiCall[] | null {
-  const { apiCalls } = (registry ?? {}) as RegistryInternal;
-  return Array.isArray(apiCalls) ? apiCalls : null;
-}
-
 export class ModuleAlreadyInstalledError extends Error {
   public readonly moduleName: string;
   public constructor(moduleName: string) {
@@ -88,79 +50,382 @@ export class ModuleAlreadyInstalledError extends Error {
   }
 }
 
-@ApplyOptions<Piece.Options>({ name: "downloader" })
-export class DownloaderUtility extends Utility {
-  public override async onLoad() {
-    super.onLoad();
-    await this.syncInstalledModulesOnStartup().catch((err) => {
-      this.container.logger.error(
+async function syncInstalledModulesOnStartup(services: Container) {
+  await fs.mkdir(AddonModulesRoot, { recursive: true });
+  const installed =
+    await services.db.downloader.readAllInstalledDownloaderModulesWithRepo();
+  if (!installed.length) return;
+
+  let restoredAny = false;
+  for (const item of installed) {
+    const sourcePath = path.join(
+      ModuleRoot,
+      item.repo.name,
+      item.moduleName,
+    );
+    const targetPath = path.join(AddonModulesRoot, item.moduleName);
+
+    try {
+      const sourceExists = await pathExists(sourcePath);
+      if (!sourceExists) {
+        services.logger.info(
+          `[DownloaderUtility] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
+        );
+        await resolver
+          .addRepo(
+            item.repo.name,
+            item.repo.url,
+            item.repo.branch || "default",
+          )
+          .catch(() => {});
+      }
+
+      const targetExists = await pathExists(targetPath);
+      if (!targetExists && (await pathExists(sourcePath))) {
+        await fs
+          .rm(targetPath, { recursive: true, force: true })
+          .catch(() => {});
+        await fs.symlink(sourcePath, targetPath, "dir");
+        restoredAny = true;
+        services.logger.info(
+          `[DownloaderUtility] Restored addon symlink for ${item.moduleName}`,
+        );
+      }
+    } catch (err) {
+      services.logger.warn(
+        `[DownloaderUtility] Failed to restore symlink for ${item.moduleName}:`,
+        err,
+      );
+    }
+  }
+
+  if (restoredAny) {
+    await services.moduleStore.discover(true);
+  }
+  for (const item of installed) {
+    if (!services.moduleStore.getRecord(item.moduleName)) continue;
+    if (services.moduleStore.get(item.moduleName)) continue;
+    try {
+      await services.moduleStore.loadModule(item.moduleName, true);
+    } catch (err) {
+      services.logger.warn(
+        `[DownloaderUtility] Failed to load ${item.moduleName} on startup:`,
+        err,
+      );
+    }
+  }
+}
+
+async function uninstallModule(services: Container, moduleName: string) {
+  const installedCheck =
+    await services.db.downloader.readInstalledDownloaderModule(
+      moduleName,
+    );
+  if (!installedCheck) {
+    throw new Error(
+      `Module **${moduleName}** was not installed via the downloader.`,
+    );
+  }
+
+  try {
+    await services.moduleStore.unload(moduleName);
+  } catch (err: unknown) {
+    const msg = errorFrom(err).message;
+    if (!msg.includes("does not exist")) {
+      throw err;
+    }
+  }
+
+  const targetPath = path.join(AddonModulesRoot, moduleName);
+  const previousLink = await fs.readlink(targetPath).catch(() => null);
+  const previousSourcePath =
+    previousLink !== null
+      ? path.resolve(path.dirname(targetPath), previousLink)
+      : null;
+
+  await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
+    services.logger.error(
+      `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
+      err,
+    );
+  });
+
+  await services.db.downloader.deleteInstalledDownloaderModule(
+    installedCheck.repoId,
+    moduleName,
+  );
+
+  await resolver
+    .releasePinnedWorktreeIfUnused(previousSourcePath)
+    .catch((err: unknown) => {
+      services.logger.warn(
+        `[DownloaderUtility] Failed to release pinned worktree for ${moduleName}:`,
+        err,
+      );
+    });
+
+  await bustUpdateCheckCache(services);
+}
+
+async function addRepo(
+  services: Container,
+  name: string,
+  url: string,
+  branch: string,
+): Promise<{ sha: string | null; signatureWarning: string | null }> {
+  let sha: string | null;
+  let signedBy: string | null;
+  let signatureWarning: string | null;
+  try {
+    ({ sha, signedBy, signatureWarning } = await resolver.addRepo(name, url, branch));
+  } catch (err: unknown) {
+    if (err instanceof RepoAlreadyInstalledError) {
+      throw new Error(
+        `Repository **${name}** is already installed${err.sha ? ` at commit \`${err.sha}\`` : ""}. Use \`,repo update ${name}\` to pull and validate the latest changes.`,
+      );
+    }
+    throw err;
+  }
+  await services.db.downloader.writeDownloaderRepo(name, url, branch, sha, signedBy);
+  return { sha, signatureWarning };
+}
+
+async function bustUpdateCheckCache(services: Container): Promise<void> {
+  await services.valkey?.del?.(ValkeyKeys.addonUpdateCheck())?.catch?.(() => undefined);
+}
+
+/** Single fetch + hash resolution behind every update check, so the hub badge,
+ * the explicit check button and updateModule() all compare the same numbers. */
+async function fetchRepoHashes(
+  services: Container,
+  repoName: string,
+  repoPath: string,
+  branch: string,
+): Promise<{ localHash: string; remoteHash: string; targetRef: string; fetchFailed: boolean }> {
+  const fetchFailed = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "fetch",
+    "origin",
+  ])
+    .then(() => false)
+    .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
+      services.logger.warn(
+        `[DownloaderUtility] git fetch failed for ${repoName}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
+      );
+      return true;
+    });
+
+  const localHash = (
+    await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
+  ).stdout.trim();
+
+  const remoteRefResult = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "rev-parse",
+    "--abbrev-ref",
+    "@{u}",
+  ]).catch(() => ({ stdout: "" }));
+  const remoteRef = remoteRefResult.stdout.trim();
+
+  const targetRef =
+    remoteRef && !remoteRef.includes("@{u}")
+      ? remoteRef
+      : `origin/${branch === "default" ? "master" : branch}`;
+
+  const { stdout: remoteOut } = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "rev-parse",
+    targetRef,
+  ]);
+  return { localHash, remoteHash: remoteOut.trim(), targetRef, fetchFailed };
+}
+
+/** Read-only check: fetches and compares hashes, never pulls. Shared by updateModule() and checkForUpdates(). */
+async function checkForModuleUpdate(
+  services: Container,
+  moduleName: string,
+): Promise<ModuleUpdateCheck> {
+  const installed =
+    await services.db.downloader.readInstalledDownloaderModule(
+      moduleName,
+    );
+  if (!installed) {
+    return {
+      ok: false,
+      reason: `Module **${moduleName}** was not installed via the downloader.`,
+    };
+  }
+
+  const repo = await services.db.downloader.readDownloaderRepoById(
+    installed.repoId,
+  );
+  if (!repo) {
+    return {
+      ok: false,
+      reason: `Repository for module **${moduleName}** could not be found.`,
+    };
+  }
+
+  const repoPath = path.join(ModuleRoot, repo.name);
+  const branch = repo.branch || "default";
+
+  try {
+    await fs.access(repoPath);
+  } catch {
+    // Directory is missing entirely, not just stale - this is a repair
+    // clone, not a pull of new upstream commits, so it goes through
+    // addRepo() rather than updateRepo().
+    await addRepo(services, repo.name, repo.url, branch);
+  }
+
+  const { localHash, remoteHash, targetRef, fetchFailed } =
+    await fetchRepoHashes(services, repo.name, repoPath, branch);
+
+  const linkTarget =
+    typeof fs.realpath === "function"
+      ? await fs.realpath(path.join(AddonModulesRoot, moduleName)).catch(() => null)
+      : null;
+  const pinned =
+    Boolean(
+      linkTarget &&
+        (linkTarget === PinRoot || linkTarget.startsWith(PinRoot + path.sep)),
+    );
+
+  const installedHash = installed.commit ?? null;
+  const servedHash = pinned ? installedHash : localHash;
+  if (servedHash !== null && servedHash === remoteHash) {
+    if (!pinned && installedHash !== remoteHash) {
+      await services.db.downloader.updateInstalledDownloaderModuleCommit(
+        repo.id,
+        moduleName,
+        remoteHash,
+      );
+    }
+    return { ok: true, hasUpdate: false };
+  }
+
+  if (fetchFailed && localHash === remoteHash) {
+    await services.db.downloader.updateInstalledDownloaderModuleCommit(
+      repo.id,
+      moduleName,
+      remoteHash,
+    );
+    return { ok: true, hasUpdate: false };
+  }
+
+  const { stdout: logOut } = await execFileAsync("git", [
+    "-C",
+    repoPath,
+    "log",
+    "--oneline",
+    `HEAD..${targetRef}`,
+  ]).catch(() => ({ stdout: "" }));
+
+  return {
+    ok: true,
+    hasUpdate: true,
+    repoId: repo.id,
+    repoName: repo.name,
+    branch,
+    remoteHash,
+    changelog: logOut.trim(),
+  };
+}
+
+function getInstalledModules(services: Container) {
+  return services.db.downloader.readAllInstalledDownloaderModules();
+}
+
+async function syncApplicationCommands(services: Container) {
+  const { client } = services;
+  if (!client.application) {
+    services.logger.warn(
+      "[DownloaderUtility] client.application not ready; slash command sync skipped",
+    );
+    return;
+  }
+
+  const seen = new Set<string>();
+  const globalData: object[] = [];
+
+  for (const def of commandRegistry.values()) {
+    if (seen.has(def.name)) continue;
+    seen.add(def.name);
+    try {
+      const built = def.build?.() as
+        | { toJSON?: unknown }
+        | Record<string, unknown>
+        | null
+        | undefined;
+      if (built) {
+        globalData.push(
+          typeof built.toJSON === "function"
+            ? (built.toJSON as () => object)()
+            : built,
+        );
+      }
+      const menu = def.contextMenu?.build();
+      if (menu) globalData.push(menu.toJSON());
+    } catch (err: unknown) {
+      services.logger.error(
+        `[DownloaderUtility] build failed for ${def.name}:`,
+        err,
+      );
+    }
+  }
+
+  if (globalData.length === 0) {
+    services.logger.warn(
+      "[DownloaderUtility] No command payloads to sync; slash command sync skipped",
+    );
+    return;
+  }
+
+  if (globalData.length) {
+    try {
+      await client.application.commands.set(
+        globalData as Parameters<typeof client.application.commands.set>[0],
+      );
+      services.logger.info(
+        `[DownloaderUtility] Synced ${globalData.length} global application commands.`,
+      );
+    } catch (err: unknown) {
+      services.logger.error(
+        `[DownloaderUtility] Failed to sync global application commands: ${String(err)}`,
+      );
+    }
+  }
+}
+
+export const downloaderUtility = defineUtility({
+  name: "downloader",
+
+  syncInstalledModulesOnStartup,
+  uninstallModule,
+  addRepo,
+  getInstalledModules,
+  syncApplicationCommands,
+
+  async onLoad(services: Container = container) {
+    await downloaderUtility.syncInstalledModulesOnStartup(services).catch((err) => {
+      services.logger.error(
         "[DownloaderUtility] Failed to sync installed modules on startup:",
         err,
       );
     });
-  }
+  },
 
-  public async syncInstalledModulesOnStartup() {
-    await fs.mkdir(AddonModulesRoot, { recursive: true });
-    const installed =
-      await this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
-    if (!installed.length) return;
-
-    let restoredAny = false;
-    for (const item of installed) {
-      const sourcePath = path.join(
-        ModuleRoot,
-        item.repo.name,
-        item.moduleName,
-      );
-      const targetPath = path.join(AddonModulesRoot, item.moduleName);
-
-      try {
-        const sourceExists = await pathExists(sourcePath);
-        if (!sourceExists) {
-          this.container.logger.info(
-            `[DownloaderUtility] Restoring repo ${item.repo.name} for module ${item.moduleName}...`,
-          );
-          await resolver
-            .addRepo(
-              item.repo.name,
-              item.repo.url,
-              item.repo.branch || "default",
-            )
-            .catch(() => {});
-        }
-
-        const targetExists = await pathExists(targetPath);
-        if (!targetExists && (await pathExists(sourcePath))) {
-          await fs
-            .rm(targetPath, { recursive: true, force: true })
-            .catch(() => {});
-          await fs.symlink(sourcePath, targetPath, "dir");
-          restoredAny = true;
-          this.container.logger.info(
-            `[DownloaderUtility] Restored addon symlink for ${item.moduleName}`,
-          );
-        }
-      } catch (err) {
-        this.container.logger.warn(
-          `[DownloaderUtility] Failed to restore symlink for ${item.moduleName}:`,
-          err,
-        );
-      }
-    }
-
-    if (restoredAny) {
-      await this.container.moduleStore.discover(true);
-    }
-  }
-
-  public async installModule(
+  async installModule(
+    services: Container,
     repoName: string,
     moduleName: string,
     revision?: string,
   ): Promise<{ signatureWarning: string | null }> {
     const repo =
-      await this.container.db.downloader.readDownloaderRepo(repoName);
+      await services.db.downloader.readDownloaderRepo(repoName);
     if (!repo) {
       throw new Error(
         `Repository **${repoName}** has not been added. Use \`,repo add\` first.`,
@@ -168,7 +433,7 @@ export class DownloaderUtility extends Utility {
     }
 
     const existing =
-      await this.container.db.downloader.readInstalledDownloaderModule(
+      await services.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (existing) {
@@ -181,30 +446,31 @@ export class DownloaderUtility extends Utility {
         )
       : await resolver.installModule(repoName, moduleName);
     try {
-      this.container.logger.info("[DownloaderUtility] Discovering modules...");
-      await this.container.moduleStore.discover(true);
-      this.container.logger.info(
+      services.logger.info("[DownloaderUtility] Discovering modules...");
+      await services.moduleStore.discover(true);
+      services.logger.info(
         `[DownloaderUtility] Loading module ${moduleName}...`,
       );
-      await this.container.moduleStore.loadModule(moduleName);
-      this.container.logger.info("[DownloaderUtility] Syncing commands...");
-      await this.syncApplicationCommands();
-      await this.container.db.downloader.writeInstalledDownloaderModule(
+      await services.moduleStore.loadModule(moduleName, true);
+      services.logger.info("[DownloaderUtility] Syncing commands...");
+      await downloaderUtility.syncApplicationCommands(services);
+      await services.db.downloader.writeInstalledDownloaderModule(
         repo.id,
         moduleName,
         info.version,
         info.signedBy,
       );
       if (info.commit) {
-        await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+        await services.db.downloader.updateInstalledDownloaderModuleCommit(
           repo.id,
           moduleName,
           info.commit,
           info.signedBy,
         );
       }
+      await bustUpdateCheckCache(services);
     } catch (err: unknown) {
-      await this.container.moduleStore
+      await services.moduleStore
         .unload(moduleName)
         .catch(() => undefined);
       await fs
@@ -214,98 +480,27 @@ export class DownloaderUtility extends Utility {
     }
 
     return { signatureWarning: info.signatureWarning };
-  }
+  },
 
-  public async uninstallModule(moduleName: string) {
-    const installedCheck =
-      await this.container.db.downloader.readInstalledDownloaderModule(
-        moduleName,
-      );
-    if (!installedCheck) {
-      throw new Error(
-        `Module **${moduleName}** was not installed via the downloader.`,
-      );
-    }
-
-    try {
-      await this.container.moduleStore.unload(moduleName);
-    } catch (err: unknown) {
-      const msg = errorFrom(err).message;
-      if (!msg.includes("does not exist")) {
-        throw err;
-      }
-    }
-
-    const targetPath = path.join(AddonModulesRoot, moduleName);
-    const previousLink = await fs.readlink(targetPath).catch(() => null);
-    const previousSourcePath =
-      previousLink !== null
-        ? path.resolve(path.dirname(targetPath), previousLink)
-        : null;
-
-    await fs.rm(targetPath, { recursive: true, force: true }).catch((err) => {
-      this.container.logger.error(
-        `[DownloaderUtility] failed to remove symlink/directory at ${targetPath}:`,
-        err,
-      );
-    });
-
-    await this.container.db.downloader.deleteInstalledDownloaderModule(
-      installedCheck.repoId,
-      moduleName,
-    );
-
-    await resolver
-      .releasePinnedWorktreeIfUnused(previousSourcePath)
-      .catch((err: unknown) => {
-        this.container.logger.warn(
-          `[DownloaderUtility] Failed to release pinned worktree for ${moduleName}:`,
-          err,
-        );
-      });
-  }
-
-  public async addRepo(
-    name: string,
-    url: string,
-    branch: string,
-  ): Promise<{ sha: string | null; signatureWarning: string | null }> {
-    let sha: string | null;
-    let signedBy: string | null;
-    let signatureWarning: string | null;
-    try {
-      ({ sha, signedBy, signatureWarning } = await resolver.addRepo(name, url, branch));
-    } catch (err: unknown) {
-      if (err instanceof RepoAlreadyInstalledError) {
-        throw new Error(
-          `Repository **${name}** is already installed${err.sha ? ` at commit \`${err.sha}\`` : ""}. Use \`,repo update ${name}\` to pull and validate the latest changes.`,
-        );
-      }
-      throw err;
-    }
-    await this.container.db.downloader.writeDownloaderRepo(name, url, branch, sha, signedBy);
-    return { sha, signatureWarning };
-  }
-
-  public async updateRepo(name: string): Promise<RepoUpdateResult> {
-    const repo = await this.container.db.downloader.readDownloaderRepo(name);
+  async updateRepo(services: Container, name: string): Promise<RepoUpdateResult> {
+    const repo = await services.db.downloader.readDownloaderRepo(name);
     if (!repo) {
       throw new Error(
         `Repository **${name}** not found. Add it first using \`,repo add\`.`,
       );
     }
     const result = await resolver.updateRepo(repo.name, repo.url, repo.branch);
-    await this.container.db.downloader.updateDownloaderRepoCommit(
+    await services.db.downloader.updateDownloaderRepoCommit(
       repo.id,
       result.newSha,
       result.signedBy,
     );
     return result;
-  }
+  },
 
   /** Read-only check: fetches and compares the repo's local HEAD against its remote branch, never pulls. */
-  public async checkRepoUpdate(name: string): Promise<RepoUpdateCheck> {
-    const repo = await this.container.db.downloader.readDownloaderRepo(name);
+  async checkRepoUpdate(services: Container, name: string): Promise<RepoUpdateCheck> {
+    const repo = await services.db.downloader.readDownloaderRepo(name);
     if (!repo) {
       return { ok: false, reason: `Repository **${name}** was not found.` };
     }
@@ -317,24 +512,15 @@ export class DownloaderUtility extends Utility {
       return { ok: true, hasUpdate: true, changelog: "" };
     }
 
-    await execFileAsync("git", ["-C", repoPath, "fetch", "origin"]).catch(
-      (err: NodeJS.ErrnoException & { stderr?: string }) => {
-        this.container.logger.warn(
-          `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
-        );
-      },
-    );
-
     const branch = repo.branch || "default";
-    const targetRef = `origin/${branch === "default" ? "master" : branch}`;
 
     try {
-      const localHash = (
-        await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
-      ).stdout.trim();
-      const remoteHash = (
-        await execFileAsync("git", ["-C", repoPath, "rev-parse", targetRef])
-      ).stdout.trim();
+      const { localHash, remoteHash, targetRef } = await fetchRepoHashes(
+        services,
+        repo.name,
+        repoPath,
+        branch,
+      );
 
       if (localHash === remoteHash) {
         return { ok: true, hasUpdate: false };
@@ -353,17 +539,17 @@ export class DownloaderUtility extends Utility {
       const msg = err instanceof Error ? err.message : String(err);
       return { ok: false, reason: `Could not check **${name}** for updates: ${msg}` };
     }
-  }
+  },
 
-  public listRepos() {
-    return this.container.db.downloader.readAllDownloaderRepos();
-  }
+  listRepos(services: Container) {
+    return services.db.downloader.readAllDownloaderRepos();
+  },
 
-  public getModulesInRepo(repoName: string) {
+  getModulesInRepo(repoName: string) {
     return resolver.getModulesInRepo(repoName);
-  }
+  },
 
-  public async getRepoStatus(
+  async getRepoStatus(
     repoName: string,
   ): Promise<{ lastCommit: string | null; lastCommitTime: string | null }> {
     const repoPath = path.join(ModuleRoot, repoName);
@@ -380,124 +566,10 @@ export class DownloaderUtility extends Utility {
     } catch {
       return { lastCommit: null, lastCommitTime: null };
     }
-  }
+  },
 
-  /** Read-only check: fetches and compares hashes, never pulls. Shared by updateModule() and checkForUpdates(). */
-  private async checkForModuleUpdate(
-    moduleName: string,
-  ): Promise<ModuleUpdateCheck> {
-    const installed =
-      await this.container.db.downloader.readInstalledDownloaderModule(
-        moduleName,
-      );
-    if (!installed) {
-      return {
-        ok: false,
-        reason: `Module **${moduleName}** was not installed via the downloader.`,
-      };
-    }
-
-    const repo = await this.container.db.downloader.readDownloaderRepoById(
-      installed.repoId,
-    );
-    if (!repo) {
-      return {
-        ok: false,
-        reason: `Repository for module **${moduleName}** could not be found.`,
-      };
-    }
-
-    const repoPath = path.join(ModuleRoot, repo.name);
-    const branch = repo.branch || "default";
-
-    try {
-      await fs.access(repoPath);
-    } catch {
-      // Directory is missing entirely, not just stale - this is a repair
-      // clone, not a pull of new upstream commits, so it goes through
-      // addRepo() rather than updateRepo().
-      await this.addRepo(repo.name, repo.url, branch);
-    }
-
-    const fetchFailed = await execFileAsync("git", [
-      "-C",
-      repoPath,
-      "fetch",
-      "origin",
-    ])
-      .then(() => false)
-      .catch((err: NodeJS.ErrnoException & { stderr?: string }) => {
-        this.container.logger.warn(
-          `[DownloaderUtility] git fetch failed for ${repo.name}; update check uses stale refs: ${(err.stderr ?? err.message).trim()}`,
-        );
-        return true;
-      });
-
-    const localHash = (
-      await execFileAsync("git", ["-C", repoPath, "rev-parse", "HEAD"])
-    ).stdout.trim();
-
-    const remoteRefResult = await execFileAsync("git", [
-      "-C",
-      repoPath,
-      "rev-parse",
-      "--abbrev-ref",
-      "@{u}",
-    ]).catch(() => ({ stdout: "" }));
-    const remoteRef = remoteRefResult.stdout.trim();
-
-    const targetRef =
-      remoteRef && !remoteRef.includes("@{u}")
-        ? remoteRef
-        : `origin/${branch === "default" ? "master" : branch}`;
-
-    const { stdout: remoteOut } = await execFileAsync("git", [
-      "-C",
-      repoPath,
-      "rev-parse",
-      targetRef,
-    ]);
-    const remoteHash = remoteOut.trim();
-
-    const installedHash = installed.commit ?? null;
-    const upToDate =
-      installedHash !== null &&
-      installedHash === remoteHash &&
-      localHash === remoteHash;
-
-    if (upToDate) {
-      return { ok: true, hasUpdate: false };
-    }
-
-    if (fetchFailed && localHash === remoteHash) {
-      await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
-        repo.id,
-        moduleName,
-        remoteHash,
-      );
-      return { ok: true, hasUpdate: false };
-    }
-
-    const { stdout: logOut } = await execFileAsync("git", [
-      "-C",
-      repoPath,
-      "log",
-      "--oneline",
-      `HEAD..${targetRef}`,
-    ]).catch(() => ({ stdout: "" }));
-
-    return {
-      ok: true,
-      hasUpdate: true,
-      repoId: repo.id,
-      repoName: repo.name,
-      branch,
-      remoteHash,
-      changelog: logOut.trim(),
-    };
-  }
-
-  public async updateModule(
+  async updateModule(
+    services: Container,
     moduleName: string,
     revision?: string,
   ): Promise<{
@@ -508,7 +580,7 @@ export class DownloaderUtility extends Utility {
     signatureWarning?: string | null;
   }> {
     const installed =
-      await this.container.db.downloader.readInstalledDownloaderModule(
+      await services.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (!installed) {
@@ -520,7 +592,7 @@ export class DownloaderUtility extends Utility {
       return { updated: false, pinned: true };
     }
 
-    const repo = await this.container.db.downloader.readDownloaderRepoById(
+    const repo = await services.db.downloader.readDownloaderRepoById(
       installed.repoId,
     );
     if (!repo) {
@@ -535,12 +607,12 @@ export class DownloaderUtility extends Utility {
         resolver.installModule(repo.name, moduleName, revision),
       );
 
-      await this.container.moduleStore.discover(true);
-      await this.container.moduleStore.loadModule(moduleName);
-      await this.syncApplicationCommands();
+      await services.moduleStore.discover(true);
+      await services.moduleStore.loadModule(moduleName, true);
+      await downloaderUtility.syncApplicationCommands(services);
 
       if (info.commit) {
-        await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+        await services.db.downloader.updateInstalledDownloaderModuleCommit(
           repo.id,
           moduleName,
           info.commit,
@@ -548,13 +620,13 @@ export class DownloaderUtility extends Utility {
         );
       }
 
-      this.container.logger.info(
+      services.logger.info(
         `[DownloaderUtility] ${moduleName} checked out to ${revision} (${info.commit ?? "unknown"}) at ${repoPath}.`,
       );
       return { updated: true, needsRestart: true, signatureWarning: info.signatureWarning };
     }
 
-    const check = await this.checkForModuleUpdate(moduleName);
+    const check = await checkForModuleUpdate(services, moduleName);
     if (!check.ok) throw new Error(check.reason);
     if (!check.hasUpdate) return { updated: false };
 
@@ -575,29 +647,30 @@ export class DownloaderUtility extends Utility {
       await resolver.installModule(repoName, moduleName);
     });
 
-    await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+    await services.db.downloader.updateInstalledDownloaderModuleCommit(
       repoId,
       moduleName,
       remoteHash,
     );
 
-    this.container.logger.info(
+    services.logger.info(
       `[DownloaderUtility] ${moduleName} updated on disk; restart required to apply.`,
     );
     return { updated: true, changelog, needsRestart: true };
-  }
+  },
 
   /**
    * Checks out an already-installed module to a specific prior revision
    * against its existing clone - no re-clone, just a checkout + manifest
    * refresh, mirroring the tail end of {@linkcode updateModule}.
    */
-  public async rollbackModule(
+  async rollbackModule(
+    services: Container,
     moduleName: string,
     revision: string,
   ): Promise<{ commit: string | null; needsRestart: true; signatureWarning: string | null }> {
     const installed =
-      await this.container.db.downloader.readInstalledDownloaderModule(
+      await services.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (!installed) {
@@ -606,7 +679,7 @@ export class DownloaderUtility extends Utility {
       );
     }
 
-    const repo = await this.container.db.downloader.readDownloaderRepoById(
+    const repo = await services.db.downloader.readDownloaderRepoById(
       installed.repoId,
     );
     if (!repo) {
@@ -619,12 +692,12 @@ export class DownloaderUtility extends Utility {
       resolver.installModule(repo.name, moduleName, revision),
     );
 
-    await this.container.moduleStore.discover(true);
-    await this.container.moduleStore.loadModule(moduleName);
-    await this.syncApplicationCommands();
+    await services.moduleStore.discover(true);
+    await services.moduleStore.loadModule(moduleName, true);
+    await downloaderUtility.syncApplicationCommands(services);
 
     if (info.commit) {
-      await this.container.db.downloader.updateInstalledDownloaderModuleCommit(
+      await services.db.downloader.updateInstalledDownloaderModuleCommit(
         repo.id,
         moduleName,
         info.commit,
@@ -632,60 +705,61 @@ export class DownloaderUtility extends Utility {
       );
     }
 
-    this.container.logger.info(
+    services.logger.info(
       `[DownloaderUtility] Rolled back ${moduleName} to ${revision} (${info.commit ?? "unknown"}).`,
     );
     return { commit: info.commit, needsRestart: true, signatureWarning: info.signatureWarning };
-  }
+  },
 
-  /** Read-only sweep across every installed module; Redis-cached to avoid hammering git on repeated calls. */
-  public async checkForUpdates(): Promise<string[]> {
-    const cacheKey = RedisKeys.addonUpdateCheck();
-    const cached = await this.container.redis.get(cacheKey);
+  /** Read-only sweep across every installed module; Valkey-cached to avoid hammering git on repeated calls. */
+  async checkForUpdates(services: Container): Promise<string[]> {
+    const cacheKey = ValkeyKeys.addonUpdateCheck();
+    const cached = await services.valkey.get(cacheKey);
     if (cached) {
       try {
         return JSON.parse(cached) as string[];
       } catch {
-        this.container.logger.warn(
+        services.logger.warn(
           `[DownloaderUtility] Discarding corrupted update-check cache at ${cacheKey}.`,
         );
       }
     }
 
-    const installed = await this.getInstalledModules();
+    const installed = await getInstalledModules(services);
     const pending: string[] = [];
     for (const mod of installed) {
       try {
-        const check = await this.checkForModuleUpdate(mod.moduleName);
+        const check = await checkForModuleUpdate(services, mod.moduleName);
         if (check.ok && check.hasUpdate) pending.push(mod.moduleName);
       } catch (err: unknown) {
-        this.container.logger.warn(
+        services.logger.warn(
           `[DownloaderUtility] Update check failed for ${mod.moduleName}: ${String(err)}`,
         );
       }
     }
 
-    await this.container.redis.setex(
+    await services.valkey.setex(
       cacheKey,
-      RedisTTL.addonUpdateCheck,
+      ValkeyTTL.addonUpdateCheck,
       JSON.stringify(pending),
     );
     return pending;
-  }
+  },
 
-  public async getAutoUpdateConfig(): Promise<AutoUpdateConfig> {
-    const global = await this.container.db.global.getGlobalConfig();
+  async getAutoUpdateConfig(services: Container): Promise<AutoUpdateConfig> {
+    const global = await services.db.global.getGlobalConfig();
     return {
       enabled: global.autoUpdateEnabled,
       intervalMinutes: global.autoUpdateIntervalMinutes,
       lastCheckedAt: global.autoUpdateLastCheckedAt,
     };
-  }
+  },
 
-  public async setAutoUpdateConfig(
+  async setAutoUpdateConfig(
+    services: Container,
     patch: Partial<AutoUpdateConfig>,
   ): Promise<void> {
-    await this.container.db.global.updateGlobalConfig({
+    await services.db.global.updateGlobalConfig({
       ...(patch.enabled !== undefined && { autoUpdateEnabled: patch.enabled }),
       ...(patch.intervalMinutes !== undefined && {
         autoUpdateIntervalMinutes: patch.intervalMinutes,
@@ -694,15 +768,16 @@ export class DownloaderUtility extends Utility {
         autoUpdateLastCheckedAt: patch.lastCheckedAt,
       }),
     });
-  }
+  },
 
   /** Freezes (or unfreezes) an installed module against `,module update`/`updateall`. */
-  public async setModulePinned(
+  async setModulePinned(
+    services: Container,
     moduleName: string,
     pinned: boolean,
   ): Promise<void> {
     const installed =
-      await this.container.db.downloader.readInstalledDownloaderModule(
+      await services.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (!installed) {
@@ -710,28 +785,25 @@ export class DownloaderUtility extends Utility {
         `Module **${moduleName}** was not installed via the downloader.`,
       );
     }
-    await this.container.db.downloader.setInstalledDownloaderModulePinned(
+    await services.db.downloader.setInstalledDownloaderModulePinned(
       installed.repoId,
       moduleName,
       pinned,
     );
-  }
+  },
 
-  public getInstalledModules() {
-    return this.container.db.downloader.readAllInstalledDownloaderModules();
-  }
-
-  public getInstalledModulesDetailed() {
-    return this.container.db.downloader.readAllInstalledDownloaderModulesWithRepo();
-  }
+  getInstalledModulesDetailed(services: Container) {
+    return services.db.downloader.readAllInstalledDownloaderModulesWithRepo();
+  },
 
   /** Enables/disables an installed addon module live via ModuleStore - no restart. */
-  public async toggleModule(
+  async toggleModule(
+    services: Container,
     moduleName: string,
     enabled: boolean,
   ): Promise<void> {
     const installed =
-      await this.container.db.downloader.readInstalledDownloaderModule(
+      await services.db.downloader.readInstalledDownloaderModule(
         moduleName,
       );
     if (!installed) {
@@ -739,141 +811,40 @@ export class DownloaderUtility extends Utility {
         `Module **${moduleName}** was not installed via the downloader.`,
       );
     }
-    await this.container.moduleStore.setEnabled(
+    await services.moduleStore.setEnabled(
       moduleName,
       enabled,
       "toggled via addons panel",
     );
-    await this.syncApplicationCommands();
-  }
+    await downloaderUtility.syncApplicationCommands(services);
+  },
 
-  public async removeRepo(name: string) {
+  async removeRepo(services: Container, name: string) {
     const repo =
-      await this.container.db.downloader.readDownloaderRepoWithModules(name);
+      await services.db.downloader.readDownloaderRepoWithModules(name);
     if (!repo) {
       throw new Error(`Repository **${name}** not found.`);
     }
 
     for (const mod of repo.installedModules) {
       try {
-        await this.uninstallModule(mod.moduleName);
+        await uninstallModule(services, mod.moduleName);
       } catch (err: unknown) {
-        this.container.logger.warn(
+        services.logger.warn(
           `[DownloaderUtility] Failed to uninstall ${mod.moduleName} during repo removal:`,
           err,
         );
       }
     }
 
-    await this.container.db.downloader.deleteDownloaderRepo(name);
+    await services.db.downloader.deleteDownloaderRepo(name);
   }
+});
 
-  /**
-   * Re-publishes every loaded command's application-command payloads so a
-   * module installed or toggled at runtime appears in Discord without a
-   * restart.
-   *
-   * @remarks
-   *
-   * Sapphire only drives its own registration pass once, during the `ready`
-   * handshake, so this reads each piece's queued payloads straight off the
-   * private `apiCalls` field of its `ApplicationCommandRegistry` - see
-   * {@linkcode RegistryInternal} for why no public API can supply them - and
-   * bulk-overwrites the global and per-guild command sets from what it finds.
-   *
-   * Pieces that were loaded after the handshake have an empty queue, so their
-   * `registerApplicationCommands` is invoked first to fill it. When the private
-   * field is absent on every registry the sync is skipped with a warning
-   * instead of silently wiping the application's commands.
-   */
-  public async syncApplicationCommands() {
-    const { client } = this.container;
-    if (!client.application) {
-      this.container.logger.warn(
-        "[DownloaderUtility] client.application not ready; slash command sync skipped",
-      );
-      return;
-    }
-
-    const commandStore = this.container.stores.get("commands");
-
-    for (const command of commandStore.values()) {
-      if (typeof command.registerApplicationCommands !== "function") continue;
-      const registry = command.applicationCommandRegistry;
-      if (!readApiCalls(registry)?.length) {
-        try {
-          await command.registerApplicationCommands(registry);
-        } catch (err: unknown) {
-          this.container.logger.error(
-            `[DownloaderUtility] registerApplicationCommands failed for ${command.name}:`,
-            err,
-          );
-        }
-      }
-    }
-
-    const globalData: object[] = [];
-    const guildData = new Map<string, object[]>();
-    let registriesRead = 0;
-
-    for (const command of commandStore.values()) {
-      const apiCalls = readApiCalls(command.applicationCommandRegistry);
-      if (apiCalls === null) continue;
-      registriesRead += 1;
-      for (const call of apiCalls) {
-        if (call.registerOptions?.guildIds?.length) {
-          for (const guildId of call.registerOptions.guildIds) {
-            const arr = guildData.get(guildId) ?? [];
-            arr.push(call.builtData);
-            guildData.set(guildId, arr);
-          }
-        } else {
-          globalData.push(call.builtData);
-        }
-      }
-    }
-
-    if (registriesRead === 0 && commandStore.size > 0) {
-      this.container.logger.warn(
-        "[DownloaderUtility] ApplicationCommandRegistry no longer exposes `apiCalls`; slash command sync skipped",
-      );
-      return;
-    }
-
-    if (globalData.length) {
-      try {
-        await client.application.commands.set(
-          globalData as Parameters<typeof client.application.commands.set>[0],
-        );
-        this.container.logger.info(
-          `[DownloaderUtility] Synced ${globalData.length} global application commands.`,
-        );
-      } catch (err: unknown) {
-        this.container.logger.error(
-          `[DownloaderUtility] Failed to sync global application commands: ${String(err)}`,
-        );
-      }
-    }
-    for (const [guildId, data] of guildData) {
-      try {
-        await client.application.commands.set(
-          data as Parameters<typeof client.application.commands.set>[0],
-          guildId,
-        );
-        this.container.logger.info(
-          `[DownloaderUtility] Synced ${data.length} commands for guild ${guildId}.`,
-        );
-      } catch (err: unknown) {
-        this.container.logger.error(
-          `[DownloaderUtility] Failed to sync commands for guild ${guildId}: ${String(err)}`,
-        );
-      }
-    }
-  }
-}
+export type DownloaderUtility = typeof downloaderUtility;
 
 declare module "#lib/module-system/Utility.js" {
   interface Utilities {
-    downloader: DownloaderUtility;
+    downloader: typeof downloaderUtility;
   }
 }

@@ -1,86 +1,62 @@
-import { buildRestOptions } from "#lib/discord-rest.js";
-import { getScheduledTasksConnectionOptions } from "#lib/client/scheduled-tasks-queue.js";
+import { buildRestOptions } from "#lib/discord/options.js";
 import { envParseString, getBotToken } from "#lib/env.js";
-import { PinoSapphireLogger } from "#lib/logging/PinoSapphireLogger.js";
+import { container } from "#lib/services.js";
 import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import { SapphireClient } from "@sapphire/framework";
+import { Client } from "discord.js";
 import { Routes, type APIUser } from "discord-api-types/v10";
 import { installContainerServices } from "./container-services.js";
 
 export interface ApiContainerServices {
-  client: SapphireClient;
+  client: Client;
   ownedEventBus: OwnedEventBus;
 }
 
-/**
- * The `installContainerServices()` counterpart for a process that serves RPC
- * traffic only and never opens a Discord gateway connection.
- *
- * @remarks
- *
- * RPC handlers (`modules/*\/rpc.ts`, audited directly rather than assumed)
- * only ever reach `container.client.rest` and `container.client.user.id` —
- * never gateway-cached state (`.guilds.cache`, `.channels.cache`, ...); the
- * last holdout, `implement.ts`'s now-deleted `cachedGuild()`, was closed by
- * the API extraction checkpoint's Phase A6. So this builds a `SapphireClient`
- * and authenticates its REST manager, but deliberately never calls `login()` —
- * that method both loads every Sapphire piece *and* opens the websocket in
- * one call (`node_modules/@sapphire/framework` `SapphireClient#login`), and
- * a gateway connection is exactly what this process must not hold. The
- * piece-loading half is safe to run alone (nothing here ever executes a
- * gateway-triggered listener, since no gateway event will ever fire), so
- * it's replicated by hand below; only the trailing `super.login(token)` call
- * is skipped.
- *
- * A side effect of constructing a plain `SapphireClient` instead of
- * `LumiClient`: none of `LumiClient`'s own plugin registrations
- * (`@lumi/core/setup`'s scheduled-tasks import in particular) are active
- * unless this process imports them itself, which it does not. That's load-
- * bearing, not incidental — `@sapphire/plugin-scheduled-tasks` constructs a
- * live BullMQ `Queue` and `Worker` the moment a client carrying its `tasks`
- * option is constructed (`ScheduledTaskHandler`'s constructor, unconditional,
- * independent of `login()`), and this process must never run that worker
- * alongside the primary shard's.
- */
 export async function installApiContainerServices(): Promise<ApiContainerServices> {
-  const client = new SapphireClient({
+  const client = new Client({
     intents: [],
     rest: buildRestOptions(),
-    baseUserDirectory: null,
-    loadDefaultErrorListeners: false,
-    loadApplicationCommandRegistriesStatusListeners: false,
-    loadMessageCommandListeners: false,
-    logger: {
-      instance: new PinoSapphireLogger(envParseString("SERVICE_NAME", "lumi-api")),
-    },
-    // Required by `ClientOptions`'s type (a global augmentation from
-    // `@sapphire/plugin-scheduled-tasks`, present whether or not that
-    // package's `register` module was ever imported) but functionally
-    // inert here: `ScheduledTaskHandler` - the thing that actually reads
-    // this and opens a BullMQ `Queue`/`Worker` - is only constructed by
-    // that plugin's `preGenericsInitialization` hook, which `setup-api.ts`
-    // deliberately never registers. See that file's comment.
-    tasks: {
-      bull: {
-        connection: getScheduledTasksConnectionOptions(),
-      },
-    },
   });
 
-  const ownedEventBus = installContainerServices(client);
+  const ownedEventBus = installContainerServices(
+    client,
+    envParseString("SERVICE_NAME", "lumi-api"),
+  );
 
   client.rest.setToken(getBotToken());
   const me = (await client.rest.get(Routes.user())) as APIUser;
-  // `ClientUser`'s constructor is `protected` in discord.js's own typings -
-  // it's meant to be built only from a gateway READY payload. Every RPC call
-  // site that reads `container.client.user` today reads only `.id`
-  // (confirmed by grep across `modules/*/rpc.ts` and `lib/rpc/*.ts`), so a
-  // real `ClientUser` isn't worth fighting the protected constructor for;
-  // this stand-in is deliberately minimal and documented rather than cast
-  // through the protected boundary. Extend it if a handler ever needs more.
   client.user = { id: me.id } as NonNullable<typeof client.user>;
 
-  await Promise.all([...client.stores.values()].map((store) => store.loadAll()));
+  try {
+    const rawApp = (await client.rest.get(Routes.oauth2CurrentApplication())) as {
+      id: string;
+      owner?: { id: string };
+      team?: { id: string; members: Array<{ user: { id: string } }> };
+    };
+    client.application = Object.assign(
+      Object.create(client.application ?? {}),
+      {
+        id: rawApp.id,
+        owner: rawApp.team
+          ? {
+              id: rawApp.team.id,
+              members: new Set(rawApp.team.members.map((m) => m.user.id)),
+            }
+          : rawApp.owner
+            ? { id: rawApp.owner.id }
+            : null,
+      },
+    );
+  } catch (err: unknown) {
+    container.logger.warn("[Api] Failed to fetch application info for bot owner check:", err);
+  }
+
+  await container.moduleStore.discover();
+  for (const record of container.moduleStore.all()) {
+    if (!record.enabled) continue;
+    await container.moduleStore.loadModule(record.name).catch((err: unknown) => {
+      container.logger.error(`[Api] Module load failed: ${record.name}`, err);
+    });
+  }
 
   return { client, ownedEventBus };
 }

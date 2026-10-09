@@ -89,7 +89,7 @@ it's a documented, explicit "we checked" marker, not the same as omitting the fi
 export const KnownSubstores = [
   "commands",
   "listeners",
-  "interaction-handlers",
+  "interactions",
   "preconditions",
   "utilities",
   "scheduled-tasks",
@@ -99,8 +99,8 @@ export const KnownSubstores = [
 
 A module's own `manifest.json` `subStores` array is just whichever of these directories
 physically exist (`detectSubStores`, `manifest.ts:17-24`) — nothing declares them by hand.
-`mod`'s manifest lists `commands`, `listeners`, `interaction-handlers`, `scheduled-tasks`; it
-also has `actions/` and `lib/` directories that are *not* in `KnownSubstores` and are just
+`mod`'s manifest lists `commands`, `listeners`, `interactions`, `scheduled-tasks`; it
+also has `services/` and `data/` directories that are *not* in `KnownSubstores` and are just
 plain code the module imports internally, not a Sapphire store.
 
 Discovery is driven by `ModuleStore`, not Sapphire's default piece walker

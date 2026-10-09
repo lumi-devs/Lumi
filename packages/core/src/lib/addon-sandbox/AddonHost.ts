@@ -1,14 +1,17 @@
 import { fileURLToPath } from "node:url";
-import { container } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
-import { GuildMember } from "discord.js";
+import { container } from "#lib/services.js";
+import { Ms } from "@lumi/shared";
+import { ComponentType, GuildMember, MessageFlags } from "discord.js";
 import type { MessageComponentInteraction, ModalSubmitInteraction, User } from "discord.js";
 import type {
   AddonCapabilities,
   AddonCommandDescriptor,
+  AddonEventName,
   AddonInvocation,
   AddonRpcRequest,
   AddonRpcResponse,
+  ConfigField,
+  SerialisedAttachment,
   SerialisedMember,
   SerialisedUser,
   ChildToHost,
@@ -16,16 +19,16 @@ import type {
 } from "@lumi/contracts";
 import { makeRpcFailure, RpcFailureCodes } from "@lumi/contracts/rpc";
 import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
 import { callHostMethod, type HostCallScope } from "./host-methods.js";
-import { ensureSandboxRoot } from "./sandbox-root.js";
+import { ensureAddonLumiLink, ensureSandboxRoot } from "./sandbox-root.js";
 
 const ChildEntry = fileURLToPath(new URL("../../runtime/addon-child.ts", import.meta.url));
 
 const ReadyTimeoutMs = 15_000;
 const InvocationTimeoutMs = 30_000;
-const CrashLoopWindowMs = Time.Minute;
+const CrashLoopWindowMs = Ms.Minute;
 
 // Allowlist, not a denylist: a denylist silently leaks whatever secret is
 // added to .env next.
@@ -65,6 +68,18 @@ function serialiseUser(user: User): SerialisedUser {
   };
 }
 
+function serialisePrimaryGuild(
+  user: { primaryGuild?: { identityGuildId?: string | null; identityEnabled?: boolean | null; tag?: string | null } | null } | null,
+): SerialisedMember["primaryGuild"] {
+  const primary = user?.primaryGuild;
+  if (!primary) return null;
+  return {
+    identityGuildId: primary.identityGuildId ?? null,
+    identityEnabled: primary.identityEnabled ?? null,
+    tag: primary.tag ?? null,
+  };
+}
+
 function serialiseMember(member: GuildMember | null): SerialisedMember | null {
   if (!member) return null;
   return {
@@ -73,15 +88,37 @@ function serialiseMember(member: GuildMember | null): SerialisedMember | null {
     roles: [...member.roles.cache.keys()],
     joinedTimestamp: member.joinedTimestamp,
     permissions: member.permissions.bitfield.toString(),
+    isOwner: member.guild.ownerId === member.id,
+    primaryGuild: serialisePrimaryGuild(member.user),
   };
 }
 
 function serialiseModalFields(interaction: ModalSubmitInteraction): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const [customId, field] of interaction.fields.fields) {
+    if (field.type !== ComponentType.TextInput) continue;
     if ("value" in field && typeof field.value === "string") fields[customId] = field.value;
   }
   return fields;
+}
+
+function serialiseModalAttachments(
+  interaction: ModalSubmitInteraction,
+): Record<string, SerialisedAttachment[]> {
+  const out: Record<string, SerialisedAttachment[]> = {};
+  for (const [customId, field] of interaction.fields.fields) {
+    if (field.type !== ComponentType.FileUpload) continue;
+    const files = interaction.fields.getUploadedFiles(customId)?.values() ?? [];
+    const list = [...files].map((a) => ({
+      id: a.id,
+      filename: a.name,
+      url: a.url,
+      size: a.size,
+      contentType: a.contentType,
+    }));
+    if (list.length > 0) out[customId] = list;
+  }
+  return out;
 }
 
 interface PendingInvocation {
@@ -96,10 +133,13 @@ class AddonProcess {
   commands: AddonCommandDescriptor[] = [];
   interactionPrefixes: string[] = [];
   tasks: string[] = [];
+  events: AddonEventName[] = [];
+  configFields: ConfigField[] = [];
 
   #proc: Bun.Subprocess;
   #pending = new Map<string, PendingInvocation>();
   #ready: Promise<AddonCommandDescriptor[]>;
+  #reportedReady = false;
   #resolveReady!: (commands: AddonCommandDescriptor[]) => void;
   #rejectReady!: (err: Error) => void;
   #seq = 0;
@@ -162,9 +202,12 @@ class AddonProcess {
   async #onMessage(raw: ChildToHost): Promise<void> {
     switch (raw.type) {
       case "ready":
+        this.#reportedReady = true;
         this.commands = raw.commands;
         this.interactionPrefixes = ownPrefixes(this.record.name, raw.interactionPrefixes);
         this.tasks = raw.tasks;
+        this.events = raw.events ?? [];
+        this.configFields = raw.configFields ?? [];
         this.#resolveReady(raw.commands);
         return;
       case "load-failed":
@@ -232,7 +275,17 @@ class AddonProcess {
   }
 
   #send(message: HostToChild): void {
-    if (this.#proc.exitCode === null) this.#proc.send(message);
+    if (this.#proc.exitCode !== null) return;
+    try {
+      this.#proc.send(message);
+    } catch {
+      // Lost a race with process exit; #onExit rejects the pending call.
+    }
+  }
+
+  /** Whether the child reported ready at least once. */
+  wasReady(): boolean {
+    return this.#reportedReady;
   }
 
   kill(): void {
@@ -252,6 +305,7 @@ export class AddonHost {
   async start(record: ModuleRecord): Promise<AddonCommandDescriptor[]> {
     this.#rootReady ??= ensureSandboxRoot();
     await this.#rootReady;
+    await ensureAddonLumiLink(record.dir);
 
     this.stop(record.name);
     const proc = new AddonProcess(record, (p, code) => this.#onExit(p, code));
@@ -290,6 +344,10 @@ export class AddonHost {
     return this.#processes.get(name)?.commands ?? [];
   }
 
+  configFieldsFor(name: string): ConfigField[] {
+    return this.#processes.get(name)?.configFields ?? [];
+  }
+
   invokeCommand(name: string, piece: string, ctx: CommandContext): Promise<void> {
     const proc = this.#require(name);
     return proc.invoke(
@@ -303,6 +361,7 @@ export class AddonHost {
         subcommand: ctx.isSlash ? ctx.interaction.options.getSubcommand(false) : null,
         user: serialiseUser(ctx.user),
         member: serialiseMember(ctx.member),
+        repliedToId: ctx.isSlash ? null : (ctx.message.reference?.messageId ?? null),
       },
       { ctx, guildId: ctx.guildId },
     );
@@ -317,11 +376,22 @@ export class AddonHost {
     return null;
   }
 
-  invokeInteraction(
+  async invokeInteraction(
     name: string,
     interaction: MessageComponentInteraction | ModalSubmitInteraction,
   ): Promise<void> {
     const proc = this.#require(name);
+    if (interaction.isModalSubmit() && !interaction.deferred && !interaction.replied) {
+      try {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      } catch (err) {
+        container.logger.warn(
+          `[addon:${name}] modal ack failed (age ${Date.now() - interaction.createdTimestamp}ms), dropping invocation:`,
+          err,
+        );
+        return;
+      }
+    }
     return proc.invoke(
       {
         kind: "interaction",
@@ -336,11 +406,11 @@ export class AddonHost {
         ),
         values: interaction.isStringSelectMenu() ? interaction.values : [],
         fields: interaction.isModalSubmit() ? serialiseModalFields(interaction) : {},
+        attachments: interaction.isModalSubmit() ? serialiseModalAttachments(interaction) : {},
       },
       { interaction, guildId: interaction.guildId },
     );
   }
-
   fireTask(name: string, task: string, payload: Record<string, unknown>): Promise<void> {
     const proc = this.#require(name);
     const guildId = typeof payload.guildId === "string" ? payload.guildId : null;
@@ -357,6 +427,27 @@ export class AddonHost {
     );
   }
 
+  emitEvent(event: AddonEventName, guildId: string | null, data: Record<string, unknown>): void {
+    for (const [name, proc] of this.#processes) {
+      if (!proc.events.includes(event)) continue;
+      proc
+        .invoke(
+          {
+            kind: "event",
+            invocationId: proc.nextInvocationId(),
+            piece: event,
+            guildId,
+            event,
+            data,
+          },
+          { guildId: guildId ?? undefined },
+        )
+        .catch((err: unknown) =>
+          container.logger.warn(`[addon:${name}] event "${event}" failed:`, err),
+        );
+    }
+  }
+
   #require(name: string): AddonProcess {
     const proc = this.#processes.get(name);
     if (!proc) throw new Error(`Addon "${name}" is not running`);
@@ -369,12 +460,17 @@ export class AddonHost {
     if (this.#processes.get(name) !== proc) return;
     this.#processes.delete(name);
 
+    if (!proc.wasReady()) {
+      container.logger.error(`[AddonHost] ${name} died during startup (exit ${code}); not respawning`);
+      return;
+    }
+
     const now = Date.now();
     const previous = this.#lastCrash.get(name) ?? 0;
     this.#lastCrash.set(name, now);
 
     if (now - previous < CrashLoopWindowMs) {
-      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Time.Second}s (exit ${code})`);
+      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Ms.Second}s (exit ${code})`);
       container.logger.error(`[AddonHost] ${name} crash-looping; leaving it failed`);
       return;
     }

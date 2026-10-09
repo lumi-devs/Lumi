@@ -1,20 +1,20 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { Role } from "discord.js";
 import { clearStaleConfigRefs } from "../services/config-cleanup.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.GuildRoleDelete })
-export class RoleDeleteListener extends Listener<
-  typeof Events.GuildRoleDelete
-> {
-  public async run(role: Role): Promise<void> {
+export const roleDeleteListener = defineListener({
+  name: "roleDeleteListener",
+  event: Events.GuildRoleDelete,
+  async execute(services: Container, role: Role): Promise<void> {
     try {
-      await clearStaleConfigRefs(role.guild.id, role.id, "role");
+      await clearStaleConfigRefs(services, role.guild.id, role.id, "role");
     } catch (err: unknown) {
-      this.container.logger.warn(
+      services.logger.warn(
         `[ConfigCleanup] Role cleanup for ${role.id} failed:`,
         err,
       );
     }
-  }
-}
+  },
+});

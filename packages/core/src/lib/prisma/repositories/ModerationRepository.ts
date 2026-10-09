@@ -1,5 +1,5 @@
 import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { Repository } from "#lib/prisma/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,
@@ -157,8 +157,8 @@ export class ModerationRepository extends Repository {
    */
   public isVoiceMuted(guildId: string, userId: string): Promise<boolean> {
     return this.getOrSet(
-      RedisKeys.voiceMuteState(guildId, userId),
-      RedisTTL.voiceMute,
+      ValkeyKeys.voiceMuteState(guildId, userId),
+      ValkeyTTL.voiceMute,
       () =>
         this.prisma.moderationCase
           .count({

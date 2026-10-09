@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import type { Guild, GuildMember, User } from "discord.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
 
@@ -26,10 +26,10 @@ export function parseSnowflakeList(raw: string): string[] {
 const FetchConcurrency = 5;
 
 /** Resolves a batch of user IDs in parallel, silently dropping any that don't resolve. */
-export async function resolveUsers(ids: string[]): Promise<User[]> {
+export async function resolveUsers(services: Container, ids: string[]): Promise<User[]> {
   const users: User[] = [];
   await mapWithConcurrency(ids, FetchConcurrency, async (id) => {
-    const user = await container.client.users.fetch(id).catch(() => null);
+    const user = await services.client.users.fetch(id).catch(() => null);
     if (user) users.push(user);
   });
   return users;

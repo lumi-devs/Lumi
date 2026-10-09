@@ -4,7 +4,7 @@ import {
   heatAction,
   secondsUntilCool,
   
-} from "#modules/filter/services/heat.js";
+} from "@lumi/application/services/filter/heat.js";
 
 const config = {
   enabled: true,

@@ -1,5 +1,5 @@
 import { Repository } from "./Repository.js";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import type { Global } from "@prisma/client";
 
 export interface UpdateGlobalInput {
@@ -19,8 +19,8 @@ export interface UpdateGlobalInput {
 export class GlobalRepository extends Repository {
   /** Get global bot configuration (id = 1), using cache-aside with fallback creation. */
   public async getGlobalConfig(): Promise<Global> {
-    const key = RedisKeys.globalConfig();
-    return this.getOrSet(key, RedisTTL.globalConfig, async () => {
+    const key = ValkeyKeys.globalConfig();
+    return this.getOrSet(key, ValkeyTTL.globalConfig, async () => {
       let config = await this.prisma.global.findUnique({ where: { id: 1 } });
       if (!config) {
         config = await this.prisma.global.create({
@@ -33,7 +33,7 @@ export class GlobalRepository extends Repository {
 
   /** Update global bot configuration and invalidate cache. */
   public async updateGlobalConfig(input: UpdateGlobalInput): Promise<Global> {
-    const key = RedisKeys.globalConfig();
+    const key = ValkeyKeys.globalConfig();
     const updated = await this.prisma.global.upsert({
       where: { id: 1 },
       create: { id: 1, ...input },
@@ -43,7 +43,6 @@ export class GlobalRepository extends Repository {
     return updated;
   }
 
-  /** Set maintenance mode status and optional message. */
   public async setMaintenanceMode(
     enabled: boolean,
     message?: string | null,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { container } from "@sapphire/framework";
-import * as clusterSafe from "#lib/database/cluster-safe.js";
-import { ProxyModule } from "./proxy-module.js";
+import { container } from "#lib/services.js";
+import * as clusterSafe from "@lumi/infrastructure/database";
+import { createProxyModule } from "./proxy-module.js";
 import { DefaultAddonCapabilities } from "@lumi/contracts";
 import { childEnv, ownPrefixes } from "./AddonHost.js";
 import { callHostMethod } from "./host-methods.js";
@@ -18,7 +18,7 @@ describe("addon child environment", () => {
     const secrets = {
       BOT_TOKEN: "token",
       DATABASE_URL: "postgres://user:pw@host/db",
-      REDIS_URL: "redis://host",
+      VALKEY_URL: "valkeys://host",
       RPC_INTERNAL_TOKEN: "internal",
       AUTH_SECRET: "secret",
     };
@@ -54,7 +54,7 @@ describe("capability gate", () => {
     expect(isMethodAllowed("ctx.reply", caps)).toBe(true);
     expect(isMethodAllowed("kv.set", caps)).toBe(true);
     expect(isMethodAllowed("discord.channels.send", caps)).toBe(false);
-    expect(isMethodAllowed("redis.sadd", caps)).toBe(false);
+    expect(isMethodAllowed("valkey.sadd", caps)).toBe(false);
     expect(isMethodAllowed("schedule.add", caps)).toBe(false);
   });
 
@@ -66,10 +66,10 @@ describe("capability gate", () => {
   });
 
   it("grants exactly what the manifest declares, and nothing adjacent", () => {
-    const caps = parseCapabilities({ discord: ["sendMessage"], redis: true });
+    const caps = parseCapabilities({ discord: ["sendMessage"], valkey: true });
     expect(isMethodAllowed("discord.channels.send", caps)).toBe(true);
     expect(isMethodAllowed("discord.messages.edit", caps)).toBe(false);
-    expect(isMethodAllowed("redis.smembers", caps)).toBe(true);
+    expect(isMethodAllowed("valkey.smembers", caps)).toBe(true);
     expect(isMethodAllowed("schedule.add", caps)).toBe(false);
   });
 
@@ -97,13 +97,12 @@ describe("addon GDPR erasure", () => {
 
   function installHost() {
     (container as any).db = { guildKV: kv };
-    (container as any).redis = { pipeline: () => pipeline, scan: vi.fn() };
+    (container as any).valkey = { pipeline: () => pipeline, scan: vi.fn() };
     (container as any).logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
   }
 
-  function proxyFor(name: string): ProxyModule {
-    const store = { name: "modules" } as never;
-    return new ProxyModule({ name, path: "/x", root: "/x", store }, { name });
+  function proxyFor(name: string) {
+    return createProxyModule(name, "/x", { name } as any);
   }
 
   beforeEach(() => {
@@ -117,7 +116,7 @@ describe("addon GDPR erasure", () => {
       "lumi:addon:giveaway:g2:entries",
     ]);
 
-    await proxyFor("giveaway").deleteUserData("user-1");
+    await proxyFor("giveaway").deleteUserData?.(container, "user-1");
 
     expect(kv.deleteModuleDataForTarget).toHaveBeenCalledWith("giveaway", "user-1");
     expect(pipeline.srem).toHaveBeenCalledWith("lumi:addon:giveaway:g1:entries", "user-1");
@@ -127,7 +126,7 @@ describe("addon GDPR erasure", () => {
   it("only ever sweeps the calling addon's own namespaces", async () => {
     const scan = vi.spyOn(clusterSafe, "scanKeysSafe").mockResolvedValue([]);
 
-    await proxyFor("tag-manager").deleteUserData("user-1");
+    await proxyFor("tag-manager").deleteUserData?.(container, "user-1");
 
     expect(scan).toHaveBeenCalledWith(expect.anything(), "lumi:addon:tag-manager:*");
     expect(kv.deleteModuleDataForTarget).toHaveBeenCalledWith("tag-manager", "user-1");
@@ -135,10 +134,10 @@ describe("addon GDPR erasure", () => {
 
   it("omits an addon from the export when it holds nothing for the user", async () => {
     vi.spyOn(clusterSafe, "scanKeysSafe").mockResolvedValue([]);
-    expect(await proxyFor("tag-manager").exportUserData("user-1")).toBeNull();
+    expect(await proxyFor("tag-manager").exportUserData?.(container, "user-1")).toBeNull();
 
     kv.listModuleDataForTarget.mockResolvedValueOnce([{ guildId: "g", key: "k", value: 1 }]);
-    expect(await proxyFor("tag-manager").exportUserData("user-1")).toEqual({
+    expect(await proxyFor("tag-manager").exportUserData?.(container, "user-1")).toEqual({
       moduleData: [{ guildId: "g", key: "k", value: 1 }],
     });
   });

@@ -2,7 +2,7 @@ import { Queue } from "bullmq";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/client/scheduled-tasks-queue.js";
+} from "#lib/scheduler/queue.js";
 import { runCheck } from "#lib/doctor/util.js";
 import type { DoctorCheckResult } from "#lib/doctor/types.js";
 
@@ -21,7 +21,7 @@ export interface QueueHealthCheckDeps {
   /**
    * Override for tests; defaults to opening a BullMQ `Queue` against the
    * same name/connection every scheduled-tasks producer in the fleet uses
-   * (`#lib/client/scheduled-tasks-queue.js`), reading its job counts, and
+   * (`#lib/scheduler/queue.js`), reading its job counts, and
    * closing it again.
    */
   getJobCounts?: () => Promise<QueueJobCounts>;
@@ -59,7 +59,7 @@ export async function checkQueueHealth(
         name: QueueHealthCheckName,
         status: "fail",
         detail: `Could not read "${SCHEDULED_TASKS_QUEUE_NAME}" queue counts: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Check Redis is reachable and REDIS_TASK_DB matches the scheduler's.",
+        hint: "Check Valkey is reachable and VALKEY_TASK_DB matches the scheduler's.",
       };
     }
 

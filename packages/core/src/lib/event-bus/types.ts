@@ -1,9 +1,9 @@
-// Bus interface - Redis Streams event bus abstraction.
-// Semantics target Redis Streams' consumer groups: at-least-once delivery,
+// Bus interface - Valkey Streams event bus abstraction.
+// Semantics target Valkey Streams' consumer groups: at-least-once delivery,
 // per-consumer pending list, explicit ack.
 
 export interface BusMessage<T = unknown> {
-  /** Unique message id (Redis stream id, e.g. `1718550000000-0`). */
+  /** Unique message id (Valkey stream id, e.g. `1718550000000-0`). */
   id: string;
   /** The decoded payload as published. */
   body: T;
@@ -58,7 +58,7 @@ export interface EventBus {
   /**
    * Drop a consumer group and its pending list. Only for groups that are
    * ephemeral by construction - one per replica, recreated at `$` on the next
-   * boot - which would otherwise accumulate in Redis forever, one dead group
+   * boot - which would otherwise accumulate in Valkey forever, one dead group
    * per restart. Never call it for a shared pool group: the pending entries of
    * every consumer in it go with it.
    */

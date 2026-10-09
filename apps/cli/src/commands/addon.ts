@@ -3,8 +3,8 @@ import fs, { promises as fsp } from "node:fs";
 import { parseArgs } from "node:util";
 import type { AddonInvocation } from "@lumi/contracts";
 import { FakeAddonHost } from "@lumi/core/addon-test-harness";
+import { runValidateAddon } from "@lumi/core/validate-addon";
 import { CliExitError, runCreateAddon } from "../../../../scripts/create-addon.js";
-import { runValidateAddon } from "../../../../packages/core/scripts/validate-addon.js";
 
 export const help = `Usage: lumi addon <create|validate|test|dev> [args...]
 
@@ -155,6 +155,7 @@ async function runAddonTest(argv: string[]): Promise<number> {
         channelId: "test-channel",
         isSlash: true,
         subcommand: null,
+        repliedToId: null,
         user: { id: "1", username: "tester", displayName: "Tester", bot: false, avatarUrl: null },
         member: null,
       };

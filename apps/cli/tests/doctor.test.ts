@@ -35,10 +35,10 @@ describe("lumi doctor", () => {
   it("prints the report and exits 0 when nothing fails", async () => {
     results = [
       { name: "postgres", status: "ok", detail: "" },
-      { name: "redis", status: "warn", detail: "old" },
+      { name: "valkey", status: "warn", detail: "old" },
     ];
     expect(await runCli(["doctor"])).toBe(0);
-    expect(logs.join("\n")).toBe("ok postgres\nwarn redis");
+    expect(logs.join("\n")).toBe("ok postgres\nwarn valkey");
   });
 
   it("exits 1 when a check fails", async () => {
@@ -47,7 +47,7 @@ describe("lumi doctor", () => {
   });
 
   it("emits JSON with --json", async () => {
-    results = [{ name: "redis", status: "ok", detail: "" }];
+    results = [{ name: "valkey", status: "ok", detail: "" }];
     expect(await runCli(["doctor", "--json"])).toBe(0);
     expect(JSON.parse(logs.join("\n"))).toEqual(results);
   });

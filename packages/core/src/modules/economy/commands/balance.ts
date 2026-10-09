@@ -1,37 +1,34 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
-import { BankService } from "../services/BankService.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
+import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
-import { reportEconomyError } from "../services/respond.js";
+import { reportEconomyError } from "@lumi/application/services/economy/respond.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const balanceDef: CommandDef = {
   name: "balance",
-  description: "Show wallet and bank balances.",
-  preconditions: ["GuildOnly", "ModuleEnabled"],
   module: "economy",
+  description: "Show wallet and bank balances.",
+  guildOnly: true,
   prefixEnabled: true,
-  cooldownLimit: 3,
-  cooldownDelay: 5000,
-})
-export default class BalanceCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addUserOption((opt) =>
-          opt
-            .setName("user")
-            .setDescription("Whose balance to show. Defaults to you.")
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  cooldownMs: 5000,
+  build: () => {
+    const builder = new SlashCommandBuilder().setName("balance");
+    return (
+    builder
+            .setName("balance")
+            .setDescription("Show wallet and bank balances.")
+            .addUserOption((opt) =>
+              opt
+                .setName("user")
+                .setDescription("Whose balance to show. Defaults to you.")
+                .setRequired(false),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(guildId);
+    const config = await getEconomyConfig(ctx.services, guildId);
     const target = (await ctx.getUser("user")) ?? ctx.user;
     try {
       const balance = await new BankService().getBalance(
@@ -52,4 +49,4 @@ export default class BalanceCommand extends BaseCommand {
       await reportEconomyError(ctx, err);
     }
   }
-}
+};

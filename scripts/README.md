@@ -3,7 +3,7 @@
 This directory contains CLI tools, build-time code generators, integration testing suites, database seeders, and operational scripts supporting the Lumi monorepo and addon ecosystem.
 
 > [!NOTE]
-> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Redis) running.
+> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Valkey) running.
 
 ---
 
@@ -17,7 +17,7 @@ This directory contains CLI tools, build-time code generators, integration testi
 | `create-addon.ts` | `bun run addon:create <name>` | Scaffolds a new addon/module directory from a minimal template | Offline CLI |
 | `seed.ts` | `bun run db:seed` | Populates local PostgreSQL database with QA test guilds & config | PostgreSQL |
 | `benchmark.ts` | `bun run bench` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
-| `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
+| `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Valkey Streams |
 
 ---
 
@@ -31,9 +31,9 @@ Interactive onboarding wizard for a fresh checkout. Bash, not Bun/TS, since it r
 
 #### Overview & Mechanics
 
-1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Redis credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
+1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Valkey credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
 2. Verifies the entered bot token with a live `GET https://discord.com/api/v10/users/@me` request (`Authorization: Bot <token>`) and prints the resolved bot username on success. A failed/unreachable check is a warning, not a hard stop - setup still completes so you can fix `.env` by hand.
-3. Optionally runs `docker compose up -d postgres pgbouncer redis` if Docker is available.
+3. Optionally runs `docker compose up -d postgres pgbouncer valkey` if Docker is available.
 
 #### Usage Examples
 
@@ -84,7 +84,7 @@ A structural validation utility used during addon development and CI pipelines t
 
 * **Manifest Integrity**: Asserts presence and valid JSON formatting of `info.json`.
 * **Module Definition**: Verifies that `index.ts` exports a valid `@DefineModule` decorator definition.
-* **Directory Conventions**: Ensures all Sapphire Scheduled Tasks are placed strictly inside a `scheduled-tasks/` subdirectory.
+* **Directory Conventions**: Ensures all scheduled tasks are placed strictly inside a `scheduled-tasks/` subdirectory.
 * **Architectural Boundaries**: Checks for forbidden cross-module relative imports and disallowed global monkey-patching patterns.
 * **Memory-leak heuristics** *(warnings, not errors)*: flags `setInterval`/`setTimeout` handles that are never stored or never passed to `clearInterval`/`clearTimeout`, `.on(`/`.addListener(` registrations with no `onUnload`/`dispose`/`.off(`/`.removeListener(` anywhere in the same file, and module-level `let`/array/`Map`/`Set` state that's pushed/set/added to without any visible bound or eviction. These are best-effort static checks (regex-level, not a real parser) meant to prompt a second look, not a verdict - see `packages/core/src/lib/downloader/validate.ts`.
 
@@ -152,23 +152,23 @@ bun run db:seed
 
 **Command:** `bun run verify:resilience`
 
-A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Redis Streams**.
+A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Valkey Streams**.
 
 #### Test Scenarios
 
 | Backend | Scenario Name | Assertion / Target |
 | :--- | :--- | :--- |
-| **Redis Streams** | Basic publish & consume round-trip | Verified message delivery and payload integrity |
-| **Redis Streams** | Sequential ordering under queue load | Strict FIFO sequence preservation across 10+ messages |
-| **Redis Streams** | Consumer group isolation & fanout | Independent delivery across `GROUP_ALPHA` and `GROUP_BETA` |
-| **Redis Streams** | High-throughput burst load | 100 parallel message dispatches with >=90% delivery assertion |
-| **Redis Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
-| **Redis Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
+| **Valkey Streams** | Basic publish & consume round-trip | Verified message delivery and payload integrity |
+| **Valkey Streams** | Sequential ordering under queue load | Strict FIFO sequence preservation across 10+ messages |
+| **Valkey Streams** | Consumer group isolation & fanout | Independent delivery across `GROUP_ALPHA` and `GROUP_BETA` |
+| **Valkey Streams** | High-throughput burst load | 100 parallel message dispatches with >=90% delivery assertion |
+| **Valkey Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
+| **Valkey Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
 
 #### Usage Examples
 
 ```bash
-# Run resilience verification suite against local Redis
+# Run resilience verification suite against local Valkey
 bun run verify:resilience
 ```
 

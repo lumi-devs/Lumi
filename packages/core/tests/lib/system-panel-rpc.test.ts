@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
@@ -70,15 +70,15 @@ describe("system panel RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
 
     const db = {} as any;
-    db.audit = new AuditRepository(prisma as any, redis as any, container.logger, db);
-    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
+    db.audit = new AuditRepository(prisma as any, valkey as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();
@@ -246,10 +246,8 @@ describe("system panel RPC handlers", () => {
   describe("system.module.toggle", () => {
     it("calls moduleStore.setEnabled when available", async () => {
       const setEnabledSpy = vi.fn().mockResolvedValue(undefined);
-      (container as any).stores = {
-        get: vi.fn().mockReturnValue({
-          setEnabled: setEnabledSpy,
-        }),
+      (container as any).moduleStore = {
+        setEnabled: setEnabledSpy,
       };
 
       const res = (await call("system.module.toggle", {
@@ -263,9 +261,7 @@ describe("system panel RPC handlers", () => {
     });
 
     it("throws when moduleStore is missing", async () => {
-      (container as any).stores = {
-        get: vi.fn().mockReturnValue(null),
-      };
+      delete (container as any).moduleStore;
 
       await expect(
         call("system.module.toggle", {

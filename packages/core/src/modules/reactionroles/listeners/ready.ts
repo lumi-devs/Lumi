@@ -1,22 +1,21 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
-import { reactionRoleRegistry } from "../services/registry.js";
+import { reactionRoleRegistry } from "@lumi/application/services/reactionroles/registry.js";
 
-@ApplyOptions<Listener.Options>({
+const reactionrolesReady = defineListener({
   name: "reactionrolesReady",
   event: Events.ClientReady,
   once: true,
-})
-export default class ReactionRolesReadyListener extends Listener<
-  typeof Events.ClientReady
-> {
-  public override run(_client: Client<true>): void {
+  execute(_services: Container, _client: Client<true>): void {
     try {
       reactionRoleRegistry.wire();
     } catch (err: unknown) {
       logError("ReactionRoles: registry wire failed", err);
     }
-  }
-}
+  },
+});
+
+export default reactionrolesReady;

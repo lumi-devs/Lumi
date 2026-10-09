@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
@@ -33,6 +33,7 @@ export const accountRpcHandlers = implementRpc(accountRpc, {
 
   "global.gdpr.delete": async ({ input }) => {
     const { failedModules } = await executeGdprDeletion(
+      container,
       input.userId,
       input.requester,
     );
@@ -50,7 +51,7 @@ export const accountRpcHandlers = implementRpc(accountRpc, {
         "Not authorized to export this user's data.",
       );
     }
-    return { success: true, data: await executeGdprExport(input.userId) };
+    return { success: true, data: await executeGdprExport(container, input.userId) };
   },
 
   "global.gdpr.export.start": async ({ actorId, input }) => {
@@ -60,7 +61,7 @@ export const accountRpcHandlers = implementRpc(accountRpc, {
         "Not authorized to export this user's data.",
       );
     }
-    const jobId = await startGdprExportJob(input.userId, actorId);
+    const jobId = await startGdprExportJob(container, input.userId, actorId);
     return { jobId };
   },
 

@@ -7,9 +7,9 @@ import {
   screenRegexRules,
   findBlockedInvite,
   findBlockedLink,
-  MaxRegexLength,
   type RuleConfig,
-} from "#modules/filter/services/rules.js";
+} from "@lumi/application/services/filter/rules.js";
+import { MaxRegexLength } from "#lib/regex-worker/validate.js";
 
 const baseConfig: RuleConfig = {
   terms: [],

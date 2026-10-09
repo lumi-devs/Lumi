@@ -3,8 +3,8 @@
 // `/readyz` (readiness) is 200 only when every registered probe passes; k8s gates
 // on it, so a failing probe pulls the replica out of the pool without killing it.
 //
-// Each app registers the probes it needs: worker - postgres, redis, Discord;
-// scheduler - postgres, redis, BullMQ, leader-lock (if enabled); dashboard - rpc.
+// Each app registers the probes it needs: worker - postgres, valkey, Discord;
+// scheduler - postgres, valkey, BullMQ, leader-lock (if enabled); dashboard - rpc.
 
 export type ProbeStatus = "ok" | "fail" | "skip";
 
@@ -39,7 +39,6 @@ export function isDraining(): boolean {
   return draining;
 }
 
-/** Register (or replace) a readiness probe. */
 export function registerReadinessProbe(name: string, fn: ProbeFn): void {
   probes.set(name, { name, fn });
 }
@@ -62,10 +61,15 @@ async function runOne(probe: Probe): Promise<ProbeResult> {
       );
       timer.unref?.();
     });
-    const result = await Promise.race<ProbeResult>([
-      Promise.resolve().then(() => probe.fn()),
-      timeoutPromise,
-    ]);
+    const probePromise = Promise.resolve()
+      .then(() => probe.fn())
+      .catch((err: unknown) => {
+        process.stderr.write(
+          `[observability] readiness probe "${probe.name}" threw: ${String(err)}\n`,
+        );
+        return { status: "fail" as const, detail: "probe error" };
+      });
+    const result = await Promise.race<ProbeResult>([probePromise, timeoutPromise]);
     return result;
   } catch (err) {
     // `/readyz` is unauthenticated, so the response carries only a fixed

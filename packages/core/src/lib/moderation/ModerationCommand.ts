@@ -1,5 +1,4 @@
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import type { LumiT } from "#lib/i18n/index.js";
 import {
   confirmPrompt,
@@ -9,9 +8,10 @@ import {
 import { logError } from "#lib/utilities/errors.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { isNullish } from "@sapphire/utilities";
-import { Time } from "@sapphire/time-utilities";
-import { Result, container, type Awaitable } from "@sapphire/framework";
+import { isNullish } from "@lumi/shared";
+import { Ms } from "@lumi/shared";
+import { Result, type Awaitable } from "@lumi/shared";
+import type { Container } from "#lib/services.js";
 import type { Guild, GuildMember, User } from "discord.js";
 import type { CaseAction } from "@prisma/client";
 
@@ -36,7 +36,9 @@ export interface HierarchyCheckContext {
 /** {@linkcode checkHierarchy}'s context plus what {@linkcode checkDuplicateCase} forwards into `confirmPrompt`. */
 export interface DuplicateCaseCheckContext
   extends HierarchyCheckContext,
-    ConfirmPromptContext {}
+    ConfirmPromptContext {
+  services: Container;
+}
 
 async function readReason(ctx: CommandContext, t: LumiT): Promise<string> {
   return (
@@ -80,14 +82,14 @@ async function checkPanicLock(
   if (!guild || !moderator) return null;
   if (guild.ownerId === moderator.id) return null;
 
-  const locked = await container.db.config.getModuleConfig(
+  const locked = await ctx.services.db.config.getModuleConfig(
     guild.id,
     "security",
     "panic_lock_mod_commands",
   );
   if (locked !== true) return null;
 
-  const state = await container.db.security.getPanicState(guild.id);
+  const state = await ctx.services.db.security.getPanicState(guild.id);
   if (!state) return null;
   if (state.actorId === moderator.id) return null;
 
@@ -113,7 +115,7 @@ export async function checkDuplicateCase(
   const guild = ctx.guild;
   if (!guild) return true;
 
-  const windowRaw = await container.db.config.getModuleConfig(
+  const windowRaw = await ctx.services.db.config.getModuleConfig(
     guild.id,
     "mod",
     "duplicate_case_window_minutes",
@@ -121,14 +123,14 @@ export async function checkDuplicateCase(
   const windowMinutes = typeof windowRaw === "number" ? windowRaw : 5;
   if (windowMinutes <= 0) return true;
 
-  const [recent] = await container.db.moderation.getModerationCases(
+  const [recent] = await ctx.services.db.moderation.getModerationCases(
     guild.id,
     targetId,
     action,
   );
   if (!recent) return true;
 
-  const ageMinutes = (Date.now() - recent.createdAt.getTime()) / Time.Minute;
+  const ageMinutes = (Date.now() - recent.createdAt.getTime()) / Ms.Minute;
   if (ageMinutes > windowMinutes) return true;
 
   const result = await confirmPrompt(ctx, {
@@ -185,31 +187,6 @@ export async function checkHierarchy(
     : null;
 }
 
-/**
- * Drives a single moderation flow to completion and replies with its outcome.
- *
- * @remarks
- *
- * The call order below is part of the contract, not an implementation detail:
- * on the prefix path {@linkcode CommandContext} binds positional arguments in
- * the order the getters are called, so a hook that reads an extra option must
- * run in the slot the command's own option list puts it in.
- *
- * 1. Defer the reply, then resolve the guild's translator.
- * 2. {@linkcode ModerationCommand.Flow.resolveTarget}. A nullish target ends
- *    the run with {@linkcode ModerationCommand.Flow.targetNotFound}.
- * 3. {@linkcode ModerationCommand.Flow.preHandle} - the slot for reading and
- *    validating options that sit between the target and the reason. An `Err`
- *    ends the run with that reply.
- * 4. {@linkcode ModerationCommand.Flow.resolveReason}, which consumes the rest
- *    of a prefix invocation by default and so must run last.
- * 5. {@linkcode ModerationCommand.Flow.action}, wrapped in a `try`/`catch` only
- *    when the flow declares a `logScope`.
- * 6. {@linkcode ModerationCommand.Flow.buildSuccessMessage}.
- *
- * @param ctx - The invocation this flow replies to.
- * @param flow - The hooks describing the one action being taken.
- */
 interface PreparedEntry<Target, Prepared> {
   target: Target;
   prepared: Prepared;
@@ -225,7 +202,6 @@ const DefaultBatchConcurrency = 1;
 /** Delay between starting batched Discord API mutations, so a 25-target run does not burst. */
 const BatchStaggerMs = 250;
 
-/** Builds one line of the batch-result card for a target that didn't make it through. */
 function rejectedLine<Target extends ModerationCommand.TargetLike>(
   entry: RejectedEntry<Target>,
 ): string {
@@ -342,7 +318,7 @@ export async function runModerationFlow<
       ? await flow.preHandle(ctx, t, target)
       : Result.ok(null as Prepared);
     if (result.isErr()) {
-      rejected.push({ target, reply: result.unwrapErr() });
+      rejected.push({ target, reply: result.error });
       continue;
     }
 
@@ -455,165 +431,12 @@ export async function runModerationFlow<
   return replyBatchResult(ctx, t, flow, successes, rejected);
 }
 
-/**
- * A standalone command that applies one moderation action to one target.
- *
- * @remarks
- *
- * Subclasses declare only what is unique to their action - the target, the
- * call into `modules/mod/actions`, and the success card - while
- * {@linkcode runModerationFlow} owns the deferral, the translator, the
- * not-found reply, the reason, the failure log and the reply itself. Read that
- * function's remarks for the exact call order; overriding a hook never changes
- * it.
- *
- * A subcommand group whose entries each apply a different action extends
- * `ModerationSubcommand` and passes a {@linkcode ModerationCommand.Flow} per
- * entry instead.
- */
-export abstract class ModerationCommand<
-  Target extends ModerationCommand.TargetLike,
-  Outcome,
-  Prepared = null,
-> extends BaseCommand {
-  /**
-   * Scope prefix for the failure log, e.g. `timeout add`. Declaring it also
-   * opts the command into the `try`/`catch` around the action; without it an
-   * action error propagates to the framework's error handler untouched.
-   */
-  protected readonly logScope: string | undefined;
-
-  /** See {@linkcode ModerationCommand.Flow.duplicateCaseAction}. Subclasses that apply a punishment override this with their case `action` string. */
-  protected readonly duplicateCaseAction: CaseAction | undefined;
-
-  public constructor(
-    context: ModerationCommand.LoaderContext,
-    options: ModerationCommand.Options,
-  ) {
-    super(context, options);
-    this.logScope = options.logScope;
-    this.duplicateCaseAction = options.duplicateCaseAction;
-  }
-
-  public override run(ctx: CommandContext): Promise<void> {
-    return runModerationFlow(ctx, this.#flow());
-  }
-
-  /**
-   * Resolves the member(s), user(s) or raw user id(s) the action applies to.
-   * A nullish or empty result ends the run with
-   * {@linkcode ModerationCommand.targetNotFound}; an array runs the rest of
-   * the flow once per target and replies with one aggregated card.
-   */
-  protected abstract resolveTarget(
-    ctx: CommandContext,
-    t: LumiT,
-  ): Awaitable<Target | Target[] | null>;
-
-  /** Applies the action, usually by delegating to `modules/mod/actions`. */
-  protected abstract action(
-    context: ModerationCommand.ActionContext<Target, Prepared>,
-  ): Promise<Outcome>;
-
-  /** Builds the card shown once the action has been applied. */
-  protected abstract buildSuccessMessage(
-    t: LumiT,
-    context: ModerationCommand.OutcomeContext<Target, Outcome, Prepared>,
-  ): ModerationCommand.Reply;
-
-  /** The card shown when {@linkcode ModerationCommand.resolveTarget} yields nothing. */
-  protected targetNotFound(t: LumiT): ModerationCommand.Reply {
-    return memberNotFound(t);
-  }
-
-  /**
-   * Reads and validates the options sitting between the target and the reason,
-   * producing the value carried as `prepared` for the rest of the run. Return
-   * an `Err` to end the run with that reply instead of taking the action.
-   */
-  protected preHandle(
-    ctx: CommandContext,
-    t: LumiT,
-    target: Target,
-  ): Awaitable<Result<Prepared, ModerationCommand.Reply>>;
-
-  protected preHandle() {
-    return Result.ok(null as Prepared);
-  }
-
-  /** Reads the audit-log reason, falling back to the localized placeholder. */
-  protected resolveReason(ctx: CommandContext, t: LumiT): Awaitable<string> {
-    return readReason(ctx, t);
-  }
-
-  /**
-   * Translates a failure the action raises as control flow - a sentinel the
-   * action layer throws rather than a fault - into its own card. Returning a
-   * reply also suppresses the failure log; return `null` to treat the error as
-   * unexpected.
-   */
-  protected mapExpectedError(
-    t: LumiT,
-    error: unknown,
-    context: ModerationCommand.ActionContext<Target, Prepared>,
-  ): ModerationCommand.Reply | null;
-
-  protected mapExpectedError(): ModerationCommand.Reply | null {
-    return null;
-  }
-
-  /**
-   * Optionally returns options for a confirmation prompt shown before the action.
-   * Return null/undefined to skip confirmation.
-   */
-  protected confirm(
-    _t: LumiT,
-    _context: ModerationCommand.ActionContext<Target, Prepared>,
-  ): Awaitable<ConfirmPromptOptions | null | undefined> {
-    return null;
-  }
-
-  /** The card shown when the action fails for an unexpected reason. */
-  protected buildFailureMessage(
-    t: LumiT,
-    _context: ModerationCommand.ActionContext<Target, Prepared>,
-  ): ModerationCommand.Reply {
-    return actionFailed(t);
-  }
-
-  #flow(): ModerationCommand.Flow<Target, Outcome, Prepared> {
-    return {
-      logScope: this.logScope,
-      duplicateCaseAction: this.duplicateCaseAction,
-      resolveTarget: (ctx, t) => this.resolveTarget(ctx, t),
-      targetNotFound: (t) => this.targetNotFound(t),
-      preHandle: (ctx, t, target) => this.preHandle(ctx, t, target),
-      resolveReason: (ctx, t) => this.resolveReason(ctx, t),
-      confirm: (t, context) => this.confirm(t, context),
-      action: (context) => this.action(context),
-      mapExpectedError: (t, error, context) =>
-        this.mapExpectedError(t, error, context),
-      buildFailureMessage: (t, context) => this.buildFailureMessage(t, context),
-      buildSuccessMessage: (t, context) => this.buildSuccessMessage(t, context),
-    };
-  }
-}
-
 export namespace ModerationCommand {
-  export type Options = BaseCommand.Options & {
-    /** See {@linkcode ModerationCommand.logScope}. */
-    logScope?: string;
-    /** See {@linkcode ModerationCommand.duplicateCaseAction}. */
-    duplicateCaseAction?: CaseAction;
-  };
-  export type LoaderContext = BaseCommand.LoaderContext;
-  export type Registry = BaseCommand.Registry;
   export type RunContext = CommandContext;
 
   /** Anything a flow can address and log a target id for. */
   export type TargetLike = string | { id: string };
 
-  /** The title and body of one moderation card. */
   export interface Reply {
     title: string;
     body: string;
@@ -640,8 +463,7 @@ export namespace ModerationCommand {
 
   /**
    * One moderation action expressed as hooks, so a subcommand group can hold
-   * several. {@linkcode ModerationCommand} implements this interface through
-   * its own protected members; the docs live there.
+   * several flows side by side.
    */
   export interface Flow<Target extends TargetLike, Outcome, Prepared = null> {
     logScope?: string;

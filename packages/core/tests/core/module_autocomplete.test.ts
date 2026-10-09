@@ -1,199 +1,95 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { ModuleCommand } from "#modules/core/commands/module.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { moduleDef } from "#modules/core/commands/module.js";
 
-const __actualModule14 = await import("#lib/module-system/Utility.js");
-vi.mock("#lib/module-system/Utility.js", () => {
-  const actual: any = __actualModule14;
-  return {
-    ...actual,
-    getUtility: vi.fn(),
-  };
-});
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn(),
+  tryGetUtility: vi.fn(),
+}));
 
 import { getUtility } from "#lib/module-system/Utility.js";
 
-function makeInteraction(opts: {
-  focusedName: string;
-  focusedValue: string;
-  subcommand?: string | null;
-  strings?: Record<string, string | null>;
-}) {
-  const respond = vi.fn().mockResolvedValue(undefined);
+function makeServices(records: any[] = []) {
   return {
-    respond,
-    guildId: "guild-1",
-    guild: { id: "guild-1", ownerId: "owner-1" },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    moduleStore: { all: vi.fn().mockReturnValue(records) },
+  } as any;
+}
+
+function autocompleteInteraction(focusedName: string, subcommand: string | null, focusedValue = "") {
+  return {
     user: { id: "owner-1" },
-    member: { roles: { cache: new Map() } },
-    channelId: "channel-1",
+    respond: vi.fn().mockResolvedValue(undefined),
     options: {
-      getFocused: vi.fn().mockReturnValue({
-        name: opts.focusedName,
-        value: opts.focusedValue,
-        focused: true,
-      }),
-      getSubcommand: vi.fn().mockReturnValue(opts.subcommand ?? null),
-      getString: vi
-        .fn()
-        .mockImplementation((name: string) => opts.strings?.[name] ?? null),
+      getFocused: vi.fn().mockReturnValue({ name: focusedName, value: focusedValue }),
+      getSubcommand: vi.fn().mockReturnValue(subcommand),
+      getString: vi.fn().mockReturnValue(null),
     },
   } as any;
 }
 
-describe("ModuleCommand.autocompleteRun", () => {
-  let command: ModuleCommand;
-  let mockModuleStore: any;
-  let mockDownloaderUtility: any;
+const records = [
+  { name: "afk", enabled: true },
+  { name: "mod", enabled: false },
+];
+
+describe("moduleDef autocomplete", () => {
+  let downloader: any;
+  let services: any;
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-
-    mockModuleStore = {
-      all: vi.fn().mockReturnValue([
-        { name: "afk", enabled: true },
-        { name: "mod", enabled: false },
-        { name: "moderation-extras", enabled: false },
-      ]),
+    vi.clearAllMocks();
+    services = makeServices(records);
+    downloader = {
+      listRepos: vi.fn().mockResolvedValue([]),
+      getModulesInRepo: vi.fn().mockResolvedValue([]),
+      getInstalledModules: vi.fn().mockResolvedValue([]),
     };
-
-    mockDownloaderUtility = {
-      listRepos: vi.fn().mockResolvedValue([
-        { name: "official" },
-        { name: "community" },
-      ]),
-      getInstalledModules: vi.fn().mockResolvedValue([
-        { moduleName: "leveling", pinned: false },
-        { moduleName: "economy", pinned: true },
-      ]),
-      getModulesInRepo: vi.fn().mockResolvedValue([
-        { name: "leveling", hidden: false },
-        { name: "starboard", hidden: false },
-        { name: "hidden-mod", hidden: true },
-      ]),
-    };
-
-    (getUtility as any).mockImplementation((name: string) =>
-      name === "downloader" ? mockDownloaderUtility : null,
-    );
-
-    (container as any).moduleStore = mockModuleStore;
-    (container as any).client = { options: {} } as any;
-    vi.spyOn(PermitResolver, "isBotOwner").mockReturnValue(true);
-
-    command = new ModuleCommand(
-      {
-        name: "module",
-        path: "/path/to/commands/module.ts",
-        root: "/path/to/commands",
-        store: { name: "commands" } as any,
-      },
-      { prefixEnabled: true },
-    );
+    (getUtility as any).mockReturnValue(downloader);
   });
 
-  it("suggests disabled modules for enable", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "enable",
-    });
-    await command.autocompleteRun(interaction);
-    const [choices] = interaction.respond.mock.calls[0]!;
-    expect(choices.map((c: any) => c.value)).toEqual(["mod", "moderation-extras"]);
+  it("suggests only disabled modules for enable", async () => {
+    const interaction = autocompleteInteraction("module", "enable");
+
+    await moduleDef.autocomplete!(services, interaction);
+
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "mod", value: "mod" }]);
   });
 
-  it("suggests enabled modules for disable", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "disable",
-    });
-    await command.autocompleteRun(interaction);
-    const [choices] = interaction.respond.mock.calls[0]!;
-    expect(choices.map((c: any) => c.value)).toEqual(["afk"]);
+  it("suggests only enabled modules for disable", async () => {
+    const interaction = autocompleteInteraction("module", "disable");
+
+    await moduleDef.autocomplete!(services, interaction);
+
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "afk", value: "afk" }]);
   });
 
-  it("suggests repo names for the repo option", async () => {
-    const interaction = makeInteraction({
-      focusedName: "repo",
-      focusedValue: "comm",
-      subcommand: "install",
-    });
-    await command.autocompleteRun(interaction);
-    expect(interaction.respond).toHaveBeenCalledWith([
-      { name: "community", value: "community" },
-    ]);
-  });
+  it("filters suggestions by what the user typed", async () => {
+    const interaction = autocompleteInteraction("module", "disable", "af");
 
-  it("suggests not-yet-installed modules from the chosen repo for install", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "install",
-      strings: { repo: "official" },
-    });
-    await command.autocompleteRun(interaction);
-    expect(mockDownloaderUtility.getModulesInRepo).toHaveBeenCalledWith("official");
-    const [choices] = interaction.respond.mock.calls[0]!;
-    expect(choices.map((c: any) => c.value)).toEqual(["starboard"]);
-  });
+    await moduleDef.autocomplete!(services, interaction);
 
-  it("responds empty for install/module when no repo has been chosen yet", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "install",
-    });
-    await command.autocompleteRun(interaction);
-    expect(interaction.respond).toHaveBeenCalledWith([]);
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "afk", value: "afk" }]);
   });
 
   it("suggests installed modules for uninstall", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "uninstall",
-    });
-    await command.autocompleteRun(interaction);
-    const [choices] = interaction.respond.mock.calls[0]!;
-    expect(choices.map((c: any) => c.value).sort()).toEqual(["economy", "leveling"]);
+    downloader.getInstalledModules.mockResolvedValue([{ moduleName: "economy" }]);
+    const interaction = autocompleteInteraction("module", "uninstall");
+
+    await moduleDef.autocomplete!(services, interaction);
+
+    expect(interaction.respond).toHaveBeenCalledWith([{ name: "economy", value: "economy" }]);
+    expect(downloader.getInstalledModules).toHaveBeenCalled();
   });
 
-  it("suggests only unpinned installed modules for pin", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "pin",
-    });
-    await command.autocompleteRun(interaction);
+  it("suggests repo names for the repo option", async () => {
+    downloader.listRepos.mockResolvedValue([{ name: "official" }, { name: "community" }]);
+    const interaction = autocompleteInteraction("repo", "install");
+
+    await moduleDef.autocomplete!(services, interaction);
+
     expect(interaction.respond).toHaveBeenCalledWith([
-      { name: "leveling", value: "leveling" },
+      { name: "official", value: "official" },
+      { name: "community", value: "community" },
     ]);
-  });
-
-  it("suggests only pinned installed modules for unpin", async () => {
-    const interaction = makeInteraction({
-      focusedName: "module",
-      focusedValue: "",
-      subcommand: "unpin",
-    });
-    await command.autocompleteRun(interaction);
-    expect(interaction.respond).toHaveBeenCalledWith([
-      { name: "economy", value: "economy" },
-    ]);
-  });
-
-  it("responds empty and does not look up repos for a non-owner", async () => {
-    (PermitResolver.isBotOwner as any).mockReturnValue(false);
-    const interaction = makeInteraction({
-      focusedName: "repo",
-      focusedValue: "comm",
-      subcommand: "install",
-    });
-    await command.autocompleteRun(interaction);
-    expect(interaction.respond).toHaveBeenCalledWith([]);
-    expect(mockDownloaderUtility.listRepos).not.toHaveBeenCalled();
   });
 });

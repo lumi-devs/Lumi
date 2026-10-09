@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { PermissionFlagsBits } from "discord.js";
+import { container } from "#lib/services.js";
 import { rpcRouter, type RpcActionName } from "@lumi/contracts/rpc";
 import { PermitResolver } from "#lib/permissions/PermitResolver.js";
 import { dispatchRpc } from "#lib/rpc/dispatch.js";
 import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -29,9 +30,8 @@ const DiscordErrors = {
   timeout: () => new Error("ETIMEDOUT: connect timed out"),
 };
 
-/** discord.js's ManageGuild bit, used to build a fake role permission string. */
-const ManageGuildBit = (1n << 5n).toString();
-const AdministratorBit = (1n << 3n).toString();
+const ManageGuildBit = PermissionFlagsBits.ManageGuild.toString();
+const AdministratorBit = PermissionFlagsBits.Administrator.toString();
 
 function everyoneRole(permissions = "0") {
   return { id: GUILD_ID, permissions };
@@ -93,8 +93,8 @@ function ownerOnlyRest(guildId: string, ownerId: string): FakeDiscordRestPort {
   return fake;
 }
 
-function mockRedisCacheMiss() {
-  (container as any).redis = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+function mockValkeyCacheMiss() {
+  (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
 }
 
 describe("RPC guild access under Discord API failures", () => {
@@ -102,7 +102,7 @@ describe("RPC guild access under Discord API failures", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
@@ -268,7 +268,7 @@ describe("dispatchRpc error shaping", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     container.client = {
       application: { owner: { id: OWNER_ID } },
@@ -439,7 +439,7 @@ describe("implementRpc input parsing", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
 
     guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
@@ -583,15 +583,13 @@ describe("static RPC registry", () => {
 
   it("keeps serving a module's reads while that module is not loaded", async () => {
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
     (container as any).discordRest = ownerOnlyRest(GUILD_ID, OWNER_ID);
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
+    (container as any).moduleStore = { get: () => undefined, loaded: () => [] };
     (container as any).db = {
       tempvc: { listGenerators: vi.fn().mockResolvedValue([]) },
     };
@@ -609,15 +607,13 @@ describe("static RPC registry", () => {
 
   it("refuses a write that needs a module which is not loaded", async () => {
     repositoryCache.clear();
-    mockRedisCacheMiss();
+    mockValkeyCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
     } as any;
     (container as any).discordRest = ownerOnlyRest(GUILD_ID, OWNER_ID);
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
+    (container as any).moduleStore = { get: () => undefined, loaded: () => [] };
 
     const handler = getRpcHandler("guild.tempvc.generators.set");
     await expect(

@@ -1,10 +1,10 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
 import { AuditLogEvent, type GuildMember } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
+import type { Container } from "#lib/services.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { swallow } from "#lib/utilities/errors.js";
-import { resolveAuditLogExecutor } from "../services/audit.js";
-import { evaluateNukeEvent, isQuarantined } from "../services/anti-nuke.js";
+import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
+import { evaluateNukeEvent, isQuarantined } from "@lumi/application/services/security/anti-nuke.js";
 
 function roleSet(member: GuildMember): Set<string> {
   return new Set(member.roles.cache.keys());
@@ -16,15 +16,12 @@ function sameRoles(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-@ApplyOptions<ModuleListener.Options>({
+export const SecurityGuildMemberUpdateListener = defineListener({
   name: "securityGuildMemberUpdate",
   event: Events.GuildMemberUpdate,
   module: "security",
-})
-export class SecurityGuildMemberUpdateListener extends ModuleListener<
-  typeof Events.GuildMemberUpdate
-> {
-  protected async handle(
+  async execute(
+    services: Container,
     oldMember: GuildMember,
     newMember: GuildMember,
   ): Promise<void> {
@@ -34,7 +31,7 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
 
     if (!(await isQuarantined(newMember.guild.id, newMember.id))) return;
 
-    const quarantineRoleId = await this.container.db.config.getModuleConfig(
+    const quarantineRoleId = await services.db.config.getModuleConfig(
       newMember.guild.id,
       "mod",
       "quarantine_role_id",
@@ -49,6 +46,5 @@ export class SecurityGuildMemberUpdateListener extends ModuleListener<
     await evaluateNukeEvent(newMember.guild, "quarantine_bypass", () =>
       resolveAuditLogExecutor(newMember.guild, AuditLogEvent.MemberRoleUpdate, newMember.id),
     );
-  }
-
-}
+  },
+});

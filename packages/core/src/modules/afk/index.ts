@@ -1,12 +1,12 @@
-import { Module, DefineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "#lib/module-system/Module.js";
 import { cfg } from "#lib/module-system/config-schema.js";
-import { container } from "@sapphire/framework";
+import { container, type Container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { clearAllAfkForUser } from "./data/afk.js";
-import { registerTaskFireHandler } from "#lib/task-fire-registry.js";
-import { handleAfkDeleteMessageFire } from "./services/delete-handler.js";
+import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { handleAfkDeleteMessageFire } from "@lumi/application/services/afk/delete-handler.js";
 
-@DefineModule({
+export const afkModule = defineModule({
   name: "afk",
   displayName: "AFK",
   emoji: Emojis.Afk,
@@ -23,34 +23,32 @@ import { handleAfkDeleteMessageFire } from "./services/delete-handler.js";
       default: true,
     }),
   }),
-})
-export class AfkModule extends Module {
-  public override onLoad() {
+  onLoad(_services: Container = container) {
     registerTaskFireHandler(
       "afk-delete-message",
       "unicast",
       handleAfkDeleteMessageFire,
     );
-    return super.onLoad();
-  }
+  },
 
-  public override onUnload() {
-    this.container.logger.info(
+  onUnload(services: Container = container) {
+    services.logger.info(
       "[AfkModule] Unloaded AFK module task handlers.",
     );
-    return super.onUnload();
-  }
+  },
 
-  public override async deleteUserData(
+  async deleteUserData(
+    services: Container,
     userId: string,
   ): Promise<void> {
-    await clearAllAfkForUser(userId);
-  }
+    await clearAllAfkForUser(services, userId);
+  },
 
-  public override async exportUserData(
+  async exportUserData(
+    services: Container,
     userId: string,
   ): Promise<Record<string, unknown> | null> {
-    const entries = await container.db.afk.findAllForUser(userId);
+    const entries = await services.db.afk.findAllForUser(userId);
     return entries.length > 0 ? { afkEntries: entries } : null;
-  }
-}
+  },
+});

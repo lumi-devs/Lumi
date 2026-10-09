@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { ChannelType, PermissionsBitField, RESTJSONErrorCodes } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {
@@ -9,9 +9,9 @@ import {
   type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
-import { RedisKeys, RedisTTL } from "#lib/database/redis.js";
+import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
 import { authorize } from "#lib/permissions/authorize.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { swallow } from "#lib/utilities/errors.js";
 
 /**
@@ -19,14 +19,26 @@ import { swallow } from "#lib/utilities/errors.js";
  * REST API rather than the gateway cache: RPC handlers run on whichever
  * shard is primary, but the gateway only caches guilds that shard itself
  * owns, so REST is the only lookup that works regardless of which shard (or,
- * eventually, a gateway-less API process) is asking. Short Redis TTLs mirror
+ * eventually, a gateway-less API process) is asking. Short Valkey TTLs mirror
  * the staleness the dashboard's own session cache already tolerates.
  */
 
 async function fetchGuildRest(guildId: string): Promise<APIGuild | null> {
+  const cached = container.client?.guilds?.cache?.get(guildId);
+  if (cached) {
+    return {
+      id: cached.id,
+      name: cached.name,
+      icon: cached.icon,
+      banner: cached.banner,
+      approximate_member_count: cached.memberCount ?? 0,
+      roles: Array.from(cached.roles?.cache?.values() ?? []).map((r) => ("toJSON" in r ? (r as any).toJSON() : r)),
+    } as unknown as APIGuild;
+  }
+
   return repositoryCache.getOrLoad<APIGuild | null>(
-    RedisKeys.restGuild(guildId),
-    RedisTTL.restGuild * 1000,
+    ValkeyKeys.restGuild(guildId),
+    ValkeyTTL.restGuild * 1000,
     () =>
       container.client.rest.get(Routes.guild(guildId), {
         query: new URLSearchParams({ with_counts: "true" }),
@@ -39,9 +51,14 @@ async function fetchGuildMemberRest(
   guildId: string,
   userId: string,
 ): Promise<APIGuildMember | null> {
+  const cachedMember = container.client?.guilds?.cache?.get(guildId)?.members?.cache?.get(userId);
+  if (cachedMember && "toJSON" in cachedMember) {
+    return (cachedMember as any).toJSON() as APIGuildMember;
+  }
+
   return repositoryCache.getOrLoad<APIGuildMember | null>(
-    RedisKeys.restMember(guildId, userId),
-    RedisTTL.restMember * 1000,
+    ValkeyKeys.restMember(guildId, userId),
+    ValkeyTTL.restMember * 1000,
     () =>
       container.client.rest.get(
         Routes.guildMember(guildId, userId),
@@ -95,8 +112,8 @@ async function fetchGuildMemberRestUncached(
 
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {
   return repositoryCache.getOrLoad<APIChannel | null>(
-    RedisKeys.restChannel(channelId),
-    RedisTTL.restChannel * 1000,
+    ValkeyKeys.restChannel(channelId),
+    ValkeyTTL.restChannel * 1000,
     () => container.client.rest.get(Routes.channel(channelId)) as Promise<APIChannel>,
     (data) => JSON.parse(data) as APIChannel,
   ).catch(swallow("discord-rest-lookup: channel fetch failed"));
@@ -132,8 +149,8 @@ export const GuildTextBasedChannelTypes = new Set<ChannelType>([
 
 export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | null> {
   return repositoryCache.getOrLoad<APIRole[] | null>(
-    RedisKeys.restGuildRoles(guildId),
-    RedisTTL.restGuildRoles * 1000,
+    ValkeyKeys.restGuildRoles(guildId),
+    ValkeyTTL.restGuildRoles * 1000,
     () => container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>,
     (data) => JSON.parse(data) as APIRole[],
   ).catch(swallow("discord-rest-lookup: guild roles fetch failed"));
@@ -141,8 +158,8 @@ export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | 
 
 export async function fetchGuildChannelsRest(guildId: string): Promise<APIChannel[] | null> {
   return repositoryCache.getOrLoad<APIChannel[] | null>(
-    RedisKeys.restGuildChannels(guildId),
-    RedisTTL.restGuildChannels * 1000,
+    ValkeyKeys.restGuildChannels(guildId),
+    ValkeyTTL.restGuildChannels * 1000,
     () => container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>,
     (data) => JSON.parse(data) as APIChannel[],
   ).catch(swallow("discord-rest-lookup: guild channels fetch failed"));
@@ -187,8 +204,8 @@ export async function fetchGuildMembersSampleRest(
   limit: number,
 ): Promise<APIGuildMember[] | null> {
   return repositoryCache.getOrLoad<APIGuildMember[] | null>(
-    RedisKeys.restGuildMembersSample(guildId, limit),
-    RedisTTL.restGuildMembersSample * 1000,
+    ValkeyKeys.restGuildMembersSample(guildId, limit),
+    ValkeyTTL.restGuildMembersSample * 1000,
     () =>
       container.client.rest.get(Routes.guildMembers(guildId), {
         query: new URLSearchParams({ limit: String(limit) }),

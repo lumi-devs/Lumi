@@ -1,8 +1,8 @@
-import { container } from "@sapphire/framework";
+import type { Container } from "#lib/services.js";
 import { TempvcCreateCooldownMs, TempvcMaxGenerators } from "./constants.js";
 
-export async function getCreateCooldownMs(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
+export async function getCreateCooldownMs(services: Container, guildId: string): Promise<number> {
+  const value = await services.db.config.getModuleConfig(
     guildId,
     "tempvc",
     "create_cooldown_seconds",
@@ -10,8 +10,8 @@ export async function getCreateCooldownMs(guildId: string): Promise<number> {
   return typeof value === "number" ? value * 1_000 : TempvcCreateCooldownMs;
 }
 
-export async function getMaxGenerators(guildId: string): Promise<number> {
-  const value = await container.db.config.getModuleConfig(
+export async function getMaxGenerators(services: Container, guildId: string): Promise<number> {
+  const value = await services.db.config.getModuleConfig(
     guildId,
     "tempvc",
     "max_generators",

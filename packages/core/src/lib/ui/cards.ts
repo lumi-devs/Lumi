@@ -9,7 +9,7 @@ import {
 
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { resolveCardColor } from "#lib/utilities/config.js";
@@ -29,6 +29,8 @@ export interface CardOptions {
   thumbnail?: string;
   thumbnailUrl?: string;
   divider?: boolean;
+  hideTitle?: boolean;
+  noAccent?: boolean;
   sections?: SectionBuilder[];
   actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
   /** Adds a divider above actionRows - only used above the hub tab bar so it doesn't blend into the content above it. */
@@ -55,7 +57,7 @@ function buildContainer(
   accentColor?: number,
 ) {
   const c = new ContainerBuilder();
-  if (accentColor !== undefined) {
+  if (accentColor !== undefined && !opts.noAccent) {
     c.setAccentColor(accentColor);
   }
 
@@ -72,25 +74,17 @@ function buildContainer(
     );
   }
 
-  c.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`## ${title}`),
-  );
-  if (opts.subtitle) {
+  if (!opts.hideTitle && title) {
     c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
+      new TextDisplayBuilder().setContent(`## ${title}`),
     );
-  }
-
-  c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(opts.divider ?? true));
-
-  const headerUrls = (opts.headerImages ?? [])
-    .filter((url) => url && url.length > 0)
-    .slice(0, 10);
-  if (headerUrls.length > 0) {
-    c.addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        ...headerUrls.map((url) => new MediaGalleryItemBuilder({ media: { url } })),
-      ),
+    if (opts.subtitle) {
+      c.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(formatSubtitle(opts.subtitle)),
+      );
+    }
+    c.addSeparatorComponents((sep) =>
+      sep.setSpacing(1).setDivider(opts.divider ?? true),
     );
   }
 
@@ -117,24 +111,27 @@ function buildContainer(
     }
     c.addSectionComponents(thumbSec);
     for (const part of parts.filter((p) => p && p.length > 0).slice(3)) {
-      c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      c.addSeparatorComponents((sep) => sep.setSpacing(1));
       c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
     }
   } else {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if (i > 0)
-        c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      if (i > 0) c.addSeparatorComponents((sep) => sep.setSpacing(1));
       if (part && part.length > 0) {
         c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
       }
     }
   }
 
-  if (opts.footer) {
-    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(false));
-    c.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
+  const headerUrls = (opts.headerImages ?? [])
+    .filter((url) => url && url.length > 0)
+    .slice(0, 10);
+  if (headerUrls.length > 0) {
+    c.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        ...headerUrls.map((url) => new MediaGalleryItemBuilder({ media: { url } })),
+      ),
     );
   }
 
@@ -142,10 +139,22 @@ function buildContainer(
     c.addMediaGalleryComponents(opts.mediaGallery);
   }
 
-  if (opts.separatorAboveActionRows && opts.actionRows?.length) {
-    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+  if (opts.footer) {
+    c.addSeparatorComponents((sep) => sep.setSpacing(1));
+    c.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`-# ${opts.footer}`),
+    );
   }
-  for (const row of opts.actionRows ?? []) {
+
+  const actionRows = opts.actionRows ?? [];
+  if (opts.separatorAboveActionRows && actionRows.length > 0) {
+    c.addSeparatorComponents((sep) => sep.setSpacing(1));
+  }
+  for (let r = 0; r < actionRows.length; r++) {
+    if (r > 0) {
+      c.addSeparatorComponents((sep) => sep.setSpacing(1));
+    }
+    const row = actionRows[r]!;
     c.addActionRowComponents((builder) => {
       builder.addComponents(...row.components);
       return builder;

@@ -50,6 +50,7 @@ describe("Readiness probe timer management", () => {
 
   it("clears timeout handle when probe throws synchronously", async () => {
     const clearSpy = spyOn(globalThis, "clearTimeout");
+    const errSpy = spyOn(process.stderr, "write").mockReturnValue(true as any);
     registerReadinessProbe("test-probe-sync-fail", () => {
       throw new Error("sync failure");
     });
@@ -58,10 +59,12 @@ describe("Readiness probe timer management", () => {
     expect(report.checks["test-probe-sync-fail"]?.status).toBe("fail");
     expect(clearSpy).toHaveBeenCalled();
     clearSpy.mockRestore();
+    errSpy.mockRestore();
   });
 
   it("clears timeout handle when probe rejects asynchronously", async () => {
     const clearSpy = spyOn(globalThis, "clearTimeout");
+    const errSpy = spyOn(process.stderr, "write").mockReturnValue(true as any);
     registerReadinessProbe("test-probe-async-fail", async () => {
       throw new Error("async failure");
     });
@@ -70,6 +73,7 @@ describe("Readiness probe timer management", () => {
     expect(report.checks["test-probe-async-fail"]?.status).toBe("fail");
     expect(clearSpy).toHaveBeenCalled();
     clearSpy.mockRestore();
+    errSpy.mockRestore();
   });
 });
 

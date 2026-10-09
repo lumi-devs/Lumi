@@ -9,8 +9,8 @@ https://lumi-devs.github.io/Lumi-docs (self-hosters and add-on authors) — its 
 in the separate [`lumi-devs/Lumi-docs`](https://github.com/lumi-devs/Lumi-docs) repo. For why a given architectural shape was chosen, see
 [`docs/adr/`](docs/adr/README.md).
 
-Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, `@sapphire/framework` +
-discord.js v14, Prisma/PostgreSQL, Redis.
+Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, discord.js v14
+(native runtime, no framework), Prisma/PostgreSQL, Valkey.
 
 ## Repo shape
 
@@ -36,22 +36,18 @@ system topology — treat it as source of truth for anything below.
 - The dashboard (Next.js App Router web admin panel) lives in its own repo,
   [`lumi-devs/lumi-dashboard`](https://github.com/lumi-devs/lumi-dashboard), published as the
   `ghcr.io/lumi-devs/lumi-dashboard` image. It talks to `apps/api` only over the internal HTTP
-  RPC bridge, never touches Postgres/Redis directly, and consumes `@lumi-devs/contracts` /
+  RPC bridge, never touches Postgres/Valkey directly, and consumes `@lumi-devs/contracts` /
   `@lumi-devs/observability` from npm rather than importing this repo's source — see
   "Releasing contracts" below for how a contracts change reaches it.
-- `packages/core` — the framework itself: module loader, database service, command/permit
-  system, addon sandbox/SDK, and (folded in from their own former packages) the Redis Streams
-  event bus (`#lib/event-bus/`) and shard telemetry for the dashboard's fleet view
-  (`#lib/sharding/`) — shard assignment itself is still discord.js's `ShardingManager`, not
-  custom code.
-- `packages/contracts` — RPC schemas (the typed router) and shared type definitions used by
-  `worker` and, via the published `@lumi-devs/contracts` package, the dashboard repo.
+- `packages/core` — the bot framework and runtime: module loader, command/permit
+  system, addon sandbox/SDK, event bus (`#lib/event-bus/`), and shard telemetry (`#lib/sharding/`).
+- `packages/application` — business logic layer: extracted module services and application interfaces.
+- `packages/infrastructure` — data & infrastructure abstractions: database repositories, Valkey cache/mutexes,
+  and BullMQ job queue abstractions.
+- `packages/contracts` — RPC schemas (the typed router), domain events, and shared type definitions used by
+  `worker`, `api`, and, via the published `@lumi-devs/contracts` package, the dashboard repo.
 - `packages/observability` — OpenTelemetry tracing, Prometheus metrics, health probes,
   wired up identically across all apps.
-
-Only three workspace packages exist under `packages/*` today (`contracts`, `core`,
-`observability`) — ESLint config and `tsconfig` bases were likewise consolidated to the repo
-root (`eslint.config.mjs`, `tsconfig.base.json`) rather than their own packages.
 
 ## Import path aliases
 
@@ -66,7 +62,7 @@ specifier even though the source is `.ts`:
 | `#modules/*.js` | `packages/core/src/modules/*.ts` |
 
 Everything that used to have its own prefix (`#database/*`, `#utilities/*`, `#core/*`,
-`#root/*`) now imports through `#lib/*.js` at its real path instead — e.g. Redis primitives
+`#root/*`) now imports through `#lib/*.js` at its real path instead — e.g. Valkey primitives
 are `#lib/database/*.js`, card/panel builders are `#lib/ui/*.js`, generic helpers are
 `#lib/utilities/*.js`. Cross-*package* imports (e.g. `packages/core` → `packages/contracts`)
 must use the `@lumi/*` specifier, never a relative path across a package boundary.
@@ -76,7 +72,7 @@ must use the `@lumi/*` specifier, never a relative path across a package boundar
 Feature modules live under `packages/core/src/modules/<name>/`, each exporting a class
 decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`), with a
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
-sub-store directories (`commands/`, `listeners/`, `services/`, `interaction-handlers/`,
+sub-store directories (`commands/`, `listeners/`, `services/`, `interactions/`,
 `scheduled-tasks/`). For the agent-facing deep dive (lifecycle hooks, config schema builders,
 real gotchas), see [`agents/architecture/module-system.md`](agents/architecture/module-system.md)
 and [`agents/workflows/adding-a-module.md`](agents/workflows/adding-a-module.md). The public doc
@@ -94,12 +90,12 @@ from `data/3rd-party-modules/`) should not reach into `#lib`/`#modules` at all �
 stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sandbox/sdk/`, exported via the root `package.json` `"exports"`
 map: `lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/interactions`, `lumi/kv`,
-`lumi/permissions`, `lumi/redis`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
+`lumi/permissions`, `lumi/valkey`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
 Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk.md).
 
 ## RPC bridge (dashboard ↔ api)
 
-The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Redis
+The dashboard (in the separate `lumi-devs/lumi-dashboard` repo) never opens a Postgres or Valkey
 connection and never holds the bot token. Every read/write is proxied over an internal HTTP RPC
 bridge to `apps/api` (the dashboard's own `src/lib/rpc.ts` calling into this repo's
 `apps/api/src/rpc-http-server.ts`, a `server-only` module reachable only from Server
@@ -124,41 +120,37 @@ them as directionally useful rather than literal.
 
 ### Releasing contracts
 
+Versions are managed with [Changesets](https://github.com/changesets/changesets) (`.changeset/`,
+`bun run changeset`). Every PR that touches `packages/` or `apps/` must include a changeset file
+(CI enforces this); docs-only PRs are exempt.
+
 A dashboard-visible change to `packages/contracts` (or `packages/observability`) only reaches
 `lumi-dashboard` once it's published and re-pinned there:
 
-1. Bump the version in `packages/contracts/package.json` (and `packages/observability/package.json`
-   if it changed too).
-2. Tag the release as `contracts-v<version>` and push the tag — `.github/workflows/publish-packages.yml`
-   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to npm from that tag.
-3. Bump the `@lumi-devs/contracts`/`@lumi-devs/observability` pin in the `lumi-dashboard` repo and
-   open a PR there.
+1. Add a changeset: `bun run changeset`, bump type `patch`/`minor`/`major` for the changed package(s).
+2. Merge to `main` — the Changesets workflow opens a `chore: version packages` PR; merging it
+   publishes `@lumi-devs/contracts`/`@lumi-devs/observability` to npm automatically.
+3. `lumi-dashboard` picks up `minor`/`patch` releases via its weekly dependabot group; a `major`
+   needs a manual PR there (see compatibility below).
 
-`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it requires the same
-major version, and while the major version is `0`, the same minor version too — so a breaking
-contracts change and the dashboard's pin bump must land together.
+`apps/api` enforces compatibility at connection time (`CONTRACT_MISMATCH`): it uses npm-style
+semver range resolution via `contractVersionsCompatible()`. Callers within `COMPATIBLE_CONTRACT_RANGE`
+(`>=MIN_COMPATIBLE_CONTRACT_VERSION <=CONTRACT_VERSION`) are accepted, allowing older deployed
+dashboard releases to talk to newer API releases without breaking. Only bump `MIN_COMPATIBLE_CONTRACT_VERSION`
+when wire contracts introduce an incompatible breaking change.
 
-**The two packages are versioned and published in lockstep, not independently.** A single
-`contracts-v<version>` tag drives `publish-packages.yml`'s single `steps.version.outputs.version`,
-which is stamped onto *both* `@lumi-devs/contracts` and `@lumi-devs/observability` regardless of
-whether both actually changed — so their in-repo `package.json` versions are kept equal by hand
-(both currently `0.6.0`) rather than tracked separately. There is no `@changesets/cli`
-setup in this repo (no `.changeset/` directory, no `changeset` script); adding one was evaluated
-and rejected because Changesets' whole model is independent per-package versions/changelogs,
-which would fight this tag's one-version-for-both design rather than replace a manual step
-cleanly. Bump both `package.json` versions by hand together, as today.
+**The two public packages are versioned and published in lockstep, not independently.**
+`.changeset/config.json` declares them `linked`, so one changeset minor/major moves both together,
+and the Changesets workflow publishes both in the same run. Private workspace packages are
+versioned together too (`privatePackages.version`), but never published.
 
-**Release channels**: the tag's version string picks the npm dist-tag, not a separate flag —
-`publish-packages.yml` parses `contracts-v<version>`, and if `<version>` contains a `-` (e.g.
-`contracts-v0.5.0-next.2`) it publishes under the `next` dist-tag, otherwise under `latest`.
-So:
+**Release channels**: prereleases go through the `next` dist-tag — `bunx changeset pre enter next`,
+merge the resulting `Version Packages` PRs while prereleases are needed, then
+`bunx changeset pre exit next` to return to `latest`. So:
 
-- `contracts-v0.5.0-next.N` → prerelease, installed only by `@lumi-devs/contracts@next` /
-  an explicit version pin — never picked up by a bare `^0.5.0` or `latest` install.
-- `contracts-v0.5.0` → stable, published as `latest`.
-
-Bump the prerelease's `-next.N` suffix for each iteration before it's ready to cut as a
-plain version tag.
+- `0.7.1-next.0` → prerelease, installed only by `@lumi-devs/contracts@next` /
+  an explicit version pin — never picked up by a bare `^0.7.0` or `latest` install.
+- `0.7.1` → stable, published as `latest`.
 
 Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/dashboard). System-level view: the
 [Architecture doc site page](https://lumi-devs.github.io/Lumi-docs/reference/architecture).
@@ -169,8 +161,8 @@ Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/d
   `container.prisma` directly. (The only legitimate direct `container.prisma` uses are
   client bootstrap in `packages/core/src/lib/client/LumiClient.ts`; addon code touching it
   is flagged by the addon validator as an error.)
-- **Cache invalidation**: shared Redis keys are invalidated via `container.invalidation`
-  (`InvalidationBus`), never a raw `redis.del`.
+- **Cache invalidation**: shared Valkey keys are invalidated via `container.invalidation`
+  (`InvalidationBus`), never a raw `valkey.del`.
 - **Discord embeds**: never construct `new EmbedBuilder()` directly in a command/service —
   use the card builders in `#lib/ui/cards.js` (`makeInfoCard`, `makeSuccessCard`,
   `makeErrorCard`, `makeWarningCard`, `makeListCard`, ...) or, inside a command, the reply
@@ -217,7 +209,7 @@ one-off commands as `nix develop --command <cmd>`.
   with `--fix`).
 - `bun run test` — the offline suite: `bun test --parallel` at the root (globs `packages/**`
   per `bunfig.toml`'s `[test] root`, skipping `tests/integration/`), then `apps/api`'s and
-  `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Redis suite (see
+  `apps/cli`'s own tests. `bun run test:integration` runs the real Postgres/Valkey suite (see
   [`agents/conventions/testing.md`](agents/conventions/testing.md)).
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 - `lumi` (`apps/cli`, run as `bun apps/cli/src/main.ts` or via the `lumi` bin) — `start
@@ -242,3 +234,14 @@ in-memory mock Prisma driver so tests don't need a live Postgres instance.
 `test` script, run separately from the root's package-scoped `bun test --parallel` (root
 `bunfig.toml` sets `root = "packages"`) — the root `test`/`test:coverage` scripts chain into it
 with `bun run --cwd apps/api test`, the same pattern the dashboard used before it moved out.
+
+<!-- BEGIN:turborepo-agent-rules -->
+
+# This is NOT the Turborepo you know
+
+Turborepo configuration, task behavior, and CLI commands can vary between installed versions and may differ from your training data. Resolve the `turbo` package from this file's directory or relevant workspace; in monorepos, it may not be visible from the repository root. For example, run `node -p "require.resolve('turbo/package.json')"` from a workspace that depends on `turbo`.
+
+Read `docs/README.md` inside that installed package first, then read the relevant pages from its `docs/` directory before changing Turborepo configuration or commands. Heed deprecation notices. These bundled docs match the installed package version and are available without network access.
+
+This block is written and re-added by `turbo` before repository-scoped commands when an AI agent is detected. In the Turborepo source repository, its template is defined in `crates/turborepo-cli/src/cli/agent_guidance.rs`. Removing the managed block while updates are enabled means a later qualifying invocation will add it again. Set `"agentGuidance": false` in the root `turbo.json` or `turbo.jsonc` to opt out; this does not remove an existing block. Keep the block committed with your work to avoid an uncommitted change on the next agent invocation.
+<!-- END:turborepo-agent-rules -->

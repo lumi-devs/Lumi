@@ -1,91 +1,21 @@
-import {
-  createRedisClient,
-  redisConnectionOptions,
-  InvalidationBus,
-  SignalBus,
-} from "#lib/database/redis.js";
-import { AddonModulesRoot } from "#lib/downloader/resolver.js";
-import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
-import { envParseInteger, getDevModulePaths } from "#lib/env.js";
-import { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import { permitResolver } from "#lib/permissions/PermitResolver.js";
-import { prisma, prismaReader } from "#lib/prisma/client.js";
-import { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
-import {
-  streamConsumerLag,
-  streamDlqLength,
-  streamLength,
-} from "@lumi/observability";
-import { container, type SapphireClient } from "@sapphire/framework";
-import { Time } from "@sapphire/time-utilities";
-import { pathToFileURL } from "node:url";
+import { envParseString } from "#lib/env.js";
+import type { OwnedEventBus } from "#lib/event-bus/factory.js";
+import { createServices, ownedEventBusOf, useServices } from "#lib/services.js";
+import { installProducerOnlyTasks } from "#lib/scheduler/producer.js";
+import type { Client } from "discord.js";
 
-/**
- * Registers Lumi's own stores on the client and installs the process-wide
- * singletons that every piece reaches through `container`.
- *
- * @remarks
- *
- * Must run inside the client constructor, after `super()` (it needs
- * `client.stores`) and before any piece is loaded, because module discovery
- * and the permission store both read from `container` at load time.
- *
- * @param client - The client whose store registry is being populated.
- * @returns The event bus this process owns and must close on shutdown.
- */
 export function installContainerServices(
-  client: SapphireClient,
+  client: Client,
+  service = envParseString("SERVICE_NAME", "lumi"),
 ): OwnedEventBus {
-  const moduleStore = new ModuleStore();
-  moduleStore.addRoot(new URL("../../modules/", import.meta.url));
-  moduleStore.addRoot(pathToFileURL(`${AddonModulesRoot}/`));
-  for (const devPath of getDevModulePaths()) {
-    moduleStore.addRoot(pathToFileURL(`${devPath}/`));
+  const services = createServices(client, service);
+  installProducerOnlyTasks(services);
+  useServices(services);
+  const owned = ownedEventBusOf(services);
+  if (!owned) {
+    throw new Error(
+      "[container-services] createServices did not register an owned event bus",
+    );
   }
-  client.stores.register(moduleStore);
-  client.stores.registerPath(new URL("../permissions/", import.meta.url));
-
-  const redis = createRedisClient();
-  const ownedEventBus = createEventBus({
-    redis: {
-      ...redisConnectionOptions(),
-      db: envParseInteger("REDIS_CACHE_DB", 0),
-    },
-    defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
-    maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
-    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", Time.Minute),
-    claimIntervalMs: envParseInteger("EVENT_STREAM_CLAIM_INTERVAL_MS", 30_000),
-    statsIntervalMs: envParseInteger("EVENT_STREAM_STATS_INTERVAL_MS", 10_000),
-    onStats: (s) => {
-      streamLength.set({ stream: s.stream }, s.length);
-      streamConsumerLag.set({ stream: s.stream, group: s.group }, s.pending);
-      streamDlqLength.set({ stream: s.stream }, s.dlqLength);
-    },
-    log: (level, msg, meta) =>
-      container.logger[level](`[EventBus] ${msg}`, meta),
-  });
-
-  Object.assign(container, {
-    prisma,
-    redis,
-    invalidation: new InvalidationBus(createRedisClient()),
-    signals: new SignalBus(createRedisClient()),
-    db: new DatabaseService(prisma, redis, container.logger, prismaReader),
-    discordRest: new DiscordRestAdapter(),
-    eventBus: ownedEventBus.bus,
-    moduleStore,
-    permitResolver,
-    configChangeHooks: new Map(),
-    configValueValidators: new Map(),
-    stats: {
-      messages: 0,
-      identifies: 0,
-      resumes: 0,
-      lastIdentify: null,
-      lastResume: null,
-    },
-  });
-
-  return ownedEventBus;
+  return owned;
 }

@@ -7,16 +7,14 @@
 // rather than lingering as a stale "Ready", so a shard with no row is unambiguously
 // a shard nobody is running.
 
-import type { Cluster, Redis } from "ioredis";
+import type { Cluster } from "iovalkey";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
+import { tryParseJSON } from "@lumi/shared";
 
-/** Either topology - callers may run Redis standalone, Sentinel, or Cluster. */
-type RedisClient = Redis | Cluster;
-import { tryParseJSON } from "@sapphire/utilities";
-
-function isClusterClient(redis: RedisClient): boolean {
+function isClusterClient(valkey: ValkeyClient): boolean {
   return (
-    typeof (redis as { nodes?: unknown }).nodes === "function" &&
-    (redis as Cluster).nodes("master").length > 0
+    typeof (valkey as { nodes?: unknown }).nodes === "function" &&
+    (valkey as Cluster).nodes("master").length > 0
   );
 }
 
@@ -51,6 +49,8 @@ interface ShardTelemetry {
   pid: number;
   /** Wall-clock of this shard's last Ready/Resume event (ms); null if it hasn't happened yet. */
   lastReadyAt: number | null;
+  /** Recent in-memory/Valkey buffered log entries for this shard. */
+  logs?: Array<{ timestamp: string; level: string; message: string }>;
 }
 
 /** Publish interval (ms) callers default to when they don't override it. */
@@ -63,7 +63,7 @@ export type ShardTelemetrySample = Omit<
 >;
 
 export interface ShardTelemetryPublisherOptions {
-  redis: RedisClient;
+  valkey: ValkeyClient;
   clusterName: string;
   replicaId: string;
   sample: () => readonly ShardTelemetrySample[];
@@ -104,7 +104,7 @@ export class ShardTelemetryPublisher {
     for (const row of rows) {
       seen.add(row.shardId);
       writes.push(
-        this.opts.redis.set(
+        this.opts.valkey.set(
           shardKey(this.opts.clusterName, row.shardId),
           JSON.stringify({
             ...row,
@@ -118,7 +118,7 @@ export class ShardTelemetryPublisher {
     }
     for (const shardId of this.published) {
       if (!seen.has(shardId)) {
-        writes.push(this.opts.redis.del(shardKey(this.opts.clusterName, shardId)));
+        writes.push(this.opts.valkey.del(shardKey(this.opts.clusterName, shardId)));
       }
     }
     this.published = seen;
@@ -134,7 +134,7 @@ export class ShardTelemetryPublisher {
     );
     this.published = new Set();
     try {
-      await Promise.all(keys.map((key) => this.opts.redis.del(key)));
+      await Promise.all(keys.map((key) => this.opts.valkey.del(key)));
     } catch (err) {
       this.opts.log?.("warn", "shard telemetry cleanup failed", {
         err: String(err),
@@ -159,7 +159,7 @@ export function isShardStale(
 /**
  * Per-shard last Ready/Resume timestamp. Gateway events land on whichever
  * listener owns the socket, not on the telemetry publisher itself, so this is
- * the cheap in-memory handoff between the two rather than a second Redis write.
+ * the cheap in-memory handoff between the two rather than a second Valkey write.
  */
 const lastReadyAtByShard = new Map<number, number>();
 
@@ -190,7 +190,7 @@ export interface ClusterShardsSnapshot {
 const GlobSpecials = /[*?[\]\\]/g;
 
 export interface ReadClusterShardsOptions {
-  redis: RedisClient;
+  valkey: ValkeyClient;
   clusterName: string;
   /** SCAN batch size. Default 200. */
   scanCount?: number;
@@ -203,18 +203,18 @@ export interface ReadClusterShardsOptions {
 export async function readClusterShards(
   opts: ReadClusterShardsOptions,
 ): Promise<ClusterShardsSnapshot> {
-  const { redis, clusterName } = opts;
+  const { valkey, clusterName } = opts;
   const pattern = `lumi:cluster:${clusterName.replace(GlobSpecials, "\\$&")}:shard:*`;
 
-  const shardKeys = await scanKeys(redis, pattern, opts.scanCount ?? 200);
+  const shardKeys = await scanKeys(valkey, pattern, opts.scanCount ?? 200);
 
   const rows: ShardTelemetry[] = [];
   if (shardKeys.length > 0) {
     let values: (string | null)[];
     try {
-      values = await redis.mget(...shardKeys);
+      values = await valkey.mget(...shardKeys);
     } catch {
-      values = await Promise.all(shardKeys.map((key) => redis.get(key)));
+      values = await Promise.all(shardKeys.map((key) => valkey.get(key)));
     }
     for (const raw of values) {
       if (!raw) continue;
@@ -223,6 +223,32 @@ export async function readClusterShards(
     }
   }
   rows.sort((a, b) => a.shardId - b.shardId);
+
+  if (rows.length > 0) {
+    try {
+      const rawLogs = await Promise.all(
+        rows.map((r) =>
+          valkey.lrange(`lumi:cluster:${clusterName}:shardlogs:${r.shardId}`, -50, -1),
+        ),
+      );
+      for (let i = 0; i < rows.length; i++) {
+        const list = rawLogs[i] ?? [];
+        rows[i]!.logs = list.map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return {
+              timestamp: new Date().toISOString(),
+              level: "info",
+              message: line,
+            };
+          }
+        });
+      }
+    } catch {
+      // Valkey lrange failure shouldn't prevent shard telemetry from returning
+    }
+  }
 
   const shardCount = rows.reduce((max, r) => Math.max(max, r.shardCount ?? 0), 0);
 
@@ -257,23 +283,23 @@ export async function readClusterShards(
 }
 
 async function scanKeys(
-  redis: RedisClient,
+  valkey: ValkeyClient,
   pattern: string,
   count: number,
 ): Promise<string[]> {
-  if (isClusterClient(redis)) {
+  if (isClusterClient(valkey)) {
     const perNode = await Promise.all(
-      (redis as Cluster)
+      (valkey as Cluster)
         .nodes("master")
         .map((node) => scanNode(node, pattern, count)),
     );
     return perNode.flat();
   }
-  return scanNode(redis, pattern, count);
+  return scanNode(valkey, pattern, count);
 }
 
 async function scanNode(
-  node: Pick<Redis, "scan">,
+  node: { scan(cursor: string, matchKey: string, matchVal: string, countKey: string, countVal: number): Promise<[string, string[]]> },
   pattern: string,
   count: number,
 ): Promise<string[]> {

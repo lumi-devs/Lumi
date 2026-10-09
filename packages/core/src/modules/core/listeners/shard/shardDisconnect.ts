@@ -1,16 +1,16 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import type { CloseEvent } from "discord.js";
 import { shardStatus } from "@lumi/observability";
 
-@ApplyOptions<Listener.Options>({ event: Events.ShardDisconnect })
-export class ShardDisconnectListener extends Listener<
-  typeof Events.ShardDisconnect
-> {
-  public run(event: CloseEvent, id: number) {
+export const shardDisconnectListener = defineListener({
+  name: "shardDisconnectListener",
+  event: Events.ShardDisconnect,
+  execute(services: Container, event: CloseEvent, id: number) {
     shardStatus.set({ shard: String(id) }, 0);
-    this.container.logger.warn(
+    services.logger.warn(
       `[Shard ${id}] Disconnected - code ${event.code}`,
     );
-  }
-}
+  },
+});

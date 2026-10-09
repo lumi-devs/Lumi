@@ -1,28 +1,23 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { PermissionFlagsBits } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { emptySetupState } from "../services/setup-wizard.js";
 import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const setupDef: CommandDef = {
   name: "setup",
   description: "Launch the ephemeral server setup wizard.",
-  preconditions: ["GuildOnly"],
-  requiredUserPermissions: [PermissionFlagsBits.ManageGuild],
+  guildOnly: true,
   defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
-})
-export class SetupCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("setup");
+    return (
+      b
+        .setName("setup")
+        .setDescription("Launch the ephemeral server setup wizard.")
     );
-  }
-
-  public override async run(ctx: CommandContext): Promise<void> {
+  },
+  run: async (ctx: CommandContext): Promise<void> => {
     await ctx.reply(buildSetupStepView(1, emptySetupState()));
-  }
-}
+  },
+};

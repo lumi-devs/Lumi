@@ -15,14 +15,14 @@
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
+    <a href="https://valkey.io"><img src="https://img.shields.io/badge/Valkey-7%2B-blue?style=flat-square&logo=valkey&logoColor=white" alt="Valkey"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
   </p>
 </div>
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Sapphire Framework, Prisma, and Redis. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
+Lumi is a modular Discord bot built with Bun, TypeScript, Sapphire Framework, Prisma, and Valkey. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
 
 Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
@@ -50,7 +50,7 @@ Lumi is organized as a Bun workspace monorepo:
 - **Sandboxed Addon SDK**: Extend bot capabilities through sandboxed addons (`lumi` SDK) with permission checks and signature validation.
 - **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution.
 - **Observability Built-in**: Unified OpenTelemetry distributed tracing and Prometheus metrics endpoints on every service.
-- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Redis for distributed caching, lock leases, and streams.
+- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Valkey for distributed caching, lock leases, and streams.
 
 ---
 
@@ -60,7 +60,7 @@ Lumi is organized as a Bun workspace monorepo:
 
 - [Bun](https://bun.sh) (v1.4+) or [Nix](https://nixos.org) with flakes enabled
 - [PostgreSQL](https://www.postgresql.org) 16+
-- [Redis](https://redis.io) 7+
+- [Valkey](https://valkey.io) 7+
 - Discord Bot Application & Bot Token
 
 ### Setup
@@ -85,7 +85,7 @@ Lumi is organized as a Bun workspace monorepo:
 4. **Configure environment:**
    ```bash
    cp .env.example .env
-   # Edit .env with your DISCORD_TOKEN, DATABASE_URL, and REDIS_URL
+   # Edit .env with your DISCORD_TOKEN, DATABASE_URL, and VALKEY_URL
    ```
 
 5. **Initialize database schema:**

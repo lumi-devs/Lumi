@@ -1,0 +1,14 @@
+{
+  "name": "@lumi/shared",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "description": "Shared dependency-free primitives (time constants, text/json helpers, mutex) for all Lumi packages. Private — never published.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

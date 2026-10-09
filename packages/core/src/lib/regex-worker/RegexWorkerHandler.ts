@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
-import { AsyncQueue } from "@sapphire/async-queue";
-import { container } from "@sapphire/framework";
+import { Mutex } from "@lumi/shared";
+import { container } from "#lib/services.js";
 import type { WorkerRequest, WorkerResponse } from "./protocol.js";
 
 /**
@@ -79,7 +79,7 @@ export interface RegexWorkerOptions {
 /**
  * Owns a single regex worker thread and serializes requests onto it.
  *
- * Modelled on Skyra's `src/lib/moderation/workers/`: an `AsyncQueue` for
+ * Modelled on Skyra's `src/lib/moderation/workers/`: an `Mutex` for
  * serialization, correlation-ID matching, a hard timeout per evaluation, and a
  * restart on failure. Serializing means a hung pattern costs one timeout
  * window of filter latency rather than corrupting other in-flight requests.
@@ -87,7 +87,7 @@ export interface RegexWorkerOptions {
  * The worker is `unref`'d, so it never holds the process open.
  */
 export class RegexWorkerHandler {
-  readonly #queue = new AsyncQueue();
+  readonly #queue = new Mutex();
   readonly #loaded = new Set<string>();
   readonly #evalTimeoutMs: number;
   readonly #probeTimeoutMs: number;

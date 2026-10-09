@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function envParseString(key: string, defaultValue?: string): string {
   const value = process.env[key];
@@ -26,6 +27,32 @@ export const envIsDefined = (key: string) => Boolean(process.env[key]);
 export const getNodeEnv = (): string => process.env["NODE_ENV"] || "development";
 export const isDevelopment = (): boolean => getNodeEnv() === "development";
 export const isProduction = (): boolean => getNodeEnv() === "production";
+
+export const DEFAULT_BOT_PREFIX = ".";
+
+let cachedRepoRoot: string | null = null;
+
+// Repo root, independent of process cwd (worker is sometimes launched from apps/worker).
+export function getRepoRoot(): string {
+  if (cachedRepoRoot) return cachedRepoRoot;
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  while (true) {
+    if (existsSync(path.join(dir, "packages", "core", "package.json"))) {
+      cachedRepoRoot = dir;
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      cachedRepoRoot = process.cwd();
+      return cachedRepoRoot;
+    }
+    dir = parent;
+  }
+}
+
+export function getDefaultPrefix(): string {
+  return envParseString("DEFAULT_PREFIX", DEFAULT_BOT_PREFIX);
+}
 
 /**
  * Fails fast on every missing key at once, instead of the first caller of
@@ -184,6 +211,13 @@ export function isPrimaryShard(): boolean {
   try {
     const parsed: unknown = JSON.parse(raw);
     const ids = Array.isArray(parsed) ? parsed : [parsed];
+    const shardListRaw = process.env["SHARD_LIST"]?.trim();
+    if (shardListRaw && shardListRaw !== "auto") {
+      const configured = shardListRaw.split(",").map((s) => Number.parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n));
+      if (configured.length > 0) {
+        return ids.includes(configured[0]);
+      }
+    }
     return ids.includes(0);
   } catch {
     return true;
@@ -193,7 +227,7 @@ export function isPrimaryShard(): boolean {
 
 /**
  * Cluster name namespaces the shard telemetry each replica publishes to
- * Redis for the dashboard's fleet view. Shard ownership itself is static,
+ * Valkey for the dashboard's fleet view. Shard ownership itself is static,
  * set per replica via SHARD_LIST - this has no effect on assignment,
  * session resumption, or IDENTIFY throttling. Unset → telemetry reports
  * under the shared "default" namespace.
@@ -254,8 +288,8 @@ export const getPostgresAppName = (): string =>
   process.env["POSTGRES_APP_NAME"] ||
   `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
 
-export function getRedisClusterNodes(): { host: string; port: number }[] | null {
-  const raw = process.env["REDIS_CLUSTER_NODES"];
+export function getValkeyClusterNodes(): { host: string; port: number }[] | null {
+  const raw = process.env["VALKEY_CLUSTER_NODES"];
   if (!raw) return null;
   const nodes = raw
     .split(",")
@@ -268,8 +302,8 @@ export function getRedisClusterNodes(): { host: string; port: number }[] | null 
   return nodes.length > 0 ? nodes : null;
 }
 
-export const getRedisClusterScaleReads = (): "all" | "slave" | "master" =>
-  (process.env["REDIS_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
+export const getValkeyClusterScaleReads = (): "all" | "slave" | "master" =>
+  (process.env["VALKEY_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
 
 export function getWriteBucket(streamBuckets = 16): number {
   const shards = process.env["SHARDS"];
@@ -400,7 +434,7 @@ export function resolveModerationRetentionDays(): number {
  * to before deleting a batch of rows from any purged table (audit ledger,
  * config history, moderation cases, appeals) - each table gets its own
  * subdirectory. Unset skips archiving entirely: matching rows are deleted
- * with no backup, the behavior before this setting existed.
+ * with no backup.
  */
 export const getAuditArchiveDir = (): string | null => {
   const raw = process.env["AUDIT_ARCHIVE_DIR"]?.trim();
@@ -411,7 +445,7 @@ export const getAuditArchiveDir = (): string | null => {
 export function getGdprExportDir(): string {
   return envParseString(
     "GDPR_EXPORT_DIR",
-    path.join(process.cwd(), "data", "gdpr-exports"),
+    path.join(getRepoRoot(), "data", "gdpr-exports"),
   );
 }
 

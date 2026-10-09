@@ -1,11 +1,13 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import { DiscordAPIError, HTTPError } from "discord.js";
 
-@ApplyOptions<Listener.Options>({ event: Events.Error })
-export class ClientErrorListener extends Listener<typeof Events.Error> {
-  public run(error: Error) {
-    const { logger } = this.container;
+export const clientErrorListener = defineListener({
+  name: "clientErrorListener",
+  event: Events.Error,
+  execute(services: Container, error: Error) {
+    const { logger } = services;
     if (error instanceof DiscordAPIError) {
       logger.warn(
         `[Discord API] code ${error.code} - ${error.method} ${error.url}: ${error.message}`,
@@ -19,5 +21,5 @@ export class ClientErrorListener extends Listener<typeof Events.Error> {
     } else {
       logger.error("[Client]", error);
     }
-  }
-}
+  },
+});

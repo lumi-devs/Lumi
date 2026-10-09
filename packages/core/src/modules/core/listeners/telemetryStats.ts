@@ -1,5 +1,6 @@
-import { Listener, Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events, type Client } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "#lib/services.js";
 import {
   guildCount,
   rest429Total,
@@ -12,21 +13,25 @@ import { getDiscordProxyUrl } from "#lib/env.js";
 
 const RefreshMs = 15_000;
 
-@ApplyOptions<Listener.Options>({ once: true, event: Events.ClientReady })
-export class TelemetryStatsListener extends Listener<
-  typeof Events.ClientReady
-> {
-  #rateLimitedHandler?: (info: {
-    route: string;
-    method: string;
-    global: boolean;
-    timeToReset: number;
-  }) => void;
-  #invalidRequestHandler?: () => void;
-  #refreshTimer?: ReturnType<typeof setInterval>;
+let boundClient: Client | undefined;
+let rateLimitedHandler:
+  | ((info: {
+      route: string;
+      method: string;
+      global: boolean;
+      timeToReset: number;
+    }) => void)
+  | undefined;
+let invalidRequestHandler: (() => void) | undefined;
+let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-  public run() {
-    const { client } = this.container;
+export const telemetryStatsListener = defineListener({
+  name: "telemetryStatsListener",
+  event: Events.ClientReady,
+  once: true,
+  execute(services: Container) {
+    const { client } = services;
+    boundClient = client;
 
     const labels = (info: { route: string; method: string; global: boolean }) =>
       ({
@@ -35,19 +40,19 @@ export class TelemetryStatsListener extends Listener<
         global: String(info.global),
       }) as const;
 
-    this.#rateLimitedHandler = (info) => {
+    rateLimitedHandler = (info) => {
       rest429Total.inc(labels(info));
       restRetryAfterSeconds.observe(labels(info), info.timeToReset / 1000);
     };
-    client.rest.on("rateLimited", this.#rateLimitedHandler);
+    client.rest.on("rateLimited", rateLimitedHandler);
 
-    this.#invalidRequestHandler = () => {
+    invalidRequestHandler = () => {
       restInvalidRequestWarnings.inc();
     };
-    client.rest.on("invalidRequestWarning", this.#invalidRequestHandler);
+    client.rest.on("invalidRequestWarning", invalidRequestHandler);
 
     if (getDiscordProxyUrl() !== null) {
-      this.container.logger.info(
+      services.logger.info(
         "[REST] Routing through DISCORD_PROXY_URL - local global throttle disabled",
       );
     }
@@ -62,23 +67,20 @@ export class TelemetryStatsListener extends Listener<
     };
 
     refresh();
-    this.#refreshTimer = setInterval(refresh, RefreshMs);
-    this.#refreshTimer.unref();
-  }
-
-  public override onUnload() {
-    const { client } = this.container;
-
-    if (this.#rateLimitedHandler) {
-      client.rest.off("rateLimited", this.#rateLimitedHandler);
+    refreshTimer = setInterval(refresh, RefreshMs);
+    refreshTimer.unref();
+  },
+  onDetach() {
+    if (boundClient) {
+      if (rateLimitedHandler) boundClient.rest.off("rateLimited", rateLimitedHandler);
+      if (invalidRequestHandler) {
+        boundClient.rest.off("invalidRequestWarning", invalidRequestHandler);
+      }
+      boundClient = undefined;
     }
-    if (this.#invalidRequestHandler) {
-      client.rest.off("invalidRequestWarning", this.#invalidRequestHandler);
-    }
-    if (this.#refreshTimer) {
-      clearInterval(this.#refreshTimer);
-    }
-
-    return super.onUnload();
-  }
-}
+    if (refreshTimer) clearInterval(refreshTimer);
+    rateLimitedHandler = undefined;
+    invalidRequestHandler = undefined;
+    refreshTimer = undefined;
+  },
+});

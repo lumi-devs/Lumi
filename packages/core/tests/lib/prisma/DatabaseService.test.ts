@@ -13,13 +13,13 @@ describe("DatabaseService guild lifecycle", () => {
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    const mockRedis: any = {
+    const mockValkey: any = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
       del: vi.fn().mockResolvedValue(1),
     };
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() };
-    db = new DatabaseService(prisma as any, mockRedis, mockLogger);
+    db = new DatabaseService(prisma as any, mockValkey, mockLogger);
   });
 
   it("markGuildLeft sets leftAt on an existing guild row", async () => {

@@ -1,6 +1,6 @@
 {
   "name": "@lumi/worker",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "Worker service - runs the full Lumi bot (Discord gateway + features + scheduler) in one process.",
   "type": "module",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@lumi/core": "workspace:*",
-    "@lumi/observability": "npm:@lumi-devs/observability@latest",
+    "@lumi/observability": "workspace:*",
     "discord.js": "^14.27.0"
   }
 }

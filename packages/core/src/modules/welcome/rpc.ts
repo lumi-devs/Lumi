@@ -1,4 +1,4 @@
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { welcomeRpc } from "@lumi/contracts/rpc";
 import { Routes } from "discord-api-types/v10";
 import { implementRpc } from "#lib/rpc/implement.js";
@@ -17,7 +17,7 @@ import {
   renderGoodbyeCard,
   renderWelcomeCard,
   templateVarsFor,
-} from "./services/welcome.js";
+} from "@lumi/application/services/welcome/welcome.js";
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
   "guild.welcome.sendTest": async ({ guildId, actorId, input }) => {

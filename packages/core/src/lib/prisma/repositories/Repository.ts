@@ -1,16 +1,13 @@
-import type { RedisClient } from "#lib/database/cluster-safe.js";
-import { CacheStore } from "#lib/cache/CacheStore.js";
-import { type ILogger, container } from "@sapphire/framework";
+import type { ValkeyClient } from "@lumi/infrastructure/database";
+import { type ILogger } from "@lumi/shared";
 import type { DatabaseClient } from "#lib/prisma/client.js";
 import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
-
-export const repositoryCache = new CacheStore();
 
 /** Base class for per-domain database repositories. */
 export abstract class Repository {
   public constructor(
     protected readonly prisma: DatabaseClient,
-    protected readonly redis: RedisClient,
+    protected readonly valkey: ValkeyClient,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,
     /**
@@ -23,6 +20,10 @@ export abstract class Repository {
 
   /** Invalidates cache keys across all peers via the InvalidationBus. */
   protected async invalidate(...keys: string[]): Promise<void> {
+    // Dynamic import: this module sits inside the services → DatabaseService
+    // → repositories import chain, so a static import of either target
+    // evaluates while a repository subclass is still extending this base.
+    const { container } = await import("#lib/services.js");
     await container.invalidation.invalidate(...keys);
   }
 
@@ -33,6 +34,7 @@ export abstract class Repository {
     parser: (data: string) => T = JSON.parse,
     serializer: (data: T) => string = JSON.stringify,
   ): Promise<T> {
+    const { repositoryCache } = await import("#lib/cache/CacheStore.js");
     const parseOrWarn = (data: string): T => {
       try {
         return parser(data);

@@ -14,13 +14,13 @@ import {
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { cutText } from "@sapphire/utilities";
+import { cutText } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
 
 // Each row here is a Section with 2-3 text lines + 1 button = 4-5 real
 // components once nested, and card chrome already eats ~10-19 of Discord's
 // 40-component budget per message, so page sizes stay well under naive counts.
-const AddonRowsPerPage = 5;
+const AddonRowsPerPage = 3;
 
 export interface AddonDashboardStats {
   repoCount: number;
@@ -50,6 +50,8 @@ export interface AddonRepoModuleRow {
   short?: string;
   description?: string;
   endUserDataStatement?: string;
+  author?: string | string[];
+  minBotVersion?: string;
   hidden?: boolean;
   isInstalled: boolean;
 }
@@ -76,7 +78,6 @@ const backToAddonsRow = (t?: LumiT): Row =>
       .setStyle(ButtonStyle.Secondary),
   );
 
-/** The add-ons tab landing card: repository and install counts plus navigation. */
 export function buildAddonsView(
   stats: AddonDashboardStats = {
     repoCount: 0,
@@ -190,13 +191,12 @@ export function buildAddonReposView(
       breadcrumbs: ["Hub", "Addons", "Configure Repositories"],
       sections,
       footer:
-        "Update pulls the repo's latest commit for every installed module from it.",
+        "Update pulls the repo's latest commit per installed module from it.",
       actionRows: rows,
     },
   );
 }
 
-/** The confirmation card shown after checking a repo, when a pending update was found. */
 export function buildRepoUpdateConfirmView(
   repoName: string,
   changelog: string,
@@ -220,7 +220,7 @@ export function buildRepoUpdateConfirmView(
     resolveCardColor("warning"),
     `${Emojis.Repo} Update available for ${repoName}`,
     changelog
-      ? `-# \`\`\`\n${cutText(changelog, 900)}\n\`\`\``
+      ? `-# \`\`\`\n${cutText(changelog, 820)}\n\`\`\``
       : "New commits are available on the tracked branch.",
     {
       footer: "Update pulls the repo's latest commit for every installed module from it.",
@@ -357,7 +357,20 @@ export function buildAddonRepoModulesView(
     );
   });
 
-  const rows: Row[] = [
+  const rows: Row[] = [];
+
+  const infoButtons = shown.map((m) =>
+    new ButtonBuilder()
+      .setCustomId(`lumi:addon:modinfo:${repoName}:${m.name}`)
+      .setLabel(`ℹ️ ${m.name}`)
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  if (infoButtons.length > 0) {
+    rows.push(row(...infoButtons));
+  }
+
+  rows.push(
     row(
       new ButtonBuilder()
         .setCustomId("lumi:addon:installed")
@@ -365,7 +378,7 @@ export function buildAddonRepoModulesView(
         .setEmoji(Emojis.parse(Emojis.ArrowLeft))
         .setStyle(ButtonStyle.Secondary),
     ),
-  ];
+  );
   if (totalPages > 1) {
     rows.push(
       createPaginationRow({
@@ -408,7 +421,6 @@ export function buildAddonRepoModulesView(
   );
 }
 
-/** The auto-update settings card: on/off toggle plus the check-interval picker. */
 export function buildAutoUpdateSettingsView(
   status: AutoUpdateStatus,
   t?: LumiT,

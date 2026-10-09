@@ -1,30 +1,25 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseCommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { makeCard } from "#lib/ui/cards.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { getAfkStats } from "../data/afk.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export const afkstatsDef: CommandDef = {
   name: "afkstats",
-  description: "Show AFK system stats (owner only).",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "owner.*",
   module: "afk",
-})
-export default class AfkStatsCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b.setName(this.name).setDescription(this.description),
+  description: "Show AFK system stats (owner only).",
+  guildOnly: true,
+  requiredPermit: "owner.*",
+  build: () => {
+    const b = new SlashCommandBuilder().setName("afkstats");
+    return (
+    b.setName("afkstats").setDescription("Show AFK system stats (owner only).")
     );
-  }
-
-  public override async run(ctx: CommandContext) {
+  },
+  run: async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
-    const { activeEntries, activeCooldowns } = await getAfkStats();
+    const { activeEntries, activeCooldowns } = await getAfkStats(ctx.services);
     return ctx.reply(
       makeCard(
         0,
@@ -33,4 +28,4 @@ export default class AfkStatsCommand extends BaseCommand {
       ),
     );
   }
-}
+};

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
 import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
 import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
@@ -57,11 +57,11 @@ function makeCase(overrides: Record<string, unknown> = {}) {
 
 describe("mod module appeals RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let generateAppealToken: (typeof import("#modules/mod/services/appeal-token.js"))["generateAppealToken"];
+  let generateAppealToken: (typeof import("@lumi/application/services/mod/appeal-token.js"))["generateAppealToken"];
 
   beforeAll(async () => {
     process.env["APPEAL_TOKEN_SECRET"] = "test-appeal-secret";
-    ({ generateAppealToken } = await import("#modules/mod/services/appeal-token.js"));
+    ({ generateAppealToken } = await import("@lumi/application/services/mod/appeal-token.js"));
   });
 
   beforeEach(() => {
@@ -85,23 +85,19 @@ describe("mod module appeals RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue(undefined),
       del: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     } as any;
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db: any = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
-    db.moderation = new ModerationRepository(prisma as any, redis, container.logger, db);
-    db.appeals = new AppealRepository(prisma as any, redis, container.logger, db);
-    db.access = new AccessRepository(prisma as any, redis, container.logger, db);
+    db.moderation = new ModerationRepository(prisma as any, valkey, container.logger, db);
+    db.appeals = new AppealRepository(prisma as any, valkey, container.logger, db);
+    db.access = new AccessRepository(prisma as any, valkey, container.logger, db);
     (container as any).db = db;
-
-    container.stores = {
-      get: vi.fn().mockReturnValue({ loaded: () => [] }),
-    } as any;
 
     registerRpcHandlers();
   });

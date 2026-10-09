@@ -1,134 +1,105 @@
-import { Piece } from "@sapphire/framework";
-import type { Awaitable } from "@sapphire/utilities";
+import { container, type Container } from "#lib/services.js";
 import { Emojis } from "#lib/utilities/assets.js";
 import { CoreVersion } from "#lib/utilities/misc.js";
-
-import {
-  fieldsFromSchema,
-  type ConfigField,
-} from "./config-schema.js";
+import { fieldsFromSchema, type ConfigField } from "./config-schema.js";
 import type { ModuleDefinition, ModuleMeta } from "./meta.js";
 
-export type ModuleOptions = ModuleDefinition & Piece.Options;
-
-/** Host for decorator-attached module metadata. */
-interface WithModuleMeta {
-  meta?: ModuleMeta;
+export interface ModuleHooks {
+  onLoad?: (services: Container) => unknown;
+  onUnload?: (services: Container) => unknown;
+  reconcileScheduledJobs?: (services: Container) => unknown;
+  deleteUserData?: (
+    services: Container,
+    userId: string,
+    requester?: string,
+  ) => unknown;
+  exportUserData?: (services: Container, userId: string) => unknown;
 }
 
-/**
- * A class decorator to attach metadata to a {@link Module} piece.
- * Automatically parses configuration schemas into runtime config fields.
- */
-export function DefineModule(options: ModuleOptions) {
-  // any[] is intentional here: the decorator must accept any Module subclass
-  // constructor signature (context + options variants). Narrowing to unknown[]
-  // breaks assignability under strictFunctionTypes.
-  return function <T extends abstract new (...args: any[]) => Module>(
-    target: T,
-  ) {
-    const fields =
-      options.configFields ??
-      (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
+export interface ModuleObject extends ModuleHooks {
+  __lumiModule: true;
+  name: string;
+  dir: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  short?: string;
+  endUserDataStatement?: string;
+  version: string;
+  disableable: boolean;
+  conflicts: string[];
+  dependencies: string[];
+  configFields: ConfigField[];
+  configSchema?: ModuleDefinition["configSchema"];
+  configOverrides: boolean;
+  category?: ModuleDefinition["category"];
+  dashboardHref?: string;
+  meta: ModuleMeta;
+  enabled: boolean;
+}
 
-    const meta: ModuleMeta = {
-      name: options.name ?? target.name.toLowerCase().replace(/module$/, ""),
-      displayName: options.displayName ?? options.name ?? target.name,
-      emoji: options.emoji ?? Emojis.Gear,
-      description: options.description ?? "",
-      short: options.short,
-      endUserDataStatement: options.endUserDataStatement,
-      version: options.version ?? CoreVersion,
-      disableable: options.disableable ?? true,
-      conflicts: options.conflicts ?? [],
-      dependencies: options.dependencies ?? [],
-      configFields: fields,
-      configSchema: options.configSchema,
-      configOverrides: options.configOverrides ?? true,
-      category: options.category,
-      dashboardHref: options.dashboardHref,
-    };
+export function defineModule(
+  options: ModuleDefinition & ModuleHooks & { name: string },
+): Omit<ModuleObject, "dir"> {
+  const fields =
+    options.configFields ??
+    (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
 
-    (target as WithModuleMeta).meta = meta;
-    return target;
+  const meta: ModuleMeta = {
+    name: options.name,
+    displayName: options.displayName ?? options.name,
+    emoji: options.emoji ?? Emojis.Gear,
+    description: options.description ?? "",
+    short: options.short,
+    endUserDataStatement: options.endUserDataStatement,
+    version: options.version ?? CoreVersion,
+    disableable: options.disableable ?? true,
+    conflicts: options.conflicts ?? [],
+    dependencies: options.dependencies ?? [],
+    configFields: fields,
+    configSchema: options.configSchema,
+    configOverrides: options.configOverrides ?? true,
+    category: options.category,
+    dashboardHref: options.dashboardHref,
+  };
+
+  const reconcile: (services: Container) => unknown =
+    options.reconcileScheduledJobs ?? (() => undefined);
+
+  return {
+    __lumiModule: true,
+    name: options.name,
+    displayName: meta.displayName,
+    emoji: meta.emoji,
+    description: meta.description,
+    short: options.short,
+    endUserDataStatement: options.endUserDataStatement,
+    version: meta.version,
+    disableable: meta.disableable ?? true,
+    conflicts: meta.conflicts ?? [],
+    dependencies: meta.dependencies ?? [],
+    configFields: fields,
+    configSchema: options.configSchema,
+    configOverrides: meta.configOverrides ?? true,
+    category: options.category,
+    dashboardHref: options.dashboardHref,
+    meta,
+    enabled: true,
+    onLoad: async (services: Container = container) => {
+      await options.onLoad?.(services);
+      void Promise.resolve(reconcile(services)).catch((err: unknown) => {
+        services.logger.error(
+          `[Module:${options.name}] reconcileScheduledJobs failed:`,
+          err,
+        );
+      });
+    },
+    onUnload: (services: Container = container) =>
+      options.onUnload?.(services) ?? undefined,
+    reconcileScheduledJobs: reconcile,
+    deleteUserData: options.deleteUserData ?? (() => undefined),
+    exportUserData: options.exportUserData ?? (() => null),
   };
 }
 
-/**
- * Abstract base class for all Lumi feature modules.
- * Inherits from Sapphire's `Piece` to allow registration within Sapphire stores.
- */
-export abstract class Module extends Piece {
-  public readonly displayName: string;
-  public readonly emoji: string;
-  public readonly description: string;
-  public readonly version: string;
-  public readonly conflicts: string[];
-  public readonly dependencies: string[];
-  public readonly configFields: ConfigField[];
-
-  public override enabled = true;
-
-  public constructor(
-    context: Piece.LoaderContext,
-    options: ModuleOptions = {},
-  ) {
-    super(context, options);
-    this.displayName = options.displayName ?? this.name;
-    this.emoji = options.emoji ?? Emojis.Gear;
-    this.description = options.description ?? "";
-    this.version = options.version ?? CoreVersion;
-    this.conflicts = options.conflicts ?? [];
-    this.dependencies = options.dependencies ?? [];
-    this.configFields =
-      options.configFields ??
-      (this.constructor as WithModuleMeta).meta?.configFields ??
-      (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
-  }
-
-  /**
-   * Hook called when a user requests their data to be deleted under GDPR/CCPA.
-   * Modules that store user-specific data must override this method to scrub records.
-   */
-  public deleteUserData(
-    _userId: string,
-    _requester?: string,
-  ): Awaitable<void> {
-    return undefined;
-  }
-
-  /**
-   * Hook called when a user requests an export of their data under GDPR/CCPA.
-   * Modules that store user-specific data must override this method and
-   * return it in a plain, JSON-serializable shape. Returning `null` (the
-   * default) omits this module from the combined export.
-   */
-  public exportUserData(
-    _userId: string,
-  ): Awaitable<Record<string, unknown> | null> {
-    return null;
-  }
-
-  /**
-   * Re-arms any delayed jobs or background tasks this module owns after a restart.
-   */
-  public reconcileScheduledJobs(): Awaitable<void> {
-    return undefined;
-  }
-
-  public override onLoad(): Awaitable<unknown> {
-    void Promise.resolve(this.reconcileScheduledJobs()).catch(
-      (err: unknown) => {
-        this.container.logger.error(
-          `[Module:${this.name}] reconcileScheduledJobs failed:`,
-          err,
-        );
-      },
-    );
-    return super.onLoad();
-  }
-
-  public override onUnload(): Awaitable<unknown> {
-    return super.onUnload();
-  }
-}
+export type ModuleOptions = ModuleDefinition;

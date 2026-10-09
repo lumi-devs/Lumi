@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "#modules/welcome/services/welcome.js";
-import { WelcomeDefaults, WelcomeTemplateDocs, GoodbyeTemplateDocs, DmTemplateDocs, loadWelcomeConfig } from "#modules/welcome/services/welcome.js";
-import { sendWelcomeCard } from "#modules/welcome/services/welcome.js";
+import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "@lumi/application/services/welcome/welcome.js";
+import { WelcomeDefaults, loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
+import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
 import {
   MessageContentSchema,
-  MessageTemplateDocs,
   MessageTemplateVars,
   renderMessageContent,
 } from "#lib/message-content.js";
 import { WelcomeMemberAddListener } from "#modules/welcome/listeners/guildMemberAdd.js";
 import { WelcomeMemberRemoveListener } from "#modules/welcome/listeners/guildMemberRemove.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -248,12 +247,6 @@ describe("message template vars", () => {
       "memberNumber",
     ]);
   });
-
-  it("is the single source for the welcome placeholder docs", () => {
-    expect(WelcomeTemplateDocs).toBe(MessageTemplateDocs);
-    expect(GoodbyeTemplateDocs).toBe(MessageTemplateDocs);
-    expect(DmTemplateDocs).toBe(MessageTemplateDocs);
-  });
 });
 
 describe("renderMessageContent", () => {
@@ -363,20 +356,12 @@ describe("sendWelcomeCard", () => {
 
 describe("welcome listener wiring", () => {
   it("gates the join listener on the welcome module", () => {
-    const listener = new WelcomeMemberAddListener({} as any, {
-      name: "welcomeMemberAdd",
-      module: "welcome",
-    });
-    expect(listener.name).toBe("welcomeMemberAdd");
-    expect(listener.module).toBe("welcome");
+    expect(WelcomeMemberAddListener.name).toBe("welcomeMemberAdd");
+    expect(WelcomeMemberAddListener.module).toBe("welcome");
   });
 
   it("gates the leave listener on the welcome module", () => {
-    const listener = new WelcomeMemberRemoveListener({} as any, {
-      name: "welcomeMemberRemove",
-      module: "welcome",
-    });
-    expect(listener.name).toBe("welcomeMemberRemove");
-    expect(listener.module).toBe("welcome");
+    expect(WelcomeMemberRemoveListener.name).toBe("welcomeMemberRemove");
+    expect(WelcomeMemberRemoveListener.module).toBe("welcome");
   });
 });

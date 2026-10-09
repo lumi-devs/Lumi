@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { FeatureFlagRepository } from "#lib/prisma/repositories/FeatureFlagRepository.js";
-import { RedisKeys } from "#lib/database/redis.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
-import { container } from "@sapphire/framework";
+import { ValkeyKeys } from "#lib/valkey/client.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { container } from "#lib/services.js";
 
 vi.mock("@lumi/observability", () => ({
   cacheHits: { inc: vi.fn() },
@@ -12,7 +12,7 @@ vi.mock("@lumi/observability", () => ({
 describe("FeatureFlagRepository", () => {
   let repo: FeatureFlagRepository;
   let mockPrisma: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let mockInvalidation: any;
 
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe("FeatureFlagRepository", () => {
       },
     };
 
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue("OK"),
     };
@@ -56,13 +56,13 @@ describe("FeatureFlagRepository", () => {
     mockInvalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
 
     (container as any).invalidation = mockInvalidation;
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     repositoryCache.clear();
 
     const mockDb: any = {};
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
 
-    repo = new FeatureFlagRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new FeatureFlagRepository(mockPrisma, mockValkey, mockLogger, mockDb);
   });
 
   describe("setFlag", () => {
@@ -92,7 +92,7 @@ describe("FeatureFlagRepository", () => {
         },
       });
       expect(mockInvalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.featureFlagEval("new-ui"),
+        ValkeyKeys.featureFlagEval("new-ui"),
       );
     });
 
@@ -141,7 +141,7 @@ describe("FeatureFlagRepository", () => {
         update: { enabled: true },
       });
       expect(mockInvalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.featureFlagOverride("new-ui", "123"),
+        ValkeyKeys.featureFlagOverride("new-ui", "123"),
       );
     });
 
@@ -155,7 +155,7 @@ describe("FeatureFlagRepository", () => {
       const deleted = await repo.deleteOverride("new-ui", "123");
       expect(deleted).toBe(true);
       expect(mockInvalidation.invalidate).toHaveBeenCalledWith(
-        RedisKeys.featureFlagOverride("new-ui", "123"),
+        ValkeyKeys.featureFlagOverride("new-ui", "123"),
       );
     });
   });

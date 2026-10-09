@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { getGuildContext } from "#lib/cache/GuildContext.js";
 import { BrandColors } from "#lib/branding/colors.js";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 
 describe("getGuildContext", () => {
   let getGuildSettings: any;
@@ -24,7 +24,7 @@ describe("getGuildContext", () => {
     isGuildIgnored.mockResolvedValue(false);
     getModuleConfig.mockResolvedValue(0x123456);
 
-    const ctx = await getGuildContext("guild-1");
+    const ctx = await getGuildContext(container, "guild-1");
 
     expect(ctx).toEqual({
       locale: "en-US",
@@ -42,7 +42,7 @@ describe("getGuildContext", () => {
     isGuildIgnored.mockResolvedValue(false);
     getModuleConfig.mockResolvedValue(null);
 
-    const ctx = await getGuildContext("guild-2");
+    const ctx = await getGuildContext(container, "guild-2");
 
     expect(ctx.prefixes).toEqual([]);
   });
@@ -52,7 +52,7 @@ describe("getGuildContext", () => {
     isGuildIgnored.mockResolvedValue(false);
     getModuleConfig.mockResolvedValue(null);
 
-    const ctx = await getGuildContext("guild-3");
+    const ctx = await getGuildContext(container, "guild-3");
 
     expect(ctx.brandColor).toBe(BrandColors.primary);
   });
@@ -62,7 +62,7 @@ describe("getGuildContext", () => {
     isGuildIgnored.mockResolvedValue(true);
     getModuleConfig.mockResolvedValue(null);
 
-    const ctx = await getGuildContext("guild-4");
+    const ctx = await getGuildContext(container, "guild-4");
 
     expect(ctx.locale).toBe("");
     expect(ctx.ignoredGuild).toBe(true);

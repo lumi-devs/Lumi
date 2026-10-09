@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { execFileSync } from "node:child_process";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,
@@ -50,7 +50,7 @@ async function writeModuleInfo(moduleDir: string, version: string) {
   );
   await fs.writeFile(
     path.join(moduleDir, "index.ts"),
-    `@DefineModule({ name: "${path.basename(moduleDir)}" })\nexport class TestModule {}\n`,
+    `import { defineModule } from "lumi";\nexport const meta = defineModule({ name: "${path.basename(moduleDir)}" });\n`,
   );
 }
 
@@ -176,7 +176,13 @@ describe("DownloadResolver - revision resolution & checkout", () => {
       await fs
         .rm(path.join(AddonModulesRoot, siblingModuleName), { recursive: true, force: true })
         .catch(() => {});
-      execFileSync("git", ["-C", repoPath, "worktree", "prune"], { encoding: "utf8" });
+      try {
+        if (await fs.stat(repoPath).then(() => true).catch(() => false)) {
+          execFileSync("git", ["-C", repoPath, "worktree", "prune"], { encoding: "utf8" });
+        }
+      } catch {
+        // Ignore prune failures during cleanup
+      }
       await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
       await fs
         .rm(path.join(ModuleRoot, ".lumi-pins", repoName), { recursive: true, force: true })

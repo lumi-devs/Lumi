@@ -1,23 +1,16 @@
-import { Events } from "@sapphire/framework";
-import { ApplyOptions } from "@sapphire/decorators";
+import { Events } from "discord.js";
+import type { Container } from "#lib/services.js";
 import { AuditLogEvent, type Guild } from "discord.js";
-import { ModuleListener } from "#lib/module-system/ModuleListener.js";
-import { resolveAuditLogExecutor } from "../services/audit.js";
-import { evaluateNukeEvent } from "../services/anti-nuke.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
+import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
+import { evaluateNukeEvent } from "@lumi/application/services/security/anti-nuke.js";
 
-@ApplyOptions<ModuleListener.Options>({
+export const SecurityGuildUpdateListener = defineListener({
   name: "securityGuildUpdate",
   event: Events.GuildUpdate,
   module: "security",
-})
-export class SecurityGuildUpdateListener extends ModuleListener<
-  typeof Events.GuildUpdate
-> {
-  protected override resolveGuildId(oldGuild: Guild): string | null {
-    return oldGuild.id;
-  }
-
-  protected async handle(oldGuild: Guild, newGuild: Guild): Promise<void> {
+  guildId: (oldGuild: Guild, _newGuild: Guild) => oldGuild.id,
+  async execute(_services: Container, oldGuild: Guild, newGuild: Guild): Promise<void> {
     if (oldGuild.vanityURLCode === newGuild.vanityURLCode) return;
 
     await evaluateNukeEvent(newGuild, "vanity_change", () =>
@@ -28,6 +21,5 @@ export class SecurityGuildUpdateListener extends ModuleListener<
         "vanity_url_code",
       ),
     );
-  }
-
-}
+  },
+});

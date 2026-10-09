@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import TempVcUtility, {
   resolveGeneratorName,
 } from "#modules/tempvc/utilities/TempVcUtility.js";
-import { container } from "@sapphire/framework";
-import { tempVcRegistry } from "#modules/tempvc/services/registry.js";
-import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#modules/tempvc/services/voice-occupancy.js";
+import { container } from "#lib/services.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
+import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "@lumi/application/services/tempvc/voice-occupancy.js";
 import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data/tempvc.js";
 
-vi.mock("#modules/tempvc/services/voice-occupancy.js", () => ({
+vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
   clearVoiceChannelOccupancy: vi.fn(),
 }));
@@ -23,7 +23,7 @@ vi.mock("#modules/tempvc/data/tempvc.js", () => ({
   removeGenerator: vi.fn(),
 }));
 
-vi.mock("#modules/tempvc/services/registry.js", () => ({
+vi.mock("@lumi/application/services/tempvc/registry.js", () => ({
   tempVcRegistry: {
     nextNumber: vi.fn(),
     addVc: vi.fn(),
@@ -41,12 +41,12 @@ vi.mock("#modules/tempvc/ui/panel.js", () => ({
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 describe("TempVcUtility", () => {
-  let service: TempVcUtility;
+  let service: typeof TempVcUtility;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    (container as any).redis = {
+    (container as any).valkey = {
       set: vi.fn(),
     } as any;
     (container as any).db = {
@@ -69,23 +69,20 @@ describe("TempVcUtility", () => {
       create: vi.fn().mockResolvedValue({}),
     };
 
-    service = new TempVcUtility(
-      { name: "tempvc", store: { name: "utilities" } } as any,
-      {}
-    );
+    service = TempVcUtility;
   });
 
 
   describe("onCreateCooldown", () => {
     it("returns false if NX set succeeds (no cooldown)", async () => {
-      (container.redis.set as any).mockResolvedValue("OK");
-      const result = await service.onCreateCooldown("guild-1", "user-1");
+      (container.valkey.set as any).mockResolvedValue("OK");
+      const result = await service.onCreateCooldown(container, "guild-1", "user-1");
       expect(result).toBe(false);
     });
 
     it("returns true if NX set returns null (cooldown active)", async () => {
-      (container.redis.set as any).mockResolvedValue(null);
-      const result = await service.onCreateCooldown("guild-1", "user-1");
+      (container.valkey.set as any).mockResolvedValue(null);
+      const result = await service.onCreateCooldown(container, "guild-1", "user-1");
       expect(result).toBe(true);
     });
   });
@@ -130,7 +127,7 @@ describe("TempVcUtility", () => {
       (listVcRecords as any).mockResolvedValue(new Map());
       (listGenerators as any).mockResolvedValue(new Map());
 
-      await service.createVc(mockMember as any, mockGenerator as any, {
+      await service.createVc(container, mockMember as any, mockGenerator as any, {
         name: "Gaming {}",
         limit: 5,
       });
@@ -144,7 +141,7 @@ describe("TempVcUtility", () => {
       });
 
       expect(mockMember.voice.setChannel).toHaveBeenCalledWith(mockChannel);
-      expect(setVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
+      expect(setVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123", {
         ownerId: "member-1",
         generatorId: "gen-123",
         name: "Gaming 2",
@@ -196,7 +193,7 @@ describe("TempVcUtility", () => {
 
       (tempVcRegistry.nextNumber as any).mockResolvedValue(2);
 
-      await service.createVc(mockMember as any, mockGenerator as any, {
+      await service.createVc(container, mockMember as any, mockGenerator as any, {
         name: "Gaming {}",
         limit: 5,
       });
@@ -239,7 +236,7 @@ describe("TempVcUtility", () => {
       (setVcRecord as any).mockRejectedValue(new Error("DB write failed"));
 
       await expect(
-        service.createVc(mockMember as any, mockGenerator as any, {
+        service.createVc(container, mockMember as any, mockGenerator as any, {
           name: "Gaming {}",
           limit: 5,
         })
@@ -282,7 +279,7 @@ describe("TempVcUtility", () => {
         ])
       );
 
-      await service.reorderChannels(mockGuild as any, "cat-1");
+      await service.reorderChannels(container, mockGuild as any, "cat-1");
 
       expect(mockGuild.channels.setPositions).toHaveBeenCalledWith([
         { channel: "gen-1", position: 0 },
@@ -310,7 +307,7 @@ describe("TempVcUtility", () => {
     it("does not delete channel if not registered", async () => {
       (getVcRecord as any).mockResolvedValue(null);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(isVoiceChannelEmpty).not.toHaveBeenCalled();
       expect(container.client.rest.delete).not.toHaveBeenCalled();
@@ -320,7 +317,7 @@ describe("TempVcUtility", () => {
       (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
       (isVoiceChannelEmpty as any).mockResolvedValue(false);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(container.client.rest.delete).not.toHaveBeenCalled();
     });
@@ -330,12 +327,12 @@ describe("TempVcUtility", () => {
       (isVoiceChannelEmpty as any).mockResolvedValue(true);
       (container.client.rest.delete as any).mockResolvedValue({} as any);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-123" });
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
 
       expect(container.client.rest.delete).toHaveBeenCalledWith("/channels/vc-123", {
         reason: "Empty temp VC cleanup",
       });
-      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-123");
+      expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-123");
     });
   });
@@ -356,13 +353,13 @@ describe("TempVcUtility", () => {
 
       const record: any = { ownerId: "owner-1", generatorId: "gen-1", locked: false };
 
-      const result = await service.setLock(mockChannel as any, record, true);
+      const result = await service.setLock(container, mockChannel as any, record, true);
 
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith(
         mockChannel.guild.roles.everyone,
         { Connect: false }
       );
-      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
+      expect(patchVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123", {
         locked: true,
       });
       expect(result.locked).toBe(true);
@@ -385,13 +382,13 @@ describe("TempVcUtility", () => {
 
       const record: any = { ownerId: "owner-1", generatorId: "gen-1", hidden: false };
 
-      const result = await service.setHide(mockChannel as any, record, true);
+      const result = await service.setHide(container, mockChannel as any, record, true);
 
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith(
         mockChannel.guild.roles.everyone,
         { ViewChannel: false }
       );
-      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
+      expect(patchVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123", {
         hidden: true,
       });
       expect(result.hidden).toBe(true);
@@ -411,7 +408,7 @@ describe("TempVcUtility", () => {
 
       const record: any = { ownerId: "old-owner" };
 
-      const result = await service.setOwner(mockChannel as any, record, "new-owner");
+      const result = await service.setOwner(container, mockChannel as any, record, "new-owner");
 
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("old-owner", {
         ManageChannels: null,
@@ -419,7 +416,7 @@ describe("TempVcUtility", () => {
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("new-owner", {
         ManageChannels: true,
       });
-      expect(patchVcRecord).toHaveBeenCalledWith("guild-1", "vc-123", {
+      expect(patchVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123", {
         ownerId: "new-owner",
       });
       expect(result.ownerId).toBe("new-owner");
@@ -453,9 +450,8 @@ describe("TempVcUtility", () => {
     });
   });
 
-  describe("onLoad & moduleName", () => {
-    it("onLoad executes without throwing and moduleName returns 'tempvc'", () => {
-      expect(() => service.onLoad()).not.toThrow();
+  describe("moduleName", () => {
+    it("returns 'tempvc'", () => {
       expect(service.moduleName).toBe("tempvc");
     });
   });
@@ -473,7 +469,7 @@ describe("TempVcUtility", () => {
         ])
       );
 
-      await service.reconcileGuild(mockGuild as any);
+      await service.reconcileGuild(container, mockGuild as any);
 
       expect(container.tasks.create).toHaveBeenCalledWith(
         { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-1" } },
@@ -499,9 +495,9 @@ describe("TempVcUtility", () => {
       );
       (removeVcRecord as any).mockResolvedValue(undefined);
 
-      await service.reconcileGuild(mockGuild as any);
+      await service.reconcileGuild(container, mockGuild as any);
 
-      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-gone");
+      expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-gone");
       expect(container.tasks.create).toHaveBeenCalledWith(
         { name: "tempvc-cleanup", payload: { guildId: "guild-1", channelId: "vc-1" } },
         expect.any(Object)
@@ -522,16 +518,16 @@ describe("TempVcUtility", () => {
       err10003.code = 10003;
       (container.client.rest.delete as any).mockRejectedValueOnce(err10003);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-10003" });
-      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-10003");
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-10003" });
+      expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-10003");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-10003");
 
       const err50013: any = new Error("Missing Permissions");
       err50013.code = 50013;
       (container.client.rest.delete as any).mockRejectedValueOnce(err50013);
 
-      await service.runCleanup({ guildId: "guild-1", channelId: "vc-50013" });
-      expect(removeVcRecord).toHaveBeenCalledWith("guild-1", "vc-50013");
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-50013" });
+      expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-50013");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-50013");
     });
 
@@ -544,7 +540,7 @@ describe("TempVcUtility", () => {
       (container.client.rest.delete as any).mockRejectedValueOnce(unexpectedErr);
 
       await expect(
-        service.runCleanup({ guildId: "guild-1", channelId: "vc-err" })
+        service.runCleanup(container, { guildId: "guild-1", channelId: "vc-err" })
       ).rejects.toThrow("Internal Error");
     });
   });
@@ -553,8 +549,8 @@ describe("TempVcUtility", () => {
     it("addGenerator calls setGenerator", async () => {
       (listGenerators as any).mockResolvedValue(new Map());
       const config = { name: "Gen", limit: 0 };
-      await service.addGenerator("guild-1", "chan-1", config);
-      expect(setGenerator).toHaveBeenCalledWith("guild-1", "chan-1", config);
+      await service.addGenerator(container, "guild-1", "chan-1", config);
+      expect(setGenerator).toHaveBeenCalledWith(container, "guild-1", "chan-1", config);
     });
 
     it("rejects a new generator at the configured limit", async () => {
@@ -567,7 +563,7 @@ describe("TempVcUtility", () => {
       );
 
       await expect(
-        service.addGenerator("guild-1", "chan-3", { name: "Gen", limit: 0 }),
+        service.addGenerator(container, "guild-1", "chan-3", { name: "Gen", limit: 0 }),
       ).rejects.toThrow("maximum of 2 voice generators");
       expect(setGenerator).not.toHaveBeenCalled();
     });
@@ -582,21 +578,21 @@ describe("TempVcUtility", () => {
       );
 
       const config = { name: "Renamed", limit: 5 };
-      await service.addGenerator("guild-1", "chan-2", config);
-      expect(setGenerator).toHaveBeenCalledWith("guild-1", "chan-2", config);
+      await service.addGenerator(container, "guild-1", "chan-2", config);
+      expect(setGenerator).toHaveBeenCalledWith(container, "guild-1", "chan-2", config);
     });
 
     it("removeGenerator calls removeGenerator", async () => {
       (removeGenerator as any).mockResolvedValue(true);
-      const res = await service.removeGenerator("guild-1", "chan-1");
+      const res = await service.removeGenerator(container, "guild-1", "chan-1");
       expect(res).toBe(true);
-      expect(removeGenerator).toHaveBeenCalledWith("guild-1", "chan-1");
+      expect(removeGenerator).toHaveBeenCalledWith(container, "guild-1", "chan-1");
     });
 
     it("listGenerators calls listGenerators data function", async () => {
       const expected = new Map([["chan-1", { name: "Gen", limit: 0 }]]);
       (listGenerators as any).mockResolvedValue(expected);
-      const res = await service.listGenerators("guild-1");
+      const res = await service.listGenerators(container, "guild-1");
       expect(res).toBe(expected);
     });
   });
@@ -610,7 +606,7 @@ describe("TempVcUtility", () => {
         },
       };
 
-      await service.reorderChannels(mockGuild as any, "cat-empty");
+      await service.reorderChannels(container, mockGuild as any, "cat-empty");
       expect(listVcRecords).not.toHaveBeenCalled();
     });
 
@@ -626,7 +622,7 @@ describe("TempVcUtility", () => {
       (listVcRecords as any).mockResolvedValue(new Map());
       (listGenerators as any).mockResolvedValue(new Map([["gen-1", {} as any]]));
 
-      await service.reorderChannels(mockGuild as any, "cat-1");
+      await service.reorderChannels(container, mockGuild as any, "cat-1");
       expect(mockGuild.channels.setPositions).not.toHaveBeenCalled();
     });
   });
@@ -652,7 +648,7 @@ describe("TempVcUtility", () => {
       };
 
       const record: any = { ownerId: "owner-1", generatorId: "gen-1", locked: false };
-      await service.setLock(mockChannel as any, record, true);
+      await service.setLock(container, mockChannel as any, record, true);
 
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("mem-1", { Connect: true });
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("mem-2", { Connect: true });
@@ -671,7 +667,7 @@ describe("TempVcUtility", () => {
       };
 
       const record: any = { ownerId: "old-owner-not-in-cache" };
-      const result = await service.setOwner(mockChannel as any, record, "new-owner");
+      const result = await service.setOwner(container, mockChannel as any, record, "new-owner");
 
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledTimes(1);
       expect(mockChannel.permissionOverwrites.edit).toHaveBeenCalledWith("new-owner", {

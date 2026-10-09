@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { UserError, container } from "@sapphire/framework";
-import * as i18n from "@sapphire/plugin-i18next";
+import { container } from "#lib/services.js";
+import { UserError } from "@lumi/shared";
+import * as i18n from "#lib/i18n/index.js";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#lib/command-context.js";
+import { CommandContext } from "#lib/commands/context.js";
 import * as commandResponse from "#lib/utilities/command-response.js";
 
-vi.mock("@sapphire/plugin-i18next", () => ({
+vi.mock("#lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
@@ -255,7 +256,7 @@ describe("CommandContext", () => {
       const ctx = CommandContext.fromInteraction(mockInteraction);
       const t = await ctx.fetchT();
       expect(t).toBeDefined();
-      expect(i18n.fetchT).toHaveBeenCalledWith(mockInteraction);
+      expect(i18n.fetchT).toHaveBeenCalledWith(mockInteraction, expect.anything());
     });
   });
 });

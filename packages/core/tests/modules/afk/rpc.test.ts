@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
-import { repositoryCache } from "#lib/prisma/repositories/Repository.js";
+import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
 
@@ -44,21 +44,17 @@ describe("afk module RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const redis = {
+    const valkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn(),
       set: vi.fn(),
       pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
     };
-    (container as any).redis = redis;
+    (container as any).valkey = valkey;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
+    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
     (container as any).db = db;
-
-    container.stores = {
-      get: vi.fn(() => ({ loaded: () => [], get: () => undefined })),
-    } as any;
 
     registerRpcHandlers();
   });

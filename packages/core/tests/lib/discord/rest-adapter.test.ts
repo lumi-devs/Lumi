@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
 import { DiscordRestApiError } from "#lib/discord/rest-port.js";
 

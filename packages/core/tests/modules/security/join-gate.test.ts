@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import {
   applyGateAction,
   loadJoinGateConfig,
   evaluateJoinFilters,
-} from "#modules/security/services/join-gate.js";
+} from "@lumi/application/services/security/join-gate.js";
 import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
 import { logToChannel } from "#lib/moderation/log.js";
 
@@ -17,16 +17,16 @@ vi.mock("#lib/moderation/log.js", () => ({
 }));
 
 function setContainer(overrides: {
-  redis?: Record<string, unknown>;
+  valkey?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).redis = {
+  (container as any).valkey = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
     multi: vi.fn(),
-    ...overrides.redis,
+    ...overrides.valkey,
   };
   (container as any).db = {
     config: { getModuleConfig: vi.fn().mockResolvedValue(null) },
@@ -67,6 +67,7 @@ describe("applyGateAction", () => {
       expect.objectContaining({ guildId: "g1", userId: "u1", action: "kick" }),
     );
     expect(logToChannel).toHaveBeenCalledWith(
+      container,
       "g1",
       expect.any(String),
       expect.any(Number),

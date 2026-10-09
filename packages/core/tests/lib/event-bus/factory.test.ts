@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { createEventBus } from "#lib/event-bus/factory.js";
-import { RedisStreamsBus } from "#lib/event-bus/RedisStreamsBus.js";
+import { StreamBus } from "#lib/event-bus/StreamBus.js";
 
 const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockInstances: any[] = [];
 
-vi.mock("ioredis", () => {
-  class MockRedis {
+vi.mock("iovalkey", () => {
+  class MockValkey {
     opts: any;
     xadd = vi.fn().mockResolvedValue("1-0");
     xack = vi.fn().mockResolvedValue(1);
@@ -21,7 +21,7 @@ vi.mock("ioredis", () => {
       mockInstances.push(this);
     }
   }
-  return { Redis: MockRedis, default: MockRedis };
+  return { Valkey: MockValkey, default: MockValkey };
 });
 
 describe("createEventBus", () => {
@@ -29,22 +29,22 @@ describe("createEventBus", () => {
     mockInstances.length = 0;
     mockQuit.mockClear();
   });
-  it("throws error when redis options are missing", () => {
+  it("throws error when valkey options are missing", () => {
     expect(() => createEventBus()).toThrow(
-      "createEventBus(): `redis` options required",
+      "createEventBus(): `valkey` options required",
     );
     expect(() => createEventBus({} as any)).toThrow(
-      "createEventBus(): `redis` options required",
+      "createEventBus(): `valkey` options required",
     );
   });
 
-  it("initializes OwnedEventBus with RedisStreamsBus and dedicated ioredis connections", () => {
+  it("initializes OwnedEventBus with StreamBus and dedicated Valkey connections", () => {
     mockInstances.length = 0;
     const onStatsSpy = vi.fn();
     const logSpy = vi.fn();
 
     const owned = createEventBus({
-      redis: { host: "localhost", port: 6379 },
+      valkey: { host: "localhost", port: 6379 },
       defaultMaxLen: 50000,
       maxDeliveries: 3,
       claimMinIdleMs: 45000,
@@ -54,7 +54,7 @@ describe("createEventBus", () => {
       log: logSpy,
     });
 
-    expect(owned.bus).toBeInstanceOf(RedisStreamsBus);
+    expect(owned.bus).toBeInstanceOf(StreamBus);
     expect(owned.publisher).toBeDefined();
 
     expect(mockInstances).toHaveLength(2);
@@ -85,7 +85,7 @@ describe("createEventBus", () => {
 
   it("passes claimMinIdleMs through to the bus", () => {
     const owned = createEventBus({
-      redis: { host: "localhost" },
+      valkey: { host: "localhost" },
       claimMinIdleMs: 30000,
     });
 
@@ -93,10 +93,10 @@ describe("createEventBus", () => {
     expect(bus.claimMinIdleMs).toBe(30000);
   });
 
-  it("closes both the bus and Redis clients when close() is invoked", async () => {
+  it("closes both the bus and Valkey clients when close() is invoked", async () => {
     mockQuit.mockClear();
     const owned = createEventBus({
-      redis: { host: "localhost", port: 6379 },
+      valkey: { host: "localhost", port: 6379 },
     });
 
     const busCloseSpy = vi.spyOn(owned.bus, "close");

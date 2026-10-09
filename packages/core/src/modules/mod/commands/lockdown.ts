@@ -1,41 +1,33 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { type ApplicationCommandRegistry } from "@sapphire/framework";
-import { BaseSubcommand } from "#lib/commands.js";
-import type { CommandContext } from "#lib/command-context.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandContext } from "#lib/commands/context.js";
 import { lockAllTextChannels, unlockAllTextChannels } from "#lib/moderation/lockdown.js";
 import { confirmPrompt } from "#lib/utilities/confirm.js";
 import { makeErrorCard } from "#lib/ui/cards.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+export const lockdownDef: CommandDef = {
   name: "lockdown",
   description: "Enable or disable server lockdown",
-  preconditions: ["GuildOnly"],
+  guildOnly: true,
   requiredPermit: "mod.lockdown",
-  subcommands: [
-    { name: "enable", run: "enable" },
-    { name: "disable", run: "disable" },
-  ],
-})
-export class LockdownCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      b
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s.setName("enable").setDescription("Lock down all text channels"),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("disable")
-            .setDescription("Remove lockdown from text channels"),
-        ),
+  build: () => {
+    const b = new SlashCommandBuilder().setName("lockdown");
+    return (
+    b
+            .setName("lockdown")
+            .setDescription("Enable or disable server lockdown")
+            .addSubcommand((s) =>
+              s.setName("enable").setDescription("Lock down all text channels"),
+            )
+            .addSubcommand((s) =>
+              s
+                .setName("disable")
+                .setDescription("Remove lockdown from text channels"),
+            )
     );
-  }
-
-  public async enable(ctx: CommandContext) {
+  },
+  handlers: {
+  "enable": async (ctx: CommandContext) => {
     const { confirmed, message } = await confirmPrompt(ctx, {
       title: "Confirm Lockdown",
       body: "You're about to disable **SendMessages** for @everyone in every text channel of this server. Members will not be able to chat until lockdown is disabled.",
@@ -60,11 +52,10 @@ export class LockdownCommand extends BaseSubcommand {
 
     return ctx.replySuccess(
       "Lockdown Enabled",
-      `Successfully disabled SendMessages for @everyone in ${modified} text channel(s).`,
+      `Successfully disabled SendMessages for @everyone in ${modified} text channel(s).`
     );
-  }
-
-  public async disable(ctx: CommandContext) {
+  },
+  "disable": async (ctx: CommandContext) => {
     await ctx.defer();
     const { modified, failed } = await unlockAllTextChannels(ctx.guild!);
 
@@ -80,4 +71,5 @@ export class LockdownCommand extends BaseSubcommand {
       `Successfully restored SendMessages for @everyone in ${modified} text channel(s).`,
     );
   }
-}
+  }
+};

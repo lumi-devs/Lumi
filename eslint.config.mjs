@@ -75,17 +75,19 @@ export default tseslint.config(
     },
   },
   {
-    // RPC, Sapphire preconditions and the addon sandbox make "what may you
+    // RPC, permissions and the addon sandbox make "what may you
     // do" decisions through the single `authorize()` evaluator, not by
-    // reaching into PermitResolver's internals directly. Repeats the
+    // reaching into PermitResolver's internals directly (`authorize.ts`
+    // itself is exempt — it IS the evaluator). Repeats the
     // repo-wide `no-restricted-imports` entries above (flat config replaces,
     // rather than merges, a rule's options per matching file) plus this
     // directory-scoped addition.
     files: [
       'packages/core/src/lib/rpc/**/*.ts',
-      'packages/core/src/lib/permissions/preconditions/**/*.ts',
+      'packages/core/src/lib/permissions/**/*.ts',
       'packages/core/src/lib/addon-sandbox/**/*.ts',
     ],
+    ignores: ['packages/core/src/lib/permissions/authorize.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -144,9 +146,9 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['../../*/**', '../../../modules/**'],
+              group: ['../../modules/**', '../../../*/**'],
               message:
-                'Cross-module import detected. A module may only import from its own folder, src/lib/, src/core/, src/redis/, src/storage/, or src/db/.',
+                'Cross-module import detected. A module may only import from its own folder, src/lib/, src/core/, src/storage/, or src/db/.',
             },
           ],
         },

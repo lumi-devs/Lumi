@@ -2,7 +2,7 @@ import type { DoctorCheckFn, DoctorCheckResult } from "#lib/doctor/types.js";
 import { checkDiscordToken } from "#lib/doctor/checks/discord-token.js";
 import { checkPrivilegedIntents } from "#lib/doctor/checks/privileged-intents.js";
 import { checkPostgres } from "#lib/doctor/checks/postgres.js";
-import { checkRedis } from "#lib/doctor/checks/redis.js";
+import { checkValkey } from "#lib/doctor/checks/valkey.js";
 import { checkRpc } from "#lib/doctor/checks/rpc.js";
 import { checkDashboardOAuth } from "#lib/doctor/checks/dashboard-oauth.js";
 import { checkFilesystem } from "#lib/doctor/checks/filesystem.js";
@@ -14,7 +14,7 @@ export const defaultDoctorChecks: DoctorCheckFn[] = [
   () => checkDiscordToken(),
   () => checkPrivilegedIntents(),
   () => checkPostgres(),
-  () => checkRedis(),
+  () => checkValkey(),
   () => checkRpc(),
   () => checkDashboardOAuth(),
   () => checkFilesystem(),

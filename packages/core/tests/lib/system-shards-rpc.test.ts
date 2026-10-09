@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const CLUSTER = "prod";
 
-function fakeRedis(store: Map<string, string>) {
+function fakeValkey(store: Map<string, string>) {
   return {
     get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
     mget: vi.fn((...keys: string[]) =>
@@ -65,7 +65,7 @@ describe("system.shards.get RPC handler", () => {
       application: { owner: { id: BOT_OWNER_ID } },
       guilds: { cache: new Map() },
     } as any;
-    (container as any).redis = fakeRedis(store);
+    (container as any).valkey = fakeValkey(store);
 
     registerRpcHandlers();
   });

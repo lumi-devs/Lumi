@@ -105,3 +105,34 @@ export function splitPage<T>(rows: T[], take: number): { page: T[]; hasMore: boo
   if (rows.length > take) return { page: rows.slice(0, take), hasMore: true };
   return { page: rows, hasMore: false };
 }
+
+export interface KeysetPagedResult<T> {
+  rows: T[];
+  total?: number;
+  nextCursor: string | null;
+}
+
+export async function paginateCreatedAtId<T extends { createdAt: Date; id: number }>(
+  fetchRows: (where: unknown) => Promise<T[]>,
+  countTotal: (where: unknown) => Promise<number>,
+  baseWhere: Record<string, unknown>,
+  filter: { cursor?: string; take?: number },
+): Promise<KeysetPagedResult<T>> {
+  const take = filter.take ?? 25;
+  const where =
+    filter.cursor !== undefined
+      ? { ...baseWhere, ...createdAtIdKeysetWhere(decodeCreatedAtIdCursor(filter.cursor)) }
+      : baseWhere;
+
+  const [rawRows, total] = await Promise.all([
+    fetchRows(where),
+    filter.cursor === undefined ? countTotal(baseWhere) : undefined,
+  ]);
+  const { page, hasMore } = splitPage(rawRows, take);
+  const last = page.at(-1);
+  return {
+    rows: page,
+    total,
+    nextCursor: hasMore && last ? encodeCreatedAtIdCursor(last) : null,
+  };
+}

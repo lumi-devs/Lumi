@@ -1,59 +1,28 @@
+import type { CommandContext } from "#lib/commands/context.js";
+import type { Container } from "#lib/services.js";
+import { SlashCommandBuilder } from "discord.js";
+import type { CommandDef } from "#lib/commands/command-def.js";
 import type { LumiT } from "#lib/i18n/index.js";
-import { ModerationCommand } from "#lib/moderation/ModerationCommand.js";
+import { runModerationFlow, type ModerationCommand } from "#lib/moderation/ModerationCommand.js";
 import { parseSnowflakeList, resolveMembers } from "#lib/moderation/multi-target.js";
 import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
-import { ApplyOptions } from "@sapphire/decorators";
-import { applyLocalizedBuilder } from "@sapphire/plugin-i18next";
+import { applyLocalizedBuilder } from "#lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { KickAction } from "#modules/mod/services/actions/KickAction.js";
-import { respondWithReasonChoices } from "../services/reason-autocomplete.js";
+import { KickAction } from "@lumi/application/services/mod/actions/KickAction.js";
+import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
 
 type Context = ModerationCommand.ActionContext<GuildMember>;
 type Success = ModerationCommand.OutcomeContext<GuildMember, ModerationCase>;
 
-@ApplyOptions<ModerationCommand.Options>({
-  name: "kick",
-  description: "Kick a member from the server",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "mod.*",
-  prefixEnabled: true,
-  cooldownLimit: 3,
-  cooldownDelay: 5000,
+const kickDefFlow: ModerationCommand.Flow<GuildMember,
+  ModerationCase> = {
   logScope: "kick",
   duplicateCaseAction: "kick",
-})
-export class KickCommand extends ModerationCommand<
-  GuildMember,
-  ModerationCase
-> {
-  public override registerApplicationCommands(
-    registry: ModerationCommand.Registry,
-  ) {
-    registry.registerChatInputCommand((b) =>
-      applyLocalizedBuilder(b, "commands:kick")
-        .addUserOption((o) =>
-          applyLocalizedBuilder(o, "commands:kickMember").setRequired(false),
-        )
-        .addStringOption((o) =>
-          applyLocalizedBuilder(o, "commands:kickMembers").setRequired(false),
-        )
-        .addStringOption((o) =>
-          applyLocalizedBuilder(o, "commands:modReason").setAutocomplete(true),
-        ),
-    );
-  }
-
-  public override async autocompleteRun(
-    interaction: AutocompleteInteraction,
-  ): Promise<void> {
-    return respondWithReasonChoices(interaction);
-  }
-
-  protected override async resolveTarget(ctx: ModerationCommand.RunContext) {
+  resolveTarget: async (ctx: ModerationCommand.RunContext) => {
     if (!ctx.isSlash) return ctx.getMembers("member", { required: true });
 
     const single = await ctx.getMember("member");
@@ -66,12 +35,11 @@ export class KickCommand extends ModerationCommand<
     return single && !resolved.some((m) => m.id === single.id)
       ? [single, ...resolved]
       : resolved;
-  }
-
-  protected override confirm(
+  },
+  confirm: (
     t: LumiT,
     { target, reason }: Context,
-  ): ConfirmPromptOptions {
+  ): ConfirmPromptOptions => {
     return {
       title: t(`${Root}:kickConfirmTitle`),
       body: t(`${Root}:kickConfirmBody`, {
@@ -80,16 +48,14 @@ export class KickCommand extends ModerationCommand<
       }),
       confirmLabel: t(`${Root}:kickConfirmButton`),
     };
-  }
-
-  protected override action({ guild, target, moderator, reason }: Context) {
+  },
+  action: ({ guild, target, moderator, reason }: Context) => {
     return KickAction.apply({ guild, targetMember: target, moderator, reason });
-  }
-
-  protected override buildSuccessMessage(
+  },
+  buildSuccessMessage: (
     t: LumiT,
     { target, reason, outcome }: Success,
-  ) {
+  ) => {
     return {
       title: t(`${Root}:kickSuccessTitle`),
       body: t(`${Root}:kickSuccess`, {
@@ -99,4 +65,32 @@ export class KickCommand extends ModerationCommand<
       }),
     };
   }
-}
+};
+
+export const kickDef: CommandDef = {
+  name: "kick",
+  description: "Kick a member from the server",
+  guildOnly: true,
+  requiredPermit: "mod.*",
+  prefixEnabled: true,
+  cooldownMs: 5000,
+  build: () => {
+    const b = new SlashCommandBuilder().setName("kick");
+    return (
+    applyLocalizedBuilder(b, "commands:kick")
+            .addUserOption((o) =>
+              applyLocalizedBuilder(o, "commands:kickMember").setRequired(false),
+            )
+            .addStringOption((o) =>
+              applyLocalizedBuilder(o, "commands:kickMembers").setRequired(false),
+            )
+            .addStringOption((o) =>
+              applyLocalizedBuilder(o, "commands:modReason").setAutocomplete(true),
+            )
+    ) as SlashCommandBuilder;
+  },
+  run: (ctx: CommandContext) => runModerationFlow(ctx, kickDefFlow),
+  autocomplete: async (_services: Container, interaction: AutocompleteInteraction,) => {
+    return respondWithReasonChoices(interaction);
+  },
+};

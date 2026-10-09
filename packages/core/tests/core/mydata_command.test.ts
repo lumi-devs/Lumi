@@ -1,164 +1,151 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { MyDataCommand } from "#modules/core/commands/mydata.js";
-import * as gdpr from "#lib/gdpr.js";
-import * as confirm from "#lib/utilities/confirm.js";
-import { makeSuccessCard, makeErrorCard, makeWarningCard, makeInfoCard } from "#lib/ui/cards.js";
+import { CommandContext } from "#lib/commands/context.js";
+import { asHandler } from "#lib/commands/command-def.js";
+import { mydataDef } from "#modules/core/commands/mydata.js";
 
-const __actualModule12 = await import("#lib/module-system/Utility.js");
-vi.mock("#lib/module-system/Utility.js", () => {
-  const actual: any = __actualModule12;
-  return {
-    ...actual,
-    getUtility: vi.fn(),
-  };
-});
+vi.mock("#lib/module-system/Utility.js", () => ({
+  getUtility: vi.fn(),
+  tryGetUtility: vi.fn(),
+}));
+
+vi.mock("#lib/utilities/confirm.js", () => ({
+  confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
+}));
+
+vi.mock("#lib/gdpr.js", () => ({
+  executeGdprExport: vi.fn(),
+  executeGdprDeletion: vi.fn(),
+}));
+
+vi.mock("#lib/i18n/index.js", () => ({
+  fetchT: vi.fn().mockResolvedValue((key: string) => key),
+  fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
+}));
+
+vi.mock("#lib/utilities/command-response.js", () => ({
+  sendInteractionReply: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { getUtility } from "#lib/module-system/Utility.js";
+import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { executeGdprExport, executeGdprDeletion } from "#lib/gdpr.js";
+import { sendInteractionReply } from "#lib/utilities/command-response.js";
 
-describe("MyDataCommand", () => {
-  let command: MyDataCommand;
-  let mockDownloaderUtility: any;
-  let mockCtx: any;
+function makeServices() {
+  return {
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+    moduleStore: { getRecord: vi.fn().mockReturnValue(undefined) },
+  } as any;
+}
+
+function slashCtx(services: any) {
+  const interaction = {
+    user: { id: "123456789", tag: "testuser#0001" },
+    guildId: "g-1",
+    deferred: false,
+    replied: false,
+    deferReply: vi.fn().mockResolvedValue(undefined),
+    reply: vi.fn().mockResolvedValue(undefined),
+    editReply: vi.fn().mockResolvedValue(undefined),
+    options: { getString: vi.fn().mockReturnValue(null) },
+  } as any;
+  return { ctx: CommandContext.fromInteraction(interaction, services), interaction };
+}
+
+function runHandler(name: "whatdata" | "3rdparty" | "getmydata" | "forgetme", ctx: CommandContext) {
+  return asHandler(mydataDef.handlers![name]!).run(ctx);
+}
+
+function lastCardJson() {
+  const calls = (sendInteractionReply as any).mock.calls;
+  return JSON.stringify(calls[calls.length - 1][1]);
+}
+
+describe("mydataDef", () => {
+  let services: any;
+  let downloader: any;
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-
-    mockDownloaderUtility = {
-      getInstalledModules: vi.fn().mockResolvedValue([]),
-    };
-
-    (getUtility as any).mockImplementation((name: string) => {
-      if (name === "downloader") return mockDownloaderUtility;
-      return null;
-    });
-
-    (container as any).client = {
-      options: {},
-    } as any;
-
-    command = new MyDataCommand(
-      {
-        name: "mydata",
-        root: "/mock",
-        path: "/mock/mydata.ts",
-        store: { name: "commands" } as any,
-      },
-      {
-        name: "mydata",
-        description: "mydata command",
-        subcommands: [],
-      },
-    );
-
-    mockCtx = {
-      user: { id: "123456789", tag: "testuser#0001" },
-      isSlash: false,
-      reply: vi.fn().mockResolvedValue(undefined),
-      message: {
-        reply: vi.fn().mockResolvedValue(undefined),
-      },
-    };
-    mockCtx.replySuccess = vi.fn((title: string, body: string, opts?: any) =>
-      mockCtx.reply(makeSuccessCard(title, body), opts),
-    );
-    mockCtx.replyError = vi.fn((title: string, body: string, opts?: any) =>
-      mockCtx.reply(makeErrorCard(title, body), opts),
-    );
-    mockCtx.replyWarning = vi.fn((title: string, body: string, opts?: any) =>
-      mockCtx.reply(makeWarningCard(title, body), opts),
-    );
-    mockCtx.replyInfo = vi.fn((title: string, body: string, opts?: any) =>
-      mockCtx.reply(makeInfoCard(title, body), opts),
-    );
+    vi.clearAllMocks();
+    services = makeServices();
+    downloader = { getInstalledModules: vi.fn().mockResolvedValue([]) };
+    (getUtility as any).mockReturnValue(downloader);
+    (confirmPrompt as any).mockResolvedValue({ confirmed: true, message: {} });
   });
 
   describe("whatdata", () => {
     it("replies with privacy information card", async () => {
-      await command.whatData(mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-      const arg = mockCtx.reply.mock.calls[0][0];
-      expect(JSON.stringify(arg)).toContain("End-User Data & Privacy in Lumi");
-      expect(JSON.stringify(arg)).toContain("Right to Erasure");
+      const { ctx } = slashCtx(services);
+
+      await runHandler("whatdata", ctx);
+
+      expect(lastCardJson()).toContain("End-User Data & Privacy in Lumi");
+      expect(lastCardJson()).toContain("Right to Erasure");
     });
   });
 
   describe("3rdparty", () => {
     it("reports when no 3rd party addons are installed", async () => {
-      mockDownloaderUtility.getInstalledModules.mockResolvedValue([]);
-      await command.thirdParty(mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-      const arg = mockCtx.reply.mock.calls[0][0];
-      expect(JSON.stringify(arg)).toContain("does not have any third-party addons installed");
+      const { ctx } = slashCtx(services);
+
+      await runHandler("3rdparty", ctx);
+
+      expect(lastCardJson()).toContain("does not have any third-party addons installed");
     });
 
     it("lists 3rd party addons and privacy statements when installed", async () => {
-      mockDownloaderUtility.getInstalledModules.mockResolvedValue([
-        { repo_name: "test-repo", moduleName: "economy", commit: "abc", pinned: false },
+      downloader.getInstalledModules.mockResolvedValue([
+        { moduleName: "economy" },
       ]);
+      services.moduleStore.getRecord.mockReturnValue({
+        meta: {
+          name: "economy",
+          displayName: "Economy",
+          emoji: "💰",
+          endUserDataStatement: "Stores user balance and inventory.",
+        },
+      });
+      const { ctx } = slashCtx(services);
 
-      (container as any).moduleStore = {
-        getRecord: vi.fn().mockReturnValue({
-          meta: {
-            name: "economy",
-            displayName: "Economy",
-            emoji: "💰",
-            endUserDataStatement: "Stores user balance and inventory.",
-          },
-        }),
-      };
+      await runHandler("3rdparty", ctx);
 
-      await command.thirdParty(mockCtx);
-      expect(mockCtx.reply).toHaveBeenCalledTimes(1);
-      const arg = mockCtx.reply.mock.calls[0][0];
-      expect(JSON.stringify(arg)).toContain("Stores user balance and inventory.");
+      expect(lastCardJson()).toContain("Stores user balance and inventory.");
     });
   });
 
   describe("getmydata", () => {
-    it("exports user data and attaches json file", async () => {
-      vi.spyOn(gdpr, "executeGdprExport").mockResolvedValue({
-        core: { blocklisted: false },
-        afk: { afk: false },
-      });
+    it("exports user data and attaches a json file", async () => {
+      (executeGdprExport as any).mockResolvedValue({ core: { blocklisted: false } });
+      const { ctx, interaction } = slashCtx(services);
 
-      await command.getMyData(mockCtx);
-      expect(gdpr.executeGdprExport).toHaveBeenCalledWith("123456789");
-      expect(mockCtx.message.reply).toHaveBeenCalledTimes(1);
-      const arg = mockCtx.message.reply.mock.calls[0][0];
-      expect(arg.files).toBeDefined();
-      expect(arg.files.length).toBe(1);
-      expect(arg.files[0].name).toBe("lumi-user-data-123456789.json");
+      await runHandler("getmydata", ctx);
+
+      expect(executeGdprExport).toHaveBeenCalledWith(services, "123456789");
+      const payload = interaction.reply.mock.calls[0][0];
+      expect(payload.files).toHaveLength(1);
+      expect(payload.files[0].name).toBe("lumi-user-data-123456789.json");
     });
   });
 
   describe("forgetme", () => {
-    it("cancels deletion when user denies prompt", async () => {
-      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue({
-        confirmed: false,
-        message: {} as any,
-      });
-      const deleteSpy = vi.spyOn(gdpr, "executeGdprDeletion");
+    it("cancels deletion when the user denies the prompt", async () => {
+      (confirmPrompt as any).mockResolvedValue({ confirmed: false, message: {} });
+      const { ctx } = slashCtx(services);
 
-      await command.forgetMe(mockCtx);
-      expect(confirm.confirmPrompt).toHaveBeenCalledTimes(1);
-      expect(deleteSpy).not.toHaveBeenCalled();
-      const arg = mockCtx.reply.mock.calls[0][0];
-      expect(JSON.stringify(arg)).toContain("Cancelled");
+      await runHandler("forgetme", ctx);
+
+      expect(executeGdprDeletion).not.toHaveBeenCalled();
+      expect(lastCardJson()).toContain("Cancelled");
     });
 
-    it("executes deletion when user confirms prompt", async () => {
-      vi.spyOn(confirm, "confirmPrompt").mockResolvedValue({
-        confirmed: true,
-        message: {} as any,
-      });
-      vi.spyOn(gdpr, "executeGdprDeletion").mockResolvedValue({ failedModules: [] });
+    it("executes deletion when the user confirms the prompt", async () => {
+      (executeGdprDeletion as any).mockResolvedValue({ failedModules: [] });
+      const { ctx } = slashCtx(services);
 
-      await command.forgetMe(mockCtx);
-      expect(confirm.confirmPrompt).toHaveBeenCalledTimes(1);
-      expect(gdpr.executeGdprDeletion).toHaveBeenCalledWith("123456789", "testuser#0001");
-      const arg = mockCtx.reply.mock.calls[0][0];
-      expect(JSON.stringify(arg)).toContain("Data Deleted");
+      await runHandler("forgetme", ctx);
+
+      expect(executeGdprDeletion).toHaveBeenCalledWith(services, "123456789", "testuser#0001");
+      expect(lastCardJson()).toContain("Data Deleted");
     });
   });
 });

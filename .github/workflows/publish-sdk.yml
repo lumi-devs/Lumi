@@ -4,6 +4,26 @@ on:
   push:
     tags:
       - "sdk-v*"
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (leave empty to derive from tag or package.json)"
+        required: false
+        type: string
+      dist_tag:
+        description: "npm dist-tag"
+        required: false
+        default: "latest"
+        type: choice
+        options:
+          - latest
+          - next
+
+# Tag publishes must never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   id-token: write
@@ -16,33 +36,66 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Derive version from tag
+      - name: Derive version
         id: version
         run: |
-          version="${GITHUB_REF_NAME#sdk-v}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$version" == *-* ]]; then
-            echo "dist_tag=next" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            version="${{ github.event.inputs.version }}"
+            dist_tag="${{ github.event.inputs.dist_tag }}"
+          elif [[ "$GITHUB_REF_NAME" == sdk-v* ]]; then
+            version="${GITHUB_REF_NAME#sdk-v}"
+            if [[ "$version" == *-* ]]; then
+              dist_tag="next"
+            else
+              dist_tag="latest"
+            fi
+          elif [[ "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            if [[ "$version" == *-* ]]; then
+              dist_tag="next"
+            else
+              dist_tag="latest"
+            fi
           else
-            echo "dist_tag=latest" >> "$GITHUB_OUTPUT"
+            version=$(jq -r .version package.json)
+            dist_tag="latest"
           fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$dist_tag" >> "$GITHUB_OUTPUT"
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-
+          bun-version: 1.4.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+      - run: bun install --frozen-lockfile
+      - run: bun run db:generate
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - run: bun install --frozen-lockfile
-
       - name: Build SDK type declarations
         run: bun run sdk:build
 
+      - name: Check if version already published
+        id: exists
+        run: |
+          if npm view @lumi-devs/sdk@${{ steps.version.outputs.version }} version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish @lumi-devs/sdk
+        if: steps.exists.outputs.published != 'true'
         working-directory: dist/sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           npm pkg set version=${{ steps.version.outputs.version }}
           npm publish --access public --tag ${{ steps.version.outputs.dist_tag }}

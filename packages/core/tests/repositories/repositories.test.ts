@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'bun:test';
 import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
 import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
 import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
-import { repositoryCache } from '#lib/prisma/repositories/Repository.js';
-import { container } from '@sapphire/framework';
+import { repositoryCache } from '#lib/cache/CacheStore.js';
+import { container } from "#lib/services.js";
 
 describe('ModerationRepository Tests', () => {
   let mockPrisma: any;
@@ -233,7 +233,7 @@ describe('ModerationRepository Tests', () => {
 
 describe('ConfigRepository Batch Operations', () => {
   let mockPrisma: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let mockLogger: any;
   let mockDb: any;
   let mockInvalidation: any;
@@ -247,7 +247,7 @@ describe('ConfigRepository Batch Operations', () => {
         upsert: vi.fn(),
       },
     };
-    mockRedis = {
+    mockValkey = {
       get: vi.fn().mockResolvedValue(null),
       setex: vi.fn().mockResolvedValue('OK'),
     };
@@ -262,10 +262,10 @@ describe('ConfigRepository Batch Operations', () => {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
     (container as any).invalidation = mockInvalidation;
-    (container as any).redis = mockRedis;
+    (container as any).valkey = mockValkey;
     repositoryCache.clear();
 
-    repo = new ConfigRepository(mockPrisma, mockRedis, mockLogger, mockDb, {
+    repo = new ConfigRepository(mockPrisma, mockValkey, mockLogger, mockDb, {
       logConfigChange: vi.fn().mockResolvedValue(undefined),
     } as any);
   });
@@ -297,7 +297,7 @@ describe('ConfigRepository Batch Operations', () => {
 
 describe('GuildKVRepository Batch Operations', () => {
   let mockPrisma: any;
-  let mockRedis: any;
+  let mockValkey: any;
   let mockLogger: any;
   let mockDb: any;
   let repo: GuildKVRepository;
@@ -310,7 +310,7 @@ describe('GuildKVRepository Batch Operations', () => {
         upsert: vi.fn(),
       },
     };
-    mockRedis = {};
+    mockValkey = {};
     mockLogger = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -319,7 +319,7 @@ describe('GuildKVRepository Batch Operations', () => {
     };
     mockDb = {};
 
-    repo = new GuildKVRepository(mockPrisma, mockRedis, mockLogger, mockDb);
+    repo = new GuildKVRepository(mockPrisma, mockValkey, mockLogger, mockDb);
   });
 
   it('getModuleDataMany returns empty map when targets array is empty', async () => {

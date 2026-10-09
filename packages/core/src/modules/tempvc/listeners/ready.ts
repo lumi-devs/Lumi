@@ -1,11 +1,12 @@
-import { Listener, Events } from "@sapphire/framework";
+import { Events } from "discord.js";
+import { defineListener } from "#lib/listeners/listener-def.js";
 import { getUtility } from "#lib/module-system/Utility.js";
-import { ApplyOptions } from "@sapphire/decorators";
 import type { Client } from "discord.js";
 import { logError } from "#lib/utilities/errors.js";
+import type { Container } from "#lib/services.js";
 import { isModuleEnabled } from "#lib/utilities/misc.js";
 import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
-import { tempVcRegistry } from "../services/registry.js";
+import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 
 /**
  * Reconcile runs against every guild on the shard before it is healthy, so
@@ -14,27 +15,25 @@ import { tempVcRegistry } from "../services/registry.js";
  */
 const ReconcileConcurrency = 10;
 
-@ApplyOptions<Listener.Options>({
+const tempvcReady = defineListener({
   name: "tempvcReady",
   event: Events.ClientReady,
   once: true,
-})
-export default class TempVcReadyListener extends Listener<
-  typeof Events.ClientReady
-> {
-  public async run(client: Client<true>) {
+  async execute(services: Container, client: Client<true>) {
     const service = getUtility("tempvc");
 
     tempVcRegistry.wire();
 
     const guilds = [...client.guilds.cache.values()];
     await mapWithConcurrency(guilds, ReconcileConcurrency, async (guild) => {
-      if (!(await isModuleEnabled(guild.id, "tempvc"))) return;
+      if (!(await isModuleEnabled(services, guild.id, "tempvc"))) return;
       await service
-        .reconcileGuild(guild)
+        .reconcileGuild(services, guild)
         .catch((err: unknown) =>
           logError(`TempVC: reconcile failed for ${guild.id}`, err),
         );
     });
-  }
-}
+  },
+});
+
+export default tempvcReady;

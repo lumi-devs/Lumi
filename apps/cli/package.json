@@ -1,6 +1,6 @@
 {
   "name": "@lumi/cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "license": "AGPL-3.0-only",
   "description": "lumi - the Lumi command-line entrypoint (start/migrate/addon/module/config).",
   "type": "module",
@@ -9,10 +9,13 @@
     "lumi": "./src/main.ts"
   },
   "scripts": {
+    "test": "bun test --parallel",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src tests --fix"
   },
   "dependencies": {
-    "@lumi/core": "workspace:*"
+    "@discordjs/rest": "^2.6.3",
+    "@lumi/core": "workspace:*",
+    "discord-api-types": "^0.38.55"
   }
 }

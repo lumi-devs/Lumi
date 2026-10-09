@@ -1,37 +1,15 @@
 import { getClusterName, isPrimaryShard } from "#lib/env.js";
 import { registerReadinessProbe } from "@lumi/observability";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
 
 /**
  * Declares the `/readyz` probes a client replica answers with.
  *
  * @remarks
- *
- * {@linkcode register} runs once, at the tail of `login()`, so that every
- * dependency a probe reports on already exists. Every process holds a real
- * gateway shard now, so the `discord` probe always applies. `scheduler-tasks`
- * no longer applies to any worker shard at all - BullMQ scheduling moved to
- * the gateway-free `apps/scheduler` (see the scheduler extraction's Phase
- * S1), which registers that probe itself via
- * {@linkcode registerSchedulerReadinessProbe}. `rpc-server` only applies when
- * a caller supplies `isRpcReady` at all - `apps/api` is the only process
- * that does, since it's the only one that owns an RPC HTTP server (see the
- * API extraction's Phase C).
- *
- * Probes reach their dependency through the suppliers passed in rather than
- * capturing it, because the client releases those handles during shutdown and
- * a probe must observe that rather than a stale reference.
+ * Registers `/readyz` probes for gateway, infrastructure, and process-specific subsystems.
  */
-/**
- * Declares the `postgres`/`redis` probes shared by every process that holds
- * a direct connection to those backing services (both `apps/worker`, via
- * {@linkcode ReadinessProbes}, and the gateway-free `apps/api`, via
- * {@linkcode registerApiReadinessProbes}). Pulled out of the class so
- * neither caller has to duplicate the probe bodies (and their driver-error
- * handling) to get this subset without also picking up the gateway/
- * scheduler probes that don't apply to a gateway-free process.
- */
+/** Declares postgres and valkey readiness probes for processes with backing service connections. */
 export function registerInfrastructureReadinessProbes(): void {
   // `/readyz` is reachable by anyone who can reach the metrics port, so probe
   // details are fixed classifications. Driver errors are logged instead:
@@ -47,17 +25,17 @@ export function registerInfrastructureReadinessProbes(): void {
     }
   });
 
-  registerReadinessProbe("redis", async () => {
+  registerReadinessProbe("valkey", async () => {
     try {
-      const pong = await container.redis.ping();
+      const pong = await container.valkey.ping();
       if (pong === "PONG") return { status: "ok" };
       container.logger?.error(
-        `[Readiness] redis probe returned unexpected reply: ${pong}`,
+        `[Readiness] valkey probe returned unexpected reply: ${pong}`,
       );
-      return { status: "fail", detail: "redis unreachable" };
+      return { status: "fail", detail: "valkey unreachable" };
     } catch (err) {
-      container.logger?.error("[Readiness] redis probe failed:", err);
-      return { status: "fail", detail: "redis unreachable" };
+      container.logger?.error("[Readiness] valkey probe failed:", err);
+      return { status: "fail", detail: "valkey unreachable" };
     }
   });
 }
@@ -91,83 +69,55 @@ export function registerSchedulerReadinessProbe(hasLock: () => boolean): void {
   );
 }
 
-export class ReadinessProbes {
-  /** Whether the gateway connection is usable. */
-  protected readonly isReady: () => boolean;
-  protected readonly isRpcReady?: () => boolean;
-
-  public constructor(options: ReadinessProbes.Options) {
-    this.isReady = options.isReady;
-    this.isRpcReady = options.isRpcReady;
-  }
-
-  /** Declares every applicable probe. */
-  public register(): void {
-    this.registerInfrastructureProbes();
-    this.registerDiscordProbe();
-    this.registerRpcProbe();
-  }
-
-  /** Declares the probes shared by every process: the backing services. */
-  protected registerInfrastructureProbes(): void {
-    registerInfrastructureReadinessProbes();
-  }
-
-  protected registerDiscordProbe(): void {
-    registerReadinessProbe("discord", async () => {
-      if (!this.isReady()) {
-        return { status: "fail", detail: "client not ready" };
+/**
+ * Declares the `/readyz` probes for a worker replica: the shared backing
+ * services plus the gateway connection (including the cluster-wide shard
+ * snapshot on the primary shard).
+ *
+ * @remarks
+ * This is exactly what the worker path of the old `ReadinessProbes.register()`
+ * declared — infrastructure + discord. The worker never supplied `isRpcReady`,
+ * so no `rpc-server` probe is registered here; gateway-free processes use the
+ * standalone `registerRpcReadinessProbe` / `registerSchedulerReadinessProbe`
+ * fns instead.
+ */
+export function registerWorkerProbes(client: { isReady: () => boolean }): void {
+  registerInfrastructureReadinessProbes();
+  registerReadinessProbe("discord", async () => {
+    if (!client.isReady()) {
+      return { status: "fail", detail: "client not ready" };
+    }
+    // Only the primary shard binds `/readyz`, so it also has to speak for
+    // every sibling shard spawned by ShardingManager in this pod - a
+    // single shard's own readiness says nothing about the others.
+    if (!isPrimaryShard()) return { status: "ok" };
+    try {
+      const snapshot = await readClusterShards({
+        valkey: container.valkey,
+        clusterName: getClusterName() ?? DefaultClusterName,
+      });
+      if (snapshot.shards.length === 0) {
+        return { status: "fail", detail: "no shard telemetry observed" };
       }
-      // Only the primary shard binds `/readyz`, so it also has to speak for
-      // every sibling shard spawned by ShardingManager in this pod - a
-      // single shard's own readiness says nothing about the others.
-      if (!isPrimaryShard()) return { status: "ok" };
-      try {
-        const snapshot = await readClusterShards({
-          redis: container.redis,
-          clusterName: getClusterName() ?? DefaultClusterName,
-        });
-        if (snapshot.shards.length === 0) {
-          return { status: "fail", detail: "no shard telemetry observed" };
-        }
-        if (snapshot.missingShardIds.length > 0) {
-          return {
-            status: "fail",
-            detail: `missing shards: ${snapshot.missingShardIds.join(",")}`,
-          };
-        }
-        const notReady = snapshot.shards
-          .filter((s) => s.status !== "Ready")
-          .map((s) => s.shardId);
-        if (notReady.length > 0) {
-          return {
-            status: "fail",
-            detail: `shards not ready: ${notReady.join(",")}`,
-          };
-        }
-        return { status: "ok" };
-      } catch (err) {
-        container.logger?.error("[Readiness] cluster shard check failed:", err);
-        return { status: "fail", detail: "cluster shard telemetry unreachable" };
+      if (snapshot.missingShardIds.length > 0) {
+        return {
+          status: "fail",
+          detail: `missing shards: ${snapshot.missingShardIds.join(",")}`,
+        };
       }
-    });
-  }
-
-  protected registerRpcProbe(): void {
-    // Registered only when a caller actually supplies `isRpcReady` - i.e.
-    // only for a process that owns an RPC HTTP server to report on
-    // (`apps/api` today; the worker stopped serving RPC in the API
-    // extraction's Phase C and no longer passes this option at all).
-    if (!this.isRpcReady) return;
-    registerRpcReadinessProbe(this.isRpcReady);
-  }
-}
-
-export namespace ReadinessProbes {
-  export interface Options {
-    /** Reads the client's current gateway readiness. */
-    isReady: () => boolean;
-    /** Reads the internal RPC HTTP server readiness. */
-    isRpcReady?: () => boolean;
-  }
+      const notReady = snapshot.shards
+        .filter((s) => s.status !== "Ready")
+        .map((s) => s.shardId);
+      if (notReady.length > 0) {
+        return {
+          status: "fail",
+          detail: `shards not ready: ${notReady.join(",")}`,
+        };
+      }
+      return { status: "ok" };
+    } catch (err) {
+      container.logger?.error("[Readiness] cluster shard check failed:", err);
+      return { status: "fail", detail: "cluster shard telemetry unreachable" };
+    }
+  });
 }

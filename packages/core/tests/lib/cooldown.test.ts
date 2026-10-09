@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "@sapphire/framework";
-import { claimCooldown, isOnCooldown } from "#lib/cooldown.js";
+import { container } from "#lib/services.js";
+import { claimCooldown, isOnCooldown } from "#lib/valkey/cooldown.js";
 
 Object.assign(container, {
-  redis: {
+  valkey: {
     set: vi.fn(),
     exists: vi.fn(),
   },
@@ -16,14 +16,14 @@ describe("cooldown", () => {
 
   describe("claimCooldown", () => {
     it("claims once and returns false on a second call within the window", async () => {
-      (container.redis.set as any)
+      (container.valkey.set as any)
         .mockResolvedValueOnce("OK")
         .mockResolvedValueOnce(null);
 
-      await expect(claimCooldown("cd-key", 5000)).resolves.toBe(true);
-      await expect(claimCooldown("cd-key", 5000)).resolves.toBe(false);
+      await expect(claimCooldown(container, "cd-key", 5000)).resolves.toBe(true);
+      await expect(claimCooldown(container, "cd-key", 5000)).resolves.toBe(false);
 
-      expect(container.redis.set).toHaveBeenCalledWith(
+      expect(container.valkey.set).toHaveBeenCalledWith(
         "cd-key",
         "1",
         "PX",
@@ -35,13 +35,13 @@ describe("cooldown", () => {
 
   describe("isOnCooldown", () => {
     it("reflects claimed state", async () => {
-      (container.redis.exists as any).mockResolvedValueOnce(0);
-      await expect(isOnCooldown("cd-key")).resolves.toBe(false);
+      (container.valkey.exists as any).mockResolvedValueOnce(0);
+      await expect(isOnCooldown(container, "cd-key")).resolves.toBe(false);
 
-      (container.redis.exists as any).mockResolvedValueOnce(1);
-      await expect(isOnCooldown("cd-key")).resolves.toBe(true);
+      (container.valkey.exists as any).mockResolvedValueOnce(1);
+      await expect(isOnCooldown(container, "cd-key")).resolves.toBe(true);
 
-      expect(container.redis.exists).toHaveBeenCalledWith("cd-key");
+      expect(container.valkey.exists).toHaveBeenCalledWith("cd-key");
     });
   });
 });

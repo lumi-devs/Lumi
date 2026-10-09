@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { container } from "@sapphire/framework";
+import { container } from "#lib/services.js";
 import { dbQueryDuration, dbSlowQueriesTotal } from "@lumi/observability";
 import { recordQueryMetrics } from "#lib/prisma/query-metrics.js";
 

@@ -1,4 +1,4 @@
-// One-call telemetry bootstrap for a service entrypoint. Import a thin side-effect
+// Import a thin side-effect
 // module that calls this BEFORE any instrumented library is imported (ESM hoists
 // imports, so it must live in its own module imported first in main.ts).
 

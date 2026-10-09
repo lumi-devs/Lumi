@@ -7,9 +7,6 @@ import {
   canSendMessages,
   withSerializedWork,
 } from "#lib/utilities/misc.js";
-import { instrumentCommandPiece } from "#lib/telemetry/instrument.js";
-import { container } from "@sapphire/framework";
-import * as observability from "@lumi/observability";
 
 vi.mock("@lumi/observability", () => {
   return {
@@ -45,10 +42,9 @@ describe("misc utilities & telemetry instrumentation", () => {
       expect(formatted).toBe("[Admin#1234 | 100200300] aaaaaaaaaaaaaaaaaaaaaaaaa");
     });
 
-    it("LumiInfo returns age in days", () => {
+    it("LumiInfo returns valid version", () => {
       expect(LumiInfo.version).toMatch(/^\d+\.\d+\.\d+/);
-      expect(typeof LumiInfo.getAgeInDays()).toBe("number");
-      expect(LumiInfo.getAgeInDays()).toBeGreaterThanOrEqual(0);
+      expect(typeof LumiInfo.github).toBe("string");
     });
 
     it("fmtId converts id to string or returns 'unknown'", () => {
@@ -58,16 +54,18 @@ describe("misc utilities & telemetry instrumentation", () => {
       expect(fmtId(undefined)).toBe("unknown");
     });
 
-    it("isModuleEnabled delegates to container.db.modules.isModuleEnabled", async () => {
-      (container as any).db = {
-        modules: {
-          isModuleEnabled: vi.fn().mockResolvedValue(true),
+    it("isModuleEnabled delegates to services.db.modules.isModuleEnabled", async () => {
+      const services = {
+        db: {
+          modules: {
+            isModuleEnabled: vi.fn().mockResolvedValue(true),
+          },
         },
-      };
+      } as any;
 
-      const res = await isModuleEnabled("g-1", "afk");
+      const res = await isModuleEnabled(services, "g-1", "afk");
       expect(res).toBe(true);
-      expect(container.db.modules.isModuleEnabled).toHaveBeenCalledWith("g-1", "afk");
+      expect(services.db.modules.isModuleEnabled).toHaveBeenCalledWith("g-1", "afk");
     });
 
     it("canSendMessages checks permissions for bot member in guild channel", () => {
@@ -112,33 +110,6 @@ describe("misc utilities & telemetry instrumentation", () => {
       expect(r1).toBe("res-1");
       expect(r2).toBe("res-2");
       expect(order).toEqual([1, 2]);
-    });
-  });
-
-  describe("instrumentCommandPiece", () => {
-    it("wraps chatInputRun, messageRun, and contextMenuRun with telemetry", async () => {
-      const piece = {
-        name: "test-command",
-        chatInputRun: vi.fn().mockResolvedValue("chat-ok"),
-        messageRun: vi.fn().mockRejectedValue(new Error("msg-fail")),
-      };
-
-      instrumentCommandPiece(piece);
-
-      const chatRes = await piece.chatInputRun({ guildId: "g-1", user: { id: "u-1" } });
-      expect(chatRes).toBe("chat-ok");
-      expect(observability.commandsTotal.inc).toHaveBeenCalledWith({
-        command: "test-command",
-        type: "chat",
-        status: "success",
-      });
-
-      await expect(piece.messageRun({ guild: { id: "g-2" }, author: { id: "u-2" } })).rejects.toThrow("msg-fail");
-      expect(observability.commandsTotal.inc).toHaveBeenCalledWith({
-        command: "test-command",
-        type: "message",
-        status: "error",
-      });
     });
   });
 });

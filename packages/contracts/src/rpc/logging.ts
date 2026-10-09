@@ -1,4 +1,4 @@
-import { s } from "@sapphire/shapeshift";
+import { z } from "zod";
 import { rpcAction, RpcTimeouts } from "./define.js";
 import { SnowflakeSchema } from "./schemas.js";
 
@@ -30,9 +30,9 @@ export const loggingRpc = {
     success: boolean;
     dismissed: boolean;
   }>()({
-    input: s.object({
+    input: z.object({
       channelId: SnowflakeSchema,
-      outcome: s.enum(LogClaimOutcomes),
+      outcome: z.enum(LogClaimOutcomes),
     }),
     auth: "guildManager",
     timeoutMs: RpcTimeouts.long,
