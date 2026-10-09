@@ -5,6 +5,7 @@
 import { startTracing } from "./tracing.js";
 import { startEventLoopMonitor } from "./event-loop.js";
 import { initMetrics, startMetricsServer } from "./metrics.js";
+import { startSentry } from "./sentry.js";
 
 // A single-host deployment runs several services off one shared `.env`, so a bare
 // METRICS_PORT would have them all fight over one port. The per-service override
@@ -53,6 +54,7 @@ export function bootstrapTelemetry(
 
   initMetrics(svc);
   startEventLoopMonitor();
+  startSentry();
   if (opts.exposeHttp ?? true) {
     startMetricsServer(resolveMetricsPort(svc));
   }

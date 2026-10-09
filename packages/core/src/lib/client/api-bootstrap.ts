@@ -2,7 +2,7 @@ import { disconnectDatabase } from "#lib/prisma/client.js";
 import { validateRequiredEnv } from "#lib/env.js";
 import { closeSystemStatusResources } from "#lib/rpc/system-rpc.js";
 import { logError, errorFrom } from "#lib/utilities/errors.js";
-import { shutdownTracing, runDrainSequence } from "@lumi/observability";
+import { flushSentry, shutdownTracing, runDrainSequence } from "@lumi/observability";
 import { container } from "#lib/services.js";
 import {
   installApiContainerServices,
@@ -106,6 +106,7 @@ export async function bootstrapApiApp(
         { name: "addon-shutdown", run: () => container.moduleStore?.stopAddonProcesses() },
         ...(options.extraDrainSteps ?? []),
         { name: "api-container-services", run: () => destroyApiContainerServices(services) },
+        { name: "sentry-flush", run: () => { void flushSentry(); } },
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ];
       try {

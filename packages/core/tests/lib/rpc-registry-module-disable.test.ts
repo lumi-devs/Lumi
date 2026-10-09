@@ -4,12 +4,11 @@ import path from "node:path";
 import { promises as fs } from "node:fs";
 
 /**
- * The whole point of S13's static registry (`#lib/rpc/registry.js`) is that a
- * module's RPC handlers used to be bound to its Sapphire pieces and vanished
- * the moment `ModuleStore#unload` ran. This drives an actual `ModuleStore`
- * through its real `unload()` path (not a stubbed `container.stores`, which
- * the module-not-loaded gate tests elsewhere already cover) and confirms a
- * handler for the unloaded module is still reachable and callable afterward.
+ * The registry is owner-based: `ModuleStore#unload` prunes that owner's RPC
+ * handlers (dispatch answers `UnknownAction`), and loading restores them.
+ * This drives an actual `ModuleStore` through its real `unload()` path and
+ * confirms the afk handler is gone afterward and callable again after
+ * `restoreStaticRpcOwner`.
  */
 
 const mockedReadManifest = vi.fn();
@@ -21,7 +20,7 @@ vi.mock("#lib/module-system/manifest.js", () => ({
 }));
 
 import { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
+import { getRpcHandler, registerRpcHandlers, restoreStaticRpcOwner } from "#lib/rpc/registry.js";
 import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
 import { repositoryCache } from "#lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
@@ -79,7 +78,7 @@ function setupAfkModule() {
   }));
 }
 
-describe("static RPC registry survives ModuleStore#unload", () => {
+describe("owner-based RPC registry follows ModuleStore#unload", () => {
   let store: any;
   let prisma: ReturnType<typeof createMockPrismaClient>;
 
@@ -135,16 +134,18 @@ describe("static RPC registry survives ModuleStore#unload", () => {
     store.addRoot(new URL("file:///test/modules"));
   });
 
-  it("still answers a call for a module unloaded through the real ModuleStore path", async () => {
+  it("drops a module's handlers on unload and restores them on load", async () => {
     await store.discover();
     const record = store.getRecord("afk");
     expect(record.dir).toBe(MODULE_DIR);
 
     await store.unload("afk");
 
-    // Confirm the module was actually unloaded, not a no-op.
     expect(store.getRecord("afk").enabled).toBe(false);
     expect(store.getRecord("afk").state).toBe("disabled");
+    expect(getRpcHandler("guild.afk.list")).toBeUndefined();
+
+    restoreStaticRpcOwner("afk");
 
     prisma.$seed("afkEntry", [
       { userId: "555555555555555555", guildId: GUILD_ID, reason: "lunch", since: new Date("2026-01-01") },

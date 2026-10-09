@@ -170,6 +170,8 @@ export class ModuleStore {
   public async unload(nameOrPiece: string | ModuleObject): Promise<ModuleObject | undefined> {
     const name =
       typeof nameOrPiece === "string" ? nameOrPiece : nameOrPiece.name;
+    const { unregisterDynamicRpc } = await import("#lib/rpc/registry.js");
+    unregisterDynamicRpc(name);
     const record = this.#records.get(name);
 
     if (record && this.isAddonModule(record)) {
@@ -316,6 +318,8 @@ export class ModuleStore {
     }
 
     await this.attachModuleLoaders(record);
+    const { restoreStaticRpcOwner } = await import("#lib/rpc/registry.js");
+    restoreStaticRpcOwner(name);
     record.enabled = true;
     record.state = "loaded";
     record.failureReason = undefined;

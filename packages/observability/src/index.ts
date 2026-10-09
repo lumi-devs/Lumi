@@ -11,6 +11,7 @@ export * from "./event-loop.js";
 export * from "./logger.js";
 export * from "./metrics.js";
 export * from "./readiness.js";
+export * from "./sentry.js";
 export * from "./shutdown.js";
 export {
   getTracer,
