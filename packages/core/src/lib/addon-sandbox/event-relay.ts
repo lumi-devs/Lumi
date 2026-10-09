@@ -81,13 +81,16 @@ export function attachAddonEventRelay(client: Client, services: Container): void
 
   client.on(Events.MessageCreate, (message: Message) => {
     if (!message.guildId) return;
+    const content = message.content ?? "";
     emit(services, "messageCreate", message.guildId, {
       guildId: message.guildId,
       channelId: message.channelId,
       messageId: message.id,
       authorId: message.author.id,
       authorBot: message.author.bot,
-      content: message.content ?? "",
+      content,
+      userMentionIds: [...content.matchAll(/<@!?(\d+)>/g)].map((m) => m[1]!),
+      roleMentionIds: [...content.matchAll(/<@&(\d+)>/g)].map((m) => m[1]!),
     });
   });
 

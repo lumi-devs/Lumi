@@ -7,6 +7,11 @@ export const AddonDiscordCapabilities = [
   "manageRoles",
   "manageVoice",
   "manageAutomod",
+  "manageChannels",
+  "manageThreads",
+  "manageEmoji",
+  "moderateMembers",
+  "clientPresence",
 ] as const;
 
 export type AddonDiscordCapability = (typeof AddonDiscordCapabilities)[number];
@@ -42,15 +47,31 @@ export type AddonRpcMethod =
   | "valkey.scard"
   | "valkey.smembers"
   | "valkey.del"
+  | "valkey.set"
+  | "valkey.get"
   | "schedule.add"
   | "discord.channels.send"
+  | "discord.channels.create"
+  | "discord.channels.remove"
+  | "discord.channels.permissions"
+  | "discord.channels.members"
   | "discord.messages.fetch"
   | "discord.messages.edit"
   | "discord.guilds.get"
   | "discord.guilds.members.fetch"
   | "discord.members.roles.add"
   | "discord.members.roles.remove"
+  | "discord.members.move"
   | "discord.members.timeout"
+  | "discord.roles.create"
+  | "discord.roles.edit"
+  | "discord.roles.remove"
+  | "discord.roles.fetch"
+  | "discord.emoji.create"
+  | "discord.threads.create"
+  | "discord.threads.archive"
+  | "discord.threads.remove"
+  | "discord.client.presence"
   | "discord.messages.delete"
   | "discord.channels.fetch"
   | "modules.enabled"

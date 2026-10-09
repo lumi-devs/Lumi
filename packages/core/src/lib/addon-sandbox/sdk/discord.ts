@@ -12,6 +12,22 @@ export const channels = {
   send(channelId: string, payload: MessagePayload): Promise<SentMessage> {
     return call("discord.channels.send", { channelId, payload });
   },
+
+  createVoice(guildId: string, name: string, options: { parentId?: string; reason?: string } = {}): Promise<{ id: string }> {
+    return call("discord.channels.create", { guildId, name, type: "voice", ...options });
+  },
+
+  createText(guildId: string, name: string, options: { parentId?: string; reason?: string } = {}): Promise<{ id: string }> {
+    return call("discord.channels.create", { guildId, name, type: "text", ...options });
+  },
+
+  remove(channelId: string, reason?: string): Promise<void> {
+    return call("discord.channels.remove", { channelId, reason });
+  },
+
+  setPermissions(channelId: string, targetId: string, perms: { allow?: string[]; deny?: string[] }): Promise<void> {
+    return call("discord.channels.permissions", { channelId, targetId, ...perms });
+  },
 };
 
 export const messages = {
@@ -40,8 +56,71 @@ export const members = {
     return call("discord.members.roles.remove", { guildId, userId, roleId });
   },
 
+  move(guildId: string, userId: string, channelId: string): Promise<void> {
+    return call("discord.members.move", { guildId, userId, channelId });
+  },
+
   timeout(guildId: string, userId: string, durationMs: number | null, reason?: string): Promise<void> {
     return call("discord.members.timeout", { guildId, userId, durationMs, reason });
+  },
+};
+
+export interface RoleInfo {
+  id: string;
+  name: string;
+  color: string;
+  mentionable: boolean;
+  managed: boolean;
+  position: number;
+}
+
+export const roles = {
+  create(guildId: string, options: { name: string; color?: string; mentionable?: boolean; reason?: string }): Promise<{ id: string }> {
+    return call("discord.roles.create", { guildId, ...options });
+  },
+
+  edit(guildId: string, roleId: string, options: { name?: string; color?: string | null; mentionable?: boolean; reason?: string }): Promise<{ id: string }> {
+    return call("discord.roles.edit", { guildId, roleId, ...options });
+  },
+
+  remove(guildId: string, roleId: string, reason?: string): Promise<void> {
+    return call("discord.roles.remove", { guildId, roleId, reason });
+  },
+
+  fetch(guildId: string, roleId: string): Promise<RoleInfo | null> {
+    return call("discord.roles.fetch", { guildId, roleId });
+  },
+};
+
+export const emoji = {
+  create(guildId: string, name: string, attachment: string, reason?: string): Promise<{ id: string }> {
+    return call("discord.emoji.create", { guildId, name, attachment, reason });
+  },
+};
+
+export const voiceChannels = {
+  members(channelId: string): Promise<string[]> {
+    return call("discord.channels.members", { channelId });
+  },
+};
+
+export const threads = {
+  create(channelId: string, name: string, options: { messageId?: string; autoArchiveMinutes?: number } = {}): Promise<{ id: string }> {
+    return call("discord.threads.create", { channelId, name, ...options });
+  },
+
+  archive(threadId: string, locked?: boolean): Promise<void> {
+    return call("discord.threads.archive", { threadId, locked });
+  },
+
+  remove(threadId: string): Promise<void> {
+    return call("discord.threads.remove", { threadId });
+  },
+};
+
+export const presence = {
+  set(options: { status?: "online" | "idle" | "dnd" | "invisible"; activities?: { name: string; type?: number; state?: string; url?: string }[] }): Promise<void> {
+    return call("discord.client.presence", options);
   },
 };
 
@@ -52,7 +131,7 @@ export const modules = {
 };
 
 export const guilds = {
-  get(guildId: string): Promise<{ id: string; name: string } | null> {
+  get(guildId: string): Promise<{ id: string; name: string; memberCount: number | null } | null> {
     return call("discord.guilds.get", { guildId });
   },
 

@@ -311,8 +311,18 @@ async function syncApplicationCommands(services: Container) {
     if (seen.has(def.name)) continue;
     seen.add(def.name);
     try {
-      const built = def.build?.();
-      if (built) globalData.push(built.toJSON());
+      const built = def.build?.() as
+        | { toJSON?: unknown }
+        | Record<string, unknown>
+        | null
+        | undefined;
+      if (built) {
+        globalData.push(
+          typeof built.toJSON === "function"
+            ? (built.toJSON as () => object)()
+            : (built as object),
+        );
+      }
       const menu = def.contextMenu?.build();
       if (menu) globalData.push(menu.toJSON());
     } catch (err: unknown) {

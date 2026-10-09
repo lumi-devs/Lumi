@@ -3,13 +3,14 @@
 import { container } from "#lib/services.js";
 import { z } from "zod";
 import type {
+  ChatInputCommandInteraction,
   MessageComponentInteraction,
   ModalSubmitInteraction,
   RepliableInteraction,
 } from "discord.js";
 import type { AddonRpcRequest } from "@lumi/contracts";
 import type { CommandContext, CtxOptionSpec } from "#lib/commands/context.js";
-import { MessageFlags } from "discord.js";
+import { ChannelType, MessageFlags, PermissionsBitField } from "discord.js";
 import { ephemeralCard, type CardReply } from "#lib/ui/cards.js";
 import { sendInteractionReply } from "#lib/utilities/command-response.js";
 import { scheduleTask } from "#lib/scheduler/schedule.js";
@@ -59,7 +60,14 @@ function scopedGuild(scope: HostCallScope, requested?: string): string {
   return requested;
 }
 
-type OptionGetter = "getString" | "getInteger" | "getNumber" | "getBoolean";
+type OptionGetter =
+  | "getString"
+  | "getInteger"
+  | "getNumber"
+  | "getBoolean"
+  | "getUser"
+  | "getRole"
+  | "getChannel";
 
 async function fetchGuildMember(guildId: string, userId: string) {
   const guild = container.client.guilds.cache.get(guildId);
@@ -81,6 +89,9 @@ const ParamSchemas: Record<string, z.ZodType> = {
       z.literal("getInteger"),
       z.literal("getNumber"),
       z.literal("getBoolean"),
+      z.literal("getUser"),
+      z.literal("getRole"),
+      z.literal("getChannel"),
     ]),
     name: z.string(),
     spec: z.unknown().optional(),
@@ -166,6 +177,16 @@ const ParamSchemas: Record<string, z.ZodType> = {
     key: z.string(),
   }),
 
+  "valkey.set": z.object({
+    key: z.string(),
+    value: z.string(),
+    ttlSeconds: z.number().optional(),
+  }),
+
+  "valkey.get": z.object({
+    key: z.string(),
+  }),
+
   "schedule.add": z.object({
     task: z.string(),
     payload: z.record(z.string(), z.unknown()),
@@ -197,6 +218,102 @@ const ParamSchemas: Record<string, z.ZodType> = {
     userId: z.string(),
   }),
 
+  "discord.members.move": z.object({
+    guildId: z.string(),
+    userId: z.string(),
+    channelId: z.string(),
+  }),
+
+  "discord.roles.create": z.object({
+    guildId: z.string(),
+    name: z.string(),
+    color: z.string().optional(),
+    mentionable: z.boolean().optional(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.roles.edit": z.object({
+    guildId: z.string(),
+    roleId: z.string(),
+    name: z.string().optional(),
+    color: z.string().nullable().optional(),
+    mentionable: z.boolean().optional(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.roles.remove": z.object({
+    guildId: z.string(),
+    roleId: z.string(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.roles.fetch": z.object({
+    guildId: z.string(),
+    roleId: z.string(),
+  }),
+
+  "discord.emoji.create": z.object({
+    guildId: z.string(),
+    name: z.string(),
+    attachment: z.string(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.channels.create": z.object({
+    guildId: z.string(),
+    name: z.string(),
+    type: z.union([z.literal("voice"), z.literal("text")]),
+    parentId: z.string().optional(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.channels.remove": z.object({
+    channelId: z.string(),
+    reason: z.string().optional(),
+  }),
+
+  "discord.channels.permissions": z.object({
+    channelId: z.string(),
+    targetId: z.string(),
+    allow: z.array(z.string()).optional(),
+    deny: z.array(z.string()).optional(),
+  }),
+
+  "discord.channels.members": z.object({
+    channelId: z.string(),
+  }),
+
+  "discord.threads.create": z.object({
+    channelId: z.string(),
+    name: z.string(),
+    messageId: z.string().optional(),
+    autoArchiveMinutes: z.number().optional(),
+  }),
+
+  "discord.threads.archive": z.object({
+    threadId: z.string(),
+    locked: z.boolean().optional(),
+  }),
+
+  "discord.threads.remove": z.object({
+    threadId: z.string(),
+  }),
+
+  "discord.client.presence": z.object({
+    status: z.union([
+      z.literal("online"),
+      z.literal("idle"),
+      z.literal("dnd"),
+      z.literal("invisible"),
+    ]).optional(),
+    activities: z.array(z.object({
+      name: z.string(),
+      type: z.number().optional(),
+      state: z.string().optional(),
+      url: z.string().optional(),
+    })).optional(),
+  }),
+
   "log": z.object({
     level: z.union([z.literal("info"), z.literal("warn"), z.literal("error")]),
     message: z.string(),
@@ -209,7 +326,17 @@ const Methods = {
     scope: HostCallScope,
   ) {
     const ctx = requireCtx(scope);
-    return ctx[getter](name, spec ?? {});
+    const value = await ctx[getter](name, spec ?? {});
+    if (value === null || value === undefined) return null;
+    if (getter === "getUser") {
+      const user = value as { id: string; username?: string };
+      return { id: user.id, ...(user.username ? { name: user.username } : {}) };
+    }
+    if (getter === "getRole" || getter === "getChannel") {
+      const target = value as { id: string; name?: string | null };
+      return { id: target.id, ...(target.name ? { name: target.name } : {}) };
+    }
+    return value;
   },
 
   async "ctx.defer"({ ephemeral, update }: { ephemeral?: boolean; update?: boolean }, scope: HostCallScope) {
@@ -316,11 +443,18 @@ const Methods = {
   },
 
   async "ctx.showModal"({ modal }: { modal: unknown }, scope: HostCallScope) {
-    const interaction = requireInteraction(scope);
-    if (!interaction.isMessageComponent()) {
-      throw new Error("showModal is only valid on a button or select interaction");
+    if (scope.interaction) {
+      if (!scope.interaction.isMessageComponent()) {
+        throw new Error("showModal is only valid on a button or select interaction");
+      }
+      await scope.interaction.showModal(modal as never);
+      return;
     }
-    await interaction.showModal(modal as never);
+    const ctx = requireCtx(scope);
+    if (!ctx.isSlash) {
+      throw new Error("showModal needs an open slash command or component interaction");
+    }
+    await (ctx.interaction as ChatInputCommandInteraction).showModal(modal as never);
   },
 
   async "valkey.sadd"({ key, members }: { key: string; members: string[] }, scope: HostCallScope) {
@@ -341,6 +475,22 @@ const Methods = {
 
   async "valkey.del"({ key }: { key: string }, scope: HostCallScope) {
     return container.valkey.del(addonKey(scope, key));
+  },
+
+  async "valkey.set"(
+    { key, value, ttlSeconds }: { key: string; value: string; ttlSeconds?: number },
+    scope: HostCallScope,
+  ) {
+    const namespaced = addonKey(scope, key);
+    if (ttlSeconds === undefined) {
+      await container.valkey.set(namespaced, value);
+      return;
+    }
+    await container.valkey.set(namespaced, value, "EX", Math.max(1, Math.floor(ttlSeconds)));
+  },
+
+  async "valkey.get"({ key }: { key: string }, scope: HostCallScope) {
+    return container.valkey.get(addonKey(scope, key));
   },
 
   async "schedule.add"(
@@ -374,7 +524,14 @@ const Methods = {
     const channel = await container.client.channels.fetch(channelId);
     if (!channel?.isTextBased()) return null;
     const message = await channel.messages.fetch(messageId).catch(() => null);
-    return message && { id: message.id, channelId: message.channelId, content: message.content };
+    return (
+      message && {
+        id: message.id,
+        channelId: message.channelId,
+        content: message.content,
+        repliedToId: message.reference?.messageId ?? null,
+      }
+    );
   },
 
   async "discord.messages.edit"(
@@ -391,7 +548,7 @@ const Methods = {
   "discord.guilds.get"({ guildId }: { guildId: string }, scope: HostCallScope) {
     const g = container.client.guilds.cache.get(scopedGuild(scope, guildId));
     if (!g) return null;
-    return { id: g.id, name: g.name };
+    return { id: g.id, name: g.name, memberCount: g.memberCount ?? null };
   },
 
   async "discord.guilds.members.fetch"({ guildId, userId }: { guildId: string; userId: string }, scope: HostCallScope) {
@@ -428,6 +585,200 @@ const Methods = {
   ) {
     const m = await fetchGuildMember(scopedGuild(scope, guildId), userId);
     await m.timeout(durationMs, reason);
+  },
+
+  async "discord.members.move"(
+    { guildId, userId, channelId }: { guildId: string; userId: string; channelId: string },
+    scope: HostCallScope,
+  ) {
+    const m = await fetchGuildMember(scopedGuild(scope, guildId), userId);
+    await m.voice.setChannel(channelId);
+  },
+
+  async "discord.roles.create"(
+    { guildId, name, color, mentionable, reason }: { guildId: string; name: string; color?: string; mentionable?: boolean; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const role = await guild.roles.create({
+      name,
+      ...(color ? { color: color as never } : {}),
+      ...(mentionable !== undefined ? { mentionable } : {}),
+      ...(reason ? { reason } : {}),
+    });
+    return { id: role.id };
+  },
+
+  async "discord.roles.edit"(
+    { guildId, roleId, name, color, mentionable, reason }: { guildId: string; roleId: string; name?: string; color?: string | null; mentionable?: boolean; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const role = await guild.roles.fetch(roleId);
+    if (!role) throw new Error(`Role ${roleId} not found in guild ${guildId}`);
+    await role.edit({
+      ...(name !== undefined ? { name } : {}),
+      ...(color !== undefined ? { color: color as never } : {}),
+      ...(mentionable !== undefined ? { mentionable } : {}),
+      ...(reason ? { reason } : {}),
+    });
+    return { id: role.id };
+  },
+
+  async "discord.roles.remove"(
+    { guildId, roleId, reason }: { guildId: string; roleId: string; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const role = await guild.roles.fetch(roleId);
+    if (!role) throw new Error(`Role ${roleId} not found in guild ${guildId}`);
+    await role.delete(reason);
+  },
+
+  async "discord.roles.fetch"(
+    { guildId, roleId }: { guildId: string; roleId: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) return null;
+    const role = await guild.roles.fetch(roleId).catch(() => null);
+    if (!role) return null;
+    return {
+      id: role.id,
+      name: role.name,
+      color: role.hexColor,
+      mentionable: role.mentionable,
+      managed: role.managed,
+      position: role.position,
+    };
+  },
+
+  async "discord.emoji.create"(
+    { guildId, name, attachment, reason }: { guildId: string; name: string; attachment: string; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const emoji = await guild.emojis.create({ attachment, name, ...(reason ? { reason } : {}) });
+    return { id: emoji.id };
+  },
+
+  async "discord.channels.create"(
+    { guildId, name, type, parentId, reason }: { guildId: string; name: string; type: "voice" | "text"; parentId?: string; reason?: string },
+    scope: HostCallScope,
+  ) {
+    const guild = container.client.guilds.cache.get(scopedGuild(scope, guildId));
+    if (!guild) throw new Error(`Guild ${guildId} is not in cache`);
+    const channel = await guild.channels.create({
+      name,
+      type: type === "voice" ? ChannelType.GuildVoice : ChannelType.GuildText,
+      ...(parentId ? { parent: parentId } : {}),
+      ...(reason ? { reason } : {}),
+    });
+    return { id: channel.id };
+  },
+
+  async "discord.channels.remove"(
+    { channelId, reason }: { channelId: string; reason?: string },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !("delete" in channel) || typeof channel.delete !== "function") {
+      throw new Error(`Channel ${channelId} cannot be deleted`);
+    }
+    await (channel as { delete: (reason?: string) => Promise<unknown> }).delete(reason);
+  },
+
+  async "discord.channels.permissions"(
+    { channelId, targetId, allow, deny }: { channelId: string; targetId: string; allow?: string[]; deny?: string[] },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !("permissionOverwrites" in channel)) {
+      throw new Error(`Channel ${channelId} has no permission overwrites`);
+    }
+    const flags = PermissionsBitField.Flags as unknown as Record<string, bigint>;
+    const resolve = (names: string[] | undefined) =>
+      (names ?? []).map((name) => {
+        const bit = flags[name];
+        if (bit === undefined) throw new Error(`Unknown permission flag "${name}"`);
+        return bit;
+      });
+    const allowBits = resolve(allow).reduce((acc, bit) => acc | bit, 0n);
+    const denyBits = resolve(deny).reduce((acc, bit) => acc | bit, 0n);
+    await (channel as { permissionOverwrites: { edit: (target: string, perms: { Allow: bigint; Deny: bigint }) => Promise<unknown> } }).permissionOverwrites.edit(targetId, { Allow: allowBits, Deny: denyBits });
+  },
+
+  async "discord.channels.members"(
+    { channelId }: { channelId: string },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !("isVoiceBased" in channel) || !channel.isVoiceBased()) {
+      throw new Error(`Channel ${channelId} is not a voice channel`);
+    }
+    return [...(channel as { members: Map<string, unknown> }).members.keys()];
+  },
+
+  async "discord.threads.create"(
+    { channelId, name, messageId, autoArchiveMinutes }: { channelId: string; name: string; messageId?: string; autoArchiveMinutes?: number },
+    _scope: HostCallScope,
+  ) {
+    const channel = await container.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !("threads" in channel)) {
+      throw new Error(`Channel ${channelId} does not support threads`);
+    }
+    const threads = (
+      channel as {
+        threads: {
+          create: (opts: { name: string; startMessage?: string; autoArchiveDuration?: number }) => Promise<{ id: string }>;
+        };
+      }
+    ).threads;
+    const thread = await threads.create({
+      name,
+      ...(messageId ? { startMessage: messageId } : {}),
+      ...(autoArchiveMinutes ? { autoArchiveDuration: autoArchiveMinutes } : {}),
+    });
+    return { id: thread.id };
+  },
+
+  async "discord.threads.archive"(
+    { threadId, locked }: { threadId: string; locked?: boolean },
+    _scope: HostCallScope,
+  ) {
+    const thread = await container.client.channels.fetch(threadId).catch(() => null);
+    if (!thread || !("setArchived" in thread)) {
+      throw new Error(`Thread ${threadId} not found`);
+    }
+    await (thread as { setArchived: (archived: boolean, reason?: string) => Promise<unknown> }).setArchived(true);
+    if (locked) {
+      await (thread as { setLocked: (locked: boolean) => Promise<unknown> }).setLocked(true);
+    }
+  },
+
+  async "discord.threads.remove"(
+    { threadId }: { threadId: string },
+    _scope: HostCallScope,
+  ) {
+    const thread = await container.client.channels.fetch(threadId).catch(() => null);
+    if (!thread || !("delete" in thread) || typeof thread.delete !== "function") {
+      throw new Error(`Thread ${threadId} not found`);
+    }
+    await (thread as { delete: () => Promise<unknown> }).delete();
+  },
+
+  "discord.client.presence"(
+    { status, activities }: { status?: "online" | "idle" | "dnd" | "invisible"; activities?: { name: string; type?: number; state?: string; url?: string }[] },
+    _scope: HostCallScope,
+  ) {
+    container.client.user?.setPresence({
+      ...(status ? { status } : {}),
+      ...(activities ? { activities: activities as never } : {}),
+    });
   },
 
   async "discord.messages.delete"(

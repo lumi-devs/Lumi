@@ -13,6 +13,11 @@ export interface CtxReplyOptions {
   ephemeral?: boolean;
 }
 
+export interface NamedRef {
+  id: string;
+  name?: string;
+}
+
 export class CommandContext {
   readonly isSlash: boolean;
   readonly guildId: string | null;
@@ -44,6 +49,18 @@ export class CommandContext {
 
   getBoolean(name: string, spec: CtxOptionSpec = {}): Promise<boolean | null> {
     return call("ctx.option", { getter: "getBoolean", name, spec });
+  }
+
+  getUser(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getUser", name, spec });
+  }
+
+  getRole(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getRole", name, spec });
+  }
+
+  getChannel(name: string, spec: CtxOptionSpec = {}): Promise<NamedRef | null> {
+    return call("ctx.option", { getter: "getChannel", name, spec });
   }
 
   defer(opts: CtxReplyOptions = {}): Promise<void> {

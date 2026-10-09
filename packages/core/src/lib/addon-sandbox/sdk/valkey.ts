@@ -19,3 +19,11 @@ export function smembers(key: string): Promise<string[]> {
 export function del(key: string): Promise<number> {
   return call("valkey.del", { key });
 }
+
+export function set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  return call("valkey.set", { key, value, ttlSeconds });
+}
+
+export function get(key: string): Promise<string | null> {
+  return call("valkey.get", { key });
+}
