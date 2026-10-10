@@ -1,7 +1,10 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { Prisma } from "@prisma/client";
 import {
+  extractTraceContext,
+  otelContext,
   runWithContext,
+  withSpan,
   semaphoreInFlight,
   semaphoreQueued,
   semaphoreRejectedTotal,
@@ -18,10 +21,10 @@ import {
 import {
   resolveRpcDiscordBulkheadQueueLimit,
   resolveRpcDiscordBulkheadSize,
-} from "#lib/env.js";
-import { getRpcHandler } from "#lib/rpc/registry.js";
-import { Semaphore, SemaphoreQueueFullError } from "#lib/utilities/concurrency.js";
-import { errorFrom, logError } from "#lib/utilities/errors.js";
+} from "@lumi/lib/env.js";
+import { getRpcHandler } from "@lumi/lib/rpc/registry.js";
+import { Semaphore, SemaphoreQueueFullError } from "@lumi/lib/utilities/concurrency.js";
+import { errorFrom, logError } from "@lumi/lib/utilities/errors.js";
 
 /**
  * Bulkheads RPC actions whose *authorizer* makes a Discord REST call before
@@ -113,61 +116,74 @@ export async function dispatchRpc(req: RpcRequest): Promise<RpcResponse> {
 
   const bulkheaded = isDiscordBoundAction(req.action);
 
-  return runWithContext(
-    {
-      correlationId: req.id,
-      source: "rpc",
-      name: req.action,
-      guildId: req.guildId,
-      userId: req.actorId,
-    },
-    async (): Promise<RpcResponse> => {
-      const startedAt = Date.now();
-      try {
-        const data = bulkheaded
-          ? await runThroughDiscordBulkhead(() => handler(req))
-          : await handler(req);
-        container.logger.debug(`[RPC] ${req.action} ok`, {
-          durationMs: Date.now() - startedAt,
-        });
-        return { id: req.id, ok: true, data };
-      } catch (err: unknown) {
-        logError(`RPC: ${req.action} error`, err);
-        container.logger.error(`[RPC] ${req.action} failed`, {
-          durationMs: Date.now() - startedAt,
-        });
-        // Prisma errors carry the query/file path/line in `.message` - never
-        // let those cross the wire raw, even though a caught-and-rethrown
-        // application `Error` (e.g. "A permit named X already exists.") is
-        // meant to reach the caller verbatim.
-        const isPrismaError =
-          err instanceof Prisma.PrismaClientKnownRequestError ||
-          err instanceof Prisma.PrismaClientUnknownRequestError ||
-          err instanceof Prisma.PrismaClientRustPanicError ||
-          err instanceof Prisma.PrismaClientValidationError ||
-          err instanceof Prisma.PrismaClientInitializationError;
-        const safeErr =
-          isPrismaError && err instanceof Prisma.PrismaClientKnownRequestError
-            ? new Error(
-                err.code === "P2002"
-                  ? "Unique constraint violation."
-                  : err.code === "P2025"
-                    ? "Record not found."
-                    : err.code === "P1008"
-                      ? "Operation timed out."
-                      : `Database error occurred (code: ${err.code}).`,
-              )
-            : isPrismaError
-              ? new Error("Database error occurred.")
-              : errorFrom(err);
-        const code =
-          err instanceof CodedRpcError ? err.code : RpcFailureCodes.HandlerError;
-        return makeRpcFailure(req.id, safeErr.message ?? "Internal error", code, {
-          retryable:
-            err instanceof CodedRpcError ? err.retryable : RpcRetryableByDefault[code],
-          retryAfterMs: err instanceof CodedRpcError ? err.retryAfterMs : undefined,
-        });
-      }
-    },
+  const parentCtx = extractTraceContext({
+    traceparent: req.traceparent,
+    tracestate: req.tracestate,
+  });
+
+  return otelContext.with(parentCtx, () =>
+    runWithContext(
+      {
+        correlationId: req.id,
+        source: "rpc",
+        name: req.action,
+        guildId: req.guildId,
+        userId: req.actorId,
+      },
+      async (): Promise<RpcResponse> =>
+        withSpan(`rpc.${req.action}`, async (span) => {
+          span.setAttribute("rpc.action", req.action);
+          span.setAttribute("rpc.id", req.id);
+          if (req.guildId) span.setAttribute("rpc.guildId", req.guildId);
+          const startedAt = Date.now();
+          try {
+            const data = bulkheaded
+              ? await runThroughDiscordBulkhead(() => handler(req))
+              : await handler(req);
+            container.logger.debug(`[RPC] ${req.action} ok`, {
+              durationMs: Date.now() - startedAt,
+            });
+            return { id: req.id, ok: true, data };
+          } catch (err: unknown) {
+            span.setAttribute("rpc.ok", false);
+            if (err instanceof CodedRpcError) span.setAttribute("rpc.code", err.code);
+            logError(`RPC: ${req.action} error`, err);
+            container.logger.error(`[RPC] ${req.action} failed`, {
+              durationMs: Date.now() - startedAt,
+            });
+            // Prisma errors carry the query/file path/line in `.message` - never
+            // let those cross the wire raw, even though a caught-and-rethrown
+            // application `Error` (e.g. "A permit named X already exists.") is
+            // meant to reach the caller verbatim.
+            const isPrismaError =
+              err instanceof Prisma.PrismaClientKnownRequestError ||
+              err instanceof Prisma.PrismaClientUnknownRequestError ||
+              err instanceof Prisma.PrismaClientRustPanicError ||
+              err instanceof Prisma.PrismaClientValidationError ||
+              err instanceof Prisma.PrismaClientInitializationError;
+            const safeErr =
+              isPrismaError && err instanceof Prisma.PrismaClientKnownRequestError
+                ? new Error(
+                    err.code === "P2002"
+                      ? "Unique constraint violation."
+                      : err.code === "P2025"
+                        ? "Record not found."
+                        : err.code === "P1008"
+                          ? "Operation timed out."
+                          : `Database error occurred (code: ${err.code}).`,
+                  )
+                : isPrismaError
+                  ? new Error("Database error occurred.")
+                  : errorFrom(err);
+            const code =
+              err instanceof CodedRpcError ? err.code : RpcFailureCodes.HandlerError;
+            return makeRpcFailure(req.id, safeErr.message ?? "Internal error", code, {
+              retryable:
+                err instanceof CodedRpcError ? err.retryable : RpcRetryableByDefault[code],
+              retryAfterMs: err instanceof CodedRpcError ? err.retryAfterMs : undefined,
+            });
+          }
+        }),
+    ),
   );
 }
