@@ -1,6 +1,6 @@
-import { type Container } from "#lib/services.js";
+import { type Container } from "@lumi/lib/services.js";
 
-import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
 import { loadAntiNukeConfig } from "./anti-nuke.js";
 import { loadBackupConfig, createBackup } from "./backup.js";
 

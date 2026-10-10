@@ -15,7 +15,7 @@ import {
   resolveKey,
   SupportedLanguages,
   translate,
-} from "#lib/i18n/index.js";
+} from "@lumi/lib/i18n/index.js";
 
 /**
  * `z.enum(...).optional()` is a `ZodOptional` wrapping a `ZodEnum`: unwrap to

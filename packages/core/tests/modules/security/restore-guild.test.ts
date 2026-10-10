@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 
 const GUILD_ID = "111111111111111111";
 const EVERYONE = { id: GUILD_ID, position: 0 };

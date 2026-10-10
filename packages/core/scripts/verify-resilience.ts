@@ -7,8 +7,8 @@
  * Invoked via: `bun run verify:resilience`
  */
 
-import { createEventBus } from "#lib/event-bus/factory.js";
-import type { EventBus, BusMessage } from "#lib/event-bus/types.js";
+import { createEventBus } from "@lumi/lib/event-bus/factory.js";
+import type { EventBus, BusMessage } from "@lumi/lib/event-bus/types.js";
 
 const VALKEY_HOST = process.env["VALKEY_HOST"] ?? "localhost";
 const VALKEY_PORT = Number(process.env["VALKEY_PORT"] ?? 6379);

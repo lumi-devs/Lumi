@@ -1,5 +1,5 @@
-import type { Container } from "#lib/services.js";
-import { rolloutBucket } from "#lib/feature-flags/hash.js";
+import type { Container } from "@lumi/lib/services.js";
+import { rolloutBucket } from "@lumi/lib/feature-flags/hash.js";
 
 /**
  * Resolves whether `key` is on, given an optional guild scope.

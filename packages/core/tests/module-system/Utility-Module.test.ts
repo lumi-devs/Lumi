@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   defineUtility,
   getUtility,
   tryGetUtility,
-} from "#lib/module-system/Utility.js";
-import { defineModule } from "#lib/module-system/Module.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/module-system/utility.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 
 describe("module-system defineUtility and defineModule", () => {
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe("module-system defineUtility and defineModule", () => {
     });
 
     it("fetches utility with tryGetUtility and throws on getUtility if missing", async () => {
-      const { loadUtilities } = await import("#lib/module-system/Utility.js");
+      const { loadUtilities } = await import("@lumi/lib/module-system/utility.js");
       expect(tryGetUtility("nonexistent" as any)).toBeUndefined();
       expect(() => getUtility("nonexistent" as any)).toThrow(
         'Utility "nonexistent" is not loaded',

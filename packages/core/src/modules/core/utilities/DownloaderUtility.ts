@@ -1,5 +1,5 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import { container, type Container } from "#lib/services.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import {
   resolver,
   AddonModulesRoot,
@@ -7,17 +7,17 @@ import {
   PinRoot,
   RepoAlreadyInstalledError,
   type RepoUpdateResult,
-} from "#lib/downloader/resolver.js";
-import { pathExists } from "#lib/downloader/validate.js";
+} from "@lumi/lib/downloader/resolver.js";
+import { pathExists } from "@lumi/lib/downloader/validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { errorFrom } from "#lib/utilities/errors.js";
-import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
-import { withSerializedWork } from "#lib/utilities/misc.js";
-import { execFileAsync } from "#lib/utilities/exec-file.js";
-import { commandRegistry } from "#lib/commands/command-def.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
+import { withSerializedWork } from "@lumi/lib/utilities/serialized-work.js";
+import { execFileAsync } from "@lumi/lib/utilities/exec-file.js";
+import { commandRegistry } from "@lumi/lib/commands/command-def.js";
 
-export interface AutoUpdateConfig {
+interface AutoUpdateConfig {
   enabled: boolean;
   intervalMinutes: number;
   lastCheckedAt: Date | null;
@@ -36,7 +36,7 @@ type ModuleUpdateCheck =
       changelog: string;
     };
 
-export type RepoUpdateCheck =
+type RepoUpdateCheck =
   | { ok: false; reason: string }
   | { ok: true; hasUpdate: false }
   | { ok: true; hasUpdate: true; changelog: string };
@@ -843,7 +843,7 @@ export const downloaderUtility = defineUtility({
 
 export type DownloaderUtility = typeof downloaderUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     downloader: typeof downloaderUtility;
   }

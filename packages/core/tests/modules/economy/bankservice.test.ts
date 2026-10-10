@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
+import { EconomyRepository } from "@lumi/modules/economy/data/EconomyRepository.js";
 import {
   BankService,
   CooldownError,
@@ -7,7 +7,7 @@ import {
   InsufficientFundsError,
   InvalidAmountError,
 } from "@lumi/application/services/economy/BankService.js";
-import type { EconomyConfig } from "#modules/economy/config.js";
+import type { EconomyConfig } from "@lumi/modules/economy/config.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 function makeConfig(overrides: Partial<EconomyConfig> = {}): EconomyConfig {

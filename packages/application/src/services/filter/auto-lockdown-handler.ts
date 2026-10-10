@@ -1,9 +1,9 @@
-import { type Container } from "#lib/services.js";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { unlockAllTextChannels } from "#lib/moderation/lockdown.js";
-import { swallow } from "#lib/utilities/errors.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
-import type { AutoLockdownUnlockPayload } from "#modules/filter/scheduled-tasks/autoLockdownUnlock.js";
+import { type Container } from "@lumi/lib/services.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { unlockAllTextChannels } from "@lumi/lib/discord/channel-locks.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
+import type { AutoLockdownUnlockPayload } from "@lumi/modules/filter/scheduled-tasks/autoLockdownUnlock.js";
 
 export async function handleAutoLockdownUnlockFire(
   services: Container,

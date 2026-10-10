@@ -1,11 +1,11 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { Guild } from "@prisma/client";
 import {
   DefaultLanguage,
   isSupportedLanguage,
   SupportedLanguages,
-} from "#lib/i18n/index.js";
+} from "@lumi/lib/i18n/index.js";
 
 /**
  * Shared guild-settings write: opens a guild transaction, rejects the change
@@ -83,7 +83,7 @@ export const guildSettingsUtility = defineUtility({
 
 export type GuildSettingsUtility = typeof guildSettingsUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     "guild-settings": typeof guildSettingsUtility;
   }

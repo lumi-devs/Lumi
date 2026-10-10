@@ -3,11 +3,11 @@ import {
   parseMinAgeHours,
   stateFromSegments,
 } from "../../services/setup-wizard.js";
-import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
-import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
+import { buildSetupStepView } from "@lumi/modules/core/ui/setup-wizard.js";
+import { ephemeralCard, makeErrorCard } from "@lumi/lib/ui/cards.js";
 import { SetupAgeModalId } from "../../constants.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { ModalSubmitInteraction } from "discord.js";
 
 export const setupWizardModal = defineInteraction({

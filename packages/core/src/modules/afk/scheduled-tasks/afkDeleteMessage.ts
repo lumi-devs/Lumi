@@ -1,4 +1,4 @@
-import { RelayTask, type CatchUpMeta } from "#lib/scheduler/tasks.js";
+import { RelayTask, type CatchUpMeta } from "@lumi/lib/scheduler/tasks.js";
 
 export interface AfkDeleteMessagePayload extends CatchUpMeta {
   channelId: string;

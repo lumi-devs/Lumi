@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   MaxMassTargets,
   parseSnowflakeList,
   resolveMembers,
   resolveUsers,
-} from "#lib/moderation/multi-target.js";
+} from "@lumi/lib/discord/mass-targets.js";
 
 describe("parseSnowflakeList", () => {
   it("extracts raw IDs separated by spaces and commas", () => {

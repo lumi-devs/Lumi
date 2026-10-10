@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import {
@@ -8,10 +8,10 @@ import {
   postOrEditVerifyPanel,
 } from "@lumi/application/services/security/verification.js";
 import { MaxAttempts, type CaptchaState } from "@lumi/application/services/security/captcha.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 

@@ -1,13 +1,13 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { Container } from "#lib/services.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
 import { deriveRepoNameFromUrl } from "@lumi/contracts";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 
 import type { AutocompleteInteraction } from "discord.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { paginateList } from "#lib/utilities/pagination.js";
-import { respondWithChoices } from "#lib/utilities/autocomplete.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { paginateList } from "@lumi/lib/utilities/pagination.js";
+import { respondWithChoices } from "@lumi/lib/utilities/autocomplete.js";
 import { repoNameChoices } from "../services/downloader-autocomplete.js";
 import {
   ActionRowBuilder,
@@ -15,10 +15,10 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { errorFrom } from "#lib/utilities/errors.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { makeInfoCard } from "@lumi/lib/ui/cards.js";
+import { componentEmoji } from "@lumi/lib/ui/panels.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 function downloaderService(): DownloaderUtility {
@@ -118,7 +118,7 @@ export const repoDef: CommandDef = {
       (await ctx.getString("branch", { required: false })) ?? "default";
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WarningSign} Third-Party Code Warning`,
+      title: `⚠️ Third-Party Code Warning`,
       body: [
         `You're about to clone **${name}** (\`${url}\`) as a module repository.`,
         "Modules installed from it run **inside the bot process** with full access to its database, cache, and Discord client. Lumi does not review or vet third-party repositories.",
@@ -139,18 +139,18 @@ export const repoDef: CommandDef = {
     try {
       const { signatureWarning } = await downloaderService().addRepo(ctx.services, name, url, branch);
       ctx.services.logger.info(
-        `[Repo] ${Emojis.Repo} Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
+        `[Repo] 📦 Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
-      const body = [t("core:repoAddedText", { name }), signatureWarning ? `${Emojis.WarningSign} Signature warning: ${signatureWarning}.` : null]
+      const body = [t("core:repoAddedText", { name }), signatureWarning ? `⚠️ Signature warning: ${signatureWarning}.` : null]
         .filter(Boolean)
         .join("\n\n");
-      await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoAddedTitle")}`, body);
+      await ctx.replySuccess(`📦 ${t("core:repoAddedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       ctx.services.logger.warn(
-        `[Repo] ${Emojis.Error} Failed to add repo: ${name} - ${msg_}`,
+        `[Repo] 🔴 Failed to add repo: ${name} - ${msg_}`,
       );
-      await ctx.replyError(`${Emojis.Error} ${t("core:failedAddRepoTitle")}`, msg_);
+      await ctx.replyError(`🔴 ${t("core:failedAddRepoTitle")}`, msg_);
     }
   },
   "remove": async (ctx: CommandContext) => {
@@ -168,7 +168,7 @@ export const repoDef: CommandDef = {
         `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
       await ctx.replySuccess(
-        `${Emojis.Repo} ${t("core:repoRemovedTitle")}`,
+        `📦 ${t("core:repoRemovedTitle")}`,
         t("core:repoRemovedText", { name }),
       );
     } catch (err: unknown) {
@@ -187,7 +187,7 @@ export const repoDef: CommandDef = {
     try {
       const result = await downloaderService().updateRepo(ctx.services, name);
       ctx.services.logger.info(
-        `[Repo] ${Emojis.Repo} Updated repository: ${name} by ${ctx.user.tag} (${result.oldSha ?? "?"} -> ${result.newSha})`,
+        `[Repo] 📦 Updated repository: ${name} by ${ctx.user.tag} (${result.oldSha ?? "?"} -> ${result.newSha})`,
       );
       const shaLine = result.changed
         ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
@@ -197,19 +197,19 @@ export const repoDef: CommandDef = {
         shaLine,
         result.diffStat,
         result.signatureWarning
-          ? `${Emojis.WarningSign} Signature warning: ${result.signatureWarning}.`
+          ? `⚠️ Signature warning: ${result.signatureWarning}.`
           : null,
       ]
         .filter(Boolean)
         .join("\n\n");
-      await ctx.replySuccess(`${Emojis.Repo} ${t("core:repoUpdatedTitle")}`, body);
+      await ctx.replySuccess(`📦 ${t("core:repoUpdatedTitle")}`, body);
     } catch (err: unknown) {
       const msg_ = errorFrom(err).message;
       ctx.services.logger.warn(
-        `[Repo] ${Emojis.Error} Failed to update repo: ${name} - ${msg_}`,
+        `[Repo] 🔴 Failed to update repo: ${name} - ${msg_}`,
       );
       await ctx.replyError(
-        `${Emojis.Error} ${t("core:failedUpdateRepoTitle")}`,
+        `🔴 ${t("core:failedUpdateRepoTitle")}`,
         msg_,
       );
     }
@@ -279,7 +279,7 @@ export const repoDef: CommandDef = {
         new ButtonBuilder()
           .setCustomId("lumi:tab:addons")
           .setLabel(t("core:openAddonsManager"))
-          .setEmoji(Emojis.parse(Emojis.Repo))
+          .setEmoji(componentEmoji("📦"))
           .setStyle(ButtonStyle.Primary),
       );
 

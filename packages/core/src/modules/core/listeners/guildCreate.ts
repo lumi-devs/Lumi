@@ -1,9 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { Guild } from "discord.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeWarningCard } from "#lib/ui/cards.js";
+import { makeWarningCard } from "@lumi/lib/ui/cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,
@@ -33,7 +32,7 @@ async function leaveWhenLocked(
     const channel = resolveAnnounceChannel(guild);
     await channel?.send(
       makeWarningCard(
-        `${Emojis.Lock} Leaving Server`,
+        `🔒 Leaving Server`,
         "Server lock is enabled, so the bot cannot stay in new servers.",
       ),
     );
@@ -47,7 +46,7 @@ async function leaveWhenLocked(
   try {
     await guild.leave();
     services.logger.info(
-      `[ServerLock] ${Emojis.Lock} Left locked guild ${guild.name} (${guild.id})`,
+      `[ServerLock] 🔒 Left locked guild ${guild.name} (${guild.id})`,
     );
   } catch (err: unknown) {
     services.logger.warn(
@@ -62,7 +61,7 @@ export const guildCreateListener = defineListener({
   event: Events.GuildCreate,
   async execute(services: Container, guild: Guild) {
     services.logger.info(
-      `[Guild] ${Emojis.Guild} Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
+      `[Guild] 🏰 Joined: ${guild.name} (${guild.id}) - ${guild.memberCount} members`,
     );
     await services.db.markGuildRejoined(guild.id);
     await services.db.permissions.ensureBuiltinPermits(guild.id);

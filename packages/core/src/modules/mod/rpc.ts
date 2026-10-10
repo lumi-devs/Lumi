@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
 import {
   CodedRpcError,
@@ -9,10 +9,10 @@ import {
 import type { AppealVerifyResult } from "@lumi/contracts/views";
 import { verifyAppealToken } from "@lumi/application/services/mod/appeal-token.js";
 import { liftModerationCaseWithUndo } from "@lumi/application/services/mod/case-lift.js";
-import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
-import { resolvePageSize } from "#lib/rpc/validation.js";
-import { formatDuration, parseDuration } from "#lib/utilities/time.js";
-import { errorCode } from "#lib/utilities/errors.js";
+import { implementRpc, requireGuildId } from "@lumi/lib/rpc/implement.js";
+import { resolvePageSize } from "@lumi/lib/rpc/validation.js";
+import { formatDuration, parseDuration } from "@lumi/lib/utilities/time.js";
+import { errorCode } from "@lumi/lib/utilities/errors.js";
 import {
   removeThresholdRule,
   setThresholdRule,

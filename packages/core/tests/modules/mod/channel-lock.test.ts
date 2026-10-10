@@ -4,7 +4,7 @@ import {
   isChannelLocked,
   lockChannel,
   unlockChannel,
-} from "#lib/moderation/lockdown.js";
+} from "@lumi/lib/discord/channel-locks.js";
 
 function makeChannel(denied: boolean) {
   const overwrite = denied

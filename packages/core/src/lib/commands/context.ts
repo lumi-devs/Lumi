@@ -1,7 +1,7 @@
 import { UserError } from "@lumi/shared";
-import { container, type Container } from "#lib/services.js";
-import type { PrefixArgs } from "#lib/commands/prefix-args.js";
-import { fetchT } from "#lib/i18n/index.js";
+import { container, type Container } from "@lumi/lib/services.js";
+import type { PrefixArgs } from "@lumi/lib/commands/prefix-args.js";
+import { fetchT } from "@lumi/lib/i18n/index.js";
 import {
   GuildMember,
   MessageFlags,
@@ -12,12 +12,12 @@ import {
   type Role,
   type User,
 } from "discord.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#lib/ui/cards.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { permitSubject } from "#lib/permissions/subject.js";
-import { BrandColors } from "#lib/branding/colors.js";
-import { getGuildContext } from "#lib/cache/GuildContext.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
+import { permitSubject } from "@lumi/lib/permissions/subject.js";
+import { BrandColors } from "@lumi/lib/ui/palette.js";
+import { getGuildContext } from "@lumi/lib/cache/guild-context.js";
 
 export interface CtxOptionSpec {
   required?: boolean;

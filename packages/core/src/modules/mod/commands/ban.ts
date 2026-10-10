@@ -1,21 +1,21 @@
 import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { AutocompleteInteraction } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#lib/moderation/ModerationCommand.js";
-import { parseSnowflakeList, resolveUsers } from "#lib/moderation/multi-target.js";
+} from "@lumi/lib/commands/moderation-flow.js";
+import { parseSnowflakeList, resolveUsers } from "@lumi/lib/discord/mass-targets.js";
 import { Result } from "@lumi/shared";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
-import { isSnowflakeId } from "#lib/utilities/misc.js";
+import { isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "@lumi/application/services/mod/actions/BanAction.js";
+import { BanAction } from "@lumi/application/services/mod/actions/ban-action.js";
 
 const Root = "commands";
 const SecondsPerDay = 86400;

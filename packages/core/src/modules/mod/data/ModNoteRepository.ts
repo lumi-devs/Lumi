@@ -1,5 +1,5 @@
 import type { ModNote } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 
 /**
  * Staff-only member notes (`ModNote`), owned by the `mod` module. Separate

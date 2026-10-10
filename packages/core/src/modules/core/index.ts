@@ -1,7 +1,6 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
 
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
 import { handleDataRetentionFire } from "./services/data-retention.js";
 import {
   handleGdprExportCleanupFire,
@@ -15,7 +14,7 @@ export const coreModule = defineModule({
   short: "Essential bot commands, module management, and administrative panels.",
   endUserDataStatement:
     "Stores user IDs in permit assignments, system blocklists, and audit logs. Handled centrally during GDPR erasure.",
-  emoji: Emojis.Shield,
+  emoji: "🛡️",
   disableable: false,
   category: "System",
   onLoad() {

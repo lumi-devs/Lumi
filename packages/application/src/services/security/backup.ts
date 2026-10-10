@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { Guild } from "discord.js";
-import { ValkeyKeys } from "#lib/valkey/client.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
 import { snapshotGuild } from "./backup-types.js";
 import { restoreGuildFromBackup } from "./restore-guild.js";
 import { getConfigNumber } from "./config-helpers.js";

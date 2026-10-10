@@ -4,7 +4,7 @@ import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
   summarizeAnnounce,
-} from "#modules/core/services/global-announce.js";
+} from "@lumi/modules/core/services/global-announce.js";
 
 interface FakeChannel {
   id: string;

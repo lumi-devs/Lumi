@@ -9,8 +9,8 @@ import {
   buildTransferView,
   buildDeleteConfirmView,
   buildPanel,
-} from "#modules/tempvc/ui/panel.js";
-import { container } from "#lib/services.js";
+} from "@lumi/modules/tempvc/ui/panel.js";
+import { container } from "@lumi/lib/services.js";
 
 describe("TempVC UI Panel Builders", () => {
   const mockChannel: any = {

@@ -1,8 +1,8 @@
-import { envParseString } from "#lib/env.js";
-import type { OwnedEventBus } from "#lib/event-bus/factory.js";
-import { createServices, ownedEventBusOf, useServices } from "#lib/services.js";
-import { installProducerOnlyTasks } from "#lib/scheduler/producer.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { envParseString } from "@lumi/lib/env.js";
+import type { OwnedEventBus } from "@lumi/lib/event-bus/factory.js";
+import { createServices, ownedEventBusOf, useServices } from "@lumi/lib/services.js";
+import { installProducerOnlyTasks } from "@lumi/lib/scheduler/producer.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import type { Client } from "discord.js";
 
 export function installContainerServices(

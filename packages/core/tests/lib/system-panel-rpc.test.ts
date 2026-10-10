@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { AuditRepository } from "@lumi/lib/prisma/repositories/audit-repository.js";
+import { AccessRepository } from "@lumi/lib/prisma/repositories/access-repository.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
 
 const GUILD_ID = "123456789012345678";

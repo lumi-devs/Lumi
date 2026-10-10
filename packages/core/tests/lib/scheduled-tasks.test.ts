@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   trace,
   context as otelContext,
@@ -7,9 +7,9 @@ import {
   type SpanContext,
 } from "@opentelemetry/api";
 import { startTracing, shutdownTracing } from "@lumi/observability";
-import { shouldRunNow, RelayTask } from "#lib/scheduler/tasks.js";
-import { taskFireStream } from "#lib/scheduler/bus.js";
-import { wrapWithTraceContext } from "#lib/scheduler/otel.js";
+import { shouldRunNow, RelayTask } from "@lumi/lib/scheduler/tasks.js";
+import { taskFireStream } from "@lumi/lib/scheduler/bus.js";
+import { wrapWithTraceContext } from "@lumi/lib/scheduler/otel.js";
 
 describe("shouldRunNow", () => {
   it("runs when no payload is given", () => {

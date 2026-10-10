@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { SecurityRepository } from "#modules/security/data/SecurityRepository.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { SecurityRepository } from "@lumi/modules/security/data/SecurityRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 import { enterPanic, revertPanic } from "@lumi/application/services/security/panic.js";
 import { postOrEditVerifyPanel } from "@lumi/application/services/security/verification.js";
 import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import { createMemoryValkey } from "../../mocks/memory-valkey.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 vi.mock("@lumi/application/services/security/panic.js", () => ({
   enterPanic: vi.fn(),

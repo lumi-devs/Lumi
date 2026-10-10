@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { moduleDef } from "#modules/core/commands/module.js";
+import { moduleDef } from "@lumi/modules/core/commands/module.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@lumi/lib/module-system/utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 
 function makeServices(records: any[] = []) {
   return {

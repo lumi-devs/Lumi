@@ -11,8 +11,8 @@ import {
 } from "@discordjs/builders";
 import { cutText } from "@lumi/shared";
 import type { MessageMentionOptions } from "discord.js";
-import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+import { MessageFlags } from "@lumi/lib/discord/constants.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
 
 export interface CardReply {
@@ -33,10 +33,8 @@ export interface CardOptions {
   noAccent?: boolean;
   sections?: SectionBuilder[];
   actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
-  /** Adds a divider above actionRows - only used above the hub tab bar so it doesn't blend into the content above it. */
   separatorAboveActionRows?: boolean;
   mediaGallery?: MediaGalleryBuilder;
-  /** Convenience for a header banner: image urls rendered as a gallery near the top. */
   headerImages?: string[];
 }
 
@@ -99,7 +97,6 @@ function buildContainer(
     !opts.sections?.length && (opts.thumbnailUrl ?? opts.thumbnail);
 
   if (thumbUrl) {
-    // The thumbnail renders beside the first body lines (max 3 per section).
     const thumbSec = new SectionBuilder().setThumbnailAccessory(
       new ThumbnailBuilder().setURL(thumbUrl),
     );
@@ -201,17 +198,8 @@ export const makeCard = (
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, color || undefined));
 
-/** Discord's per-TextDisplay content limit for Components V2 messages. */
 export const TextDisplayLimit = 4000;
 
-/**
- * Join lines into one TextDisplay body that fits Discord's limit.
- *
- * @discordjs/builders validates this client-side and throws, so an oversized
- * body fails the entire reply rather than being truncated in transit - a
- * per-item cap is not enough on its own, because enough capped items still
- * overflow the total.
- */
 export function fitLines(
   lines: string[],
   budget = TextDisplayLimit,

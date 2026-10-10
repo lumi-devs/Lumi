@@ -3,7 +3,7 @@ import {
   getSystemStatus,
   StatusThresholds,
   type SystemStatusDeps,
-} from "#lib/rpc/system-status.js";
+} from "@lumi/lib/rpc/system-status.js";
 
 function baseDeps(overrides: Partial<SystemStatusDeps> = {}): SystemStatusDeps {
   return {

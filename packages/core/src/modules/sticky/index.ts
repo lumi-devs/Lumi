@@ -1,6 +1,6 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { NoEndUserData } from "#lib/module-system/meta.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { NoEndUserData } from "@lumi/lib/module-system/meta.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 
 export const stickyModule = defineModule({
   name: "sticky",

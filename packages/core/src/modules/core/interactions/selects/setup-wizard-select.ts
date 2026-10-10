@@ -1,8 +1,8 @@
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   VerificationModes,
   emptySetupState,
@@ -10,7 +10,7 @@ import {
   setupAccessDenied,
   stateFromSegments,
 } from "../../services/setup-wizard.js";
-import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
+import { buildSetupStepView } from "@lumi/modules/core/ui/setup-wizard.js";
 import { SetupStepId } from "../../constants.js";
 import type { AnySelectMenuInteraction } from "discord.js";
 

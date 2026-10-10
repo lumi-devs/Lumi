@@ -1,12 +1,11 @@
-import { moduleUpdateResultCard } from "#modules/core/ui/module-update-card.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { moduleUpdateResultCard } from "@lumi/modules/core/ui/module-update-card.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import {
   ModuleAlreadyInstalledError,
   type DownloaderUtility,
-} from "#modules/core/utilities/DownloaderUtility.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeErrorCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
-import { errorFrom } from "#lib/utilities/errors.js";
+} from "@lumi/modules/core/utilities/DownloaderUtility.js";
+import { makeErrorCard, makeSuccessCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
 import {
   moduleAlreadyInstalledCard,
   moduleNotFoundCard,
@@ -15,8 +14,8 @@ import {
   multiUpdateReportCard,
   noInstalledModulesCard,
   type ModuleUpdateOutcome,
-} from "#modules/core/ui/module-command-cards.js";
-import { container } from "#lib/services.js";
+} from "@lumi/modules/core/ui/module-command-cards.js";
+import { container } from "@lumi/lib/services.js";
 import type { User } from "discord.js";
 
 function downloader(): DownloaderUtility {
@@ -42,8 +41,8 @@ export async function setModuleEnabled(
     await container.moduleStore.setEnabled(name, enabled);
     return makeSuccessCard(
       enabled
-        ? `${Emojis.Check} Enabled Module`
-        : `${Emojis.Cross} Disabled Module`,
+        ? `✅ Enabled Module`
+        : `❌ Disabled Module`,
       `Successfully ${enabled ? "enabled" : "disabled"} **${record.meta.displayName}** globally.`,
     );
   } catch (err: unknown) {
@@ -60,15 +59,15 @@ export async function installModule(
   try {
     const { signatureWarning } = await downloader().installModule(container, repoName, moduleName);
     container.logger.debug(
-      `[Module] ${Emojis.Install} Installed: ${moduleName} from ${repoName} by ${user.tag}`,
+      `[Module] 🔧 Installed: ${moduleName} from ${repoName} by ${user.tag}`,
     );
     const body = [
       `Successfully installed and loaded **${moduleName}** from **${repoName}**.`,
-      signatureWarning ? `${Emojis.Error} Signature warning: ${signatureWarning}.` : null,
+      signatureWarning ? `🔴 Signature warning: ${signatureWarning}.` : null,
     ]
       .filter(Boolean)
       .join("\n\n");
-    return makeSuccessCard(`${Emojis.Install} Module Installed`, body);
+    return makeSuccessCard(`🔧 Module Installed`, body);
   } catch (err: unknown) {
     if (err instanceof ModuleAlreadyInstalledError) {
       return moduleAlreadyInstalledCard(moduleName, user.id);
@@ -76,9 +75,9 @@ export async function installModule(
 
     const message = errorFrom(err).message;
     container.logger.warn(
-      `[Module] ${Emojis.Error} Install failed: ${moduleName} - ${message}`,
+      `[Module] 🔴 Install failed: ${moduleName} - ${message}`,
     );
-    return makeErrorCard(`${Emojis.Error} Failed to Install Module`, message);
+    return makeErrorCard(`🔴 Failed to Install Module`, message);
   }
 }
 
@@ -89,18 +88,18 @@ export async function uninstallModule(
   try {
     await downloader().uninstallModule(container, moduleName);
     container.logger.debug(
-      `[Module] ${Emojis.Uninstall} Uninstalled: ${moduleName} by ${user.tag}`,
+      `[Module] 🗑️ Uninstalled: ${moduleName} by ${user.tag}`,
     );
     return makeSuccessCard(
-      `${Emojis.Uninstall} Module Uninstalled`,
+      `🗑️ Module Uninstalled`,
       `Successfully uninstalled **${moduleName}**.`,
     );
   } catch (err: unknown) {
     const message = errorFrom(err).message;
     container.logger.warn(
-      `[Module] ${Emojis.Error} Uninstall failed: ${moduleName} - ${message}`,
+      `[Module] 🔴 Uninstall failed: ${moduleName} - ${message}`,
     );
-    return makeErrorCard(`${Emojis.Error} Failed to Uninstall Module`, message);
+    return makeErrorCard(`🔴 Failed to Uninstall Module`, message);
   }
 }
 
@@ -113,13 +112,13 @@ export async function reloadModule(
     await downloader().syncApplicationCommands(container);
     container.logger.info(`[Module] Reloaded: ${moduleName} by ${userTag}`);
     return makeSuccessCard(
-      `${Emojis.Check} Module Reloaded`,
+      `✅ Module Reloaded`,
       `**${moduleName}** has been reloaded. Its full source subtree was re-evaluated and slash commands (if any) re-synced.`,
     );
   } catch (err: unknown) {
     const message = errorFrom(err).message;
     container.logger.warn(`[Module] Reload failed: ${moduleName} - ${message}`);
-    return makeErrorCard(`${Emojis.Error} Reload Failed`, message);
+    return makeErrorCard(`🔴 Reload Failed`, message);
   }
 }
 
@@ -132,7 +131,7 @@ export async function updateModule(
     return moduleUpdateResultCard(result, moduleName, userId);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.Error} Update Failed`,
+      `🔴 Update Failed`,
       errorFrom(err).message,
     );
   }
@@ -174,7 +173,7 @@ export async function updateAllModules(userId: string): Promise<CardReply> {
     return multiUpdateReportCard(outcomes, userId);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.Error} Multi-Update Failed`,
+      `🔴 Multi-Update Failed`,
       errorFrom(err).message,
     );
   }
@@ -187,7 +186,7 @@ export async function pinModule(moduleName: string): Promise<CardReply> {
     return modulePinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.Error} Pin Failed`,
+      `🔴 Pin Failed`,
       errorFrom(err).message,
     );
   }
@@ -200,7 +199,7 @@ export async function unpinModule(moduleName: string): Promise<CardReply> {
     return moduleUnpinnedCard(moduleName);
   } catch (err: unknown) {
     return makeErrorCard(
-      `${Emojis.Error} Unpin Failed`,
+      `🔴 Unpin Failed`,
       errorFrom(err).message,
     );
   }

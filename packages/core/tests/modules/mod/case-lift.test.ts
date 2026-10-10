@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { liftModerationCaseWithUndo } from '@lumi/application/services/mod/case-lift.js';
-import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
+import { FakeDiscordRestPort } from '@lumi/lib/discord/fake-rest-port.js';
 import type { ModerationCase } from '@prisma/client';
 
 const discordRest = new FakeDiscordRestPort();

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,
-} from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
-import { ReactionRoleRepository } from "#modules/reactionroles/data/ReactionRoleRepository.js";
+} from "@lumi/modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleRepository } from "@lumi/modules/reactionroles/data/ReactionRoleRepository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 function mockValkey() {
@@ -99,7 +99,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
     // Same race as the test above, but bypassing ReactionRolesUtility and calling
     // the underlying data.ts read-modify-write directly - proves the race is real
     // at the storage layer the lock guards, not an artifact of the utility mock.
-    const { saveMenu, getMenu: rawGetMenu } = await import("#modules/reactionroles/data/reactionroles.js");
+    const { saveMenu, getMenu: rawGetMenu } = await import("@lumi/modules/reactionroles/data/reactionroles.js");
     await saveMenu(container, {
       id: "unlocked",
       guildId: "guild-1",

@@ -12,9 +12,10 @@ The core framework, module system, command handler, and database service for Lum
 
 ## Path Aliases
 
-Internal imports within `@lumi/core` use explicit path aliases (always requiring `.js` extensions):
+Internal imports within `@lumi/core` use explicit path aliases (always requiring `.js` extensions,
+mapped in the root `tsconfig.base.json` `paths` and honored by Bun at runtime):
 
 | Alias | Target |
 | :--- | :--- |
-| `#lib/*.js` | `./src/lib/*.ts` |
-| `#modules/*.js` | `./src/modules/*.ts` |
+| `@lumi/lib/*.js` | `packages/core/src/lib/*.ts` |
+| `@lumi/modules/*.js` | `packages/core/src/modules/*.ts` |

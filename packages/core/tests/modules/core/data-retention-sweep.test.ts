@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
-import { container } from "#lib/services.js";
-import { handleDataRetentionFire } from "#modules/core/services/data-retention.js";
-import { readClusterShards } from "#lib/sharding/shard-telemetry.js";
+import { container } from "@lumi/lib/services.js";
+import { handleDataRetentionFire } from "@lumi/modules/core/services/data-retention.js";
+import { readClusterShards } from "@lumi/lib/sharding/shard-telemetry.js";
 
 // bun:test has no `vi.mocked` type-narrowing helper — these fields are real
 // db-interface methods at the type level, stubbed with vi.fn() at runtime.
@@ -9,12 +9,12 @@ function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {
   return fn as unknown as Mock<T>;
 }
 
-vi.mock("#lib/sharding/shard-telemetry.js", () => ({
+vi.mock("@lumi/lib/sharding/shard-telemetry.js", () => ({
   DefaultClusterName: "default",
   readClusterShards: vi.fn(),
 }));
 
-vi.mock("#lib/valkey/guild-eviction.js", () => ({
+vi.mock("@lumi/lib/valkey/guild-eviction.js", () => ({
   evictGuildValkeyState: vi.fn().mockResolvedValue(undefined),
 }));
 

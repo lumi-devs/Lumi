@@ -1,7 +1,7 @@
-import { buildRestOptions } from "#lib/discord/options.js";
-import { envParseInteger } from "#lib/env.js";
-import { BotConfig } from "#lib/utilities/config.js";
+import { buildRestOptions } from "@lumi/lib/discord/options.js";
+import { envParseInteger } from "@lumi/lib/env.js";
 import {
+  ActivityType,
   GatewayIntentBits,
   Options,
   Partials,
@@ -69,11 +69,11 @@ export function buildClientOptions(): ClientOptions {
     presence: {
       activities: [
         {
-          name: BotConfig.presence.activityText,
-          type: BotConfig.presence.activityType,
+          name: "the server",
+          type: ActivityType.Watching,
         },
       ],
-      status: BotConfig.presence.status as PresenceStatusData,
+      status: "online" as PresenceStatusData,
     },
     rest: buildRestOptions(),
   };

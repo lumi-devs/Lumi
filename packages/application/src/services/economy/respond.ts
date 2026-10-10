@@ -1,5 +1,5 @@
-import type { CommandContext } from "#lib/commands/context.js";
-import { formatDuration } from "#lib/utilities/time.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { formatDuration } from "@lumi/lib/utilities/time.js";
 import {
   CooldownError,
   EconomyError,

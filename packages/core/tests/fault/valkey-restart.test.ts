@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { acquireValkeyLock, verifyValkeyLock } from "@lumi/infrastructure/cache";
-import { createGuildTransaction } from "#lib/guild-transaction.js";
+import { createGuildTransaction } from "@lumi/lib/prisma/guild-transaction.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
 // the setInterval/setTimeout queue, so these wait on the real clock instead.

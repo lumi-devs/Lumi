@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { EventEmitter } from "node:events";
-import * as misc from "#lib/utilities/misc.js";
 
 import {
   addListenerDef,
   defineListener,
-} from "#lib/listeners/listener-def.js";
-import { attachDefs } from "#lib/listeners/listener-loader.js";
-import type { Container } from "#lib/services.js";
+} from "@lumi/lib/listeners/listener-def.js";
+import { attachDefs } from "@lumi/lib/listeners/listener-loader.js";
+import type { Container } from "@lumi/lib/services.js";
 
-const services = {} as unknown as Container;
+const isModuleEnabled = vi.fn();
+const services = {
+  db: { modules: { isModuleEnabled } },
+} as unknown as Container;
 
 const flush = () =>
   new Promise<void>((resolve) => {
@@ -17,20 +19,12 @@ const flush = () =>
   });
 
 describe("listener-loader module gating", () => {
-  let isModuleEnabled: ReturnType<
-    typeof vi.spyOn<typeof misc, "isModuleEnabled">
-  >;
-
   beforeEach(() => {
-    isModuleEnabled = vi
-      .spyOn(misc, "isModuleEnabled")
-      .mockResolvedValue(true);
+    isModuleEnabled.mockResolvedValue(true);
   });
 
-  // Spies mutate the shared module object: restore the real implementation
-  // so later test files see real misc.js behavior.
   afterEach(() => {
-    isModuleEnabled.mockRestore();
+    vi.clearAllMocks();
   });
 
   it("does not run a module-gated def when the module is disabled", async () => {
@@ -50,7 +44,7 @@ describe("listener-loader module gating", () => {
     await flush();
 
     expect(execute).not.toHaveBeenCalled();
-    expect(isModuleEnabled).toHaveBeenCalledWith(services, "g-1", "mod");
+    expect(isModuleEnabled).toHaveBeenCalledWith("g-1", "mod");
     detach();
   });
 

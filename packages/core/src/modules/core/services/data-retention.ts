@@ -5,10 +5,10 @@ import {
   resolveAuditRetentionDays,
   resolveConfigHistoryRetentionDays,
   resolveModerationRetentionDays,
-} from "#lib/env.js";
-import { evictGuildValkeyState } from "#lib/valkey/guild-eviction.js";
-import { DefaultClusterName, readClusterShards } from "#lib/sharding/shard-telemetry.js";
-import { type Container } from "#lib/services.js";
+} from "@lumi/lib/env.js";
+import { evictGuildValkeyState } from "@lumi/lib/valkey/guild-eviction.js";
+import { DefaultClusterName, readClusterShards } from "@lumi/lib/sharding/shard-telemetry.js";
+import { type Container } from "@lumi/lib/services.js";
 
 function daysAgo(days: number): Date {
   const date = new Date();

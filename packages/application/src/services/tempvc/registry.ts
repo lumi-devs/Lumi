@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
-import { logError } from "#lib/utilities/errors.js";
-import type { GeneratorConfig } from "#modules/tempvc/data/tempvc.js";
+import { container } from "@lumi/lib/services.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import type { GeneratorConfig } from "@lumi/modules/tempvc/data/tempvc.js";
 
 interface ManagedVc {
   generatorId: string;

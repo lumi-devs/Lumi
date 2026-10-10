@@ -1,11 +1,11 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
 import { isNullish, tryParseJSON } from "@lumi/shared";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { logToChannel } from "#lib/moderation/log.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { QuarantineAction } from "../mod/actions/quarantine-action.js";
+import { logToChannel } from "@lumi/lib/discord/mod-log.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
 import {
   hasNoAvatar,
   isUnverifiedBot,
@@ -33,7 +33,7 @@ interface JoinGateFilterConfig {
   action: GateAction;
 }
 
-export interface JoinGateConfig {
+interface JoinGateConfig {
   enabled: boolean;
   raidJoinCount: number;
   raidWindowSeconds: number;
@@ -47,7 +47,7 @@ export interface JoinGateConfig {
   filterAdvertising: JoinGateFilterConfig;
 }
 
-export interface JoinFilterResult {
+interface JoinFilterResult {
   action: GateAction;
   triggered: string[];
 }

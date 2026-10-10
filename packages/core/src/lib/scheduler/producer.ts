@@ -2,11 +2,11 @@ import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/scheduler/queue.js";
-import type { Container } from "#lib/services.js";
-import type { TaskQueue } from "#lib/scheduler/runner.js";
-import type { ScheduleOptions } from "#lib/scheduler/schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#lib/scheduler/job-options.js";
+} from "@lumi/lib/scheduler/queue.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { TaskQueue } from "@lumi/lib/scheduler/runner.js";
+import type { ScheduleOptions } from "@lumi/lib/scheduler/schedule.js";
+import { resolveTaskRef, toBullMQJobOptions } from "@lumi/lib/scheduler/job-options.js";
 import { JobQueue } from "@lumi/infrastructure/queues";
 
 export function installProducerOnlyTasks(services: Container): void {

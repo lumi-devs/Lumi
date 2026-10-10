@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkDiscordToken } from "#lib/doctor/checks/discord-token.js";
+import { checkDiscordToken } from "@lumi/lib/doctor/checks/discord-token.js";
 
 describe("checkDiscordToken", () => {
   it("fails when no token is configured", async () => {

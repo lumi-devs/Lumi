@@ -1,7 +1,7 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { GuildMember } from "discord.js";
-import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 
 export const QuarantineMemberAddListener = defineListener({
   name: "quarantineMemberAdd",

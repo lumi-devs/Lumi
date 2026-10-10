@@ -1,6 +1,6 @@
-import { type Container } from "#lib/services.js";
+import { type Container } from "@lumi/lib/services.js";
 import type { ModerationCase } from "@prisma/client";
-import type { WarnDecayPayload } from "#modules/mod/scheduled-tasks/warnDecay.js";
+import type { WarnDecayPayload } from "@lumi/modules/mod/scheduled-tasks/warnDecay.js";
 import { decrementWarnCounts } from "./thresholds.js";
 
 export async function handleWarnDecayFire(

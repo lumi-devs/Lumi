@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const PostgresCheckName = "postgres";
 
@@ -25,7 +25,7 @@ export interface PostgresCheckDeps {
 }
 
 async function defaultGetClient(): Promise<PostgresProbeClient> {
-  const { prisma } = await import("#lib/prisma/client.js");
+  const { prisma } = await import("@lumi/lib/prisma/client.js");
   return prisma;
 }
 

@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
 import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import type { Container } from "#lib/services.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
 import { isSuspiciousAccount } from "@lumi/application/services/security/suspicious.js";
 import { loadVerificationConfig, assignPending } from "@lumi/application/services/security/verification.js";
 import {

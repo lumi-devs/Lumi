@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   applyGateAction,
   loadJoinGateConfig,
   evaluateJoinFilters,
 } from "@lumi/application/services/security/join-gate.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { logToChannel } from "#lib/moderation/log.js";
+import { QuarantineAction } from "@lumi/application/services/mod/actions/quarantine-action.js";
+import { logToChannel } from "@lumi/lib/discord/mod-log.js";
 
-vi.mock("#lib/moderation/QuarantineAction.js", () => ({
+vi.mock("@lumi/application/services/mod/actions/quarantine-action.js", () => ({
   QuarantineAction: { apply: vi.fn() },
 }));
 
-vi.mock("#lib/moderation/log.js", () => ({
+vi.mock("@lumi/lib/discord/mod-log.js", () => ({
   logToChannel: vi.fn(),
 }));
 

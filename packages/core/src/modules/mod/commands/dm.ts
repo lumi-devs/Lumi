@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { makeInfoCard } from "#lib/ui/cards.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { makeInfoCard } from "@lumi/lib/ui/cards.js";
 
 const MaxMessageLength = 2000;
 

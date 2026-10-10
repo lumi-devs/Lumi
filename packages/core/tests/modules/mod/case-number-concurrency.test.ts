@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
 
 // Backs the "do not break when refactoring" contract on
 // ModerationRepository.createModerationCase: the counter reservation MUST stay

@@ -1,5 +1,5 @@
-import { type Container } from "#lib/services.js";
-import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { type Container } from "@lumi/lib/services.js";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
 import { sweepExpiredPending } from "./verification.js";
 
 /** Sweeps touch the Discord API per guild, so the fan-out stays capped. */

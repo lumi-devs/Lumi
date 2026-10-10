@@ -4,7 +4,7 @@ import {
   resolveGdprExportSigningKey,
   signGdprExportToken,
   verifyGdprExportToken,
-} from "#lib/gdpr-export-token.js";
+} from "@lumi/lib/gdpr/export-token.js";
 
 describe("gdpr export download token", () => {
   const originalEnv = { ...process.env };

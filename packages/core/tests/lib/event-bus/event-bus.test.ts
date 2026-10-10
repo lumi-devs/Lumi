@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { createEventBus } from '#lib/event-bus/factory.js';
+import { createEventBus } from '@lumi/lib/event-bus/factory.js';
 
 const mockQuit = vi.fn().mockResolvedValue('OK');
 const mockInstances: any[] = [];

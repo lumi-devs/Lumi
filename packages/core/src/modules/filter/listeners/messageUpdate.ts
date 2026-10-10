@@ -1,8 +1,8 @@
-import { getUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import { LumiEvents } from "#lib/types/common.js";
-import type { GuildMessage } from "#lib/types/common.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { LumiEvents } from "@lumi/lib/types/common.js";
+import type { GuildMessage } from "@lumi/lib/types/common.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
 import { enforceHit, runRules, shouldScreen } from "@lumi/application/services/filter/enforce.js";
 

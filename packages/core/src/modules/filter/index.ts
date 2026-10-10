@@ -1,13 +1,13 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { container, type Container } from "#lib/services.js";
-import { NoEndUserData } from "#lib/module-system/meta.js";
-import { cfg, toStringArray } from "#lib/module-system/config-schema.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { container, type Container } from "@lumi/lib/services.js";
+import { NoEndUserData } from "@lumi/lib/module-system/meta.js";
+import { cfg, toStringArray } from "@lumi/lib/module-system/config-schema.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
 import { ChannelType } from "discord.js";
-import { shutdownRegexWorker } from "#lib/regex-worker/RegexWorkerHandler.js";
-import { validateRegexPattern } from "#lib/regex-worker/validate.js";
+import { shutdownRegexWorker } from "@lumi/lib/regex-worker/handler.js";
+import { validateRegexPattern } from "@lumi/lib/regex-worker/validate.js";
 import { DefaultWarnMessage } from "@lumi/application/services/filter/rules.js";
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
 import { handleAutoLockdownUnlockFire } from "@lumi/application/services/filter/auto-lockdown-handler.js";
 
 /** Config keys the FilterUtility compiles into its per-guild rule set -

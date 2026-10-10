@@ -1,7 +1,7 @@
 import { promises as fs, constants as fsConstants } from "node:fs";
-import { DataRoot, ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { DataRoot, ModuleRoot, AddonModulesRoot } from "@lumi/lib/downloader/resolver.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const FilesystemCheckName = "filesystem";
 

@@ -1,19 +1,19 @@
-import { fetchTyped } from "#lib/i18n/index.js";
-import { FieldType } from "#lib/module-system/config-schema.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import { FieldType } from "@lumi/lib/module-system/config-schema.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";
 import { hasPanelAccess, loadDetail } from "../../services/config-panel.js";
-import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
-import { buildOverridesView } from "#modules/core/ui/overrides.js";
-import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
-import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
+import { buildFeatureDetailView } from "@lumi/modules/core/ui/modules.js";
+import { buildOverridesView } from "@lumi/modules/core/ui/overrides.js";
+import { ephemeralCard, makeErrorCard } from "@lumi/lib/ui/cards.js";
+import { cleanMention, isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 import {
   ConfigFieldModalId,
   ConfigModalId,
   ConfigOverrideModalId,
 } from "../../constants.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { ModalSubmitInteraction } from "discord.js";
 import { OverrideTargetType, type $Enums } from "@prisma/client";
 

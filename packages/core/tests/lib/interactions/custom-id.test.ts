@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { defineCustomId } from "#lib/interactions/custom-id.js";
+import { defineCustomId } from "@lumi/lib/interactions/custom-id.js";
 
 describe("lib/interactions custom-id codec", () => {
   const TestId = defineCustomId("tvc", ["action", "channelId"]);

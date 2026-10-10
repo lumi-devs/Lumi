@@ -1,8 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
@@ -14,8 +13,8 @@ const MaxFailedGuildsShown = 10;
 
 function buildAnnounceReportCard(summary: AnnounceSummary): CardReply {
   const lines = [
-    `${Emojis.Check} Sent: **${summary.sent}**`,
-    `${Emojis.Cross} Failed: **${summary.failed}**`,
+    `✅ Sent: **${summary.sent}**`,
+    `❌ Failed: **${summary.failed}**`,
     `Skipped (no writable channel): **${summary.skipped}**`,
   ];
   const failedIds = summary.results
@@ -56,7 +55,7 @@ export const announceDef: CommandDef = {
     const message = (await ctx.getString("message", { required: true, rest: true }))!;
     if (message.trim().length === 0) {
       await ctx.replyError(
-        `${Emojis.Cross} Empty Announcement`,
+        `❌ Empty Announcement`,
         "Provide the message text to broadcast.",
       );
       return;
@@ -65,18 +64,18 @@ export const announceDef: CommandDef = {
     const guilds = [...ctx.services.client.guilds.cache.values()];
     if (guilds.length === 0) {
       await ctx.replyError(
-        `${Emojis.Cross} No Servers`,
+        `❌ No Servers`,
         "The bot is not in any server.",
       );
       return;
     }
 
     await ctx.replyInfo(
-      `${Emojis.Bell} Broadcasting`,
+      `🔔 Broadcasting`,
       `Sending to **${guilds.length}** server(s).`,
     );
 
-    const card = makeInfoCard(`${Emojis.Bell} Announcement`, message.trim());
+    const card = makeInfoCard(`🔔 Announcement`, message.trim());
     const summary = await runGlobalAnnounce(guilds, async (guild) => {
       let configured: string | null = null;
       try {
@@ -100,7 +99,7 @@ export const announceDef: CommandDef = {
     });
 
     ctx.services.logger.info(
-      `[Announce] ${Emojis.Bell} Broadcast by ${ctx.user.tag}: ${summary.sent} sent, ${summary.failed} failed, ${summary.skipped} skipped`,
+      `[Announce] 🔔 Broadcast by ${ctx.user.tag}: ${summary.sent} sent, ${summary.failed} failed, ${summary.skipped} skipped`,
     );
     await ctx.reply(buildAnnounceReportCard(summary));
   }

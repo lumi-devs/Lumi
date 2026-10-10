@@ -1,9 +1,8 @@
-import type { ModuleMeta } from "#lib/module-system/meta.js";
-import { hasRequiredPermit } from "#lib/permissions/index.js";
-import type { FeatureListEntry } from "#modules/core/ui/modules.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import type { ModuleMeta } from "@lumi/lib/module-system/meta.js";
+import { hasRequiredPermit } from "@lumi/lib/permissions/index.js";
+import type { FeatureListEntry } from "@lumi/modules/core/ui/modules.js";
 import { UserError } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
@@ -67,5 +66,5 @@ export async function hasPanelAccess(
 export const configAccessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.Cross} You need the Admin permission level to manage configuration.`,
+    message: `❌ You need the Admin permission level to manage configuration.`,
   });

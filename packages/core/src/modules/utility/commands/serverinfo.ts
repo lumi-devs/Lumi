@@ -11,12 +11,11 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeCard } from "#lib/ui/cards.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { makeCard } from "@lumi/lib/ui/cards.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 
 async function buildServerCard(
   ctx: ChatInputCommandInteraction | Message,
@@ -47,7 +46,7 @@ async function buildServerCard(
       })}\n` +
       `${t("commands:serverinfoGuildId", { id: guild.id })}`,
 
-    `### ${Emojis.Members} ${t("commands:serverinfoMembersTitle")}\n` +
+    `### 👥 ${t("commands:serverinfoMembersTitle")}\n` +
       `${t("commands:serverinfoTotalMembers", { count: guild.memberCount })}\n${
         guild.premiumSubscriptionCount
           ? `${t("commands:serverinfoServerBoosts", {
@@ -57,13 +56,13 @@ async function buildServerCard(
           : ""
       }`,
 
-    `### ${Emojis.Gateway} ${t("commands:serverinfoChannelsTitle")}\n` +
+    `### 🌐 ${t("commands:serverinfoChannelsTitle")}\n` +
       `${t("commands:serverinfoTextChannels", { count: textChannels })}\n` +
       `${t("commands:serverinfoVoiceChannels", { count: voiceChannels })}\n` +
       `${t("commands:serverinfoCategories", { count: categoryChannels })}\n` +
       `${t("commands:serverinfoTotalChannels", { count: channels.size })}`,
 
-    `### ${Emojis.Gear} ${t("commands:serverinfoFeaturesTitle")}\n` +
+    `### ⚙️ ${t("commands:serverinfoFeaturesTitle")}\n` +
       `${t("commands:serverinfoRoles", { count: roleCount })}\n` +
       `${t("commands:serverinfoEmojis", { count: emojiCount })}\n` +
       `${t("commands:serverinfoVerificationLevel", { level: guild.verificationLevel })}`,

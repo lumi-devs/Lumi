@@ -1,11 +1,10 @@
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { GatewayDispatchPayload } from "discord-api-types/v10";
-import { logError } from "#lib/utilities/errors.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { planToggle } from "#modules/reactionroles/data/reactionroles.js";
-import type { ReactionRolesUtility } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { planToggle } from "@lumi/modules/reactionroles/data/reactionroles.js";
+import type { ReactionRolesUtility } from "@lumi/modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 interface ReactionPacket {
   user_id: string;
@@ -30,7 +29,7 @@ const reactionrolesRawReactions = defineListener({
     if (data.member?.user?.bot === true) return;
 
     const guildId = data.guild_id;
-    if (!(await isModuleEnabled(services, guildId, "reactionroles").catch(() => false))) {
+    if (!(await services.db.modules.isModuleEnabled(guildId, "reactionroles").catch(() => false))) {
       return;
     }
     const menu = await service

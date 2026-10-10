@@ -1,6 +1,6 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import { Status } from "discord.js";
 import { getEventLoopLagP99Ms } from "@lumi/observability";
 import {
@@ -9,9 +9,9 @@ import {
   ShardTelemetryPublisher,
   getLastReadyAt,
   type ShardTelemetrySample,
-} from "#lib/sharding/shard-telemetry.js";
-import { LumiPinoLogger } from "#lib/logging/LumiPinoLogger.js";
-import { getClusterName, getConsumerId } from "#lib/env.js";
+} from "@lumi/lib/sharding/shard-telemetry.js";
+import { LumiPinoLogger } from "@lumi/lib/logging/pino-logger.js";
+import { getClusterName, getConsumerId } from "@lumi/lib/env.js";
 
 const BytesPerMb = 1024 * 1024;
 

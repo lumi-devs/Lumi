@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
 import {
   getServerLockState,
   setServerLockState,
@@ -34,7 +33,7 @@ export const serverlockDef: CommandDef = {
     const state = await getServerLockState(ctx.services.db);
     if (state.enabled) {
       await ctx.replyInfo(
-        `${Emojis.Lock} Server Lock Already On`,
+        `🔒 Server Lock Already On`,
         `The bot is already locked to **${state.guildIds.length}** server(s). New servers are left on join.`,
       );
       return;
@@ -42,10 +41,10 @@ export const serverlockDef: CommandDef = {
     const guildIds = [...ctx.services.client.guilds.cache.keys()];
     await setServerLockState(ctx.services.db, { enabled: true, guildIds });
     ctx.services.logger.info(
-      `[ServerLock] ${Emojis.Lock} Enabled by ${ctx.user.tag} (${guildIds.length} guilds snapshotted)`,
+      `[ServerLock] 🔒 Enabled by ${ctx.user.tag} (${guildIds.length} guilds snapshotted)`,
     );
     await ctx.replySuccess(
-      `${Emojis.Lock} Server Lock Enabled`,
+      `🔒 Server Lock Enabled`,
       `Locked to the current **${guildIds.length}** server(s). The bot will now leave any newly joined server.`
     );
   },
@@ -53,17 +52,17 @@ export const serverlockDef: CommandDef = {
     const state = await getServerLockState(ctx.services.db);
     if (!state.enabled) {
       await ctx.replyInfo(
-        `${Emojis.Unlock} Server Lock Already Off`,
+        `🔓 Server Lock Already Off`,
         "The bot is not locked and may stay in newly joined servers.",
       );
       return;
     }
     await setServerLockState(ctx.services.db, { enabled: false, guildIds: [] });
     ctx.services.logger.info(
-      `[ServerLock] ${Emojis.Unlock} Disabled by ${ctx.user.tag}`,
+      `[ServerLock] 🔓 Disabled by ${ctx.user.tag}`,
     );
     await ctx.replySuccess(
-      `${Emojis.Unlock} Server Lock Disabled`,
+      `🔓 Server Lock Disabled`,
       "The bot will now stay in newly joined servers."
     );
   },
@@ -71,13 +70,13 @@ export const serverlockDef: CommandDef = {
     const state = await getServerLockState(ctx.services.db);
     if (!state.enabled) {
       await ctx.replyInfo(
-        `${Emojis.Unlock} Server Lock Off`,
+        `🔓 Server Lock Off`,
         "The bot will stay in newly joined servers.",
       );
       return;
     }
     await ctx.replyInfo(
-      `${Emojis.Lock} Server Lock On`,
+      `🔒 Server Lock On`,
       `Locked to **${state.guildIds.length}** server(s). The bot leaves any newly joined server.`,
     );
   }

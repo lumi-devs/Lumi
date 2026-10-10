@@ -1,4 +1,4 @@
-import type { DoctorCheckResult, DoctorStatus } from "#lib/doctor/types.js";
+import type { DoctorCheckResult, DoctorStatus } from "@lumi/lib/doctor/types.js";
 
 const StatusGlyph: Record<DoctorStatus, string> = {
   ok: "✓",

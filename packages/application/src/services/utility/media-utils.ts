@@ -13,13 +13,13 @@ import {
   MediaGalleryItemBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
-import { container, type Container } from "#lib/services.js";
+import { makeErrorCard, makeInfoCard } from "@lumi/lib/ui/cards.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import { capitalizeFirstLetter } from "@lumi/shared";
-import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { claimCooldown } from "#lib/valkey/cooldown.js";
-import { fetchT } from "#lib/i18n/index.js";
-import { UserMediaViewId } from "#modules/utility/constants.js";
+import { deleteMessageLater } from "@lumi/lib/utilities/temporary-message.js";
+import { claimCooldown } from "@lumi/lib/valkey/cooldown.js";
+import { fetchT } from "@lumi/lib/i18n/index.js";
+import { UserMediaViewId } from "@lumi/modules/utility/constants.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;

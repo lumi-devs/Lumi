@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 
 export const nickDef: CommandDef = {
   name: "nick",

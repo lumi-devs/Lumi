@@ -7,19 +7,19 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { formatDuration } from "#lib/utilities/time.js";
-import { makeErrorCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
+import { formatDuration } from "@lumi/lib/utilities/time.js";
+import { makeErrorCard, makeListCard, ephemeralCard } from "@lumi/lib/ui/cards.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { Emojis } from "#lib/utilities/assets.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { componentEmoji } from "@lumi/lib/ui/panels.js";
 import { getAfkMentions } from "../../data/afk.js";
 import { AfkMentionsId } from "../../constants.js";
 
-import { fetchTyped } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 
 const PageSize = 5;
 
@@ -84,7 +84,7 @@ export default defineInteraction({
       new ButtonBuilder()
         .setCustomId(AfkMentionsId.build({ userId, page: String(safePage - 1) }))
         .setLabel(t("afk:previousButton"))
-        .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+        .setEmoji(componentEmoji("⬅️"))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage <= 0),
       new ButtonBuilder()
@@ -95,13 +95,13 @@ export default defineInteraction({
       new ButtonBuilder()
         .setCustomId(AfkMentionsId.build({ userId, page: String(safePage + 1) }))
         .setLabel(t("afk:nextButton"))
-        .setEmoji(Emojis.parse(Emojis.ArrowRight))
+        .setEmoji(componentEmoji("➡️"))
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(safePage >= totalPages - 1)
     ) : undefined;
 
     const card = makeListCard(
-      `${Emojis.Mail} ${t("afk:mentionsTitle")}`,
+      `📬 ${t("afk:mentionsTitle")}`,
       items,
       row ? { actionRows: [row] } : {}
     );

@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { loggingRpc } from "@lumi/contracts/rpc";
 import { Routes } from "discord-api-types/v10";
 import {
@@ -7,11 +7,11 @@ import {
   listLogClaims,
   LogClaimCodeTtlMs,
 } from "@lumi/application/services/logging/claims.js";
-import { implementRpc } from "#lib/rpc/implement.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 import {
   fetchChannelRest,
   GuildTextBasedChannelTypes,
-} from "#lib/rpc/discord-rest-lookup.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
 
 export const loggingRpcHandlers = implementRpc(loggingRpc, {
   "guild.logClaims.list": async ({ guildId }) => ({

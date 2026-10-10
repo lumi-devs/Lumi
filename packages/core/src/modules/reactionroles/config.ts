@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { ReactionRoleMaxMenus } from "./constants.js";
 
 export async function getMaxMenus(services: Container, guildId: string): Promise<number> {

@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
-import { evictGuildValkeyState } from "#lib/valkey/guild-eviction.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { evictGuildValkeyState } from "@lumi/lib/valkey/guild-eviction.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
 import type { Guild } from "discord.js";
 
 export const guildDeleteEventBusListener = defineListener({

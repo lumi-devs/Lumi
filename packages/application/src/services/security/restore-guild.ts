@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ChannelType } from "discord.js";
 import {
   Routes,
@@ -11,7 +11,7 @@ import type { GuildBackupData } from "./backup-types.js";
 import {
   fetchGuildChannelsRestUncached,
   fetchGuildRolesRestUncached,
-} from "#lib/rpc/discord-rest-lookup.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
 
 interface LocalRoleOrder {
   id: string;

@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { AuditLogEvent, type Guild } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
 import { evaluateNukeEvent } from "@lumi/application/services/security/anti-nuke.js";
 

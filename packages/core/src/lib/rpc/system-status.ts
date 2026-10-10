@@ -1,4 +1,4 @@
-import { TimeoutError, withTimeout } from "#lib/utilities/resilience.js";
+import { TimeoutError, withTimeout } from "@lumi/lib/utilities/resilience.js";
 
 /**
  * Aggregates every backing dependency `system.status.get` reports on into one

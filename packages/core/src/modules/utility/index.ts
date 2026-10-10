@@ -1,12 +1,11 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { NoEndUserData } from "#lib/module-system/meta.js";
-import { cfg } from "#lib/module-system/config-schema.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { NoEndUserData } from "@lumi/lib/module-system/meta.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 
 export const utilityModule = defineModule({
   name: "utility",
   displayName: "Utility",
-  emoji: Emojis.Gear,
+  emoji: "⚙️",
   description: "General utility commands.",
   short: "Helpful server tools, avatar lookups, and user info commands.",
   endUserDataStatement: NoEndUserData(),

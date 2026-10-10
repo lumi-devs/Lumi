@@ -4,8 +4,7 @@ import { pathToFileURL } from "node:url";
 import { randomUUIDv7 } from "bun";
 import type { Client } from "discord.js";
 import { runWithContext } from "@lumi/observability";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   addListenerDef,
   type ListenerDef,
@@ -64,7 +63,7 @@ async function runDef(
   const guildId = def.guildId?.(...args) ?? resolveGuildId(args);
   if (def.module) {
     if (!guildId) return;
-    if (!(await isModuleEnabled(services, guildId, def.module))) return;
+    if (!(await services.db.modules.isModuleEnabled(guildId, def.module))) return;
     return runWithContext(
       {
         correlationId: randomUUIDv7(),

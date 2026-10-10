@@ -3,14 +3,14 @@ import type {
   StringSelectMenuInteraction,
 } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
-import { logError } from "#lib/utilities/errors.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import { ReactionRoleSelectId } from "../../constants.js";
-import type { ReactionRolesUtility } from "#modules/reactionroles/utilities/ReactionRolesUtility.js";
+import type { ReactionRolesUtility } from "@lumi/modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 export const reactionrolesPickSelect = defineInteraction({
   prefix: ReactionRoleSelectId.prefix,

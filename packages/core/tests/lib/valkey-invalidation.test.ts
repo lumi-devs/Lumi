@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { InvalidationBus } from "#lib/valkey/buses.js";
+import { container } from "@lumi/lib/services.js";
+import { InvalidationBus } from "@lumi/lib/valkey/buses.js";
 
 const CHANNEL = "lumi:cache:invalidate";
 

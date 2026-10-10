@@ -3,17 +3,17 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-vi.mock("#lib/downloader/validate.js", () => ({
+vi.mock("@lumi/lib/downloader/validate.js", () => ({
   validateAddon: vi.fn(),
 }));
-vi.mock("#lib/module-system/manifest.js", () => ({
+vi.mock("@lumi/lib/module-system/manifest.js", () => ({
   detectSubStores: vi.fn(),
   writeManifest: vi.fn(),
 }));
 
-import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "#lib/downloader/resolver.js";
-import { validateAddon } from "#lib/downloader/validate.js";
-import { detectSubStores, writeManifest } from "#lib/module-system/manifest.js";
+import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "@lumi/lib/downloader/resolver.js";
+import { validateAddon } from "@lumi/lib/downloader/validate.js";
+import { detectSubStores, writeManifest } from "@lumi/lib/module-system/manifest.js";
 import { fakeSpawnResult } from "../helpers/mock-bun-spawn.js";
 
 describe("DownloadResolver Edge Cases", () => {

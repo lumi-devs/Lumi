@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { AuditRepository } from "@lumi/lib/prisma/repositories/audit-repository.js";
+import { ConfigHistoryRepository } from "@lumi/lib/prisma/repositories/config-history-repository.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
+import { AppealRepository } from "@lumi/modules/mod/data/AppealRepository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

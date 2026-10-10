@@ -1,16 +1,16 @@
 import { Queue, Worker, type Job, type JobsOptions } from "bullmq";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   getScheduledTask,
   repeatedScheduledTasks,
-} from "#lib/scheduler/tasks.js";
+} from "@lumi/lib/scheduler/tasks.js";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/scheduler/queue.js";
-import type { ScheduleOptions } from "#lib/scheduler/schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#lib/scheduler/job-options.js";
+} from "@lumi/lib/scheduler/queue.js";
+import type { ScheduleOptions } from "@lumi/lib/scheduler/schedule.js";
+import { resolveTaskRef, toBullMQJobOptions } from "@lumi/lib/scheduler/job-options.js";
 
 export interface RepeatedTaskSpec {
   name: string;
@@ -19,8 +19,6 @@ export interface RepeatedTaskSpec {
   timezone?: string;
   customJobOptions?: JobsOptions;
 }
-
-export type CreateTaskOptions = ScheduleOptions;
 
 /**
  * The `container.tasks` surface every process shares: enqueue, cancel, close.

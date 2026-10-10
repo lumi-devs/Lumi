@@ -1,6 +1,6 @@
-import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
+import type { DatabaseService } from "@lumi/lib/prisma/database-service.js";
 
-export interface ServerLockState {
+interface ServerLockState {
   enabled: boolean;
   guildIds: string[];
 }

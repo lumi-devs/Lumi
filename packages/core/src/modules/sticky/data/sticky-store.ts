@@ -1,5 +1,5 @@
-import type { Container } from "#lib/services.js";
-import { claimCooldown } from "#lib/valkey/cooldown.js";
+import type { Container } from "@lumi/lib/services.js";
+import { claimCooldown } from "@lumi/lib/valkey/cooldown.js";
 
 export const StickyCooldownMs = 1_000;
 

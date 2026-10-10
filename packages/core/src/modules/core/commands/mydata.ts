@@ -1,11 +1,10 @@
-import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
 import { SlashCommandBuilder, AttachmentBuilder } from "discord.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { makeSuccessCard, makeListCard, ephemeralCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { executeGdprDeletion, executeGdprExport } from "#lib/gdpr.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { makeSuccessCard, makeListCard, ephemeralCard } from "@lumi/lib/ui/cards.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
+import { executeGdprDeletion, executeGdprExport } from "@lumi/lib/gdpr/requests.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 function downloaderService(): DownloaderUtility {
@@ -53,7 +52,7 @@ export const mydataDef: CommandDef = {
   handlers: {
   "whatdata": async (ctx: CommandContext) => {
     await ctx.replyInfo(
-      `${Emojis.Shield} End-User Data & Privacy in Lumi`,
+      `🛡️ End-User Data & Privacy in Lumi`,
       [
         "Lumi respects user privacy and complies with GDPR and CCPA data rights:",
         "",
@@ -125,7 +124,7 @@ export const mydataDef: CommandDef = {
     const userId = ctx.user.id;
 
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WarningSign} Request Data Deletion`,
+      title: `⚠️ Request Data Deletion`,
       body: [
         "Are you sure you want to delete and anonymize all your stored data in Lumi?",
         "",

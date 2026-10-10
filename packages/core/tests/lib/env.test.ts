@@ -4,7 +4,7 @@ import {
   defineEnv,
   envField,
   resolveDbSlowQueryThresholdMs,
-} from "#lib/env.js";
+} from "@lumi/lib/env.js";
 
 describe("validateRequiredEnv", () => {
   const original: Record<string, string | undefined> = {};

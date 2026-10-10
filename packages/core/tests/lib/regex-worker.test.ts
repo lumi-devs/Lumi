@@ -1,10 +1,10 @@
 import { describe, expect, it, beforeAll, afterEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   RegexTimeoutError,
   RegexWorkerHandler,
-} from "#lib/regex-worker/RegexWorkerHandler.js";
-import { validateRegexPattern } from "#lib/regex-worker/validate.js";
+} from "@lumi/lib/regex-worker/handler.js";
+import { validateRegexPattern } from "@lumi/lib/regex-worker/validate.js";
 
 /** The canonical catastrophic-backtracking pattern. */
 const EVIL = "(a+)+$";

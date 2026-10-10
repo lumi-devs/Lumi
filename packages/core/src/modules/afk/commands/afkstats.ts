@@ -1,8 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { makeCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { makeCard } from "@lumi/lib/ui/cards.js";
 import { getAfkStats } from "../data/afk.js";
 
 export const afkstatsDef: CommandDef = {
@@ -23,7 +22,7 @@ export const afkstatsDef: CommandDef = {
     return ctx.reply(
       makeCard(
         0,
-        `${Emojis.Analytics} ${t("afk:statsTitle")}`,
+        `📊 ${t("afk:statsTitle")}`,
         t("afk:statsBody", { activeEntries, activeCooldowns }),
       ),
     );

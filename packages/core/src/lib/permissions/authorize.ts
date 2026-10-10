@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
 
 /**
  * Everything an authorization decision needs about the caller. Deliberately

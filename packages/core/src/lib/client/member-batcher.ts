@@ -44,14 +44,3 @@ export function createMemberBatcher(
     });
   };
 }
-
-export function createMemberBatchers(
-  guilds: Map<string, Guild>,
-  windowMs = 50,
-): Map<string, (userId: string) => Promise<GuildMember | null>> {
-  const batchers = new Map<string, (userId: string) => Promise<GuildMember | null>>();
-  guilds.forEach((guild, guildId) => {
-    batchers.set(guildId, createMemberBatcher(guild, windowMs));
-  });
-  return batchers;
-}

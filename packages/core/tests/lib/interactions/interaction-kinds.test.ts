@@ -4,8 +4,8 @@ import {
   clearInteractionDefsForTest,
   defineInteraction,
   interactionDefs,
-} from "#lib/interactions/interaction-def.js";
-import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { dispatchInteraction } from "@lumi/lib/interactions/interaction-dispatch.js";
 
 function fakeInteraction(kind: "button" | "select", customId: string) {
   return {

@@ -1,18 +1,18 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import {
   loadVerificationConfig,
   grantVerified,
   startChallenge,
   advanceChallenge,
 } from "@lumi/application/services/security/verification.js";
-import { getDashboardPublicUrl } from "#lib/env.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
+import { getDashboardPublicUrl } from "@lumi/lib/env.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
 import { CaptchaButtonId } from "../../constants.js";
 import {
   VerifyButtonId,

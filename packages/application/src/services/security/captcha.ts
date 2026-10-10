@@ -1,8 +1,7 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
-import { CaptchaButtonId } from "#modules/security/constants.js";
+import { createActionButton, buildSafeActionRows } from "@lumi/lib/ui/panels.js";
+import { CaptchaButtonId } from "@lumi/modules/security/constants.js";
 
 export const EmojiPool = [
   "🍎",
@@ -66,7 +65,7 @@ export function buildCaptchaRows(
         slice.map((idx) =>
           createActionButton({
             customId: CaptchaButtonId.build({ idx: String(idx) }),
-            emoji: Emojis.parse(EmojiPool[idx]!),
+            emoji: EmojiPool[idx]!,
             style: solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary,
             disabled: solved.has(idx),
           })

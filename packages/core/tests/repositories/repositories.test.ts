@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { ModerationRepository } from '#lib/prisma/repositories/ModerationRepository.js';
-import { ConfigRepository } from '#lib/prisma/repositories/ConfigRepository.js';
-import { GuildKVRepository } from '#lib/prisma/repositories/GuildKVRepository.js';
-import { repositoryCache } from '#lib/cache/CacheStore.js';
-import { container } from "#lib/services.js";
+import { ModerationRepository } from '@lumi/lib/prisma/repositories/moderation-repository.js';
+import { ConfigRepository } from '@lumi/lib/prisma/repositories/config-repository.js';
+import { GuildKVRepository } from '@lumi/lib/prisma/repositories/guild-kv-repository.js';
+import { repositoryCache } from '@lumi/lib/cache/cache-store.js';
+import { container } from "@lumi/lib/services.js";
 
 describe('ModerationRepository Tests', () => {
   let mockPrisma: any;

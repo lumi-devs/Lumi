@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Command } from "iovalkey";
 import { valkeyCommandDuration } from "@lumi/observability";
-import { instrumentValkeyLatency } from "#lib/valkey/client.js";
+import { instrumentValkeyLatency } from "@lumi/lib/valkey/client.js";
 
 /** Minimal stand-in for a Valkey/Cluster instance - only `sendCommand` is used. */
 function makeFakeClient(resolveValue: unknown = "OK") {

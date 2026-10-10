@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   handleSseRequest,
   closeAllSseConnections,
   _activeSseConnectionCount,
   MaxSseConnections,
-} from "#lib/rpc/sse-server.js";
+} from "@lumi/lib/rpc/sse-server.js";
 import { dashboardEventPublishFailures } from "@lumi/observability";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "987654321098765432";

@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import { shardStatus } from "@lumi/observability";
-import { recordShardReady } from "#lib/sharding/shard-telemetry.js";
+import { recordShardReady } from "@lumi/lib/sharding/shard-telemetry.js";
 
 export const shardResumeListener = defineListener({
   name: "shardResumeListener",

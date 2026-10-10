@@ -7,11 +7,11 @@ import {
   type NewsChannel,
   type TextChannel,
 } from "discord.js";
-import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
 
-export type AnnounceOutcome = "sent" | "failed" | "skipped";
+type AnnounceOutcome = "sent" | "failed" | "skipped";
 
-export interface AnnounceResult {
+interface AnnounceResult {
   guildId: string;
   outcome: AnnounceOutcome;
 }

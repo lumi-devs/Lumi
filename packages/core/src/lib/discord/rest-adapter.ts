@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { RESTJSONErrorCodes } from "discord.js";
 import { Routes, type APIGuild, type APIGuildMember } from "discord-api-types/v10";
 import { DiscordRestApiError, type DiscordRestPort } from "./rest-port.js";

@@ -1,6 +1,6 @@
-import { tryGetUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import type { TempVcCleanupPayload } from "#modules/tempvc/scheduled-tasks/cleanup.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { TempVcCleanupPayload } from "@lumi/modules/tempvc/scheduled-tasks/cleanup.js";
 
 export async function handleTempVcCleanupFire(
   services: Container,

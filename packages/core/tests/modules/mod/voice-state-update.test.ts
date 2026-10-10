@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { VoiceStateUpdateListener } from "#modules/mod/listeners/voiceStateUpdate.js";
+import { container } from "@lumi/lib/services.js";
+import { VoiceStateUpdateListener } from "@lumi/modules/mod/listeners/voiceStateUpdate.js";
 
 function makeVoiceState(overrides: Record<string, unknown> = {}) {
   return {

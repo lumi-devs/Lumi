@@ -1,17 +1,17 @@
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
-import type { Container } from "#lib/services.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+import type { Container } from "@lumi/lib/services.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
-import { getVcRecord, patchVcRecord } from "#modules/tempvc/data/tempvc.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
+import { getVcRecord, patchVcRecord } from "@lumi/modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../../constants.js";
 import { resolveOwnedVc } from "@lumi/application/services/tempvc/panel-guard.js";
-import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
-import { buildBackRows, buildPanel } from "#modules/tempvc/ui/panel.js";
+import type { TempVcUtility } from "@lumi/modules/tempvc/utilities/TempVcUtility.js";
+import { buildBackRows, buildPanel } from "@lumi/modules/tempvc/ui/panel.js";
 
 const ModalKinds = new Set(["namem", "limitm"]);
 

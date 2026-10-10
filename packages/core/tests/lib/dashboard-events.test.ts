@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { publishDashboardEvent } from "#lib/rpc/dashboard-events.js";
+import { container } from "@lumi/lib/services.js";
+import { publishDashboardEvent } from "@lumi/lib/rpc/dashboard-events.js";
 import { DashboardEventStream } from "@lumi/contracts/events";
 import { dashboardEventPublishFailures } from "@lumi/observability";
 

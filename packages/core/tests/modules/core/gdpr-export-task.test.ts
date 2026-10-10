@@ -3,17 +3,17 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 
-vi.mock("#lib/gdpr.js", () => ({
+vi.mock("@lumi/lib/gdpr/requests.js", () => ({
   executeGdprExport: vi.fn(),
 }));
 
-import { executeGdprExport } from "#lib/gdpr.js";
+import { executeGdprExport } from "@lumi/lib/gdpr/requests.js";
 import {
   handleGdprExportCleanupFire,
   handleGdprExportFire,
-} from "#modules/core/services/gdpr-export-task.js";
+} from "@lumi/modules/core/services/gdpr-export-task.js";
 
 // bun:test has no `vi.mocked` type-narrowing helper - these fields are real
 // functions at the type level, stubbed with vi.fn() at runtime.

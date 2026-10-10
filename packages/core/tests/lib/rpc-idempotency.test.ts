@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
-import { withIdempotency } from "#lib/rpc/idempotency.js";
+import { withIdempotency } from "@lumi/lib/rpc/idempotency.js";
 import { createMemoryValkey } from "../mocks/memory-valkey.js";
 
 const GUILD_ID = "123456789012345678";

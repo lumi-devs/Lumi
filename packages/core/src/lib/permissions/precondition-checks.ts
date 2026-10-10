@@ -1,11 +1,11 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type {
   ChatInputCommandInteraction,
   Guild,
   Message,
 } from "discord.js";
-import { authorize } from "#lib/permissions/authorize.js";
-import { permitSubject } from "#lib/permissions/subject.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import { permitSubject } from "@lumi/lib/permissions/subject.js";
 
 /** Invocation facts a gate reads, normalized off either source. */
 export interface GateSource {

@@ -1,16 +1,16 @@
-import type { LumiT } from "#lib/i18n/index.js";
-import { row, type Row, formatPageFooter } from "#modules/core/ui/common.js";
-import { hubTabRow } from "#modules/core/ui/hub.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { row, type Row, formatPageFooter } from "@lumi/modules/core/ui/common.js";
+import { hubTabRow } from "@lumi/modules/core/ui/hub.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { makeCard, noPingCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
+  componentEmoji,
   createPaginationRow,
   createRoleSelectMenu,
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
@@ -41,7 +41,7 @@ const backToPermissionsRow = (t?: LumiT): Row =>
     new ButtonBuilder()
       .setCustomId("lumi:tab:permissions")
       .setLabel(t ? t("panels:backToHub") : "Back")
-      .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+      .setEmoji(componentEmoji("⬅️"))
       .setStyle(ButtonStyle.Secondary),
   );
 
@@ -60,7 +60,7 @@ export function buildPermissionsView(
   const sections = shown.map((a) =>
     settingRow(
       [
-        `${a.kind === "enforced" ? Emojis.Shield : Emojis.Check} ${a.permitName}${a.builtin ? " 🔒" : ""}`,
+        `${a.kind === "enforced" ? "🛡️" : "✅"} ${a.permitName}${a.builtin ? " 🔒" : ""}`,
         `-# ${a.kind} · ${a.targetType} ${assignmentMention(a)}`,
       ],
       {
@@ -75,12 +75,12 @@ export function buildPermissionsView(
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:custom")
       .setLabel(t ? t("panels:permsGrantCustom") : "Assign Custom…")
-      .setEmoji(Emojis.parse(Emojis.Check))
+      .setEmoji(componentEmoji("✅"))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId("lumi:permit:grant:enforced")
       .setLabel(t ? t("panels:permsGrantEnforced") : "Assign Enforced…")
-      .setEmoji(Emojis.parse(Emojis.Shield))
+      .setEmoji(componentEmoji("🛡️"))
       .setStyle(ButtonStyle.Primary),
   );
 
@@ -112,9 +112,9 @@ export function buildPermissionsView(
   return noPingCard(
     makeCard(
       resolveCardColor("primary"),
-      `${Emojis.Shield} ${t ? t("panels:permsTitle") : "Permits"}`,
+      `🛡️ ${t ? t("panels:permsTitle") : "Permits"}`,
       shown.length
-        ? `-# ${Emojis.Check} ${t ? t("panels:permsLegend") : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
+        ? `-# ✅ ${t ? t("panels:permsLegend") : "custom · enforced. Enforced permits survive anti-nuke quarantine."}`
         : t
           ? t("panels:permsEmpty")
           : "*No permits are assigned yet - every command uses its default access.*",
@@ -133,7 +133,7 @@ export function buildPermitPickerView(
   if (permits.length === 0) {
     return makeCard(
       resolveCardColor("primary"),
-      `${Emojis.Shield} ${t ? t("panels:permsPickPermit") : "Pick a Permit"}`,
+      `🛡️ ${t ? t("panels:permsPickPermit") : "Pick a Permit"}`,
       t
         ? t("panels:permsNoPermits")
         : "No permits of this kind exist yet. Create one from the dashboard.",
@@ -153,7 +153,7 @@ export function buildPermitPickerView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Shield} ${t ? t("panels:permsPickPermit") : "Pick a Permit"}`,
+    `🛡️ ${t ? t("panels:permsPickPermit") : "Pick a Permit"}`,
     t
       ? t("panels:permsPickPermit")
       : "Pick which permit to assign.",
@@ -180,7 +180,7 @@ export function buildPermitAssignTargetView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Shield} ${permitName}`,
+    `🛡️ ${permitName}`,
     t
       ? t("panels:permsPickTarget")
       : kind === "enforced"

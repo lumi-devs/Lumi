@@ -1,23 +1,22 @@
-import type { ModuleMeta } from "#lib/module-system/meta.js";
+import type { ModuleMeta } from "@lumi/lib/module-system/meta.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
-} from "#lib/prisma/DatabaseService.js";
+} from "@lumi/lib/prisma/database-service.js";
 import {
   formatFieldValue,
   formatSubtitle,
   row,
   type Row,
-} from "#modules/core/ui/common.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
+} from "@lumi/modules/core/ui/common.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { makeCard, noPingCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
   createStringSelectMenu,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
   channelMention,
@@ -114,7 +113,7 @@ export function buildHistoryView(
   return noPingCard(
     makeCard(
       resolveCardColor("info"),
-      `${Emojis.Clock} ${meta.displayName} • History`,
+      `🕐 ${meta.displayName} • History`,
       [
         formatSubtitle("Configuration change log and rollback history."),
         lines.join("\n"),
@@ -161,7 +160,7 @@ export function buildOverridesView(
           rest: [String(page)],
         }),
         label: "Add Override…",
-        emoji: Emojis.Edit,
+        emoji: "✏️",
         style: ButtonStyle.Primary,
       }),
     ),
@@ -188,7 +187,7 @@ export function buildOverridesView(
   return noPingCard(
     makeCard(
       resolveCardColor("purple"),
-      `${Emojis.Shield} ${meta.displayName} • Overrides`,
+      `🛡️ ${meta.displayName} • Overrides`,
       [
         formatSubtitle(
           "Targeted configuration overrides for channels, roles, and users.",

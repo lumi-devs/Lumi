@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   type ChatInputCommandInteraction,
   type Message,
@@ -9,16 +9,15 @@ import {
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { LumiInfo } from "#lib/utilities/misc.js";
-import { BotConfig } from "#lib/utilities/config.js";
+import { createActionButton, buildSafeActionRows } from "@lumi/lib/ui/panels.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { LumiInfo } from "@lumi/lib/utilities/version.js";
 import { collectPingData } from "../services/ping-collect.js";
 import { fmtMB } from "../ui/ping-cards.js";
-import { makeCard } from "#lib/ui/cards.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard } from "@lumi/lib/ui/cards.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 
 async function buildAboutCard(
   services: Container,
@@ -59,17 +58,12 @@ async function buildAboutCard(
 
   const row1Buttons: ButtonBuilder[] = [];
 
-  const supportServer = BotConfig.branding.links?.supportServer;
-  if (supportServer) {
-    row1Buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:supportServer"), url: supportServer }));
-  }
-
-  const githubUrl = BotConfig.branding.links?.github || LumiInfo.github;
+  const githubUrl = LumiInfo.github;
   if (githubUrl) {
     row1Buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:github"), url: githubUrl }));
   }
 
-  const website = BotConfig.branding.links?.website || "https://lumi-devs.github.io/Lumi-docs";
+  const website = "https://lumi-devs.github.io/Lumi-docs";
   if (website) {
     row1Buttons.push(createActionButton({ style: ButtonStyle.Link, label: "Documentation", url: website }));
   }

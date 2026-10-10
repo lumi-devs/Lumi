@@ -6,7 +6,7 @@ import {
   type SpanContext,
 } from "@opentelemetry/api";
 import { startTracing, shutdownTracing } from "@lumi/observability";
-import { wrapWithTraceContext, unwrapTraceContext } from "#lib/scheduler/otel.js";
+import { wrapWithTraceContext, unwrapTraceContext } from "@lumi/lib/scheduler/otel.js";
 
 const fakeProducerSpanContext: SpanContext = {
   traceId: "0af7651916cd43dd8448eb211c80319c",

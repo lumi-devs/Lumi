@@ -1,7 +1,7 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { tryParseJSON } from "@lumi/shared";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
-import { ValkeyKeys } from "#lib/valkey/client.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
 
 /**
  * Separate from `lumi:scheduler:leader` (the mutex `scheduler-lock.ts`

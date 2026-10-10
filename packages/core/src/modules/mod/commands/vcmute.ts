@@ -1,12 +1,12 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#lib/moderation/ModerationCommand.js";
+} from "@lumi/lib/commands/moderation-flow.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { VoiceMuteAction } from "@lumi/application/services/mod/actions/VoiceMuteAction.js";
-import { formatDuration, parseDuration } from "#lib/utilities/time.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { VoiceMuteAction } from "@lumi/application/services/mod/actions/voice-mute-action.js";
+import { formatDuration, parseDuration } from "@lumi/lib/utilities/time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
 import { Result } from "@lumi/shared";

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { handleModLiftFire } from '@lumi/application/services/mod/lift-handler.js';
-import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
+import { FakeDiscordRestPort } from '@lumi/lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
 

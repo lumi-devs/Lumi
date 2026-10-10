@@ -1,13 +1,13 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#lib/moderation/ModerationCommand.js";
+} from "@lumi/lib/commands/moderation-flow.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
-import { SoftbanAction } from "@lumi/application/services/mod/actions/SoftbanAction.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { ConfirmPromptOptions } from "@lumi/lib/utilities/confirm.js";
+import { SoftbanAction } from "@lumi/application/services/mod/actions/softban-action.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
 import { Result } from "@lumi/shared";

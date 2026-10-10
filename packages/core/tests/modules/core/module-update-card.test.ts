@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { moduleUpdateResultCard } from "#modules/core/ui/module-update-card.js";
+import { moduleUpdateResultCard } from "@lumi/modules/core/ui/module-update-card.js";
 
 /** Flattens all text-display content in a container into a single string for substring assertions. */
 function textOf(container: ContainerBuilder): string {

@@ -10,10 +10,9 @@ import {
   type MessageComponentInteraction,
   type VoiceBasedChannel,
 } from "discord.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { TempVcPanelId } from "#modules/tempvc/constants.js";
-import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { TempVcPanelId } from "@lumi/modules/tempvc/constants.js";
+import type { TempVcUtility } from "@lumi/modules/tempvc/utilities/TempVcUtility.js";
 
 /**
  * @remarks
@@ -32,7 +31,7 @@ export function assertOwner(
   if (service.canManage(member, channel)) return;
   throw new UserError({
     identifier: "TempVcNotOwner",
-    message: `${Emojis.Cross} ${t ? t("tempvc:onlyOwner") : "Only the channel owner can use these controls."}`,
+    message: `❌ ${t ? t("tempvc:onlyOwner") : "Only the channel owner can use these controls."}`,
   });
 }
 

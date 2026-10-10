@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { scheduledJobsGauge } from "@lumi/observability";
-import type { ScheduledTaskRunner } from "#lib/scheduler/runner.js";
+import type { ScheduledTaskRunner } from "@lumi/lib/scheduler/runner.js";
 
 /**
  * States sampled off the shared scheduled-tasks BullMQ queue. Matches

@@ -6,7 +6,7 @@ import { gunzipSync } from "node:zlib";
 import {
   purgeInBatchesWithArchive,
   writeRetentionArchive,
-} from "#lib/retention/archive.js";
+} from "@lumi/lib/retention.js";
 
 function mockLogger(): import("@lumi/shared").ILogger {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@lumi/shared").ILogger;

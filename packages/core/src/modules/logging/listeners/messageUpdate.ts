@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { Colors, type Message, type PartialMessage } from "discord.js";
 import {
   channelMention,
@@ -7,7 +7,7 @@ import {
   userMention,
 } from "@discordjs/formatters";
 import { cutText } from "@lumi/shared";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import { isIgnoredChannel, isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
 
 export const LoggingMessageUpdateListener = defineListener({

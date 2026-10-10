@@ -1,8 +1,8 @@
 import { clampMessageDocumentV2 } from "@lumi/contracts";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { reactionrolesRpc } from "@lumi/contracts/rpc";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { implementRpc } from "#lib/rpc/implement.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 import type { ReactionRoleMenu } from "./data/reactionroles.js";
 
 function toView(menu: ReactionRoleMenu) {

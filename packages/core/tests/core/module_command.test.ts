@@ -1,23 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#lib/commands/context.js";
-import { asHandler } from "#lib/commands/command-def.js";
-import { moduleDef } from "#modules/core/commands/module.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { asHandler } from "@lumi/lib/commands/command-def.js";
+import { moduleDef } from "@lumi/modules/core/commands/module.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@lumi/lib/module-system/utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/command-response.js", () => ({
+vi.mock("@lumi/lib/utilities/command-response.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#lib/utilities/pagination.js", () => ({
+vi.mock("@lumi/lib/utilities/pagination.js", () => ({
   paginateContainer: vi.fn().mockResolvedValue(undefined),
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
@@ -37,9 +37,9 @@ vi.mock("@lumi/application/services/core/module-command/pieces.js", () => ({
   getModulePiecesInfo: vi.fn().mockResolvedValue({ totalPieces: 0, piecesByStore: {} }),
 }));
 
-import { getUtility } from "#lib/module-system/Utility.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { paginateList } from "#lib/utilities/pagination.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
+import { paginateList } from "@lumi/lib/utilities/pagination.js";
 import { setModuleEnabled } from "@lumi/application/services/core/module-command/operations.js";
 
 function makeServices(records: any[] = []) {

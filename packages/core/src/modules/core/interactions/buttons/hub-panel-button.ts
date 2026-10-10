@@ -1,11 +1,11 @@
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
 import type { GuildSettingsUtility } from "../../utilities/GuildSettingsUtility.js";
 import {
@@ -24,11 +24,11 @@ import {
   buildAddonsView,
   buildAutoUpdateSettingsView,
   buildRepoUpdateConfirmView,
-} from "#modules/core/ui/addons.js";
-import { DefaultPrefix } from "#modules/core/ui/hub.js";
-import { buildFeatureListView } from "#modules/core/ui/modules.js";
-import { buildPermitPickerView } from "#modules/core/ui/permissions.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#lib/ui/cards.js";
+} from "@lumi/modules/core/ui/addons.js";
+import { DefaultPrefix } from "@lumi/modules/core/ui/hub.js";
+import { buildFeatureListView } from "@lumi/modules/core/ui/modules.js";
+import { buildPermitPickerView } from "@lumi/modules/core/ui/permissions.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
 import { HubAddonModalId, HubId } from "../../constants.js";
 import {
   ActionRowBuilder,

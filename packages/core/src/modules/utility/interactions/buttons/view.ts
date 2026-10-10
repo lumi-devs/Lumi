@@ -1,6 +1,6 @@
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import { handleMediaRequest } from "@lumi/application/services/utility/media-utils.js";
 import { UserMediaViewId } from "../../constants.js";
 

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { dbQueryDuration, dbSlowQueriesTotal } from "@lumi/observability";
-import { recordQueryMetrics } from "#lib/prisma/query-metrics.js";
+import { recordQueryMetrics } from "@lumi/lib/prisma/query-metrics.js";
 
 // DB_SLOW_QUERY_THRESHOLD_MS is read once at module load (see
-// #lib/prisma/query-metrics.js), so these tests exercise the documented
+// @lumi/lib/prisma/query-metrics.js), so these tests exercise the documented
 // default (1000ms) rather than reconfiguring it per test.
 
 describe("recordQueryMetrics", () => {

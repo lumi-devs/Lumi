@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { Interaction } from "discord.js";
 import {
   addInteractionDef,
@@ -9,10 +9,9 @@ import {
   interactionDefs,
   kindOfInteraction,
   matchesPrefix,
-} from "#lib/interactions/interaction-def.js";
-import { resolveErrorCard, respond } from "#lib/utilities/command-response.js";
-import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { resolveErrorCard, respond } from "@lumi/lib/utilities/command-response.js";
+import { ephemeralCard, makeErrorCard } from "@lumi/lib/ui/cards.js";
 
 export async function loadInteractionHandlers(
   moduleDir: string,
@@ -108,7 +107,7 @@ export async function dispatchInteraction(
     const prefixes = Array.isArray(def.prefix) ? def.prefix : [def.prefix];
     const label = prefixes[0] ?? "addon";
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
-    if (def.module && guildId && !(await isModuleEnabled(services, guildId, def.module))) {
+    if (def.module && guildId && !(await services.db.modules.isModuleEnabled(guildId, def.module))) {
       return;
     }
     try {

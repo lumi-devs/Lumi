@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -418,7 +418,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       const res = (await call("guild.warnThresholds.list")) as any;
 
       expect(res.thresholds).toEqual([
-        { warnCount: 3, action: "mute", duration: "1h" },
+        { warnCount: 3, action: "mute", duration: "1 hour" },
         { warnCount: 5, action: "ban", duration: null },
       ]);
     });

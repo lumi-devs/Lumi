@@ -13,9 +13,9 @@ import {
   isAfkOnCooldown,
   setAfkCooldown,
   addAfkMentionsBatch,
-} from "#modules/afk/data/afk.js";
-import { AfkKeys, AfkTTL } from "#modules/afk/constants.js";
-import { container } from "#lib/services.js";
+} from "@lumi/modules/afk/data/afk.js";
+import { AfkKeys, AfkTTL } from "@lumi/modules/afk/constants.js";
+import { container } from "@lumi/lib/services.js";
 
 Object.assign(container, {
   valkey: {

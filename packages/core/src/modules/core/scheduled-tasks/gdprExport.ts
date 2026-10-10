@@ -1,5 +1,5 @@
-import { RelayTask } from "#lib/scheduler/tasks.js";
-import { QueuePriority } from "#lib/scheduler/schedule.js";
+import { RelayTask } from "@lumi/lib/scheduler/tasks.js";
+import { QueuePriority } from "@lumi/lib/scheduler/schedule.js";
 
 export class GdprExportTask extends RelayTask<"gdpr-export"> {
   public constructor() {

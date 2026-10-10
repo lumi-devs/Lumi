@@ -1,10 +1,10 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import { FieldType } from "#lib/module-system/config-schema.js";
-import { validateModuleConfigValue } from "#lib/module-system/config-schema.js";
-import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { FieldType } from "@lumi/lib/module-system/config-schema.js";
+import { validateModuleConfigValue } from "@lumi/lib/module-system/config-schema.js";
+import { cleanMention, isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 import type { Prisma } from "@prisma/client";
-import { configLock } from "#lib/guild-transaction.js";
+import { configLock } from "@lumi/lib/prisma/guild-transaction.js";
 
 /** Persist + audit + post-set hook. Caller must hold the module's config lock. */
 async function write(
@@ -316,7 +316,7 @@ export const configUtility = defineUtility({
 
 export type ConfigUtility = typeof configUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     config: typeof configUtility;
   }

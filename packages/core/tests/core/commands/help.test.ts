@@ -1,23 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { asHandler } from "#lib/commands/command-def.js";
-import { commandRegistry } from "#lib/commands/command-def.js";
-import { getCategories, helpDef } from "#modules/core/commands/help.js";
-import { timeoutDef } from "#modules/mod/commands/timeout.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { asHandler } from "@lumi/lib/commands/command-def.js";
+import { commandRegistry } from "@lumi/lib/commands/command-def.js";
+import { getCategories, helpDef } from "@lumi/modules/core/commands/help.js";
+import { timeoutDef } from "@lumi/modules/mod/commands/timeout.js";
 
-vi.mock("#lib/utilities/pagination.js", () => ({
+vi.mock("@lumi/lib/utilities/pagination.js", () => ({
   paginateContainer: vi.fn().mockResolvedValue(undefined),
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-import { paginateContainer } from "#lib/utilities/pagination.js";
+import { paginateContainer } from "@lumi/lib/utilities/pagination.js";
 
 function makeDef(name: string, module = "core") {
   return { name, module, description: `${name} description`, handlers: {} as Record<string, never> };
@@ -102,7 +101,7 @@ describe("getCategories", () => {
     const { categoryEmojis } = getCategories(services);
 
     expect(categoryEmojis["Moderation"]).toBe("🛡️");
-    expect(categoryEmojis["Utility"]).toBe(Emojis.Gear);
+    expect(categoryEmojis["Utility"]).toBe("⚙️");
   });
 
   it("counts every command across all categories", () => {

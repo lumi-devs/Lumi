@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 
 /**
  * Atomically take a cooldown slot. Returns true only for the caller that won

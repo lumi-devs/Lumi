@@ -1,13 +1,13 @@
-import type { DoctorCheckFn, DoctorCheckResult } from "#lib/doctor/types.js";
-import { checkDiscordToken } from "#lib/doctor/checks/discord-token.js";
-import { checkPrivilegedIntents } from "#lib/doctor/checks/privileged-intents.js";
-import { checkPostgres } from "#lib/doctor/checks/postgres.js";
-import { checkValkey } from "#lib/doctor/checks/valkey.js";
-import { checkRpc } from "#lib/doctor/checks/rpc.js";
-import { checkDashboardOAuth } from "#lib/doctor/checks/dashboard-oauth.js";
-import { checkFilesystem } from "#lib/doctor/checks/filesystem.js";
-import { checkAddonCompat } from "#lib/doctor/checks/addon-compat.js";
-import { checkQueueHealth } from "#lib/doctor/checks/queue-health.js";
+import type { DoctorCheckFn, DoctorCheckResult } from "@lumi/lib/doctor/types.js";
+import { checkDiscordToken } from "@lumi/lib/doctor/checks/discord-token.js";
+import { checkPrivilegedIntents } from "@lumi/lib/doctor/checks/privileged-intents.js";
+import { checkPostgres } from "@lumi/lib/doctor/checks/postgres.js";
+import { checkValkey } from "@lumi/lib/doctor/checks/valkey.js";
+import { checkRpc } from "@lumi/lib/doctor/checks/rpc.js";
+import { checkDashboardOAuth } from "@lumi/lib/doctor/checks/dashboard-oauth.js";
+import { checkFilesystem } from "@lumi/lib/doctor/checks/filesystem.js";
+import { checkAddonCompat } from "@lumi/lib/doctor/checks/addon-compat.js";
+import { checkQueueHealth } from "@lumi/lib/doctor/checks/queue-health.js";
 
 /** Every check `runDoctor()` runs by default, in report order. */
 export const defaultDoctorChecks: DoctorCheckFn[] = [

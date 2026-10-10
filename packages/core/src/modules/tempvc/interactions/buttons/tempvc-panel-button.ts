@@ -1,28 +1,27 @@
 import { UserError } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type {
   ButtonInteraction,
   GuildMember,
   MessageComponentInteraction,
   VoiceBasedChannel,
 } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeSuccessCard } from "#lib/ui/cards.js";
-import { getVcRecord, removeVcRecord } from "#modules/tempvc/data/tempvc.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { makeSuccessCard } from "@lumi/lib/ui/cards.js";
+import { getVcRecord, removeVcRecord } from "@lumi/modules/tempvc/data/tempvc.js";
 import { TempVcKeys, TempVcPanelId } from "../../constants.js";
 import {
   showLimitModal,
   showRenameModal,
 } from "@lumi/application/services/tempvc/panel-helpers.js";
 import { resolveOwnedVc, resolveVc } from "@lumi/application/services/tempvc/panel-guard.js";
-import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "@lumi/modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBlockView,
   buildDeleteConfirmView,
@@ -32,7 +31,7 @@ import {
   buildTrustView,
   buildUnblockView,
   buildUntrustView,
-} from "#modules/tempvc/ui/panel.js";
+} from "@lumi/modules/tempvc/ui/panel.js";
 
 export const tempVcPanelButton = defineInteraction({
   prefix: TempVcPanelId.prefix,
@@ -58,11 +57,11 @@ export const tempVcPanelButton = defineInteraction({
     const notFound = {
       channel: {
         identifier: "TempVcGone",
-        message: `${Emojis.Cross} ${t("tempvc:channelNoLongerExists")}`,
+        message: `❌ ${t("tempvc:channelNoLongerExists")}`,
       },
       record: {
         identifier: "TempVcUnmanaged",
-        message: `${Emojis.Cross} ${t("tempvc:channelNoLongerManaged")}`,
+        message: `❌ ${t("tempvc:channelNoLongerManaged")}`,
       },
     };
 
@@ -161,7 +160,7 @@ async function doDelete(
     if (!deleted) {
       throw new UserError({
         identifier: "TempVcDeleteFailed",
-        message: `${Emojis.Cross} ${
+        message: `❌ ${
           t ? t("tempvc:deleteFailedMessage") : "Failed to delete the voice channel. Try again."
         }`,
       });
@@ -190,14 +189,14 @@ async function claim(
     if (member.voice.channelId !== channel.id) {
       throw new UserError({
         identifier: "TempVcClaimNotIn",
-        message: `${Emojis.Cross} ${t("tempvc:mustBeInChannelToClaim")}`,
+        message: `❌ ${t("tempvc:mustBeInChannelToClaim")}`,
       });
     }
     const owner = channel.members.get(record.ownerId);
     if (owner) {
       throw new UserError({
         identifier: "TempVcOwnerPresent",
-        message: `${Emojis.Cross} ${t("tempvc:ownerStillHere")}`,
+        message: `❌ ${t("tempvc:ownerStillHere")}`,
       });
     }
 
@@ -211,7 +210,7 @@ async function claim(
     if (guard === null) {
       throw new UserError({
         identifier: "TempVcClaimRace",
-        message: `${Emojis.Loading} ${t("tempvc:someoneElseClaiming")}`,
+        message: `⏳ ${t("tempvc:someoneElseClaiming")}`,
       });
     }
 

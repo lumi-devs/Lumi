@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
-import { container } from "#lib/services.js";
-import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
+import { container } from "@lumi/lib/services.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
 import { mgetSafe } from "@lumi/infrastructure/database";
 
 const LogClaimCodeLength = 6;

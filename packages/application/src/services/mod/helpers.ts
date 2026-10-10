@@ -1,7 +1,7 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { Guild } from "discord.js";
 import type { CaseAction } from "@prisma/client";
-import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
+import { scheduleTask, QueuePriority } from "@lumi/lib/scheduler/schedule.js";
 
 
 const liftJobId = (caseId: number) => `mod-lift-${caseId}`;

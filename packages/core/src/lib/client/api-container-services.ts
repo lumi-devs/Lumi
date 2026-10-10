@@ -1,7 +1,7 @@
-import { buildRestOptions } from "#lib/discord/options.js";
-import { envParseString, getBotToken } from "#lib/env.js";
-import { container } from "#lib/services.js";
-import type { OwnedEventBus } from "#lib/event-bus/factory.js";
+import { buildRestOptions } from "@lumi/lib/discord/options.js";
+import { envParseString, getBotToken } from "@lumi/lib/env.js";
+import { container } from "@lumi/lib/services.js";
+import type { OwnedEventBus } from "@lumi/lib/event-bus/factory.js";
 import { Client } from "discord.js";
 import { Routes, type APIUser } from "discord-api-types/v10";
 import { installContainerServices } from "./container-services.js";

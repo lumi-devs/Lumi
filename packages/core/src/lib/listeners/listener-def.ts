@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 
 export interface ListenerDef<A extends unknown[] = any[]> {
   name: string;
@@ -23,8 +23,4 @@ const registry: ListenerDef<any>[] = [];
 
 export function addListenerDef(def: ListenerDef<any>): void {
   if (!registry.includes(def)) registry.push(def);
-}
-
-export function listenerDefs(): readonly ListenerDef<any>[] {
-  return registry;
 }

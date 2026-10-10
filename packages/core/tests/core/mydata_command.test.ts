@@ -1,35 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#lib/commands/context.js";
-import { asHandler } from "#lib/commands/command-def.js";
-import { mydataDef } from "#modules/core/commands/mydata.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { asHandler } from "@lumi/lib/commands/command-def.js";
+import { mydataDef } from "@lumi/modules/core/commands/mydata.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@lumi/lib/module-system/utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/confirm.js", () => ({
+vi.mock("@lumi/lib/utilities/confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/gdpr.js", () => ({
+vi.mock("@lumi/lib/gdpr/requests.js", () => ({
   executeGdprExport: vi.fn(),
   executeGdprDeletion: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/command-response.js", () => ({
+vi.mock("@lumi/lib/utilities/command-response.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { getUtility } from "#lib/module-system/Utility.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { executeGdprExport, executeGdprDeletion } from "#lib/gdpr.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
+import { executeGdprExport, executeGdprDeletion } from "@lumi/lib/gdpr/requests.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
 
 function makeServices() {
   return {

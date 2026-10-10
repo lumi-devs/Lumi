@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkQueueHealth } from "#lib/doctor/checks/queue-health.js";
+import { checkQueueHealth } from "@lumi/lib/doctor/checks/queue-health.js";
 
 describe("checkQueueHealth", () => {
   it("fails when the queue counts can't be read", async () => {

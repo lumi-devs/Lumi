@@ -1,10 +1,9 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { LabelBuilder, ModalBuilder, TextInputBuilder } from "@discordjs/builders";
 import { TextInputStyle } from "discord.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
 import { PunishAuthorModalId, PunishAuthorSelectId } from "../../constants.js";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import type { Container } from "@lumi/lib/services.js";
 
 export const punishAuthorSelect = defineInteraction({
   prefix: PunishAuthorSelectId.prefix,
@@ -15,7 +14,7 @@ export const punishAuthorSelect = defineInteraction({
     const { authorId } = parsed;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
+    if (!(await services.db.modules.isModuleEnabled(guildId, "mod"))) return;
 
     const action = interaction.values[0];
     if (!action) return;

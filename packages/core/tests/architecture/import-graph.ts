@@ -133,10 +133,10 @@ export function resolveSpecifier(fromFile: string, specifier: string): ResolvedI
     return { kind: "relative", path: found ?? candidate };
   }
 
-  if (specifier.startsWith("#lib/") || specifier.startsWith("#modules/")) {
-    const [aliasDir, ...rest] = specifier.startsWith("#lib/")
-      ? ["lib", specifier.slice("#lib/".length)]
-      : ["modules", specifier.slice("#modules/".length)];
+  if (specifier.startsWith("@lumi/lib/") || specifier.startsWith("@lumi/modules/")) {
+    const [aliasDir, ...rest] = specifier.startsWith("@lumi/lib/")
+      ? ["lib", specifier.slice("@lumi/lib/".length)]
+      : ["modules", specifier.slice("@lumi/modules/".length)];
     const restPath = rest.join("").replace(/\.js$/, "");
     const candidate = join(REPO_ROOT, "packages/core/src", aliasDir, restPath);
     const found = tryResolveFile(candidate);

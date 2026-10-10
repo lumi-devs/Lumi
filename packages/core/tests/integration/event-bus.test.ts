@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
 import type Valkey from "iovalkey";
-import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
-import type { BusMessage } from "#lib/event-bus/types.js";
+import { createEventBus, type OwnedEventBus } from "@lumi/lib/event-bus/factory.js";
+import type { BusMessage } from "@lumi/lib/event-bus/types.js";
 import { createTestValkey, integrationDescribe, parseTestValkeyOptions } from "./setup.js";
 
 const StreamPrefix = "lumi:test:int:events:";

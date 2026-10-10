@@ -1,6 +1,6 @@
 import { cutText } from "@lumi/shared";
-import { formatDuration } from "#lib/utilities/time.js";
-import { AfkMaxReasonLength } from "#modules/afk/constants.js";
+import { formatDuration } from "@lumi/lib/utilities/time.js";
+import { AfkMaxReasonLength } from "@lumi/modules/afk/constants.js";
 
 export function sanitizeReason(reason: string): string {
   const f =

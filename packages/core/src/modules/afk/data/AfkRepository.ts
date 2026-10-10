@@ -1,5 +1,5 @@
 import type { AfkEntry } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 
 /**
  * AFK entries (`AfkEntry`), owned by the `afk` module.  Pure persistence - the

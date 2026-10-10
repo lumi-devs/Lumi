@@ -1,9 +1,9 @@
-import { disconnectDatabase } from "#lib/prisma/client.js";
-import { validateRequiredEnv } from "#lib/env.js";
-import { closeSystemStatusResources } from "#lib/rpc/system-rpc.js";
-import { logError, errorFrom } from "#lib/utilities/errors.js";
+import { disconnectDatabase } from "@lumi/lib/prisma/client.js";
+import { validateRequiredEnv } from "@lumi/lib/env.js";
+import { closeSystemStatusResources } from "@lumi/lib/rpc/system-rpc.js";
+import { logError, errorFrom } from "@lumi/lib/utilities/errors.js";
 import { flushSentry, shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   installApiContainerServices,
   type ApiContainerServices,
@@ -16,7 +16,6 @@ export interface BootstrapApiAppOptions {
 let installedRejectionHandler: ((reason: unknown) => void) | null = null;
 let installedExceptionHandler: ((err: unknown) => void) | null = null;
 
-// Process-level unhandled rejection and uncaught exception handlers for API.
 function registerProcessErrorHandlers(): void {
   if (installedRejectionHandler) {
     process.off("unhandledRejection", installedRejectionHandler);

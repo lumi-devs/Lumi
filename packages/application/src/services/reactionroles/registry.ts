@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
-import { logError } from "#lib/utilities/errors.js";
-import { getMenu, listMenus, type ReactionRoleMenu } from "#modules/reactionroles/data/reactionroles.js";
+import { container } from "@lumi/lib/services.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import { getMenu, listMenus, type ReactionRoleMenu } from "@lumi/modules/reactionroles/data/reactionroles.js";
 
 class ReactionRoleRegistry {
   readonly #menus = new Map<string, Map<string, ReactionRoleMenu>>();
@@ -50,7 +50,7 @@ class ReactionRoleRegistry {
     for (const menu of this.#menus.get(guildId)?.values() ?? []) {
       if (menu.messageIds.includes(messageId)) return menu;
     }
-    const { findMenuByMessage } = await import("#modules/reactionroles/data/reactionroles.js");
+    const { findMenuByMessage } = await import("@lumi/modules/reactionroles/data/reactionroles.js");
     const fresh = await findMenuByMessage(container, guildId, messageId).catch(
       (err: unknown) => {
         logError("ReactionRoles: message lookup", err);

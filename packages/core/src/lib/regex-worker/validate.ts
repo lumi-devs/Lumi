@@ -1,4 +1,4 @@
-import { getRegexProbeWorker } from "./RegexWorkerHandler.js";
+import { getRegexProbeWorker } from "./handler.js";
 
 /** Patterns longer than this are rejected outright - length feeds blowup. */
 export const MaxRegexLength = 256;

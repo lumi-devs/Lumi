@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { StreamBus } from "#lib/event-bus/StreamBus.js";
+import { StreamBus } from "@lumi/lib/event-bus/stream-bus.js";
 
 describe("Chaos Suite: Stream Poison Pill & DLQ Routing", () => {
   let publisher: any;

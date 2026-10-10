@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { SnowflakeSchema, securityRpc } from "@lumi/contracts/rpc";
 import type { GuildBackupData } from "@lumi/application/services/security/backup-types.js";
 import { restoreGuildFromBackup } from "@lumi/application/services/security/restore-guild.js";
@@ -8,8 +8,8 @@ import {
   loadVerificationConfig,
   grantVerified,
 } from "@lumi/application/services/security/verification.js";
-import { implementRpc, requireGuildId } from "#lib/rpc/implement.js";
-import { withIdempotency } from "#lib/rpc/idempotency.js";
+import { implementRpc, requireGuildId } from "@lumi/lib/rpc/implement.js";
+import { withIdempotency } from "@lumi/lib/rpc/idempotency.js";
 
 export const securityRpcHandlers = implementRpc(securityRpc, {
   "guild.panic.get": async ({ guildId }) => {

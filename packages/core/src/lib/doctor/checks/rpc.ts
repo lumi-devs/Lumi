@@ -1,6 +1,6 @@
-import { getRpcHealthUrl } from "#lib/env.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { getRpcHealthUrl } from "@lumi/lib/env.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const RpcCheckName = "rpc";
 

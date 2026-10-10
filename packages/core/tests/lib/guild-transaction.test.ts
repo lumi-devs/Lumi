@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { createGuildTransaction } from "#lib/guild-transaction.js";
+import { container } from "@lumi/lib/services.js";
+import { createGuildTransaction } from "@lumi/lib/prisma/guild-transaction.js";
 
 Object.assign(container, {
   invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },

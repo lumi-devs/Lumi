@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ChannelType, PermissionsBitField, RESTJSONErrorCodes } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {
@@ -9,10 +9,10 @@ import {
   type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
-import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
-import { authorize } from "#lib/permissions/authorize.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { swallow } from "#lib/utilities/errors.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
 
 /**
  * Guild/member/channel reads for RPC authorization, sourced from Discord's

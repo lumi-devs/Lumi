@@ -1,23 +1,23 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { systemRpc, type SystemStatusData } from "@lumi/contracts/rpc";
 import { streamConsumerLag, getEventLoopLagP99Ms } from "@lumi/observability";
 import { Queue } from "bullmq";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/scheduler/queue.js";
-import { getClusterName } from "#lib/env.js";
-import { authorize } from "#lib/permissions/authorize.js";
-import { implementRpc } from "#lib/rpc/implement.js";
-import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
-import { readSchedulerHeartbeat } from "#lib/scheduler/heartbeat.js";
+} from "@lumi/lib/scheduler/queue.js";
+import { getClusterName } from "@lumi/lib/env.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
+import { paginate, resolvePageSize } from "@lumi/lib/rpc/validation.js";
+import { readSchedulerHeartbeat } from "@lumi/lib/scheduler/heartbeat.js";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,
   isShardStale,
   readClusterShards,
-} from "#lib/sharding/shard-telemetry.js";
-import { getSystemStatus, type SystemStatusDeps } from "#lib/rpc/system-status.js";
+} from "@lumi/lib/sharding/shard-telemetry.js";
+import { getSystemStatus, type SystemStatusDeps } from "@lumi/lib/rpc/system-status.js";
 
 /** A shard with no fresh row in 3 publish intervals is flagged stale in the fleet view. */
 const StaleAfterMs = DefaultPublishIntervalMs * 3;

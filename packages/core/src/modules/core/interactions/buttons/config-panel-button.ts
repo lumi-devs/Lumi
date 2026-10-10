@@ -1,13 +1,13 @@
-import { fetchTyped } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import { UserError } from "@lumi/shared";
-import type { LumiT } from "#lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { FieldType } from "#lib/module-system/config-schema.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { FieldType } from "@lumi/lib/module-system/config-schema.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";
 import {
   configAccessDenied,
@@ -20,14 +20,13 @@ import {
   buildFeatureDetailView,
   buildFeatureListView,
   buildFieldEditView,
-} from "#modules/core/ui/modules.js";
+} from "@lumi/modules/core/ui/modules.js";
 import {
   buildHistoryView,
   buildOverridesView,
-} from "#modules/core/ui/overrides.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { ephemeralCard, makeErrorCard } from "#lib/ui/cards.js";
-import { respond } from "#lib/utilities/command-response.js";
+} from "@lumi/modules/core/ui/overrides.js";
+import { ephemeralCard, makeErrorCard } from "@lumi/lib/ui/cards.js";
+import { respond } from "@lumi/lib/utilities/command-response.js";
 import {
   ConfigButtonId,
   ConfigFieldModalId,
@@ -241,7 +240,7 @@ async function renderDetail(
     if (!detail)
       throw new UserError({
         identifier: "UnknownModule",
-        message: `${Emojis.Cross} Module \`${moduleName}\` no longer exists.`,
+        message: `❌ Module \`${moduleName}\` no longer exists.`,
       });
     return detail;
   }

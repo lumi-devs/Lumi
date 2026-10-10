@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
+import { AuditRepository } from "@lumi/lib/prisma/repositories/audit-repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { Colors, type GuildMember } from "discord.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import { isToggleEnabled, sendLog } from "@lumi/application/services/logging/send.js";
 
 export const LoggingMemberAddListener = defineListener({

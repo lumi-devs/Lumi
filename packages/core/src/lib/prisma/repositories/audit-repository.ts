@@ -1,0 +1,293 @@
+import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
+import { hostname } from "node:os";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
+import { getWriteBucket } from "@lumi/lib/env.js";
+import {
+  purgeInBatchesWithArchive,
+  type RetentionPurgeOptions,
+} from "@lumi/lib/retention.js";
+import {
+  CreatedAtIdOrderBy,
+  paginateCreatedAtId,
+} from "@lumi/lib/prisma/cursor.js";
+
+import { tryParseJSON } from "@lumi/shared";
+import { Time } from "@lumi/shared";
+
+/**
+ * Per-process, so two overlapping workers cannot both read the other's pending
+ * entries and insert the same audit rows twice.
+ */
+const AuditConsumer = `${hostname()}:${process.pid}`;
+
+/** How long a delivered-but-unacked entry must sit before another run reclaims it. */
+const StalePendingMs = Time.Minute;
+
+/**
+ * Approximate cap on the buffer stream. If the flush task stops - a crash loop,
+ * a Postgres outage - the stream would otherwise grow without bound and take
+ * the cache tier down with it. At ~200 bytes an entry this is roughly 100 MB of
+ * headroom, far more than a healthy flush ever accumulates, so trimming only
+ * ever discards the oldest entries of an already-broken backlog.
+ */
+const AuditStreamMaxlen = 500_000;
+
+/**
+ * Number of stream buckets the fleet spreads audit writes across. Fixed rather
+ * than derived from shard count so the consumer knows the full key space
+ * without coordination, and so changing shard count never strands a bucket.
+ */
+const AuditStreamBuckets = 16;
+
+/**
+ * This process always writes to the same bucket, which keeps each stream's
+ * entries roughly time-ordered and avoids scattering one process's writes.
+ */
+const WriteBucket = getWriteBucket(AuditStreamBuckets);
+
+export interface AuditLogPayload {
+  guildId: string;
+  userId: string;
+  action: string;
+  platform: AuditPlatform;
+  details?: unknown;
+}
+
+export interface AuditLedgerFilter {
+  guildId?: string;
+  userId?: string;
+  action?: string;
+  platform?: AuditPlatform;
+  take?: number;
+  /** Opaque `(createdAt, id)` cursor. Omitted for the first page, where `total` is also returned. */
+  cursor?: string;
+}
+
+/**
+ * Buffered audit log - writes land in a Valkey Stream (`auditLogsQueue`) and are
+ * drained to the `AuditLedger` Postgres table in batches via a consumer group.
+ */
+export class AuditRepository extends Repository {
+  public async queueAuditLog(payload: AuditLogPayload) {
+    await this.valkey.xadd(
+      ValkeyKeys.auditLogsQueue(WriteBucket),
+      "MAXLEN",
+      "~",
+      AuditStreamMaxlen,
+      "*",
+      "payload",
+      JSON.stringify(payload),
+    );
+  }
+
+  /**
+   * Drains every bucket, not just this process's own: the flush task is unicast,
+   * so whichever process handles a fire is responsible for the whole key space.
+   */
+  public async flushAuditLogsToPostgres(batchSize = 500) {
+    const perBucket = Math.max(1, Math.floor(batchSize / AuditStreamBuckets));
+    let total = 0;
+
+    await mapWithConcurrency(
+      Array.from({ length: AuditStreamBuckets }, (_, i) => i),
+      4,
+      async (bucket) => {
+        total += await this.#flushBucket(bucket, perBucket);
+      },
+    );
+
+    return total;
+  }
+
+  async #flushBucket(bucket: number, batchSize: number) {
+    const key = ValkeyKeys.auditLogsQueue(bucket);
+    await this.#ensureGroup(key);
+
+    type XReadGroupReply = [string, [string, string[]][]][] | null;
+    type XAutoClaimReply = [string, [string, string[]][], string[]?] | null;
+
+    // Reclaim entries a previous run delivered but never acked - a crash, or an
+    // overlapping deploy - before taking anything new. XAUTOCLAIM is used
+    // rather than a pending read against our own name because the consumer name
+    // is per-process, so the stranded entries belong to a name we no longer use.
+    const claimed = (await this.valkey.xautoclaim(
+      key,
+      "audit_workers",
+      AuditConsumer,
+      StalePendingMs,
+      "0-0",
+      "COUNT",
+      batchSize,
+    )) as XAutoClaimReply;
+
+    let messages = claimed?.[1] ?? [];
+
+    if (!messages.length) {
+      const results = (await this.valkey.xreadgroup(
+        "GROUP",
+        "audit_workers",
+        AuditConsumer,
+        "COUNT",
+        batchSize,
+        "STREAMS",
+        key,
+        ">",
+      )) as XReadGroupReply;
+      messages = results?.[0]?.[1] ?? [];
+    }
+
+    if (!messages.length) return 0;
+
+    const entries: { id: string; payload: AuditLogPayload }[] = [];
+    const droppedIds: string[] = [];
+
+    for (const [id, fields] of messages) {
+      try {
+        const idx = fields.indexOf("payload");
+        const raw = idx === -1 ? undefined : fields[idx + 1];
+        if (raw === undefined) {
+          this.logger.warn(
+            `[AuditRepository] Entry ${id} is missing the "payload" field - skipping.`,
+          );
+          droppedIds.push(id);
+        } else {
+          const parsed = tryParseJSON(raw);
+          if (parsed) {
+            entries.push({ id, payload: parsed as AuditLogPayload });
+          } else {
+            droppedIds.push(id);
+          }
+        }
+      } catch (err: unknown) {
+        this.logger.error(
+          "[AuditRepository] Malformed audit log entry:",
+          id,
+          err,
+        );
+        droppedIds.push(id);
+      }
+    }
+
+    const persistedIds: string[] = [...droppedIds];
+    let persistedEntryCount = 0;
+
+    if (entries.length) {
+      const guildIds = new Set(entries.map(({ payload: p }) => p.guildId));
+      await Promise.all(
+        Array.from(guildIds, (guildId) => this.db.ensureGuild(guildId)),
+      );
+
+      try {
+        await this.prisma.auditLedger.createMany({
+          data: entries.map(({ payload: p }) => ({
+            guildId: p.guildId,
+            userId: p.userId,
+            action: p.action,
+            platform: p.platform,
+            details: p.details as Prisma.InputJsonValue,
+          })),
+        });
+        persistedIds.push(...entries.map((e) => e.id));
+        persistedEntryCount = entries.length;
+      } catch (err) {
+        this.logger.error(
+          "[AuditRepository] Postgres batch flush failed, falling back to per-row insert:",
+          err,
+        );
+        for (const { id, payload: p } of entries) {
+          try {
+            await this.prisma.auditLedger.create({
+              data: {
+                guildId: p.guildId,
+                userId: p.userId,
+                action: p.action,
+                platform: p.platform,
+                details: p.details as Prisma.InputJsonValue,
+              },
+            });
+            persistedIds.push(id);
+            persistedEntryCount++;
+          } catch (rowErr) {
+            this.logger.error(
+              `[AuditRepository] Dropping unpersistable audit log entry ${id}:`,
+              rowErr,
+            );
+          }
+        }
+      }
+    }
+
+    if (persistedIds.length) {
+      await this.valkey.xack(key, "audit_workers", ...persistedIds);
+      await this.valkey.xdel(key, ...persistedIds);
+    }
+
+    return persistedEntryCount;
+  }
+
+  // Omitting `guildId` reads across every guild — bot-owner scoped callers only.
+  public async listAuditLogs(
+    filter: AuditLedgerFilter = {},
+  ): Promise<{ entries: AuditLedger[]; total?: number; nextCursor: string | null }> {
+    const baseWhere = {
+      ...(filter.guildId ? { guildId: filter.guildId } : {}),
+      ...(filter.userId ? { userId: filter.userId } : {}),
+      ...(filter.action ? { action: { contains: filter.action } } : {}),
+      ...(filter.platform ? { platform: filter.platform } : {}),
+    };
+    const result = await paginateCreatedAtId(
+      (where) =>
+        this.prisma.auditLedger.findMany({
+          where: where as Prisma.AuditLedgerWhereInput,
+          orderBy: CreatedAtIdOrderBy,
+          take: (filter.take ?? 25) + 1,
+        }),
+      (where) => this.prisma.auditLedger.count({ where: where as Prisma.AuditLedgerWhereInput }),
+      baseWhere,
+      filter,
+    );
+    return {
+      entries: result.rows,
+      total: result.total,
+      nextCursor: result.nextCursor,
+    };
+  }
+
+  async #ensureGroup(key: string) {
+    try {
+      await this.valkey.xgroup("CREATE", key, "audit_workers", "0", "MKSTREAM");
+    } catch (err: unknown) {
+      if (!(err instanceof Error) || !err.message.includes("BUSYGROUP"))
+        throw err;
+    }
+  }
+
+  public async purgeOldEntries(
+    date: Date,
+    options: RetentionPurgeOptions = {},
+  ): Promise<number> {
+    return purgeInBatchesWithArchive({
+      table: "audit_ledger",
+      archiveDir: options.archiveDir,
+      batchSize: options.batchSize,
+      logger: this.logger,
+      findBatch: (afterId, batchSize) =>
+        this.prisma.auditLedger.findMany({
+          where: {
+            createdAt: { lt: date },
+            ...(afterId === null ? {} : { id: { gt: afterId } }),
+          },
+          orderBy: { id: "asc" },
+          take: batchSize,
+        }),
+      deleteByIds: async (ids) => {
+        const { count } = await this.prisma.auditLedger.deleteMany({
+          where: { id: { in: ids } },
+        });
+        return count;
+      },
+    });
+  }
+}

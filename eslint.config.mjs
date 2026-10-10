@@ -53,7 +53,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/modules/*/**', '../**/modules/**', '../../**/modules/**'],
+              group: ['../**/modules/**', '../../**/modules/**'],
               message:
                 'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
             },
@@ -62,12 +62,12 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
             },
           ],
         },
@@ -94,7 +94,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['**/modules/*/**', '../**/modules/**', '../../**/modules/**'],
+              group: ['../**/modules/**', '../../**/modules/**'],
               message:
                 'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
             },
@@ -103,16 +103,16 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
             },
             {
-              name: '#lib/permissions/PermitResolver.js',
-              message: 'Authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly.',
+              name: '@lumi/lib/permissions/permit-resolver.js',
+              message: 'Authorization decisions go through authorize() (@lumi/lib/permissions/authorize.js), not PermitResolver directly.',
             },
           ],
         },

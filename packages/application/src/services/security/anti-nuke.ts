@@ -1,11 +1,11 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
 import { isNullish, type Awaitable } from "@lumi/shared";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
-import { logToChannel } from "#lib/moderation/log.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { QuarantineAction } from "../mod/actions/quarantine-action.js";
+import { isImmuneToAutomatedAction } from "../mod/immune-roles.js";
+import { logToChannel } from "@lumi/lib/discord/mod-log.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
 import { getConfigNumber } from "./config-helpers.js";
 
 export type NukeKind =
@@ -20,7 +20,7 @@ export type NukeKind =
 
 type NukeResponse = "log" | "quarantine" | "ban";
 
-export interface AntiNukeConfig {
+interface AntiNukeConfig {
   enabled: boolean;
   windowSeconds: number;
   limits: Record<NukeKind, number>;

@@ -4,20 +4,20 @@ import type {
   GuildMember,
   VoiceBasedChannel,
 } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { ephemeralCard, makeSuccessCard } from "#lib/ui/cards.js";
-import type { VcRecord } from "#modules/tempvc/data/tempvc.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { ephemeralCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
+import type { VcRecord } from "@lumi/modules/tempvc/data/tempvc.js";
 import { TempVcPanelId } from "../../constants.js";
 import { showLimitModal, showRenameModal } from "@lumi/application/services/tempvc/panel-helpers.js";
 import { resolveOwnedRecord } from "@lumi/application/services/tempvc/panel-guard.js";
-import type { TempVcUtility } from "#modules/tempvc/utilities/TempVcUtility.js";
+import type { TempVcUtility } from "@lumi/modules/tempvc/utilities/TempVcUtility.js";
 import {
   buildBackRows,
   buildBlockView,
@@ -28,7 +28,7 @@ import {
   buildTrustView,
   buildUnblockView,
   buildUntrustView,
-} from "#modules/tempvc/ui/panel.js";
+} from "@lumi/modules/tempvc/ui/panel.js";
 
 const SelectActions = new Set([
   "select_kick",

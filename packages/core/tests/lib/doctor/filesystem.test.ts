@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkFilesystem } from "#lib/doctor/checks/filesystem.js";
+import { checkFilesystem } from "@lumi/lib/doctor/checks/filesystem.js";
 
 describe("checkFilesystem", () => {
   it("fails when a directory does not exist", async () => {

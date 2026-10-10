@@ -1,5 +1,5 @@
 import { sectionsOf } from "@lumi/contracts";
-import { securityModule } from "#modules/security/index.js";
+import { securityModule } from "@lumi/modules/security/index.js";
 import { describe, expect, it } from "bun:test";
 
 const fields = securityModule.meta.configFields ?? [];

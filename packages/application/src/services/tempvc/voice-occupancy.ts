@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { pipelineBySlot } from "@lumi/infrastructure/database";
 
 const TtlSeconds = 24 * 60 * 60;

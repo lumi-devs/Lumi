@@ -1,6 +1,6 @@
-import type { Container } from "#lib/services.js";
-import { isHexColor } from "#lib/message-content.js";
-import { isSnowflakeId } from "#lib/utilities/misc.js";
+import type { Container } from "@lumi/lib/services.js";
+import { isHexColor } from "@lumi/lib/utilities/message-content.js";
+import { isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 import type { MessageDocumentV2 } from "@lumi/contracts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
@@ -72,7 +72,7 @@ export function maxOptionsForMode(mode: ReactionRoleMode): number {
   return ReactionRoleLimits.buttonsMaxOptions;
 }
 
-export interface MenuValidationError {
+interface MenuValidationError {
   field: string;
   message: string;
 }

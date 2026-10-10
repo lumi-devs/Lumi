@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   collectPingData,
   getRuntimeLabel,
   resetPingCachesForTests,
-} from "#modules/core/services/ping-collect.js";
+} from "@lumi/modules/core/services/ping-collect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 

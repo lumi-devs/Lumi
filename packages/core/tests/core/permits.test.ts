@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import {
   PermitResolver,
   evaluateNodeMatch,
-} from "#lib/permissions/PermitResolver.js";
-import { container } from "#lib/services.js";
+} from "@lumi/lib/permissions/permit-resolver.js";
+import { container } from "@lumi/lib/services.js";
 import { UserError } from "@lumi/shared";
 
 describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {

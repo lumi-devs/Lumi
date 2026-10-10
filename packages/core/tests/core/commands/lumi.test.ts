@@ -1,27 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#lib/commands/context.js";
-import { asHandler } from "#lib/commands/command-def.js";
-import { lumiDef } from "#modules/core/commands/lumi.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { asHandler } from "@lumi/lib/commands/command-def.js";
+import { lumiDef } from "@lumi/modules/core/commands/lumi.js";
 
-vi.mock("#modules/core/services/config-panel.js", () => ({
+vi.mock("@lumi/modules/core/services/config-panel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#modules/core/ui/hub.js", () => ({
+vi.mock("@lumi/modules/core/ui/hub.js", () => ({
   buildHubView: vi.fn().mockReturnValue({ components: [] }),
 }));
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/command-response.js", () => ({
+vi.mock("@lumi/lib/utilities/command-response.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { loadFeatures } from "#modules/core/services/config-panel.js";
-import { buildHubView } from "#modules/core/ui/hub.js";
+import { loadFeatures } from "@lumi/modules/core/services/config-panel.js";
+import { buildHubView } from "@lumi/modules/core/ui/hub.js";
 
 function makeServices() {
   return {

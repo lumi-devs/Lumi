@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
 import { AuditLogEvent, type GuildMember } from "discord.js";
-import type { Container } from "#lib/services.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { swallow } from "#lib/utilities/errors.js";
+import type { Container } from "@lumi/lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
 import { resolveAuditLogExecutor } from "@lumi/application/services/security/audit.js";
 import { evaluateNukeEvent, isQuarantined } from "@lumi/application/services/security/anti-nuke.js";
 

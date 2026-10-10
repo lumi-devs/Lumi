@@ -1,10 +1,10 @@
-import type { Container } from "#lib/services.js";
-import { renderMessageContent } from "#lib/message-content.js";
-import { LumiEvents } from "#lib/types/common.js";
-import type { GuildMessage } from "#lib/types/common.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { swallow } from "#lib/utilities/errors.js";
-import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
+import type { Container } from "@lumi/lib/services.js";
+import { renderMessageContent } from "@lumi/lib/utilities/message-content.js";
+import { LumiEvents } from "@lumi/lib/types/common.js";
+import type { GuildMessage } from "@lumi/lib/types/common.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
+import { renderMessageBlocksV2 } from "@lumi/lib/utilities/message-blocks-v2.js";
 import {
   getStickyMessageId,
   isStickyOnCooldown,

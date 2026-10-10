@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkValkey } from "#lib/doctor/checks/valkey.js";
+import { checkValkey } from "@lumi/lib/doctor/checks/valkey.js";
 
 describe("checkValkey", () => {
   it("fails when PING fails", async () => {

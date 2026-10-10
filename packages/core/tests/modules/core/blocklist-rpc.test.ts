@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { AccessRepository } from "#lib/prisma/repositories/AccessRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { AccessRepository } from "@lumi/lib/prisma/repositories/access-repository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";

@@ -1,5 +1,5 @@
 import { UserError } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   ApplicationIntegrationType,
   InteractionContextType,
@@ -10,31 +10,31 @@ import {
   type Message,
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
-import { CommandContext } from "#lib/commands/context.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
 import {
   commandRegistry,
   asHandler,
   type CommandDef,
   type SubcommandHandler,
-} from "#lib/commands/command-def.js";
-import { PrefixArgs } from "#lib/commands/prefix-args.js";
-import { authorize } from "#lib/permissions/authorize.js";
+} from "@lumi/lib/commands/command-def.js";
+import { PrefixArgs } from "@lumi/lib/commands/prefix-args.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
 import {
   gateSourceFromChatInput,
   gateSourceFromMessage,
   type GateSource,
-} from "#lib/permissions/precondition-checks.js";
-import { memberRoleIds } from "#lib/permissions/subject.js";
-import { denyGated } from "#lib/commands/gates.js";
-import { instrumentedRun } from "#lib/telemetry/instrument.js";
+} from "@lumi/lib/permissions/precondition-checks.js";
+import { memberRoleIds } from "@lumi/lib/permissions/subject.js";
+import { denyGated } from "@lumi/lib/commands/gates.js";
+import { instrumentedRun } from "@lumi/lib/telemetry.js";
 import {
   handleDenied,
   resolveErrorCard,
   respond,
   respondMessage,
-} from "#lib/utilities/command-response.js";
-import { ephemeralCard, makeWarningCard } from "#lib/ui/cards.js";
-import { getDefaultPrefix } from "#lib/env.js";
+} from "@lumi/lib/utilities/command-response.js";
+import { ephemeralCard, makeWarningCard } from "@lumi/lib/ui/cards.js";
+import { getDefaultPrefix } from "@lumi/lib/env.js";
 
 function denyCommand(
   services: Container,

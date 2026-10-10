@@ -1,13 +1,13 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { container, type Container } from "#lib/services.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { container, type Container } from "@lumi/lib/services.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 import {
   ModuleName,
   PanelMessageDefault,
   PanelTitleDefault,
 } from "./constants.js";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
 import { handleTempVcCleanupFire } from "@lumi/application/services/tempvc/cleanup-handler.js";
 
 export const tempVcModule = defineModule({

@@ -1,6 +1,6 @@
-import { type Container } from "#lib/services.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
-import { queueSend } from "#lib/outbound/send-queue.js";
+import { type Container } from "@lumi/lib/services.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
+import { queueSend } from "@lumi/lib/outbound/send-queue.js";
 
 const Module = "logging";
 

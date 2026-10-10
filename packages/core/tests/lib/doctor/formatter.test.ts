@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { formatDoctorReport, doctorExitCode } from "#lib/doctor/formatter.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { formatDoctorReport, doctorExitCode } from "@lumi/lib/doctor/formatter.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 const results: DoctorCheckResult[] = [
   { name: "a", status: "ok", detail: "all good" },

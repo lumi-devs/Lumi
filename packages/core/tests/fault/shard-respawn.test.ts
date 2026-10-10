@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { registerRpcReadinessProbe } from "#lib/client/ReadinessProbes.js";
+import { registerRpcReadinessProbe } from "@lumi/lib/client/readiness-probes.js";
 import { runReadinessProbes } from "@lumi/observability";
 
 // The RPC HTTP server's own bind-retry/EADDRINUSE chaos test lives with the

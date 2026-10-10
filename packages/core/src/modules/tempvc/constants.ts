@@ -1,4 +1,4 @@
-import { defineCustomId } from "#lib/interactions/custom-id.js";
+import { defineCustomId } from "@lumi/lib/interactions/custom-id.js";
 
 export const TempvcCreateCooldownMs = 30_000;
 export const TempvcCleanupDelayMs = 8_000;
