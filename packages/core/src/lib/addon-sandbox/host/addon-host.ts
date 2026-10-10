@@ -1,6 +1,5 @@
-import { fileURLToPath } from "node:url";
-import { container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
+import { container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
 import { ComponentType, GuildMember, MessageFlags } from "discord.js";
 import type { MessageComponentInteraction, ModalSubmitInteraction, User } from "discord.js";
 import type {
@@ -18,17 +17,23 @@ import type {
   HostToChild,
 } from "@lumi/contracts";
 import { makeRpcFailure, RpcFailureCodes } from "@lumi/contracts/rpc";
-import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { ModuleRecord } from "@lumi/lib/module-system/module-store.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import { isMethodAllowed, parseCapabilities } from "./capabilities.js";
 import { callHostMethod, type HostCallScope } from "./host-methods.js";
-import { ensureAddonLumiLink, ensureSandboxRoot } from "./sandbox-root.js";
-
-const ChildEntry = fileURLToPath(new URL("../../runtime/addon-child.ts", import.meta.url));
+import { ensureAddonLumiLink } from "./sandbox-root.js";
+import { forEachLine } from "../isolate/ndjson.js";
+import {
+  buildIsolateBundle,
+  IsolateRunnerEntry,
+  nodeBin,
+  type IsolateBundle,
+} from "../isolate/isolate-build.js";
 
 const ReadyTimeoutMs = 15_000;
 const InvocationTimeoutMs = 30_000;
-const CrashLoopWindowMs = Ms.Minute;
+const CrashLoopWindowMs = Time.Minute;
+const KillGraceMs = 5_000;
 
 // Allowlist, not a denylist: a denylist silently leaks whatever secret is
 // added to .env next.
@@ -147,6 +152,7 @@ class AddonProcess {
   constructor(
     readonly record: ModuleRecord,
     private readonly onExit: (proc: AddonProcess, code: number | null) => void,
+    bundle: IsolateBundle,
   ) {
     this.capabilities = parseCapabilities(
       (record.manifest as { capabilities?: unknown } | undefined)?.capabilities,
@@ -163,18 +169,27 @@ class AddonProcess {
     void this.#ready.catch(() => undefined).finally(() => clearTimeout(readyTimer));
 
     this.#proc = Bun.spawn({
-      cmd: [process.execPath, ChildEntry],
+      cmd: [nodeBin(), "--no-node-snapshot", IsolateRunnerEntry, bundle.path],
       cwd: record.dir,
       env: childEnv(record),
-      stdin: "ignore",
+      stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
-      ipc: (message: ChildToHost) => void this.#onMessage(message),
       onExit: (_proc, exitCode) => this.#onExit(exitCode),
     });
 
-    void this.#pipe(this.#proc.stdout, "info");
+    void forEachLine(this.#proc.stdout, (line) => this.#onLine(line));
     void this.#pipe(this.#proc.stderr, "warn");
+  }
+
+  #onLine(line: string): void {
+    let message: ChildToHost;
+    try {
+      message = JSON.parse(line) as ChildToHost;
+    } catch {
+      return;
+    }
+    void this.#onMessage(message);
   }
 
   async #pipe(stream: ReadableStream<Uint8Array> | number | undefined, level: "info" | "warn") {
@@ -212,6 +227,9 @@ class AddonProcess {
         return;
       case "load-failed":
         this.#rejectReady(new Error(raw.error));
+        return;
+      case "log":
+        container.logger[raw.level](`[addon:${this.record.name}] ${raw.message}`);
         return;
       case "rpc-request":
         this.#send({ type: "rpc-response", response: await this.#dispatch(raw.request) });
@@ -277,7 +295,10 @@ class AddonProcess {
   #send(message: HostToChild): void {
     if (this.#proc.exitCode !== null) return;
     try {
-      this.#proc.send(message);
+      const stdin = this.#proc.stdin;
+      if (typeof stdin === "number" || !stdin) return;
+      void stdin.write(`${JSON.stringify(message)}\n`);
+      void stdin.flush();
     } catch {
       // Lost a race with process exit; #onExit rejects the pending call.
     }
@@ -291,6 +312,13 @@ class AddonProcess {
   kill(): void {
     this.#send({ type: "shutdown" });
     this.#proc.kill();
+    setTimeout(() => {
+      try {
+        if (this.#proc.exitCode === null) this.#proc.kill("SIGKILL");
+      } catch {
+        // Raced with process exit; #onExit already ran.
+      }
+    }, KillGraceMs).unref();
   }
 }
 
@@ -300,15 +328,13 @@ export class AddonHost {
 
   #processes = new Map<string, AddonProcess>();
   #lastCrash = new Map<string, number>();
-  #rootReady: Promise<void> | null = null;
 
   async start(record: ModuleRecord): Promise<AddonCommandDescriptor[]> {
-    this.#rootReady ??= ensureSandboxRoot();
-    await this.#rootReady;
     await ensureAddonLumiLink(record.dir);
 
     this.stop(record.name);
-    const proc = new AddonProcess(record, (p, code) => this.#onExit(p, code));
+    const bundle = await buildIsolateBundle(record.dir, record.name);
+    const proc = new AddonProcess(record, (p, code) => this.#onExit(p, code), bundle);
     this.#processes.set(record.name, proc);
     try {
       return await proc.ready();
@@ -470,7 +496,7 @@ export class AddonHost {
     this.#lastCrash.set(name, now);
 
     if (now - previous < CrashLoopWindowMs) {
-      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Ms.Second}s (exit ${code})`);
+      this.#markFailed(proc.record, `Crashed twice within ${CrashLoopWindowMs / Time.Second}s (exit ${code})`);
       container.logger.error(`[AddonHost] ${name} crash-looping; leaving it failed`);
       return;
     }

@@ -1,6 +1,10 @@
 // boundary, where no threaded services bag crosses today. They read the global
 // boot container directly until the IPC scope carries services explicitly.
-import { container } from "#lib/services.js";
+import { createHash, randomBytes } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { container } from "@lumi/lib/services.js";
+import { sleep } from "@sapphire/utilities";
 import { z } from "zod";
 import type {
   MessageComponentInteraction,
@@ -8,12 +12,12 @@ import type {
   RepliableInteraction,
 } from "discord.js";
 import type { AddonRpcRequest } from "@lumi/contracts";
-import type { CommandContext, CtxOptionSpec } from "#lib/commands/context.js";
+import type { CommandContext, CtxOptionSpec } from "@lumi/lib/commands/context.js";
 import { ChannelType, MessageFlags, PermissionsBitField } from "discord.js";
-import { ephemeralCard, type CardReply } from "#lib/ui/cards.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { scheduleTask } from "#lib/scheduler/schedule.js";
-import { AddonRelayTaskName } from "./relay-task.js";
+import { ephemeralCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
+import { scheduleTask } from "@lumi/lib/scheduler/schedule.js";
+import { AddonRelayTaskName } from "../isolate/relay-task.js";
 
 type MessagePayload = CardReply | { content?: string; components?: unknown[] };
 
@@ -346,7 +350,88 @@ const ParamSchemas: Record<string, z.ZodType> = {
     level: z.union([z.literal("info"), z.literal("warn"), z.literal("error")]),
     message: z.string(),
   }),
+
+  "util.randomHex": z.object({
+    bytes: z.number().int().min(1).max(1024),
+  }),
+
+  "util.sha256Hex": z.object({
+    text: z.string().max(1024 * 1024),
+  }),
+
+  "util.sleep": z.object({
+    ms: z.number().int().min(0).max(30_000),
+  }),
+
+  "net.fetch": z.object({
+    url: z.string().max(2048),
+    method: z.union([z.literal("GET"), z.literal("POST")]).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
+    body: z.string().max(1024 * 1024).optional(),
+    contentType: z.string().max(128).optional(),
+    timeoutMs: z.number().int().positive().max(30_000).optional(),
+    maxBytes: z.number().int().positive().max(5 * 1024 * 1024).optional(),
+  }),
 };
+
+const FetchTimeoutMs = 10_000;
+const FetchMaxBytes = 5 * 1024 * 1024;
+const FetchMaxRedirects = 3;
+
+export function ipBlocked(ip: string): boolean {
+  if (isIP(ip) === 4) {
+    const [a = -1, b = -1, c = -1] = ip.split(".").map(Number);
+    if (a === 0 || a === 10 || a === 127) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && (b === 0 || b === 2 || b === 168)) return true;
+    if (a === 198 && (b === 18 || b === 19 || b === 51)) return true;
+    if (a === 203 && b === 0 && c === 113) return true;
+    if (a >= 224) return true;
+    return false;
+  }
+  if (isIP(ip) === 6) {
+    const h = ip.toLowerCase();
+    if (h === "::" || h === "::1") return true;
+    if (h.includes(".")) return ipBlocked(h.slice(h.lastIndexOf(":") + 1));
+    const parts = h.split(":").filter((p) => p.length > 0);
+    const first = Number.parseInt(parts[0]!, 16);
+    const second = Number.parseInt(parts[1] ?? "0", 16);
+    if (first === 0x2002) return true;
+    if (first === 0x2001 && second === 0) return true;
+    if (first === 0x0064 && second === 0xff9b) return true;
+    if (first >= 0xfe80 && first <= 0xfebf) return true;
+    if ((first & 0xfe00) === 0xfc00) return true;
+    if ((first & 0xff00) === 0xff00) return true;
+    return false;
+  }
+  return true;
+}
+
+export async function assertPublicUrl(raw: string): Promise<URL> {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("Only http/https URLs are allowed");
+  if (url.username || url.password) throw new Error("URLs with credentials are not allowed");
+  if (isIP(url.hostname) !== 0) {
+    if (ipBlocked(url.hostname)) throw new Error("URL resolves to a disallowed address");
+    return url;
+  }
+  let addrs: { address: string }[];
+  try {
+    addrs = await lookup(url.hostname, { all: true });
+  } catch {
+    throw new Error("Could not resolve hostname");
+  }
+  if (addrs.length === 0 || addrs.some((a) => ipBlocked(a.address)))
+    throw new Error("URL resolves to a disallowed address");
+  return url;
+}
 
 const Methods = {
   async "ctx.option"(
@@ -953,6 +1038,78 @@ const Methods = {
 
   log({ level, message }: { level: "info" | "warn" | "error"; message: string }, scope: HostCallScope) {
     container.logger[level](`[addon:${scope.moduleName}] ${message}`);
+  },
+
+  "util.randomHex"({ bytes }: { bytes: number }) {
+    return randomBytes(bytes).toString("hex");
+  },
+
+  "util.sha256Hex"({ text }: { text: string }) {
+    return createHash("sha256").update(text, "utf8").digest("hex");
+  },
+
+  async "util.sleep"({ ms }: { ms: number }) {
+    await sleep(ms);
+  },
+
+  async "net.fetch"(
+    {
+      url,
+      method = "GET",
+      headers = {},
+      body,
+      contentType,
+      timeoutMs = FetchTimeoutMs,
+      maxBytes = FetchMaxBytes,
+    }: {
+      url: string;
+      method?: "GET" | "POST";
+      headers?: Record<string, string>;
+      body?: string;
+      contentType?: string;
+      timeoutMs?: number;
+      maxBytes?: number;
+    },
+  ) {
+    let current = await assertPublicUrl(url);
+    let res: Response | undefined;
+    for (let i = 0; i <= FetchMaxRedirects; i++) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), Math.min(timeoutMs, 30_000));
+      try {
+        res = await fetch(current.toString(), {
+          method,
+          headers: { ...(contentType ? { "content-type": contentType } : {}), ...headers },
+          body: method === "POST" ? body : undefined,
+          redirect: "manual",
+          signal: ctrl.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      const location = res.headers.get("location");
+      if (res.status < 300 || res.status >= 400 || !location) break;
+      if (i === FetchMaxRedirects) throw new Error("Too many redirects");
+      current = await assertPublicUrl(new URL(location, current).toString());
+    }
+    if (!res) throw new Error("Fetch failed");
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > maxBytes) throw new Error(`Response exceeds ${maxBytes} bytes`);
+    const type = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+    const textual =
+      type.startsWith("text/") ||
+      type === "application/json" ||
+      type === "application/javascript" ||
+      type.endsWith("/json") ||
+      type.endsWith("+json") ||
+      type.endsWith("/xml") ||
+      type.endsWith("+xml");
+    return {
+      status: res.status,
+      contentType: type,
+      encoding: textual ? "text" : "base64",
+      body: textual ? buf.toString("utf8") : buf.toString("base64"),
+    };
   },
 } satisfies Record<string, (params: never, scope: HostCallScope) => unknown>;
 

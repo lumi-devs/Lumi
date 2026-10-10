@@ -1,9 +1,9 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   defineModule,
   type ModuleObject,
-} from "#lib/module-system/Module.js";
-import type { ModuleMeta } from "#lib/module-system/meta.js";
+} from "@lumi/lib/module-system/module.js";
+import type { ModuleMeta } from "@lumi/lib/module-system/meta.js";
 import { scanKeysSafe } from "@lumi/infrastructure/database";
 
 // Swept host-side rather than asked of the addon, so it works while the addon

@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import type {
   AddonInvocation,
   AddonReady,
@@ -9,11 +8,9 @@ import type {
   HostToChild,
 } from "@lumi/contracts";
 import { RpcFailureCodes } from "@lumi/contracts/rpc";
-import { childEnv } from "./AddonHost.js";
-
-export const AddonChildEntry = fileURLToPath(
-  new URL("../../runtime/addon-child.ts", import.meta.url),
-);
+import { childEnv } from "../host/addon-host.js";
+import { buildIsolateBundle, IsolateRunnerEntry, nodeBin } from "./isolate-build.js";
+import { forEachLine } from "./ndjson.js";
 
 export interface FakeAddonHostOptions {
   name: string;
@@ -28,8 +25,8 @@ export interface FakeAddonHostOptions {
 }
 
 /**
- * Drives a real addon child process (`packages/core/src/runtime/addon-child.ts`)
- * over its IPC protocol with a fake host that answers `rpc-request`s instead of
+ * Drives a real addon isolate over NDJSON stdio
+ * over NDJSON stdio with a fake host that answers `rpc-request`s instead of
  * touching Discord/Postgres/Valkey - the harness `child.test.ts` and `lumi addon
  * test` both drive, so the protocol only has one implementation.
  */
@@ -37,48 +34,64 @@ export class FakeAddonHost {
   readonly messages: ChildToHost[] = [];
   readonly rpcRequests: AddonRpcRequest[] = [];
 
-  #child: ChildProcess;
+  #child!: ChildProcess;
   #ready = Promise.withResolvers<AddonReady>();
   #pending = new Map<string, PromiseWithResolvers<void>>();
   #exited = false;
 
-  constructor(options: FakeAddonHostOptions) {
-    this.#child = spawn(process.execPath, [AddonChildEntry], {
+  private constructor() {}
+
+  static async create(options: FakeAddonHostOptions): Promise<FakeAddonHost> {
+    const host = new FakeAddonHost();
+    const bundle = await buildIsolateBundle(options.dir, options.name);
+    host.#child = spawn(nodeBin(), ["--no-node-snapshot", IsolateRunnerEntry, bundle.path], {
       ...(existsSync(options.dir) && { cwd: options.dir }),
       env: childEnv({ name: options.name, dir: options.dir }),
-      stdio: ["ignore", "pipe", "pipe", "ipc"],
+      stdio: ["pipe", "pipe", "inherit"],
     });
 
-    this.#child.on("message", (message: ChildToHost) => {
-      this.messages.push(message);
-      switch (message.type) {
-        case "ready":
-          this.#ready.resolve(message);
-          return;
-        case "load-failed":
-          this.#ready.reject(new Error(message.error));
-          return;
-        case "rpc-request":
-          this.rpcRequests.push(message.request);
-          this.#answer(message.request, options.onRpcRequest);
-          return;
-        case "invocation-done": {
-          const pending = this.#pending.get(message.invocationId);
-          if (!pending) return;
-          this.#pending.delete(message.invocationId);
-          if (message.error) pending.reject(new Error(message.error));
-          else pending.resolve();
-        }
+    void forEachLine(host.#child.stdout, (line) => host.#onLine(line, options.onRpcRequest));
+
+    host.#child.on("exit", (code) => {
+      host.#exited = true;
+      const err = new Error(`Addon isolate exited (${code ?? "null"})`);
+      host.#ready.reject(err);
+      for (const pending of host.#pending.values()) pending.reject(err);
+      host.#pending.clear();
+    });
+    return host;
+  }
+
+  #onLine(line: string, onRpcRequest?: (request: AddonRpcRequest) => unknown): void {
+    let message: ChildToHost;
+    try {
+      message = JSON.parse(line) as ChildToHost;
+    } catch {
+      return;
+    }
+    this.messages.push(message);
+    switch (message.type) {
+      case "ready":
+        this.#ready.resolve(message);
+        return;
+      case "load-failed":
+        this.#ready.reject(new Error(message.error));
+        return;
+      case "rpc-request":
+        this.rpcRequests.push(message.request);
+        this.#answer(message.request, onRpcRequest);
+        return;
+      case "invocation-done": {
+        const pending = this.#pending.get(message.invocationId);
+        if (!pending) return;
+        this.#pending.delete(message.invocationId);
+        if (message.error) pending.reject(new Error(message.error));
+        else pending.resolve();
+        return;
       }
-    });
-
-    this.#child.on("exit", (code) => {
-      this.#exited = true;
-      const err = new Error(`Addon child exited (${code ?? "null"})`);
-      this.#ready.reject(err);
-      for (const pending of this.#pending.values()) pending.reject(err);
-      this.#pending.clear();
-    });
+      case "log":
+        return;
+    }
   }
 
   #answer(request: AddonRpcRequest, onRpcRequest?: (request: AddonRpcRequest) => unknown): void {
@@ -124,6 +137,6 @@ export class FakeAddonHost {
   }
 
   #send(message: HostToChild): void {
-    if (!this.#exited) this.#child.send(message);
+    if (!this.#exited) this.#child.stdin!.write(`${JSON.stringify(message)}\n`);
   }
 }

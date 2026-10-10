@@ -6,7 +6,7 @@ import {
   type AddonRpcMethod,
 } from "@lumi/contracts";
 
-type Requirement = AddonDiscordCapability | "kv" | "valkey" | "scheduling" | null;
+type Requirement = AddonDiscordCapability | "kv" | "valkey" | "scheduling" | "network" | null;
 
 const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "ctx.option": null,
@@ -60,6 +60,10 @@ const MethodCapability: Record<AddonRpcMethod, Requirement> = {
   "discord.channels.fetch": null,
   "discord.attachments.rehost": "sendMessage",
   "modules.enabled": null,
+  "util.randomHex": null,
+  "util.sha256Hex": null,
+  "util.sleep": null,
+  "net.fetch": "network",
 };
 
 export function parseCapabilities(raw: unknown): AddonCapabilities {
@@ -73,6 +77,7 @@ export function parseCapabilities(raw: unknown): AddonCapabilities {
     scheduling: block.scheduling === true,
     kv: block.kv !== false,
     valkey: block.valkey === true,
+    network: block.network === true,
   };
 }
 
@@ -95,5 +100,6 @@ export function isMethodAllowed(
   if (required === "kv") return granted.kv === true;
   if (required === "valkey") return granted.valkey === true;
   if (required === "scheduling") return granted.scheduling === true;
+  if (required === "network") return granted.network === true;
   return granted.discord?.includes(required) === true;
 }

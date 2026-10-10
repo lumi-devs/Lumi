@@ -10,7 +10,7 @@ import {
   type VoiceState,
 } from "discord.js";
 import type { AddonEventName } from "@lumi/contracts";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 
 function rolesOf(member: GuildMember | null): string[] {
   if (!member) return [];

@@ -1,4 +1,4 @@
-import type { CardReply } from "#lib/ui/cards.js";
+import type { CardReply } from "@lumi/lib/ui/cards.js";
 import { call } from "./rpc.js";
 
 export type MessagePayload = CardReply | { content?: string; components?: unknown[] };

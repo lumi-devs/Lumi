@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import * as clusterSafe from "@lumi/infrastructure/database";
 import { createProxyModule } from "./proxy-module.js";
 import { DefaultAddonCapabilities } from "@lumi/contracts";
-import { childEnv, ownPrefixes } from "./AddonHost.js";
-import { callHostMethod } from "./host-methods.js";
+import { childEnv, ownPrefixes } from "../host/addon-host.js";
+import { callHostMethod } from "../host/host-methods.js";
 import {
   isMethodAllowed,
   parseCapabilities,
   unknownDiscordCapabilities,
-} from "./capabilities.js";
+} from "../host/capabilities.js";
 
 const record = { name: "some-addon", dir: "/tmp/some-addon" };
 

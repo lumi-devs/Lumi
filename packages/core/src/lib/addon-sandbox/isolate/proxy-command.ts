@@ -1,12 +1,12 @@
 import type { AddonCommandDescriptor } from "@lumi/contracts";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import {
   commandRegistry,
   registerCommandDef,
   type CommandBuilder,
   type CommandDef,
-} from "#lib/commands/command-def.js";
-import type { AddonHost } from "./AddonHost.js";
+} from "@lumi/lib/commands/command-def.js";
+import type { AddonHost } from "../host/addon-host.js";
 
 const proxyNames = new Map<string, string[]>();
 

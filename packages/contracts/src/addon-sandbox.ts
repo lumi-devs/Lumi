@@ -25,6 +25,7 @@ export interface AddonCapabilities {
   scheduling?: boolean;
   kv?: boolean;
   valkey?: boolean;
+  network?: boolean;
 }
 
 export const DefaultAddonCapabilities: AddonCapabilities = {
@@ -84,7 +85,11 @@ export type AddonRpcMethod =
   | "discord.channels.fetch"
   | "discord.attachments.rehost"
   | "modules.enabled"
-  | "log";
+  | "log"
+  | "util.randomHex"
+  | "util.sha256Hex"
+  | "util.sleep"
+  | "net.fetch";
 
 export type AddonRpcRequest<T = unknown> = RpcRequest<T> & {
   action: AddonRpcMethod;
@@ -255,8 +260,11 @@ export type HostToChild =
   | { type: "rpc-response"; response: AddonRpcResponse }
   | { type: "shutdown" };
 
+export type RpcLogLevel = "debug" | "info" | "warn" | "error";
+
 export type ChildToHost =
   | AddonReady
   | { type: "rpc-request"; request: AddonRpcRequest }
   | { type: "invocation-done"; invocationId: string; error?: string }
-  | { type: "load-failed"; error: string };
+  | { type: "load-failed"; error: string }
+  | { type: "log"; level: RpcLogLevel; message: string };

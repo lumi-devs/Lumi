@@ -9,16 +9,12 @@
     ".": "./index.ts",
     "./env": "./src/lib/env.ts",
     "./doctor": "./src/lib/doctor/index.ts",
-    "./addon-test-harness": "./src/lib/addon-sandbox/test-harness.ts",
+    "./addon-test-harness": "./src/lib/addon-sandbox/isolate/test-harness.ts",
     "./manifest": "./src/lib/module-system/manifest.ts",
     "./validate-addon": "./scripts/validate-addon.ts",
     "./generate-manifests": "./scripts/generate-manifests.ts",
     "./command-def": "./src/lib/commands/command-def.ts",
     "./command-dispatch": "./src/lib/commands/command-dispatch.ts"
-  },
-  "imports": {
-    "#lib/*.js": "./src/lib/*.ts",
-    "#modules/*.js": "./src/modules/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests/fixtures/addons/tsconfig.json",
@@ -36,12 +32,17 @@
     "@opentelemetry/api": "^1.9.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
+    "@sapphire/async-queue": "^1.5.5",
+    "@sapphire/duration": "^1.2.0",
+    "@sapphire/snowflake": "^3.5.5",
+    "@sapphire/utilities": "^3.18.2",
     "bullmq": "^5.58.7",
     "cluster-key-slot": "^1.1.2",
     "discord-api-types": "^0.38.55",
     "discord.js": "^14.27.0",
     "i18next": "^26.4.2",
     "iovalkey": "^0.4.0",
+    "isolated-vm": "^7.0.1",
     "pg": "^8.23.0",
     "semver": "^7.8.5",
     "zod": "^4"

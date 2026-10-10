@@ -12,8 +12,8 @@ export const help = `Usage: lumi addon <create|validate|test|dev> [args...]
                                            \`bun run addon:create\`).
   lumi addon validate <addon-dir|repo>    Validate addon structure (same as
                                            \`bun run validate\`).
-  lumi addon test <dir> [options]         Boot the addon in the real sandbox
-                                           child process and report what it
+  lumi addon test <dir> [options]         Boot the addon in the real V8
+                                           isolate sandbox and report what it
                                            loaded.
   lumi addon dev <dir> [options]          Re-run \`addon test\` on every change
                                            under <dir> (smoke loop, not hot
@@ -27,9 +27,9 @@ subcommand-specific options.
 
 const testHelp = `Usage: lumi addon test <dir> [options]
 
-Boots the addon at <dir> in the real sandbox child process
-(packages/core/src/runtime/addon-child.ts) with a fake host that answers
-every RPC call with a no-op success, then reports what the addon loaded:
+Boots the addon at <dir> in the real V8 isolate sandbox
+(packages/core/src/runtime/addon-isolate-runner.ts) with a fake host that
+answers every RPC call with a no-op success, then reports what the addon loaded:
 whether it came up at all, its commands, interaction-handler prefixes, and
 scheduled-task names. This is a smoke harness, not a test framework - it
 proves the addon boots and its pieces register, not that its logic is
@@ -124,10 +124,11 @@ async function runAddonTest(argv: string[]): Promise<number> {
 
   const absDir = path.resolve(dir);
   const name = path.basename(absDir);
-  const host = new FakeAddonHost({ name, dir: absDir });
 
   try {
-    const ready = await withTimeout(
+    const host = await FakeAddonHost.create({ name, dir: absDir });
+    try {
+      const ready = await withTimeout(
       host.ready(),
       timeoutMs,
       `Addon "${name}" did not report ready within ${timeoutMs}ms`,
@@ -173,11 +174,12 @@ async function runAddonTest(argv: string[]): Promise<number> {
     }
 
     return 0;
+    } finally {
+      host.stop();
+    }
   } catch (err: unknown) {
     console.error(err instanceof Error ? err.message : String(err));
     return 1;
-  } finally {
-    host.stop();
   }
 }
 

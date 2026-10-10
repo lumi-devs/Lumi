@@ -1,6 +1,6 @@
 FROM docker.io/oven/bun:1-alpine AS base
 WORKDIR /app
-RUN apk upgrade --no-cache && apk add --no-cache dumb-init git
+RUN apk upgrade --no-cache && apk add --no-cache dumb-init git nodejs
 
 FROM base AS deps
 COPY package.json bun.lock ./
@@ -15,7 +15,14 @@ COPY apps/api/package.json apps/api/package.json
 COPY apps/scheduler/package.json apps/scheduler/package.json
 COPY apps/cli/package.json apps/cli/package.json
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install --frozen-lockfile --ignore-scripts && \
+    apk add --no-cache --virtual .native-build python3 make g++ npm ada-dev brotli-dev c-ares-dev icu-dev libuv-dev nghttp2-dev openssl-dev simdjson-dev simdutf-dev sqlite-dev zlib-dev zstd-dev && \
+    export IVM="$(dirname "$(node -e "console.log(require.resolve('isolated-vm/package.json', { paths: ['/app/packages/core'] }))")")" && \
+    (cd "$IVM" && npx -y node-gyp@11 rebuild --release -j max) && \
+    mv "$IVM/build/Release/isolated_vm.node" /tmp/isolated_vm.node && \
+    rm -rf "$IVM/build" /root/.cache/node-gyp /root/.npm && \
+    mkdir -p "$IVM/build/Release" && mv /tmp/isolated_vm.node "$IVM/build/Release/isolated_vm.node" && \
+    apk del .native-build
 
 FROM deps AS source
 COPY --chown=bun:bun tsconfig.base.json tsconfig.json prisma.config.ts ./

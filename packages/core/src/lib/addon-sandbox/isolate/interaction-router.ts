@@ -1,9 +1,9 @@
 import type { Interaction } from "discord.js";
-import type { AddonHost } from "./AddonHost.js";
+import type { AddonHost } from "../host/addon-host.js";
 import {
   addInteractionDef,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
+} from "@lumi/lib/interactions/interaction-def.js";
 
 export function registerAddonInteractionRouting(host: AddonHost): void {
   addInteractionDef(
