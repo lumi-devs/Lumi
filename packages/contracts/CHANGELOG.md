@@ -1,5 +1,21 @@
 # @lumi/contracts
 
+## 0.9.0
+
+### Minor Changes
+
+- [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d) - Expand addon sandbox contracts: add manageStickers and fetchMessage capabilities, sticker RPCs, clientStats RPC, repliedToId on invocations, and isOwner flag on SerialisedMember.
+
+- [#186](https://github.com/lumi-devs/Lumi/pull/186) [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a) Thanks [@rebizzz](https://github.com/rebizzz)! - Run every addon in a V8 isolate inside a Node sidecar instead of a Bun child process. The isolate has no filesystem, network, subprocess, or process access at all - addon code reaches the host only through the capability-gated RPC bridge, with per-isolate memory limits and CPU timeouts. New mediated RPC methods: `util.randomHex`/`util.sha256Hex`/`util.sleep` (always allowed, pure compute) and SSRF-guarded `net.fetch` (new `network` manifest capability, exposed as `lumi/net`). The addon SDK transport is now injected (`setRpcTransport`) so one RPC module serves both runtimes, card-color and error helpers moved to dependency-free homes (`#lib/discord/constants`, `#lib/branding/colors`, `@lumi/shared`), and `Bun.spawn` mocks in resolver tests are scoped per-test so later suites can spawn real processes. The dashboard RPC client now retries server-directed retryable failures (honoring `retryAfterMs`) and caps response bodies. Docker images install Node.js and compile the isolated-vm binding in the deps stage.
+
+### Patch Changes
+
+- [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d) - Ship addon `configFields` over the sandbox `ready` handshake and merge them into the host module record, so addons render the same config UI as built-in modules in the Discord hub panel and dashboard. Previously the host only ever saw the manifest's (usually empty) `configFields` while the real schema lived in the child process.
+
+- [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d) - Addon modal file uploads end to end: `modal()` builds label-wrapped file-upload components, the host serialises uploads onto the invocation, and `discord.attachments.rehost` (Discord CDN URLs only, 8MB cap, gated under `sendMessage`) re-hosts them. `discord.channels.send` accepts `replyTo` for native message references without pinging. The host acknowledges modal submits before invoking the addon so slow handlers no longer blow the 3s window.
+
+- [#186](https://github.com/lumi-devs/Lumi/pull/186) [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a) Thanks [@rebizzz](https://github.com/rebizzz)! - Continue the caller's W3C trace in RPC dispatch with per-action spans, and harden the RPC client: retry any retryable coded failure (honoring retryAfterMs) and reject over-cap response bodies without buffering them.
+
 ## 0.8.0
 
 ### Minor Changes

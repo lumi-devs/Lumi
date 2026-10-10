@@ -1,5 +1,13 @@
 # @lumi/scheduler
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [[`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`8c5a209`](https://github.com/lumi-devs/Lumi/commit/8c5a209ca043ae6762d09561a199555c236ced0d), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`9c0b1a1`](https://github.com/lumi-devs/Lumi/commit/9c0b1a1a5d5188164993f450c05dae91ce5eeca4), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a), [`879ddaf`](https://github.com/lumi-devs/Lumi/commit/879ddaf93c2a63e641e6ac3896560bd4e59dcb5a)]:
+  - @lumi/core@1.1.0
+  - @lumi/observability@0.9.0
+
 ## 0.6.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@lumi/shared",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "AGPL-3.0-only",
   "description": "Shared primitives for all Lumi packages (time constants, text/json helpers). Private — never published.",
   "private": true,
