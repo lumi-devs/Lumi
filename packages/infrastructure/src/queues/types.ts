@@ -20,15 +20,6 @@ export type JobStatus =
   | "prioritized"
   | "paused";
 
-export interface QueueStats {
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-  paused: number;
-}
-
 export interface FailedJobInfo {
   jobId: string;
   name: string;

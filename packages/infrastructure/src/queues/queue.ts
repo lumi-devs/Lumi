@@ -1,5 +1,5 @@
 import { Queue, type QueueOptions } from "bullmq";
-import type { IJobQueue, JobStatus, QueueConnectionOptions, QueueJobOptions, QueueLogger } from "./types.js";
+import type { IJobQueue, JobStatus, QueueConnectionOptions, QueueJobOptions } from "./types.js";
 
 export class JobQueue<T = unknown> implements IJobQueue<T> {
   readonly #queue: Queue;
@@ -9,7 +9,6 @@ export class JobQueue<T = unknown> implements IJobQueue<T> {
     options: {
       connection?: QueueConnectionOptions;
       defaultJobOptions?: QueueJobOptions;
-      logger?: QueueLogger;
     } = {},
   ) {
     const queueOpts: QueueOptions = {

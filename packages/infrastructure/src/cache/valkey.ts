@@ -122,6 +122,7 @@ export const ValkeyTTL = {
   ignoreCache: 300,
   botStats: 15,
   voiceMute: 300,
+  panicState: 60,
   quarantine: 30 * 24 * 60 * 60,
   quarantineNegative: 60,
   warnThresholds: 300,
@@ -338,10 +339,6 @@ export class InvalidationBus {
     this.#logger = logger;
   }
 
-  public setPublisher(publisher: ValkeyClient): void {
-    this.#publisher = publisher;
-  }
-
   public onInvalidate(fn: (keys: string[]) => void): () => void {
     this.#listeners.add(fn);
     return () => this.#listeners.delete(fn);
@@ -469,10 +466,6 @@ export class SignalBus {
     this.#subscriber = subscriber;
     this.#publisher = publisher ?? null;
     this.#logger = logger;
-  }
-
-  public setPublisher(publisher: ValkeyClient): void {
-    this.#publisher = publisher;
   }
 
   public onSignal(

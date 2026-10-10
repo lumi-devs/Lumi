@@ -8,7 +8,6 @@ import { registry } from "./metrics.js";
 /** Sampling resolution; also the floor on what the histogram can report. */
 const ResolutionMs = 20;
 
-/** How often the histogram is drained into the gauges. */
 const ReportIntervalMs = 10_000;
 
 /**

@@ -1,5 +1,5 @@
 import { JobQueue } from "./queue.js";
-import type { QueueConnectionOptions, QueueJobOptions, QueueLogger } from "./types.js";
+import type { QueueConnectionOptions, QueueJobOptions } from "./types.js";
 
 export const DEFAULT_QUEUE_NAME = "scheduled-tasks";
 
@@ -32,13 +32,11 @@ export class TaskQueueProducer {
     options: {
       connection?: QueueConnectionOptions;
       defaultJobOptions?: QueueJobOptions;
-      logger?: QueueLogger;
     } = {},
   ) {
     this.#queue = new JobQueue(queueName, {
       connection: options.connection,
       defaultJobOptions: options.defaultJobOptions ?? DEFAULT_QUEUE_JOB_OPTIONS,
-      logger: options.logger,
     });
   }
 

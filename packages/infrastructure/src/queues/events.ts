@@ -68,15 +68,6 @@ export class QueueEventsWatcher {
     };
   }
 
-  public onCompleted(
-    handler: (args: { jobId: string; returnvalue: string }) => void,
-  ): () => void {
-    this.#events.on("completed", handler);
-    return () => {
-      this.#events.removeListener("completed", handler);
-    };
-  }
-
   public async close(): Promise<void> {
     await this.#events.close();
   }
