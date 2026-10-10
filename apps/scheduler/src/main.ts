@@ -4,7 +4,7 @@ import {
   registerInfrastructureReadinessProbes,
   registerSchedulerReadinessProbe,
 } from "@lumi/core";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 
 await bootstrapSchedulerApp();
 

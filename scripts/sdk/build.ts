@@ -43,8 +43,8 @@ const IMPORTED_LIBRARIES = [
 
 // Anything matching these in an emitted .d.ts means a type the SDK exposes
 // wasn't inlined and leaked an unresolvable internal specifier instead -
-// a third-party addon repo has no way to resolve "#lib/*" or "@lumi/core".
-const FORBIDDEN_SPECIFIERS = [/#lib\//, /#modules\//, /@lumi\/core\b/, /@lumi\/observability\b/];
+// a third-party addon repo has no way to resolve "@lumi/lib/*" or "@lumi/core".
+const FORBIDDEN_SPECIFIERS = [/(@lumi\/lib\/|@lumi\/modules\/)/, /@lumi\/core\b/, /@lumi\/observability\b/];
 
 async function main(): Promise<void> {
   const startTime = Date.now();
@@ -74,12 +74,12 @@ async function main(): Promise<void> {
 
     // @lumi/contracts is resolved through the workspace while building; the
     // published SDK depends on its published counterpart instead.
-    // Also strip any remaining #lib/ or #modules/ JSDoc references that
-    // dts-bundle-generator didn't inline (e.g. {@link "#lib/..."}).
+    // Also strip any remaining @lumi/lib/ or @lumi/modules/ JSDoc references that
+    // dts-bundle-generator didn't inline (e.g. {@link "@lumi/lib/..."}).
     const rewritten = generated
       .replaceAll("@lumi/contracts", "@lumi-devs/contracts")
-      .replace(/(\{@link\s+["'])#lib\//g, "$1")
-      .replace(/(\{@link\s+["'])#modules\//g, "$1");
+      .replace(/(\{@link\s+["'])@lumi\/lib\//g, "$1")
+      .replace(/(\{@link\s+["'])@lumi\/modules\//g, "$1");
     await writeFile(path.join(OUT_DIR, `${name}.d.ts`), rewritten);
 
     for (const pattern of FORBIDDEN_SPECIFIERS) {
