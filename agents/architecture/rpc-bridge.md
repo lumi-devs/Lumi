@@ -67,7 +67,7 @@ and merged into `rpcRouter` in `packages/contracts/src/rpc/router.ts`.
 Each route specifies:
 - `auth`: `"guildManager"` | `"botOwner"` | `"session"` | `"public"`
 - `permission?`: fine-grained permit string required
-- `input?`: Shapeshift validator for runtime payload validation
+- `input?`: Zod schema for runtime payload validation
 - `timeoutMs`: action deadline
 - `readOnly?`: whether the call is safe to retry on transport errors
 - `idempotent?`: whether the mutation accepts idempotency deduplication
@@ -115,6 +115,15 @@ request does not fail the entire batch.
 
 Mutations can pass `idempotencyKey` in `RpcRequest`. `withIdempotency()` acquires a distributed Valkey lock,
 returning cached results on replay or rejecting concurrent duplicates with `CONFLICT`.
+
+## Dashboard client behavior (`packages/contracts/src/rpc/client.ts`)
+
+Reads (router `readOnly` actions) retry on transport failures *and* on
+server-directed retryable envelopes, honoring `retryAfterMs` as the backoff
+floor — mutations never retry. A circuit breaker fails fast against a dead
+`apps/api` (5 consecutive transport failures, 10s cooldown). Response bodies
+are capped at 10MB (content-length fast path + bounded reader), oversized
+bodies surface as `MALFORMED`.
 
 ## Contract Versioning & Compatibility Handshake
 

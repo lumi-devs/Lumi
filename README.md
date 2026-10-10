@@ -22,7 +22,7 @@
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Sapphire Framework, Prisma, and Valkey. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
+Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
 
 Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
@@ -47,7 +47,7 @@ Lumi is organized as a Bun workspace monorepo:
 ## Features
 
 - **Decoupled Topology**: Discord gateway (`worker`), background queues (`scheduler`), and RPC endpoints (`api`) run in isolated processes.
-- **Sandboxed Addon SDK**: Extend bot capabilities through sandboxed addons (`lumi` SDK) with permission checks and signature validation.
+- **Sandboxed Addon SDK**: Extend bot capabilities through addons (`lumi` SDK) executed in V8 isolates with capability-gated host access and signature validation.
 - **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution.
 - **Observability Built-in**: Unified OpenTelemetry distributed tracing and Prometheus metrics endpoints on every service.
 - **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Valkey for distributed caching, lock leases, and streams.
@@ -59,6 +59,7 @@ Lumi is organized as a Bun workspace monorepo:
 ### Prerequisites
 
 - [Bun](https://bun.sh) (v1.4+) or [Nix](https://nixos.org) with flakes enabled
+- [Node.js](https://nodejs.org) (22+; runs the addon isolate sidecar)
 - [PostgreSQL](https://www.postgresql.org) 16+
 - [Valkey](https://valkey.io) 7+
 - Discord Bot Application & Bot Token

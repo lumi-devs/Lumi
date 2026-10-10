@@ -40,7 +40,7 @@ system topology — treat it as source of truth for anything below.
   `@lumi-devs/observability` from npm rather than importing this repo's source — see
   "Releasing contracts" below for how a contracts change reaches it.
 - `packages/core` — the bot framework and runtime: module loader, command/permit
-  system, addon sandbox/SDK, event bus (`#lib/event-bus/`), and shard telemetry (`#lib/sharding/`).
+  system, addon sandbox/SDK, event bus (`@lumi/lib/event-bus/`), and shard telemetry (`@lumi/lib/sharding/`).
 - `packages/application` — business logic layer: extracted module services and application interfaces.
 - `packages/infrastructure` — data & infrastructure abstractions: database repositories, Valkey cache/mutexes,
   and BullMQ job queue abstractions.
@@ -51,26 +51,26 @@ system topology — treat it as source of truth for anything below.
 
 ## Import path aliases
 
-Defined in `packages/core/package.json`'s own `"imports"` map (subpath imports, resolved via
-Bun/Node) — the root `package.json` has no `"imports"` field at all; the alias vocabulary was
+Mapped in `tsconfig.base.json` `paths` (typecheck) and honored by Bun at runtime —
+the root `package.json` has no `"imports"` field at all; the alias vocabulary was
 consolidated to two entries, both owned by `packages/core`. Always append `.js` to the
 specifier even though the source is `.ts`:
 
 | Alias | Resolves to |
 | :--- | :--- |
-| `#lib/*.js` | `packages/core/src/lib/*.ts` |
-| `#modules/*.js` | `packages/core/src/modules/*.ts` |
+| `@lumi/lib/*.js` | `packages/core/src/lib/*.ts` |
+| `@lumi/modules/*.js` | `packages/core/src/modules/*.ts` |
 
 Everything that used to have its own prefix (`#database/*`, `#utilities/*`, `#core/*`,
-`#root/*`) now imports through `#lib/*.js` at its real path instead — e.g. Valkey primitives
-are `#lib/database/*.js`, card/panel builders are `#lib/ui/*.js`, generic helpers are
-`#lib/utilities/*.js`. Cross-*package* imports (e.g. `packages/core` → `packages/contracts`)
+`#root/*`) now imports through `@lumi/lib/*.js` at its real path instead — e.g. Valkey primitives
+are `@lumi/lib/database/*.js`, card/panel builders are `@lumi/lib/ui/*.js`, generic helpers are
+`@lumi/lib/utilities/*.js`. Cross-*package* imports (e.g. `packages/core` → `packages/contracts`)
 must use the `@lumi/*` specifier, never a relative path across a package boundary.
 
 ## Module system & addon SDK
 
-Feature modules live under `packages/core/src/modules/<name>/`, each exporting a class
-decorated with `@DefineModule` (`packages/core/src/lib/module-system/Module.ts`), with a
+Feature modules live under `packages/core/src/modules/<name>/`, each exporting a
+`defineModule({...})` object (`packages/core/src/lib/module-system/module.ts`), with a
 per-guild config schema (`packages/core/src/lib/module-system/config-schema.ts`) and
 sub-store directories (`commands/`, `listeners/`, `services/`, `interactions/`,
 `scheduled-tasks/`). For the agent-facing deep dive (lifecycle hooks, config schema builders,
@@ -83,14 +83,18 @@ site's addon-facing surface is the generated
 sandbox's execution model.
 
 **Zero cross-module import law**: a module must never import directly from a sibling
-module. Shared code belongs under `#lib/*`.
+module. Shared code belongs under `@lumi/lib/*`.
 
-Third-party addon code (downloaded modules, symlinked into `packages/core/src/modules/`
-from `data/3rd-party-modules/`) should not reach into `#lib`/`#modules` at all — the one
+Third-party addon code (downloaded modules living under `data/`, registered as a
+second `ModuleStore` root via symlinks — never inside `packages/core/src/modules/`)
+should not reach into `@lumi/lib`/`@lumi/modules` at all — the one
 stable, supported import surface is the `lumi` package itself
 (`packages/core/src/lib/addon-sandbox/sdk/`, exported via the root `package.json` `"exports"`
 map: `lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/interactions`, `lumi/kv`,
-`lumi/permissions`, `lumi/valkey`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
+`lumi/net`, `lumi/permissions`, `lumi/valkey`, `lumi/scheduling`, `lumi/ui`, `lumi/utils`).
+Every addon executes in a V8 isolate with no fs/network/process access — host
+contact happens only through capability-gated RPC (`network` capability for
+`lumi/net`).
 Full surface: [`agents/architecture/addon-sdk.md`](agents/architecture/addon-sdk.md).
 
 ## RPC bridge (dashboard ↔ api)
@@ -107,8 +111,8 @@ and assembled by `packages/contracts/src/rpc/router.ts` into `rpcRouter`/`RpcAct
 there is no hand-written `RpcActions`/`RpcRequestPayloads` map to keep in sync by hand.
 Adding a dashboard capability means adding an entry to the owning module's contract slice,
 implementing it with `implementRpc()` (`packages/core/src/lib/rpc/implement.ts`) in that
-module's own `#modules/<name>/rpc.ts` (bot-owner/system-level actions instead live in
-`#lib/rpc/account-rpc.ts` / `#lib/rpc/system-rpc.ts`), and adding it to the static list in
+module's own `@lumi/modules/<name>/rpc.ts` (bot-owner/system-level actions instead live in
+`@lumi/lib/rpc/account-rpc.ts` / `@lumi/lib/rpc/system-rpc.ts`), and adding it to the static list in
 `packages/core/src/lib/rpc/registry.ts` so it's registered even while the module is disabled.
 The caller side, in the dashboard repo, is `src/lib/guild-reads.ts` (reads, cached with React's
 `cache()`) or `src/actions/*` (mutations, Server Actions) — never a direct database call from
@@ -159,17 +163,17 @@ Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/d
 
 - **Database access**: modules go through `container.db` (`DatabaseService`), never
   `container.prisma` directly. (The only legitimate direct `container.prisma` uses are
-  client bootstrap in `packages/core/src/lib/client/LumiClient.ts`; addon code touching it
+  client bootstrap in `packages/core/src/lib/client/lumi-client.ts`; addon code touching it
   is flagged by the addon validator as an error.)
 - **Cache invalidation**: shared Valkey keys are invalidated via `container.invalidation`
   (`InvalidationBus`), never a raw `valkey.del`.
 - **Discord embeds**: never construct `new EmbedBuilder()` directly in a command/service —
-  use the card builders in `#lib/ui/cards.js` (`makeInfoCard`, `makeSuccessCard`,
+  use the card builders in `@lumi/lib/ui/cards.js` (`makeInfoCard`, `makeSuccessCard`,
   `makeErrorCard`, `makeWarningCard`, `makeListCard`, ...) or, inside a command, the reply
-  helpers in `#lib/commands.js` (`replySuccess`, `replyError`, `sendReply`) / the equivalent
+  helpers in `@lumi/lib/commands.js` (`replySuccess`, `replyError`, `sendReply`) / the equivalent
   `ctx.replySuccess(...)` / `ctx.replyError(...)` on `CommandContext`.
 - **Panels**: admin-facing panel UI (hub, config, module subpanels) uses the panel kit
-  (`#lib/ui/panels.js`) builders (`settingRow`, `tabRow`, `confirmRow`, `backRow`,
+  (`@lumi/lib/ui/panels.js`) builders (`settingRow`, `tabRow`, `confirmRow`, `backRow`,
   `createPaginationRow`, ...) rather than hand-rolled section/button layouts.
 - **Dashboard settings pages**: a page never names a module's settings, groups or tabs
   itself — it derives them from the module's `configSchema` (`section`/`group` on each
@@ -181,13 +185,13 @@ Full reference: [Dashboard Guide](https://lumi-devs.github.io/Lumi-docs/guides/d
   `packages/contracts`): [`agents/domains/dashboard-design.md`](agents/domains/dashboard-design.md).
 - **Permit nodes**: dot-notation permit strings (`mod.ban`, `admin.*`, ...) are not a
   hand-maintained registry — they're read live off each command's own `requiredPermit`
-  (`#lib/permissions/preconditions/RequirePermit.ts`) wherever the permit system needs the
+  (`@lumi/lib/permissions/preconditions/RequirePermit.ts`) wherever the permit system needs the
   full vocabulary (e.g. the dashboard's permit editor). There is no `/permit` bot command;
   permits are managed from the dashboard only.
 - **Autocomplete**: for a STRING/NUMBER command option whose valid values are a real,
   bounded, discoverable set at runtime (an existing permit/module/repo name, not free text
   like a ban reason), wire Sapphire's `Command.autocompleteRun` rather than leaving it
-  free-typed, using the shared helpers in `#lib/utilities/autocomplete.js`
+  free-typed, using the shared helpers in `@lumi/lib/utilities/autocomplete.js`
   (`filterAutocompleteChoices`, `respondWithChoices`) for the case-insensitive match + 25-choice
   cap Discord's API requires. Options already using `addRoleOption`/`addChannelOption`/
   `addUserOption`/`addMentionableOption` already have a native picker - autocomplete doesn't

@@ -46,7 +46,7 @@ would add indirection without removing any duplication - `authorize()`'s job is 
 place a *scattered* check gets consolidated, not a mandatory layer over every existing call.
 
 `eslint.config.mjs` and `packages/core/tests/architecture/import-graph.test.ts` both forbid
-importing `#lib/permissions/PermitResolver.js` from `permissions/preconditions/**`, `rpc/**`, or
+importing `#lib/permissions/permit-resolver.js` from `permissions/preconditions/**`, `rpc/**`, or
 `addon-sandbox/**` - those three surfaces must go through `authorize()`.
 
 ## Consequences
