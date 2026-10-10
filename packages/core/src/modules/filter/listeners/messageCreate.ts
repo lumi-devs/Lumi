@@ -1,11 +1,11 @@
-import { Ms } from "@lumi/shared";
-import { getUtility, tryGetUtility } from "#lib/module-system/Utility.js";
+import { Time } from "@lumi/shared";
+import { getUtility, tryGetUtility } from "@lumi/lib/module-system/utility.js";
 import { Colors } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { LumiEvents } from "#lib/types/common.js";
-import type { GuildMessage } from "#lib/types/common.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { LumiEvents } from "@lumi/lib/types/common.js";
+import type { GuildMessage } from "@lumi/lib/types/common.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { FilterUtility } from "../utilities/FilterUtility.js";
 import { enforceHit, runRules, shouldScreen } from "@lumi/application/services/filter/enforce.js";
 import {
@@ -16,13 +16,13 @@ import {
   isZalgo,
   type HeatConfig,
 } from "@lumi/application/services/filter/heat.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
-import { lockAllTextChannels } from "#lib/moderation/lockdown.js";
-import { scheduleTask } from "#lib/scheduler/schedule.js";
-import { swallow } from "#lib/utilities/errors.js";
-import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+import { QuarantineAction } from "@lumi/application/services/mod/actions/quarantine-action.js";
+import { isImmuneToAutomatedAction } from "@lumi/application/services/mod/immune-roles.js";
+import { lockAllTextChannels } from "@lumi/lib/discord/channel-locks.js";
+import { scheduleTask } from "@lumi/lib/scheduler/schedule.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
+import { deleteMessageLater } from "@lumi/lib/utilities/temporary-message.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 
 export const FilterMessageListener = defineListener({
   name: "filterMessageCreate",
@@ -88,7 +88,7 @@ async function mentionFlood(
         { guildId: message.guildId },
         {
           repeated: false,
-          delay: config.lockdownDurationMinutes * Ms.Minute,
+          delay: config.lockdownDurationMinutes * Time.Minute,
           customJobOptions: {
             jobId: `filter-auto-lockdown-unlock-${message.guildId}`,
             removeOnComplete: true,
@@ -137,7 +137,7 @@ async function heatCheck(
         const reason =
           "Heat panic mode: flagged raider posted during the active raid window";
         await member
-          .timeout(config.timeoutMinutes * Ms.Minute, reason)
+          .timeout(config.timeoutMinutes * Time.Minute, reason)
           .catch(swallow("Filter: heat panic timeout"));
         await logHeat(services, message, "Heat Panic - Timeout", reason);
       }
@@ -222,7 +222,7 @@ async function heatCheck(
       );
       const reason = `Heat escalation: reached ${Math.round(level)} heat (violation #${violations})`;
       await member
-        .timeout(minutes * Ms.Minute, reason)
+        .timeout(minutes * Time.Minute, reason)
         .catch(swallow("Filter: heat timeout"));
       await logHeat(services, message, "Heat - Timeout", reason);
     } else if (action === "warn") {

@@ -2,7 +2,7 @@
   "name": "@lumi/shared",
   "version": "0.1.0",
   "license": "AGPL-3.0-only",
-  "description": "Shared dependency-free primitives (time constants, text/json helpers, mutex) for all Lumi packages. Private — never published.",
+  "description": "Shared primitives for all Lumi packages (time constants, text/json helpers). Private — never published.",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,5 +10,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sapphire/time-utilities": "^1.7.14",
+    "@sapphire/utilities": "^3.18.2"
   }
 }

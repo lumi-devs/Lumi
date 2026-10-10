@@ -9,9 +9,9 @@ import {
   readManifest,
   writeManifest,
   ManifestFile,
-} from "#lib/module-system/manifest.js";
-import { cfg, FieldType } from "#lib/module-system/config-schema.js";
-import { CoreVersion } from "#lib/utilities/misc.js";
+} from "@lumi/lib/module-system/manifest.js";
+import { cfg, FieldType } from "@lumi/lib/module-system/config-schema.js";
+import { CoreVersion } from "@lumi/lib/utilities/version.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;

@@ -10,7 +10,7 @@ import {
   durationString,
   choiceEnum,
   FieldType,
-} from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/module-system/config-schema.js";
 
 describe("Config Schema Utilities", () => {
   describe("cfg builders & fieldsFromSchema", () => {

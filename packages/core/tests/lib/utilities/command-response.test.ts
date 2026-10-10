@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { UserError } from "@lumi/shared";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes, MessageFlags } from "discord.js";
 import { trace } from "@opentelemetry/api";
@@ -12,18 +12,18 @@ import {
   respond,
   respondMessage,
   handleDenied,
-} from "#lib/utilities/command-response.js";
-import * as temporaryMessage from "#lib/utilities/temporary-message.js";
+} from "@lumi/lib/utilities/command-response.js";
+import * as temporaryMessage from "@lumi/lib/utilities/temporary-message.js";
 
 // bun:test has no `vi.mocked` type-narrowing helper, so the mock is kept as a
 // named reference here rather than cast after a normal import.
 const resolveKey = vi.fn();
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   resolveKey,
 }));
 
-vi.mock("#lib/utilities/temporary-message.js", () => ({
+vi.mock("@lumi/lib/utilities/temporary-message.js", () => ({
   deleteMessageLater: vi.fn(),
   deleteReplyLater: vi.fn(),
 }));

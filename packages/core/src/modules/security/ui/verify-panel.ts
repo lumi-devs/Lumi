@@ -1,11 +1,10 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 import { ButtonStyle } from "discord.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, makeInfoCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { createActionButton, buildSafeActionRows } from "@lumi/lib/ui/panels.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { makeCard, makeInfoCard, makeWarningCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   buildCaptchaRows,
   sequenceDisplay,
@@ -26,7 +25,7 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
     customId: VerifyButtonId,
     label: t("panels:verifyButton"),
     style: ButtonStyle.Success,
-    emoji: Emojis.parse("✅"),
+    emoji: "✅",
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
   return makeCard(
@@ -41,7 +40,7 @@ export function buildVerifyPanel(t: LumiT, content?: VerifyPanelContent): CardRe
 }
 
 export function buildChallengeCard(t: LumiT, state: CaptchaState): CardReply {
-  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Ms.Minute));
+  const minutes = Math.max(1, Math.round((state.expiresAt - Date.now()) / Time.Minute));
   return makeInfoCard(
     t("panels:verifyChallengeTitle"),
     t("panels:verifyChallenge", {
@@ -82,7 +81,7 @@ export function buildWebPromptCard(t: LumiT, url: string): CardReply {
     style: ButtonStyle.Link,
     url: url,
     label: t("panels:verifyWebButton"),
-    emoji: Emojis.parse("🔗"),
+    emoji: "🔗",
   });
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
   return makeInfoCard(t("panels:verifyWebTitle"), t("panels:verifyWebIntro"), {

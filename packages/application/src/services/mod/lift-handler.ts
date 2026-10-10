@@ -1,9 +1,9 @@
-import { type Container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
+import { type Container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
 import { acquireValkeyLock } from "@lumi/infrastructure/cache";
-import type { ModLiftPayload } from "#modules/mod/scheduled-tasks/modLift.js";
+import type { ModLiftPayload } from "@lumi/modules/mod/scheduled-tasks/modLift.js";
 import { liftModerationCaseWithUndo } from "./case-lift.js";
-import { errorCode } from "#lib/utilities/errors.js";
+import { errorCode } from "@lumi/lib/utilities/errors.js";
 
 const ActionLabels: Record<string, string> = {
   mute: "Mute",
@@ -21,7 +21,7 @@ export async function handleModLiftFire(
   const { release } = await acquireValkeyLock(
     services.valkey,
     `lumi:lock:mod-lift:${payload.caseId}`,
-    { ttlMs: Ms.Second * 30, acquireTimeoutMs: Ms.Minute },
+    { ttlMs: Time.Second * 30, acquireTimeoutMs: Time.Minute },
   );
   try {
     await liftCase(services, payload);

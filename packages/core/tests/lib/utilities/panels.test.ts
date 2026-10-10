@@ -8,7 +8,7 @@ import {
   ChannelType,
   type APIButtonComponentWithCustomId,
 } from "discord.js";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -23,12 +23,12 @@ import {
   navRow,
   pageFooter,
   HubTabs,
-} from "#lib/ui/panels.js";
-import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "#lib/ui/layout.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { BrandColors } from "#lib/branding/colors.js";
-import { makeSuccessCard } from "#lib/ui/cards.js";
-import { createStringSelectMenu as createStringSelectFromIndex } from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
+import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "@lumi/lib/ui/layout.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { BrandColors } from "@lumi/lib/ui/palette.js";
+import { makeSuccessCard } from "@lumi/lib/ui/cards.js";
+import { createStringSelectMenu as createStringSelectFromIndex } from "@lumi/lib/ui/panels.js";
 
 describe("Panel & Card Utility Standardization", () => {
   beforeEach(() => {
@@ -283,15 +283,16 @@ describe("Panel & Card Utility Standardization", () => {
       expect(HubTabs.map((t) => t.id)).toContain("addons");
     });
 
-    it("lumi/ui exposes the core kit builders themselves", async () => {
-      const kit = await import("#lib/ui/panels.js");
-      const addon = await import("#lib/addon-sandbox/sdk/ui.js");
+    it("lumi/ui exposes only isolate-safe builders, not host-backed runtimes", async () => {
+      const cards = await import("@lumi/lib/ui/cards.js");
+      const addon = (await import("@lumi/lib/addon-sandbox/sdk/ui.js")) as Record<string, unknown>;
 
-      expect(addon.settingRow).toBe(kit.settingRow);
-      expect(addon.tabRow).toBe(kit.tabRow);
-      expect(addon.backRow).toBe(kit.backRow);
-      expect(addon.navRow).toBe(kit.navRow);
-      expect(addon.pageFooter).toBe(kit.pageFooter);
+      expect(addon.makeInfoCard).toBe(cards.makeInfoCard);
+      expect(addon.makeSuccessCard).toBe(cards.makeSuccessCard);
+      expect(addon.makeErrorCard).toBe(cards.makeErrorCard);
+      expect(addon.confirmPrompt).toBeUndefined();
+      expect(addon.paginateList).toBeUndefined();
+      expect(addon.settingRow).toBeUndefined();
     });
   });
 });

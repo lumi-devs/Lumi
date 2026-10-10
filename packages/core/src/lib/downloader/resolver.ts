@@ -1,21 +1,22 @@
-import { container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
+import { container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
 import { promises as fs } from "node:fs";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo } from "./types.js";
 import { validateAddon } from "./validate.js";
+import { ensureAddonLumiLink } from "@lumi/lib/addon-sandbox/host/sandbox-root.js";
 import { z } from "zod";
-import { logError } from "#lib/utilities/errors.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import {
   detectSubStores,
   writeManifest,
   type ModuleManifest,
-} from "#lib/module-system/manifest.js";
-import { withSerializedWork } from "#lib/utilities/misc.js";
-import { execFileAsync } from "#lib/utilities/exec-file.js";
-import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "#lib/env.js";
+} from "@lumi/lib/module-system/manifest.js";
+import { withSerializedWork } from "@lumi/lib/utilities/serialized-work.js";
+import { execFileAsync } from "@lumi/lib/utilities/exec-file.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "@lumi/lib/env.js";
 import { verifyCommitSignature, type SignatureVerification } from "./signature.js";
 
 const execGit = (args: string[]) =>
@@ -162,7 +163,7 @@ export class DownloadResolver {
    * Checks `sha` against `ADDON_SIGNATURE_POLICY` before it is allowed to go
    * live. `off` (or `warn`/`require` with no allowed-signers file configured
    * - `require` alone never reaches this state; {@linkcode
-   * validateAddonSignatureConfig} in `#lib/env.js` refuses to boot without
+   * validateAddonSignatureConfig} in `@lumi/lib/env.js` refuses to boot without
    * one) is a no-op. `warn` logs and returns a warning string for the caller
    * to surface. `require` throws {@linkcode AddonSignatureRejectedError}.
    */
@@ -649,18 +650,10 @@ export class DownloadResolver {
       await execFileAsync(
         "bun",
         ["add", "--ignore-scripts", ...reqs],
-        { cwd: sourcePath, timeout: Ms.Minute },
+        { cwd: sourcePath, timeout: Time.Minute },
       ).catch(execError("Requirement installation failed"));
 
-      const nodeModulesLumiPath = path.join(sourcePath, "node_modules", "lumi");
-      if (!(await this._exists(nodeModulesLumiPath))) {
-        await fs.mkdir(path.join(sourcePath, "node_modules"), {
-          recursive: true,
-        });
-        await fs
-          .symlink(ModuleRoot, nodeModulesLumiPath, "dir")
-          .catch(() => { });
-      }
+      await ensureAddonLumiLink(sourcePath);
     }
 
     // Two repos can each ship a module of the same name. Overwriting silently

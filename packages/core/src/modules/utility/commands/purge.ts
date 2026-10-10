@@ -1,9 +1,9 @@
-import type { Container } from "#lib/services.js";
-import { respondWithChoices, filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import type { Container } from "@lumi/lib/services.js";
+import { respondWithChoices, filterAutocompleteChoices } from "@lumi/lib/utilities/autocomplete.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { Ms } from "@lumi/shared";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { Time } from "@lumi/shared";
 import {
   Message,
   PermissionFlagsBits,
@@ -11,17 +11,17 @@ import {
   type FetchMessagesOptions,
   Collection,
 } from "discord.js";
-import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#lib/ui/cards.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { logError, errorCode } from "#lib/utilities/errors.js";
-import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { parseDuration, formatDuration } from "#lib/utilities/time.js";
+import { makeErrorCard, makeSuccessCard, makeWarningCard } from "@lumi/lib/ui/cards.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
+import { logError, errorCode } from "@lumi/lib/utilities/errors.js";
+import { deleteMessageLater } from "@lumi/lib/utilities/temporary-message.js";
+import { parseDuration, formatDuration } from "@lumi/lib/utilities/time.js";
 import {
   MatchBatchSize,
   getRegexWorker,
-} from "#lib/regex-worker/RegexWorkerHandler.js";
-import { validateRegexPattern } from "#lib/regex-worker/validate.js";
-import type { LumiT } from "#lib/i18n/index.js";
+} from "@lumi/lib/regex-worker/handler.js";
+import { validateRegexPattern } from "@lumi/lib/regex-worker/validate.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 
 type MessageFilter = (message: Message) => boolean;
 
@@ -198,7 +198,7 @@ async function executePurge(
         : null;
 
       const now = Date.now();
-      const fourteenDaysAgo = now - 14 * Ms.Day;
+      const fourteenDaysAgo = now - 14 * Time.Day;
 
       const youngMessages: Message[] = [];
       const oldMessages: Message[] = [];

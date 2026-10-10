@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { downloaderUtility, ModuleAlreadyInstalledError } from "#modules/core/utilities/DownloaderUtility.js";
-import { container } from "#lib/services.js";
-import { resolver } from "#lib/downloader/resolver.js";
+import { downloaderUtility, ModuleAlreadyInstalledError } from "@lumi/modules/core/utilities/DownloaderUtility.js";
+import { container } from "@lumi/lib/services.js";
+import { resolver } from "@lumi/lib/downloader/resolver.js";
 import { promises as fs } from "node:fs";
 
 class MockRepoAlreadyInstalledError extends Error {
@@ -13,7 +13,7 @@ class MockRepoAlreadyInstalledError extends Error {
   }
 }
 
-vi.mock("#lib/downloader/resolver.js", () => ({
+vi.mock("@lumi/lib/downloader/resolver.js", () => ({
   resolver: {
     addRepo: vi.fn().mockResolvedValue({ sha: null, signedBy: null, signatureWarning: null }),
     updateRepo: vi.fn().mockResolvedValue({
@@ -86,6 +86,7 @@ describe("DownloaderUtility", () => {
       unload: vi.fn().mockResolvedValue(undefined),
       reload: vi.fn().mockResolvedValue(undefined),
       setEnabled: vi.fn().mockResolvedValue(undefined),
+      getRecord: vi.fn().mockReturnValue(undefined),
     };
 
     mockValkey = {
@@ -620,7 +621,7 @@ describe("DownloaderUtility", () => {
     it("enables/disables the module via the ModuleStore and re-syncs commands", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       const { commandRegistry } = await import(
-        "#lib/commands/command-def.js"
+        "@lumi/lib/commands/command-def.js"
       );
       commandRegistry.set("ut-toggle-cmd", {
         name: "ut-toggle-cmd",
@@ -684,7 +685,7 @@ describe("DownloaderUtility", () => {
 
     it("builds registered defs and sets global commands", async () => {
       const { commandRegistry } = await import(
-        "#lib/commands/command-def.js"
+        "@lumi/lib/commands/command-def.js"
       );
       commandRegistry.set("ut-cmd1", {
         name: "ut-cmd1",

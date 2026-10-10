@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { envParseString } from "#lib/env.js";
-import { Ms } from "@lumi/shared";
+import { envParseString } from "@lumi/lib/env.js";
+import { Time } from "@lumi/shared";
 
 /**
  * Signed, tamper-proof, expiring token embedded in the appeal link DMed on
@@ -13,7 +13,7 @@ import { Ms } from "@lumi/shared";
  * module is the only place that ever verifies it, satisfying "verify
  * server-side on page load AND on submission" without a shared secret.
  */
-export interface AppealTokenPayload {
+interface AppealTokenPayload {
   guildId: string;
   caseId: number;
   userId: string;
@@ -21,7 +21,7 @@ export interface AppealTokenPayload {
   exp: number;
 }
 
-const DefaultTtlMs = 14 * Ms.Day;
+const DefaultTtlMs = 14 * Time.Day;
 
 function secret(): string {
   return envParseString("APPEAL_TOKEN_SECRET");

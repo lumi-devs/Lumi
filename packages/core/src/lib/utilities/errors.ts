@@ -1,12 +1,7 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
+import { errorFrom, swallow as swallowWith } from "@lumi/shared";
 
-export function errorFrom(err: unknown): Error {
-  if (err instanceof Error) return err;
-  if (typeof err === "string") return new Error(err);
-  if (err && typeof err === "object" && "message" in err)
-    return new Error(String(err.message));
-  return new Error(String(err));
-}
+export { errorFrom };
 
 export function errorCode(err: unknown): number | string | undefined {
   if (err && typeof err === "object" && "code" in err)
@@ -25,8 +20,5 @@ export function logError(context: string, err: unknown): void {
  * Usage: `somePromise.catch(swallow("Context: operation failed"))`
  */
 export function swallow(reason: string): (err: unknown) => null {
-  return (err: unknown) => {
-    container.logger.debug(`[swallow] ${reason}:`, errorFrom(err).message);
-    return null;
-  };
+  return swallowWith(reason, (r, e) => container.logger.debug(`[swallow] ${r}:`, e.message));
 }

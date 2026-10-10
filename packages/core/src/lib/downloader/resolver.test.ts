@@ -1,16 +1,19 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { getRepoRoot } from "@lumi/lib/env.js";
 import { fakeSpawnResult } from "../../../tests/helpers/mock-bun-spawn.js";
 
 // Real network/`bun add` isn't available in CI; installModule only needs
 // this call to resolve so the code after it (the regression under test)
 // runs. Every other resolver.ts codepath uses git too, but this test never
 // reaches those.
-vi.spyOn(Bun, "spawn").mockImplementation(() => fakeSpawnResult("") as any);
+beforeEach(() => {
+  vi.spyOn(Bun, "spawn").mockImplementation(() => fakeSpawnResult("") as any);
+});
 
 const { resolver, ModuleRoot, AddonModulesRoot } = await import("./resolver.js");
-const { ensureAddonLumiLink } = await import("../addon-sandbox/sandbox-root.js");
+const { ensureAddonLumiLink } = await import("../addon-sandbox/host/sandbox-root.js");
 
 const RepoName = "resolver-test-repo";
 const ModuleName = "resolver-test-addon";
@@ -52,6 +55,7 @@ async function writeFixtureAddon() {
 
 describe("DownloadResolver.installModule - requirements package boundary", () => {
   afterEach(async () => {
+    vi.restoreAllMocks();
     await fs.rm(path.join(ModuleRoot, RepoName), { recursive: true, force: true });
     await fs.rm(path.join(AddonModulesRoot, ModuleName), { recursive: true, force: true });
   });
@@ -66,7 +70,7 @@ describe("DownloadResolver.installModule - requirements package boundary", () =>
     expect(stat.isSymbolicLink()).toBe(true);
 
     const target = await fs.readlink(nodeModulesLumi);
-    expect(path.resolve(path.dirname(nodeModulesLumi), target)).toBe(ModuleRoot);
+    expect(path.resolve(path.dirname(nodeModulesLumi), target)).toBe(getRepoRoot());
   });
 
   it("links node_modules/lumi for addons without requirements too", async () => {
@@ -81,6 +85,6 @@ describe("DownloadResolver.installModule - requirements package boundary", () =>
     const link = path.join(sourceDir, "node_modules", "lumi");
     expect((await fs.lstat(link)).isSymbolicLink()).toBe(true);
     const target = await fs.readlink(link);
-    expect(path.resolve(path.dirname(link), target)).toBe(ModuleRoot);
+    expect(path.resolve(path.dirname(link), target)).toBe(getRepoRoot());
   });
 });

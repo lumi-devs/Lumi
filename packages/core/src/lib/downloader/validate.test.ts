@@ -55,10 +55,10 @@ describe("validateAddon - lumi SDK import boundary", () => {
   });
 
   it.each([
-    "#core/module-system/Module.js",
-    "#lib/commands/gates.js",
-    "#lib/ui/cards.js",
-    "#lib/valkey/client.js",
+    "#core/module-system/module.js",
+    "@lumi/lib/commands/gates.js",
+    "@lumi/lib/ui/cards.js",
+    "@lumi/lib/valkey/client.js",
     "#root/foo.js",
   ])("hard-errors when the addon imports Lumi's internal path %s directly", async (internalPath) => {
     const dir = path.join(tmpRoot, "my-addon");
@@ -72,11 +72,11 @@ describe("validateAddon - lumi SDK import boundary", () => {
     expect(warnings.some((w) => w.includes(internalPath))).toBe(false);
   });
 
-  it("still hard-errors on importing another module via #modules/*", async () => {
+  it("still hard-errors on importing another module via @lumi/modules/*", async () => {
     const dir = path.join(tmpRoot, "my-addon");
     await writeAddon(
       dir,
-      `import { defineModule } from "lumi";\nimport { something } from "#modules/other/index.js";\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+      `import { defineModule } from "lumi";\nimport { something } from "@lumi/modules/other/index.js";\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
     );
 
     const { errors } = await validateAddon(dir);
@@ -254,6 +254,102 @@ describe("validateAddon - memory-leak heuristics", () => {
 
     const { warnings } = await validateAddon(dir);
     expect(warnings.some((w) => w.includes("module-level `seen`"))).toBe(false);
+  });
+
+  it("warns on a raw I/O builtin import without hard-failing", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}import fs from "node:fs";\n\nconsole.log(fs.readdirSync(".").length);\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes('"node:fs"') && w.includes('"lumi/kv"'))).toBe(true);
+  });
+
+  it("warns on import-free exfiltration globals (fetch/Bun.) without hard-failing", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}await fetch("https://example.com/collect");\nBun.spawn(["echo", "hi"]);\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes("fetch("))).toBe(true);
+    expect(warnings.some((w) => w.includes("Bun."))).toBe(true);
+  });
+
+  it("does not flag method calls like messages.fetch(", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}await messages.fetch("c", "m");\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { warnings } = await validateAddon(dir);
+    expect(warnings.some((w) => w.includes("fetch("))).toBe(false);
+  });
+
+  it("warns on any node: builtin, even pure-compute ones like node:path", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `import path from "node:path";\n\nconsole.log(path.join("a", "b"));\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes('"node:path"'))).toBe(true);
+  });
+
+  it("stays silent when the addon only uses the lumi SDK", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `import { defineModule } from "lumi";\nimport { defineCommand } from "lumi/commands";\n\nconsole.log(typeof defineCommand);\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("hard-errors on a used import of a builtin that breaks in the isolate", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}import { randomBytes } from "node:crypto";\n\nconsole.log(randomBytes(4));\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes('"node:crypto"') && e.includes('"lumi/utils"'))).toBe(true);
+    expect(warnings.some((w) => w.includes('"node:crypto"'))).toBe(false);
+  });
+
+  it("only warns on an imported-but-unused isolate-breaking builtin", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}import { randomBytes } from "node:crypto";\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes('"node:crypto"'))).toBe(true);
+  });
+
+  it("documents the known bypass: a concatenated dynamic import is not flagged", async () => {
+    const dir = path.join(tmpRoot, "my-addon");
+    await writeAddon(
+      dir,
+      `${Header}const fs = await import("node:" + "fs");\n\nconsole.log(typeof fs);\n\nexport const meta = defineModule({ name: "my-addon" });\n`,
+    );
+
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes("node:fs") || w.includes("filesystem"))).toBe(false);
   });
 
   it("all leak heuristics are warnings, never errors", async () => {

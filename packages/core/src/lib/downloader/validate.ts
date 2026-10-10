@@ -3,9 +3,9 @@ import path from "node:path";
 import { z } from "zod";
 import semver from "semver";
 import { AddonDiscordCapabilities } from "@lumi/contracts";
-import { LumiInfo } from "#lib/utilities/misc.js";
-import { unknownDiscordCapabilities } from "#lib/addon-sandbox/capabilities.js";
-import { isValidDependencySpec } from "#lib/module-system/dependencies.js";
+import { LumiInfo } from "@lumi/lib/utilities/version.js";
+import { unknownDiscordCapabilities } from "@lumi/lib/addon-sandbox/host/capabilities.js";
+import { isValidDependencySpec } from "@lumi/lib/module-system/dependencies.js";
 
 /** Static, import-free structural validation for an addon directory. */
 export interface ValidationResult {
@@ -105,7 +105,6 @@ const ImportRe = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
 const EmbedImportRe =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
-// ── Memory-leak heuristics ──────────────────────────────────────────────────
 // Best-effort, regex-level static checks for the leak shapes that come up
 // most often in long-running addon code: timers nobody clears, listeners
 // nobody removes, and module-level collections nobody bounds. Source text
@@ -185,6 +184,76 @@ function checkLeakHeuristics(src: string, rel: string, warnings: string[]): void
         `${rel}: module-level \`${name}\` is pushed/set/added to but this file never trims it (.delete/.shift/.pop/.clear/.splice, or a .length/.size bounds check) - it can grow unbounded for the process lifetime.`,
       );
     }
+  }
+}
+
+const BareBuiltin = new Set(
+  "fs path os util events stream buffer crypto timers url querystring string_decoder repl tty readline perf_hooks async_hooks assert punycode constants v8 inspector sqlite sys module cluster dgram dns http https http2 tls net vm process child_process worker_threads".split(
+    " ",
+  ),
+);
+const DangerousBunImportRe = /^bun:(?:ffi|shell|sqlite)$/;
+
+const BreaksWhenUsed = new Set(["crypto", "url", "timers", "timers/promises", "async_hooks"]);
+
+function importedNames(statement: string): string[] {
+  const m = /import\s*(?:type\s*)?(?:([A-Za-z_$][\w$]*)\s*,\s*)?(?:\*\s*as\s*([A-Za-z_$][\w$]*)|\{([^}]*)\})?/.exec(
+    statement,
+  );
+  if (!m) return [];
+  const names = [m[1], m[2]].filter((n): n is string => !!n);
+  for (const part of (m[3] ?? "").split(",")) {
+    const local = part.trim().split(/\s+as\s+/).pop()!.trim();
+    if (/^[A-Za-z_$][\w$]*$/.test(local)) names.push(local);
+  }
+  return names;
+}
+
+const DangerousGlobalRes: RegExp[] = [
+  /(?<!\.)\bfetch\s*\(/,
+  /\bnew\s+WebSocket\s*\(/,
+  /\bBun\s*\./,
+  /\bgetBuiltinModule\s*\(/,
+  /\bprocess\s*\.\s*(?:dlopen|binding)\b/,
+  /\bnew\s+Worker\s*\(/,
+  /\brequire\s*\(\s*["'](?:node:)?(?:fs|net|https?|child_process|worker_threads|vm|sqlite)/,
+];
+
+function checkDangerousImportSpec(
+  spec: string,
+  statement: string,
+  src: string,
+  rel: string,
+  warnings: string[],
+  errors: string[],
+): void {
+  const bare = spec.startsWith("node:") ? spec.slice("node:".length).split("/")[0] : spec.split("/")[0];
+  if (!spec.startsWith("node:") && !BareBuiltin.has(bare!) && !DangerousBunImportRe.test(spec))
+    return;
+  if (BreaksWhenUsed.has(bare!)) {
+    const rest = src.replace(statement, "");
+    const used = importedNames(statement).some(
+      (name) => new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[.(]`).test(rest),
+    );
+    if (used) {
+      errors.push(
+        `${rel}: imports "${spec}" and uses it - that builtin resolves to a broken shim inside the isolate; use the "lumi/*" SDK instead ("lumi/utils" for randomness, hashing, and sleep).`,
+      );
+      return;
+    }
+  }
+  warnings.push(
+    `${rel}: imports "${spec}" - no Node.js builtin exists inside the isolate; use the "lumi/*" SDK instead ("lumi/kv", "lumi/discord", "lumi/scheduling", "lumi/net", "lumi/utils"), or flag it for a human reviewer.`,
+  );
+}
+
+function checkDangerousGlobals(src: string, rel: string, warnings: string[]): void {
+  for (const re of DangerousGlobalRes) {
+    const match = re.exec(src);
+    if (match)
+      warnings.push(
+        `${rel}: uses \`${match[0].trim()}\` - this reaches outside the addon sandbox (raw network, subprocesses, or loader bypasses); use the "lumi/*" SDK instead ("lumi/net" for HTTP, with the \`network\` capability in manifest.json), or flag it for a human reviewer.`,
+      );
   }
 }
 
@@ -331,6 +400,33 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
           `manifest.json: unknown Discord capability "${unknown}". Valid names: ${AddonDiscordCapabilities.join(", ")}.`,
         );
       }
+      const caps = (manifest as { capabilities?: unknown }).capabilities;
+      if (caps && typeof caps === "object") {
+        const c = caps as {
+          network?: unknown;
+          valkey?: unknown;
+          scheduling?: unknown;
+          discord?: unknown;
+        };
+        const broad: string[] = [];
+        if (c.network === true) broad.push("network");
+        if (c.valkey === true) broad.push("valkey");
+        if (c.scheduling === true) broad.push("scheduling");
+        if (Array.isArray(c.discord))
+          for (const d of c.discord)
+            if (
+              typeof d === "string" &&
+              (d.startsWith("manage") ||
+                d === "moderateMembers" ||
+                d === "clientPresence" ||
+                d === "sendDirectMessage")
+            )
+              broad.push(`discord:${d}`);
+        if (broad.length > 0)
+          warnings.push(
+            `manifest.json declares broad capabilities (${broad.join(", ")}) - confirm the addon needs each one before enabling it.`,
+          );
+      }
     } catch (err) {
       errors.push(
         `manifest.json is not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
@@ -387,18 +483,19 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       );
 
     checkLeakHeuristics(src, rel, warnings);
+    checkDangerousGlobals(src, rel, warnings);
 
     let match: RegExpExecArray | null;
     ImportRe.lastIndex = 0;
     while ((match = ImportRe.exec(src)) !== null) {
       const spec = match[1]!;
-      if (spec.startsWith("#modules/")) {
+      if (spec.startsWith("@lumi/modules/")) {
         errors.push(
           `${rel}: imports another module via "${spec}" - addons must be self-contained.`,
         );
         continue;
       }
-      if (/^#(core|lib|utilities|database|root)\//.test(spec)) {
+      if (/^#(core|lib|utilities|database|root)\//.test(spec) || spec.startsWith("@lumi/lib/")) {
         // Not a boundary, just a better error than a resolution failure at
         // spawn time: an addon process resolves `lumi`/`lumi/*` and nothing
         // else, so these specifiers do not exist for it.
@@ -416,6 +513,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
             `${rel}: relative import "${spec}" escapes the addon directory - move shared code into the addon or import from "lumi".`,
           );
       }
+      checkDangerousImportSpec(spec, match[0], src, rel, warnings, errors);
     }
   }
 

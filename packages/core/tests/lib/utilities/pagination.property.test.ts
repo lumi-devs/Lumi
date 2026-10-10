@@ -4,7 +4,7 @@ import {
   computePageCount,
   sliceForPage,
   clampPageIndex,
-} from "#lib/utilities/pagination.js";
+} from "@lumi/lib/utilities/pagination.js";
 
 describe("computePageCount (property)", () => {
   it("equals ceil(itemCount / perPage), floored to a minimum of 1", () => {

@@ -1,4 +1,4 @@
-import { execFileAsync } from "#lib/utilities/exec-file.js";
+import { execFileAsync } from "@lumi/lib/utilities/exec-file.js";
 
 /**
  * Result of verifying a single commit's SSH signature against a git

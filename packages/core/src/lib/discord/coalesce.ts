@@ -1,11 +1,11 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { Routes } from "discord-api-types/v10";
 import { SnowflakeUtil } from "discord.js";
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 
 const MaxBatch = 100;
-const FlushDelayMs = Ms.Second * 1.5;
-const TwoWeeksMs = 14 * Ms.Day;
+const FlushDelayMs = Time.Second * 1.5;
+const TwoWeeksMs = 14 * Time.Day;
 
 interface PendingEntry {
   messageId: string;
