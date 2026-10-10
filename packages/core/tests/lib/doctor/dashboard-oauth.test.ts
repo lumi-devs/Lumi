@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkDashboardOAuth } from "#lib/doctor/checks/dashboard-oauth.js";
+import { checkDashboardOAuth } from "@lumi/lib/doctor/checks/dashboard-oauth.js";
 
 describe("checkDashboardOAuth", () => {
   it("skips when none of the dashboard OAuth env vars are set", async () => {

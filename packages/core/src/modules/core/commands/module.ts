@@ -1,7 +1,7 @@
-import type { Container } from "#lib/services.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { paginateList } from "#lib/utilities/pagination.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { paginateList } from "@lumi/lib/utilities/pagination.js";
 import {
   installProgressCard,
   moduleHelpCard,
@@ -27,12 +27,12 @@ import {
 import { getModulePiecesInfo } from "@lumi/application/services/core/module-command/pieces.js";
 import { buildModuleCommand } from "@lumi/application/services/core/module-command/registry.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#lib/utilities/autocomplete.js";
+} from "@lumi/lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,
   repoModuleChoices,

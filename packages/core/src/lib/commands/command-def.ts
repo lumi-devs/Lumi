@@ -9,8 +9,8 @@ import type {
   SlashCommandBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import type { Container } from "#lib/services.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { Container } from "@lumi/lib/services.js";
 
 export type CommandBuilder =
   | SlashCommandBuilder

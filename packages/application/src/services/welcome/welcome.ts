@@ -1,17 +1,16 @@
 import { userMention } from "@discordjs/formatters";
 import type { Guild } from "discord.js";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { clampMessageDocumentV2, splitOnSeparator, type MessageDocumentV2 } from "@lumi/contracts";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeInfoCard, type CardReply } from "#lib/ui/cards.js";
+import { makeInfoCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   renderMessageContent,
   type MessageButton,
-} from "#lib/message-content.js";
-import { renderTemplate } from "#lib/utilities/template.js";
-import { renderMessageBlocksV2 } from "#lib/utilities/message-blocks-v2.js";
-import { logError } from "#lib/utilities/errors.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/utilities/message-content.js";
+import { renderTemplate } from "@lumi/lib/utilities/template.js";
+import { renderMessageBlocksV2 } from "@lumi/lib/utilities/message-blocks-v2.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
 
 export interface WelcomeTemplateVars {
   user: string;
@@ -72,7 +71,7 @@ export function renderWelcomeTemplate(
   return renderTemplate(template, welcomeTemplateVarsRecord(vars));
 }
 
-export interface WelcomeCardRich {
+interface WelcomeCardRich {
   accentColor?: string | null;
   thumbnailUrl?: string | null;
   imageUrls?: string[];
@@ -95,7 +94,7 @@ export function buildWelcomeCard(
       buttons: rich?.buttons,
     },
     {},
-    `${Emojis.Wave} Welcome`,
+    `👋 Welcome`,
   );
 }
 
@@ -103,7 +102,7 @@ export function buildGoodbyeCard(body: string): CardReply {
   return makeInfoCard("Member left", splitOnSeparator(body));
 }
 
-export interface WelcomeModuleConfig {
+interface WelcomeModuleConfig {
   welcomeEnabled: boolean;
   welcomeChannel: string | null;
   welcomeTemplate: string;
@@ -161,7 +160,7 @@ export function renderGoodbyeCard(
 }
 
 export function buildDmWelcomeCard(serverName: string, body: string): CardReply {
-  return makeInfoCard(`${Emojis.Wave} Welcome to ${serverName}`, splitOnSeparator(body));
+  return makeInfoCard(`👋 Welcome to ${serverName}`, splitOnSeparator(body));
 }
 
 export async function sendWelcomeCard(

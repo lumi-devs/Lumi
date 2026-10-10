@@ -1,13 +1,12 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import { AfkMaxReasonLength } from "../constants.js";
 import { sanitizeReason } from "@lumi/application/services/afk/format.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeInfoCard } from "#lib/ui/cards.js";
+import { makeInfoCard } from "@lumi/lib/ui/cards.js";
 import type { AfkUtility } from "../utilities/AfkUtility.js";
 
 function afkStatusText(
@@ -23,12 +22,12 @@ function afkStatusText(
   }
   if (status === "UPDATED_AFK") {
     return {
-      title: `${Emojis.Edit} ${t("commands:afkUpdatedTitle")}`,
+      title: `✏️ ${t("commands:afkUpdatedTitle")}`,
       body: t("commands:afkUpdated", { reason }),
     };
   }
   return {
-    title: `${Emojis.Afk} ${t("commands:afkSetTitle")}`,
+    title: `💤 ${t("commands:afkSetTitle")}`,
     body: t("commands:afkSet", { reason }),
   };
 }

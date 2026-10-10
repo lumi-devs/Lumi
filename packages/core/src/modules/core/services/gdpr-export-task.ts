@@ -1,10 +1,10 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { type Container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
-import { getGdprExportDir, resolveGdprExportTtlHours } from "#lib/env.js";
-import { executeGdprExport } from "#lib/gdpr.js";
+import { type Container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
+import { getGdprExportDir, resolveGdprExportTtlHours } from "@lumi/lib/env.js";
+import { executeGdprExport } from "@lumi/lib/gdpr/requests.js";
 
 export interface GdprExportFirePayload {
   jobId: string;
@@ -42,7 +42,7 @@ export async function handleGdprExportFire(
     await writeFile(filePath, compressed);
 
     const expiresAt = new Date(
-      Date.now() + resolveGdprExportTtlHours() * Ms.Hour,
+      Date.now() + resolveGdprExportTtlHours() * Time.Hour,
     );
     await services.db.gdprExportJobs.markDone(jobId, {
       filePath,

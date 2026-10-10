@@ -120,7 +120,7 @@ export function spinSlots(random: () => number = Math.random): SlotSpin {
   return { rows, middle: rows[1] };
 }
 
-export interface SlotOutcome {
+interface SlotOutcome {
   key: SlotPayoutKey | null;
   multiplier: number;
   pay: number;

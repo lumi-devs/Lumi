@@ -368,7 +368,7 @@ export type AddonSignaturePolicy = "off" | "warn" | "require";
 
 /**
  * How strictly the Downloader enforces git commit-signature verification
- * (`#lib/downloader/signature.js`) against `ADDON_ALLOWED_SIGNERS_FILE` before
+ * (`@lumi/lib/downloader/signature.js`) against `ADDON_ALLOWED_SIGNERS_FILE` before
  * an addon repo/module revision goes live. `off` preserves the pre-signing
  * behavior.
  */

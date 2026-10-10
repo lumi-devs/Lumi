@@ -15,10 +15,10 @@ import {
   type MessageBlockButton,
   type MessageDocumentV2,
 } from "@lumi/contracts";
-import { parseHexColor } from "#lib/message-content.js";
+import { parseHexColor } from "@lumi/lib/utilities/message-content.js";
 import { renderTemplate } from "./template.js";
-import { resolveCardColor } from "./config.js";
-import type { CardReply } from "#lib/ui/cards.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import type { CardReply } from "@lumi/lib/ui/cards.js";
 
 const buttonStyleMap: Record<Exclude<MessageBlockButton["style"], "link">, ButtonStyle> = {
   primary: ButtonStyle.Primary,

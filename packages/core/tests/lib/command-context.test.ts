@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { UserError } from "@lumi/shared";
-import * as i18n from "#lib/i18n/index.js";
+import * as i18n from "@lumi/lib/i18n/index.js";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#lib/commands/context.js";
-import * as commandResponse from "#lib/utilities/command-response.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import * as commandResponse from "@lumi/lib/utilities/command-response.js";
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/command-response.js", () => ({
+vi.mock("@lumi/lib/utilities/command-response.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 

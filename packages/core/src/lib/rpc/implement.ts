@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { z } from "zod";
 import {
   CodedRpcError,
@@ -9,9 +9,9 @@ import {
   type RpcRequest,
   type RpcSliceEntry,
 } from "@lumi/contracts/rpc";
-import { snowflakeString } from "#lib/module-system/config-schema.js";
-import { authorize } from "#lib/permissions/authorize.js";
-import { checkGuildManagerRest } from "#lib/rpc/discord-rest-lookup.js";
+import { snowflakeString } from "@lumi/lib/module-system/config-schema.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import { checkGuildManagerRest } from "@lumi/lib/rpc/discord-rest-lookup.js";
 
 interface RpcAuthContexts {
   guildManager: { guildId: string; actorId: string };

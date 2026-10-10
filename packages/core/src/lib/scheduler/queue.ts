@@ -1,6 +1,6 @@
-import { parseValkeyConnectionOption } from "#lib/valkey/client.js";
-import { envParseInteger } from "#lib/env.js";
-import { QueuePriority } from "#lib/scheduler/schedule.js";
+import { parseValkeyConnectionOption } from "@lumi/lib/valkey/client.js";
+import { envParseInteger } from "@lumi/lib/env.js";
+import { QueuePriority } from "@lumi/lib/scheduler/schedule.js";
 import type { QueueConnectionOptions as ConnectionOptions } from "@lumi/infrastructure/queues";
 
 /**

@@ -1,7 +1,7 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { container, type Container } from "#lib/services.js";
-import { cfg } from "#lib/module-system/config-schema.js";
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { container, type Container } from "@lumi/lib/services.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
 import { invalidateThresholds } from "@lumi/application/services/mod/threshold-rules.js";
 import { scheduleCaseLift } from "@lumi/application/services/mod/helpers.js";
 import { handleModLiftFire } from "@lumi/application/services/mod/lift-handler.js";

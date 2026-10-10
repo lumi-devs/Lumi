@@ -1,5 +1,5 @@
-import type { Container } from "#lib/services.js";
-import { parseDuration } from "#lib/utilities/time.js";
+import type { Container } from "@lumi/lib/services.js";
+import { parseDuration } from "@lumi/lib/utilities/time.js";
 import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,

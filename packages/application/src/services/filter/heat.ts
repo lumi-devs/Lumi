@@ -1,4 +1,4 @@
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 
 export interface HeatConfig {
   enabled: boolean;
@@ -41,7 +41,7 @@ export interface HeatConfig {
   lockdownDurationMinutes: number;
 }
 
-export type HeatAction = "none" | "warn" | "timeout" | "quarantine";
+type HeatAction = "none" | "warn" | "timeout" | "quarantine";
 
 export function decayHeat(
   stored: number,
@@ -50,7 +50,7 @@ export function decayHeat(
   decayPerMinute: number,
 ): number {
   if (decayPerMinute <= 0) return Math.max(0, stored);
-  const minutes = Math.max(0, (now - lastTs) / Ms.Minute);
+  const minutes = Math.max(0, (now - lastTs) / Time.Minute);
   return Math.max(0, stored - minutes * decayPerMinute);
 }
 

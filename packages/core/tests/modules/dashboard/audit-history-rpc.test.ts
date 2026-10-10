@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { RpcActionName } from "@lumi/contracts/rpc";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ConfigOverrideRepository } from "#lib/prisma/repositories/ConfigOverrideRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { AuditRepository } from "@lumi/lib/prisma/repositories/audit-repository.js";
+import { ConfigHistoryRepository } from "@lumi/lib/prisma/repositories/config-history-repository.js";
+import { ConfigOverrideRepository } from "@lumi/lib/prisma/repositories/config-override-repository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 let config: { setConfig: ReturnType<typeof vi.fn> };
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@lumi/lib/module-system/utility.js", () => ({
   getUtility: vi.fn().mockImplementation(() => config),
   tryGetUtility: vi.fn().mockImplementation(() => config),
 }));

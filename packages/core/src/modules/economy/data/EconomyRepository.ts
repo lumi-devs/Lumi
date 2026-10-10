@@ -3,9 +3,9 @@ import type {
   EconomyTransaction,
   EconomyTxnKind,
 } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 
-export interface EconomyMutationInput {
+interface EconomyMutationInput {
   guildId: string;
   userId: string;
   walletDelta: number;
@@ -16,7 +16,7 @@ export interface EconomyMutationInput {
   startBank: number;
 }
 
-export interface EconomyTransferInput {
+interface EconomyTransferInput {
   guildId: string;
   fromUserId: string;
   toUserId: string;
@@ -27,7 +27,7 @@ export interface EconomyTransferInput {
   startBank: number;
 }
 
-export interface EconomySlotsInput {
+interface EconomySlotsInput {
   guildId: string;
   userId: string;
   bid: number;
@@ -37,7 +37,7 @@ export interface EconomySlotsInput {
   startBank: number;
 }
 
-export interface EconomyPaydayInput {
+interface EconomyPaydayInput {
   guildId: string;
   userId: string;
   amount: number;

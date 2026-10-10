@@ -1,5 +1,5 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { GuildMember, User } from "discord.js";
 import { NickPrefix, AfkRemovalCooldownMs, AfkKeys } from "../constants.js";
 import { isAfkNickPrefixEnabled } from "../config.js";
@@ -10,7 +10,7 @@ import {
   iterateAllAfkEntries,
   clearAfkEntry,
 } from "../data/afk.js";
-import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
 
 /** Member fetches are per-entry Discord API calls, so the sweep is capped rather than unbounded. */
 const SweepConcurrency = 10;
@@ -100,7 +100,7 @@ export default afkUtility;
 
 export type AfkUtility = typeof afkUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     afk: typeof afkUtility;
   }

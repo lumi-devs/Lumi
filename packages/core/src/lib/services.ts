@@ -1,41 +1,41 @@
-import type { DatabaseClient } from "#lib/prisma/client.js";
+import type { DatabaseClient } from "@lumi/lib/prisma/client.js";
 import type { ValkeyClient } from "@lumi/infrastructure/database";
-import type { InvalidationBus, SignalBus } from "#lib/valkey/buses.js";
-import type { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import type { DiscordRestPort } from "#lib/discord/rest-port.js";
-import type { EventBus } from "#lib/event-bus/types.js";
-import type { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import type { TaskQueue } from "#lib/scheduler/runner.js";
-import type { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import type { InvalidationBus, SignalBus } from "@lumi/lib/valkey/buses.js";
+import type { DatabaseService } from "@lumi/lib/prisma/database-service.js";
+import type { DiscordRestPort } from "@lumi/lib/discord/rest-port.js";
+import type { EventBus } from "@lumi/lib/event-bus/types.js";
+import type { ModuleStore } from "@lumi/lib/module-system/module-store.js";
+import type { TaskQueue } from "@lumi/lib/scheduler/runner.js";
+import type { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
 import type { ILogger } from "@lumi/shared";
 import type { Client } from "discord.js";
 import {
   createValkeyClient,
   valkeyConnectionOptions,
-} from "#lib/valkey/client.js";
+} from "@lumi/lib/valkey/client.js";
 import {
   InvalidationBus as InvalidationBusImpl,
   SignalBus as SignalBusImpl,
-} from "#lib/valkey/buses.js";
-import { AddonModulesRoot } from "#lib/downloader/resolver.js";
-import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
+} from "@lumi/lib/valkey/buses.js";
+import { AddonModulesRoot } from "@lumi/lib/downloader/resolver.js";
+import { DiscordRestAdapter } from "@lumi/lib/discord/rest-adapter.js";
 import {
   envParseInteger,
   envParseString,
   getDevModulePaths,
-} from "#lib/env.js";
-import { LumiPinoLogger } from "#lib/logging/LumiPinoLogger.js";
-import { ModuleStore as ModuleStoreImpl } from "#lib/module-system/ModuleStore.js";
-import { permitResolver } from "#lib/permissions/PermitResolver.js";
-import { prisma, prismaReader } from "#lib/prisma/client.js";
-import { DatabaseService as DatabaseServiceImpl } from "#lib/prisma/DatabaseService.js";
-import { createEventBus, type OwnedEventBus } from "#lib/event-bus/factory.js";
+} from "@lumi/lib/env.js";
+import { LumiPinoLogger } from "@lumi/lib/logging/pino-logger.js";
+import { ModuleStore as ModuleStoreImpl } from "@lumi/lib/module-system/module-store.js";
+import { permitResolver } from "@lumi/lib/permissions/permit-resolver.js";
+import { prisma, prismaReader } from "@lumi/lib/prisma/client.js";
+import { DatabaseService as DatabaseServiceImpl } from "@lumi/lib/prisma/database-service.js";
+import { createEventBus, type OwnedEventBus } from "@lumi/lib/event-bus/factory.js";
 import {
   streamConsumerLag,
   streamDlqLength,
   streamLength,
 } from "@lumi/observability";
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 import { pathToFileURL } from "node:url";
 
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
@@ -101,7 +101,7 @@ export function createServices(
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
     maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
-    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", Ms.Minute),
+    claimMinIdleMs: envParseInteger("EVENT_STREAM_CLAIM_MIN_IDLE_MS", Time.Minute),
     claimIntervalMs: envParseInteger("EVENT_STREAM_CLAIM_INTERVAL_MS", 30_000),
     statsIntervalMs: envParseInteger("EVENT_STREAM_STATS_INTERVAL_MS", 10_000),
     onStats: (s) => {

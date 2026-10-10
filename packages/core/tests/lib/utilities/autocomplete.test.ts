@@ -3,7 +3,7 @@ import {
   AutocompleteChoiceLimit,
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#lib/utilities/autocomplete.js";
+} from "@lumi/lib/utilities/autocomplete.js";
 
 describe("filterAutocompleteChoices", () => {
   it("returns all values when the query is empty", () => {

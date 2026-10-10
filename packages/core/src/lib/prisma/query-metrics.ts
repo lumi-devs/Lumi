@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { dbQueryDuration, dbSlowQueriesTotal } from "@lumi/observability";
-import { resolveDbSlowQueryThresholdMs } from "#lib/env.js";
+import { resolveDbSlowQueryThresholdMs } from "@lumi/lib/env.js";
 
 const SlowQueryThresholdMs = resolveDbSlowQueryThresholdMs();
 

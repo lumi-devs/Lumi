@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { DiscordRestAdapter } from "#lib/discord/rest-adapter.js";
-import { DiscordRestApiError } from "#lib/discord/rest-port.js";
+import { container } from "@lumi/lib/services.js";
+import { DiscordRestAdapter } from "@lumi/lib/discord/rest-adapter.js";
+import { DiscordRestApiError } from "@lumi/lib/discord/rest-port.js";
 
 function discordApiError(message: string, code: number, status: number) {
   const err = new Error(message) as Error & { code: number; status: number };

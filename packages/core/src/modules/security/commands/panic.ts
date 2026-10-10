@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import { enterPanic } from "@lumi/application/services/security/panic.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,

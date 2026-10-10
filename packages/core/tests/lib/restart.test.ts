@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ButtonStyle } from "discord.js";
 import {
   restartChoiceRow,
   scheduleProcessRestart,
-} from "#lib/restart.js";
+} from "@lumi/lib/restart.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
 // the setTimeout queue, so this waits on the real clock instead.

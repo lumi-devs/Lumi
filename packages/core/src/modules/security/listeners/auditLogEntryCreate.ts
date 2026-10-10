@@ -5,8 +5,8 @@ import {
   type GuildAuditLogsEntry,
 } from "discord.js";
 import { isNullish } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import { evaluateNukeEvent, type NukeKind } from "@lumi/application/services/security/anti-nuke.js";
 import { flagRestorePending } from "@lumi/application/services/security/backup.js";
 

@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { TempVcRecord } from "@prisma/client";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkRpc } from "#lib/doctor/checks/rpc.js";
+import { checkRpc } from "@lumi/lib/doctor/checks/rpc.js";
 
 describe("checkRpc", () => {
   it("skips when no RPC url is configured", async () => {

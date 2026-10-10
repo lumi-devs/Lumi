@@ -3,21 +3,20 @@ import {
   type GuildMember,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { fetchT } from "#lib/i18n/index.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import { parseDuration } from "#lib/utilities/time.js";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import { fetchT } from "@lumi/lib/i18n/index.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import { parseDuration } from "@lumi/lib/utilities/time.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   checkDuplicateCase,
   checkHierarchy,
   type DuplicateCaseCheckContext,
-} from "#lib/moderation/ModerationCommand.js";
-import { BanAction } from "@lumi/application/services/mod/actions/BanAction.js";
-import { KickAction } from "@lumi/application/services/mod/actions/KickAction.js";
-import { MuteAction } from "@lumi/application/services/mod/actions/MuteAction.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { WarnAction } from "@lumi/application/services/mod/actions/WarnAction.js";
+} from "@lumi/lib/commands/moderation-flow.js";
+import { BanAction } from "@lumi/application/services/mod/actions/ban-action.js";
+import { KickAction } from "@lumi/application/services/mod/actions/kick-action.js";
+import { MuteAction } from "@lumi/application/services/mod/actions/mute-action.js";
+import { QuarantineAction } from "@lumi/application/services/mod/actions/quarantine-action.js";
+import { WarnAction } from "@lumi/application/services/mod/actions/warn-action.js";
 import { PunishAuthorModalId } from "../../constants.js";
 import type { CaseAction } from "@prisma/client";
 
@@ -41,7 +40,7 @@ export const punishAuthorModal = defineInteraction({
     const { action, authorId } = parsed;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
+    if (!(await services.db.modules.isModuleEnabled(guildId, "mod"))) return;
 
     const { guild } = interaction;
     if (!guild) return;

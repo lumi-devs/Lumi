@@ -2,14 +2,14 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { JobsOptions } from "bullmq";
-import { container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
+import { container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
 import { SpanKind } from "@opentelemetry/api";
 import { otelContext, withSpan } from "@lumi/observability";
-import type { ScheduledTasks } from "#lib/types/common.js";
-import { publishTaskFire } from "#lib/scheduler/bus.js";
-import { unwrapTraceContext } from "#lib/scheduler/otel.js";
-import { SCHEDULED_TASKS_QUEUE_NAME } from "#lib/scheduler/queue.js";
+import type { ScheduledTasks } from "@lumi/lib/types/common.js";
+import { publishTaskFire } from "@lumi/lib/scheduler/bus.js";
+import { unwrapTraceContext } from "@lumi/lib/scheduler/otel.js";
+import { SCHEDULED_TASKS_QUEUE_NAME } from "@lumi/lib/scheduler/queue.js";
 
 /**
  * Catch-up metadata every scheduled-task payload may carry. BullMQ will
@@ -32,7 +32,7 @@ export interface CatchUpMeta {
 }
 
 /** Default tolerance before a `catchUp: false` job is treated as stale. */
-const DefaultCatchupGraceMs = Ms.Minute;
+const DefaultCatchupGraceMs = Time.Minute;
 
 /**
  * Decide whether a scheduled task should run now given its catch-up policy.

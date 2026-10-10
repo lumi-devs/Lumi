@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   delStickyMessageId,
   getStickyMessageId,
@@ -7,8 +7,8 @@ import {
   setStickyMessageId,
   StickyCooldownMs,
   stickyKey,
-} from "#modules/sticky/data/sticky-store.js";
-import { StickyMessageListener } from "#modules/sticky/listeners/messageCreate.js";
+} from "@lumi/modules/sticky/data/sticky-store.js";
+import { StickyMessageListener } from "@lumi/modules/sticky/listeners/messageCreate.js";
 
 function makeMessage(overrides: Record<string, unknown> = {}) {
   return {

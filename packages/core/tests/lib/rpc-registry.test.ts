@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { registerRpcHandlers, verifyRpcCompleteness, getRpcHandler } from "../../src/lib/rpc/registry.js";
 import { rpcRouter } from "@lumi/contracts/rpc";
 

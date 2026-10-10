@@ -1,11 +1,11 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   preconditionChecks,
   type GateCommand,
   type GateDenial,
   type GateSource,
-} from "#lib/permissions/precondition-checks.js";
-import { handleDenied } from "#lib/utilities/command-response.js";
+} from "@lumi/lib/permissions/precondition-checks.js";
+import { handleDenied } from "@lumi/lib/utilities/command-response.js";
 import { UserError } from "@lumi/shared";
 import {
   type ChatInputCommandInteraction,

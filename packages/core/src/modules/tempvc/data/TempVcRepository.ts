@@ -1,7 +1,7 @@
 import type { TempVcGenerator, TempVcRecord } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 
-export interface TempVcRecordInput {
+interface TempVcRecordInput {
   ownerId: string;
   generatorId: string;
   name: string;

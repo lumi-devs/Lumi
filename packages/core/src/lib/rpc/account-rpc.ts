@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
@@ -8,10 +8,10 @@ import {
   executeGdprDeletion,
   executeGdprExport,
   startGdprExportJob,
-} from "#lib/gdpr.js";
-import { signGdprExportToken } from "#lib/gdpr-export-token.js";
-import { authorize } from "#lib/permissions/authorize.js";
-import { implementRpc } from "#lib/rpc/implement.js";
+} from "@lumi/lib/gdpr/requests.js";
+import { signGdprExportToken } from "@lumi/lib/gdpr/export-token.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 
 async function canAccessUserData(
   actorId: string,

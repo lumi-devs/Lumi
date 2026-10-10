@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import {
   GuildFeature,
@@ -7,18 +7,18 @@ import {
   type APIChannel,
   type APIOverwrite,
 } from "discord-api-types/v10";
-import { withSerializedWork } from "#lib/utilities/misc.js";
-import type { LockedChannelSnapshot } from "#modules/security/data/SecurityRepository.js";
-import { fetchGuildChannelsRest, fetchGuildRestUncached } from "#lib/rpc/discord-rest-lookup.js";
+import { withSerializedWork } from "@lumi/lib/utilities/serialized-work.js";
+import type { LockedChannelSnapshot } from "@lumi/modules/security/data/SecurityRepository.js";
+import { fetchGuildChannelsRest, fetchGuildRestUncached } from "@lumi/lib/rpc/discord-rest-lookup.js";
 import { isRestorePending, restoreFromBackup, clearRestorePending } from "./backup.js";
 
-export interface PanicResult {
+interface PanicResult {
   invitesPaused: boolean;
   lockedCount: number;
   skippedCount: number;
 }
 
-export interface PanicRevertResult {
+interface PanicRevertResult {
   restoredCount: number;
   restoredStructure: { rolesRestored: number; channelsRestored: number } | null;
 }

@@ -1,23 +1,23 @@
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
-import { FieldType } from "#lib/module-system/config-schema.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { FieldType } from "@lumi/lib/module-system/config-schema.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { ConfigUtility } from "../../utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
   loadDetail,
 } from "../../services/config-panel.js";
-import { buildFeatureDetailView } from "#modules/core/ui/modules.js";
+import { buildFeatureDetailView } from "@lumi/modules/core/ui/modules.js";
 import {
   buildHistoryView,
   buildOverridesView,
-} from "#modules/core/ui/overrides.js";
+} from "@lumi/modules/core/ui/overrides.js";
 import { ConfigSelectId } from "../../constants.js";
 import type { AnySelectMenuInteraction } from "discord.js";
 import { OverrideTargetType, type $Enums } from "@prisma/client";

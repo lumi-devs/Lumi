@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import loggingClaimMessageListener from "#modules/logging/listeners/claimMessage.js";
+import loggingClaimMessageListener from "@lumi/modules/logging/listeners/claimMessage.js";
 
 vi.mock("@lumi/application/services/logging/claims.js", () => ({
   normalizeLogClaimCode: vi.fn(),
@@ -8,7 +8,7 @@ vi.mock("@lumi/application/services/logging/claims.js", () => ({
   registerLogClaim: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 

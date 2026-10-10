@@ -1,7 +1,7 @@
 import type { User } from "discord.js";
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 
-const SuspiciousAccountAgeMs = 7 * Ms.Day;
+const SuspiciousAccountAgeMs = 7 * Time.Day;
 
 /**
  * Coarse "throwaway account" heuristic shared by verification targeting and

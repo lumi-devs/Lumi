@@ -1,11 +1,10 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
-import { commandRegistry } from "#lib/commands/command-def.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
+import { commandRegistry } from "@lumi/lib/commands/command-def.js";
 import { styleText } from "node:util";
-import { Emojis } from "#lib/utilities/assets.js";
-import { getShardCount, isPrimaryShard } from "#lib/env.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getShardCount, isPrimaryShard } from "@lumi/lib/env.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 
 async function publishStats(services: Container, guilds: number) {
   const stats = {
@@ -79,7 +78,7 @@ export const readyListener = defineListener({
     const bar = styleText("gray", "|");
     logger.debug(rule);
     logger.debug(
-      `${styleText(["bold", "green"], ` ${Emojis.Fire} Lumi `)} ${styleText("cyan", tag)} ${bar} ${guilds} guilds`,
+      `${styleText(["bold", "green"], ` 🔥 Lumi `)} ${styleText("cyan", tag)} ${bar} ${guilds} guilds`,
     );
     logger.debug(
       `${styleText("gray", " Modules:")}  ${modules} ${bar} Commands: ${commands}`,

@@ -1,16 +1,16 @@
-import type { CommandContext } from "#lib/commands/context.js";
-import type { Container } from "#lib/services.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { Container } from "@lumi/lib/services.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { runModerationFlow, type ModerationCommand } from "#lib/moderation/ModerationCommand.js";
-import { parseSnowflakeList, resolveMembers } from "#lib/moderation/multi-target.js";
-import type { ConfirmPromptOptions } from "#lib/utilities/confirm.js";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { runModerationFlow, type ModerationCommand } from "@lumi/lib/commands/moderation-flow.js";
+import { parseSnowflakeList, resolveMembers } from "@lumi/lib/discord/mass-targets.js";
+import type { ConfirmPromptOptions } from "@lumi/lib/utilities/confirm.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { KickAction } from "@lumi/application/services/mod/actions/KickAction.js";
+import { KickAction } from "@lumi/application/services/mod/actions/kick-action.js";
 import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";

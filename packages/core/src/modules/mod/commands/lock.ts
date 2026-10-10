@@ -1,12 +1,12 @@
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import {
   isChannelLocked,
   lockChannel,
   unlockChannel,
   type LockableChannel,
-} from "#lib/moderation/lockdown.js";
-import { formatAuditReason } from "#lib/utilities/misc.js";
+} from "@lumi/lib/discord/channel-locks.js";
+import { formatAuditReason } from "@lumi/lib/utilities/audit-reason.js";
 import { SlashCommandBuilder, ChannelType } from "discord.js";
 
 function isLockable(

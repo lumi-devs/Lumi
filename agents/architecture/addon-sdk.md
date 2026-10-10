@@ -1,185 +1,108 @@
 # Addon SDK
 
-Third-party addons are downloaded git repos symlinked into the module tree. Their only
-supported import surface is the `lumi` package (self-referencing the repo root's own
-`package.json`), never `#core`/`#lib`/`#utilities`/`#database`. This is enforced two ways:
-static analysis at install time (`validate.ts`) and, for first-party core modules, an ESLint
-rule — addons themselves aren't linted by this repo's ESLint config since they live outside
-`packages/*/src`.
+Third-party addons are downloaded git repos managed by the downloader
+(`packages/core/src/lib/downloader/`), installed under `data/` and enabled per
+guild. Their only supported import surface is the `lumi` package — never
+`@lumi/lib/*`, `@lumi/modules/*`, `discord.js`, or `node:*` builtins. Enforced three
+ways: static analysis at install time (`validate.ts`), capability-gated host
+RPC at runtime (`host/capabilities.ts`), and the isolate itself (no fs/network/
+process globals exist to abuse).
 
-## The `exports` map (root `package.json:14-21`)
+## Execution: V8 isolates, mandatory
 
-```json
-"exports": {
-  ".": "./packages/core/src/lib/addon-sdk/index.ts",
-  "./commands": "./packages/core/src/lib/addon-sdk/commands.ts",
-  "./permissions": "./packages/core/src/lib/addon-sdk/permissions.ts",
-  "./scheduling": "./packages/core/src/lib/addon-sdk/scheduling.ts",
-  "./ui": "./packages/core/src/lib/addon-sdk/ui.ts",
-  "./utils": "./packages/core/src/lib/addon-sdk/utils.ts"
-}
-```
+Every addon is bundled (`Bun.build`, `isolate/isolate-build.ts`) and run in a V8
+isolate inside a Node sidecar (`runtime/addon-isolate-runner.ts`, plain
+`.ts` — image and dev Nodes run type-stripped TS natively), spawned by
+`host/AddonHost` (`host/addon-host.ts`) over NDJSON stdio. There is no other execution mode. Invokes are
+serialized per isolate (FIFO); the runner stamps the active invocation id
+itself and ignores the isolate-sent one, so concurrent calls can never cross
+scopes.
 
-The root `package.json`'s own comments (`comment:imports`/`comment:exports`, lines 12-13)
-explain the mechanism precisely: an installed addon is symlinked into
-`packages/core/src/modules/` but its *realpath* lives under `data/3rd-party-modules/`
-(or, once installed, `data/installed-modules/<name>` — see below). Node/Bun resolve `#`
-subpath imports and bare `"lumi"` self-references from a file's realpath's nearest
-`package.json`, which for an addon is this root one, not `packages/core/package.json`. That's
-why an addon's `#lib/*.js` specifier would (if allowed) resolve through *this* root's
-`imports` map (`package.json:22-37`) rather than the core package's — and why `import ...
-from "lumi"` just works with zero addon-side configuration.
+- The isolate contains the addon's code plus the pure SDK slice (card/component
+  builders, config schema, branding, shared utils). Everything impure is a host
+  RPC (`call()` in `sdk/rpc.ts`, injected transport — `setRpcTransport`).
+- Per-isolate memory limit (`LUMI_ISOLATE_MEMORY_MB`, default 128) and
+  invocation timeouts; a dead isolate exits and the host crash-loop guard
+  (respawn once, then failed) applies.
+- The sidecar inherits an allowlisted env only (`childEnv`, `host/addon-host.ts`).
+  Secrets never cross.
+- `Bun.spawn` IPC does not interoperate with Node children (framing mismatch,
+  silent) — hence NDJSON over stdin/stdout. `jail.set` only accepts
+  transferable values (no plain objects); async host calls go through a
+  `Reference` + `.apply(..., { result: { promise: true, copy: true } })`,
+  never `Callback` (its results are always copied, so promises can't cross).
+- Node 22+ is required to run the sidecar (`LUMI_NODE_BIN` override). Docker
+  images compile the `isolated-vm` binding in the deps stage.
 
-## Full exported surface (verified from the six SDK files)
+## The `lumi` surface (root `package.json` exports)
 
-`lumi` (`addon-sdk/index.ts`):
-`Module`, `DefineModule`, `NoEndUserData`, `noEndUserData`, `cfg`, `FieldType`,
-`toStringArray`, `ModuleMeta`, `ModuleOptions`, `ConfigField`, `ModuleConfigSchema`,
-`ModuleListener`, `ModuleListenerOptions`, `GuildMessageListener`, `Utility`, `getUtility`,
-`tryGetUtility`, `Utilities`.
+`lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/events`,
+`lumi/interactions`, `lumi/kv`, `lumi/net`, `lumi/permissions`, `lumi/valkey`,
+`lumi/scheduling`, `lumi/ui`, `lumi/utils` → `packages/core/src/lib/addon-sandbox/sdk/*.ts`.
 
-`lumi/commands` (`addon-sdk/commands.ts`):
-`BaseCommand`, `BaseSubcommand`, `CommandContext`, `BucketScope`, `sendReply`,
-`replySuccess`, `replyError`, `replyWarning`, `replyInfo`, `assertPermit`, `ReplyOptions`,
-`CommandReplyTarget`.
+`node_modules/lumi` inside each addon dir symlinks the repo root
+(`ensureAddonLumiLink`, `host/sandbox-root.ts`), so the root exports map is the one
+and only subpath table. Notable surface points:
 
-`lumi/permissions` (`addon-sdk/permissions.ts`):
-`hasRequiredPermit`, `checkModulesEnabled`, `isModuleEnabled`.
+- `lumi` — `defineModule`, `cfg`, `logger`, `setRpcTransport` (test seam for
+  addon unit tests; see `confessions/lib/anon.test.ts` in `lumi-addons`).
+- `lumi/commands` — `defineCommand`, `CommandContext` (all Discord access is
+  `call()`-backed; `ctx.*` never touches discord.js).
+- `lumi/ui` — pure builders only: `make*Card`, `noPingCard`, `actionRow`/
+  `selectRow`/`modal`, colors (emoji are unicode literals at each use site;
+  builders take `{ name }` component-emoji objects).
+  Host-backed runtimes (`confirmPrompt`, `paginateList`, panel rows) are
+  absent — no live interaction objects exist in an isolate. A test
+  (`panels.test.ts`) locks this boundary: pure builders identical, runtimes
+  undefined.
+- `lumi/utils` — `randomHex`, `sha256Hex`, `sleep` (host CSPRNG/crypto/timers;
+  the isolate has none of these globals), plus pure time/error helpers
+  (`errorFrom`/`swallow` live in `@lumi/shared`).
+- `lumi/net` — `fetchUrl`/`fetchText`/`fetchJson`, backed by SSRF-guarded
+  `net.fetch` (http(s) only, DNS-resolved IP denylist per redirect hop, 10s
+  timeout, 5MB cap, text or base64 by content type).
+- `lumi/config`, `lumi/kv`, `lumi/valkey`, `lumi/scheduling`, `lumi/discord`,
+  `lumi/events`, `lumi/interactions`, `lumi/permissions` — thin `call()`
+  wrappers; check `sdk/*.ts` (each is one import deep).
 
-`lumi/scheduling` (`addon-sdk/scheduling.ts`):
-`RelayTask`, `shouldRunNow`, `DefaultCatchupGraceMs`, `CatchUpMeta`, `scheduleTask`,
-`cancelTask`, `publishTaskFire`, `registerTaskFireHandler`.
+Discord enums the bundle needs (`MessageFlags`, `ActivityType`) are repo-owned
+copies in `@lumi/lib/discord/constants.js`, drift-tested against the installed
+`discord.js` (`constants.test.ts`) — `discord.js` itself can never enter the
+bundle (drags `@discordjs/ws` + node builtins). Same story for card colors
+(`@lumi/lib/ui/palette.js`, operator overrides baked at build time).
 
-`lumi/ui` (`addon-sdk/ui.ts`):
-card builders `makeCard`, `makeInfoCard`, `makeSuccessCard`, `makeWarningCard`,
-`makeErrorCard`, `makeListCard`, `makeEmptyCard`, `ephemeralCard`, `noPingCard`,
-`resolveCardColor`, `defaultCardColors`, `CardReply`, `CardOptions`, `CardColorKey`; panel
-kit `confirmRow`, `backRow`, `navRow`, `pageFooter`, `tabRow`, `settingRow`, `thumbRow`,
-`HubTabs`, `SectionLineLimit`, `ButtonLabelLimit`, `AccessoryButton`, `Tab`,
-`ConfirmRowOptions`, `NavAction`, `NavRowOptions`; plus `confirmPrompt`, `paginateList`,
-`paginateContainer`, `Emojis`, and addon-specific re-export wrappers `addonSettingRow`,
-`addonTabRow`, `addonConfirmRow`, `addonBackRow`, `addonNavRow`, `addonPageFooter` — these
-last six are literally one-line pass-throughs to the same core functions (see
-`ui.ts:64-103`), kept as a separate naming convention rather than a different implementation.
+## Capabilities (`host/capabilities.ts`, contracts `addon-sandbox.ts`)
 
-`lumi/utils` (`addon-sdk/utils.ts`):
-`BotConfig`, `relativeTimestamp`, `shortTimestamp`, `parseDuration`, `formatDuration`,
-`errorFrom`, `swallow`, `logError`, `acquireValkeyLock`, `verifyValkeyLock`, `ValkeyLock`,
-`ValkeyLockOptions`, `GuildMessage`.
-
-Notably absent from every subpath: `container.db`/`container.prisma`, `container.valkey`
-directly, `container.invalidation`. Addons get no Prisma schema of their own — persistence is
-`container.db.guildKV` or `container.valkey` per the validator's own error message
-(`validate.ts:330-333`).
-
-## Symlink mechanism (`downloader/resolver.ts`)
-
-Two on-disk roots, both under `data/`:
-
-- `ModuleRoot = data/3rd-party-modules/<repoName>` — a real git clone/pull target
-  (`resolver.ts:70-74`, `addRepo`).
-- `AddonModulesRoot = data/installed-modules/<moduleName>` — a symlink into a subdirectory of
-  a cloned repo (`resolver.ts:76-80`, `installModule:262-375`). `installModule` validates
-  the addon (`validateAddon`, described below) *before* creating the symlink
-  (`resolver.ts:289-294`) and refuses to overwrite a same-named module symlinked from a
-  different repo (`resolver.ts:356-365`).
-
-`ModuleStore` is told about both roots by `installContainerServices`
-(`packages/core/src/lib/client/container-services.ts:37-42`):
-
-```ts
-moduleStore.addRoot(new URL("../../modules/", import.meta.url)); // core modules
-moduleStore.addRoot(pathToFileURL(`${AddonModulesRoot}/`));       // installed addons
-```
-
-`ModuleStore.isAddonModule` (`ModuleStore.ts:85-91`) distinguishes "addon" from "core" purely
-by whether a module's directory sits inside the *first* registered root — order matters, the
-core root must be registered first.
-
-If an addon's `info.json` declares `requirements` (npm packages), `installModule`
-(`resolver.ts:319-352`) writes a throwaway local `package.json` inside the addon's *source*
-directory (not the symlink target) and runs `bun add --ignore-scripts` scoped to that
-directory, then symlinks `node_modules/lumi` back to the repo root so the addon's own
-isolated `node_modules` can still resolve `import ... from "lumi"`.
+Every host method declares one requirement; unknown methods deny by default
+(`isMethodAllowed`). `discord[]` scopes map to Discord powers, `scheduling` /
+`valkey` default off, `kv` defaults on, `network` (for `net.fetch`) defaults
+off. `util.randomHex` / `util.sha256Hex` / `util.sleep`, `config.get`, `log`,
+and read-only Discord getters require nothing. Manifests declare them under
+`capabilities` (validated names only — unknown discord names are install
+errors); interaction prefixes are constrained to `<addonName>:` (`ownPrefixes`).
 
 ## `validate.ts` — what actually gets flagged
 
-Read in full; every check below is real, not inferred:
+Errors (block install): missing/invalid `info.json` (name format, non-empty
+author, semver version, required `end_user_data_statement`, name-dirname
+match, bot-version range), missing/invalid `manifest.json` (+ unknown
+capability names), missing `index.ts` / no `defineModule` / no export, a
+`tasks/` or `scheduled-tasks/` directory, `EmbedBuilder` usage, `container`
+usage, removed class API (`@DefineModule`/`BaseCommand`/`Module`), sibling or
+`#`-internal imports, escaping relative imports.
 
-**Errors (block install):**
-- Missing `info.json` (`validate.ts:262-264`); malformed JSON; schema violations against
-  `infoSchema` (`validate.ts:13-27`) — `name` must match `^[a-z0-9][a-z0-9-]*$`, `author`
-  must be a non-empty string array, `version` must look like semver, and
-  `end_user_data_statement` is **required** (a dedicated error message calls this out by
-  name, `validate.ts:228-231`, distinct from the generic schema-violation message).
-- `info.json`'s `name` must equal the addon's directory name (`validate.ts:241-245`).
-- `min_bot_version`/`max_bot_version` checked against the running `LumiInfo.version` via real
-  semver comparison (`isVersionCompatible`/`isMaxVersionCompatible`, handles `v`-prefixes,
-  pre-release tags, build metadata) — an addon requiring a newer Lumi than what's running, or
-  capped below it, fails validation (`validate.ts:246-255`).
-- If present, `manifest.json` is schema-checked (`manifestSchema`, `validate.ts:49-62`) and
-  its `name` must also match the directory name.
-- Missing `index.ts` (`validate.ts:310-312`); `index.ts` not using `@DefineModule(` (regex
-  check, `validate.ts:300-301`); `index.ts` with no `export` at all
-  (`validate.ts:302-305`).
-- A `tasks/` directory present anywhere in the addon (`validate.ts:314-318`) — see the
-  module-system doc's gotcha about `scheduled-tasks/` being the only scanned name.
-- Any `.ts` file (recursively, skipping `node_modules`/`.git`/`dist`/`build`) that: imports
-  `EmbedBuilder` from `discord.js` or `@discordjs/builders`, or constructs `new
-  EmbedBuilder()` directly (`validate.ts:326-329`); touches `container.prisma`
-  (`validate.ts:330-333`); imports `#modules/...` (cross-module import,
-  `validate.ts:345-349`); imports any `#core/`, `#lib/`, `#utilities/`, `#database/`, or
-  `#root/` path directly (`validate.ts:351-355` — this is the actual enforcement point for
-  "addons only use `lumi`"); or has a relative import that resolves outside the addon's own
-  root directory (`validate.ts:356-365`).
-
-**Warnings (non-blocking, still surfaced to whoever runs the validator):**
-- `index.ts` hand-authoring `configFields:` instead of a `configSchema` with `cfg.*`
-  (`validate.ts:306-309`).
-- Calling `stores.registerPath(...)` — redundant, the Downloader already registers the addon's
-  path (`validate.ts:334-337`).
-- A batch of best-effort memory-leak heuristics (`checkLeakHeuristics`, `validate.ts:99-180`),
-  explicitly documented as regex-level guesses that can't prove an actual leak: an untracked
-  `setInterval`/`setTimeout` return value, a timer variable with no matching
-  `clearInterval`/`clearTimeout` anywhere in the same file, a `.on(`/`.addListener(` call with
-  no `onUnload`/`dispose`/`.off(`/`removeListener`/`removeAllListeners` in the same file, a
-  module-scope `let`, or a module-scope `[]`/`Map`/`Set` that's pushed/set/added to but never
-  trimmed or bounds-checked. All of these can have a false positive (cleanup living in an
-  imported helper or base class) — treat them as prompts to check, not proof of a bug.
-
-`validateAddonOrRepo` (`validate.ts:373-395`) is the entry point used by `bun run validate`
-(root `package.json` script, `scripts/validate-addon.ts`) — it accepts either a single addon
-directory (has its own `info.json`) or a directory of many addons.
+Warnings: hand-authored `configFields`, `stores.registerPath`, leak heuristics
+(unstored timers, listener without cleanup, module-level `let`/unbounded
+collections), and dangerous-import tripwires (`node:fs/net/http/...`,
+`bun:ffi`, bare `fetch(`/`Bun.`/`Worker(`/`require(builtin)`) — warn-only by
+design, since `import("node:"+"fs")` defeats static detection. `*.test.ts`
+files are never scanned; neither are `node_modules`/`.git`/`dist`/`build`.
 
 ## Addon manifest format
 
-Two files, distinct purposes, both validated if present:
-
-- `info.json` — required, author-supplied Downloader metadata (name, author, description,
-  version, `end_user_data_statement`, optional `requirements`/`tags`/`min_bot_version`/
-  `max_bot_version`/`hidden`). Real example, `hello-world/info.json` in
-  [`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s `examples/`:
-
-  ```json
-  {
-    "name": "hello-world",
-    "author": ["Lumi Developers"],
-    "description": "The simplest possible Lumi addon: one command, one config field, one listener.",
-    "short": "A minimal starter addon.",
-    "version": "1.0.0",
-    "requirements": [],
-    "end_user_data_statement": "This addon does not collect or store any personal end-user data."
-  }
-  ```
-
-- `manifest.json` — generated, not hand-written. `installModule` synthesizes one from
-  `info.json` if absent at install time (`resolver.ts:296-315`) with `configFields: []` and
-  `subStores` from `detectSubStores`. Once a module (core or addon) actually runs, `bun run
-  modules:manifest` (`scripts/generate-manifests.ts`) regenerates it from the class's live
-  `@DefineModule` meta, which is why a *core* module's checked-in `manifest.json` (e.g.
-  `modules/mod/manifest.json`) has real `configFields` derived from its `configSchema`, while
-  a freshly-installed addon's synthesized one starts with an empty `configFields` array until
-  it's regenerated.
-
-The three reference addons (`hello-world`, `tag-manager`, `giveaway`) now live in
-[`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s `examples/`, not this repo.
+`info.json` (required: name, author, description, version,
+`end_user_data_statement`; optional `requirements` = npm packages installed via
+`bun add --ignore-scripts` into the addon dir and bundled by `Bun.build`,
+`min/max_bot_version`, tags), `manifest.json` (module metadata + `capabilities`;
+synthesized at install if absent). Reference addons live in
+[`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons).

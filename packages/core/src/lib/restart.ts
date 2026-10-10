@@ -1,10 +1,10 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import {
   ModuleRestartCancelId,
   ModuleRestartId,
-} from "#modules/core/constants.js";
+} from "@lumi/modules/core/constants.js";
 
 /**
  * Self-restart support for applying downloaded-module code updates.

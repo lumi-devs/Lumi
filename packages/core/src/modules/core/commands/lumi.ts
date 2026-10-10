@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
 import { loadFeatures } from "../services/config-panel.js";
-import { buildHubView } from "#modules/core/ui/hub.js";
+import { buildHubView } from "@lumi/modules/core/ui/hub.js";
 
 export const lumiDef: CommandDef = {
   name: "lumi",

@@ -16,15 +16,24 @@ import {
 import {
   ButtonStyle,
   ChannelType,
+  parseEmoji,
   type APIMessageComponentEmoji,
 } from "discord.js";
-import { container } from "#lib/services.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { container } from "@lumi/lib/services.js";
 import { formatPageFooter } from "./layout.js";
 
 export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
-/** Wraps components in an action row, saving generic parameters at call sites. */
+export function componentEmoji(text: string): APIMessageComponentEmoji {
+  const parsed = parseEmoji(text);
+  if (!parsed?.name) return { name: text };
+  return {
+    name: parsed.name,
+    ...(parsed.id ? { id: parsed.id } : {}),
+    ...(parsed.animated ? { animated: parsed.animated } : {}),
+  };
+}
+
 export function row(...components: MessageActionRowComponentBuilder[]): Row {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...components);
 }
@@ -34,11 +43,7 @@ function setEmojiIfPresent(
   emoji?: string | APIMessageComponentEmoji,
 ): void {
   if (emoji) {
-    if (typeof emoji === "string") {
-      builder.setEmoji(Emojis.parse(emoji));
-    } else {
-      builder.setEmoji(emoji);
-    }
+    builder.setEmoji(typeof emoji === "string" ? componentEmoji(emoji) : emoji);
   }
 }
 
@@ -222,7 +227,7 @@ export function createPaginationRow(
   const prevBtn = new ButtonBuilder()
     .setCustomId(`${customIdPrefix}:prev:${Math.max(0, currentPage - 1)}`)
     .setLabel("Prev")
-    .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+    .setEmoji(componentEmoji("⬅️"))
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(disabled || isFirstPage);
 
@@ -235,7 +240,7 @@ export function createPaginationRow(
   const nextBtn = new ButtonBuilder()
     .setCustomId(`${customIdPrefix}:next:${currentPage + 1}`)
     .setLabel("Next")
-    .setEmoji(Emojis.parse(Emojis.ArrowRight))
+    .setEmoji(componentEmoji("➡️"))
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(disabled || isLastPage);
 
@@ -339,16 +344,12 @@ const toButton = (b: AccessoryButton): ButtonBuilder => {
     .setStyle(b.style ?? ButtonStyle.Secondary);
   if (b.label) button.setLabel(clipLabel(b.label));
   if (b.emoji) {
-    button.setEmoji(typeof b.emoji === "string" ? Emojis.parse(b.emoji) : b.emoji);
+    button.setEmoji(typeof b.emoji === "string" ? componentEmoji(b.emoji) : b.emoji);
   }
   if (b.disabled !== undefined) button.setDisabled(b.disabled);
   return button;
 };
 
-/**
- * A "setting row": up to three text lines with an inline accessory button.
- * The core list-row primitive for panels — label + value + Edit/Toggle button.
- */
 export function settingRow(
   lines: string | string[],
   button: AccessoryButton,
@@ -360,7 +361,6 @@ export function settingRow(
   return section;
 }
 
-/** Up to three text lines with a thumbnail accessory. */
 export function thumbRow(
   lines: string | string[],
   imageUrl: string,
@@ -380,7 +380,6 @@ export interface Tab {
   emoji?: string;
 }
 
-/** Hub and detail tab set backing the Home/Modules/Permissions/Settings/Addons bar. */
 export const HubTabs: readonly Tab[] = [
   { id: "home", label: "Hub", emoji: "🤖" },
   { id: "modules", label: "Modules", emoji: "⚙️" },
@@ -389,10 +388,6 @@ export const HubTabs: readonly Tab[] = [
   { id: "addons", label: "Addons", emoji: "📦" },
 ];
 
-/**
- * Panel tab bar. The active tab renders as a disabled Primary button; the rest
- * are Secondary buttons with customId `<prefix>:<tab.id>`.
- */
 export function tabRow(
   prefix: string,
   tabs: readonly Tab[],
@@ -406,7 +401,9 @@ export function tabRow(
       .setLabel(clipLabel(tab.label))
       .setStyle(active ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setDisabled(active);
-    if (tab.emoji) button.setEmoji(Emojis.parse(tab.emoji));
+    if (tab.emoji) {
+      button.setEmoji(typeof tab.emoji === "string" ? componentEmoji(tab.emoji) : tab.emoji);
+    }
     row.addComponents(button);
   }
   return row;
@@ -420,7 +417,6 @@ export interface ConfirmRowOptions {
   confirmStyle?: ButtonStyle;
 }
 
-/** Standard destructive-action confirmation pair: Danger confirm + Secondary cancel. */
 export function confirmRow(
   options: ConfirmRowOptions,
 ): ActionRowBuilder<ButtonBuilder> {
@@ -436,7 +432,6 @@ export function confirmRow(
   );
 }
 
-/** A lone back button row for subpanels. */
 export function backRow(
   customId: string,
   label = "← Back",
@@ -449,10 +444,6 @@ export function backRow(
   );
 }
 
-/**
- * Detail-view navigation: a Back button plus one primary action.
- * Keeps subpanel footers uniform across hub, detail, and addon views.
- */
 export function navRow(
   options: NavRowOptions,
 ): ActionRowBuilder<ButtonBuilder> {
@@ -463,7 +454,7 @@ export function navRow(
   if (options.action.emoji) {
     action.setEmoji(
       typeof options.action.emoji === "string"
-        ? Emojis.parse(options.action.emoji)
+        ? componentEmoji(options.action.emoji)
         : options.action.emoji,
     );
   }
@@ -479,7 +470,6 @@ export function navRow(
   );
 }
 
-/** Small muted footer line for paged panels: `Page x of y` plus a hint. */
 export function pageFooter(
   pageIndex: number,
   totalPages: number,

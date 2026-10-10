@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validateAddon } from "#lib/downloader/validate.js";
+import { validateAddon } from "@lumi/lib/downloader/validate.js";
 
 let root: string;
 
@@ -131,24 +131,24 @@ describe("validateAddon", () => {
     expect(errors.some((e) => e.includes("container"))).toBe(true);
   });
 
-  it("blocks direct #core/#lib/#utilities/#database alias imports as hard errors", async () => {
+  it("blocks direct #core/@lumi/lib/#utilities/#database alias imports as hard errors", async () => {
     const dir = await makeAddon("aliases", {
       "info.json": JSON.stringify({ name: "aliases", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
       "index.ts": GOOD_INDEX,
-      "lib/x.ts": `import { makeInfoCard } from "#lib/ui/cards.js";\nimport { Utility } from "#lib/module-system/Utility.js";\nexport { makeInfoCard, Service };\n`,
+      "lib/x.ts": `import { makeInfoCard } from "@lumi/lib/ui/cards.js";\nimport { Utility } from "@lumi/lib/module-system/utility.js";\nexport { makeInfoCard, Service };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/ui/cards.js"'))).toBe(true);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/module-system/Utility.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "@lumi/lib/ui/cards.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "@lumi/lib/module-system/utility.js"'))).toBe(true);
   });
 
   it("blocks direct #database/* alias imports too (closes the container.prisma bypass)", async () => {
     const dir = await makeAddon("database-bypass", {
       "info.json": JSON.stringify({ name: "database-bypass", author: ["T"], description: "d", short: "s", version: "1.0.0" }),
-      "index.ts": `${GOOD_INDEX}\nimport { prisma } from "#lib/database/client.js";\nexport { prisma };\n`,
+      "index.ts": `${GOOD_INDEX}\nimport { prisma } from "@lumi/lib/database/client.js";\nexport { prisma };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "#lib/database/client.js"'))).toBe(true);
+    expect(errors.some((e) => e.includes('imports Lumi\'s internal path "@lumi/lib/database/client.js"'))).toBe(true);
   });
 
   it("validates a valid manifest.json contract", async () => {

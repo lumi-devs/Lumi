@@ -1,15 +1,14 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { cfg } from "#lib/module-system/config-schema.js";
-import { container, type Container } from "#lib/services.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import { clearAllAfkForUser } from "./data/afk.js";
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
 import { handleAfkDeleteMessageFire } from "@lumi/application/services/afk/delete-handler.js";
 
 export const afkModule = defineModule({
   name: "afk",
   displayName: "AFK",
-  emoji: Emojis.Afk,
+  emoji: "💤",
   description:
     "Set yourself AFK; mentions notify others and a prefix is added to your nickname.",
   short: "Set yourself AFK with automated status and mention alerts.",

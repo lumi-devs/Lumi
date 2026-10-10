@@ -1,6 +1,6 @@
-import type { CommandContext } from "#lib/commands/context.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import { SlashCommandBuilder, type ChatInputCommandInteraction, type GuildMember } from "discord.js";
 import { getVcRecord } from "../data/tempvc.js";
 import { buildPanel } from "../ui/panel.js";

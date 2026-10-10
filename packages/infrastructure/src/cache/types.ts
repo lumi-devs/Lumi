@@ -5,19 +5,6 @@ export interface CacheLogger {
   error?(message: string, ...args: unknown[]): void;
 }
 
-export interface CacheOptions {
-  ttlSeconds?: number;
-  namespace?: string;
-}
-
-export interface ICacheStore {
-  get<T>(key: string): Promise<T | null>;
-  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
-  del(...keys: string[]): Promise<void>;
-  has(key: string): Promise<boolean>;
-  getOrSet<T>(key: string, ttlSeconds: number, producer: () => Promise<T>): Promise<T>;
-}
-
 export interface ValkeyConnectionConfig {
   url?: string;
   host?: string;

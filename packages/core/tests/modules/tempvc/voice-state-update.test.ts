@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import tempvcVoiceStateUpdate from "#modules/tempvc/listeners/voiceStateUpdate.js";
+import tempvcVoiceStateUpdate from "@lumi/modules/tempvc/listeners/voiceStateUpdate.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@lumi/lib/module-system/utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
@@ -18,11 +18,7 @@ vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/misc.js", () => ({
-  isModuleEnabled: vi.fn().mockResolvedValue(true),
-}));
-
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import {
   trackVoiceState,
@@ -32,6 +28,7 @@ import {
 function makeServices() {
   return {
     logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() },
+    db: { modules: { isModuleEnabled: vi.fn().mockResolvedValue(true) } },
   } as any;
 }
 

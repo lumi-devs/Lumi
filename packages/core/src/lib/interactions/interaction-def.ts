@@ -3,8 +3,7 @@ import {
   RESTJSONErrorCodes,
   type Interaction,
 } from "discord.js";
-import type { Container } from "#lib/services.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import type { Container } from "@lumi/lib/services.js";
 
 export type InteractionKind = "button" | "select" | "modal";
 
@@ -82,7 +81,7 @@ export function matchesPrefix(customId: string, prefix: string): boolean {
 export function checkSecurity(interaction: Interaction, ownerId: string): void {
   if ("user" in interaction && interaction.user.id !== ownerId) {
     throw new InteractionAccessDeniedError(
-      `${Emojis.Cross} Only the original invoker can use these components.`,
+      `❌ Only the original invoker can use these components.`,
     );
   }
 }

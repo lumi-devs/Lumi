@@ -5,9 +5,9 @@ import { promises as fs, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Prisma } from "@prisma/client";
 import { version as djsVersion } from "discord.js";
-import type { Container } from "#lib/services.js";
-import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import { logError } from "#lib/utilities/errors.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { ModuleRecord } from "@lumi/lib/module-system/module-store.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 
 interface ShardInfo {
   id: number;

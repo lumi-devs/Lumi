@@ -1,7 +1,7 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import { queueSend } from "#lib/outbound/send-queue.js";
-import type { AuditEntry } from "#lib/outbound/render.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { queueSend } from "@lumi/lib/outbound/send-queue.js";
+import type { AuditEntry } from "@lumi/lib/outbound/render.js";
 
 export const guildLogUtility = defineUtility({
   name: "guild-log",
@@ -27,7 +27,7 @@ export const guildLogUtility = defineUtility({
 
 export type GuildLogUtility = typeof guildLogUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     "guild-log": typeof guildLogUtility;
   }

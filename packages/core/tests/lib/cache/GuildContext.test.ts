@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { getGuildContext } from "#lib/cache/GuildContext.js";
-import { BrandColors } from "#lib/branding/colors.js";
-import { container } from "#lib/services.js";
+import { getGuildContext } from "@lumi/lib/cache/guild-context.js";
+import { BrandColors } from "@lumi/lib/ui/palette.js";
+import { container } from "@lumi/lib/services.js";
 
 describe("getGuildContext", () => {
   let getGuildSettings: any;

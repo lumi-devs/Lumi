@@ -1,7 +1,7 @@
-import { Ms } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
+import { Time } from "@lumi/shared";
+import type { Container } from "@lumi/lib/services.js";
 import { SlashCommandBuilder, type Message } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
 import { collectPingData } from "../services/ping-collect.js";
 import {
   buildOverviewCard,
@@ -9,8 +9,8 @@ import {
   EphemeralFlags,
 } from "../ui/ping-cards.js";
 
-const LiveUpdatesDuration = Ms.Minute;
-const LiveUpdateInterval = Ms.Second * 10;
+const LiveUpdatesDuration = Time.Minute;
+const LiveUpdateInterval = Time.Second * 10;
 /** Per-user live-update interval handles; ensures at most one active interval per user. */
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export const pingViewStates = new Map<

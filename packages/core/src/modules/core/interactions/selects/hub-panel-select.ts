@@ -1,10 +1,10 @@
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { Container } from "#lib/services.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { GuildSettingsUtility } from "../../utilities/GuildSettingsUtility.js";
 import type { PermissionUtility } from "../../utilities/PermissionUtility.js";
 import {
@@ -15,12 +15,12 @@ import {
   renderRepoModules,
   renderSettings,
 } from "../../services/hub-panel.js";
-import { buildAutoUpdateSettingsView } from "#modules/core/ui/addons.js";
+import { buildAutoUpdateSettingsView } from "@lumi/modules/core/ui/addons.js";
 import {
   buildPermitAssignTargetView,
   type PermitKind,
-} from "#modules/core/ui/permissions.js";
-import { ephemeralCard, makeErrorCard, makeWarningCard } from "#lib/ui/cards.js";
+} from "@lumi/modules/core/ui/permissions.js";
+import { ephemeralCard, makeErrorCard, makeWarningCard } from "@lumi/lib/ui/cards.js";
 import {
   HubAddonModActionId,
   HubPermitAssignId,

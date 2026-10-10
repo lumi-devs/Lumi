@@ -1,16 +1,16 @@
-import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import { restartChoiceRow } from "#lib/restart.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#lib/ui/cards.js";
+import type { ModuleRecord } from "@lumi/lib/module-system/module-store.js";
+import { restartChoiceRow } from "@lumi/lib/restart.js";
+import { componentEmoji } from "@lumi/lib/ui/panels.js";
+import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import type { ModulePiecesInfo } from "@lumi/application/services/core/module-command/pieces.js";
 import { ModuleUpdateId } from "../constants.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 
 function stateEmoji(state: string | undefined): string {
-  if (state === "loaded") return Emojis.Success;
-  if (state === "failed") return Emojis.Warning;
-  return Emojis.Cross;
+  if (state === "loaded") return "🟢";
+  if (state === "failed") return "🟡";
+  return "❌";
 }
 
 export function noModulesDiscoveredCard(): CardReply {
@@ -54,7 +54,7 @@ export function moduleInfoCard(
 
   if (pinned) {
     detailLines.push(
-      `**Update Lock:** ${Emojis.Pin} Pinned (\`,module update\` skips this module)`,
+      `**Update Lock:** 📌 Pinned (\`,module update\` skips this module)`,
     );
   }
 
@@ -112,12 +112,12 @@ export function moduleAlreadyInstalledCard(
     new ButtonBuilder()
       .setCustomId(ModuleUpdateId.build({ moduleName, userId }))
       .setLabel("Update Module")
-      .setEmoji(Emojis.parse(Emojis.Download))
+      .setEmoji(componentEmoji("📥"))
       .setStyle(ButtonStyle.Primary),
   );
 
   return makeWarningCard(
-    `${Emojis.Warning} Already Installed`,
+    `🟡 Already Installed`,
     `**${moduleName}** is already installed. Would you like to update it instead?`,
     { actionRows: [updateRow] },
   );
@@ -133,21 +133,21 @@ export function uninstallProgressCard(moduleName: string): CardReply {
 export function reloadProgressCard(moduleName: string): CardReply {
   return makeInfoCard(
     "Reloading Module",
-    `${Emojis.Loading} Unloading and reloading **${moduleName}**...`,
+    `⏳ Unloading and reloading **${moduleName}**...`,
   );
 }
 
 export function updateProgressCard(moduleName: string): CardReply {
   return makeInfoCard(
     "Updating Module",
-    `${Emojis.Loading} Checking and downloading updates for **${moduleName}**...`,
+    `⏳ Checking and downloading updates for **${moduleName}**...`,
   );
 }
 
 export function updateAllProgressCard(): CardReply {
   return makeInfoCard(
     "Updating All Modules",
-    `${Emojis.Loading} Scanning and updating all installed modules...`,
+    `⏳ Scanning and updating all installed modules...`,
   );
 }
 
@@ -160,14 +160,14 @@ export function noInstalledModulesCard(): CardReply {
 
 export function modulePinnedCard(moduleName: string): CardReply {
   return makeSuccessCard(
-    `${Emojis.Pin} Module Pinned`,
+    `📌 Module Pinned`,
     `**${moduleName}** is now pinned. \`,module update ${moduleName}\` and \`,module update\` (all) will both skip it until you run \`,module unpin ${moduleName}\`.`,
   );
 }
 
 export function moduleUnpinnedCard(moduleName: string): CardReply {
   return makeSuccessCard(
-    `${Emojis.Check} Module Unpinned`,
+    `✅ Module Unpinned`,
     `**${moduleName}** is unpinned and will be updated normally again.`,
   );
 }
@@ -194,19 +194,19 @@ export function multiUpdateReportCard(
     .filter((outcome) => outcome.status === "updated")
     .map(
       (outcome) =>
-        `${Emojis.Success} **${outcome.moduleName}**${outcome.needsRestart ? "" : " (hot-reloaded)"}`,
+        `🟢 **${outcome.moduleName}**${outcome.needsRestart ? "" : " (hot-reloaded)"}`,
     );
   const skipped = outcomes
     .filter((outcome) => outcome.status === "up-to-date")
     .map((outcome) => `- **${outcome.moduleName}** (up-to-date)`);
   const pinned = outcomes
     .filter((outcome) => outcome.status === "skipped-pinned")
-    .map((outcome) => `${Emojis.Pin} **${outcome.moduleName}** (pinned)`);
+    .map((outcome) => `📌 **${outcome.moduleName}** (pinned)`);
   const failed = outcomes
     .filter((outcome) => outcome.status === "failed")
     .map(
       (outcome) =>
-        `${Emojis.Error} **${outcome.moduleName}** - ${outcome.error}`,
+        `🔴 **${outcome.moduleName}** - ${outcome.error}`,
     );
   const needsRestart = outcomes.some(
     (outcome) => outcome.status === "updated" && outcome.needsRestart,
@@ -234,12 +234,12 @@ export function moduleHelpCard(): CardReply {
     new ButtonBuilder()
       .setCustomId("lumi:tab:modules")
       .setLabel("Open Modules Panel")
-      .setEmoji(Emojis.parse(Emojis.Gear))
+      .setEmoji(componentEmoji("⚙️"))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:tab:addons")
       .setLabel("Open Add-ons Manager")
-      .setEmoji(Emojis.parse(Emojis.Repo))
+      .setEmoji(componentEmoji("📦"))
       .setStyle(ButtonStyle.Secondary),
   );
 

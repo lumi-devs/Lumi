@@ -14,9 +14,9 @@ import {
   TextDisplayBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { Emojis } from "#lib/utilities/assets.js";
-import { Ms } from "@lumi/shared";
-import { fitLines, type CardReply } from "#lib/ui/cards.js";
+import { componentEmoji } from "@lumi/lib/ui/panels.js";
+import { Time } from "@lumi/shared";
+import { fitLines, type CardReply } from "@lumi/lib/ui/cards.js";
 
 /** Total page count for `itemCount` items shown `perPage` at a time; always at least 1. */
 export function computePageCount(itemCount: number, perPage: number): number {
@@ -53,7 +53,7 @@ export async function paginateContainer(options: PaginationOptions) {
     totalPages,
     userId,
     customIdPrefix = "page",
-    time = Ms.Minute,
+    time = Time.Minute,
     ephemeral = false,
     render,
   } = options;
@@ -73,7 +73,7 @@ export async function paginateContainer(options: PaginationOptions) {
           new ButtonBuilder()
             .setCustomId(`${customIdPrefix}:prev`)
             .setLabel("Previous")
-            .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+            .setEmoji(componentEmoji("⬅️"))
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(disabled || pageIndex <= 0),
           new ButtonBuilder()
@@ -84,7 +84,7 @@ export async function paginateContainer(options: PaginationOptions) {
           new ButtonBuilder()
             .setCustomId(`${customIdPrefix}:next`)
             .setLabel("Next")
-            .setEmoji(Emojis.parse(Emojis.ArrowRight))
+            .setEmoji(componentEmoji("➡️"))
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(disabled || pageIndex >= totalPages - 1),
         );
@@ -178,7 +178,7 @@ export async function paginateList(options: PaginateListOptions) {
     perPage = 10,
     ephemeral = false,
     customIdPrefix = "list",
-    time = Ms.Minute,
+    time = Time.Minute,
   } = options;
 
   const totalPages = computePageCount(items.length, perPage);

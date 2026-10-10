@@ -1,7 +1,6 @@
-import { authorize } from "#lib/permissions/authorize.js";
-import type { Container } from "#lib/services.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { authorize } from "@lumi/lib/permissions/authorize.js";
+import type { Container } from "@lumi/lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import { UserError } from "@lumi/shared";
 import type {
   AnySelectMenuInteraction,
@@ -124,7 +123,7 @@ export async function hasSetupAccess(interaction: SetupInteraction): Promise<boo
 export const setupAccessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.Cross} You need the Manage Server permission to run setup.`,
+    message: `❌ You need the Manage Server permission to run setup.`,
   });
 
 export async function finishSetupWizard(

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,
   AddonModulesRoot,
-} from "#lib/downloader/resolver.js";
+} from "@lumi/lib/downloader/resolver.js";
 
 /**
  * Verifies the real addon-installation/classification logic in

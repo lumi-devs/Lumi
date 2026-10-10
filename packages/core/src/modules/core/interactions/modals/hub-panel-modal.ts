@@ -1,6 +1,6 @@
-import { fetchTyped } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import { deriveRepoNameFromUrl } from "@lumi/contracts";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
 import type { GuildSettingsUtility } from "../../utilities/GuildSettingsUtility.js";
 import {
@@ -8,10 +8,10 @@ import {
   hasOwnerPermit,
   renderSettings,
 } from "../../services/hub-panel.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#lib/ui/cards.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/lib/ui/cards.js";
 import { HubAddonModalId } from "../../constants.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
 
 export const hubPanelModal = defineInteraction({

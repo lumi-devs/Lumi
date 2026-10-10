@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkAddonCompat } from "#lib/doctor/checks/addon-compat.js";
+import { checkAddonCompat } from "@lumi/lib/doctor/checks/addon-compat.js";
 
 describe("checkAddonCompat", () => {
   it("ok when no addons are installed", async () => {

@@ -1,7 +1,7 @@
 import type { AutocompleteInteraction } from "discord.js";
-import type { Container } from "#lib/services.js";
-import type { DownloaderUtility } from "#modules/core/utilities/DownloaderUtility.js";
-import { filterAutocompleteChoices } from "#lib/utilities/autocomplete.js";
+import type { Container } from "@lumi/lib/services.js";
+import type { DownloaderUtility } from "@lumi/modules/core/utilities/DownloaderUtility.js";
+import { filterAutocompleteChoices } from "@lumi/lib/utilities/autocomplete.js";
 
 export async function repoNameChoices(
   services: Container,

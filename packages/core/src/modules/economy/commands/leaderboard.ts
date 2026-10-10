@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
 import { userMention } from "@discordjs/formatters";
-import type { CommandContext } from "#lib/commands/context.js";
-import { paginateList } from "#lib/utilities/pagination.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { paginateList } from "@lumi/lib/utilities/pagination.js";
 import { BankService } from "@lumi/application/services/economy/BankService.js";
 import { formatAmount, getEconomyConfig } from "../config.js";
 import { reportEconomyError } from "@lumi/application/services/economy/respond.js";

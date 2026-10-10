@@ -1,8 +1,7 @@
-import { makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { restartChoiceRow } from "#lib/restart.js";
+import { makeSuccessCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { restartChoiceRow } from "@lumi/lib/restart.js";
 
-export interface ModuleUpdateResult {
+interface ModuleUpdateResult {
   updated: boolean;
   changelog?: string;
   needsRestart?: boolean;
@@ -20,14 +19,14 @@ export function moduleUpdateResultCard(
 ): CardReply {
   if (result.pinned) {
     return makeSuccessCard(
-      `${Emojis.Pin} Module Pinned`,
+      `📌 Module Pinned`,
       `**${moduleName}** is pinned and was skipped. Run \`,module unpin ${moduleName}\` first if you want to update it.`,
     );
   }
 
   if (!result.updated) {
     return makeSuccessCard(
-      `${Emojis.Check} Module Up-To-Date`,
+      `✅ Module Up-To-Date`,
       `**${moduleName}** is already running the latest version!`,
     );
   }
@@ -38,14 +37,14 @@ export function moduleUpdateResultCard(
 
   if (result.needsRestart) {
     return makeSuccessCard(
-      `${Emojis.Download} Module Updated`,
+      `📥 Module Updated`,
       `Updated **${moduleName}** on disk. Bun can't hot-swap module code, so a restart is needed to load it.\n\n${changelogStr}`,
       { actionRows: [restartChoiceRow(userId)] },
     );
   }
 
   return makeSuccessCard(
-    `${Emojis.Download} Module Updated`,
+    `📥 Module Updated`,
     `Successfully updated and hot-reloaded **${moduleName}**!\n\n${changelogStr}`,
   );
 }

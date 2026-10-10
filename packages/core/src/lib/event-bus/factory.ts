@@ -5,7 +5,7 @@
 // would stall publishes behind blocking reads.
 
 import Valkey, { type RedisOptions } from "iovalkey";
-import { StreamBus, type StreamStats } from "./StreamBus.js";
+import { StreamBus, type StreamStats } from "./stream-bus.js";
 import type { EventBus } from "./types.js";
 
 export type ValkeyOptions = RedisOptions;

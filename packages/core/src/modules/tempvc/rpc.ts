@@ -1,7 +1,7 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { tempvcRpc } from "@lumi/contracts/rpc";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { implementRpc } from "#lib/rpc/implement.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 
 export const tempvcRpcHandlers = implementRpc(tempvcRpc, {
   "guild.tempvc.generators.list": async ({ guildId }) => {

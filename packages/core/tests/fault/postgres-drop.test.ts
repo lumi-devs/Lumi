@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { ConfigRepository } from "#lib/prisma/repositories/ConfigRepository.js";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { container } from "#lib/services.js";
+import { ConfigRepository } from "@lumi/lib/prisma/repositories/config-repository.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { container } from "@lumi/lib/services.js";
 
 interface SimulatedDbState {
   isOnline: boolean;

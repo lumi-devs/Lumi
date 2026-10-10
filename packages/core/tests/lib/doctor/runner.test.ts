@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { runDoctor } from "#lib/doctor/runner.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { runDoctor } from "@lumi/lib/doctor/runner.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 function ok(name: string): Promise<DoctorCheckResult> {
   return Promise.resolve({ name, status: "ok", detail: "fine" });

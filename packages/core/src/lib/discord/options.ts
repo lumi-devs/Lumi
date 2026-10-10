@@ -1,5 +1,5 @@
 import type { RESTOptions } from "@discordjs/rest";
-import { envParseInteger, getDiscordProxyUrl } from "#lib/env.js";
+import { envParseInteger, getDiscordProxyUrl } from "@lumi/lib/env.js";
 
 export interface BuildRestOptions {
   /**

@@ -131,7 +131,7 @@ Raw Discord embeds (`EmbedBuilder`) are strictly prohibited in user-facing comma
 
 ```ts
 import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
-import { replySuccess } from "#lib/commands.js";
+import { replySuccess } from "@lumi/lib/commands.js";
 
 // Respond with standardized success feedback
 await replySuccess(interaction, "Settings Saved", "Updated moderation threshold.");

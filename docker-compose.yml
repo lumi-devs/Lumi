@@ -24,7 +24,7 @@ x-lumi-service: &lumi-service
       required: false
   environment: &lumi-env
     VALKEY_HOST: valkey
-    POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
+    POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
     DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
@@ -39,14 +39,15 @@ x-lumi-service: &lumi-service
   depends_on:
     migrate:
       condition: service_completed_successfully
-    pgbouncer:
-      condition: service_healthy
-      required: false
     postgres:
       condition: service_healthy
     valkey:
       condition: service_healthy
   restart: unless-stopped
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
   volumes:
     - addon-data:/app/data
   networks:
@@ -127,6 +128,15 @@ services:
       LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
       METRICS_HOST: "0.0.0.0"
       POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      pgbouncer:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     profiles:
       - scale
 

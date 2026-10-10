@@ -1,11 +1,10 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { Client } from "discord.js";
-import { logError } from "#lib/utilities/errors.js";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
-import { mapWithConcurrency } from "#lib/utilities/concurrency.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import type { Container } from "@lumi/lib/services.js";
+import { mapWithConcurrency } from "@lumi/lib/utilities/concurrency.js";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 
 /**
@@ -26,7 +25,7 @@ const tempvcReady = defineListener({
 
     const guilds = [...client.guilds.cache.values()];
     await mapWithConcurrency(guilds, ReconcileConcurrency, async (guild) => {
-      if (!(await isModuleEnabled(services, guild.id, "tempvc"))) return;
+      if (!(await services.db.modules.isModuleEnabled(guild.id, "tempvc"))) return;
       await service
         .reconcileGuild(services, guild)
         .catch((err: unknown) =>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { ModNoteRepository } from '#modules/mod/data/ModNoteRepository.js';
+import { ModNoteRepository } from '@lumi/modules/mod/data/ModNoteRepository.js';
 
 describe('ModNoteRepository GDPR erasure', () => {
   let mockPrisma: any;

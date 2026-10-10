@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { checkPostgres } from "#lib/doctor/checks/postgres.js";
+import { checkPostgres } from "@lumi/lib/doctor/checks/postgres.js";
 
 describe("checkPostgres", () => {
   it("fails when SELECT 1 fails", async () => {

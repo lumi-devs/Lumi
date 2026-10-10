@@ -1,4 +1,4 @@
-import { row, type Row } from "#modules/core/ui/common.js";
+import { row, type Row } from "@lumi/modules/core/ui/common.js";
 import {
   ageButtonCustomId,
   ageModalCustomId,
@@ -8,15 +8,14 @@ import {
   type SetupWizardState,
 } from "../services/setup-wizard.js";
 import { SetupStepId } from "../constants.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { makeCard, makeSuccessCard, type CardReply } from "#lib/ui/cards.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+import { makeCard, makeSuccessCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 import {
   LabelBuilder,
   ModalBuilder,
@@ -71,7 +70,7 @@ function setupShell(
 ): CardReply {
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Shield} Server Setup — Step ${step} of ${SetupTotalSteps}`,
+    `🛡️ Server Setup — Step ${step} of ${SetupTotalSteps}`,
     [setupProgressLines(step, state).join("\n"), `**${heading}**\n${hint}`],
     {
       breadcrumbs: ["Setup"],
@@ -168,7 +167,7 @@ export function buildSetupStepView(
             state.minAgeHours !== null
               ? `Min age: ${state.minAgeHours}h`
               : "Set min age…",
-          emoji: Emojis.Edit,
+          emoji: "✏️",
           style: ButtonStyle.Secondary,
         }),
         createActionButton({
@@ -199,7 +198,7 @@ export function buildSetupReviewView(state: SetupWizardState): CardReply {
   ].join("\n");
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Shield} Server Setup — Review`,
+    `🛡️ Server Setup — Review`,
     [setupProgressLines(SetupTotalSteps, settled).join("\n"), summary],
     {
       breadcrumbs: ["Setup", "Review"],
@@ -230,7 +229,7 @@ export function buildSetupSuccessCard(state: SetupWizardState): CardReply {
     `Verification: ${settled.verificationMode ? (verificationLabels[settled.verificationMode] ?? settled.verificationMode) : "Unchanged"}`,
     `Join gate: ${settled.joinGateEnabled ? `On (min age ${settled.minAgeHours}h)` : "Off"}`,
   ].join("\n");
-  return makeSuccessCard(`${Emojis.Check} Setup Complete`, recap, {
+  return makeSuccessCard(`✅ Setup Complete`, recap, {
     breadcrumbs: ["Setup"],
     footer: "Open the Hub to fine-tune every module.",
     actionRows: buildSafeActionRows([
@@ -238,7 +237,7 @@ export function buildSetupSuccessCard(state: SetupWizardState): CardReply {
         createActionButton({
           customId: "lumi:tab:home",
           label: "Open Hub",
-          emoji: Emojis.Bot,
+          emoji: "🤖",
           style: ButtonStyle.Primary,
         }),
       ),

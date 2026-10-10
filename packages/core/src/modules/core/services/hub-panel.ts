@@ -1,31 +1,30 @@
-import type { LumiT } from "#lib/i18n/index.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { hasRequiredPermit } from "#lib/permissions/index.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { hasRequiredPermit } from "@lumi/lib/permissions/index.js";
+import { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
 import { loadFeatures } from "./config-panel.js";
-import { buildAddonRepoModulesView } from "#modules/core/ui/addons.js";
-import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
+import { buildAddonRepoModulesView } from "@lumi/modules/core/ui/addons.js";
+import { buildHubView, buildSettingsView } from "@lumi/modules/core/ui/hub.js";
 import {
   buildPermissionsView,
   type PermitAssignmentRow,
-} from "#modules/core/ui/permissions.js";
-import { Emojis } from "#lib/utilities/assets.js";
+} from "@lumi/modules/core/ui/permissions.js";
 import { UserError } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
 
-export type PanelInteraction =
+type PanelInteraction =
   ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
 /** The error every hub-panel handler throws once the `admin.*` check fails. */
 export const accessDenied = () =>
   new UserError({
     identifier: "AccessDenied",
-    message: `${Emojis.Cross} You need the \`admin.*\` permit to manage this server.`,
+    message: `❌ You need the \`admin.*\` permit to manage this server.`,
   });
 
 /** Wick-style permit check for the hub panel: same node /lumi requires. */

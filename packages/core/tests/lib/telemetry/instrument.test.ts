@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "bun:test";
-import { instrumentedRun } from "#lib/telemetry/instrument.js";
+import { instrumentedRun } from "@lumi/lib/telemetry.js";
 
 describe("instrumentedRun", () => {
   it("returns the wrapped result", async () => {

@@ -1,16 +1,15 @@
-import { getUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
 import { UserError } from "@lumi/shared";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
 import { type ButtonInteraction } from "discord.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { makeErrorCard, makeInfoCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { errorFrom } from "#lib/utilities/errors.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { makeErrorCard, makeInfoCard } from "@lumi/lib/ui/cards.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
 import { moduleUpdateResultCard } from "../../ui/module-update-card.js";
 import type { DownloaderUtility } from "../../utilities/DownloaderUtility.js";
 import { ModuleUpdateId } from "../../constants.js";
@@ -26,7 +25,7 @@ export const moduleUpdate = defineInteraction({
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.Cross} Only Bot Owners can update modules.`,
+        message: `❌ Only Bot Owners can update modules.`,
       });
     }
 
@@ -35,7 +34,7 @@ export const moduleUpdate = defineInteraction({
     await interaction.editReply(
       makeInfoCard(
         "Updating Module",
-        `${Emojis.Loading} Checking and downloading updates for **${moduleName}**...`,
+        `⏳ Checking and downloading updates for **${moduleName}**...`,
       ),
     );
 
@@ -46,7 +45,7 @@ export const moduleUpdate = defineInteraction({
       );
     } catch (err: unknown) {
       await interaction.editReply(
-        makeErrorCard(`${Emojis.Error} Update Failed`, errorFrom(err).message),
+        makeErrorCard(`🔴 Update Failed`, errorFrom(err).message),
       );
     }
   },

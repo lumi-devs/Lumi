@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { taskFireStream, publishTaskFire } from "#lib/scheduler/bus.js";
+import { container } from "@lumi/lib/services.js";
+import { taskFireStream, publishTaskFire } from "@lumi/lib/scheduler/bus.js";
 
 describe("scheduler-bus", () => {
   beforeEach(() => {

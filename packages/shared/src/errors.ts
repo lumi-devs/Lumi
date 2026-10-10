@@ -16,3 +16,21 @@ export class UserError extends Error {
     this.context = opts.context;
   }
 }
+
+export function errorFrom(err: unknown): Error {
+  if (err instanceof Error) return err;
+  if (typeof err === "string") return new Error(err);
+  if (err && typeof err === "object" && "message" in err)
+    return new Error(String(err.message));
+  return new Error(String(err));
+}
+
+export function swallow(
+  reason: string,
+  onError: (reason: string, err: Error) => void = () => {},
+): (err: unknown) => null {
+  return (err: unknown) => {
+    onError(reason, errorFrom(err));
+    return null;
+  };
+}

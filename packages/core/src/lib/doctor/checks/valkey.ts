@@ -1,9 +1,9 @@
 import Valkey, { Cluster } from "iovalkey";
-import { valkeyConnectionOptions } from "#lib/valkey/client.js";
+import { valkeyConnectionOptions } from "@lumi/lib/valkey/client.js";
 import type { ValkeyClient as ValkeyConnection } from "@lumi/infrastructure/database";
-import { getValkeyClusterNodes, getValkeyClusterScaleReads } from "#lib/env.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { getValkeyClusterNodes, getValkeyClusterScaleReads } from "@lumi/lib/env.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const ValkeyCheckName = "valkey";
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { welcomeRpcHandlers } from "#modules/welcome/rpc.js";
-import { container } from "#lib/services.js";
+import { welcomeRpcHandlers } from "@lumi/modules/welcome/rpc.js";
+import { container } from "@lumi/lib/services.js";
 
-vi.mock("#lib/rpc/discord-rest-lookup.js", () => ({
+vi.mock("@lumi/lib/rpc/discord-rest-lookup.js", () => ({
   fetchChannelRest: vi.fn(),
   fetchGuildMemberRest: vi.fn(),
   fetchGuildRest: vi.fn(),
@@ -23,7 +23,7 @@ import {
   fetchChannelRest,
   fetchGuildMemberRest,
   fetchGuildRest,
-} from "#lib/rpc/discord-rest-lookup.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
 import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
 
 describe("Welcome RPC Handlers", () => {

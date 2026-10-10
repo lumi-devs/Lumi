@@ -1,12 +1,12 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
 import type {
   Guild,
   GuildMember,
   GuildTextBasedChannel,
   Message,
 } from "discord.js";
-import { logError } from "#lib/utilities/errors.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import { acquireValkeyLock } from "@lumi/infrastructure/cache";
 import { ModuleName, ReactionRoleKeys } from "../constants.js";
 import {
@@ -406,7 +406,7 @@ export default reactionRolesUtility;
 
 export type ReactionRolesUtility = typeof reactionRolesUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     reactionroles: typeof reactionRolesUtility;
   }

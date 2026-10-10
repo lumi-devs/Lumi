@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   deleteMessageLater,
   deleteReplyLater,
   TransientReplyTtl,
-} from "#lib/utilities/temporary-message.js";
+} from "@lumi/lib/utilities/temporary-message.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now), not
 // the setTimeout queue, so these wait on the real clock instead.

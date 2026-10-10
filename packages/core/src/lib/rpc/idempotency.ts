@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { tryParseJSON } from "@lumi/shared";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
-import { ValkeyKeys, ValkeyTTL } from "#lib/valkey/client.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);

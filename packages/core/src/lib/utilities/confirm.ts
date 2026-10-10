@@ -6,9 +6,9 @@ import {
   type RepliableInteraction,
   type User,
 } from "discord.js";
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { confirmRow } from "#lib/ui/panels.js";
-import { makeWarningCard, type CardReply } from "#lib/ui/cards.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
+import { confirmRow } from "@lumi/lib/ui/panels.js";
+import { makeWarningCard, type CardReply } from "@lumi/lib/ui/cards.js";
 
 /**
  * The slice of {@linkcode CommandContext} `confirmPrompt` actually needs -

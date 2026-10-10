@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type Valkey from "iovalkey";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
-import { withIdempotency } from "#lib/rpc/idempotency.js";
-import { ValkeyTTL } from "#lib/valkey/client.js";
+import { withIdempotency } from "@lumi/lib/rpc/idempotency.js";
+import { ValkeyTTL } from "@lumi/lib/valkey/client.js";
 import { createTestValkey, deleteByPrefix, integrationDescribe, scanKeys } from "./setup.js";
 
 const KeyPrefix = "lumi:rpc:idem:";

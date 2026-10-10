@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import fc from "fast-check";
-import { container } from "#lib/services.js";
-import { evaluateNodeMatch, PermitResolver } from "#lib/permissions/PermitResolver.js";
-import type { TargetPermitPayload } from "#lib/prisma/repositories/PermissionRepository.js";
+import { container } from "@lumi/lib/services.js";
+import { evaluateNodeMatch, PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
+import type { TargetPermitPayload } from "@lumi/lib/prisma/repositories/permission-repository.js";
 
 const segment = fc.string({
   minLength: 1,

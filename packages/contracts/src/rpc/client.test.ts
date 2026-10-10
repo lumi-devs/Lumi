@@ -377,4 +377,65 @@ describe("RpcClient read retries", () => {
     expect((err as RpcError).code).toBe(RpcFailureCodes.Forbidden);
     expect(fetchCalls).toBe(1);
   });
+
+  it("retries a retryable coded failure on a read action and succeeds", async () => {
+    let fetchCalls = 0;
+    const baseUrl = serve(() => {
+      fetchCalls++;
+      if (fetchCalls === 1) {
+        return Response.json({
+          id: "1",
+          ok: false,
+          error: "busy",
+          code: RpcFailureCodes.Conflict,
+          retryable: true,
+        });
+      }
+      return Response.json({ id: "2", ok: true, data: { entries: [] } });
+    });
+    const client = new RpcClient({
+      baseUrl,
+      retry: { attempts: 3, baseDelayMs: 1 },
+    });
+    const result = await client.invoke("guild.afk.list", { guildId: "g1" });
+    expect(result).toEqual({ entries: [] });
+    expect(fetchCalls).toBe(2);
+  });
+
+  it("waits at least retryAfterMs before retrying a retryable failure", async () => {
+    let fetchCalls = 0;
+    const baseUrl = serve(() => {
+      fetchCalls++;
+      return Response.json({
+        id: "1",
+        ok: false,
+        error: "slow down",
+        code: RpcFailureCodes.Conflict,
+        retryable: true,
+        retryAfterMs: 250,
+      });
+    });
+    const client = new RpcClient({
+      baseUrl,
+      retry: { attempts: 2, baseDelayMs: 1 },
+    });
+    const startedAt = Date.now();
+    const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+    expect((err as RpcError).code).toBe(RpcFailureCodes.Conflict);
+    expect(fetchCalls).toBe(2);
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(200);
+  });
+
+  it("rejects a response body larger than the cap without reading it all", async () => {
+    const baseUrl = serve(
+      () =>
+        new Response("x".repeat(1024), {
+          headers: { "content-length": String(11 * 1024 * 1024), "content-type": "application/json" },
+        }),
+    );
+    const client = new RpcClient({ baseUrl });
+    const err = await client.invoke("guild.afk.list", { guildId: "g1" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(RpcError);
+    expect((err as RpcError).code).toBe("MALFORMED");
+  });
 });

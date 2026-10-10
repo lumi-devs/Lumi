@@ -2,9 +2,9 @@ import { Queue } from "bullmq";
 import {
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#lib/scheduler/queue.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+} from "@lumi/lib/scheduler/queue.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const QueueHealthCheckName = "queue-health";
 
@@ -21,7 +21,7 @@ export interface QueueHealthCheckDeps {
   /**
    * Override for tests; defaults to opening a BullMQ `Queue` against the
    * same name/connection every scheduled-tasks producer in the fleet uses
-   * (`#lib/scheduler/queue.js`), reading its job counts, and
+   * (`@lumi/lib/scheduler/queue.js`), reading its job counts, and
    * closing it again.
    */
   getJobCounts?: () => Promise<QueueJobCounts>;

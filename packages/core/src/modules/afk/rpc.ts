@@ -1,6 +1,6 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { afkRpc } from "@lumi/contracts/rpc";
-import { implementRpc } from "#lib/rpc/implement.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 
 export const afkRpcHandlers = implementRpc(afkRpc, {
   "guild.afk.list": async ({ guildId }) => {

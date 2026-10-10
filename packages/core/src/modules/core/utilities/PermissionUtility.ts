@@ -6,10 +6,10 @@ import {
   type PermitRecord,
   type PermitTargetType,
   type PermitWithAssignments,
-} from "#lib/prisma/repositories/PermissionRepository.js";
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import { cleanMention, isSnowflakeId } from "#lib/utilities/misc.js";
+} from "@lumi/lib/prisma/repositories/permission-repository.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { cleanMention, isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 
 const ValidKinds: ReadonlySet<string> = new Set(["enforced", "custom"]);
 
@@ -301,25 +301,25 @@ export const permissionUtility = defineUtility({
 
 export type PermissionUtility = typeof permissionUtility;
 
-export interface PermitExportEntry {
+interface PermitExportEntry {
   name: string;
   nodes: string[];
   roleIds: string[];
 }
 
-export interface PermitExport {
+interface PermitExport {
   version: 1;
   exportedAt: string;
   permits: PermitExportEntry[];
 }
 
-export interface PermitImportResult {
+interface PermitImportResult {
   created: number;
   updated: number;
   skipped: Array<{ name: string; reason: string }>;
 }
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     permissions: typeof permissionUtility;
   }

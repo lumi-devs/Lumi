@@ -1,8 +1,8 @@
 import {
   fieldsFromSchema,
   type ConfigField,
-} from "#lib/module-system/config-schema.js";
-import type { ModuleDefinition } from "#lib/module-system/meta.js";
+} from "@lumi/lib/module-system/config-schema.js";
+import type { ModuleDefinition } from "@lumi/lib/module-system/meta.js";
 import { call } from "./rpc.js";
 
 export {
@@ -11,9 +11,11 @@ export {
   toStringArray,
   type ConfigField,
   type ModuleConfigSchema,
-} from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/module-system/config-schema.js";
 
-export { NoEndUserData } from "#lib/module-system/meta.js";
+export { NoEndUserData } from "@lumi/lib/module-system/meta.js";
+
+export { setRpcTransport, type RpcEnvelope, type RpcTransport } from "./rpc.js";
 
 export type ModuleOptions = Omit<ModuleDefinition, "configOverrides" | "dashboardHref"> & { name: string };
 export type ModuleMeta = ModuleOptions & { displayName: string; configFields: ConfigField[] };

@@ -8,10 +8,6 @@
     ".": "./src/index.ts",
     "./services/*": "./src/services/*"
   },
-  "imports": {
-    "#lib/*.js": "../core/src/lib/*.ts",
-    "#modules/*.js": "../core/src/modules/*.ts"
-  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

@@ -17,8 +17,7 @@
     "packages/core": {
       "entry": [
         "index.ts",
-        "src/lib/client/setup.ts",
-        "src/lib/client/LumiClient.ts",
+        "src/lib/client/lumi-client.ts",
         "src/lib/env.ts",
         "src/runtime/*.ts",
         "src/lib/regex-worker/worker.ts",

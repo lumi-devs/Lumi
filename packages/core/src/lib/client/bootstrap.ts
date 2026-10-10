@@ -1,17 +1,17 @@
 process.env["NODE_ENV"] ??= "development";
 
 import { Client } from "discord.js";
-import { container, createServices, useServices } from "#lib/services.js";
+import { container, createServices, useServices } from "@lumi/lib/services.js";
 import { flushSentry, shutdownTracing, runDrainSequence } from "@lumi/observability";
-import { attachClient, destroyLumi, loginLumi } from "./LumiClient.js";
+import { attachClient, destroyLumi, loginLumi } from "./lumi-client.js";
 import { buildClientOptions } from "./client-options.js";
 import {
   envParseString,
   validateAddonSignatureConfig,
   validateRequiredEnv,
-} from "#lib/env.js";
-import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#lib/cluster/shard-lease.js";
-import { logError, errorFrom } from "#lib/utilities/errors.js";
+} from "@lumi/lib/env.js";
+import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "@lumi/lib/sharding/shard-lease.js";
+import { logError, errorFrom } from "@lumi/lib/utilities/errors.js";
 
 export interface BootstrapAppOptions {
   onlineMessage?: string;

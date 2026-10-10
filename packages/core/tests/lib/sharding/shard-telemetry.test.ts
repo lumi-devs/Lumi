@@ -4,7 +4,7 @@ import {
   isShardStale,
   readClusterShards,
   type ShardTelemetrySample,
-} from "#lib/sharding/shard-telemetry.js";
+} from "@lumi/lib/sharding/shard-telemetry.js";
 
 const CLUSTER = "test";
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { container } from "#lib/services.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { container } from "@lumi/lib/services.js";
 
 vi.mock("@lumi/observability", () => ({
   cacheHits: { inc: vi.fn() },

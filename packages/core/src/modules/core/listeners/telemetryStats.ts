@@ -1,6 +1,6 @@
 import { Events, type Client } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   guildCount,
   rest429Total,
@@ -9,7 +9,7 @@ import {
   shardLatency,
   shardStatus,
 } from "@lumi/observability";
-import { getDiscordProxyUrl } from "#lib/env.js";
+import { getDiscordProxyUrl } from "@lumi/lib/env.js";
 
 const RefreshMs = 15_000;
 

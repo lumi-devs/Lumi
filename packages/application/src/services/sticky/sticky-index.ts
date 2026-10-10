@@ -1,5 +1,5 @@
-import { container } from "#lib/services.js";
-import type { StickyEntry } from "#modules/sticky/config.js";
+import { container } from "@lumi/lib/services.js";
+import type { StickyEntry } from "@lumi/modules/sticky/config.js";
 
 function parseStickyEntry(raw: unknown): StickyEntry | null {
   if (typeof raw !== "object" || raw === null) return null;

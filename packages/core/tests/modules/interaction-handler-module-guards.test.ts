@@ -1,18 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#lib/services.js";
-import * as misc from "#lib/utilities/misc.js";
+import { container } from "@lumi/lib/services.js";
 import {
   addInteractionDef,
   type InteractionDef,
-} from "#lib/interactions/interaction-def.js";
-import { dispatchInteraction } from "#lib/interactions/interaction-dispatch.js";
-import type { Container } from "#lib/services.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { dispatchInteraction } from "@lumi/lib/interactions/interaction-dispatch.js";
+import type { Container } from "@lumi/lib/services.js";
 
-vi.mock("#lib/i18n/index.js", () => ({
+vi.mock("@lumi/lib/i18n/index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/permissions/index.js", () => ({
+vi.mock("@lumi/lib/permissions/index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
 }));
 
@@ -20,7 +19,7 @@ vi.mock("@lumi/application/services/utility/media-utils.js", () => ({
   handleMediaRequest: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#modules/afk/data/afk.js", () => ({
+vi.mock("@lumi/modules/afk/data/afk.js", () => ({
   getAfkMentions: vi.fn().mockResolvedValue([]),
 }));
 
@@ -52,11 +51,11 @@ function buttonInteraction(customId: string, guildId = "g-1") {
 }
 
 describe("interaction dispatch guards on per-guild module state", () => {
-  let isModuleEnabled: ReturnType<typeof vi.spyOn<typeof misc, "isModuleEnabled">>;
+  const isModuleEnabled = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    isModuleEnabled = vi.spyOn(misc, "isModuleEnabled");
+    isModuleEnabled.mockResolvedValue(true);
     (container as any).logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -69,8 +68,6 @@ describe("interaction dispatch guards on per-guild module state", () => {
     };
   });
 
-  // vi.spyOn mutates the shared misc module object: restore the real
-  // implementation so later test files see real misc.js behavior.
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -80,15 +77,16 @@ describe("interaction dispatch guards on per-guild module state", () => {
     isModuleEnabled.mockResolvedValue(false);
     const services = {
       logger: (container as any).logger,
+      db: { modules: { isModuleEnabled } },
     } as unknown as Container;
     await dispatchInteraction(services, buttonInteraction(customId) as any);
   }
 
   it("security panic revert skips work when security is disabled", async () => {
     const { panicRevert } = await import(
-      "#modules/security/interactions/buttons/panic.js"
+      "@lumi/modules/security/interactions/buttons/panic.js"
     );
-    const { PanicRevertId } = await import("#modules/security/ui/panic-card.js");
+    const { PanicRevertId } = await import("@lumi/modules/security/ui/panic-card.js");
     await dispatch(panicRevert, PanicRevertId);
     expect((container as any).permitResolver.hasPermit).not.toHaveBeenCalled();
   });
@@ -97,10 +95,10 @@ describe("interaction dispatch guards on per-guild module state", () => {
     const { handleMediaRequest } = await import(
       "@lumi/application/services/utility/media-utils.js"
     );
-    const mod = await import("#modules/utility/interactions/buttons/view.js");
+    const mod = await import("@lumi/modules/utility/interactions/buttons/view.js");
     const def = (mod.default ?? Object.values(mod)[0]) as InteractionDef;
     const { UserMediaViewId } = await import(
-      "#modules/utility/constants.js"
+      "@lumi/modules/utility/constants.js"
     );
     await dispatch(
       def,
@@ -110,10 +108,10 @@ describe("interaction dispatch guards on per-guild module state", () => {
   });
 
   it("afk mentions skips work when afk is disabled", async () => {
-    const { getAfkMentions } = await import("#modules/afk/data/afk.js");
-    const mod = await import("#modules/afk/interactions/buttons/mentions.js");
+    const { getAfkMentions } = await import("@lumi/modules/afk/data/afk.js");
+    const mod = await import("@lumi/modules/afk/interactions/buttons/mentions.js");
     const def = (mod.default ?? Object.values(mod)[0]) as InteractionDef;
-    const { AfkMentionsId } = await import("#modules/afk/constants.js");
+    const { AfkMentionsId } = await import("@lumi/modules/afk/constants.js");
     await dispatch(
       def,
       AfkMentionsId.build({ userId: "u-1", page: "0" }),
@@ -126,9 +124,9 @@ describe("interaction dispatch guards on per-guild module state", () => {
       "@lumi/application/services/tempvc/panel-guard.js"
     );
     const { tempVcPanelButton } = await import(
-      "#modules/tempvc/interactions/buttons/tempvc-panel-button.js"
+      "@lumi/modules/tempvc/interactions/buttons/tempvc-panel-button.js"
     );
-    const { TempVcPanelId } = await import("#modules/tempvc/constants.js");
+    const { TempVcPanelId } = await import("@lumi/modules/tempvc/constants.js");
     await dispatch(
       tempVcPanelButton,
       TempVcPanelId.build({ action: "panel", channelId: "c-1" }),

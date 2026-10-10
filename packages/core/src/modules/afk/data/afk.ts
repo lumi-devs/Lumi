@@ -1,12 +1,12 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { mgetSafe, pipelineBySlot, scanKeysSafe } from "@lumi/infrastructure/database";
-import { claimCooldown, isOnCooldown } from "#lib/valkey/cooldown.js";
+import { claimCooldown, isOnCooldown } from "@lumi/lib/valkey/cooldown.js";
 import { isNullish, filterNullish, tryParseJSON } from "@lumi/shared";
 import { AfkKeys, AfkTTL } from "../constants.js";
 import { sanitizeReason } from "@lumi/application/services/afk/format.js";
 import type { AfkEntry } from "@prisma/client";
 
-export interface AfkMention {
+interface AfkMention {
   authorId: string;
   authorName: string;
   channelId: string;

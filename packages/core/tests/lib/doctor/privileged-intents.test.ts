@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { GatewayIntentBits } from "discord.js";
 import { ApplicationFlags } from "discord-api-types/v10";
-import { checkPrivilegedIntents } from "#lib/doctor/checks/privileged-intents.js";
+import { checkPrivilegedIntents } from "@lumi/lib/doctor/checks/privileged-intents.js";
 
 describe("checkPrivilegedIntents", () => {
   it("fails when no token is configured", async () => {

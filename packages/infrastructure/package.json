@@ -24,11 +24,6 @@
       "bun": "./src/queues/index.ts",
       "types": "./src/queues/index.ts",
       "default": "./src/queues/index.ts"
-    },
-    "./services": {
-      "bun": "./src/services/index.ts",
-      "types": "./src/services/index.ts",
-      "default": "./src/services/index.ts"
     }
   },
   "scripts": {

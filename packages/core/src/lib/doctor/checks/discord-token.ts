@@ -1,9 +1,9 @@
 import { REST, RequestMethod } from "@discordjs/rest";
 import { Routes, type APIUser } from "discord-api-types/v10";
-import { buildRestOptions } from "#lib/discord/options.js";
-import { getBotToken } from "#lib/env.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+import { buildRestOptions } from "@lumi/lib/discord/options.js";
+import { getBotToken } from "@lumi/lib/env.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const DiscordTokenCheckName = "discord-token";
 

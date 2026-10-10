@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { fnv1aHash, rolloutBucket } from "#lib/feature-flags/hash.js";
+import { fnv1aHash, rolloutBucket } from "@lumi/lib/feature-flags/hash.js";
 
 describe("fnv1aHash", () => {
   it("is deterministic for the same input", () => {

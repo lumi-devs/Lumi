@@ -1,9 +1,9 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { coreRpc, downloaderRpc } from "@lumi/contracts/rpc";
-import { resolver } from "#lib/downloader/resolver.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { implementRpc } from "#lib/rpc/implement.js";
-import { paginate } from "#lib/rpc/validation.js";
+import { resolver } from "@lumi/lib/downloader/resolver.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
+import { paginate } from "@lumi/lib/rpc/validation.js";
 
 export const coreRpcHandlers = implementRpc(coreRpc, {
   "guild.permits.list": async ({ guildId }) => ({

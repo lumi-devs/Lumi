@@ -1,6 +1,6 @@
-import { container, type Container } from "#lib/services.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import { UserError } from "@lumi/shared";
-import { resolveKey } from "#lib/i18n/index.js";
+import { resolveKey } from "@lumi/lib/i18n/index.js";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
 import {
   MessageFlags,
@@ -10,12 +10,12 @@ import {
   type MessageReplyOptions,
 } from "discord.js";
 import { trace, SpanStatusCode } from "@opentelemetry/api";
-import { ephemeralCard, makeErrorCard, type CardReply } from "#lib/ui/cards.js";
-import { errorFrom } from "#lib/utilities/errors.js";
+import { ephemeralCard, makeErrorCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
 import {
   deleteMessageLater,
   deleteReplyLater,
-} from "#lib/utilities/temporary-message.js";
+} from "@lumi/lib/utilities/temporary-message.js";
 
 /**
  * Friendly card titles for known {@link UserError} identifiers thrown by
@@ -101,7 +101,6 @@ function reportUnexpected(error: unknown): string | undefined {
       return span.spanContext().traceId;
     }
   } catch {
-    // ignore
   }
   return undefined;
 }

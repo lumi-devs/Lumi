@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 
-vi.mock("#lib/outbound/send-queue.js", () => ({
+vi.mock("@lumi/lib/outbound/send-queue.js", () => ({
   queueSend: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { queueSend } from "#lib/outbound/send-queue.js";
+import { queueSend } from "@lumi/lib/outbound/send-queue.js";
 import {
   resolveLogChannel,
   sendLog,

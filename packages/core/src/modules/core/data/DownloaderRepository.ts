@@ -1,4 +1,4 @@
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 
 /**
  * Module downloader bookkeeping - `DownloaderRepo` (tracked git repos) and

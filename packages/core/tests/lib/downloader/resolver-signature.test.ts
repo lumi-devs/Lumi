@@ -3,13 +3,13 @@ import { promises as fs } from "node:fs";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,
   AddonModulesRoot,
   AddonSignatureRejectedError,
-} from "#lib/downloader/resolver.js";
+} from "@lumi/lib/downloader/resolver.js";
 
 function hasSshKeygen(): boolean {
   try {

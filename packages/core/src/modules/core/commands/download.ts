@@ -1,9 +1,9 @@
-import type { Container } from "#lib/services.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { respondWithChoices } from "#lib/utilities/autocomplete.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { respondWithChoices } from "@lumi/lib/utilities/autocomplete.js";
 import {
   installedModuleChoices,
   repoModuleChoices,
@@ -15,10 +15,10 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { errorFrom } from "#lib/utilities/errors.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
+import { makeInfoCard } from "@lumi/lib/ui/cards.js";
+import { componentEmoji } from "@lumi/lib/ui/panels.js";
+import { errorFrom } from "@lumi/lib/utilities/errors.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
 import type { DownloaderUtility } from "../utilities/DownloaderUtility.js";
 
 function downloaderService(): DownloaderUtility {
@@ -32,7 +32,7 @@ async function panel(ctx: CommandContext): Promise<void> {
       new ButtonBuilder()
         .setCustomId("lumi:tab:addons")
         .setLabel(t("core:openAddonsManager"))
-        .setEmoji(Emojis.parse(Emojis.Repo))
+        .setEmoji(componentEmoji("📦"))
         .setStyle(ButtonStyle.Primary),
     );
 
@@ -65,19 +65,19 @@ async function install(ctx: CommandContext): Promise<void> {
       revision,
     );
     ctx.services.logger.info(
-      `[Download] ${Emojis.Download} Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
+      `[Download] 📥 Installed ${moduleName} from ${repoName} by ${ctx.user.tag}`,
     );
     await ctx.replySuccess(
-      `${Emojis.Install} ${t("core:moduleInstalledTitle")}`,
+      `🔧 ${t("core:moduleInstalledTitle")}`,
       t("core:moduleInstalledText", { moduleName, repoName }),
     );
   } catch (err: unknown) {
     const msg_ = errorFrom(err).message;
     ctx.services.logger.warn(
-      `[Download] ${Emojis.Error} Install failed: ${moduleName} - ${msg_}`,
+      `[Download] 🔴 Install failed: ${moduleName} - ${msg_}`,
     );
     await ctx.replyError(
-      `${Emojis.Error} ${t("core:failedInstallModuleTitle")}`,
+      `🔴 ${t("core:failedInstallModuleTitle")}`,
       msg_,
     );
   }
@@ -116,7 +116,7 @@ async function rollback(ctx: CommandContext): Promise<void> {
   const revision = (await ctx.getString("revision", { required: true }))!;
 
   const { confirmed } = await confirmPrompt(ctx, {
-    title: `${Emojis.WarningSign} Rollback Warning`,
+    title: `⚠️ Rollback Warning`,
     body: [
       `You're about to check out **${moduleName}** to revision \`${revision}\`.`,
       "This runs whatever code exists at that commit inside the bot process. A restart is required to fully apply the change.",

@@ -6,7 +6,7 @@ import {
   snowflakeString,
   durationString,
   choiceEnum,
-} from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/module-system/config-schema.js";
 
 describe("snowflakeString (property)", () => {
   const validator = snowflakeString();

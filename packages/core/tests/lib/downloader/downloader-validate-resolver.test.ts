@@ -2,10 +2,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { container } from "#lib/services.js";
-import { validateAddon, validateAddonOrRepo } from "#lib/downloader/validate.js";
-import { DownloadResolver, ModuleRoot } from "#lib/downloader/resolver.js";
-import { LumiInfo } from "#lib/utilities/misc.js";
+import { container } from "@lumi/lib/services.js";
+import { validateAddon, validateAddonOrRepo } from "@lumi/lib/downloader/validate.js";
+import { DownloadResolver, ModuleRoot } from "@lumi/lib/downloader/resolver.js";
+import { LumiInfo } from "@lumi/lib/utilities/version.js";
 import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
 describe("Downloader & Addon Helpers (validate & resolver)", () => {
@@ -197,7 +197,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       const indexTs = `
         import { defineModule } from "lumi";
         import { EmbedBuilder } from "discord.js";
-        import { other } from "#modules/afk/index.js";
+        import { other } from "@lumi/modules/afk/index.js";
         import { outside } from "../outside.js";
         export const meta = defineModule({ name: "rule-addon" });
         export function run() {
@@ -214,7 +214,7 @@ describe("Downloader & Addon Helpers (validate & resolver)", () => {
       );
       expect(result.errors.some((e) => e.includes("uses EmbedBuilder"))).toBe(true);
       expect(result.errors.some((e) => e.includes("does not exist in an addon process"))).toBe(true);
-      expect(result.errors.some((e) => e.includes('imports another module via "#modules/afk/index.js"'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('imports another module via "@lumi/modules/afk/index.js"'))).toBe(true);
       expect(result.errors.some((e) => e.includes('relative import "../outside.js" escapes'))).toBe(true);
       expect(result.warnings.some((w) => w.includes("calls stores.registerPath"))).toBe(true);
     });

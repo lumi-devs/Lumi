@@ -1,12 +1,12 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
-import type { EconomyRepository } from "#modules/economy/data/EconomyRepository.js";
+import type { EconomyRepository } from "@lumi/modules/economy/data/EconomyRepository.js";
 import {
   resolveSlotPayout,
   spinSlots,
   type SlotSpin,
 } from "./slots.js";
-import type { EconomyConfig } from "#modules/economy/config.js";
+import type { EconomyConfig } from "@lumi/modules/economy/config.js";
 
 export class EconomyError extends Error {
   public readonly code: string;
@@ -54,14 +54,14 @@ function isRepoInsufficient(err: unknown): boolean {
   );
 }
 
-export interface BalanceView {
+interface BalanceView {
   wallet: number;
   bank: number;
   total: number;
   lastPaydayAt: Date | null;
 }
 
-export interface SlotsResult {
+interface SlotsResult {
   spin: SlotSpin;
   bid: number;
   pay: number;

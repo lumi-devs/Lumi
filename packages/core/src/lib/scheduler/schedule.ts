@@ -1,14 +1,14 @@
 import type { JobsOptions } from "bullmq";
-import { container } from "#lib/services.js";
-import type { ScheduledTasks } from "#lib/types/common.js";
-import { wrapWithTraceContext } from "#lib/scheduler/otel.js";
+import { container } from "@lumi/lib/services.js";
+import type { ScheduledTasks } from "@lumi/lib/types/common.js";
+import { wrapWithTraceContext } from "@lumi/lib/scheduler/otel.js";
 
 /**
  * BullMQ priority values for the single shared scheduled-tasks queue (lower
  * runs sooner). A job with no `priority` set is not "unprioritized" in the
  * neutral sense - BullMQ always drains its wait list ahead of the prioritized
  * set, so it would jump ahead of even `CRITICAL`. `SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS`
- * (`#lib/scheduler/queue.js`) defaults every job to `UTILITY` for
+ * (`@lumi/lib/scheduler/queue.js`) defaults every job to `UTILITY` for
  * that reason; a call site only needs this to move a job off that default.
  */
 export const QueuePriority = {

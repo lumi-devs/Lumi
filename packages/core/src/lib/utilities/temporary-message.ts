@@ -1,5 +1,6 @@
 import type { Message, RepliableInteraction } from "discord.js";
-import { swallow } from "#lib/utilities/errors.js";
+import { sleep } from "@sapphire/utilities";
+import { swallow } from "@lumi/lib/utilities/errors.js";
 
 export const TransientReplyTtl = 5_000;
 
@@ -8,11 +9,9 @@ export function deleteMessageLater(
   delayMs = TransientReplyTtl,
   reason = "deleteMessageLater",
 ): void {
-  const timer = setTimeout(
-    () => void message.delete().catch(swallow(reason)),
-    delayMs,
+  void sleep(delayMs, undefined, { ref: false }).then(() =>
+    message.delete().catch(swallow(reason)),
   );
-  timer.unref?.();
 }
 
 /** {@link deleteMessageLater} for an interaction's own reply. */
@@ -21,9 +20,7 @@ export function deleteReplyLater(
   delayMs = TransientReplyTtl,
   reason = "deleteReplyLater",
 ): void {
-  const timer = setTimeout(
-    () => void interaction.deleteReply().catch(swallow(reason)),
-    delayMs,
+  void sleep(delayMs, undefined, { ref: false }).then(() =>
+    interaction.deleteReply().catch(swallow(reason)),
   );
-  timer.unref?.();
 }

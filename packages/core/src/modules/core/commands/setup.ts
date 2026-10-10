@@ -1,8 +1,8 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import { emptySetupState } from "../services/setup-wizard.js";
-import { buildSetupStepView } from "#modules/core/ui/setup-wizard.js";
+import { buildSetupStepView } from "@lumi/modules/core/ui/setup-wizard.js";
 
 export const setupDef: CommandDef = {
   name: "setup",

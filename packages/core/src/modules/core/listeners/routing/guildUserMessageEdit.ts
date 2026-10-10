@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { Message, PartialMessage } from "discord.js";
-import { LumiEvents } from "#lib/types/common.js";
+import { LumiEvents } from "@lumi/lib/types/common.js";
 
 export const guildUserMessageEditRouterListener = defineListener({
   name: "guildUserMessageEditRouterListener",

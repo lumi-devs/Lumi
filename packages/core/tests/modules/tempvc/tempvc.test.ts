@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import TempVcUtility, {
   resolveGeneratorName,
-} from "#modules/tempvc/utilities/TempVcUtility.js";
-import { container } from "#lib/services.js";
+} from "@lumi/modules/tempvc/utilities/TempVcUtility.js";
+import { container } from "@lumi/lib/services.js";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "@lumi/application/services/tempvc/voice-occupancy.js";
-import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#modules/tempvc/data/tempvc.js";
+import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "@lumi/modules/tempvc/data/tempvc.js";
 
 vi.mock("@lumi/application/services/tempvc/voice-occupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
   clearVoiceChannelOccupancy: vi.fn(),
 }));
 
-vi.mock("#modules/tempvc/data/tempvc.js", () => ({
+vi.mock("@lumi/modules/tempvc/data/tempvc.js", () => ({
   setVcRecord: vi.fn(),
   patchVcRecord: vi.fn(),
   listVcRecords: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock("@lumi/application/services/tempvc/registry.js", () => ({
   },
 }));
 
-vi.mock("#modules/tempvc/ui/panel.js", () => ({
+vi.mock("@lumi/modules/tempvc/ui/panel.js", () => ({
   buildPanel: vi.fn(() => Promise.resolve({ content: "panel" })),
 }));
 

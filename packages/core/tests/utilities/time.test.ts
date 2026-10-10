@@ -1,14 +1,16 @@
 import { describe, it, expect } from "bun:test";
-import { parseDuration, formatDuration, relativeTimestamp, shortTimestamp } from "#lib/utilities/time.js";
+import { time, TimestampStyles } from "@discordjs/formatters";
+import { parseDuration, formatDuration } from "@lumi/lib/utilities/time.js";
 
 describe("time utilities", () => {
   it("formatDuration", () => {
-    expect(formatDuration(50000)).toBe("50s");
-    expect(formatDuration(90000)).toBe("1m");
+    expect(formatDuration(50000)).toBe("50 seconds");
+    expect(formatDuration(90000)).toBe("1 minute 30 seconds");
   });
 
-  it("formatDuration clamps negative input to 0s", () => {
-    expect(formatDuration(-5000)).toBe("0s");
+  it("formatDuration passes through zero and negatives unclamped", () => {
+    expect(formatDuration(0)).toBe("0 seconds");
+    expect(formatDuration(-5000)).toBe("-5 seconds");
   });
 
   it("parseDuration", () => {
@@ -19,7 +21,7 @@ describe("time utilities", () => {
 
   it("timestamps", () => {
     const d = new Date(1700000000000);
-    expect(relativeTimestamp(d)).toContain("<t:1700000000:R>");
-    expect(shortTimestamp(d)).toContain("<t:1700000000:t>");
+    expect(time(d, TimestampStyles.RelativeTime)).toContain("<t:1700000000:R>");
+    expect(time(d, TimestampStyles.ShortTime)).toContain("<t:1700000000:t>");
   });
 });

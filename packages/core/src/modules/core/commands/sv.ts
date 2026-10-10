@@ -1,9 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import { CommandContext } from "#lib/commands/context.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { confirmPrompt } from "#lib/utilities/confirm.js";
-import { isSnowflakeId } from "#lib/utilities/misc.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import { CommandContext } from "@lumi/lib/commands/context.js";
+import { confirmPrompt } from "@lumi/lib/utilities/confirm.js";
+import { isSnowflakeId } from "@lumi/lib/utilities/snowflakes.js";
 
 export const svDef: CommandDef = {
   name: "sv",
@@ -36,7 +35,7 @@ export const svDef: CommandDef = {
     const guildId = raw.replace(/\D/g, "");
     if (!isSnowflakeId(guildId)) {
       await ctx.replyError(
-        `${Emojis.Cross} Invalid Server ID`,
+        `❌ Invalid Server ID`,
         `\`${raw}\` is not a valid server ID.`,
       );
       return;
@@ -47,7 +46,7 @@ export const svDef: CommandDef = {
       (await ctx.services.client.guilds.fetch(guildId).catch(() => null));
     if (!guild) {
       await ctx.replyError(
-        `${Emojis.Cross} Server Not Found`,
+        `❌ Server Not Found`,
         `The bot is not in a server with ID \`${guildId}\`.`,
       );
       return;
@@ -55,7 +54,7 @@ export const svDef: CommandDef = {
 
     const memberCount = guild.memberCount;
     const { confirmed } = await confirmPrompt(ctx, {
-      title: `${Emojis.WarningSign} Leave Server`,
+      title: `⚠️ Leave Server`,
       body: `The bot will leave **${guild.name}** (\`${guild.id}\`, ${memberCount} members). This cannot be undone from here.`,
       confirmLabel: "Leave server",
       time: 30_000,
@@ -70,14 +69,14 @@ export const svDef: CommandDef = {
       await guild.leave();
     } catch {
       await ctx.replyError(
-        `${Emojis.Cross} Leave Failed`,
+        `❌ Leave Failed`,
         `Could not leave **${guildName}** (\`${guildId}\`).`,
       );
       return;
     }
 
     ctx.services.logger.info(
-      `[Sv] ${Emojis.Wave} Left guild ${guildName} (${guildId}) on behalf of ${ctx.user.tag}`,
+      `[Sv] 👋 Left guild ${guildName} (${guildId}) on behalf of ${ctx.user.tag}`,
     );
     await ctx.services.db.ensureGuild(guildId);
     await ctx.services.db.audit
@@ -92,7 +91,7 @@ export const svDef: CommandDef = {
         ctx.services.logger.warn("[Sv] Failed to queue leave audit entry:", err),
       );
     await ctx.replySuccess(
-      `${Emojis.Wave} Left Server`,
+      `👋 Left Server`,
       `Left **${guildName}** (\`${guildId}\`).`,
     );
   }

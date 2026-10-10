@@ -4,12 +4,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { execFileSync } from "node:child_process";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   DownloadResolver,
   ModuleRoot,
   AddonModulesRoot,
-} from "#lib/downloader/resolver.js";
+} from "@lumi/lib/downloader/resolver.js";
 import { fakeSpawnResult } from "../../helpers/mock-bun-spawn.js";
 
 // Re-installed in beforeEach below, not module scope: the file's own

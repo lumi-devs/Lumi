@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { GuildMember, PartialGuildMember } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
 import { loadWelcomeConfig } from "@lumi/application/services/welcome/welcome.js";
 import { sendWelcomeCard } from "@lumi/application/services/welcome/welcome.js";
 import { renderGoodbyeCard, templateVarsFor } from "@lumi/application/services/welcome/welcome.js";

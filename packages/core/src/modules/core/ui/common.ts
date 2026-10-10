@@ -1,7 +1,6 @@
-import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
-import { formatSubtitle, formatPageFooter } from "#lib/ui/layout.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { row, type Row } from "#lib/ui/panels.js";
+import { FieldType, type ConfigField } from "@lumi/lib/module-system/config-schema.js";
+import { formatSubtitle, formatPageFooter } from "@lumi/lib/ui/layout.js";
+import { row, type Row } from "@lumi/lib/ui/panels.js";
 import {
   channelMention,
   roleMention,
@@ -56,7 +55,7 @@ export function formatFieldValue(field: ConfigField, value: unknown): string {
     case FieldType.User:
       return userMention(String(val));
     case FieldType.Boolean:
-      return val ? `${Emojis.Check} Yes` : `${Emojis.Cross} No`;
+      return val ? `✅ Yes` : `❌ No`;
     default:
       return `\`${cutText(String(val), 120)}\``;
   }

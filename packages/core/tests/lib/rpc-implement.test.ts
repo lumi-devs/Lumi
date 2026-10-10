@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { PermissionFlagsBits } from "discord.js";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { rpcRouter, type RpcActionName } from "@lumi/contracts/rpc";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
-import { dispatchRpc } from "#lib/rpc/dispatch.js";
-import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
-import { getRpcHandler, registerRpcHandlers } from "#lib/rpc/registry.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
+import { dispatchRpc } from "@lumi/lib/rpc/dispatch.js";
+import { requireGuildId, requireGuildManager } from "@lumi/lib/rpc/implement.js";
+import { getRpcHandler, registerRpcHandlers } from "@lumi/lib/rpc/registry.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";

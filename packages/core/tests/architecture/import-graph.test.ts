@@ -135,12 +135,13 @@ describe("package dependency direction", () => {
 
   it("the addon SDK only imports what its public contract allows", () => {
     const violations: string[] = [];
-    // Presentational/formatting-only surfaces the SDK re-exports as `lumi/ui`
-    // and `lumi/utils`. Everything else under #lib/ (database, client, rpc,
-    // permissions, valkey, ...) stays off-limits — the SDK reaches the host
-    // only through rpc.ts's call().
-    const ALLOWED_LIB_PREFIXES = ["#lib/ui/", "#lib/module-system/", "#lib/utilities/", "#lib/branding/"];
+    // Presentational/formatting-only surfaces the SDK re-exports, plus the
+    // dependency-free bottom packages. Everything else under @lumi/lib/ (database,
+    // client, rpc, permissions, valkey, ...) stays off-limits — the SDK
+    // reaches the host only through rpc.ts's call().
+    const ALLOWED_LIB_PREFIXES = ["@lumi/lib/ui/", "@lumi/lib/module-system/", "@lumi/lib/utilities/"];
     const ALLOWED_EXTERNAL = new Set(["@discordjs/builders"]);
+    const ALLOWED_WORKSPACE_VALUES = new Set(["shared"]);
 
     for (const { file, ref } of allImports) {
       if (!isSdkFile(file)) continue;
@@ -161,13 +162,14 @@ describe("package dependency direction", () => {
             formatViolation(
               file,
               ref,
-              "SDK may only reach into #lib/ui/* or #lib/module-system/*, never other #lib/* or #modules/*",
+              "SDK may only reach into @lumi/lib/ui/* or @lumi/lib/module-system/*, never other @lumi/lib/* or @lumi/modules/*",
             ),
           );
           continue;
         }
         case "workspace": {
           if (resolved.pkg === "contracts" && ref.isTypeOnly) continue;
+          if (resolved.pkg && ALLOWED_WORKSPACE_VALUES.has(resolved.pkg)) continue;
           violations.push(
             formatViolation(file, ref, "SDK may only take type-only imports from @lumi/contracts, never @lumi/core"),
           );
@@ -244,7 +246,7 @@ describe("package dependency direction", () => {
       const resolved = resolveSpecifier(file, ref.specifier);
       if ((resolved.kind === "relative" || resolved.kind === "alias") && resolved.path === PERMIT_RESOLVER) {
         violations.push(
-          formatViolation(file, ref, "authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly"),
+          formatViolation(file, ref, "authorization decisions go through authorize() (@lumi/lib/permissions/authorize.js), not PermitResolver directly"),
         );
       }
     }

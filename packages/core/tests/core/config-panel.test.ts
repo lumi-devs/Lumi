@@ -1,14 +1,14 @@
-import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
-import type { ModuleMeta } from "#lib/module-system/meta.js";
+import { FieldType, type ConfigField } from "@lumi/lib/module-system/config-schema.js";
+import type { ModuleMeta } from "@lumi/lib/module-system/meta.js";
 import {
   FeaturesPerPage,
   FieldsPerPage,
   buildFeatureDetailView,
   buildFeatureListView,
   buildFieldEditView,
-} from "#modules/core/ui/modules.js";
-import type { CardReply } from "#lib/ui/cards.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+} from "@lumi/modules/core/ui/modules.js";
+import type { CardReply } from "@lumi/lib/ui/cards.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;

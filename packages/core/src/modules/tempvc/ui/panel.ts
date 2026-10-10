@@ -3,7 +3,7 @@ import {
   ButtonBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { ButtonStyle, MessageFlags, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import {
@@ -12,14 +12,14 @@ import {
   PanelTitleDefault,
   TempVcPanelId,
 } from "../constants.js";
-import { parseHexColor } from "#lib/message-content.js";
-import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
+import { parseHexColor } from "@lumi/lib/utilities/message-content.js";
+import { renderMessageBlocksV2Container } from "@lumi/lib/utilities/message-blocks-v2.js";
 import { clampMessageDocumentV2, type MessageDocumentV2 } from "@lumi/contracts";
 import type { VcRecord } from "../data/tempvc.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { makeCard, makeInfoCard, makeErrorCard, type CardReply } from "#lib/ui/cards.js";
-import { formatStatusBadge } from "#lib/ui/layout.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { makeCard, makeInfoCard, makeErrorCard, type CardReply } from "@lumi/lib/ui/cards.js";
+import { formatStatusBadge } from "@lumi/lib/ui/layout.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -27,9 +27,9 @@ import {
   createBackButton,
   createActionButton,
   buildSafeActionRows,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 
-export type PanelMessage = CardReply;
+type PanelMessage = CardReply;
 
 /**
  * Builds the SaaS owner control panel for a temporary voice channel. The

@@ -5,18 +5,27 @@ import {
   SeparatorBuilder,
   TextDisplayBuilder,
 } from "@discordjs/builders";
-import type { Container } from "#lib/services.js";
-import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
-import { LumiEvents } from "#lib/types/common.js";
-import type { GuildMessage } from "#lib/types/common.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { isCommandMessage } from "#lib/commands/command-dispatch.js";
-import { makeCard } from "#lib/ui/cards.js";
-import { createActionButton, buildSafeActionRows } from "#lib/ui/panels.js";
-import { logError } from "#lib/utilities/errors.js";
-import { canSendMessages } from "#lib/utilities/misc.js";
-import { scheduleTask } from "#lib/scheduler/schedule.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import type { Container } from "@lumi/lib/services.js";
+import { ButtonStyle, MessageFlags, PermissionsBitField, SeparatorSpacingSize } from "discord.js";
+import type { Message } from "discord.js";
+import { LumiEvents } from "@lumi/lib/types/common.js";
+import type { GuildMessage } from "@lumi/lib/types/common.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { isCommandMessage } from "@lumi/lib/commands/command-dispatch.js";
+import { makeCard } from "@lumi/lib/ui/cards.js";
+import { createActionButton, buildSafeActionRows } from "@lumi/lib/ui/panels.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import { scheduleTask } from "@lumi/lib/scheduler/schedule.js";
+
+function canSendMessages(message: Message<true>): boolean {
+  const { me } = message.guild.members;
+  if (!me) return false;
+  return (
+    message.channel
+      .permissionsFor(me)
+      ?.has(PermissionsBitField.Flags.SendMessages) ?? false
+  );
+}
 import {
   AfkKeys,
   AfkMentionCooldownMs,
@@ -37,7 +46,7 @@ import {
   addAfkMentionsBatch,
 } from "../data/afk.js";
 
-import { fetchTyped } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 
 const afkMessageCreate = defineListener({
   name: "afkMessageCreate",
@@ -98,7 +107,7 @@ async function removeAfk(services: Container, message: GuildMessage, since: Date
             createActionButton({
               customId: AfkMentionsId.build({ userId, page: "0" }),
               label: t("afk:viewMentionsButton", { count: mentions.length }),
-              emoji: Emojis.Mail,
+              emoji: "📬",
               style: ButtonStyle.Secondary,
             })
           ),
@@ -108,7 +117,7 @@ async function removeAfk(services: Container, message: GuildMessage, since: Date
     const welcomeCard = new ContainerBuilder();
     welcomeCard.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `**${Emojis.Wave} ${t("afk:welcomeBackTitle")}**`,
+        `**👋 ${t("afk:welcomeBackTitle")}**`,
       ),
     );
     welcomeCard.addSeparatorComponents(
@@ -216,7 +225,7 @@ async function notifyMentioned(services: Container, message: GuildMessage) {
       .reply({
         ...makeCard(
           0,
-          `${Emojis.Afk} ${t("afk:isAfkTitle", { name })}`,
+          `💤 ${t("afk:isAfkTitle", { name })}`,
           t("afk:isAfkBody", {
             reason: sanitizeReason(entry.reason),
             duration: afkDurationSince(entry.since),

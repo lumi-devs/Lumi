@@ -1,13 +1,13 @@
 import {
   buildAddonReposView,
   buildAddonsView,
-} from "#modules/core/ui/addons.js";
-import { buildHubView, buildSettingsView } from "#modules/core/ui/hub.js";
+} from "@lumi/modules/core/ui/addons.js";
+import { buildHubView, buildSettingsView } from "@lumi/modules/core/ui/hub.js";
 import {
   buildPermissionsView,
   PermsPerPage,
-} from "#modules/core/ui/permissions.js";
-import type { CardReply } from "#lib/ui/cards.js";
+} from "@lumi/modules/core/ui/permissions.js";
+import type { CardReply } from "@lumi/lib/ui/cards.js";
 import { describe, it, expect } from "bun:test";
 
 type ComponentJson = {

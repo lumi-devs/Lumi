@@ -5,7 +5,7 @@ export {
   createClient,
   loginLumi,
   destroyLumi,
-} from "./src/lib/client/LumiClient.js";
+} from "./src/lib/client/lumi-client.js";
 export {
   bootstrapApiApp,
   destroyApiContainerServices,
@@ -32,11 +32,11 @@ export {
   findGdprExportJob,
   type GdprExportJobRecord,
   GdprExportSigningKeyUnavailable,
-} from "./src/lib/gdpr-export-token.js";
+} from "./src/lib/gdpr/export-token.js";
 export {
   registerInfrastructureReadinessProbes,
   registerRpcReadinessProbe,
   registerSchedulerReadinessProbe,
   registerWorkerProbes,
-} from "./src/lib/client/ReadinessProbes.js";
+} from "./src/lib/client/readiness-probes.js";
 export { container } from "./src/lib/services.js";

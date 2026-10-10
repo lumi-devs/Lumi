@@ -1,13 +1,13 @@
 import type { Appeal } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 import {
   purgeInBatchesWithArchive,
   type RetentionPurgeOptions,
-} from "#lib/retention/archive.js";
+} from "@lumi/lib/retention.js";
 import {
   CreatedAtIdOrderBy,
   paginateCreatedAtId,
-} from "#lib/prisma/cursor.js";
+} from "@lumi/lib/prisma/cursor.js";
 
 export type AppealStatus =
   | "pending"
@@ -18,7 +18,7 @@ export type AppealStatus =
 
 /**
  * Ban/timeout appeals (`Appeal`), owned by the `mod` module. Submitted
- * publicly through a signed link (see `#modules/mod/services/appeal-token.js`) and reviewed
+ * publicly through a signed link (see `@lumi/modules/mod/services/appeal-token.js`) and reviewed
  * from the dashboard. One appeal per `ModerationCase` - enforced by the
  * unique `caseId` column, not re-checked here.
  */

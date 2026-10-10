@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { GuildKVRepository } from "#lib/prisma/repositories/GuildKVRepository.js";
+import { GuildKVRepository } from "@lumi/lib/prisma/repositories/guild-kv-repository.js";
 import { createMockPrismaClient } from "../../mocks/prisma.js";
 
 vi.mock("@lumi/observability", () => ({

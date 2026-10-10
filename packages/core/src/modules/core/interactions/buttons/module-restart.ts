@@ -1,16 +1,15 @@
 import { UserError } from "@lumi/shared";
-import type { Container } from "#lib/services.js";
-import { PermitResolver } from "#lib/permissions/PermitResolver.js";
+import type { Container } from "@lumi/lib/services.js";
+import { PermitResolver } from "@lumi/lib/permissions/permit-resolver.js";
 import { type ButtonInteraction } from "discord.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import { makeSuccessCard, makeInfoCard } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { scheduleProcessRestart } from "#lib/restart.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import { makeSuccessCard, makeInfoCard } from "@lumi/lib/ui/cards.js";
+import { scheduleProcessRestart } from "@lumi/lib/restart.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import { ModuleRestartCancelId, ModuleRestartId } from "../../constants.js";
 
 /**
@@ -36,7 +35,7 @@ export const moduleRestart = defineInteraction({
     if (!PermitResolver.isBotOwner(interaction.user.id)) {
       throw new UserError({
         identifier: "AccessDenied",
-        message: `${Emojis.Cross} Only Bot Owners can restart Lumi.`,
+        message: `❌ Only Bot Owners can restart Lumi.`,
       });
     }
     await acknowledge(interaction);
@@ -45,7 +44,7 @@ export const moduleRestart = defineInteraction({
     if (action === "cancel") {
       await interaction.editReply(
         makeInfoCard(
-          `${Emojis.Cross} ${t("core:restartCancelledTitle")}`,
+          `❌ ${t("core:restartCancelledTitle")}`,
           t("core:restartCancelledText"),
         ),
       );
@@ -54,7 +53,7 @@ export const moduleRestart = defineInteraction({
 
     await interaction.editReply(
       makeSuccessCard(
-        `${Emojis.Loading} ${t("core:restartingTitle")}`,
+        `⏳ ${t("core:restartingTitle")}`,
         t("core:restartingText"),
       ),
     );

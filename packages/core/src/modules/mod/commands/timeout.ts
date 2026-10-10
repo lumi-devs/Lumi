@@ -1,23 +1,23 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#lib/moderation/ModerationCommand.js";
-import type { Container } from "#lib/services.js";
-import { formatDuration, parseDuration } from "#lib/utilities/time.js";
-import { Ms } from "@lumi/shared";
+} from "@lumi/lib/commands/moderation-flow.js";
+import type { Container } from "@lumi/lib/services.js";
+import { formatDuration, parseDuration } from "@lumi/lib/utilities/time.js";
+import { Time } from "@lumi/shared";
 import { Result } from "@lumi/shared";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { MuteAction } from "@lumi/application/services/mod/actions/MuteAction.js";
+import { MuteAction } from "@lumi/application/services/mod/actions/mute-action.js";
 import { respondWithReasonChoices } from "@lumi/application/services/mod/reason-autocomplete.js";
 
 const Root = "commands";
-const MaxTimeoutMs = 28 * Ms.Day;
+const MaxTimeoutMs = 28 * Time.Day;
 
 type Flow = MC.Flow<GuildMember, ModerationCase>;
 type TimedFlow = MC.Flow<GuildMember, ModerationCase, number>;

@@ -7,23 +7,18 @@ import {
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
 import { ReactionRolePickId, ReactionRoleSelectId } from "../constants.js";
 import type { ReactionRoleMenu, ReactionRoleOption } from "../data/reactionroles.js";
-import { parseHexColor } from "#lib/message-content.js";
-import { makeCard, type CardReply } from "#lib/ui/cards.js";
-import { Emojis } from "#lib/utilities/assets.js";
+import { parseHexColor } from "@lumi/lib/utilities/message-content.js";
+import { makeCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createStringSelectMenu,
-} from "#lib/ui/panels.js";
-import { renderMessageBlocksV2Container } from "#lib/utilities/message-blocks-v2.js";
+} from "@lumi/lib/ui/panels.js";
+import { renderMessageBlocksV2Container } from "@lumi/lib/utilities/message-blocks-v2.js";
 
 function safeEmoji(emoji: string | null) {
   if (!emoji) return undefined;
-  try {
-    return Emojis.parse(emoji);
-  } catch {
-    return undefined;
-  }
+  return emoji;
 }
 
 function optionLine(option: ReactionRoleOption): string {

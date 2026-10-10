@@ -9,8 +9,8 @@ code, the code wins — these files can drift, `AGENTS.md` and the source can't.
 ## Layout
 
 - **`architecture/`** — how the big systems actually work: the module system
-  (`@DefineModule`, lifecycle hooks, config schema), the addon SDK (what
-  third-party code can and can't import), the RPC bridge (dashboard ↔ worker).
+  (`defineModule`, lifecycle hooks, config schema), the addon SDK (what
+  third-party code can and can't import), the RPC bridge (dashboard ↔ api).
 - **`conventions/`** — repo-wide standards: TypeScript/naming style, testing
   patterns, git/commit conventions, the i18n key-parity system.
 - **`domains/`** — specific subsystems: database access patterns, the permit

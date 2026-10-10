@@ -199,12 +199,38 @@ export interface RpcClientOptions {
   retry?: RpcRetryOptions;
 }
 
-function isRetryableTransportError(err: unknown): boolean {
-  return (
-    err instanceof RpcError &&
-    err.retryable &&
-    (err.code === "TIMEOUT" || err.code === "WORKER_DOWN")
-  );
+function isRetryableForRetry(err: unknown): boolean {
+  return err instanceof RpcError && err.retryable;
+}
+
+const MaxBodyBytes = 10 * 1024 * 1024;
+
+async function readBoundedText(res: Response): Promise<string> {
+  const declared = res.headers.get("content-length");
+  if (declared !== null && Number(declared) > MaxBodyBytes) {
+    throw new Error(`response exceeds ${MaxBodyBytes} bytes`);
+  }
+  if (!res.body) throw new Error("response has no body");
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > MaxBodyBytes) {
+      void reader.cancel();
+      throw new Error(`response exceeds ${MaxBodyBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return new TextDecoder().decode(body);
 }
 
 function jitteredBackoff(baseDelayMs: number, attempt: number): number {
@@ -291,8 +317,15 @@ export class RpcClient {
       clearTimeout(timer);
     }
 
+    let text: string;
     try {
-      return await res.json();
+      text = await readBoundedText(res);
+    } catch (err: unknown) {
+      this.log(`Discarding oversized RPC response: ${String(err)}`);
+      throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
+    }
+    try {
+      return JSON.parse(text) as unknown;
     } catch (err: unknown) {
       this.log(`Discarding undecodable RPC response: ${String(err)}`);
       throw new RpcError("MALFORMED", action, `RPC ${action}: malformed response`);
@@ -371,12 +404,13 @@ export class RpcClient {
       } catch (err) {
         lastError = err;
         const canRetry =
-          attempt < maxAttempts && retryCfg !== undefined && isRetryableTransportError(err);
+          attempt < maxAttempts && retryCfg !== undefined && isRetryableForRetry(err);
         if (!canRetry) {
           throw err;
         }
         const remainingBudget = deadlineAt - Date.now();
-        const backoff = jitteredBackoff(retryCfg.baseDelayMs, attempt);
+        const serverWait = err instanceof RpcError ? (err.retryAfterMs ?? 0) : 0;
+        const backoff = Math.max(jitteredBackoff(retryCfg.baseDelayMs, attempt), serverWait);
         if (remainingBudget <= 0 || backoff >= remainingBudget) {
           throw err;
         }

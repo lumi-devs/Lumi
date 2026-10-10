@@ -1,22 +1,15 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
-import { makeInfoCard } from "#lib/ui/cards.js";
+import { chunk } from "@lumi/shared";
+import { makeInfoCard } from "@lumi/lib/ui/cards.js";
 import { decrementWarnCount } from "@lumi/application/services/mod/thresholds.js";
 import { CaseAction, type $Enums } from "@prisma/client";
 
 function isCaseAction(value: string): value is $Enums.CaseAction {
   return (Object.values(CaseAction) as string[]).includes(value);
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const pages: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    pages.push(items.slice(i, i + size));
-  }
-  return pages;
 }
 
 async function viewOne(ctx: CommandContext, caseNumber: number) {

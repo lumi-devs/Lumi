@@ -1,9 +1,9 @@
-import { type Container } from "#lib/services.js";
-import { Ms } from "@lumi/shared";
-import { registerTaskFireHandler } from "#lib/scheduler/fires.js";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { handleSendMessageFire } from "#lib/outbound/send-queue.js";
-import { scheduleProcessRestart } from "#lib/restart.js";
+import { type Container } from "@lumi/lib/services.js";
+import { Time } from "@lumi/shared";
+import { registerTaskFireHandler } from "@lumi/lib/scheduler/fires.js";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
+import { handleSendMessageFire } from "@lumi/lib/outbound/send-queue.js";
+import { scheduleProcessRestart } from "@lumi/lib/restart.js";
 
 async function handleFlushLogsFire(services: Container): Promise<void> {
   try {
@@ -32,7 +32,7 @@ async function handleAddonAutoUpdateFire(services: Container): Promise<void> {
     const dueForCheck =
       config.lastCheckedAt === null ||
       Date.now() - config.lastCheckedAt.getTime() >=
-        config.intervalMinutes * Ms.Minute;
+        config.intervalMinutes * Time.Minute;
     if (!dueForCheck) return;
 
     const pending = await downloader.checkForUpdates(services);

@@ -1,7 +1,7 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { welcomeRpc } from "@lumi/contracts/rpc";
 import { Routes } from "discord-api-types/v10";
-import { implementRpc } from "#lib/rpc/implement.js";
+import { implementRpc } from "@lumi/lib/rpc/implement.js";
 import {
   fetchChannelRest,
   fetchGuildMemberRest,
@@ -9,9 +9,9 @@ import {
   GuildTextBasedChannelTypes,
   guildIconUrl,
   memberAvatarUrl,
-} from "#lib/rpc/discord-rest-lookup.js";
-import { serializeCard } from "#lib/rpc/card-serialize.js";
-import { logError } from "#lib/utilities/errors.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
+import { serializeCard } from "@lumi/lib/rpc/card-serialize.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import {
   loadWelcomeConfig,
   renderGoodbyeCard,

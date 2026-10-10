@@ -1,20 +1,20 @@
-import type { CommandContext } from "#lib/commands/context.js";
-import type { Container } from "#lib/services.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import type { Container } from "@lumi/lib/services.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#lib/utilities/autocomplete.js";
+} from "@lumi/lib/utilities/autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import {
   ChannelType,
   channelMention,
   type ChatInputCommandInteraction,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { ReactionRolesUtility } from "../utilities/ReactionRolesUtility.js";
 import { ReactionRoleMenuLockedError } from "../utilities/ReactionRolesUtility.js";
 

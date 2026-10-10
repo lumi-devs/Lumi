@@ -3,7 +3,7 @@ import type {
   ReactionRoleOption as OptionRow,
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
 import { clampMessageDocumentV2 } from "@lumi/contracts";
 import type {
   ReactionRoleMenu,

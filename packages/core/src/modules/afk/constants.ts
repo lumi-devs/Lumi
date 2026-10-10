@@ -1,4 +1,4 @@
-import { defineCustomId } from "#lib/interactions/custom-id.js";
+import { defineCustomId } from "@lumi/lib/interactions/custom-id.js";
 
 export const NickPrefix = "[AFK] ";
 export const AfkMaxReasonLength = 100;

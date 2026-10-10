@@ -6,8 +6,8 @@ import {
   manifestFromMeta,
   writeManifest,
   type ModuleManifest,
-} from "#lib/module-system/manifest.js";
-import type { ModuleDefinition, ModuleMeta } from "#lib/module-system/meta.js";
+} from "@lumi/lib/module-system/manifest.js";
+import type { ModuleDefinition, ModuleMeta } from "@lumi/lib/module-system/meta.js";
 
 // Build-time generator for per-module `manifest.json`. Imports each module's
 // `index.ts` to read its in-code `meta` (the Zod `configSchema` stays the single

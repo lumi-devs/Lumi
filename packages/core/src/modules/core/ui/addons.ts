@@ -1,14 +1,14 @@
-import type { LumiT } from "#lib/i18n/index.js";
-import { formatPageFooter, row, type Row } from "#modules/core/ui/common.js";
-import { hubTabRow } from "#modules/core/ui/hub.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, type CardReply } from "#lib/ui/cards.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { formatPageFooter, row, type Row } from "@lumi/modules/core/ui/common.js";
+import { hubTabRow } from "@lumi/modules/core/ui/hub.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { makeCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
+  componentEmoji,
   createPaginationRow,
   createStringSelectMenu,
   settingRow,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
@@ -22,13 +22,13 @@ import { ButtonStyle } from "discord.js";
 // 40-component budget per message, so page sizes stay well under naive counts.
 const AddonRowsPerPage = 3;
 
-export interface AddonDashboardStats {
+interface AddonDashboardStats {
   repoCount: number;
   installedCount: number;
   pendingUpdates: string[];
 }
 
-export interface AddonRepoRow {
+interface AddonRepoRow {
   name: string;
   url: string;
   branch: string;
@@ -36,7 +36,7 @@ export interface AddonRepoRow {
   commit: string | null;
 }
 
-export interface AddonInstalledRow {
+interface AddonInstalledRow {
   moduleName: string;
   version: string | null;
   repoName: string;
@@ -44,7 +44,7 @@ export interface AddonInstalledRow {
   enabled: boolean;
 }
 
-export interface AddonRepoModuleRow {
+interface AddonRepoModuleRow {
   name: string;
   version: string;
   short?: string;
@@ -56,7 +56,7 @@ export interface AddonRepoModuleRow {
   isInstalled: boolean;
 }
 
-export interface AutoUpdateStatus {
+interface AutoUpdateStatus {
   enabled: boolean;
   intervalMinutes: number;
 }
@@ -74,7 +74,7 @@ const backToAddonsRow = (t?: LumiT): Row =>
     new ButtonBuilder()
       .setCustomId("lumi:tab:addons")
       .setLabel(t ? t("panels:backToAddons") : "Back to Add-ons")
-      .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+      .setEmoji(componentEmoji("⬅️"))
       .setStyle(ButtonStyle.Secondary),
   );
 
@@ -91,14 +91,14 @@ export function buildAddonsView(
       ? t("panels:addonsIntro")
       : "Add-ons let you expand Lumi with community modules. Every installed add-on works seamlessly alongside built-in features.",
     [
-      `${Emojis.Repo} **${t ? t("panels:addonsRepos") : "Tracked Repositories"}:** ${stats?.repoCount ?? 0}`,
-      `${Emojis.Download} **${t ? t("panels:addonsInstalled") : "Installed Add-ons"}:** ${stats?.installedCount ?? 0}`,
+      `📦 **${t ? t("panels:addonsRepos") : "Tracked Repositories"}:** ${stats?.repoCount ?? 0}`,
+      `📥 **${t ? t("panels:addonsInstalled") : "Installed Add-ons"}:** ${stats?.installedCount ?? 0}`,
     ].join("\n"),
   ];
 
   if (stats.pendingUpdates.length > 0) {
     body.push(
-      `${Emojis.WarningSign} **Updates available:** ${stats.pendingUpdates.map((m) => `\`${m}\``).join(", ")}`,
+      `⚠️ **Updates available:** ${stats.pendingUpdates.map((m) => `\`${m}\``).join(", ")}`,
     );
   }
 
@@ -106,23 +106,23 @@ export function buildAddonsView(
     new ButtonBuilder()
       .setCustomId("lumi:addon:repos")
       .setLabel(t ? t("panels:addonsBrowseRepos") : "Configure Repos")
-      .setEmoji(Emojis.parse(Emojis.Repo))
+      .setEmoji(componentEmoji("📦"))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:installed")
       .setLabel(t ? t("panels:addonsBrowseInstalled") : "Configure Addons")
-      .setEmoji(Emojis.parse(Emojis.Download))
+      .setEmoji(componentEmoji("📥"))
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId("lumi:addon:autoupdate")
       .setLabel("Auto-Update")
-      .setEmoji(Emojis.parse("⏱️"))
+      .setEmoji(componentEmoji("⏱️"))
       .setStyle(ButtonStyle.Secondary),
   );
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Repo} ${t ? t("panels:addonsTitle") : "Add-ons & Updates"}`,
+    `📦 ${t ? t("panels:addonsTitle") : "Add-ons & Updates"}`,
     body,
     {
       breadcrumbs: ["Hub", "Addons"],
@@ -149,7 +149,7 @@ export function buildAddonReposView(
   const sections = shown.map((repo) =>
     settingRow(
       [
-        `${Emojis.Repo} **${repo.name}** (\`${repo.branch}\`)${repo.commit ? ` @ \`${repo.commit.slice(0, 7)}\`` : ""}`,
+        `📦 **${repo.name}** (\`${repo.branch}\`)${repo.commit ? ` @ \`${repo.commit.slice(0, 7)}\`` : ""}`,
         `-# ${cutText(repo.url, 90)}`,
         `-# ${t ? t("panels:addonsInstalled") : "Installed Add-ons"}: **${repo.installedCount}**`,
       ],
@@ -166,12 +166,12 @@ export function buildAddonReposView(
       new ButtonBuilder()
         .setCustomId("lumi:addon:add_repo")
         .setLabel(t ? t("panels:addonsAddRepo") : "Add Repository")
-        .setEmoji(Emojis.parse(Emojis.Repo))
+        .setEmoji(componentEmoji("📦"))
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId("lumi:addon:rm_repo")
         .setLabel(t ? t("panels:addonsRemoveRepo") : "Remove Repository")
-        .setEmoji(Emojis.parse(Emojis.Uninstall))
+        .setEmoji(componentEmoji("🗑️"))
         .setStyle(ButtonStyle.Danger),
     ),
     backToAddonsRow(t),
@@ -179,7 +179,7 @@ export function buildAddonReposView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Repo} ${t ? t("panels:addonsReposTitle") : "Configure Repositories"}`,
+    `📦 ${t ? t("panels:addonsReposTitle") : "Configure Repositories"}`,
     sorted.length
       ? sorted.length > shown.length
         ? `-# +${sorted.length - shown.length} more`
@@ -207,7 +207,7 @@ export function buildRepoUpdateConfirmView(
       new ButtonBuilder()
         .setCustomId(`lumi:addon:update_repo_confirm:${repoName}`)
         .setLabel(t ? t("panels:addonsUpdateRepo") : "Update")
-        .setEmoji(Emojis.parse(Emojis.Download))
+        .setEmoji(componentEmoji("📥"))
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
         .setCustomId(`lumi:addon:update_repo_skip:${repoName}`)
@@ -218,7 +218,7 @@ export function buildRepoUpdateConfirmView(
 
   return makeCard(
     resolveCardColor("warning"),
-    `${Emojis.Repo} Update available for ${repoName}`,
+    `📦 Update available for ${repoName}`,
     changelog
       ? `-# \`\`\`\n${cutText(changelog, 820)}\n\`\`\``
       : "New commits are available on the tracked branch.",
@@ -246,7 +246,7 @@ export function buildAddonInstalledView(
   const sections = shown.map((mod) =>
     settingRow(
       [
-        `${mod.enabled ? Emojis.Success : Emojis.Error} **${mod.moduleName}** (v${mod.version ?? "1.0.0"})`,
+        `${mod.enabled ? "🟢" : "🔴"} **${mod.moduleName}** (v${mod.version ?? "1.0.0"})`,
         `-# ${mod.repoName} · ${time(mod.installedAt, TimestampStyles.RelativeTime)}`,
       ],
       {
@@ -285,7 +285,7 @@ export function buildAddonInstalledView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Download} ${t ? t("panels:addonsInstalledTitle") : "Configure Addons"}`,
+    `📥 ${t ? t("panels:addonsInstalledTitle") : "Configure Addons"}`,
     sorted.length
       ? sorted.length > shown.length
         ? `-# +${sorted.length - shown.length} more`
@@ -328,7 +328,7 @@ export function buildAddonRepoModulesView(
 
   const sections = shown.map((m) => {
     const status = m.isInstalled
-      ? `${Emojis.Check} ${t ? t("panels:addonsStatusInstalled") : "Installed"}`
+      ? `✅ ${t ? t("panels:addonsStatusInstalled") : "Installed"}`
       : t
         ? t("panels:addonsStatusAvailable")
         : "Available";
@@ -375,7 +375,7 @@ export function buildAddonRepoModulesView(
       new ButtonBuilder()
         .setCustomId("lumi:addon:installed")
         .setLabel(t ? t("panels:backToRepos") : "Back to Configure Addons")
-        .setEmoji(Emojis.parse(Emojis.ArrowLeft))
+        .setEmoji(componentEmoji("⬅️"))
         .setStyle(ButtonStyle.Secondary),
     ),
   );
@@ -391,7 +391,7 @@ export function buildAddonRepoModulesView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Gear} ${
+    `⚙️ ${
       t
         ? t("panels:addonsModulesTitle", { repo: repoName })
         : `Available Modules in ${repoName}`
@@ -433,7 +433,7 @@ export function buildAutoUpdateSettingsView(
     new ButtonBuilder()
       .setCustomId("lumi:addon:autoupdate_toggle")
       .setLabel(status.enabled ? "Disable Auto-Update" : "Enable Auto-Update")
-      .setEmoji(Emojis.parse(status.enabled ? Emojis.Cross : Emojis.Check))
+      .setEmoji(componentEmoji(status.enabled ? "❌" : "✅"))
       .setStyle(status.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
   );
 
@@ -453,7 +453,7 @@ export function buildAutoUpdateSettingsView(
     "⏱️ Auto-Update Settings",
     [
       "When enabled, Lumi periodically checks every tracked repository and pulls updates for installed add-ons automatically.",
-      `**Status:** ${status.enabled ? `${Emojis.Success} \`ENABLED\`` : `${Emojis.Error} \`DISABLED\``}`,
+      `**Status:** ${status.enabled ? `🟢 \`ENABLED\`` : `🔴 \`DISABLED\``}`,
     ],
     {
       footer:

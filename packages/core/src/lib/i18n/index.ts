@@ -5,8 +5,8 @@ import {
   Message,
   type Channel,
 } from "discord.js";
-import { getGuildContext } from "#lib/cache/GuildContext.js";
-import { container, type Container } from "#lib/services.js";
+import { getGuildContext } from "@lumi/lib/cache/guild-context.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import afk from "../../languages/en-US/afk.json";
 import commands from "../../languages/en-US/commands.json";
 import common from "../../languages/en-US/common.json";

@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
 const mockedReadManifest = vi.fn();
 const mockedMetaFromManifest = vi.fn();
 
-vi.mock("#lib/module-system/manifest.js", () => ({
+vi.mock("@lumi/lib/module-system/manifest.js", () => ({
   readManifest: mockedReadManifest,
   metaFromManifest: mockedMetaFromManifest,
 }));
 
-import { ModuleStore } from "#lib/module-system/ModuleStore.js";
+import { ModuleStore } from "@lumi/lib/module-system/module-store.js";
 
 type ModSpec = {
   dependencies?: string[];

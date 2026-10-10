@@ -1,5 +1,5 @@
 import { collectPingData } from "../../services/ping-collect.js";
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   buildOverviewCard,
   buildDetailCard,
@@ -10,7 +10,7 @@ import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
+} from "@lumi/lib/interactions/interaction-def.js";
 import { PingId } from "../../constants.js";
 
 export const ping = defineInteraction({

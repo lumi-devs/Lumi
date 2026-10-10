@@ -1,8 +1,8 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   FieldType,
   fieldsFromSchema,
-} from "#lib/module-system/config-schema.js";
+} from "@lumi/lib/module-system/config-schema.js";
 
 export async function clearStaleConfigRefs(
   services: Container,

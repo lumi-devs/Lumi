@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "bun:test";
-import { evictGuildValkeyState } from "#lib/valkey/guild-eviction.js";
+import { evictGuildValkeyState } from "@lumi/lib/valkey/guild-eviction.js";
 
 function mocks() {
   const scanned: string[] = [];

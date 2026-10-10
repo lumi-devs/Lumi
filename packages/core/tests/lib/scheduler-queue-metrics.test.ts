@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { scheduledJobsGauge } from "@lumi/observability";
-import { watchQueueDepth } from "#lib/scheduler/queue-metrics.js";
+import { watchQueueDepth } from "@lumi/lib/scheduler/queue-metrics.js";
 
 describe("scheduler-queue-metrics", () => {
   beforeEach(() => {

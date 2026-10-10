@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { StreamBus } from "#lib/event-bus/StreamBus.js";
+import { StreamBus } from "@lumi/lib/event-bus/stream-bus.js";
 
 // bun:test's fake-timer support only mocks the system clock (Date.now),
 // not the setInterval/setTimeout queue, so there's no advanceTimersByTimeAsync

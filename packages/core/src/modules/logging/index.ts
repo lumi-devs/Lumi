@@ -1,7 +1,7 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import type { Container } from "#lib/services.js";
-import { NoEndUserData } from "#lib/module-system/meta.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import type { Container } from "@lumi/lib/services.js";
+import { NoEndUserData } from "@lumi/lib/module-system/meta.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 import { ChannelType } from "discord.js";
 
 export const loggingModule = defineModule({

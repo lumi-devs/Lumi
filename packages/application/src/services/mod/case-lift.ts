@@ -1,8 +1,8 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import type { ModerationCase } from "@prisma/client";
-import { BanAction } from "./actions/BanAction.js";
-import { MuteAction } from "./actions/MuteAction.js";
-import { VoiceMuteAction } from "./actions/VoiceMuteAction.js";
+import { BanAction } from "./actions/ban-action.js";
+import { MuteAction } from "./actions/mute-action.js";
+import { VoiceMuteAction } from "./actions/voice-mute-action.js";
 
 /**
  * Undoes the Discord-side effect of a case's action (if it has one) and marks

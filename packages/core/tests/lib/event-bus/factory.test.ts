@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { createEventBus } from "#lib/event-bus/factory.js";
-import { StreamBus } from "#lib/event-bus/StreamBus.js";
+import { createEventBus } from "@lumi/lib/event-bus/factory.js";
+import { StreamBus } from "@lumi/lib/event-bus/stream-bus.js";
 
 const mockQuit = vi.fn().mockResolvedValue("OK");
 const mockInstances: any[] = [];

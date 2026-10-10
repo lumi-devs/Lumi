@@ -34,35 +34,6 @@ export const commandDuration = new Histogram({
   registers: [registry],
 });
 
-export const utilitiesTotal = new Counter({
-  name: "lumi_utilities_total",
-  help: "Utility methods executed, by utility/method/status",
-  labelNames: ["utility", "method", "status"] as const,
-  registers: [registry],
-});
-
-export const utilityDuration = new Histogram({
-  name: "lumi_utility_duration_seconds",
-  help: "Utility method execution latency in seconds",
-  labelNames: ["utility", "method"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2],
-  registers: [registry],
-});
-
-export const busEventsPublished = new Counter({
-  name: "lumi_bus_events_published_total",
-  help: "Fanout events published to the bus, by event",
-  labelNames: ["event"] as const,
-  registers: [registry],
-});
-
-export const busEventsConsumed = new Counter({
-  name: "lumi_bus_events_consumed_total",
-  help: "Fanout events consumed from the bus, by event",
-  labelNames: ["event"] as const,
-  registers: [registry],
-});
-
 export const queueDepth = new Gauge({
   name: "lumi_queue_depth",
   help: "Pending items in a named queue",

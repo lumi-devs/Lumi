@@ -8,7 +8,7 @@ import {
   encodeSingleKeyCursor,
   singleKeyKeysetWhere,
   splitPage,
-} from "#lib/prisma/cursor.js";
+} from "@lumi/lib/prisma/cursor.js";
 
 describe("createdAt/id cursor", () => {
   it("round-trips through encode/decode", () => {

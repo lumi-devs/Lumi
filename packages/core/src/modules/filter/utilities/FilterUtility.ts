@@ -1,7 +1,7 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import type { Container } from "#lib/services.js";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import type { Container } from "@lumi/lib/services.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
 import {
   compileRules,
   evaluateStatic,
@@ -16,7 +16,7 @@ import {
   getRegexWorker,
   RegexTimeoutError,
   RegexWorkerUnavailableError,
-} from "#lib/regex-worker/RegexWorkerHandler.js";
+} from "@lumi/lib/regex-worker/handler.js";
 
 const DuplicateWindowSeconds = 30;
 const WarnCooldownSeconds = 30;
@@ -522,7 +522,7 @@ export const filterUtility = defineUtility({
 
 export type FilterUtility = typeof filterUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     filter: typeof filterUtility;
   }

@@ -1,6 +1,6 @@
-import { defineUtility } from "#lib/module-system/Utility.js";
-import { type Container } from "#lib/services.js";
-import { Mutex } from "@lumi/shared";
+import { defineUtility } from "@lumi/lib/module-system/utility.js";
+import { type Container } from "@lumi/lib/services.js";
+import { AsyncQueue } from "@sapphire/async-queue";
 import {
   ChannelType,
   Collection,
@@ -10,10 +10,10 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { errorCode, logError } from "#lib/utilities/errors.js";
-import { renderTemplate } from "#lib/utilities/template.js";
-import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
-import { claimCooldown } from "#lib/valkey/cooldown.js";
+import { errorCode, logError } from "@lumi/lib/utilities/errors.js";
+import { renderTemplate } from "@lumi/lib/utilities/template.js";
+import { scheduleTask, QueuePriority } from "@lumi/lib/scheduler/schedule.js";
+import { claimCooldown } from "@lumi/lib/valkey/cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
@@ -35,7 +35,7 @@ import {
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import { buildPanel } from "../ui/panel.js";
 
-const creationQueues = new Collection<string, Mutex>();
+const creationQueues = new Collection<string, AsyncQueue>();
 
 const cleanupJobId = (guildId: string, channelId: string) =>
   `tempvc-cleanup-${guildId}-${channelId}`;
@@ -205,7 +205,7 @@ const tempVcUtility = defineUtility({
   ): Promise<void> {
     let queue = creationQueues.get(generator.id);
     if (!queue) {
-      queue = new Mutex();
+      queue = new AsyncQueue();
       creationQueues.set(generator.id, queue);
     }
     await queue.wait();
@@ -404,7 +404,7 @@ export default tempVcUtility;
 
 export type TempVcUtility = typeof tempVcUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@lumi/lib/module-system/utility.js" {
   interface Utilities {
     tempvc: typeof tempVcUtility;
   }

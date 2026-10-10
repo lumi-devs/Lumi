@@ -1,17 +1,17 @@
 import { rpcRouter } from "@lumi/contracts/rpc";
-import { container } from "#lib/services.js";
-import { accountRpcHandlers } from "#lib/rpc/account-rpc.js";
-import type { RpcBoundHandler, RpcImplementation } from "#lib/rpc/implement.js";
-import { systemRpcHandlers } from "#lib/rpc/system-rpc.js";
-import { afkRpcHandlers } from "#modules/afk/rpc.js";
-import { coreRpcHandlers, downloaderRpcHandlers } from "#modules/core/rpc.js";
-import { dashboardRpcHandlers } from "#modules/dashboard/rpc.js";
-import { loggingRpcHandlers } from "#modules/logging/rpc.js";
-import { modRpcHandlers } from "#modules/mod/rpc.js";
-import { reactionrolesRpcHandlers } from "#modules/reactionroles/rpc.js";
-import { securityRpcHandlers } from "#modules/security/rpc.js";
-import { tempvcRpcHandlers } from "#modules/tempvc/rpc.js";
-import { welcomeRpcHandlers } from "#modules/welcome/rpc.js";
+import { container } from "@lumi/lib/services.js";
+import { accountRpcHandlers } from "@lumi/lib/rpc/account-rpc.js";
+import type { RpcBoundHandler, RpcImplementation } from "@lumi/lib/rpc/implement.js";
+import { systemRpcHandlers } from "@lumi/lib/rpc/system-rpc.js";
+import { afkRpcHandlers } from "@lumi/modules/afk/rpc.js";
+import { coreRpcHandlers, downloaderRpcHandlers } from "@lumi/modules/core/rpc.js";
+import { dashboardRpcHandlers } from "@lumi/modules/dashboard/rpc.js";
+import { loggingRpcHandlers } from "@lumi/modules/logging/rpc.js";
+import { modRpcHandlers } from "@lumi/modules/mod/rpc.js";
+import { reactionrolesRpcHandlers } from "@lumi/modules/reactionroles/rpc.js";
+import { securityRpcHandlers } from "@lumi/modules/security/rpc.js";
+import { tempvcRpcHandlers } from "@lumi/modules/tempvc/rpc.js";
+import { welcomeRpcHandlers } from "@lumi/modules/welcome/rpc.js";
 
 const staticOwners: ReadonlyArray<readonly [string, RpcImplementation]> = [
   ["account", accountRpcHandlers],
@@ -48,15 +48,6 @@ function trackOwner(owner: string, implementation: RpcImplementation): void {
     if (!existing.includes(implementation)) existing.push(implementation);
   } else {
     owners.set(owner, [implementation]);
-  }
-}
-
-export function registerDynamicRpc(owner: string, implementation: RpcImplementation): void {
-  trackOwner(owner, implementation);
-  rebuildHandlers();
-  const { extra } = verifyRpcCompleteness();
-  if (extra.length > 0) {
-    container.logger?.warn(`[Rpc] Extra implementations not in contract router: ${extra.join(", ")}`);
   }
 }
 

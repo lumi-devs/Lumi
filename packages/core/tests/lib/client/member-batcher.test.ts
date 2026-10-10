@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { createMemberBatcher } from "#lib/client/member-batcher.js";
+import { createMemberBatcher } from "@lumi/lib/client/member-batcher.js";
 import { Guild, GuildMember } from "discord.js";
 
 describe("createMemberBatcher", () => {

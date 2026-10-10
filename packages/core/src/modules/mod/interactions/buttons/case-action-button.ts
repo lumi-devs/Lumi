@@ -1,8 +1,7 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import { defineInteraction } from "#lib/interactions/interaction-def.js";
-import { defineCustomId } from "#lib/interactions/custom-id.js";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import { defineInteraction } from "@lumi/lib/interactions/interaction-def.js";
+import { defineCustomId } from "@lumi/lib/interactions/custom-id.js";
+import type { Container } from "@lumi/lib/services.js";
 
 export const CaseActionButtonId = defineCustomId("mod:case-action", [
   "action",
@@ -19,7 +18,7 @@ export const caseActionButton = defineInteraction({
     const { db } = services;
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (!guildId) return;
-    if (!(await isModuleEnabled(services, guildId, "mod"))) return;
+    if (!(await db.modules.isModuleEnabled(guildId, "mod"))) return;
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 

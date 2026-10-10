@@ -1,24 +1,24 @@
 import { describe, it, expect } from "bun:test";
-import { asHandler, type CommandDef } from "#lib/commands/command-def.js";
-import { banDef } from "#modules/mod/commands/ban.js";
-import { kickDef } from "#modules/mod/commands/kick.js";
-import { timeoutDef } from "#modules/mod/commands/timeout.js";
-import { warnDef } from "#modules/mod/commands/warn.js";
-import { softbanDef } from "#modules/mod/commands/softban.js";
-import { quarantineDef } from "#modules/mod/commands/quarantine.js";
-import { lockdownDef } from "#modules/mod/commands/lockdown.js";
-import { lockDef } from "#modules/mod/commands/lock.js";
-import { sayDef } from "#modules/mod/commands/say.js";
-import { dmDef } from "#modules/mod/commands/dm.js";
-import { notesDef } from "#modules/mod/commands/notes.js";
-import { casesDef } from "#modules/mod/commands/cases.js";
-import { sanitizeDef } from "#modules/mod/commands/sanitize.js";
-import { vcmuteDef } from "#modules/mod/commands/vcmute.js";
-import { lumiDef } from "#modules/core/commands/lumi.js";
-import { repoDef } from "#modules/core/commands/repo.js";
-import { downloadDef } from "#modules/core/commands/download.js";
-import { helpDef } from "#modules/core/commands/help.js";
-import { mydataDef } from "#modules/core/commands/mydata.js";
+import { asHandler, type CommandDef } from "@lumi/lib/commands/command-def.js";
+import { banDef } from "@lumi/modules/mod/commands/ban.js";
+import { kickDef } from "@lumi/modules/mod/commands/kick.js";
+import { timeoutDef } from "@lumi/modules/mod/commands/timeout.js";
+import { warnDef } from "@lumi/modules/mod/commands/warn.js";
+import { softbanDef } from "@lumi/modules/mod/commands/softban.js";
+import { quarantineDef } from "@lumi/modules/mod/commands/quarantine.js";
+import { lockdownDef } from "@lumi/modules/mod/commands/lockdown.js";
+import { lockDef } from "@lumi/modules/mod/commands/lock.js";
+import { sayDef } from "@lumi/modules/mod/commands/say.js";
+import { dmDef } from "@lumi/modules/mod/commands/dm.js";
+import { notesDef } from "@lumi/modules/mod/commands/notes.js";
+import { casesDef } from "@lumi/modules/mod/commands/cases.js";
+import { sanitizeDef } from "@lumi/modules/mod/commands/sanitize.js";
+import { vcmuteDef } from "@lumi/modules/mod/commands/vcmute.js";
+import { lumiDef } from "@lumi/modules/core/commands/lumi.js";
+import { repoDef } from "@lumi/modules/core/commands/repo.js";
+import { downloadDef } from "@lumi/modules/core/commands/download.js";
+import { helpDef } from "@lumi/modules/core/commands/help.js";
+import { mydataDef } from "@lumi/modules/core/commands/mydata.js";
 
 const destructiveModCommands: { name: string; def: CommandDef; permit: string }[] = [
   { name: "ban", def: banDef, permit: "mod.*" },

@@ -1,18 +1,18 @@
-import { container, type Container } from "#lib/services.js";
+import { container, type Container } from "@lumi/lib/services.js";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "@lumi/shared";
-import { fetchTyped } from "#lib/i18n/index.js";
-import { ValkeyKeys } from "#lib/valkey/client.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
   fetchGuildMemberRestUncached,
   fetchGuildRest,
   GuildTextBasedChannelTypes,
-} from "#lib/rpc/discord-rest-lookup.js";
-import { serializeCard } from "#lib/rpc/card-serialize.js";
-import { withSerializedWork } from "#lib/utilities/misc.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
+import { serializeCard } from "@lumi/lib/rpc/card-serialize.js";
+import { withSerializedWork } from "@lumi/lib/utilities/serialized-work.js";
 import {
   advanceCaptcha,
   buildChallenge,
@@ -21,9 +21,9 @@ import {
   type CaptchaState,
 } from "./captcha.js";
 import { getConfigNumber, getConfigString } from "./config-helpers.js";
-import { buildVerifyPanel, type VerifyPanelContent } from "#modules/security/ui/verify-panel.js";
+import { buildVerifyPanel, type VerifyPanelContent } from "@lumi/modules/security/ui/verify-panel.js";
 
-export interface VerifyPanelSetResult {
+interface VerifyPanelSetResult {
   channelId: string;
   messageId: string;
   posted: boolean;
@@ -36,7 +36,7 @@ export interface VerifyPanelSetResult {
 type VerificationMode = "emoji" | "none" | "web";
 type VerificationTarget = "everyone" | "suspicious";
 
-export interface VerificationConfig {
+interface VerificationConfig {
   enabled: boolean;
   mode: VerificationMode;
   target: VerificationTarget;
@@ -100,7 +100,7 @@ function isSendableGuildChannel(
  * `restore-guild.ts`'s channel recreation), channel/message reads are
  * `fetchChannelRest`/`fetchChannelMessageRest`, and the send/edit itself
  * serializes the `CardReply` the same way `welcome/rpc.ts`'s test-send does
- * (now shared via `#lib/rpc/card-serialize.js`).
+ * (now shared via `@lumi/lib/rpc/card-serialize.js`).
  */
 export async function postOrEditVerifyPanel(
   services: Container,

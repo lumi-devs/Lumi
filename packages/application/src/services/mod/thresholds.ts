@@ -1,15 +1,15 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { pipelineBySlot } from "@lumi/infrastructure/database";
 import { tryParseJSON } from "@lumi/shared";
 import { type WarnThresholdAction } from "@lumi/contracts/rpc";
-import { Ms } from "@lumi/shared";
+import { Time } from "@lumi/shared";
 import { thresholdKey } from "./threshold-rules.js";
-import { BanAction } from "./actions/BanAction.js";
-import { MuteAction } from "./actions/MuteAction.js";
-import { KickAction } from "./actions/KickAction.js";
-import { QuarantineAction } from "#lib/moderation/QuarantineAction.js";
-import { VoiceMuteAction } from "./actions/VoiceMuteAction.js";
-import { isImmuneToAutomatedAction } from "#lib/moderation/immune-roles.js";
+import { BanAction } from "./actions/ban-action.js";
+import { MuteAction } from "./actions/mute-action.js";
+import { KickAction } from "./actions/kick-action.js";
+import { QuarantineAction } from "./actions/quarantine-action.js";
+import { VoiceMuteAction } from "./actions/voice-mute-action.js";
+import { isImmuneToAutomatedAction } from "./immune-roles.js";
 
 /** Kept identical to the wire contract so a rule the dashboard can save is a rule the runner can apply. */
 type ThresholdAction = WarnThresholdAction;
@@ -131,7 +131,7 @@ export async function resetWarnCount(
  * still describe an intended punishment, and a Discord timeout cannot be
  * permanent, so there is no "no duration" reading of the rule to honour.
  */
-const FallbackThresholdDurationMs = Ms.Hour;
+const FallbackThresholdDurationMs = Time.Hour;
 
 function resolveThresholdDuration(
   container: Container,
@@ -145,7 +145,7 @@ function resolveThresholdDuration(
   container.logger.warn(
     `[Thresholds] Guild ${guildId}: the ${entry.action} rule at ${targetCount} warns has an unusable duration (${
       entry.duration ? `"${entry.duration}"` : "none set"
-    }) - applying ${FallbackThresholdDurationMs / Ms.Minute}m instead. Save the rule again with a valid duration.`,
+    }) - applying ${FallbackThresholdDurationMs / Time.Minute}m instead. Save the rule again with a valid duration.`,
   );
   return FallbackThresholdDurationMs;
 }

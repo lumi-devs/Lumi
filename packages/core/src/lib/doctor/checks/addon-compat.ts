@@ -1,13 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { AddonModulesRoot } from "#lib/downloader/resolver.js";
+import { AddonModulesRoot } from "@lumi/lib/downloader/resolver.js";
 import {
   isMaxVersionCompatible,
   isVersionCompatible,
-} from "#lib/downloader/validate.js";
-import { LumiInfo } from "#lib/utilities/misc.js";
-import { runCheck } from "#lib/doctor/util.js";
-import type { DoctorCheckResult } from "#lib/doctor/types.js";
+} from "@lumi/lib/downloader/validate.js";
+import { LumiInfo } from "@lumi/lib/utilities/version.js";
+import { runCheck } from "@lumi/lib/doctor/run-check.js";
+import type { DoctorCheckResult } from "@lumi/lib/doctor/types.js";
 
 export const AddonCompatCheckName = "addon-compat";
 

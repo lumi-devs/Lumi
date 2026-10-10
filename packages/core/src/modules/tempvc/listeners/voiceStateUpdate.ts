@@ -1,12 +1,11 @@
 import { Events } from "discord.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { getUtility } from "#lib/module-system/Utility.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
 import type { VoiceState } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import { makeWarningCard } from "#lib/ui/cards.js";
-import { logError } from "#lib/utilities/errors.js";
-import type { Container } from "#lib/services.js";
-import { isModuleEnabled } from "#lib/utilities/misc.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import { makeWarningCard } from "@lumi/lib/ui/cards.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
+import type { Container } from "@lumi/lib/services.js";
 import { TempvcCreateCooldownMs } from "../constants.js";
 import { tempVcRegistry } from "@lumi/application/services/tempvc/registry.js";
 import type { TempVcUtility } from "../utilities/TempVcUtility.js";
@@ -57,7 +56,7 @@ const tempvcVoiceStateUpdate = defineListener({
         newState.channelId,
       );
       if (generator) {
-        if (!(await isModuleEnabled(services, guildId, "tempvc"))) return;
+        if (!(await services.db.modules.isModuleEnabled(guildId, "tempvc"))) return;
 
         if (await service.onCreateCooldown(services, guildId, member.id)) {
           await member.voice.disconnect().catch(() => null);

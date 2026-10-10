@@ -1,3 +1,5 @@
+import { sleep } from "@sapphire/utilities";
+
 /** Thrown by {@linkcode withTimeout} when `fn` doesn't settle within `ms`. */
 export class TimeoutError extends Error {
   public constructor(ms: number) {
@@ -16,18 +18,26 @@ export async function withTimeout<T>(
   ms: number,
 ): Promise<T> {
   const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout>;
-  const deadline = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(() => {
-      reject(new TimeoutError(ms));
-      controller.abort(new TimeoutError(ms));
-    }, ms);
-  });
-
+  const timer = new AbortController();
+  const deadline = sleep(ms, undefined, { signal: timer.signal }).then<never>(
+    () => {
+      const reason = new TimeoutError(ms);
+      queueMicrotask(() => controller.abort(reason));
+      throw reason;
+    },
+  );
+  let task: Promise<T>;
   try {
-    return await Promise.race([fn(controller.signal), deadline]);
+    task = fn(controller.signal);
+  } catch (err) {
+    timer.abort();
+    await deadline.catch(() => undefined);
+    throw err;
+  }
+  try {
+    return await Promise.race([task, deadline]);
   } finally {
-    clearTimeout(timer!);
+    timer.abort();
   }
 }
 

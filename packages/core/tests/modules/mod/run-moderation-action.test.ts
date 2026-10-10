@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
-import { runModerationAction } from "@lumi/application/services/mod/runModerationAction.js";
+import { container } from "@lumi/lib/services.js";
+import { runModerationAction } from "@lumi/application/services/mod/run-moderation-action.js";
 
 Object.assign(container, {
   logger: {
@@ -8,7 +8,7 @@ Object.assign(container, {
   },
 });
 
-vi.mock("#lib/moderation/log.js", () => ({
+vi.mock("@lumi/lib/discord/mod-log.js", () => ({
   logToChannel: vi.fn(),
 }));
 
@@ -20,7 +20,7 @@ vi.mock("@lumi/application/services/mod/appeal-dm.js", () => ({
   sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { logToChannel } from "#lib/moderation/log.js";
+import { logToChannel } from "@lumi/lib/discord/mod-log.js";
 import { scheduleCaseLift } from "@lumi/application/services/mod/helpers.js";
 import { sendAppealLinkDm } from "@lumi/application/services/mod/appeal-dm.js";
 

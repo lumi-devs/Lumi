@@ -1,4 +1,4 @@
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
@@ -6,9 +6,9 @@ import {
 } from "@lumi/contracts/rpc";
 import type { DashboardModuleSummaryView } from "@lumi/contracts/views";
 import { ChannelType } from "discord.js";
-import type { ModuleRecord } from "#lib/module-system/ModuleStore.js";
-import { getUtility } from "#lib/module-system/Utility.js";
-import { implementRpc, requireGuildManager } from "#lib/rpc/implement.js";
+import type { ModuleRecord } from "@lumi/lib/module-system/module-store.js";
+import { getUtility } from "@lumi/lib/module-system/utility.js";
+import { implementRpc, requireGuildManager } from "@lumi/lib/rpc/implement.js";
 import {
   fetchBotMemberRest,
   fetchGuildChannelsRest,
@@ -17,9 +17,9 @@ import {
   fetchGuildRolesRest,
   guildBannerUrl,
   guildIconUrl,
-} from "#lib/rpc/discord-rest-lookup.js";
-import { paginate, resolvePageSize } from "#lib/rpc/validation.js";
-import { publishDashboardEvent } from "#lib/rpc/dashboard-events.js";
+} from "@lumi/lib/rpc/discord-rest-lookup.js";
+import { paginate, resolvePageSize } from "@lumi/lib/rpc/validation.js";
+import { publishDashboardEvent } from "@lumi/lib/rpc/dashboard-events.js";
 import type { APIRole } from "discord-api-types/v10";
 
 const GuildSummariesMax = 200;

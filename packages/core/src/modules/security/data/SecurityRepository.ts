@@ -1,5 +1,6 @@
 import type { GuildBackup, PanicState, VerificationPanel } from "@prisma/client";
-import { Repository } from "#lib/prisma/repositories/Repository.js";
+import { Repository } from "@lumi/lib/prisma/repositories/repository.js";
+import { ValkeyKeys, ValkeyTTL } from "@lumi/lib/valkey/client.js";
 import type { GuildBackupData } from "@lumi/application/services/security/backup-types.js";
 
 /** Channel id → prior `@everyone` SendMessages allow state (true/false/null). */
@@ -10,8 +11,15 @@ export type LockedChannelSnapshot = Record<string, boolean | null>;
  * the guild's verification panel message reference.
  */
 export class SecurityRepository extends Repository {
+  /**
+   * Cached like `isVoiceMuted`: the common case (no panic) is read on every
+   * mod command (`checkPanicLock`) and every channel/role-delete audit entry,
+   * and would otherwise pay a Postgres query each time. Writers invalidate.
+   */
   public getPanicState(guildId: string): Promise<PanicState | null> {
-    return this.prisma.panicState.findUnique({ where: { guildId } });
+    return this.getOrSet(ValkeyKeys.panicState(guildId), ValkeyTTL.panicState, () =>
+      this.prisma.panicState.findUnique({ where: { guildId } }),
+    );
   }
 
   public async savePanicState(input: {
@@ -21,7 +29,7 @@ export class SecurityRepository extends Repository {
     lockedChannels: LockedChannelSnapshot;
   }): Promise<PanicState> {
     await this.db.ensureGuild(input.guildId);
-    return this.prisma.panicState.upsert({
+    const state = await this.prisma.panicState.upsert({
       where: { guildId: input.guildId },
       update: {
         actorId: input.actorId,
@@ -35,12 +43,15 @@ export class SecurityRepository extends Repository {
         lockedChannels: input.lockedChannels,
       },
     });
+    await this.invalidate(ValkeyKeys.panicState(input.guildId));
+    return state;
   }
 
   public async clearPanicState(guildId: string): Promise<boolean> {
     const result = await this.prisma.panicState.deleteMany({
       where: { guildId },
     });
+    if (result.count > 0) await this.invalidate(ValkeyKeys.panicState(guildId));
     return result.count > 0;
   }
 

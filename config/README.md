@@ -1,44 +1,9 @@
 # Lumi Configuration Architecture & Reference
 
-This directory contains the operational and infrastructure configurations for Lumi. Configuration in Lumi is partitioned into **Application-Level Settings** (`bot.json`, `emojis.json`) and **Infrastructure-Level Stack Configurations** (`postgres/`, `valkey/`, `observability/`).
+This directory contains the operational and infrastructure configurations for Lumi (`postgres/`, `valkey/`, `observability/`).
 
 > [!NOTE]
-> Application configuration files (`bot.ts` and `emojis.ts`) are optional. Lumi ships with production-grade defaults compiled directly into the binary. Any values provided in `config/bot.ts` or `config/emojis.ts` are deeply merged on top of internal defaults at boot time.
-
----
-
-## Application Configuration
-
-### `bot.ts`
-
-The `bot.ts` file configures runtime presence, color schemes, external links, permission tier titles, and user interface pagination defaults.
-
-All available options are documented as comments in the file. Uncomment and edit what you need - everything is optional.
-
-#### Configuration Options
-
-| Option Path | Type | Description | Default / Values |
-| :--- | :--- | :--- | :--- |
-| `presence.activityType` | `number` | Discord activity type enumeration | `0` (Playing), `1` (Streaming), `2` (Listening), `3` (Watching), `5` (Competing) |
-| `presence.activityText` | `string` | Text displayed in the bot status activity line | `"the server"` |
-| `presence.status` | `string` | Gateway client online status | `"online"`, `"idle"`, `"dnd"`, `"invisible"` |
-| `branding.colors.*` | `number` | Hex integer representations of embed accent colors | e.g. `0x5865F2` (Blurple), `0x57F287` (Green), `0xED4245` (Red) |
-| `branding.links.supportServer` | `string` | Discord invite URL surfaced in help and information cards | `""` |
-| `branding.links.website` | `string` | Official website URL surfaced in bot metadata | `""` |
-| `branding.links.github` | `string` | Source code repository URL | `""` |
-| `ui.defaultListPerPage` | `number` | Default number of items per page in paginated UI components | `10` |
-
----
-
-### `emojis.ts`
-
-`emojis.ts` defines named emoji identifiers used across cards, status messages, and command responses. Values can be unicode glyphs or custom Discord emojis formatted as `<:name:id>` (or `<a:name:id>` for animated emojis).
-
-> [!TIP]
-> Any key omitted from `emojis.ts` automatically falls back to Lumi's built-in unicode emoji mapping. You only need to declare keys you wish to override.
-
-All defined emoji keys are listed as comments in the file. Uncomment and edit what you need.
-```
+> Application-level settings (presence, branding colors/links, emoji symbols) are compiled directly into the binary with production-grade defaults. There are no `config/bot.ts` / `config/emojis.ts` override files — presence is fixed to Watching "the server" / online, card colors come from the built-in palette in `packages/core/src/lib/ui/palette.ts`, and emoji are unicode literals at each use site.
 
 ---
 
@@ -48,8 +13,6 @@ The subdirectories within `config/` house operational parameters and initializat
 
 ```
 config/
-├── bot.ts                    # Application presence, branding, & UI settings
-├── emojis.ts                 # Application emoji symbol mappings
 ├── postgres/
 │   ├── init-replication.sh   # Primary DB bootstrap script (creates replicator role)
 │   ├── pg_hba.conf           # PostgreSQL host-based authentication rules

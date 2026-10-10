@@ -1,0 +1,94 @@
+import type { Container } from "@lumi/lib/services.js";
+import { QueuePriority, scheduleTask } from "@lumi/lib/scheduler/schedule.js";
+
+export interface GdprDeletionResult {
+  /** Modules whose `deleteUserData` hook rejected; their data may still exist. */
+  failedModules: string[];
+}
+
+/**
+ * Module hooks run before the core deletion so they can still resolve rows the
+ * core delete is about to remove.
+ *
+ * A failing module hook does not abort the core deletion - partial erasure
+ * beats none - but it is reported so the caller can retry or escalate rather
+ * than record the request as fully satisfied.
+ */
+export async function executeGdprDeletion(
+  services: Container,
+  userId: string,
+  requester?: string,
+): Promise<GdprDeletionResult> {
+  const modules = Array.from(services.moduleStore.values());
+  const results = await Promise.allSettled(
+    modules.map((m) => m.deleteUserData?.(services, userId, requester)),
+  );
+
+  const failedModules: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const res = results[i]!;
+    if (res.status === "rejected") {
+      failedModules.push(modules[i]!.name);
+      services.logger.error(
+        `[GDPR] Module '${modules[i]!.name}' failed deleteUserData for ${userId}:`,
+        res.reason,
+      );
+    }
+  }
+
+  await services.db.deleteUserData(userId);
+
+  return { failedModules };
+}
+
+/** Keyed by module name (core data under `"core"`); modules returning `null` are omitted. */
+export async function executeGdprExport(
+  services: Container,
+  userId: string,
+): Promise<Record<string, unknown>> {
+  const result: Record<string, unknown> = {};
+
+  const core = await services.db.exportUserData(userId);
+  if (core) result["core"] = core;
+
+  const modules = Array.from(services.moduleStore.values());
+  const exports = await Promise.allSettled(
+    modules.map((m) => m.exportUserData?.(services, userId)),
+  );
+
+  for (let i = 0; i < exports.length; i++) {
+    const res = exports[i]!;
+    if (res.status === "fulfilled" && res.value != null) {
+      result[modules[i]!.name] = res.value;
+    } else if (res.status === "rejected") {
+      services.logger.warn(
+        `[GDPR] Module '${modules[i]!.name}' failed exportUserData for ${userId}:`,
+        res.reason,
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Starts an async export: a `GdprExportJob` row is created up front (so the
+ * caller gets an id to poll immediately), then a `gdpr-export` job is
+ * enqueued to actually build it - large exports (many guilds, long
+ * moderation history) would otherwise hold the RPC/command request open for
+ * longer than its timeout. The synchronous `executeGdprExport()` above is
+ * unaffected and still backs `/mydata getmydata` and small dashboard exports.
+ */
+export async function startGdprExportJob(
+  services: Container,
+  userId: string,
+  requestedBy: string,
+): Promise<string> {
+  const job = await services.db.gdprExportJobs.create({ userId, requestedBy });
+  await scheduleTask(
+    "gdpr-export",
+    { jobId: job.id },
+    { customJobOptions: { priority: QueuePriority.UTILITY } },
+  );
+  return job.id;
+}

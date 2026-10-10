@@ -7,10 +7,10 @@ import {
   MessageContentSchema,
   MessageTemplateVars,
   renderMessageContent,
-} from "#lib/message-content.js";
-import { WelcomeMemberAddListener } from "#modules/welcome/listeners/guildMemberAdd.js";
-import { WelcomeMemberRemoveListener } from "#modules/welcome/listeners/guildMemberRemove.js";
-import { container } from "#lib/services.js";
+} from "@lumi/lib/utilities/message-content.js";
+import { WelcomeMemberAddListener } from "@lumi/modules/welcome/listeners/guildMemberAdd.js";
+import { WelcomeMemberRemoveListener } from "@lumi/modules/welcome/listeners/guildMemberRemove.js";
+import { container } from "@lumi/lib/services.js";
 
 beforeEach(() => {
   vi.clearAllMocks();

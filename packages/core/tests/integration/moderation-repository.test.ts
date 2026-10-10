@@ -3,8 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import type Valkey from "iovalkey";
-import { DatabaseService } from "#lib/prisma/DatabaseService.js";
-import type { DatabaseClient } from "#lib/prisma/client.js";
+import { DatabaseService } from "@lumi/lib/prisma/database-service.js";
+import type { DatabaseClient } from "@lumi/lib/prisma/client.js";
 import { createTestValkey, integrationDescribe, requireTestDatabaseUrl } from "./setup.js";
 
 const noopLogger = {

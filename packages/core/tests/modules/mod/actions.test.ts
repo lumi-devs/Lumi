@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import { scheduleCaseLift } from '@lumi/application/services/mod/helpers.js';
-import { parseDuration, formatDuration } from '#lib/utilities/time.js';
+import { parseDuration, formatDuration } from '@lumi/lib/utilities/time.js';
 import {
   getThresholds,
   incrementWarnCount,
@@ -10,14 +10,14 @@ import {
   checkThresholds
 } from '@lumi/application/services/mod/thresholds.js';
 import { invalidateThresholds, setThresholdRule } from '@lumi/application/services/mod/threshold-rules.js';
-import { BanAction } from '@lumi/application/services/mod/actions/BanAction.js';
-import { MuteAction } from '@lumi/application/services/mod/actions/MuteAction.js';
-import { VoiceMuteAction } from '@lumi/application/services/mod/actions/VoiceMuteAction.js';
-import { KickAction } from '@lumi/application/services/mod/actions/KickAction.js';
-import { WarnAction } from '@lumi/application/services/mod/actions/WarnAction.js';
-import { QuarantineAction } from '#lib/moderation/QuarantineAction.js';
-import { QueuePriority } from '#lib/scheduler/schedule.js';
-import { FakeDiscordRestPort } from '#lib/discord/fake-rest-port.js';
+import { BanAction } from '@lumi/application/services/mod/actions/ban-action.js';
+import { MuteAction } from '@lumi/application/services/mod/actions/mute-action.js';
+import { VoiceMuteAction } from '@lumi/application/services/mod/actions/voice-mute-action.js';
+import { KickAction } from '@lumi/application/services/mod/actions/kick-action.js';
+import { WarnAction } from '@lumi/application/services/mod/actions/warn-action.js';
+import { QuarantineAction } from '@lumi/application/services/mod/actions/quarantine-action.js';
+import { QueuePriority } from '@lumi/lib/scheduler/schedule.js';
+import { FakeDiscordRestPort } from '@lumi/lib/discord/fake-rest-port.js';
 
 const discordRest = new FakeDiscordRestPort();
 
@@ -80,10 +80,10 @@ describe('Mod Helpers & Duration Parsing', () => {
   });
 
   it('formatDuration converts ms into human readable string', () => {
-    expect(formatDuration(5000)).toBe('5s');
-    expect(formatDuration(120000)).toBe('2m');
-    expect(formatDuration(7200000)).toBe('2h');
-    expect(formatDuration(172800000)).toBe('2d');
+    expect(formatDuration(5000)).toBe('5 seconds');
+    expect(formatDuration(120000)).toBe('2 minutes');
+    expect(formatDuration(7200000)).toBe('2 hours');
+    expect(formatDuration(172800000)).toBe('2 days');
   });
 
   it('scheduleCaseLift handles valid expiresAt date', async () => {

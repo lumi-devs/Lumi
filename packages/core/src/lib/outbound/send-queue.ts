@@ -17,10 +17,10 @@
  * Discord's 15-minute token and are the one path a user is actually waiting on.
  * The rule is *if no user is waiting on it, queue it*.
  */
-import { Mutex } from "@lumi/shared";
-import { type Container } from "#lib/services.js";
+import { AsyncQueue } from "@sapphire/async-queue";
+import { type Container } from "@lumi/lib/services.js";
 import { queueDepth } from "@lumi/observability";
-import { scheduleTask, QueuePriority } from "#lib/scheduler/schedule.js";
+import { scheduleTask, QueuePriority } from "@lumi/lib/scheduler/schedule.js";
 import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "./render.js";
 
 const QueueLabel = "outbound-send";
@@ -57,7 +57,7 @@ export async function queueSend(services: Container, payload: OutboundSendPayloa
 }
 
 /** One in-flight send per channel; distinct channels still run concurrently. */
-const channelQueues = new Map<string, Mutex>();
+const channelQueues = new Map<string, AsyncQueue>();
 let pending = 0;
 
 export async function handleSendMessageFire(
@@ -67,7 +67,7 @@ export async function handleSendMessageFire(
   const { channelId } = payload;
   let queue = channelQueues.get(channelId);
   if (!queue) {
-    queue = new Mutex();
+    queue = new AsyncQueue();
     channelQueues.set(channelId, queue);
   }
 

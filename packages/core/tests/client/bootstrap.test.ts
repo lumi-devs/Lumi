@@ -15,7 +15,7 @@ const attachClient = mock(() => {});
 const loginLumi = mock(() => Promise.resolve("mock.bot.token.12345"));
 const destroyLumi = mock(() => Promise.resolve(undefined));
 
-mock.module("../../src/lib/client/LumiClient.js", () => ({
+mock.module("../../src/lib/client/lumi-client.js", () => ({
   attachClient,
   loginLumi,
   destroyLumi,

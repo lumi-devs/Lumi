@@ -1,5 +1,5 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { cfg } from "#lib/module-system/config-schema.js";
+import { defineModule } from "@lumi/lib/module-system/module.js";
+import { cfg } from "@lumi/lib/module-system/config-schema.js";
 import { ModuleName } from "./constants.js";
 
 export const reactionRolesModule = defineModule({

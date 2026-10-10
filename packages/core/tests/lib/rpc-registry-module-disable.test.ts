@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
@@ -14,17 +14,17 @@ import { promises as fs } from "node:fs";
 const mockedReadManifest = vi.fn();
 const mockedMetaFromManifest = vi.fn();
 
-vi.mock("#lib/module-system/manifest.js", () => ({
+vi.mock("@lumi/lib/module-system/manifest.js", () => ({
   readManifest: mockedReadManifest,
   metaFromManifest: mockedMetaFromManifest,
 }));
 
-import { ModuleStore } from "#lib/module-system/ModuleStore.js";
-import { getRpcHandler, registerRpcHandlers, restoreStaticRpcOwner } from "#lib/rpc/registry.js";
-import { AfkRepository } from "#modules/afk/data/AfkRepository.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
+import { ModuleStore } from "@lumi/lib/module-system/module-store.js";
+import { getRpcHandler, registerRpcHandlers, restoreStaticRpcOwner } from "@lumi/lib/rpc/registry.js";
+import { AfkRepository } from "@lumi/modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
 import { createMockPrismaClient } from "../mocks/prisma.js";
-import { FakeDiscordRestPort } from "#lib/discord/fake-rest-port.js";
+import { FakeDiscordRestPort } from "@lumi/lib/discord/fake-rest-port.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";

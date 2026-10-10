@@ -1,11 +1,11 @@
-import type { CommandContext } from "#lib/commands/context.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { LumiT } from "#lib/i18n/index.js";
-import { runModerationFlow, type ModerationCommand } from "#lib/moderation/ModerationCommand.js";
-import { applyLocalizedBuilder } from "#lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
+import { runModerationFlow, type ModerationCommand } from "@lumi/lib/commands/moderation-flow.js";
+import { applyLocalizedBuilder } from "@lumi/lib/i18n/index.js";
 import type { GuildMember } from "discord.js";
-import { NotesAction } from "@lumi/application/services/mod/actions/NotesAction.js";
+import { NotesAction } from "@lumi/application/services/mod/actions/notes-action.js";
 
 const Root = "commands";
 

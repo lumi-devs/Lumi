@@ -1,7 +1,7 @@
-import { defineListener } from "#lib/listeners/listener-def.js";
-import type { Container } from "#lib/services.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import type { GatewayDispatchPayload, APIGuild } from "discord-api-types/v10";
-import { logError } from "#lib/utilities/errors.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import {
   seedVoiceStates,
   clearVoiceChannelOccupancy,

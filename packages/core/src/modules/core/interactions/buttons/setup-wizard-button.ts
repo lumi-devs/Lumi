@@ -1,8 +1,8 @@
 import {
   acknowledge,
   defineInteraction,
-} from "#lib/interactions/interaction-def.js";
-import type { Container } from "#lib/services.js";
+} from "@lumi/lib/interactions/interaction-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import {
   emptySetupState,
   finishSetupWizard,
@@ -16,7 +16,7 @@ import {
   buildSetupReviewView,
   buildSetupStepView,
   buildSetupSuccessCard,
-} from "#modules/core/ui/setup-wizard.js";
+} from "@lumi/modules/core/ui/setup-wizard.js";
 import { SetupId } from "../../constants.js";
 import type { ButtonInteraction } from "discord.js";
 

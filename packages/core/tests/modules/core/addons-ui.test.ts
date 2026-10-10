@@ -6,7 +6,7 @@ import {
   buildAddonInstalledView,
   buildAddonRepoModulesView,
   buildAutoUpdateSettingsView,
-} from "#modules/core/ui/addons.js";
+} from "@lumi/modules/core/ui/addons.js";
 
 describe("Addons UI Panel Builders", () => {
   it("builds main add-ons overview with pending updates and without", () => {

@@ -3,7 +3,7 @@ import {
   getServerLockState,
   setServerLockState,
   shouldLeaveOnJoin,
-} from "#modules/core/services/server-lock.js";
+} from "@lumi/modules/core/services/server-lock.js";
 
 describe("shouldLeaveOnJoin", () => {
   it("leaves only locked-out guilds while enabled", () => {

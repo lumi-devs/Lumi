@@ -14,14 +14,14 @@ declare module "discord.js" {
   }
 }
 
-import type { OutboundSendPayload } from "#lib/outbound/send-queue.js";
-import type { AddonRelayPayload } from "#lib/addon-sandbox/relay-task.js";
-import type { GdprExportFirePayload } from "#modules/core/services/gdpr-export-task.js";
-import type { ModLiftPayload } from "#modules/mod/scheduled-tasks/modLift.js";
-import type { WarnDecayPayload } from "#modules/mod/scheduled-tasks/warnDecay.js";
-import type { AutoLockdownUnlockPayload } from "#modules/filter/scheduled-tasks/autoLockdownUnlock.js";
-import type { AfkDeleteMessagePayload } from "#modules/afk/scheduled-tasks/afkDeleteMessage.js";
-import type { TempVcCleanupPayload } from "#modules/tempvc/scheduled-tasks/cleanup.js";
+import type { OutboundSendPayload } from "@lumi/lib/outbound/send-queue.js";
+import type { AddonRelayPayload } from "@lumi/lib/addon-sandbox/isolate/relay-task.js";
+import type { GdprExportFirePayload } from "@lumi/modules/core/services/gdpr-export-task.js";
+import type { ModLiftPayload } from "@lumi/modules/mod/scheduled-tasks/modLift.js";
+import type { WarnDecayPayload } from "@lumi/modules/mod/scheduled-tasks/warnDecay.js";
+import type { AutoLockdownUnlockPayload } from "@lumi/modules/filter/scheduled-tasks/autoLockdownUnlock.js";
+import type { AfkDeleteMessagePayload } from "@lumi/modules/afk/scheduled-tasks/afkDeleteMessage.js";
+import type { TempVcCleanupPayload } from "@lumi/modules/tempvc/scheduled-tasks/cleanup.js";
 
 export interface ScheduledTasks {
   "flush-logs": Record<string, never>;

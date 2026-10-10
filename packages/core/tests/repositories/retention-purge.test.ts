@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { createMockPrismaClient } from "../mocks/prisma.js";
-import { AuditRepository } from "#lib/prisma/repositories/AuditRepository.js";
-import { ConfigHistoryRepository } from "#lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ModerationRepository } from "#lib/prisma/repositories/ModerationRepository.js";
-import { AppealRepository } from "#modules/mod/data/AppealRepository.js";
+import { AuditRepository } from "@lumi/lib/prisma/repositories/audit-repository.js";
+import { ConfigHistoryRepository } from "@lumi/lib/prisma/repositories/config-history-repository.js";
+import { ModerationRepository } from "@lumi/lib/prisma/repositories/moderation-repository.js";
+import { AppealRepository } from "@lumi/modules/mod/data/AppealRepository.js";
 
 function mockLogger(): import("@lumi/shared").ILogger {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@lumi/shared").ILogger;

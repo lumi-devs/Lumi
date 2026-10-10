@@ -78,7 +78,7 @@ change this file.
 
 ## Enforcement
 
-`eslint.config.mjs` forbids importing `#lib/permissions/PermitResolver.js` from
+`eslint.config.mjs` forbids importing `@lumi/lib/permissions/permit-resolver.js` from
 `permissions/preconditions/**`, `rpc/**`, or `addon-sandbox/**` - those three ask `authorize()`
 instead. `packages/core/tests/architecture/import-graph.test.ts` carries the same rule as an
 ESLint-independent check (it walks the parsed import graph rather than relying on ESLint's own

@@ -1,4 +1,4 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { toTitleCase } from "@lumi/shared";
 import { SeparatorBuilder, TextDisplayBuilder } from "@discordjs/builders";
 import {
@@ -9,13 +9,12 @@ import {
   SeparatorSpacingSize,
 } from "discord.js";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { fetchTyped } from "#lib/i18n/index.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { CommandContext } from "#lib/commands/context.js";
-import { commandRegistry } from "#lib/commands/command-def.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { paginateContainer } from "#lib/utilities/pagination.js";
-import type { LumiT } from "#lib/i18n/index.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandContext } from "@lumi/lib/commands/context.js";
+import { commandRegistry } from "@lumi/lib/commands/command-def.js";
+import { paginateContainer } from "@lumi/lib/utilities/pagination.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 
 export function getCategories(services: Container) {
   const seen = new Set<CommandDef>();
@@ -41,7 +40,7 @@ export function getCategories(services: Container) {
 
     if (!categories[moduleName]) categories[moduleName] = [];
     categories[moduleName].push(def);
-    categoryEmojis[moduleName] ??= record?.meta.emoji ?? Emojis.Gear;
+    categoryEmojis[moduleName] ??= record?.meta.emoji ?? "⚙️";
     totalCommandsCount++;
   }
 
@@ -106,11 +105,11 @@ function renderPage(
 ) {
   const categoryName = data.sortedCategories[data.pageIndex] || "Core";
   const categoryCommands = data.categories[categoryName] || [];
-  const categoryEmoji = data.categoryEmojis[categoryName] ?? Emojis.Gear;
+  const categoryEmoji = data.categoryEmojis[categoryName] ?? "⚙️";
 
   c.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `## ${Emojis.Shield} ${t("commands:helpTitle")}`,
+      `## 🛡️ ${t("commands:helpTitle")}`,
     ),
   );
   c.addSeparatorComponents(

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { container } from "#lib/services.js";
-import { loggingModule } from "#modules/logging/index.js";
+import { container } from "@lumi/lib/services.js";
+import { loggingModule } from "@lumi/modules/logging/index.js";
 
 describe("LoggingModule", () => {
   it("exposes module metadata", () => {

@@ -1,16 +1,16 @@
-import { type Container } from "#lib/services.js";
+import { type Container } from "@lumi/lib/services.js";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { cutText } from "@lumi/shared";
-import { Ms } from "@lumi/shared";
-import { tryGetUtility } from "#lib/module-system/Utility.js";
-import { toStringArray } from "#lib/module-system/config-schema.js";
-import type { GuildMessage } from "#lib/types/common.js";
-import { swallow } from "#lib/utilities/errors.js";
-import { deleteMessageLater } from "#lib/utilities/temporary-message.js";
-import { fetchTyped } from "#lib/i18n/index.js";
+import { Time } from "@lumi/shared";
+import { tryGetUtility } from "@lumi/lib/module-system/utility.js";
+import { toStringArray } from "@lumi/lib/module-system/config-schema.js";
+import type { GuildMessage } from "@lumi/lib/types/common.js";
+import { swallow } from "@lumi/lib/utilities/errors.js";
+import { deleteMessageLater } from "@lumi/lib/utilities/temporary-message.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
 import { getHitReason, type FilterHit } from "./rules.js";
-import type { FilterUtility } from "#modules/filter/utilities/FilterUtility.js";
+import type { FilterUtility } from "@lumi/modules/filter/utilities/FilterUtility.js";
 
 async function isExempt(services: Container, message: GuildMessage): Promise<boolean> {
   const stored = await services.db.config.getModuleConfig(
@@ -82,7 +82,7 @@ async function punish(
   if (typeof minutes !== "number" || minutes <= 0) return;
   await message.member
     ?.timeout(
-      minutes * Ms.Minute,
+      minutes * Time.Minute,
       `[Filter] Message matched ${hit.rule} rule (${hit.detail})`,
     )
     .catch(swallow("Filter: timeout member"));

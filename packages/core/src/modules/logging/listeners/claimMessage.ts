@@ -1,11 +1,11 @@
-import type { Container } from "#lib/services.js";
+import type { Container } from "@lumi/lib/services.js";
 import { Colors } from "discord.js";
-import { fetchTyped } from "#lib/i18n/index.js";
-import { defineListener } from "#lib/listeners/listener-def.js";
-import { memberRoleIds } from "#lib/permissions/subject.js";
-import { LumiEvents, type GuildMessage } from "#lib/types/common.js";
-import { makeCard } from "#lib/ui/cards.js";
-import { logError } from "#lib/utilities/errors.js";
+import { fetchTyped } from "@lumi/lib/i18n/index.js";
+import { defineListener } from "@lumi/lib/listeners/listener-def.js";
+import { memberRoleIds } from "@lumi/lib/permissions/subject.js";
+import { LumiEvents, type GuildMessage } from "@lumi/lib/types/common.js";
+import { makeCard } from "@lumi/lib/ui/cards.js";
+import { logError } from "@lumi/lib/utilities/errors.js";
 import {
   consumeLogClaimCode,
   normalizeLogClaimCode,

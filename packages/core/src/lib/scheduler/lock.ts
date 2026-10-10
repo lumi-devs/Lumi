@@ -1,7 +1,7 @@
 import type { ValkeyClient } from "@lumi/infrastructure/database";
 import type { CacheLogger } from "@lumi/infrastructure/cache";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { getConsumerId } from "#lib/env.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { getConsumerId } from "@lumi/lib/env.js";
 import { acquireValkeyLock, type ValkeyLock } from "@lumi/infrastructure/cache";
 
 /**

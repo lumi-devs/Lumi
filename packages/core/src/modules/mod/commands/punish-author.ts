@@ -1,5 +1,5 @@
-import { sendInteractionReply } from "#lib/utilities/command-response.js";
-import { createStringSelectMenu } from "#lib/ui/panels.js";
+import { sendInteractionReply } from "@lumi/lib/utilities/command-response.js";
+import { createStringSelectMenu } from "@lumi/lib/ui/panels.js";
 import {
   ActionRowBuilder,
   ContextMenuCommandBuilder,
@@ -10,8 +10,8 @@ import {
   MessageFlags,
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
-import type { CommandDef } from "#lib/commands/command-def.js";
-import type { Container } from "#lib/services.js";
+import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { Container } from "@lumi/lib/services.js";
 import { PunishAuthorSelectId } from "../constants.js";
 
 function punishAuthorMenu(): ContextMenuCommandBuilder {

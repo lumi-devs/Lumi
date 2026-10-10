@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   handleSendMessageFire,
   queueSend,
-} from "#lib/outbound/send-queue.js";
+} from "@lumi/lib/outbound/send-queue.js";
 
 /** Records send start/finish order so overlap can be asserted. */
 const events: string[] = [];

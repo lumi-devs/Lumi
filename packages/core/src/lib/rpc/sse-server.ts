@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { container } from "#lib/services.js";
+import { container } from "@lumi/lib/services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
@@ -7,8 +7,8 @@ import {
 } from "@lumi/contracts/events";
 import { dashboardEventPublishFailures } from "@lumi/observability";
 import { CodedRpcError, RpcFailureCodes } from "@lumi/contracts/rpc";
-import { requireGuildId, requireGuildManager } from "#lib/rpc/implement.js";
-import type { BusMessage } from "#lib/event-bus/types.js";
+import { requireGuildId, requireGuildManager } from "@lumi/lib/rpc/implement.js";
+import type { BusMessage } from "@lumi/lib/event-bus/types.js";
 
 /**
  * Per-process cap on concurrent SSE connections. This process only ever

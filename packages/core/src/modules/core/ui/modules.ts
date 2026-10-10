@@ -1,19 +1,18 @@
 import { chunk } from "@lumi/shared";
-import type { LumiT } from "#lib/i18n/index.js";
+import type { LumiT } from "@lumi/lib/i18n/index.js";
 import { resolveChannelTypeIds, sectionsOf } from "@lumi/contracts";
-import { FieldType, type ConfigField } from "#lib/module-system/config-schema.js";
-import type { ModuleMeta } from "#lib/module-system/meta.js";
+import { FieldType, type ConfigField } from "@lumi/lib/module-system/config-schema.js";
+import type { ModuleMeta } from "@lumi/lib/module-system/meta.js";
 import {
   formatFieldValue,
   formatPageFooter,
   formatSubtitle,
   row,
   type Row,
-} from "#modules/core/ui/common.js";
-import { hubTabRow } from "#modules/core/ui/hub.js";
-import { Emojis } from "#lib/utilities/assets.js";
-import { resolveCardColor } from "#lib/utilities/config.js";
-import { makeCard, noPingCard, type CardReply } from "#lib/ui/cards.js";
+} from "@lumi/modules/core/ui/common.js";
+import { hubTabRow } from "@lumi/modules/core/ui/hub.js";
+import { resolveCardColor } from "@lumi/lib/ui/palette.js";
+import { makeCard, noPingCard, type CardReply } from "@lumi/lib/ui/cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -24,7 +23,7 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#lib/ui/panels.js";
+} from "@lumi/lib/ui/panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import { cutText } from "@lumi/shared";
 import { ButtonStyle, ChannelType } from "discord.js";
@@ -46,8 +45,8 @@ export interface FeatureListEntry {
 
 const formatStatusBadge = (status: "enabled" | "disabled", t?: LumiT) =>
   status === "enabled"
-    ? `${Emojis.Success} \`${t ? t("panels:detailEnabled") : "ENABLED"}\``
-    : `${Emojis.Error} \`${t ? t("panels:detailDisabled") : "DISABLED"}\``;
+    ? `🟢 \`${t ? t("panels:detailEnabled") : "ENABLED"}\``
+    : `🔴 \`${t ? t("panels:detailDisabled") : "DISABLED"}\``;
 
 const hasStoredValue = (field: ConfigField, value: unknown): boolean => {
   const current = value ?? field.default ?? null;
@@ -61,9 +60,9 @@ const statusGlyphFor = (field: ConfigField, value: unknown): string => {
     const fallback =
       field.default === undefined ? false : Boolean(field.default);
     const current = value ?? fallback;
-    return current ? Emojis.Check : Emojis.Cross;
+    return current ? "✅" : "❌";
   }
-  return hasStoredValue(field, value) ? Emojis.Success : Emojis.Error;
+  return hasStoredValue(field, value) ? "🟢" : "🔴";
 };
 
 const isEnumField = (field: ConfigField): boolean =>
@@ -118,7 +117,7 @@ export function buildFeatureListView(
   const sections = pageFeatures.map((f) =>
     settingRow(
       [
-        `${f.guildEnabled ? Emojis.Success : Emojis.Error} ${f.meta.emoji} **${f.meta.displayName}**`,
+        `${f.guildEnabled ? "🟢" : "🔴"} ${f.meta.emoji} **${f.meta.displayName}**`,
         `-# ${f.meta.description ? cutText(f.meta.description, 90) : "No description"}`,
       ],
       {
@@ -147,7 +146,7 @@ export function buildFeatureListView(
 
   return makeCard(
     resolveCardColor("primary"),
-    `${Emojis.Gear} ${t ? t("panels:modulesTitle") : "Feature Modules"}`,
+    `⚙️ ${t ? t("panels:modulesTitle") : "Feature Modules"}`,
     pageFeatures.length
       ? ""
       : t
@@ -255,7 +254,7 @@ export function buildFeatureDetailView(
           moduleName: meta.name,
           rest: [field.key, String(idx)],
         }),
-        label: on ? Emojis.Check : Emojis.Cross,
+        label: on ? "✅" : "❌",
         style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
     }
@@ -268,7 +267,7 @@ export function buildFeatureDetailView(
           rest: [field.key, String(idx)],
         }),
         label: t ? t("panels:detailEdit") : "Edit",
-        emoji: Emojis.Edit,
+        emoji: "✏️",
         style: ButtonStyle.Secondary,
       });
     }
@@ -280,7 +279,7 @@ export function buildFeatureDetailView(
         rest: [field.key, String(idx)],
       }),
       label: t ? t("panels:detailEdit") : "Edit",
-      emoji: Emojis.Edit,
+      emoji: "✏️",
       style: ButtonStyle.Secondary,
     });
   });
@@ -319,7 +318,7 @@ export function buildFeatureDetailView(
           : t
             ? t("panels:detailEnable")
             : "Enable Module",
-        emoji: guildEnabled ? Emojis.Cross : Emojis.Check,
+        emoji: guildEnabled ? "❌" : "✅",
         style: guildEnabled ? ButtonStyle.Danger : ButtonStyle.Success,
       }),
       createActionButton({
@@ -329,7 +328,7 @@ export function buildFeatureDetailView(
           rest: [String(idx)],
         }),
         label: t ? t("panels:detailReset") : "Reset",
-        emoji: Emojis.Uninstall,
+        emoji: "🗑️",
         style: ButtonStyle.Secondary,
       }),
     ),
@@ -369,7 +368,7 @@ export function buildFeatureDetailView(
         rest: [String(idx)],
       }),
       label: t ? t("panels:detailHistory") : "History",
-      emoji: Emojis.Clock,
+      emoji: "🕐",
       style: ButtonStyle.Secondary,
     }),
   ];
@@ -383,7 +382,7 @@ export function buildFeatureDetailView(
           rest: [String(idx)],
         }),
         label: t ? t("panels:detailOverrides") : "Overrides",
-        emoji: Emojis.Shield,
+        emoji: "🛡️",
         style: ButtonStyle.Secondary,
       }),
     );
@@ -525,7 +524,7 @@ export function buildFieldEditView(
             rest: [field.key, String(fieldPage)],
           }),
           label: t ? t("panels:fieldEditEnterValue") : "Enter value…",
-          emoji: Emojis.Edit,
+          emoji: "✏️",
           style: ButtonStyle.Primary,
         }),
       ),

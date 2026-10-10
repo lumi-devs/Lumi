@@ -1,4 +1,3 @@
-// Bus interface - Valkey Streams event bus abstraction.
 // Semantics target Valkey Streams' consumer groups: at-least-once delivery,
 // per-consumer pending list, explicit ack.
 

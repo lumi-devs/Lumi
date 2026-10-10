@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { FeatureFlagRepository } from "#lib/prisma/repositories/FeatureFlagRepository.js";
-import { ValkeyKeys } from "#lib/valkey/client.js";
-import { repositoryCache } from "#lib/cache/CacheStore.js";
-import { container } from "#lib/services.js";
+import { FeatureFlagRepository } from "@lumi/lib/prisma/repositories/feature-flag-repository.js";
+import { ValkeyKeys } from "@lumi/lib/valkey/client.js";
+import { repositoryCache } from "@lumi/lib/cache/cache-store.js";
+import { container } from "@lumi/lib/services.js";
 
 vi.mock("@lumi/observability", () => ({
   cacheHits: { inc: vi.fn() },
