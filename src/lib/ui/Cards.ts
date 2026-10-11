@@ -11,7 +11,7 @@ import {
 } from "@discordjs/builders";
 import { cutText } from "#src/shared/Index.ts";
 import type { MessageMentionOptions } from "discord.js";
-import { MessageFlags } from "#src/lib/discord/Constants.js";
+import { MessageFlags } from "discord.js";
 import { resolveCardColor } from "#src/lib/ui/Palette.js";
 import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "#src/lib/ui/Layout.js";
 
@@ -22,20 +22,20 @@ export interface CardReply {
 }
 
 export interface CardOptions {
-  subtitle?: string;
-  breadcrumbs?: string[];
-  statusBadge?: { status: string; label?: string };
-  footer?: string;
-  thumbnail?: string;
-  thumbnailUrl?: string;
-  divider?: boolean;
-  hideTitle?: boolean;
-  noAccent?: boolean;
-  sections?: SectionBuilder[];
-  actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[];
-  separatorAboveActionRows?: boolean;
-  mediaGallery?: MediaGalleryBuilder;
-  headerImages?: string[];
+  subtitle?: string | undefined;
+  breadcrumbs?: string[] | undefined;
+  statusBadge?: { status: string; label?: string | undefined } | undefined;
+  footer?: string | undefined;
+  thumbnail?: string | undefined;
+  thumbnailUrl?: string | undefined;
+  divider?: boolean | undefined;
+  hideTitle?: boolean | undefined;
+  noAccent?: boolean | undefined;
+  sections?: SectionBuilder[] | undefined;
+  actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder | any>[] | undefined;
+  separatorAboveActionRows?: boolean | undefined;
+  mediaGallery?: MediaGalleryBuilder | undefined;
+  headerImages?: string[] | undefined;
 }
 
 export const ephemeralCard = (card: CardReply): CardReply => ({
@@ -145,12 +145,9 @@ function buildContainer(
 
   const actionRows = opts.actionRows ?? [];
   if (opts.separatorAboveActionRows && actionRows.length > 0) {
-    c.addSeparatorComponents((sep) => sep.setSpacing(1));
+    c.addSeparatorComponents((sep) => sep);
   }
   for (let r = 0; r < actionRows.length; r++) {
-    if (r > 0) {
-      c.addSeparatorComponents((sep) => sep.setSpacing(1));
-    }
     const row = actionRows[r]!;
     c.addActionRowComponents((builder) => {
       builder.addComponents(...row.components);

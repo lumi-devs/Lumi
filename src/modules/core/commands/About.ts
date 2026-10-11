@@ -40,10 +40,8 @@ async function buildAboutCard(
   const coreArchHeader = t("commands:aboutCoreArch");
 
   const body = [
-    `# __Lumi__\n` +
-      `*Moderation, automod, logging, economy - and fully modular.*\n` +
-      `Turn this instance into your mod team, your bank, your welcome party, or all of them at once. You host it, you own it, your data stays yours.\n` +
-      `-# Self-hosted TypeScript bot · v${LumiInfo.version} · open source · [source](${LumiInfo.github})`,
+    `# __Lumi__\n\n` +
+      `Lumi is a powerful, self-hosted Discord administration platform designed for communities that demand full control and rock-solid reliability. Powered by TypeScript and Bun. Lumi guarantees instant command responses, modular capability, and enterprise-grade uptime for your server. The all-in-one administration platform you host yourself - moderation, leveling, economy, and logging, engineered for reliability.`,
 
     `### 📊 __${instanceStatsHeader}__\n` +
       `-# ${fmtCount(serverCount)} ${t("core:servers")} · ${fmtCount(userCount)} ${t("core:members")} · ${fmtCount(channelCount)} ${t("core:channels")}\n` +
@@ -51,20 +49,20 @@ async function buildAboutCard(
       `-# Gateway \`${Math.round(data.wsPing)}ms\` · Memory \`${fmtMB(data.rss)}\` · CPU \`${data.cpuPercent.toFixed(1)}%\``,
 
     `### ⚙️ __${coreArchHeader}__\n` +
+      `_Lumi version_ v${LumiInfo.version}\n` +
       `*Bun* v${data.runtime.replace(/^Bun v/, "")} · *discord.js* v${data.djsVersion}\n` +
       `*PostgreSQL* 18 · *Valkey* v${data.valkeyVersion}`,
 
     `### 📦 __Codebase__\n` +
-      `**${data.codeLines.toLocaleString()}** lines of TypeScript · **${data.modules.length}** modules · **${data.depCount.toLocaleString()}** dependencies`,
-
-    `-# *Self-hosted, open source, and allergic to downtime.*`,
+      `**${data.codeLines.toLocaleString()}** lines of TypeScript · **${data.modules.length}** modules · **${data.depCount.toLocaleString()}** dependencies\n` +
+      `-# *Self-hosted, open source, and allergic to downtime.*`,
   ];
 
   const row1Buttons: ButtonBuilder[] = [];
 
   const githubUrl = LumiInfo.github;
   if (githubUrl) {
-    row1Buttons.push(createActionButton({ style: ButtonStyle.Link, label: t("core:github"), url: githubUrl }));
+    row1Buttons.push(createActionButton({ style: ButtonStyle.Link, label: "Source Code", url: githubUrl }));
   }
 
   const website = "https://lumi-devs.github.io/Lumi-docs";
@@ -131,6 +129,7 @@ async function buildAboutCard(
       hideTitle: true,
       noAccent: true,
       thumbnailUrl: data.avatarURL,
+      separatorAboveActionRows: true,
       actionRows,
     },
   );
