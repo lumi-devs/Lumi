@@ -43,6 +43,9 @@ x-lumi-service: &lumi-service
       condition: service_healthy
     valkey:
       condition: service_healthy
+  # Exit-code contract: 0 clean shutdown, 1 crash, 26 requested restart.
+  # unless-stopped restarts on all of them; use `docker exec lumi-bot lumi-setup`
+  # for preflight and `docker logs lumi-bot` for the boot banner.
   restart: unless-stopped
   cap_drop:
     - ALL

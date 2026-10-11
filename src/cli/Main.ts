@@ -6,8 +6,8 @@ import * as config from "#src/cli/commands/Config.js";
 import * as migrate from "#src/cli/commands/Migrate.js";
 import * as moduleCmd from "#src/cli/commands/Module.js";
 import * as start from "#src/cli/commands/Start.js";
-
-const VERSION = "0.1.0";
+import * as setup from "#src/cli/commands/Setup.js";
+import { LumiInfo } from "#src/lib/utilities/Version.js";
 
 interface CliCommand {
   name: string;
@@ -23,6 +23,7 @@ const COMMANDS: CliCommand[] = [
   { name: "commands", summary: "Deploy application commands to Discord.", help: commands.help, run: commands.run },
   { name: "module", summary: "Inspect bundled modules.", help: moduleCmd.help, run: moduleCmd.run },
   { name: "config", summary: "Print resolved environment configuration.", help: config.help, run: config.run },
+  { name: "setup", summary: "Preflight check for a Docker-first install.", help: setup.help, run: setup.run },
 ];
 
 function printTopLevelHelp(): void {
@@ -48,7 +49,7 @@ export async function runCli(argv: string[]): Promise<number> {
     });
 
     if (values["version"]) {
-      console.log(VERSION);
+      console.log(LumiInfo.version);
       return 0;
     }
 

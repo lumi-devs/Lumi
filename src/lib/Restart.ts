@@ -23,10 +23,18 @@ export function restartChoiceRow(
 }
 
 let restartScheduled = false;
+let restartRequested = false;
+
+export function consumeRestartRequested(): boolean {
+  const requested = restartRequested;
+  restartRequested = false;
+  return requested;
+}
 
 export function scheduleProcessRestart(services: Container, reason: string, delayMs = 2_000): void {
   if (restartScheduled) return;
   restartScheduled = true;
+  restartRequested = true;
 
   services.logger.warn(
     `[Restart] Scheduling graceful restart in ${delayMs}ms - ${reason}`,

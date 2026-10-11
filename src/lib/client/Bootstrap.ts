@@ -12,6 +12,8 @@ import {
 } from "#src/lib/Env.js";
 import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#src/lib/sharding/ShardLease.js";
 import { logError, errorFrom } from "#src/lib/utilities/Errors.js";
+import { ExitCodes } from "#src/lib/ExitCodes.js";
+import { consumeRestartRequested } from "#src/lib/Restart.js";
 
 export interface BootstrapAppOptions {
   onlineMessage?: string;
@@ -114,7 +116,7 @@ export async function bootstrapClientApp(
           preCloseGraceMs: 5_000,
           deadlineMs: 30_000,
         });
-        process.exit(0);
+        process.exit(consumeRestartRequested() ? ExitCodes.RESTART : ExitCodes.SHUTDOWN);
       } catch (err: unknown) {
         log("error", "Drain sequence failed", {
           error: err instanceof Error ? err.message : String(err),

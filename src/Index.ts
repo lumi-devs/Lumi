@@ -11,12 +11,13 @@ import { watchFailedJobs } from "#src/lib/scheduler/FailedJobs.js";
 import { watchQueueDepth } from "#src/lib/scheduler/QueueMetrics.js";
 import { publishSchedulerHeartbeat } from "#src/lib/scheduler/Heartbeat.js";
 import { getConsumerId } from "#src/lib/Env.js";
+import { printBootBanner } from "#src/lib/Branding.js";
 
 bootstrapTelemetry("bot");
 
 let rpcServer: Awaited<ReturnType<typeof startRpcHttpServer>> = null;
 
-await bootstrapClientApp({
+const client = await bootstrapClientApp({
   extraDrainSteps: [
     {
       name: "rpc-http-server",
@@ -60,3 +61,13 @@ watchQueueDepth(tasks);
 publishSchedulerHeartbeat(container.valkey, getConsumerId());
 
 container.logger.info("[Bot] Online");
+
+printBootBanner(
+  {
+    guilds: client.guilds.cache.size,
+    members: client.guilds.cache.reduce((n, g) => n + (g.memberCount ?? 0), 0),
+    channels: client.channels.cache.size,
+    modules: container.moduleStore.loaded().filter((r) => r.state === "loaded").length,
+  },
+  `https://discord.com/oauth2/authorize?client_id=${client.user?.id ?? "unknown"}`,
+);
