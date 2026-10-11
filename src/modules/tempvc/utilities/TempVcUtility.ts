@@ -214,8 +214,8 @@ const tempVcUtility = defineUtility({
       const vc = await guild.channels.create({
         name,
         type: ChannelType.GuildVoice,
-        parent: generator.parentId ?? undefined,
-        userLimit: config.limit > 0 ? config.limit : undefined,
+        ...(generator.parentId ? { parent: generator.parentId } : {}),
+        ...(config.limit > 0 ? { userLimit: config.limit } : {}),
         reason: `Temp VC created by ${member.user.tag}`,
       });
 
@@ -272,7 +272,15 @@ const tempVcUtility = defineUtility({
     const record = await getVcRecord(services, guildId, channelId);
     if (!record) return;
 
-    if (!(await isVoiceChannelEmpty(channelId))) return;
+    const guild = await services.client?.guilds?.fetch(guildId).catch(() => null) ?? null;
+    const live = guild
+      ? await guild.channels.fetch(channelId).catch(() => null)
+      : null;
+    if (live) {
+      if (live.isVoiceBased() && live.members.size > 0) return;
+    } else if (!(await isVoiceChannelEmpty(channelId))) {
+      return;
+    }
 
     const cleanup = async () => {
       await removeVcRecord(services, guildId, channelId);

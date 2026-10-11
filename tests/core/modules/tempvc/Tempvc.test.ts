@@ -61,6 +61,9 @@ describe("TempVcUtility", () => {
       rest: {
         delete: vi.fn(),
       },
+      guilds: {
+        fetch: vi.fn().mockResolvedValue(null),
+      },
     } as any;
     (container as any).tasks = {
       create: vi.fn().mockResolvedValue({}),
@@ -330,6 +333,43 @@ describe("TempVcUtility", () => {
       });
       expect(removeVcRecord).toHaveBeenCalledWith(container, "guild-1", "vc-123");
       expect(clearVoiceChannelOccupancy).toHaveBeenCalledWith("vc-123");
+    });
+
+    it("deletes when live members are empty despite stale occupancy", async () => {
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(false);
+      (container.client.guilds.fetch as any).mockResolvedValue({
+        channels: {
+          fetch: vi.fn().mockResolvedValue({
+            isVoiceBased: () => true,
+            members: { size: 0 },
+          }),
+        },
+      });
+      (container.client.rest.delete as any).mockResolvedValue({} as any);
+
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
+
+      expect(container.client.rest.delete).toHaveBeenCalledWith("/channels/vc-123", {
+        reason: "Empty temp VC cleanup",
+      });
+    });
+
+    it("keeps the channel when live members disagree with empty occupancy", async () => {
+      (getVcRecord as any).mockResolvedValue({ ownerId: "owner-1" } as any);
+      (isVoiceChannelEmpty as any).mockResolvedValue(true);
+      (container.client.guilds.fetch as any).mockResolvedValue({
+        channels: {
+          fetch: vi.fn().mockResolvedValue({
+            isVoiceBased: () => true,
+            members: { size: 2 },
+          }),
+        },
+      });
+
+      await service.runCleanup(container, { guildId: "guild-1", channelId: "vc-123" });
+
+      expect(container.client.rest.delete).not.toHaveBeenCalled();
     });
   });
 

@@ -37,17 +37,22 @@ const tempvcVoiceStateUpdate = defineListener({
         : null;
     if (!oldManaged && !newManaged && newGenerator === null) return;
 
-    const { prevChannelId } = await trackVoiceState(
-      member.id,
-      newState.channelId,
-    );
+    await trackVoiceState(member.id, newState.channelId);
 
     if (
-      prevChannelId &&
-      (await tempVcRegistry.isManagedVc(guildId, prevChannelId))
+      oldManaged &&
+      oldState.channelId &&
+      oldState.channelId !== newState.channelId
     ) {
-      if (await isVoiceChannelEmpty(prevChannelId)) {
-        await service.scheduleCleanup(guildId, prevChannelId);
+      const guild = newState.guild ?? oldState.guild;
+      const live = guild
+        ? await guild.channels.fetch(oldState.channelId).catch(() => null)
+        : null;
+      const empty = live
+        ? !live.isVoiceBased() || live.members.size === 0
+        : await isVoiceChannelEmpty(oldState.channelId);
+      if (empty) {
+        await service.scheduleCleanup(guildId, oldState.channelId);
       }
     }
 

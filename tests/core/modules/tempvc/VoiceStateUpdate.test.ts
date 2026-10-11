@@ -45,7 +45,7 @@ function makeState(overrides: Record<string, any> = {}) {
   return {
     channelId: null,
     member: makeMember(false),
-    guild: { id: "g1", channels: { fetch: vi.fn() } },
+    guild: { id: "g1", channels: { fetch: vi.fn().mockResolvedValue(null) } },
     channel: null,
     ...overrides,
   } as any;
@@ -113,6 +113,46 @@ describe("tempvcVoiceStateUpdate", () => {
     await tempvcVoiceStateUpdate.execute(services, oldState, newState);
 
     expect(tempvc.scheduleCleanup).toHaveBeenCalledWith("g1", "vc-9");
+  });
+
+  it("trusts live members over stale occupancy when scheduling", async () => {
+    const services = makeServices();
+    (tempVcRegistry.isManagedVc as any).mockImplementation(
+      async (_g: string, c: string) => c === "vc-9",
+    );
+    (trackVoiceState as any).mockResolvedValue({ prevChannelId: "vc-9" });
+    (isVoiceChannelEmpty as any).mockResolvedValue(false);
+    const liveChannel = {
+      isVoiceBased: () => true,
+      members: { size: 0 },
+    };
+    const oldState = makeState({ channelId: "vc-9" });
+    const newState = makeState({ channelId: null });
+    newState.guild.channels.fetch.mockResolvedValue(liveChannel);
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
+    expect(tempvc.scheduleCleanup).toHaveBeenCalledWith("g1", "vc-9");
+  });
+
+  it("skips cleanup when live members disagree with empty occupancy", async () => {
+    const services = makeServices();
+    (tempVcRegistry.isManagedVc as any).mockImplementation(
+      async (_g: string, c: string) => c === "vc-9",
+    );
+    (trackVoiceState as any).mockResolvedValue({ prevChannelId: "vc-9" });
+    (isVoiceChannelEmpty as any).mockResolvedValue(true);
+    const liveChannel = {
+      isVoiceBased: () => true,
+      members: { size: 3 },
+    };
+    const oldState = makeState({ channelId: "vc-9" });
+    const newState = makeState({ channelId: null });
+    newState.guild.channels.fetch.mockResolvedValue(liveChannel);
+
+    await tempvcVoiceStateUpdate.execute(services, oldState, newState);
+
+    expect(tempvc.scheduleCleanup).not.toHaveBeenCalled();
   });
 
   it("creates a VC when joining a generator channel", async () => {
