@@ -1,7 +1,5 @@
 ---
-"@lumi/core": minor
-"@lumi/application": patch
-"@lumi/infrastructure": patch
+"lumi": minor
 ---
 
 Overhaul `packages/core/src/lib`: split `addon-sandbox/` into `host/` + `isolate/` + `sdk/`, delete `branding/`, dissolve `moderation/`, regroup flat root files. No backward-compat shims — all importers updated.

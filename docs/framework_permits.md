@@ -50,3 +50,11 @@ non-empty for the scope, the user must be listed; otherwise allow.
 Permits carry a `position` integer used only for listing order. Reorder
 via the `guild.permits.move` RPC action, the hub panel (`↕ Order`), or
 the dashboard. Order never affects evaluation.
+
+## Default member permissions
+
+`defaultMemberPermissions` on a `CommandDef` sets Discord's
+default_member_permissions at slash sync. Members lacking those bits
+don't see the command; server owners, administrators, and per-command
+Integration overwrites bypass it. This is display-level hiding only —
+`requiredPermit` and the gates above still decide at execution.

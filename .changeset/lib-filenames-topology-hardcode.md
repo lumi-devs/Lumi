@@ -1,7 +1,5 @@
 ---
-"@lumi/core": minor
-"@lumi/application": patch
-"@lumi/cli": patch
+"lumi": minor
 ---
 
 Follow-up hardening on the lib reorg: proper filenames, flatter topology, no operator-config or emoji-map modules.
