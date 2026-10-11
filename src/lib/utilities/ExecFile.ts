@@ -1,8 +1,8 @@
 
 export interface ExecFileOptions {
-  cwd?: string;
-  env?: Record<string, string | undefined>;
-  timeout?: number;
+  cwd?: string | undefined;
+  env?: Record<string, string | undefined> | undefined;
+  timeout?: number | undefined;
 }
 
 export interface ExecFileResult {
@@ -43,11 +43,13 @@ export async function execFileAsync(
   opts: ExecFileOptions = {},
 ): Promise<ExecFileResult> {
   const proc = Bun.spawn([cmd, ...args], {
-    cwd: opts.cwd,
-    env: opts.env as Record<string, string> | undefined,
+    ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+    ...(opts.env !== undefined ? { env: opts.env } : {}),
     stdout: "pipe",
     stderr: "pipe",
-    signal: opts.timeout ? AbortSignal.timeout(opts.timeout) : undefined,
+    ...(opts.timeout !== undefined
+      ? { signal: AbortSignal.timeout(opts.timeout) }
+      : {}),
   });
 
   const [stdout, stderr] = await Promise.all([

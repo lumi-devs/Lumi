@@ -87,7 +87,7 @@ export function splitPage<T>(rows: T[], take: number): { page: T[]; hasMore: boo
 
 export interface KeysetPagedResult<T> {
   rows: T[];
-  total?: number;
+  total?: number | undefined;
   nextCursor: string | null;
 }
 
@@ -95,7 +95,7 @@ export async function paginateCreatedAtId<T extends { createdAt: Date; id: numbe
   fetchRows: (where: unknown) => Promise<T[]>,
   countTotal: (where: unknown) => Promise<number>,
   baseWhere: Record<string, unknown>,
-  filter: { cursor?: string; take?: number },
+  filter: { cursor?: string | undefined; take?: number | undefined },
 ): Promise<KeysetPagedResult<T>> {
   const take = filter.take ?? 25;
   const where =

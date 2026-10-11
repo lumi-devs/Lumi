@@ -1,32 +1,32 @@
 import type { ConfigField, ModuleConfigSchema } from "#src/lib/module-system/ConfigSchema.js";
 
 export interface ModuleDefinition {
-  name?: string;
-  displayName?: string;
-  emoji?: string;
-  description?: string;
-  short?: string;
-  endUserDataStatement?: string;
-  version?: string;
-  conflicts?: string[];
+  name?: string | undefined;
+  displayName?: string | undefined;
+  emoji?: string | undefined;
+  description?: string | undefined;
+  short?: string | undefined;
+  endUserDataStatement?: string | undefined;
+  version?: string | undefined;
+  conflicts?: string[] | undefined;
 
-  dependencies?: string[];
-  configFields?: ConfigField[];
-  configSchema?: ModuleConfigSchema;
-  configOverrides?: boolean;
-  disableable?: boolean;
+  dependencies?: string[] | undefined;
+  configFields?: ConfigField[] | undefined;
+  configSchema?: ModuleConfigSchema | undefined;
+  configOverrides?: boolean | undefined;
+  disableable?: boolean | undefined;
 
-  category?: string;
+  category?: string | undefined;
 
-  dashboardHref?: string;
-  author?: string[];
-  requirements?: string[];
-  install_msg?: string;
-  tags?: string[];
-  hidden?: boolean;
-  disabled?: boolean;
-  min_bot_version?: string;
-  max_bot_version?: string;
+  dashboardHref?: string | undefined;
+  author?: string[] | undefined;
+  requirements?: string[] | undefined;
+  install_msg?: string | undefined;
+  tags?: string[] | undefined;
+  hidden?: boolean | undefined;
+  disabled?: boolean | undefined;
+  min_bot_version?: string | undefined;
+  max_bot_version?: string | undefined;
 }
 
 export interface ModuleMeta {
@@ -34,28 +34,28 @@ export interface ModuleMeta {
   displayName: string;
   emoji: string;
   description: string;
-  short?: string;
-  endUserDataStatement?: string;
+  short?: string | undefined;
+  endUserDataStatement?: string | undefined;
   version: string;
-  disableable?: boolean;
-  conflicts?: string[];
+  disableable?: boolean | undefined;
+  conflicts?: string[] | undefined;
 
-  dependencies?: string[];
-  configFields?: ConfigField[];
-  configSchema?: ModuleConfigSchema;
-  configOverrides?: boolean;
+  dependencies?: string[] | undefined;
+  configFields?: ConfigField[] | undefined;
+  configSchema?: ModuleConfigSchema | undefined;
+  configOverrides?: boolean | undefined;
 
-  category?: string;
+  category?: string | undefined;
 
-  dashboardHref?: string;
-  author?: string[];
-  requirements?: string[];
-  install_msg?: string;
-  tags?: string[];
-  hidden?: boolean;
-  disabled?: boolean;
-  min_bot_version?: string;
-  max_bot_version?: string;
+  dashboardHref?: string | undefined;
+  author?: string[] | undefined;
+  requirements?: string[] | undefined;
+  install_msg?: string | undefined;
+  tags?: string[] | undefined;
+  hidden?: boolean | undefined;
+  disabled?: boolean | undefined;
+  min_bot_version?: string | undefined;
+  max_bot_version?: string | undefined;
 }
 
 export function NoEndUserData(): undefined {

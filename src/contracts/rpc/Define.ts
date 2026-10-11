@@ -39,7 +39,7 @@ export function rpcAction<O extends object>() {
 }
 
 export interface RpcSliceEntry {
-  input?: z.ZodType<unknown>;
+  input?: z.ZodType<unknown> | undefined;
   auth: RpcAuth;
   requiresEnabled?: string;
   timeoutMs: number;

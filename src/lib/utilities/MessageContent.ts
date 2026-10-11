@@ -18,11 +18,11 @@ export interface MessageButton {
 
 export interface MessageContent {
   text: string;
-  accentColor?: string;
-  imageUrls?: string[];
-  thumbnailUrl?: string;
-  footer?: string;
-  buttons?: MessageButton[];
+  accentColor?: string | undefined;
+  imageUrls?: string[] | undefined;
+  thumbnailUrl?: string | undefined;
+  footer?: string | undefined;
+  buttons?: MessageButton[] | undefined;
 }
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);

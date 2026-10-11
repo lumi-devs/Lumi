@@ -7,13 +7,15 @@ export class JobQueue<T = unknown> implements IJobQueue<T> {
   public constructor(
     name: string,
     options: {
-      connection?: QueueConnectionOptions;
-      defaultJobOptions?: QueueJobOptions;
+      connection?: QueueConnectionOptions | undefined;
+      defaultJobOptions?: QueueJobOptions | undefined;
     } = {},
   ) {
     const queueOpts: QueueOptions = {
       connection: options.connection ?? { host: "localhost", port: 6379 },
-      defaultJobOptions: options.defaultJobOptions,
+      ...(options.defaultJobOptions !== undefined
+        ? { defaultJobOptions: options.defaultJobOptions }
+        : {}),
     };
     this.#queue = new Queue(name, queueOpts);
   }

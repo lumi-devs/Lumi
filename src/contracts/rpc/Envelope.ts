@@ -3,13 +3,13 @@ import { z } from "zod";
 export interface RpcRequest<T = unknown> {
   id: string;
   action: string;
-  guildId?: string;
-  actorId?: string;
+  guildId?: string | undefined;
+  actorId?: string | undefined;
 
-  idempotencyKey?: string;
+  idempotencyKey?: string | undefined;
 
-  traceparent?: string;
-  tracestate?: string;
+  traceparent?: string | undefined;
+  tracestate?: string | undefined;
   data?: T;
 }
 
@@ -60,15 +60,15 @@ export const RpcRetryableByDefault: Record<RpcFailureCode, boolean> = {
 
 export interface CodedRpcErrorOptions {
 
-  retryable?: boolean;
+  retryable?: boolean | undefined;
 
-  retryAfterMs?: number;
+  retryAfterMs?: number | undefined;
 }
 
 export class CodedRpcError extends Error {
   public readonly code: RpcFailureCode;
   public readonly retryable: boolean;
-  public readonly retryAfterMs?: number;
+  public readonly retryAfterMs?: number | undefined;
 
   public constructor(code: RpcFailureCode, message: string, options?: CodedRpcErrorOptions) {
     super(message);
@@ -96,7 +96,7 @@ export type RpcResponse<T = unknown> =
       error: string;
       code: RpcFailureCode;
       retryable: boolean;
-      retryAfterMs?: number;
+      retryAfterMs?: number | undefined;
     };
 
 export function makeRpcFailure(

@@ -14,7 +14,10 @@ interface IdSource {
   author?: { id?: string };
 }
 
-function extractIds(source: unknown): { guildId?: string; userId?: string } {
+function extractIds(source: unknown): {
+  guildId?: string | undefined;
+  userId?: string | undefined;
+} {
   if (!source || typeof source !== "object") return {};
   const s = source as IdSource;
   const guildId =

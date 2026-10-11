@@ -4,7 +4,7 @@ import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
 
 export interface SetFeatureFlagInput {
   key: string;
-  description?: string | null;
+  description?: string | null | undefined;
   enabled: boolean;
   rolloutPercent: number;
   updatedBy: string;

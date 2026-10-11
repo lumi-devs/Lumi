@@ -52,10 +52,10 @@ export class ModerationRepository extends Repository {
     userId: string;
     moderatorId: string;
     action: CaseAction;
-    customType?: string;
-    reason?: string;
-    durationSeconds?: number;
-    expiresAt?: Date;
+    customType?: string | undefined;
+    reason?: string | undefined;
+    durationSeconds?: number | undefined;
+    expiresAt?: Date | undefined;
   }): Promise<ModerationCase> {
     await this.db.ensureGuild(data.guildId);
 
@@ -82,9 +82,9 @@ export class ModerationRepository extends Repository {
         moderatorId: data.moderatorId,
         action: data.action,
         customAction: data.customType ?? null,
-        reason: data.reason,
-        duration: data.durationSeconds,
-        expiresAt: data.expiresAt,
+        reason: data.reason ?? null,
+        duration: data.durationSeconds ?? null,
+        expiresAt: data.expiresAt ?? null,
         active: true,
       },
     });
@@ -115,14 +115,14 @@ export class ModerationRepository extends Repository {
   public async listCases(
     guildId: string,
     filter: {
-      action?: CaseAction;
-      userId?: string;
-      moderatorId?: string;
-      take?: number;
+      action?: CaseAction | undefined;
+      userId?: string | undefined;
+      moderatorId?: string | undefined;
+      take?: number | undefined;
 
-      cursor?: string;
+      cursor?: string | undefined;
     } = {},
-  ): Promise<{ cases: ModerationCase[]; total?: number; nextCursor: string | null }> {
+  ): Promise<{ cases: ModerationCase[]; total?: number | undefined; nextCursor: string | null }> {
     const baseWhere = {
       guildId,
       ...(filter.action ? { action: filter.action } : {}),
@@ -298,7 +298,7 @@ export class ModerationRepository extends Repository {
     guildId: string;
     warnCount: number;
     action: CaseAction;
-    duration?: number;
+    duration?: number | undefined;
   }) {
     await this.db.ensureGuild(data.guildId);
     return this.prisma.warnThreshold.upsert({
@@ -312,11 +312,11 @@ export class ModerationRepository extends Repository {
         guildId: data.guildId,
         warnCount: data.warnCount,
         action: data.action,
-        duration: data.duration,
+        duration: data.duration ?? null,
       },
       update: {
         action: data.action,
-        duration: data.duration,
+        duration: data.duration ?? null,
       },
     });
   }
@@ -335,7 +335,7 @@ export class ModerationRepository extends Repository {
 
   public async setBulkWarnThresholds(
     guildId: string,
-    thresholds: Array<{ warnCount: number; action: CaseAction; duration?: number }>,
+    thresholds: Array<{ warnCount: number; action: CaseAction; duration?: number | undefined }>,
   ) {
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
@@ -346,7 +346,7 @@ export class ModerationRepository extends Repository {
             guildId,
             warnCount: t.warnCount,
             action: t.action,
-            duration: t.duration,
+            duration: t.duration ?? null,
           })),
         });
       }

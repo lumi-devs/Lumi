@@ -30,10 +30,10 @@ export interface EvaluatePermitOptions {
   guildId: string;
   userId: string;
 
-  roleIds?: string[];
+  roleIds?: string[] | undefined;
 
-  channelId?: string;
-  guildOwnerId?: string | null;
+  channelId?: string | undefined;
+  guildOwnerId?: string | null | undefined;
   permitNode: string;
 }
 

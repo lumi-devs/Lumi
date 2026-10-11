@@ -7,7 +7,6 @@ import {
   Partials,
   Sweepers,
   type ClientOptions,
-  type PresenceStatusData,
 } from "discord.js";
 
 export function buildClientOptions(): ClientOptions {
@@ -73,7 +72,7 @@ export function buildClientOptions(): ClientOptions {
           type: ActivityType.Watching,
         },
       ],
-      status: "online" as PresenceStatusData,
+      status: "online",
     },
     rest: buildRestOptions(),
   };

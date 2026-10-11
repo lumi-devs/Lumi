@@ -35,7 +35,7 @@ export interface ResolvedCommandError {
 
   expected: boolean;
 
-  report?: string;
+  report?: string | undefined;
 }
 
 function messageForDiscordCode(code: number): string | null {
@@ -207,7 +207,7 @@ export async function updatePanel(
   const payload = {
     components: card.components,
     flags,
-    allowedMentions: card.allowedMentions,
+    ...(card.allowedMentions ? { allowedMentions: card.allowedMentions } : {}),
   };
   try {
     if (interaction.deferred || interaction.replied) {

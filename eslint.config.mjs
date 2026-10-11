@@ -37,37 +37,27 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['src/**/*.ts', 'src/**/*.tsx', 'tests/**/*.ts'],
     languageOptions: {
       parserOptions: {
-        // `project: true` resolves each file against its *nearest* tsconfig
-        // rather than this root one.
         project: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
-      // Ensure modules are self-contained.
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            {
-              group: ['../**/modules/**', '../../**/modules/**'],
-              message:
-                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
-            },
-          ],
           paths: [
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
           ],
         },
@@ -75,44 +65,32 @@ export default tseslint.config(
     },
   },
   {
-    // RPC, permissions and the addon sandbox make "what may you
-    // do" decisions through the single `authorize()` evaluator, not by
-    // reaching into PermitResolver's internals directly (`authorize.ts`
-    // itself is exempt — it IS the evaluator). Repeats the
-    // repo-wide `no-restricted-imports` entries above (flat config replaces,
-    // rather than merges, a rule's options per matching file) plus this
-    // directory-scoped addition.
+    // RPC and permissions make "what may you do" decisions through the single
+    // `authorize()` evaluator, not by reaching into PermitResolver's internals
+    // directly (`authorize.ts` itself is exempt — it IS the evaluator).
     files: [
-      'packages/core/src/lib/rpc/**/*.ts',
-      'packages/core/src/lib/permissions/**/*.ts',
-      'packages/core/src/lib/addon-sandbox/**/*.ts',
+      'src/lib/rpc/**/*.ts',
+      'src/lib/permissions/**/*.ts',
     ],
-    ignores: ['packages/core/src/lib/permissions/authorize.ts'],
+    ignores: ['src/lib/permissions/authorize.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
-          patterns: [
-            {
-              group: ['../**/modules/**', '../../**/modules/**'],
-              message:
-                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
-            },
-          ],
           paths: [
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @lumi/lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
             },
             {
-              name: '@lumi/lib/permissions/permit-resolver.js',
-              message: 'Authorization decisions go through authorize() (@lumi/lib/permissions/authorize.js), not PermitResolver directly.',
+              name: '#lib/permissions/permit-resolver.js',
+              message: 'Authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly.',
             },
           ],
         },
@@ -121,7 +99,7 @@ export default tseslint.config(
   },
   {
     // Enforce CommandContext reply helper conventions.
-    files: ['packages/core/src/**/commands/*.ts'],
+    files: ['src/**/commands/*.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -139,16 +117,16 @@ export default tseslint.config(
   },
   {
     // Allow relative imports within a module's own folder.
-    files: ['packages/core/src/modules/*/**/*.ts'],
+    files: ['src/modules/*/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['../../modules/**', '../../../*/**'],
+              group: ['../modules/**', '../../modules/**', '../**/modules/**'],
               message:
-                'Cross-module import detected. A module may only import from its own folder, src/lib/, src/core/, src/storage/, or src/db/.',
+                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
             },
           ],
         },
@@ -156,7 +134,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/*/tests/**/*.ts', 'packages/*/src/**/*.test.ts'],
+    files: ['tests/**/*.ts', 'src/**/*.test.ts'],
     rules: {
       // bun:test types vi.mock/mock.module as returning a Promise, but module mocks are hoisted and never awaited.
       '@typescript-eslint/no-floating-promises': [

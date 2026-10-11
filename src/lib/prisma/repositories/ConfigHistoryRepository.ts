@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,
@@ -35,7 +35,7 @@ export class ConfigHistoryRepository extends Repository {
         guildId: data.guildId,
         moduleName: data.moduleName,
         key: data.key,
-        oldValue: data.oldValue ?? undefined,
+        oldValue: data.oldValue ?? Prisma.DbNull,
         newValue: data.newValue as Prisma.InputJsonValue,
         actorId: data.actorId,
       },
@@ -58,14 +58,14 @@ export class ConfigHistoryRepository extends Repository {
   public async listGuildConfigHistory(
     guildId: string,
     filter: {
-      moduleName?: string;
-      key?: string;
-      actorId?: string;
-      take?: number;
+      moduleName?: string | undefined;
+      key?: string | undefined;
+      actorId?: string | undefined;
+      take?: number | undefined;
 
-      cursor?: string;
+      cursor?: string | undefined;
     } = {},
-  ): Promise<{ entries: ConfigHistoryEntry[]; total?: number; nextCursor: string | null }> {
+  ): Promise<{ entries: ConfigHistoryEntry[]; total?: number | undefined; nextCursor: string | null }> {
     const baseWhere = {
       guildId,
       ...(filter.moduleName ? { moduleName: filter.moduleName } : {}),

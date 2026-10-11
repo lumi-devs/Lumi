@@ -62,7 +62,7 @@ export async function lockChannel(
   await channel.permissionOverwrites.edit(
     channel.guild.id,
     { SendMessages: false },
-    { reason },
+    reason === undefined ? {} : { reason },
   );
 }
 
@@ -73,6 +73,6 @@ export async function unlockChannel(
   await channel.permissionOverwrites.edit(
     channel.guild.id,
     { SendMessages: null },
-    { reason },
+    reason === undefined ? {} : { reason },
   );
 }

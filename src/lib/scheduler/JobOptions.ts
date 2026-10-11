@@ -10,10 +10,17 @@ export function toBullMQJobOptions(
   const { repeated, pattern, interval, delay, customJobOptions, timezone } =
     options;
   return {
-    delay,
+    ...(delay !== undefined ? { delay } : {}),
     ...customJobOptions,
     ...(repeated
-      ? { repeat: interval ? { every: interval } : { pattern, tz: timezone } }
+      ? {
+          repeat: interval
+            ? { every: interval }
+            : {
+                ...(pattern !== undefined ? { pattern } : {}),
+                ...(timezone !== undefined ? { tz: timezone } : {}),
+              },
+        }
       : {}),
   };
 }

@@ -9,8 +9,8 @@ export interface FireEnvelope<
 > {
   name: N;
   payload: ScheduledTasks[N];
-  traceparent?: string;
-  tracestate?: string;
+  traceparent?: string | undefined;
+  tracestate?: string | undefined;
 }
 
 export async function publishTaskFire<N extends keyof ScheduledTasks>(

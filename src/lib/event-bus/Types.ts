@@ -24,10 +24,10 @@ export interface ConsumeOptions {
 
   consumer: string;
 
-  blockMs?: number;
+  blockMs?: number | undefined;
 
-  batchSize?: number;
-  startId?: string;
+  batchSize?: number | undefined;
+  startId?: string | undefined;
 }
 
 export interface EventBus {

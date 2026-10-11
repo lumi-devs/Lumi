@@ -24,12 +24,6 @@ export const WarnThresholdTimedActions = ["mute", "voice_mute"] as const;
 export type WarnThresholdTimedAction =
   (typeof WarnThresholdTimedActions)[number];
 
-export function isWarnThresholdAction(
-  value: string,
-): value is WarnThresholdAction {
-  return (WarnThresholdActions as readonly string[]).includes(value);
-}
-
 export function warnThresholdNeedsDuration(
   action: WarnThresholdAction,
 ): action is WarnThresholdTimedAction {

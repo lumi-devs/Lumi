@@ -12,8 +12,8 @@ export interface AuditEntry {
   reason?: string;
   color?: number;
   caseNumber?: number;
-  channelId?: string;
-  extra?: Record<string, unknown>;
+  channelId?: string | undefined;
+  extra?: Record<string, unknown> | undefined;
 }
 
 export function renderAuditCard(entry: AuditEntry, at: number): CardReply {

@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fieldsFromSchema } from "#src/lib/module-system/ConfigSchema.js";
 import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
-import { CoreVersion } from "#src/lib/utilities/Version.js";
+import { LumiInfo } from "#src/lib/utilities/Version.js";
 import {
   type ModuleManifest,
 } from "#src/contracts/Index.ts";
@@ -25,7 +25,7 @@ export function manifestFromMeta(
     description: meta.description ?? "",
     short: meta.short,
     endUserDataStatement: meta.endUserDataStatement,
-    version: meta.version ?? CoreVersion,
+    version: meta.version ?? LumiInfo.version,
     disableable: meta.disableable ?? true,
     dependencies: meta.dependencies ?? [],
     conflicts: meta.conflicts ?? [],

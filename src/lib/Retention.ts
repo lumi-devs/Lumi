@@ -33,8 +33,8 @@ export async function writeRetentionArchive(
 export interface PurgeBatchRunnerOptions<TRow extends { id: number }> {
 
   table: string;
-  archiveDir?: string | null;
-  batchSize?: number;
+  archiveDir?: string | null | undefined;
+  batchSize?: number | undefined;
   logger: ILogger;
 
   findBatch: (afterId: number | null, batchSize: number) => Promise<TRow[]>;

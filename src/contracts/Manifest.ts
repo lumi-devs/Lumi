@@ -8,26 +8,26 @@ export interface ModuleManifest {
   emoji: string;
   description: string;
   version: string;
-  disableable?: boolean;
+  disableable?: boolean | undefined;
 
-  dependencies?: string[];
-  conflicts?: string[];
-  configOverrides?: boolean;
+  dependencies?: string[] | undefined;
+  conflicts?: string[] | undefined;
+  configOverrides?: boolean | undefined;
   configFields: ConfigField[];
 
-  category?: ModuleCategory;
+  category?: ModuleCategory | undefined;
 
-  short?: string;
+  short?: string | undefined;
 
-  endUserDataStatement?: string;
+  endUserDataStatement?: string | undefined;
 
-  dashboardHref?: string;
-  author?: string[];
-  requirements?: string[];
-  install_msg?: string;
-  tags?: string[];
-  hidden?: boolean;
-  disabled?: boolean;
-  min_bot_version?: string;
-  max_bot_version?: string;
+  dashboardHref?: string | undefined;
+  author?: string[] | undefined;
+  requirements?: string[] | undefined;
+  install_msg?: string | undefined;
+  tags?: string[] | undefined;
+  hidden?: boolean | undefined;
+  disabled?: boolean | undefined;
+  min_bot_version?: string | undefined;
+  max_bot_version?: string | undefined;
 }

@@ -1,5 +1,5 @@
 import { container, type Container } from "#src/lib/Services.js";
-import { CoreVersion } from "#src/lib/utilities/Version.js";
+import { LumiInfo } from "#src/lib/utilities/Version.js";
 import { fieldsFromSchema, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
 import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
 
@@ -22,17 +22,17 @@ export interface ModuleObject extends ModuleHooks {
   displayName: string;
   emoji: string;
   description: string;
-  short?: string;
-  endUserDataStatement?: string;
+  short?: string | undefined;
+  endUserDataStatement?: string | undefined;
   version: string;
   disableable: boolean;
   conflicts: string[];
   dependencies: string[];
   configFields: ConfigField[];
-  configSchema?: ModuleDefinition["configSchema"];
+  configSchema?: ModuleDefinition["configSchema"] | undefined;
   configOverrides: boolean;
-  category?: ModuleDefinition["category"];
-  dashboardHref?: string;
+  category?: ModuleDefinition["category"] | undefined;
+  dashboardHref?: string | undefined;
   meta: ModuleMeta;
   enabled: boolean;
 }
@@ -51,7 +51,7 @@ export function defineModule(
     description: options.description ?? "",
     short: options.short,
     endUserDataStatement: options.endUserDataStatement,
-    version: options.version ?? CoreVersion,
+    version: options.version ?? LumiInfo.version,
     disableable: options.disableable ?? true,
     conflicts: options.conflicts ?? [],
     dependencies: options.dependencies ?? [],

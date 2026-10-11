@@ -131,8 +131,8 @@ function requireModuleLoaded(name: string): void {
 function bindAction<A extends RpcAuth, I, O>(
   entry: {
     auth: A;
-    input?: InputValidator;
-    requiresEnabled?: string;
+    input?: InputValidator | undefined;
+    requiresEnabled?: string | undefined;
   },
   handler: (context: RpcAuthContexts[A] & { input: I }) => Promise<O> | O,
 ): RpcBoundHandler {

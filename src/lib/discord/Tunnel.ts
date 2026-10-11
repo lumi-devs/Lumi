@@ -125,11 +125,12 @@ export class Tunnel {
     if (!fromA && !this.isCounterpart(message)) return;
     const target = inA ? this.channelB : this.channelA;
     const files = [...message.attachments.values()].map((a) => a.url);
+    const content = this.header
+      ? `**${message.author.tag}:** ${message.content || ""}`
+      : message.content;
     await target.send({
-      content: this.header
-        ? `**${message.author.tag}:** ${message.content || ""}`
-        : message.content || undefined,
-      files: files.length > 0 ? files : undefined,
+      ...(content.length > 0 ? { content } : {}),
+      ...(files.length > 0 ? { files } : {}),
       allowedMentions: {},
     });
   }

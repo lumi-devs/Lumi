@@ -51,8 +51,8 @@ export abstract class LumiScheduledTask {
   public readonly name: string;
   public readonly interval: number | null;
   public readonly pattern: string | null;
-  public readonly timezone?: string;
-  public readonly customJobOptions?: JobsOptions;
+  public readonly timezone?: string | undefined;
+  public readonly customJobOptions?: JobsOptions | undefined;
 
   public constructor(options: ScheduledTaskOptions) {
     this.name = options.name;

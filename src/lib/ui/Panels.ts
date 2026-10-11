@@ -100,8 +100,8 @@ export interface CreateMentionableSelectMenuOptions {
 interface StringSelectOptionInput {
   label: string;
   value: string;
-  description?: string;
-  emoji?: string | APIMessageComponentEmoji;
+  description?: string | undefined;
+  emoji?: string | APIMessageComponentEmoji | undefined;
   default?: boolean;
 }
 
@@ -178,12 +178,12 @@ export function createStringSelectMenu(
 }
 
 export interface CreateActionButtonOptions {
-  customId?: string;
-  url?: string;
-  label?: string;
-  style?: ButtonStyle;
-  emoji?: string | APIMessageComponentEmoji;
-  disabled?: boolean;
+  customId?: string | undefined;
+  url?: string | undefined;
+  label?: string | undefined;
+  style?: ButtonStyle | undefined;
+  emoji?: string | APIMessageComponentEmoji | undefined;
+  disabled?: boolean | undefined;
 }
 
 export interface CreatePaginationRowOptions {

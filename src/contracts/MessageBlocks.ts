@@ -113,10 +113,15 @@ function clampButton(raw: unknown): MessageBlockButton | null {
   if (style === "link") {
     const url = typeof r.url === "string" ? r.url : "";
     if (url.length === 0) return null;
-    return { style, label, emoji, url };
+    return { style, label, url, ...(emoji !== undefined ? { emoji } : {}) };
   }
   const customId = typeof r.customId === "string" ? r.customId.slice(0, 100) : undefined;
-  return { style, label, emoji, customId };
+  return {
+    style,
+    label,
+    ...(emoji !== undefined ? { emoji } : {}),
+    ...(customId !== undefined ? { customId } : {}),
+  };
 }
 
 function clampAccessory(raw: unknown): SectionAccessory | undefined {
@@ -191,7 +196,11 @@ export function clampMessageDocumentV2(raw: unknown): MessageDocumentV2 {
       actionRowCount++;
     }
     blocks.push(block);
-    if (countComponents({ blocks, accentColor }) > MessageBlockLimits.maxTotalComponents) {
+    if (
+      countComponents(
+        accentColor ? { blocks, accentColor } : { blocks },
+      ) > MessageBlockLimits.maxTotalComponents
+    ) {
       blocks.pop();
       break;
     }

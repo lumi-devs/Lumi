@@ -14,10 +14,10 @@ import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/JobOption
 
 export interface RepeatedTaskSpec {
   name: string;
-  interval?: number;
-  pattern?: string;
-  timezone?: string;
-  customJobOptions?: JobsOptions;
+  interval?: number | undefined;
+  pattern?: string | undefined;
+  timezone?: string | undefined;
+  customJobOptions?: JobsOptions | undefined;
 }
 
 export interface TaskQueue {

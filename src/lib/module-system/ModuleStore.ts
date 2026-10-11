@@ -189,7 +189,7 @@ export class ModuleStore {
     } else if (record) {
       record.enabled = false;
       record.state = "disabled";
-      record.failureReason = undefined;
+      delete record.failureReason;
     }
 
     return module;
@@ -219,7 +219,7 @@ export class ModuleStore {
 
       record.enabled = enabled;
       record.state = enabled ? "loaded" : "disabled";
-      record.failureReason = undefined;
+      delete record.failureReason;
       const module = this.get(name);
       if (module) module.enabled = enabled;
 
@@ -316,7 +316,7 @@ export class ModuleStore {
     restoreStaticRpcOwner(record.name);
     record.enabled = true;
     record.state = "loaded";
-    record.failureReason = undefined;
+    delete record.failureReason;
   }
 
   async #loadIndex(record: ModuleRecord, fresh = false): Promise<void> {
@@ -330,7 +330,9 @@ export class ModuleStore {
     const module: ModuleObject = { ...def, dir: record.dir };
     await module.onLoad?.(this.#services);
     this.#modules.set(record.name, module);
-    record.oneshots = collectOneshots(mod);
+    const oneshots = collectOneshots(mod);
+    if (oneshots) record.oneshots = oneshots;
+    else delete record.oneshots;
     if (def.meta) record.meta = def.meta;
     const schema = def.meta?.configSchema ?? def.configSchema;
     if (schema) {

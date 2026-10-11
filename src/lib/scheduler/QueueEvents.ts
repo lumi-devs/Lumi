@@ -4,13 +4,13 @@ import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "#src/li
 export class QueueEventsWatcher {
   readonly #events: QueueEvents;
   readonly #queueName: string;
-  readonly #logger?: QueueLogger;
+  readonly #logger?: QueueLogger | undefined;
 
   public constructor(
     queueName: string,
     options: {
-      connection?: QueueConnectionOptions;
-      logger?: QueueLogger;
+      connection?: QueueConnectionOptions | undefined;
+      logger?: QueueLogger | undefined;
     } = {},
   ) {
     this.#queueName = queueName;

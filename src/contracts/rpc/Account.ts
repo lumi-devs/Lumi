@@ -36,12 +36,12 @@ export interface GdprExportDownload {
 
 export interface GdprExportJobStatusResponse {
   status: GdprExportJobStatus;
-  error?: string;
-  sizeBytes?: number;
+  error?: string | undefined;
+  sizeBytes?: number | undefined;
   createdAt: string;
-  completedAt?: string;
-  expiresAt?: string;
-  download?: GdprExportDownload;
+  completedAt?: string | undefined;
+  expiresAt?: string | undefined;
+  download?: GdprExportDownload | undefined;
 }
 
 export const accountRpc = {

@@ -35,13 +35,13 @@ export interface AuditLogPayload {
 }
 
 export interface AuditLedgerFilter {
-  guildId?: string;
-  userId?: string;
-  action?: string;
-  platform?: AuditPlatform;
-  take?: number;
+  guildId?: string | undefined;
+  userId?: string | undefined;
+  action?: string | undefined;
+  platform?: AuditPlatform | undefined;
+  take?: number | undefined;
 
-  cursor?: string;
+  cursor?: string | undefined;
 }
 
 export class AuditRepository extends Repository {
@@ -196,7 +196,7 @@ export class AuditRepository extends Repository {
 
   public async listAuditLogs(
     filter: AuditLedgerFilter = {},
-  ): Promise<{ entries: AuditLedger[]; total?: number; nextCursor: string | null }> {
+  ): Promise<{ entries: AuditLedger[]; total?: number | undefined; nextCursor: string | null }> {
     const baseWhere = {
       ...(filter.guildId ? { guildId: filter.guildId } : {}),
       ...(filter.userId ? { userId: filter.userId } : {}),

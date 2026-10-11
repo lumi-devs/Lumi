@@ -13,8 +13,8 @@ export interface DashboardModuleSummaryView {
   displayName: string;
   emoji: string;
   description: string;
-  short?: string;
-  endUserDataStatement?: string;
+  short?: string | undefined;
+  endUserDataStatement?: string | undefined;
   version: string;
   conflicts: string[];
   dependencies: string[];
@@ -82,7 +82,7 @@ export interface ModerationCaseView {
 export interface CasesListData {
   cases: ModerationCaseView[];
 
-  total?: number;
+  total?: number | undefined;
   pageSize: number;
 
   nextCursor: string | null;
@@ -184,7 +184,7 @@ export interface AuditEntryView {
 export interface AuditListData {
   entries: AuditEntryView[];
 
-  total?: number;
+  total?: number | undefined;
   pageSize: number;
 
   nextCursor: string | null;
@@ -203,7 +203,7 @@ export interface ConfigHistoryEntryView {
 export interface ConfigHistoryListData {
   entries: ConfigHistoryEntryView[];
 
-  total?: number;
+  total?: number | undefined;
   pageSize: number;
 
   nextCursor: string | null;
@@ -258,7 +258,7 @@ export interface AppealView {
 export interface AppealsListData {
   appeals: AppealView[];
 
-  total?: number;
+  total?: number | undefined;
   pageSize: number;
 
   nextCursor: string | null;
@@ -322,7 +322,7 @@ export interface DownloaderRepoView {
 export interface RepoModuleView {
   name: string;
   version?: string;
-  short?: string;
+  short?: string | undefined;
   description?: string;
   author?: string[];
   end_user_data_statement?: string;

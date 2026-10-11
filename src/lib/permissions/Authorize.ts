@@ -4,10 +4,10 @@ import { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
 
 export interface Actor {
   userId: string;
-  guildId?: string;
-  guildOwnerId?: string | null;
-  roleIds?: readonly string[];
-  channelId?: string;
+  guildId?: string | undefined;
+  guildOwnerId?: string | null | undefined;
+  roleIds?: readonly string[] | undefined;
+  channelId?: string | undefined;
   memberPermissions?: PermissionsBitField | bigint | null;
 }
 

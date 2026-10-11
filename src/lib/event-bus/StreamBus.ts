@@ -27,19 +27,19 @@ export interface StreamBusOptions {
 
   subscriber: Valkey;
 
-  defaultMaxLen?: number;
+  defaultMaxLen?: number | undefined;
 
-  log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
+  log?: ((level: "info" | "warn" | "error", msg: string, meta?: object) => void) | undefined;
 
-  maxDeliveries?: number;
+  maxDeliveries?: number | undefined;
 
-  claimMinIdleMs?: number;
+  claimMinIdleMs?: number | undefined;
 
-  claimIntervalMs?: number;
+  claimIntervalMs?: number | undefined;
 
-  onStats?: (stats: StreamStats) => void;
+  onStats?: ((stats: StreamStats) => void) | undefined;
 
-  statsIntervalMs?: number;
+  statsIntervalMs?: number | undefined;
 }
 
 interface StreamCommands {

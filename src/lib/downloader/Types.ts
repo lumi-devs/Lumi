@@ -22,6 +22,6 @@ export interface ModuleInfo {
 export interface RepoInfo {
   author: string[];
   description: string;
-  short?: string;
-  install_msg?: string;
+  short?: string | undefined;
+  install_msg?: string | undefined;
 }

@@ -80,9 +80,12 @@ export async function listModuleFiles(
     }
     for (const entry of entries) {
       const next = rel ? `${rel}/${entry.name}` : entry.name;
-      if (!next.startsWith(prefix)) continue;
-      if (entry.isDirectory()) await walk(path.join(current, entry.name), next);
-      else out.push(next);
+      if (!next.startsWith(prefix) && !prefix.startsWith(`${next}/`)) continue;
+      if (entry.isDirectory()) {
+        await walk(path.join(current, entry.name), next);
+      } else if (next.startsWith(prefix)) {
+        out.push(next);
+      }
     }
   };
   await walk(dir, "");

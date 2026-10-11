@@ -126,11 +126,11 @@ export class GuildKVRepository extends Repository {
   public async listGuildModuleData(
     guildId: string,
     filter: {
-      moduleName?: string;
-      targetId?: string;
-      key?: string;
-      skip?: number;
-      take?: number;
+      moduleName?: string | undefined;
+      targetId?: string | undefined;
+      key?: string | undefined;
+      skip?: number | undefined;
+      take?: number | undefined;
     } = {},
   ): Promise<{
     entries: {

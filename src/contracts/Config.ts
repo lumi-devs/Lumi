@@ -93,6 +93,7 @@ export function sectionsOf(fields: ConfigField[]): ConfigSection[] {
   return order.map((name) => {
     const sectionFields = bySection.get(name)!;
     const { order: groupOrder, groups: byGroup } = groupBy(sectionFields, (field) => field.group ?? null);
+    const widget = sectionFields.find((field) => field.widget)?.widget;
 
     return {
       name,
@@ -101,7 +102,7 @@ export function sectionsOf(fields: ConfigField[]): ConfigSection[] {
         fields: byGroup.get(group)!,
       })),
       fieldCount: sectionFields.length,
-      widget: sectionFields.find((field) => field.widget)?.widget,
+      ...(widget ? { widget } : {}),
     };
   });
 }

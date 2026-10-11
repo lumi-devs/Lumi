@@ -292,9 +292,9 @@ export function instrumentValkeyLatency(
 }
 
 export interface CreateValkeyClientOptions {
-  config?: ValkeyConnectionConfig;
-  logger?: CacheLogger;
-  onDuration?: (command: string, seconds: number) => void;
+  config?: ValkeyConnectionConfig | undefined;
+  logger?: CacheLogger | undefined;
+  onDuration?: ((command: string, seconds: number) => void) | undefined;
 }
 
 export function createValkeyClient(
@@ -352,7 +352,7 @@ const InvalidationChannel = "lumi:cache:invalidate";
 export class InvalidationBus {
   readonly #subscriber: ValkeyClient;
   #publisher: ValkeyClient | null;
-  readonly #logger?: CacheLogger;
+  readonly #logger?: CacheLogger | undefined;
   #listeners = new Set<(keys: string[]) => void>();
   #resyncListeners = new Set<(ctx: ResyncContext) => void | Promise<void>>();
   #started = false;
@@ -481,7 +481,7 @@ const SignalsChannel = "lumi:signals";
 export class SignalBus {
   readonly #subscriber: ValkeyClient;
   #publisher: ValkeyClient | null;
-  readonly #logger?: CacheLogger;
+  readonly #logger?: CacheLogger | undefined;
   #listeners = new Set<
     (topic: string, payload: Record<string, string | number>) => void
   >();

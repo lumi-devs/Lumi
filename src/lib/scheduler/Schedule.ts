@@ -13,12 +13,12 @@ export type QueuePriority = (typeof QueuePriority)[keyof typeof QueuePriority];
 export type ScheduleOptions =
   | number
   | {
-      repeated?: boolean;
-      delay?: number;
-      interval?: number;
-      pattern?: string;
-      timezone?: string;
-      customJobOptions?: JobsOptions;
+      repeated?: boolean | undefined;
+      delay?: number | undefined;
+      interval?: number | undefined;
+      pattern?: string | undefined;
+      timezone?: string | undefined;
+      customJobOptions?: JobsOptions | undefined;
     };
 
 export async function scheduleTask<N extends keyof ScheduledTasks>(

@@ -82,8 +82,15 @@ export class AccessRepository extends Repository {
     if (!guildId) {
       const entry = await this.prisma.globalBlock.upsert({
         where: { userId },
-        create: { userId, blockedBy, reason },
-        update: { blockedBy, reason },
+        create: {
+          userId,
+          blockedBy,
+          ...(reason === undefined ? {} : { reason }),
+        },
+        update: {
+          blockedBy,
+          ...(reason === undefined ? {} : { reason }),
+        },
       });
       await this.invalidate(ValkeyKeys.blocked(null, userId));
       return entry;
@@ -91,8 +98,16 @@ export class AccessRepository extends Repository {
     await this.db.ensureGuild(guildId);
     const entry = await this.prisma.blocklist.upsert({
       where: { uq_blocklist_user_guild: { userId, guildId } },
-      create: { userId, blockedBy, reason, guildId },
-      update: { blockedBy, reason },
+      create: {
+        userId,
+        blockedBy,
+        ...(reason === undefined ? {} : { reason }),
+        guildId,
+      },
+      update: {
+        blockedBy,
+        ...(reason === undefined ? {} : { reason }),
+      },
     });
     await this.invalidate(ValkeyKeys.blocked(guildId, userId));
     return entry;
@@ -195,8 +210,15 @@ export class AccessRepository extends Repository {
     if (!guildId) {
       const entry = await this.prisma.globalAllow.upsert({
         where: { userId },
-        create: { userId, allowedBy, reason },
-        update: { allowedBy, reason },
+        create: {
+          userId,
+          allowedBy,
+          ...(reason === undefined ? {} : { reason }),
+        },
+        update: {
+          allowedBy,
+          ...(reason === undefined ? {} : { reason }),
+        },
       });
       await this.invalidate(ValkeyKeys.accessAllow(null, userId));
       return entry;
@@ -204,8 +226,16 @@ export class AccessRepository extends Repository {
     await this.db.ensureGuild(guildId);
     const entry = await this.prisma.allowlist.upsert({
       where: { uq_allowlist_user_guild: { userId, guildId } },
-      create: { userId, allowedBy, reason, guildId },
-      update: { allowedBy, reason },
+      create: {
+        userId,
+        allowedBy,
+        ...(reason === undefined ? {} : { reason }),
+        guildId,
+      },
+      update: {
+        allowedBy,
+        ...(reason === undefined ? {} : { reason }),
+      },
     });
     await this.invalidate(ValkeyKeys.accessAllow(guildId, userId));
     return entry;

@@ -225,9 +225,9 @@ export class DatabaseService {
   }
 
   public async getPostgresStats(): Promise<{
-    overview?: { size: string; uptime_secs: string };
+    overview?: { size: string; uptime_secs: string } | undefined;
     tables: { relname: string; bytes: string; dead: string }[];
-    tx?: { commits: string; rollbacks: string };
+    tx?: { commits: string; rollbacks: string } | undefined;
   }> {
     const [[ov], tables, [tx]] = await Promise.all([
       this.prisma.$queryRaw<{ size: string; uptime_secs: string }[]>(

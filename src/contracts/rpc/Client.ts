@@ -30,15 +30,15 @@ function retryableForCode(code: RpcErrorCode): boolean {
 }
 
 export interface RpcErrorOptions {
-  retryable?: boolean;
-  retryAfterMs?: number;
+  retryable?: boolean | undefined;
+  retryAfterMs?: number | undefined;
 }
 
 export class RpcError extends Error {
   public readonly code: RpcErrorCode;
   public readonly action: string;
   public readonly retryable: boolean;
-  public readonly retryAfterMs?: number;
+  public readonly retryAfterMs?: number | undefined;
   public constructor(
     code: RpcErrorCode,
     action: string,
@@ -209,8 +209,8 @@ export class RpcClient {
   private readonly token: string;
   private readonly log: (msg: string) => void;
   private readonly injectTraceHeaders: () => { traceparent?: string; tracestate?: string };
-  private readonly breaker?: RpcCircuitBreaker;
-  private readonly retry?: RpcRetryOptions;
+  private readonly breaker?: RpcCircuitBreaker | undefined;
+  private readonly retry?: RpcRetryOptions | undefined;
 
   public constructor(options: RpcClientOptions) {
     this.baseUrl = options.baseUrl;

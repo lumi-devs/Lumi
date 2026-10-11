@@ -23,9 +23,9 @@ export interface GateDenial {
 }
 
 export interface GateCommand {
-  module?: string;
-  locationFull?: string;
-  requiredPermit?: string;
+  module?: string | undefined;
+  locationFull?: string | undefined;
+  requiredPermit?: string | undefined;
 }
 
 export type GateCheck = (

@@ -15,8 +15,12 @@ type FieldMeta = Omit<ConfigField, "key">;
 
 const Registry = new WeakMap<z.ZodType, FieldMeta>();
 
-function tag<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
-  Registry.set(schema, meta);
+function tag<T extends z.ZodType>(schema: T, meta: Record<string, unknown>): T {
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(meta)) {
+    if (value !== undefined) clean[key] = value;
+  }
+  Registry.set(schema, clean as FieldMeta);
   return schema;
 }
 
