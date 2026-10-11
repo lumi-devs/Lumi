@@ -35,9 +35,11 @@ jobs:
             docker:
               - 'Dockerfile*'
               - '.dockerignore'
-              - 'apps/**'
-              - '!apps/**/*.md'
-              - 'packages/**'
+              - 'src/**'
+              - '!src/**/*.md'
+              - 'prisma/**'
+              - 'package.json'
+              - 'bun.lock'
               - '!packages/**/*.md'
               - 'prisma/**'
               - '.github/**'
@@ -60,14 +62,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [worker, api, scheduler]
+        target: [bot]
         include:
-          - target: worker
+          - target: bot
             image-suffix: ""
-          - target: api
-            image-suffix: "-api"
-          - target: scheduler
-            image-suffix: "-scheduler"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

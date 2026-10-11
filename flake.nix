@@ -26,6 +26,7 @@
             postgresql
             valkey
             rabbitmq-server
+            stdenv.cc.cc.lib
           ];
 
           env = {
@@ -34,6 +35,7 @@
           };
 
           shellHook = ''
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
             echo "========================================="
             echo "  Lumi Multi-Platform Dev Shell (Flake)  "
             echo "========================================="

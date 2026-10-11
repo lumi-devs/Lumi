@@ -22,7 +22,7 @@
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It separates gateway interactions, background job scheduling, and RPC API serving into independent processes for high stability and horizontal scalability.
+Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It runs as a single process: one Discord gateway client, an embedded RPC bridge for the dashboard, and in-process BullMQ scheduling.
 
 Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
@@ -30,27 +30,30 @@ Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.
 
 ## Architecture
 
-Lumi is organized as a Bun workspace monorepo:
+Lumi is a single-package monolith under `src/`:
 
 | Path | Purpose |
 | :--- | :--- |
-| `apps/worker` | Bot gateway runner. Uses `ShardingManager` to spawn shard processes handling Discord events, slash commands, and interaction routing. |
-| `apps/scheduler` | Dedicated BullMQ worker and scheduler. Handles recurring tasks, cron schedules, and background worker queues. |
-| `apps/api` | Gateway-free HTTP RPC server. Serves typed RPC actions over an internal HTTP bridge. |
-| `apps/cli` | Command-line tool (`lumi`) for operations, migrations, addon creation, doctor diagnostics, and service orchestration. |
-| `packages/core` | Core framework: database access layer, permit evaluation, sandboxed addon SDK, event bus, and internal modules. |
-| `packages/contracts` | Strongly-typed RPC router, schemas, and shared contracts. |
-| `packages/observability` | OpenTelemetry tracing, Prometheus metrics exporter, and health probes. |
+| `src/Index.ts` | The one boot: database → modules → slash registration → RPC → gateway login → scheduling. |
+| `src/modules/*` | Self-contained feature modules (commands, listeners, interactions, tasks, services, data). |
+| `src/lib/*` | Shared framework: database, cache, permits, scheduler, RPC, UI kit, utilities. |
+| `src/cli` | Command-line tool (`lumi`) for operations, migrations, and addon scaffolding. |
+| `src/contracts` | Typed RPC router and schemas for the dashboard bridge. |
+| `data/addons` | Third-party addon root. Addons load in-process through the same module loader. |
+
+Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
 
 ---
 
 ## Features
 
-- **Decoupled Topology**: Discord gateway (`worker`), background queues (`scheduler`), and RPC endpoints (`api`) run in isolated processes.
-- **Sandboxed Addon SDK**: Extend bot capabilities through addons (`lumi` SDK) executed in V8 isolates with capability-gated host access and signature validation.
-- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution.
-- **Observability Built-in**: Unified OpenTelemetry distributed tracing and Prometheus metrics endpoints on every service.
-- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Valkey for distributed caching, lock leases, and streams.
+- **Single Process**: Gateway, RPC, and scheduling run in one Bun process.
+- **Red-Style Modules**: Self-contained modules plus third-party addons, loaded by one in-process loader with dependency sorting and per-guild toggles.
+- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution, reorderable from the dashboard, RPC, and the hub panel.
+- **Leveling**: Message and voice XP with 7 selectable level formulas, image rank cards, and Overall / Voice / Weekly / Monthly image leaderboards.
+- **Guild Economy**: Wallet + bank balances with payday, taxed transfers, slots, and a fully audited transaction ledger.
+- **Observability Built-in**: OpenTelemetry tracing and Prometheus metrics.
+- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Valkey for caching, locks, and queues.
 
 ---
 
@@ -59,7 +62,6 @@ Lumi is organized as a Bun workspace monorepo:
 ### Prerequisites
 
 - [Bun](https://bun.sh) (v1.4+) or [Nix](https://nixos.org) with flakes enabled
-- [Node.js](https://nodejs.org) (22+; runs the addon isolate sidecar)
 - [PostgreSQL](https://www.postgresql.org) 16+
 - [Valkey](https://valkey.io) 7+
 - Discord Bot Application & Bot Token
@@ -91,24 +93,13 @@ Lumi is organized as a Bun workspace monorepo:
 
 5. **Initialize database schema:**
    ```bash
-   bun run db:generate
-   bun run db:deploy
+    bun run db:generate
+    bun run db:migrate
    ```
 
-6. **Run diagnostic checks:**
+6. **Start the bot:**
    ```bash
-   bun run doctor
-   ```
-
-7. **Start services:**
-   ```bash
-   # Run all processes concurrently
-   bun run dev
-
-   # Or start individual services
-   bun run start:worker
-   bun run start:scheduler
-   bun run start:api
+   bun run start
    ```
 
 ---
@@ -116,41 +107,42 @@ Lumi is organized as a Bun workspace monorepo:
 ## Development
 
 ```bash
-# Typecheck root and all workspace packages
+# Typecheck
 bun run typecheck
 
 # Run linter
 bun run lint
 bun run lint:fix
 
-# Run offline unit test suites
+# Run unit test suite (each file runs in its own process for isolation)
 bun run test
-
-# Run integration tests against real databases
-bun run test:integration
-
-# Build published SDK bundle
-bun run sdk:build
 ```
 
 ---
 
 ## Addons & CLI
 
-Lumi includes a command-line tool `lumi` (`apps/cli`):
+Lumi includes a command-line tool `lumi` (`src/cli`):
 
 ```bash
-# Check service health and environment connectivity
-bun run doctor
-
 # Scaffold a new addon module
-bun apps/cli/src/main.ts addon create my-addon
+bun src/cli/Main.ts addon create my-addon
 
-# Validate and test an addon
-bun apps/cli/src/main.ts addon test my-addon
+# Validate an addon
+bun src/cli/Main.ts addon validate my-addon
 ```
 
+Addons consume the bot through `createModuleApi()` (`src/lib/ModuleApi.ts`),
+which hands out a guild-scoped surface: config, `bank` (balances, transfers,
+pay-to-run, leaderboards), `levels` (XP, levels, boards), permits, UI cards,
+KV, files, flags, scheduling, and antispam. See `docs/framework_bank.md` and
+`docs/framework_leveling.md`.
+
 ---
+
+## Inspiration
+
+Lumi's module system takes inspiration from [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot).
 
 ## License
 

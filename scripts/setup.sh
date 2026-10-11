@@ -67,33 +67,10 @@ if [[ ! -f "$ENV_EXAMPLE" ]]; then
   exit 1
 fi
 
-# Each app is started with its own directory as cwd, and Bun auto-loads the
-# `.env` it finds there. Pointing them all at the root file is what keeps them
-# from drifting into separately-maintained copies (which is how apps/worker/.env
-# ended up missing RPC_INTERNAL_TOKEN). `.env` is gitignored at every level, so
-# these links can't be committed - they have to be (re)made here.
-link_app_envs() {
-  local app
-  for app in worker dashboard; do
-    local link="${ROOT_DIR}/apps/${app}/.env"
-    [[ -d "${ROOT_DIR}/apps/${app}" ]] || continue
-    if [[ -L "$link" && "$(readlink "$link")" == "../../.env" ]]; then
-      continue
-    fi
-    if [[ -e "$link" && ! -L "$link" ]]; then
-      warn "apps/${app}/.env is a real file, not a symlink to the root .env - replacing it."
-    fi
-    rm -f "$link"
-    ln -s "../../.env" "$link"
-    ok "Linked apps/${app}/.env -> ../../.env"
-  done
-}
-
 if [[ -f "$ENV_FILE" ]]; then
   warn "${ENV_FILE} already exists."
   if ! confirm "Overwrite it?" "n"; then
     info "Keeping the existing .env. Re-run 'bun run setup' any time to regenerate it."
-    link_app_envs
     exit 0
   fi
 fi
@@ -223,8 +200,6 @@ header "Writing ${ENV_FILE}"
 
 chmod 600 "$ENV_FILE"
 ok "Wrote $(wc -l < "$ENV_FILE" | tr -d ' ') variables to .env (permissions set to 600)."
-
-link_app_envs
 
 # ── [ 4 ] Verify the bot token ────────────────────────────────────────────────
 header "[4/4] Verifying bot token"
