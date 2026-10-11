@@ -10,7 +10,7 @@ import {
   ManifestFile,
 } from "#src/lib/module-system/Manifest.js";
 import { cfg, FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { CoreVersion } from "#src/lib/utilities/Version.js";
+import { LumiInfo } from "#src/lib/utilities/Version.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;
@@ -49,24 +49,12 @@ describe("Module Manifest Utilities", () => {
         displayName: "Test Module",
         emoji: "🚀",
         description: "A test module description",
-        short: undefined,
-        endUserDataStatement: undefined,
         version: "1.2.3",
         disableable: true,
         dependencies: ["dep-1"],
         conflicts: ["conflict-1"],
         configOverrides: true,
         configFields: meta.configFields,
-        category: undefined,
-        dashboardHref: undefined,
-        author: undefined,
-        requirements: undefined,
-        install_msg: undefined,
-        tags: undefined,
-        hidden: undefined,
-        disabled: undefined,
-        min_bot_version: undefined,
-        max_bot_version: undefined,
       });
     });
 
@@ -85,14 +73,11 @@ describe("Module Manifest Utilities", () => {
           type: FieldType.Channel,
           label: "Log Channel",
           description: "Channel for logs",
-          default: undefined,
-          required: undefined,
-          channelTypes: undefined,
         },
       ]);
       expect(manifest.displayName).toBe("schema-module");
       expect(manifest.emoji).toBe("⚙️");
-      expect(manifest.version).toBe(CoreVersion);
+      expect(manifest.version).toBe(LumiInfo.version);
       expect(manifest.disableable).toBe(true);
     });
   });

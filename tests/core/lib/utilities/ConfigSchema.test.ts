@@ -49,7 +49,6 @@ describe("Config Schema Utilities", () => {
         label: "Enable Feature",
         description: "Toggle on/off",
         default: true,
-        required: undefined,
       });
 
       expect(fields.find((f) => f.key === "maxLimit")).toEqual({
@@ -60,7 +59,6 @@ describe("Config Schema Utilities", () => {
         default: 50,
         min: 1,
         max: 100,
-        required: undefined,
       });
 
       expect(fields.find((f) => f.key === "logChannel")).toEqual({
@@ -68,8 +66,6 @@ describe("Config Schema Utilities", () => {
         type: FieldType.Channel,
         label: "Log Channel",
         description: "Target channel",
-        default: undefined,
-        required: undefined,
         channelTypes: [ChannelType.GuildText],
       });
 
@@ -79,7 +75,6 @@ describe("Config Schema Utilities", () => {
         label: "Mode",
         description: "Difficulty",
         default: "easy",
-        required: undefined,
         choices: ["easy", "hard"],
       });
     });
@@ -214,7 +209,6 @@ describe("Config Schema Utilities", () => {
           label: "Cooldown",
           description: "Wait time",
           default: "15m",
-          required: undefined,
           group: "Limits",
           quickPicks: ["5m", "15m", "1h", "24h", "7d"],
         },
@@ -270,7 +264,6 @@ describe("Config Schema Utilities", () => {
         label: "Staff Roles",
         description: "Staff list",
         default: ["123456789012345678"],
-        required: undefined,
       });
       expect(fields.find((f) => f.key === "logChannels")?.type).toBe(
         FieldType.MultiChannel,
