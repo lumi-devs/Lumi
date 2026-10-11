@@ -1,0 +1,58 @@
+import { describe, it, expect, vi, beforeEach } from 'bun:test';
+import { createEventBus } from '#src/lib/event-bus/Factory.js';
+
+const mockQuit = vi.fn().mockResolvedValue('OK');
+const mockInstances: any[] = [];
+
+vi.mock('iovalkey', () => {
+  class MockValkey {
+    opts: any;
+    xadd = vi.fn().mockResolvedValue('1-0');
+    xack = vi.fn().mockResolvedValue(1);
+    xlen = vi.fn().mockResolvedValue(0);
+    xgroup = vi.fn().mockResolvedValue('OK');
+    xreadgroup = vi.fn().mockResolvedValue(null);
+    xautoclaim = vi.fn().mockResolvedValue(null);
+    xpending = vi.fn().mockResolvedValue([]);
+    quit = mockQuit;
+    constructor(opts: any) {
+      this.opts = opts;
+      mockInstances.push(this);
+    }
+  }
+  return { Valkey: MockValkey, default: MockValkey };
+});
+
+describe('StreamBus & createEventBus Tests', () => {
+  beforeEach(() => {
+    mockInstances.length = 0;
+    mockQuit.mockClear();
+  });
+
+  it('createEventBus initializes StreamBus with dedicated publisher/subscriber connections', () => {
+    const owned = createEventBus({
+      valkey: { host: 'localhost', port: 6379, lazyConnect: true },
+    });
+    expect(owned.publisher).not.toBeNull();
+    expect(typeof owned.close).toBe('function');
+    expect(mockInstances).toHaveLength(2);
+    expect(mockInstances[0]).toBe(owned.publisher);
+  });
+
+  it('createEventBus throws error when valkey config is missing', () => {
+    expect(() => createEventBus()).toThrow(/`valkey` options required/);
+  });
+
+  it('close() quits both the publisher and subscriber Valkey clients', async () => {
+    const owned = createEventBus({
+      valkey: { host: 'localhost', port: 6379, lazyConnect: true },
+    });
+
+    const busCloseSpy = vi.spyOn(owned.bus, 'close');
+
+    await owned.close();
+
+    expect(busCloseSpy).toHaveBeenCalledTimes(1);
+    expect(mockQuit).toHaveBeenCalledTimes(2);
+  });
+});

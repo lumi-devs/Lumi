@@ -1,0 +1,100 @@
+import { parentPort } from "node:worker_threads";
+import type { WorkerRequest, WorkerResponse } from "#src/lib/regex-worker/Protocol.js";
+
+const MaxSets = 2_000;
+
+const sets = new Map<string, RegExp[]>();
+
+const port = parentPort;
+if (!port) throw new Error("regex-worker must be started as a worker thread");
+
+function reply(message: WorkerResponse): void {
+  port!.postMessage(message);
+}
+
+function compile(patterns: string[]): RegExp[] {
+  const out: RegExp[] = [];
+  for (const pattern of patterns) {
+    try {
+      out.push(new RegExp(pattern, "iu"));
+    } catch {
+      // Parent already rejects invalid patterns; skip rather than kill the set.
+    }
+  }
+  return out;
+}
+
+function store(key: string, patterns: string[]): void {
+  sets.delete(key);
+  sets.set(key, compile(patterns));
+  while (sets.size > MaxSets) {
+    const oldest = sets.keys().next().value;
+    if (oldest === undefined) break;
+    sets.delete(oldest);
+  }
+}
+
+function firstMatch(id: number, regexes: RegExp[], content: string): number | null {
+  for (let i = 0; i < regexes.length; i++) {
+    reply({ kind: "progress", id, index: i });
+    const regex = regexes[i]!;
+    regex.lastIndex = 0;
+    if (regex.test(content)) return i;
+  }
+  return null;
+}
+
+reply({ kind: "ready" });
+
+port.on("message", (msg: WorkerRequest) => {
+  switch (msg.kind) {
+    case "load":
+      store(msg.key, msg.patterns);
+      return;
+
+    case "test": {
+      const regexes = sets.get(msg.key);
+      if (!regexes) {
+        reply({ kind: "unknown", id: msg.id, key: msg.key });
+        return;
+      }
+      reply({ kind: "result", id: msg.id, index: firstMatch(msg.id, regexes, msg.content) });
+      return;
+    }
+
+    case "matchAll": {
+      let regex: RegExp;
+      try {
+        regex = new RegExp(msg.pattern, "iu");
+      } catch {
+        reply({ kind: "matches", id: msg.id, indexes: [] });
+        return;
+      }
+      const indexes: number[] = [];
+      for (let i = 0; i < msg.contents.length; i++) {
+
+        reply({ kind: "progress", id: msg.id, index: i });
+        regex.lastIndex = 0;
+        if (regex.test(msg.contents[i]!)) indexes.push(i);
+      }
+      reply({ kind: "matches", id: msg.id, indexes });
+      return;
+    }
+
+    case "probe": {
+      let regex: RegExp;
+      try {
+        regex = new RegExp(msg.pattern, "iu");
+      } catch {
+        reply({ kind: "result", id: msg.id, index: null });
+        return;
+      }
+      for (const input of msg.inputs) {
+        regex.lastIndex = 0;
+        regex.test(input);
+      }
+      reply({ kind: "result", id: msg.id, index: null });
+      return;
+    }
+  }
+});

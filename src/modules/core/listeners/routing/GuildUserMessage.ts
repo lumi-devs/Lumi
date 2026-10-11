@@ -1,0 +1,22 @@
+import { Events } from "discord.js";
+import { defineListener } from "#src/lib/listeners/ListenerDef.js";
+import type { Container } from "#src/lib/Services.js";
+import type { Message } from "discord.js";
+import { LumiEvents } from "#src/lib/types/Common.js";
+
+export const guildUserMessageRouterListener = defineListener({
+  name: "guildUserMessageRouterListener",
+  event: Events.MessageCreate,
+  async execute(services: Container, message: Message): Promise<void> {
+    if (message.partial) {
+      const full = await message.fetch().catch(() => null);
+      if (!full) return;
+      message = full;
+    }
+    if (message.webhookId !== null) return;
+    if (message.system) return;
+    if (message.author.bot) return;
+    if (!message.inGuild()) return;
+    services.client.emit(LumiEvents.GuildUserMessage, message);
+  },
+});

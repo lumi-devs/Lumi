@@ -1,0 +1,582 @@
+import { describe, it, expect, vi, beforeEach } from 'bun:test';
+import { container } from "#src/lib/Services.js";
+import { scheduleCaseLift } from '#src/modules/mod/services/Helpers.js';
+import { parseDuration, formatDuration } from '#src/lib/utilities/Time.js';
+import {
+  getThresholds,
+  incrementWarnCount,
+  decrementWarnCount,
+  resetWarnCount,
+  checkThresholds
+} from '#src/modules/mod/services/Thresholds.js';
+import { invalidateThresholds, setThresholdRule } from '#src/modules/mod/data/ThresholdRules.js';
+import { BanAction } from '#src/modules/mod/services/actions/BanAction.js';
+import { MuteAction } from '#src/modules/mod/services/actions/MuteAction.js';
+import { VoiceMuteAction } from '#src/modules/mod/services/actions/VoiceMuteAction.js';
+import { KickAction } from '#src/modules/mod/services/actions/KickAction.js';
+import { WarnAction } from '#src/modules/mod/services/actions/WarnAction.js';
+import { QuarantineAction } from '#src/lib/moderation/Quarantine.js';
+import { QueuePriority } from '#src/lib/scheduler/Schedule.js';
+import { FakeDiscordRestPort } from '#src/lib/discord/FakeRestPort.js';
+
+const discordRest = new FakeDiscordRestPort();
+
+function batchedMembers(member: { id: string }) {
+  return vi.fn(async (arg: unknown) => {
+    if (typeof arg === "string") return member;
+    const ids = (arg as { user?: string[] }).user ?? [];
+    return new Map(ids.map((id) => [id, id === member.id ? member : null]));
+  });
+}
+
+Object.assign(container, {
+  invalidation: {
+    invalidate: vi.fn().mockResolvedValue(undefined)
+  },
+  valkey: {
+    get: vi.fn(),
+    setex: vi.fn(),
+    del: vi.fn(),
+    exists: vi.fn().mockResolvedValue(0),
+    set: vi.fn().mockResolvedValue('OK'),
+    pipeline: vi.fn(),
+    eval: vi.fn().mockResolvedValue(1)
+  },
+  db: {
+    config: {
+      getModuleConfig: vi.fn()
+    },
+    moderation: {
+      getModerationCases: vi.fn(),
+      countModerationCases: vi.fn(),
+      createModerationCase: vi.fn(),
+      getActiveCases: vi.fn().mockResolvedValue([]),
+      liftModerationCase: vi.fn(),
+      liftModerationCases: vi.fn(),
+      getWarnThresholds: vi.fn(),
+      setWarnThreshold: vi.fn(),
+      removeWarnThreshold: vi.fn(),
+      resetWarnThresholds: vi.fn()
+    }
+  },
+  tasks: {
+    create: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue(undefined)
+  },
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn()
+  },
+  discordRest,
+  client: {
+    user: { id: 'bot-1' },
+    users: { fetch: vi.fn() },
+    guilds: {
+      cache: {
+        get: vi.fn()
+      }
+    }
+  }
+});
+
+describe('Mod Helpers & Duration Parsing', () => {
+  it('parseDuration converts valid string to ms and invalid/negative to null', () => {
+    expect(parseDuration('10m')).toBe(600000);
+    expect(parseDuration('2h')).toBe(7200000);
+    expect(parseDuration('invalid')).toBeNull();
+  });
+
+  it('formatDuration converts ms into human readable string', () => {
+    expect(formatDuration(5000)).toBe('5 seconds');
+    expect(formatDuration(120000)).toBe('2 minutes');
+    expect(formatDuration(7200000)).toBe('2 hours');
+    expect(formatDuration(172800000)).toBe('2 days');
+  });
+
+  it('scheduleCaseLift handles valid expiresAt date', async () => {
+    const mockCase = { id: 101, expiresAt: new Date(Date.now() + 5000) };
+    await scheduleCaseLift(container, mockCase);
+    expect(container.logger.error).not.toHaveBeenCalled();
+  });
+
+  it('scheduleCaseLift returns early if expiresAt is null', async () => {
+    await scheduleCaseLift(container, { id: 102, expiresAt: null });
+    expect(container.logger.error).not.toHaveBeenCalled();
+  });
+
+  it('scheduleCaseLift schedules the lift job at CRITICAL priority', async () => {
+    const mockCase = { id: 103, expiresAt: new Date(Date.now() + 5000) };
+    await scheduleCaseLift(container, mockCase);
+    const call = (container.tasks.create as any).mock.calls.at(-1);
+    expect(call[0].name).toBe('mod-lift');
+    expect(call[1].customJobOptions.priority).toBe(QueuePriority.CRITICAL);
+  });
+});
+
+describe('Mod Thresholds Logic', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('getThresholds uses cached values if available', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
+    const thresholds = await getThresholds(container, 'g-1');
+    expect(thresholds).toEqual({ '3': { action: 'kick' } });
+    expect(container.db.moderation.getWarnThresholds).not.toHaveBeenCalled();
+  });
+
+  it('getThresholds fetches DB when cache miss occurs', async () => {
+    (container.valkey.get as any).mockResolvedValue(null);
+    (container.db.moderation.getWarnThresholds as any).mockResolvedValue([
+      { warnCount: 5, action: 'ban', duration: null }
+    ]);
+    const thresholds = await getThresholds(container, 'g-1');
+    expect(thresholds).toEqual({ '5': { action: 'ban' } });
+    expect(container.valkey.setex).toHaveBeenCalled();
+  });
+
+  it('invalidateThresholds deletes valkey key', async () => {
+    await invalidateThresholds(container, 'g-1');
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:thresholds');
+  });
+
+  it('incrementWarnCount initializes count from DB when key does not exist', async () => {
+    (container.valkey.exists as any).mockResolvedValue(0);
+    (container.db.moderation.countModerationCases as any).mockResolvedValue(2);
+    const count = await incrementWarnCount(container, 'g-1', 'u-1');
+    expect(count).toBe(2);
+    expect(container.valkey.set).toHaveBeenCalled();
+  });
+
+  it('incrementWarnCount uses pipeline when count key exists', async () => {
+    (container.valkey.exists as any).mockResolvedValue(1);
+    const mockPipe = {
+      incr: vi.fn(),
+      expire: vi.fn(),
+      exec: vi.fn().mockResolvedValue([[null, 4]])
+    };
+    (container.valkey.pipeline as any).mockReturnValue(mockPipe);
+    const count = await incrementWarnCount(container, 'g-1', 'u-1');
+    expect(count).toBe(4);
+  });
+
+  it('decrementWarnCount and resetWarnCount call valkey operations', async () => {
+    await decrementWarnCount(container, 'g-1', 'u-1');
+    expect(container.valkey.eval).toHaveBeenCalled();
+
+    await resetWarnCount(container, 'g-1', 'u-1');
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:warns:u-1');
+  });
+
+  it('checkThresholds executes kick action when threshold matches', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'kick' } }));
+    const mockMember = { id: 'u-1' };
+    const mockGuild = {
+      id: 'g-1',
+      members: { fetch: batchedMembers(mockMember) }
+    };
+    (container.client.guilds.cache.get as any).mockReturnValue(mockGuild);
+
+    const kickSpy = vi.spyOn(KickAction, 'apply').mockResolvedValue({ caseNumber: 1 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 3);
+
+    expect(kickSpy).toHaveBeenCalled();
+    kickSpy.mockRestore();
+  });
+
+  it('checkThresholds executes quarantine action when threshold matches', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    const mockMember = { id: 'u-1' };
+    const mockGuild = {
+      id: 'g-1',
+      members: { fetch: batchedMembers(mockMember) }
+    };
+    (container.client.guilds.cache.get as any).mockReturnValue(mockGuild);
+
+    const quarantineSpy = vi
+      .spyOn(QuarantineAction, 'apply')
+      .mockResolvedValue({ caseNumber: 2 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 4);
+
+    expect(quarantineSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ targetMember: mockMember, moderator: container.client.user })
+    );
+    quarantineSpy.mockRestore();
+  });
+
+  it('checkThresholds logs instead of throwing when quarantine is unconfigured', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '4': { action: 'quarantine' } }));
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: batchedMembers({ id: 'u-1' }) }
+    });
+
+    const quarantineSpy = vi
+      .spyOn(QuarantineAction, 'apply')
+      .mockRejectedValue(new Error('UNCONFIGURED'));
+    await expect(checkThresholds(container, 'g-1', 'u-1', 4)).resolves.toBeUndefined();
+
+    expect(container.logger.error).toHaveBeenCalled();
+    quarantineSpy.mockRestore();
+  });
+
+  it('checkThresholds executes voice_mute action with the configured duration', async () => {
+    (container.valkey.get as any).mockResolvedValue(
+      JSON.stringify({ '2': { action: 'voice_mute', duration: 1800 } })
+    );
+    const mockMember = { id: 'u-1' };
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: batchedMembers(mockMember) }
+    });
+
+    const vcSpy = vi.spyOn(VoiceMuteAction, 'apply').mockResolvedValue({ caseNumber: 3 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 2);
+
+    expect(vcSpy).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 1800000 }));
+    vcSpy.mockRestore();
+  });
+
+  it('checkThresholds warns and falls back to an hour for a mute rule with no duration', async () => {
+    (container.valkey.get as any).mockResolvedValue(
+      JSON.stringify({ '3': { action: 'mute' } })
+    );
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: batchedMembers({ id: 'u-1' }) }
+    });
+
+    const muteSpy = vi.spyOn(MuteAction, 'apply').mockResolvedValue({ caseNumber: 4 } as any);
+    await checkThresholds(container, 'g-1', 'u-1', 3);
+
+    expect(muteSpy).toHaveBeenCalledWith(expect.objectContaining({ durationMs: 3600000 }));
+    const warning = (container.logger.warn as any).mock.calls[0]?.[0] as string;
+    expect(warning).toContain('g-1');
+    expect(warning).toContain('3 warns');
+    expect(warning).toContain('none set');
+    muteSpy.mockRestore();
+  });
+
+  it('checkThresholds logs an error for an action it cannot apply', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify({ '3': { action: 'tempban' } }));
+    (container.client.guilds.cache.get as any).mockReturnValue({
+      id: 'g-1',
+      members: { fetch: batchedMembers({ id: 'u-1' }) }
+    });
+
+    await checkThresholds(container, 'g-1', 'u-1', 3);
+
+    expect(container.logger.error).toHaveBeenCalledWith(expect.stringContaining('tempban'));
+  });
+
+  it('setThresholdRule stores the already-converted seconds value as-is', async () => {
+    await setThresholdRule(container, 'g-1', 3, 'mute', 7200);
+    expect(container.db.moderation.setWarnThreshold).toHaveBeenCalledWith({
+      guildId: 'g-1',
+      warnCount: 3,
+      action: 'mute',
+      duration: 7200
+    });
+
+    await setThresholdRule(container, 'g-1', 5, 'kick');
+    expect(container.db.moderation.setWarnThreshold).toHaveBeenLastCalledWith({
+      guildId: 'g-1',
+      warnCount: 5,
+      action: 'kick',
+      duration: undefined
+    });
+  });
+});
+
+describe('Mod Actions (Ban, Mute, Kick, Warn, Quarantine)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (container.valkey.exists as any).mockResolvedValue(0);
+  });
+
+  it('BanAction.apply sends DM, bans user, creates case, and logs to channel', async () => {
+    const mockUser = { id: 'u-1', send: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', name: 'TestGuild', members: { ban: vi.fn().mockResolvedValue({}) } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 42 });
+
+    const c = await BanAction.apply({
+      guild: mockGuild as any,
+      targetUser: mockUser as any,
+      moderator: mockMod as any,
+      reason: 'Rule breach'
+    });
+
+    expect(c.caseNumber).toBe(42);
+    expect(mockUser.send).toHaveBeenCalled();
+    expect(mockGuild.members.ban).toHaveBeenCalledWith('u-1', expect.anything());
+  });
+
+  it('BanAction.undo removes ban and records unban case', async () => {
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', bans: { remove: vi.fn().mockResolvedValue({}) } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 43 });
+
+    const c = await BanAction.undo({
+      guild: mockGuild as any,
+      targetId: 'u-1',
+      moderator: mockMod as any,
+      reason: 'Appeal approved'
+    });
+
+    expect(c.caseNumber).toBe(43);
+    expect(mockGuild.bans.remove).toHaveBeenCalled();
+  });
+
+  it('BanAction.undoRaw delegates to the Discord REST port (which owns 10026 handling)', async () => {
+    await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('BanAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('removeBan', err);
+
+    await expect(BanAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
+  });
+
+  it('MuteAction.apply applies timeout and creates moderation case', async () => {
+    const mockMember = { id: 'u-1', user: { id: 'u-1', send: vi.fn().mockResolvedValue({}) }, send: vi.fn().mockResolvedValue({}), timeout: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', name: 'TestGuild' };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 1, caseNumber: 10, expiresAt: new Date() });
+
+    const c = await MuteAction.apply({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Spamming',
+      durationMs: 600000
+    });
+
+    expect(c.caseNumber).toBe(10);
+    expect(mockMember.timeout).toHaveBeenCalledWith(600000, expect.anything());
+  });
+
+  it('MuteAction.undo removes timeout and records unmute case', async () => {
+    const mockMember = { id: 'u-1', timeout: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1' };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 1, caseNumber: 11 });
+
+    const c = await MuteAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Time served'
+    });
+
+    expect(c.caseNumber).toBe(11);
+    expect(mockMember.timeout).toHaveBeenCalledWith(null, expect.anything());
+  });
+
+  it('MuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
+    const mockMember = { id: 'u-1', timeout: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1' };
+    (container.db.moderation.getActiveCases as any).mockResolvedValueOnce([
+      { id: 55, caseNumber: 5, action: 'mute' }
+    ]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 2, caseNumber: 12 });
+
+    await MuteAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Time served'
+    });
+
+    expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'mute');
+    expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([55]);
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-55');
+  });
+
+  it('MuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
+    await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('MuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearTimeout', err);
+
+    await expect(MuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
+  });
+
+  it('VoiceMuteAction.apply still records the case when the target is not in voice', async () => {
+    const disconnect = vi.fn().mockResolvedValue({});
+    const mockMember = { id: 'u-1', voice: { channel: null, disconnect } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 9, caseNumber: 19 });
+
+    await VoiceMuteAction.apply({
+      guild: { id: 'g-1' } as any,
+      targetMember: mockMember as any,
+      moderator: { id: 'm-1' } as any,
+      reason: 'Raiding',
+      durationMs: 60_000
+    });
+
+    expect(disconnect).not.toHaveBeenCalled();
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u-1', action: 'voice_mute' })
+    );
+    expect(container.invalidation.invalidate).toHaveBeenCalledWith('lumi:mod:g-1:voicemute:u-1');
+  });
+
+  it('VoiceMuteAction.apply evicts a connected target without server-muting them', async () => {
+    const disconnect = vi.fn().mockResolvedValue({});
+    const setMute = vi.fn().mockResolvedValue({});
+    const mockMember = { id: 'u-1', voice: { channel: { id: 'vc-1' }, disconnect, setMute } };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 9, caseNumber: 19 });
+
+    await VoiceMuteAction.apply({
+      guild: { id: 'g-1' } as any,
+      targetMember: mockMember as any,
+      moderator: { id: 'm-1' } as any,
+      reason: 'Raiding',
+      durationMs: 60_000
+    });
+
+    expect(disconnect).toHaveBeenCalled();
+    expect(setMute).not.toHaveBeenCalled();
+  });
+
+  it('VoiceMuteAction.undo closes the original active case and cancels its pending auto-lift job', async () => {
+    const mockMember = {
+      id: 'u-1',
+      voice: { channel: { id: 'vc-1' }, setMute: vi.fn().mockResolvedValue({}) }
+    };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1' };
+    (container.db.moderation.getActiveCases as any).mockResolvedValueOnce([
+      { id: 77, caseNumber: 7, action: 'voice_mute' }
+    ]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 3, caseNumber: 13 });
+
+    await VoiceMuteAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Time served'
+    });
+
+    expect(mockMember.voice.setMute).toHaveBeenCalledWith(false, expect.anything());
+    expect(container.db.moderation.getActiveCases).toHaveBeenCalledWith('g-1', 'u-1', 'voice_mute');
+    expect(container.db.moderation.liftModerationCases).toHaveBeenCalledWith([77]);
+    expect(container.tasks.delete).toHaveBeenCalledWith('mod-lift-77');
+  });
+
+  it('VoiceMuteAction.undoRaw delegates to the Discord REST port (which owns 10007 handling)', async () => {
+    await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).resolves.toBeUndefined();
+  });
+
+  it('VoiceMuteAction.undoRaw propagates 50013 (missing permissions) from the port instead of swallowing it', async () => {
+    const err = Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    discordRest.failNextWith('clearVoiceMute', err);
+
+    await expect(VoiceMuteAction.undoRaw('g-1', 'u-1', 'Reason')).rejects.toThrow('Missing Permissions');
+  });
+
+  it('KickAction.apply sends DM, kicks member, and creates case', async () => {
+    const mockMember = { id: 'u-1', send: vi.fn().mockResolvedValue({}), kick: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', name: 'TestGuild' };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 12 });
+
+    const c = await KickAction.apply({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Insubordination'
+    });
+
+    expect(c.caseNumber).toBe(12);
+    expect(mockMember.kick).toHaveBeenCalled();
+  });
+
+  it('WarnAction.apply creates warn case and increments count', async () => {
+    const mockMember = { id: 'u-1', send: vi.fn().mockResolvedValue({}) };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', name: 'TestGuild' };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 13 });
+    (container.valkey.exists as any).mockResolvedValue(0);
+
+    const result = await WarnAction.apply({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Warning 1'
+    });
+
+    expect(result.caseRecord.caseNumber).toBe(13);
+  });
+
+  it('QuarantineAction.apply assigns quarantine role and saves state', async () => {
+    (container.db.config.getModuleConfig as any).mockResolvedValue('q-role');
+    (container.valkey.exists as any).mockResolvedValue(0);
+    const mockMember = {
+      id: 'u-1',
+      send: vi.fn().mockResolvedValue({}),
+      roles: {
+        cache: {
+          filter: vi.fn().mockReturnValue([{ id: 'r1' }])
+        },
+        set: vi.fn().mockResolvedValue({})
+      }
+    };
+    const mockMod = { id: 'm-1' };
+    const mockGuild = { id: 'g-1', name: 'TestGuild' };
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ id: 2, caseNumber: 14, expiresAt: null });
+
+    const c = await QuarantineAction.apply({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Suspicious activity'
+    });
+
+    expect(c.caseNumber).toBe(14);
+    expect(mockMember.roles.set).toHaveBeenCalledWith(['q-role'], expect.anything());
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'quarantine' })
+    );
+  });
+
+  it('QuarantineAction.undo restores original roles', async () => {
+    (container.valkey.get as any).mockResolvedValue(JSON.stringify(['r1', 'r2']));
+    const mockMember = {
+      id: 'u-1',
+      roles: {
+        set: vi.fn().mockResolvedValue({})
+      }
+    };
+
+    (container.db.moderation.getActiveCases as any).mockResolvedValue([{ id: 'c-1' }]);
+    (container.db.moderation.createModerationCase as any).mockResolvedValue({ caseNumber: 15 });
+
+    const mockMod = { id: 'm-1' };
+    const mockGuild = {
+      id: 'g-1',
+      roles: {
+        cache: new Map([['r1', { id: 'r1' }], ['r2', { id: 'r2' }]])
+      }
+    };
+
+    const c = await QuarantineAction.undo({
+      guild: mockGuild as any,
+      targetMember: mockMember as any,
+      moderator: mockMod as any,
+      reason: 'Cleared'
+    });
+
+    expect(c.caseNumber).toBe(15);
+    expect(mockMember.roles.set).toHaveBeenCalledWith(['r1', 'r2'], expect.anything());
+    expect(container.db.moderation.createModerationCase).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'unquarantine' })
+    );
+  });
+});

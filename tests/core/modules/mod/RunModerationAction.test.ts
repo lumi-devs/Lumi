@@ -1,0 +1,128 @@
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { container } from "#src/lib/Services.js";
+import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+
+Object.assign(container, {
+  logger: {
+    warn: vi.fn(),
+  },
+});
+
+vi.mock("#lib/discord/ModLog.js", () => ({
+  logToChannel: vi.fn(),
+}));
+
+vi.mock("#src/modules/mod/services/Helpers.js", () => ({
+  scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("#src/modules/mod/services/AppealDm.js", () => ({
+  sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { logToChannel } from "#src/lib/discord/ModLog.js";
+import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";
+import { sendAppealLinkDm } from "#src/modules/mod/services/AppealDm.js";
+
+describe("runModerationAction", () => {
+  const mockCase: any = { id: 1, caseNumber: 5, expiresAt: null };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (logToChannel as any).mockResolvedValue(undefined);
+  });
+
+  it("returns the case from perform() when every best-effort step succeeds", async () => {
+    const result = await runModerationAction({
+      perform: async () => mockCase,
+      log: (c) => ({
+        guildId: "g-1",
+        label: "Test",
+        color: 0,
+        targetId: "u-1",
+        moderator: { id: "m-1" } as any,
+        reason: "reason",
+        caseNumber: c.caseNumber,
+      }),
+    });
+
+    expect(result).toBe(mockCase);
+    expect(logToChannel).toHaveBeenCalledWith(
+      container,
+      "g-1",
+      "Test",
+      0,
+      "u-1",
+      { id: "m-1" },
+      "reason",
+      5,
+      undefined,
+    );
+  });
+
+  it("still returns the case when logToChannel rejects", async () => {
+    (logToChannel as any).mockRejectedValue(new Error("log channel down"));
+
+    const result = await runModerationAction({
+      perform: async () => mockCase,
+      log: (c) => ({
+        guildId: "g-1",
+        label: "Test",
+        color: 0,
+        targetId: "u-1",
+        moderator: { id: "m-1" } as any,
+        reason: "reason",
+        caseNumber: c.caseNumber,
+      }),
+    });
+
+    expect(result).toBe(mockCase);
+    expect(container.logger.warn).toHaveBeenCalled();
+  });
+
+  it("propagates a failure from perform() without running the tail steps", async () => {
+    await expect(
+      runModerationAction({
+        perform: async () => {
+          throw new Error("case write failed");
+        },
+        log: () => ({
+          guildId: "g-1",
+          label: "Test",
+          color: 0,
+          targetId: "u-1",
+          moderator: { id: "m-1" } as any,
+          reason: "reason",
+          caseNumber: 1,
+        }),
+      }),
+    ).rejects.toThrow("case write failed");
+
+    expect(logToChannel).not.toHaveBeenCalled();
+    expect(scheduleCaseLift).not.toHaveBeenCalled();
+  });
+
+  it("schedules the lift job and sends the appeal DM when requested", async () => {
+    await runModerationAction({
+      perform: async () => mockCase,
+      scheduleLift: true,
+      log: (c) => ({
+        guildId: "g-1",
+        label: "Test",
+        color: 0,
+        targetId: "u-1",
+        moderator: { id: "m-1" } as any,
+        reason: "reason",
+        caseNumber: c.caseNumber,
+      }),
+      appealDm: () => ({ targetUser: { id: "u-1" } as any, guild: { id: "g-1" } as any }),
+    });
+
+    expect(scheduleCaseLift).toHaveBeenCalledWith(container, mockCase);
+    expect(sendAppealLinkDm).toHaveBeenCalledWith(
+      { id: "u-1" },
+      { id: "g-1" },
+      mockCase,
+    );
+  });
+});

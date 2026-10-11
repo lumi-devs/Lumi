@@ -1,0 +1,314 @@
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { container } from "#src/lib/Services.js";
+import {
+  countMenus,
+  deleteMenu,
+  findMenuByMessage,
+  getMenu,
+  listMenus,
+  normalizeMenuId,
+  planToggle,
+  resolveMenuId,
+  saveMenu,
+  toggleBlockedMessage,
+  trackMenuMessage,
+  validateMenuDraft,
+  validateOptionDraft,
+  type ReactionRoleMenu,
+} from "#src/modules/reactionroles/data/Reactionroles.js";
+import { ReactionRoleRepository } from "#src/modules/reactionroles/data/ReactionRoleRepository.js";
+import { createMockPrismaClient } from "../../mocks/Prisma.js";
+
+function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {
+  const now = Date.now();
+  return {
+    id: "game-night",
+    guildId: "guild-1",
+    title: "Game Night",
+    description: "Pick your squad.",
+    color: "#5865F2",
+    mode: "buttons",
+    exclusive: false,
+    maxRoles: 2,
+    channelId: null,
+    messageIds: [],
+    options: [
+      {
+        id: "valorant",
+        label: "Valorant",
+        emoji: "🔫",
+        description: null,
+        roleId: "111111111111111111",
+        requiredRoleId: null,
+      },
+      {
+        id: "minecraft",
+        label: "Minecraft",
+        emoji: "⛏️",
+        description: null,
+        roleId: "222222222222222222",
+        requiredRoleId: null,
+      },
+      {
+        id: "vip-lounge",
+        label: "VIP Lounge",
+        emoji: "👑",
+        description: null,
+        roleId: "333333333333333333",
+        requiredRoleId: "444444444444444444",
+      },
+    ],
+    richContent: { blocks: [] },
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+function installMockDb() {
+  const prisma = createMockPrismaClient();
+  const mockLogger = {
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    info: vi.fn(),
+  };
+  const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
+  (container as any).db = {
+    ...mockDb,
+    reactionRoles: new ReactionRoleRepository(
+      prisma as never,
+      {} as never,
+      mockLogger as never,
+      mockDb as never,
+    ),
+  } as any;
+  return prisma;
+}
+
+describe("reactionroles validation", () => {
+  it("accepts a well-formed menu draft", () => {
+    expect(
+      validateMenuDraft({ title: "Game Night", mode: "buttons", maxRoles: 2 }),
+    ).toEqual([]);
+  });
+
+  it("rejects blank titles, bad colors, bad modes, and out-of-range maxRoles", () => {
+    expect(validateMenuDraft({ title: "  ", mode: "buttons" }).length).toBeGreaterThan(0);
+    expect(
+      validateMenuDraft({ title: "Ok", mode: "carrier-pigeon" }).some(
+        (e) => e.field === "mode",
+      ),
+    ).toBe(true);
+    expect(
+      validateMenuDraft({ title: "Ok", mode: "buttons", color: "blurple" }).some(
+        (e) => e.field === "color",
+      ),
+    ).toBe(true);
+    expect(
+      validateMenuDraft({ title: "Ok", mode: "buttons", maxRoles: 99 }).some(
+        (e) => e.field === "maxRoles",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects bad option drafts and self-referential gates", () => {
+    expect(
+      validateOptionDraft({ label: "", roleId: "111111111111111111" }).some(
+        (e) => e.field === "label",
+      ),
+    ).toBe(true);
+    expect(
+      validateOptionDraft({ label: "Ok", roleId: "not-a-snowflake" }).some(
+        (e) => e.field === "roleId",
+      ),
+    ).toBe(true);
+    expect(
+      validateOptionDraft({
+        label: "Ok",
+        roleId: "111111111111111111",
+        requiredRoleId: "111111111111111111",
+      }).some((e) => e.field === "requiredRoleId"),
+    ).toBe(true);
+  });
+
+  it("normalizes titles into slug ids", () => {
+    expect(normalizeMenuId("Game Night!!")).toBe("game-night");
+    expect(normalizeMenuId("!!!")).toBe("roles");
+  });
+});
+
+describe("reactionroles planToggle", () => {
+  it("toggles off a role the member already holds", () => {
+    const plan = planToggle({
+      menu: makeMenu(),
+      optionId: "valorant",
+      memberRoleIds: ["111111111111111111"],
+    });
+    expect(plan).toEqual({ outcome: "remove", roleId: "111111111111111111" });
+  });
+
+  it("adds a role when under the max", () => {
+    const plan = planToggle({
+      menu: makeMenu(),
+      optionId: "minecraft",
+      memberRoleIds: ["111111111111111111"],
+    });
+    expect(plan).toEqual({
+      outcome: "add",
+      roleId: "222222222222222222",
+      removeRoleIds: [],
+    });
+  });
+
+  it("blocks adds past maxRoles", () => {
+    const menu = makeMenu({ maxRoles: 1 });
+    const plan = planToggle({
+      menu,
+      optionId: "minecraft",
+      memberRoleIds: ["111111111111111111"],
+    });
+    expect(plan.outcome).toBe("blocked");
+    expect((plan as { reason: string }).reason).toBe("maxRolesReached");
+    expect(toggleBlockedMessage(menu, plan as never)).toContain("1 role");
+  });
+
+  it("swaps other menu roles when exclusive", () => {
+    const menu = makeMenu({ exclusive: true, maxRoles: 1 });
+    const plan = planToggle({
+      menu,
+      optionId: "minecraft",
+      memberRoleIds: ["111111111111111111", "999999999999999999"],
+    });
+    expect(plan).toEqual({
+      outcome: "add",
+      roleId: "222222222222222222",
+      removeRoleIds: ["111111111111111111"],
+    });
+  });
+
+  it("blocks gated options without the required role", () => {
+    const menu = makeMenu();
+    const blocked = planToggle({
+      menu,
+      optionId: "vip-lounge",
+      memberRoleIds: [],
+    });
+    expect(blocked.outcome).toBe("blocked");
+    expect((blocked as { reason: string }).reason).toBe("missingRequiredRole");
+    expect(toggleBlockedMessage(menu, blocked as never)).toContain("444444444444444444");
+  });
+
+  it("allows gated options with the required role", () => {
+    const plan = planToggle({
+      menu: makeMenu(),
+      optionId: "vip-lounge",
+      memberRoleIds: ["444444444444444444"],
+    });
+    expect(plan.outcome).toBe("add");
+  });
+
+  it("blocks unknown options", () => {
+    const menu = makeMenu();
+    const plan = planToggle({ menu, optionId: "nope", memberRoleIds: [] });
+    expect(plan.outcome).toBe("blocked");
+    expect(toggleBlockedMessage(menu, plan as never)).toContain("no longer exists");
+  });
+});
+
+describe("reactionroles menu CRUD", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    installMockDb();
+    container.logger = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      info: vi.fn(),
+    } as any;
+  });
+
+  it("saves, lists, and fetches menus per guild", async () => {
+    await saveMenu(container, makeMenu());
+    await saveMenu(container, makeMenu({ id: "other", guildId: "guild-2", title: "Other" }));
+
+    expect(await countMenus(container, "guild-1")).toBe(1);
+    expect((await listMenus(container, "guild-1")).map((m) => m.id)).toEqual(["game-night"]);
+    expect((await getMenu(container, "guild-1", "game-night"))?.title).toBe("Game Night");
+    expect(await getMenu(container, "guild-1", "missing")).toBeNull();
+  });
+
+  it("resolves unique menu ids", async () => {
+    await saveMenu(container, makeMenu());
+    expect(await resolveMenuId(container, "guild-1", "Game Night")).toBe("game-night-2");
+    expect(await resolveMenuId(container, "guild-1", "Fresh Title")).toBe("fresh-title");
+  });
+
+  it("tracks posted messages and finds menus by message", async () => {
+    const menu = await saveMenu(container, makeMenu());
+    const tracked = await trackMenuMessage(container, menu, "channel-9", "message-7");
+    expect(tracked.messageIds).toContain("message-7");
+
+    const found = await findMenuByMessage(container, "guild-1", "message-7");
+    expect(found?.id).toBe("game-night");
+    expect(await findMenuByMessage(container, "guild-1", "unknown-message")).toBeNull();
+  });
+
+  it("deletes menus", async () => {
+    const menu = await saveMenu(container, makeMenu());
+    await trackMenuMessage(container, menu, "channel-9", "message-7");
+    expect(await deleteMenu(container, "guild-1", "game-night")).toBe(true);
+    expect(await deleteMenu(container, "guild-1", "game-night")).toBe(false);
+    expect(await countMenus(container, "guild-1")).toBe(0);
+  });
+
+  it("does not let one guild read another guild's menu by id", async () => {
+    await saveMenu(container, makeMenu());
+    expect(await getMenu(container, "guild-2", "game-night")).toBeNull();
+  });
+
+  it("round-trips option add/edit/remove through saveMenu's full-replace semantics", async () => {
+    const menu = await saveMenu(container, makeMenu({ options: [] }));
+    expect(menu.options).toEqual([]);
+
+    const withOption = await saveMenu(container, {
+      ...menu,
+      options: [
+        {
+          id: "valorant",
+          label: "Valorant",
+          emoji: "🔫",
+          description: null,
+          roleId: "111111111111111111",
+          requiredRoleId: null,
+        },
+      ],
+    });
+    expect(withOption.options.map((o) => o.id)).toEqual(["valorant"]);
+
+    const edited = await saveMenu(container, {
+      ...withOption,
+      options: [
+        {
+          ...withOption.options[0]!,
+          label: "Valorant (Competitive)",
+          roleId: "222222222222222222",
+        },
+      ],
+    });
+    expect(edited.options).toEqual([
+      {
+        id: "valorant",
+        label: "Valorant (Competitive)",
+        emoji: "🔫",
+        description: null,
+        roleId: "222222222222222222",
+        requiredRoleId: null,
+      },
+    ]);
+
+    const removed = await saveMenu(container, { ...edited, options: [] });
+    expect(removed.options).toEqual([]);
+    expect((await getMenu(container, "guild-1", "game-night"))?.options).toEqual([]);
+  });
+});

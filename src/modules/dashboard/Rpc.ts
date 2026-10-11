@@ -1,0 +1,490 @@
+import { container } from "#src/lib/Services.js";
+import {
+  CodedRpcError,
+  RpcFailureCodes,
+  dashboardRpc,
+} from "#src/contracts/rpc/Index.ts";
+import type { DashboardModuleSummaryView } from "#src/contracts/Views.js";
+import { ChannelType } from "discord.js";
+import type { ModuleRecord } from "#src/lib/module-system/ModuleStore.js";
+import { getUtility } from "#src/lib/module-system/Utility.js";
+import { implementRpc, requireGuildManager } from "#src/lib/rpc/Implement.js";
+import {
+  fetchBotMemberRest,
+  fetchGuildChannelsRest,
+  fetchGuildMembersSampleRest,
+  fetchGuildRest,
+  fetchGuildRolesRest,
+  guildBannerUrl,
+  guildIconUrl,
+} from "#src/lib/rpc/DiscordRestLookup.js";
+import { paginate, resolvePageSize } from "#src/lib/rpc/Validation.js";
+import { publishDashboardEvent } from "#src/lib/rpc/DashboardEvents.js";
+import type { APIRole } from "discord-api-types/v10";
+
+const GuildSummariesMax = 200;
+const GuildConfigSetManyMax = 50;
+const MemberSampleSize = 200;
+
+const PickableChannelTypes = new Set<ChannelType>([
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.GuildVoice,
+  ChannelType.GuildStageVoice,
+  ChannelType.GuildForum,
+  ChannelType.GuildMedia,
+]);
+
+function highestRoleId(
+  roleIds: readonly string[],
+  rolesById: ReadonlyMap<string, APIRole>,
+): string | undefined {
+  let highest: APIRole | undefined;
+  for (const id of roleIds) {
+    const role = rolesById.get(id);
+    if (!role) continue;
+    if (
+      !highest ||
+      role.position > highest.position ||
+      (role.position === highest.position && BigInt(role.id) < BigInt(highest.id))
+    ) {
+      highest = role;
+    }
+  }
+  return highest?.id;
+}
+
+export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
+  "guild.shell.get": async ({ guildId }) => {
+    const modules = container.moduleStore.loaded();
+    const [settings, enabled, apiGuild] = await Promise.all([
+      container.db.config.getGuildSettings(guildId),
+      container.db.modules.areModulesEnabled(
+        guildId,
+        modules.map((m) => m.meta.name),
+      ),
+      fetchGuildRest(guildId),
+    ]);
+    if (!apiGuild) {
+      throw new CodedRpcError(
+        RpcFailureCodes.GuildNotFound,
+        "Guild not found in bot cache",
+      );
+    }
+    return {
+      name: apiGuild.name,
+      icon: guildIconUrl(apiGuild),
+      banner: guildBannerUrl(apiGuild),
+      memberCount: apiGuild.approximate_member_count ?? 0,
+      settings,
+      modules: modules.map((m) =>
+        moduleSummary(m, enabled.get(m.meta.name) ?? true),
+      ),
+    };
+  },
+
+  "guild.module.get": async ({ guildId, input }) => {
+    const module = container.moduleStore
+      .loaded()
+      .find((m) => m.meta.name === input.module);
+    if (!module) return { module: null };
+    const [enabled, stored] = await Promise.all([
+      container.db.modules.areModulesEnabled(guildId, [module.meta.name]),
+      container.db.config.getAllModuleConfig(guildId, module.meta.name),
+    ]);
+    const config: Record<string, unknown> = {};
+    for (const field of module.meta.configFields ?? []) {
+      config[field.key] = stored[field.key] ?? field.default ?? null;
+    }
+    return {
+      module: {
+        ...moduleSummary(module, enabled.get(module.meta.name) ?? true),
+        config,
+      },
+    };
+  },
+
+  "guild.entities.get": async ({ guildId }) => {
+    const [apiRoles, apiChannels, botMember, memberSample] = await Promise.all([
+      fetchGuildRolesRest(guildId),
+      fetchGuildChannelsRest(guildId),
+      fetchBotMemberRest(guildId),
+      fetchGuildMembersSampleRest(guildId, MemberSampleSize),
+    ]);
+
+    const rolesById = new Map((apiRoles ?? []).map((r) => [r.id, r]));
+    const botRoleId = highestRoleId(botMember?.roles ?? [], rolesById);
+
+    const roles = (apiRoles ?? [])
+      .filter((r) => r.id !== guildId)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        color: r.color,
+        position: r.position,
+        permissions: r.permissions,
+        isBotRole: r.id === botRoleId,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const channels = (apiChannels ?? [])
+      .filter((c) => PickableChannelTypes.has(c.type))
+      .map((c) => ({ id: c.id, name: c.name ?? "", type: c.type }));
+
+    const members: { id: string; username: string; displayName: string }[] = [];
+    for (const m of memberSample ?? []) {
+      if (!m.user || m.user.bot) continue;
+      members.push({
+        id: m.user.id,
+        username: m.user.username,
+        displayName: m.nick ?? m.user.global_name ?? m.user.username,
+      });
+      if (members.length >= MemberSampleSize) break;
+    }
+    members.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    return { roles, channels, members };
+  },
+
+  "guild.summaries.list": async ({ actorId, input }) => {
+    const allowed = await Promise.all(
+      input.guildIds.slice(0, GuildSummariesMax).map((guildId) =>
+        requireGuildManager(guildId, actorId).then(
+          () => guildId,
+          () => null,
+        ),
+      ),
+    );
+
+    const resolved = await Promise.all(
+      allowed.map(async (guildId) => {
+        if (!guildId) return null;
+        const guild = await fetchGuildRest(guildId);
+        if (!guild) return null;
+        return {
+          guildId,
+          icon: guildIconUrl(guild),
+          banner: guildBannerUrl(guild),
+          memberCount: guild.approximate_member_count ?? 0,
+        };
+      }),
+    );
+    const summaries = resolved.filter(
+      (s): s is NonNullable<typeof s> => s !== null,
+    );
+
+    return { summaries };
+  },
+
+  "guild.module.toggle": async ({ guildId, actorId, input }) => {
+    if (input.moduleName === "core") {
+      throw new Error("Cannot disable the core module");
+    }
+    if (!container.moduleStore.get(input.moduleName)) {
+      throw new Error(`No module named \`${input.moduleName}\`.`);
+    }
+    await container.db.modules.setModuleGuildEnabled(
+      guildId,
+      input.moduleName,
+      input.enabled,
+    );
+    await publishDashboardEvent(container, {
+      type: "module.stateChanged",
+      guildId,
+      moduleName: input.moduleName,
+      enabled: input.enabled,
+      actorId,
+      at: Date.now(),
+    });
+    return { success: true, enabled: input.enabled };
+  },
+
+  "guild.config.set": async ({ guildId, actorId, input }) => {
+    const value = await applyConfigSet(
+      guildId,
+      input.moduleName,
+      input.key,
+      input.value,
+      actorId,
+    );
+    return { success: true, key: input.key, value };
+  },
+
+  "guild.config.setMany": async ({ guildId, actorId, input }) => {
+    const { values } = input;
+    if (typeof values !== "object" || values === null || Array.isArray(values)) {
+      throw badPayload("values must be an object");
+    }
+    const entries = Object.entries(values);
+    if (entries.length > GuildConfigSetManyMax) {
+      throw badPayload(`at most ${GuildConfigSetManyMax} values per call`);
+    }
+    if (entries.some(([key]) => key.length === 0)) {
+      throw badPayload("config keys must not be empty");
+    }
+
+    const updated: Record<string, unknown> = {};
+    for (const [key, value] of entries) {
+      updated[key] = await applyConfigSet(
+        guildId,
+        input.moduleName,
+        key,
+        value,
+        actorId,
+      );
+    }
+    return { success: true, updated };
+  },
+
+  "guild.settings.set": async ({ guildId, input }) => {
+    const tx = await container.db.transaction(guildId);
+    try {
+      tx.write(input);
+      await tx.submit();
+    } finally {
+      tx.dispose();
+    }
+    const settings = await container.db.config.getGuildSettings(guildId);
+    return { success: true, settings };
+  },
+
+  "guild.audit.list": async ({ guildId, input }) => {
+    const { pageSize, take } = resolvePageSize(input);
+    const { entries, total, nextCursor } = await container.db.audit.listAuditLogs({
+      guildId,
+      userId: input.userId,
+      action: input.action,
+      platform: input.platform,
+      take,
+      cursor: input.cursor,
+    });
+    return {
+      entries: entries.map((e) => ({
+        id: e.id,
+        guildId: e.guildId,
+        userId: e.userId,
+        action: e.action,
+        platform: e.platform,
+        details: e.details,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total,
+      pageSize,
+      nextCursor,
+    };
+  },
+
+  "guild.history.list": async ({ guildId, input }) => {
+    const { pageSize, take } = resolvePageSize(input);
+    const { entries, total, nextCursor } =
+      await container.db.configHistory.listGuildConfigHistory(guildId, {
+        moduleName: input.moduleName,
+        key: input.key,
+        actorId: input.actorId,
+        take,
+        cursor: input.cursor,
+      });
+    return {
+      entries: entries.map((e) => ({
+        id: e.id,
+        moduleName: e.moduleName,
+        key: e.key,
+        oldValue: e.oldValue,
+        newValue: e.newValue,
+        actorId: e.actorId,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      total,
+      pageSize,
+      nextCursor,
+    };
+  },
+
+  "guild.history.rollback": async ({ guildId, actorId, input }) => {
+    const entry = await container.db.configHistory.getConfigHistoryEntry(
+      input.entryId,
+    );
+    if (!entry || entry.guildId !== guildId) {
+      throw new Error(`History entry ${input.entryId} not found`);
+    }
+
+    if (entry.oldValue === null || entry.oldValue === undefined) {
+      await container.db.config.deleteModuleConfigKey(
+        guildId,
+        entry.moduleName,
+        entry.key,
+      );
+      return {
+        success: true,
+        moduleName: entry.moduleName,
+        key: entry.key,
+        value: null,
+      };
+    }
+
+    const { coerced } = await getUtility("config").setConfig(
+      container,
+      guildId,
+      entry.moduleName,
+      entry.key,
+      toRawConfigValue(entry.oldValue),
+      actorId,
+    );
+    return {
+      success: true,
+      moduleName: entry.moduleName,
+      key: entry.key,
+      value: coerced,
+    };
+  },
+
+  "guild.overrides.list": async ({ guildId, input }) => {
+    const overrides =
+      await container.db.configOverrides.listGuildConfigOverrides(
+        guildId,
+        input.moduleName,
+      );
+    return {
+      overrides: overrides.map((o) => ({
+        id: o.id,
+        moduleName: o.moduleName,
+        key: o.key,
+        modelType: o.modelType,
+        modelId: o.modelId,
+        value: o.value,
+      })),
+    };
+  },
+
+  "guild.overrides.set": async ({ guildId, input }) => {
+    const { moduleName, key, modelType, modelId, value } = input;
+    if (value === null || value === undefined) {
+      const deleted = await container.db.configOverrides.deleteConfigOverride({
+        guildId,
+        moduleName,
+        key,
+        modelType,
+        modelId,
+      });
+      return { success: true, deleted };
+    }
+
+    await container.db.configOverrides.setConfigOverride({
+      guildId,
+      moduleName,
+      key,
+      modelType,
+      modelId,
+      value,
+    });
+    return { success: true, deleted: false };
+  },
+
+  "guild.moduleData.list": async ({ guildId, input }) => {
+    const { page, pageSize, skip, take } = paginate(input);
+    const { entries, total } = await container.db.guildKV.listGuildModuleData(
+      guildId,
+      {
+        moduleName: input.moduleName,
+        targetId: input.targetId,
+        key: input.key,
+        skip,
+        take,
+      },
+    );
+    return { entries, total, page, pageSize };
+  },
+});
+
+function badPayload(detail: string): CodedRpcError {
+  return new CodedRpcError(RpcFailureCodes.BadRequest, `Bad payload: ${detail}`);
+}
+
+function moduleSummary(
+  module: ModuleRecord,
+  enabled: boolean,
+): DashboardModuleSummaryView {
+  const { meta } = module;
+  return {
+    name: meta.name,
+    displayName: meta.displayName,
+    emoji: meta.emoji,
+    description: meta.description,
+    short: meta.short,
+    endUserDataStatement: meta.endUserDataStatement,
+    version: meta.version,
+    conflicts: meta.conflicts ?? [],
+    dependencies: meta.dependencies ?? [],
+    enabled,
+    configFields: meta.configFields || [],
+    isAddon: container.moduleStore.isAddonModule(module),
+    category: meta.category ?? "System",
+    dashboardHref: meta.dashboardHref ?? null,
+  };
+}
+
+async function applyConfigSet(
+  guildId: string,
+  moduleName: string,
+  key: string,
+  value: unknown,
+  actorId: string,
+): Promise<unknown> {
+  if (value === null || value === undefined || value === "") {
+    await container.db.config.deleteModuleConfigKey(guildId, moduleName, key);
+    await publishDashboardEvent(container, {
+      type: "config.changed",
+      guildId,
+      moduleName,
+      key,
+      actorId,
+      at: Date.now(),
+    });
+    return null;
+  }
+
+  const { coerced } = await getUtility("config").setConfig(
+    container,
+    guildId,
+    moduleName,
+    key,
+    toRawConfigValue(value),
+    actorId,
+  );
+  await publishDashboardEvent(container, {
+    type: "config.changed",
+    guildId,
+    moduleName,
+    key,
+    actorId,
+    at: Date.now(),
+  });
+  return coerced;
+}
+
+function toRawConfigValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    if (value.every(isPrimitiveConfigValue)) {
+      return value.map((entry) => String(entry));
+    }
+    return value;
+  }
+
+  if (value !== null && typeof value === "object") {
+    return value;
+  }
+  if (!isPrimitiveConfigValue(value)) {
+    throw new TypeError(
+      `Unsupported config value of type ${value === null ? "null" : typeof value}; expected string, number, boolean, array or object.`,
+    );
+  }
+  return value;
+}
+
+function isPrimitiveConfigValue(value: unknown): boolean {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}

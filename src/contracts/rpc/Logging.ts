@@ -1,0 +1,40 @@
+import { z } from "zod";
+import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
+import { SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+
+export interface LogClaimView {
+  channelId: string;
+  authorId: string;
+  messageId: string;
+  claimedAt: string;
+}
+
+export const LogClaimOutcomes = ["confirmed", "dismissed"] as const;
+
+export type LogClaimOutcome = (typeof LogClaimOutcomes)[number];
+
+export const loggingRpc = {
+  "guild.logClaims.list": rpcAction<{ claims: LogClaimView[] }>()({
+    auth: "guildManager",
+    timeoutMs: RpcTimeouts.short,
+    summary: "List channels pending as log destinations.",
+    readOnly: true,
+  }),
+  "guild.logClaims.issue": rpcAction<{ code: string; expiresIn: number }>()({
+    auth: "guildManager",
+    timeoutMs: RpcTimeouts.long,
+    summary: "Issue a one-time code to claim a log channel.",
+  }),
+  "guild.logClaims.dismiss": rpcAction<{
+    success: boolean;
+    dismissed: boolean;
+  }>()({
+    input: z.object({
+      channelId: SnowflakeSchema,
+      outcome: z.enum(LogClaimOutcomes),
+    }),
+    auth: "guildManager",
+    timeoutMs: RpcTimeouts.long,
+    summary: "Resolve a claim as confirmed or dismissed; audit-logged.",
+  }),
+};

@@ -1,0 +1,312 @@
+import { container } from "#src/lib/Services.js";
+import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
+import {
+  CodedRpcError,
+  modRpc,
+  RpcFailureCodes,
+  warnThresholdNeedsDuration,
+} from "#src/contracts/rpc/Index.ts";
+import type { AppealVerifyResult } from "#src/contracts/Views.js";
+import { verifyAppealToken } from "#src/modules/mod/services/AppealToken.js";
+import { liftModerationCaseWithUndo } from "#src/modules/mod/services/CaseLift.js";
+import { implementRpc, requireGuildId } from "#src/lib/rpc/Implement.js";
+import { resolvePageSize } from "#src/lib/rpc/Validation.js";
+import { formatDuration, parseDuration } from "#src/lib/utilities/Time.js";
+import { errorCode } from "#src/lib/utilities/Errors.js";
+import {
+  removeThresholdRule,
+  setThresholdRule,
+} from "#src/modules/mod/data/ThresholdRules.js";
+
+const AppealableCaseActions = new Set(["ban", "mute"]);
+
+function isCaseAction(value: string): value is $Enums.CaseAction {
+  return (Object.values(CaseAction) as string[]).includes(value);
+}
+
+type AppealTokenResolution =
+  | { ok: false; reason: string }
+  | { ok: true; moderationCase: ModerationCase; userId: string };
+
+async function resolveAppealToken(
+  guildId: string,
+  caseId: number,
+  token: string,
+): Promise<AppealTokenResolution> {
+  const payload = verifyAppealToken(token);
+  if (!payload || payload.guildId !== guildId || payload.caseId !== caseId) {
+    return { ok: false, reason: "This appeal link is invalid or has expired." };
+  }
+
+  const moderationCase = await container.db.moderation.getModerationCaseById(caseId);
+  if (
+    !moderationCase ||
+    moderationCase.guildId !== guildId ||
+    moderationCase.userId !== payload.userId
+  ) {
+    return { ok: false, reason: "This appeal link is invalid or has expired." };
+  }
+  if (!AppealableCaseActions.has(moderationCase.action)) {
+    return { ok: false, reason: "This case can't be appealed." };
+  }
+
+  return { ok: true, moderationCase, userId: payload.userId };
+}
+
+async function verifyAppeal(
+  guildId: string,
+  caseId: number,
+  token: string,
+): Promise<AppealVerifyResult> {
+  const resolved = await resolveAppealToken(guildId, caseId, token);
+  if (!resolved.ok) return { valid: false, reason: resolved.reason };
+
+  const existing = await container.db.appeals.findByCaseId(caseId);
+  return {
+    valid: true,
+    case: {
+      caseNumber: resolved.moderationCase.caseNumber,
+      action: resolved.moderationCase.action,
+      reason: resolved.moderationCase.reason,
+      createdAt: resolved.moderationCase.createdAt.toISOString(),
+    },
+    existingStatus: existing?.status ?? null,
+  };
+}
+
+export const modRpcHandlers = implementRpc(modRpc, {
+  "guild.cases.list": async ({ guildId, input }) => {
+    const { pageSize, take } = resolvePageSize(input);
+    const { cases, total, nextCursor } = await container.db.moderation.listCases(guildId, {
+      action: input.action && isCaseAction(input.action) ? input.action : undefined,
+      userId: input.userId,
+      moderatorId: input.moderatorId,
+      take,
+      cursor: input.cursor,
+    });
+    return {
+      cases: cases.map((c) => ({
+        id: c.id,
+        caseNumber: c.caseNumber,
+        userId: c.userId,
+        moderatorId: c.moderatorId,
+        action: c.action,
+        reason: c.reason,
+        duration: c.duration,
+        expiresAt: c.expiresAt?.toISOString() ?? null,
+        active: c.active,
+        createdAt: c.createdAt.toISOString(),
+      })),
+      total,
+      pageSize,
+      nextCursor,
+    };
+  },
+
+  "guild.cases.revoke": async ({ guildId, input }) => {
+    const { caseNumber } = input;
+    const moderationCase = await container.db.moderation.getModerationCase(
+      guildId,
+      caseNumber,
+    );
+    if (!moderationCase) throw new Error(`Case #${caseNumber} not found`);
+    if (!moderationCase.active) {
+      throw new Error(`Case #${caseNumber} is already revoked`);
+    }
+
+    try {
+      await liftModerationCaseWithUndo(
+        moderationCase,
+        `[Revoked via dashboard] Case #${caseNumber}`,
+      );
+    } catch (err) {
+      container.logger.error(
+        `[RPC] Failed to revoke case #${caseNumber} (${guildId}/${moderationCase.userId}):`,
+        err,
+      );
+      const missingPermission = errorCode(err) === 50013;
+      const message = missingPermission
+        ? "Lumi lacks permission to undo this on Discord (needs Ban Members / Moderate Members). Grant it and try again."
+        : "Could not undo this action on Discord. Try again shortly.";
+      throw new CodedRpcError(RpcFailureCodes.HandlerError, message, {
+        retryable: !missingPermission,
+      });
+    }
+
+    return { success: true, caseNumber };
+  },
+
+  "guild.warnThresholds.list": async ({ guildId }) => {
+    const thresholds = await container.db.moderation.getWarnThresholds(guildId);
+    return {
+      thresholds: thresholds.map((t) => ({
+        warnCount: t.warnCount,
+        action: t.action,
+        duration: t.duration !== null ? formatDuration(t.duration * 1000) : null,
+      })),
+    };
+  },
+
+  "guild.warnThresholds.set": async ({ guildId, input }) => {
+    const { warnCount, action, duration } = input;
+    if (action === null) {
+      await removeThresholdRule(container, guildId, warnCount);
+      return { success: true, warnCount, deleted: true };
+    }
+
+    let durationSeconds: number | undefined;
+    if (warnThresholdNeedsDuration(action)) {
+      const trimmed = duration?.trim();
+      if (!trimmed) {
+        throw new CodedRpcError(
+          RpcFailureCodes.BadRequest,
+          `A ${action} threshold needs a duration such as "1h".`,
+        );
+      }
+      const ms = parseDuration(trimmed);
+      if (!ms) {
+        throw new CodedRpcError(
+          RpcFailureCodes.BadRequest,
+          `"${trimmed}" is not a duration Lumi understands - try a value such as "30m", "2h" or "7d".`,
+        );
+      }
+      durationSeconds = Math.round(ms / 1000);
+    }
+
+    await container.db.ensureGuild(guildId);
+    await setThresholdRule(container, guildId, warnCount, action, durationSeconds);
+    return { success: true, warnCount, deleted: false };
+  },
+
+  "guild.modNotes.list": async ({ guildId, input }) => {
+    const notes = await container.db.modNotes.listForUser(guildId, input.userId);
+    return {
+      notes: notes.map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        authorId: n.authorId,
+        message: n.message,
+        createdAt: n.createdAt.toISOString(),
+      })),
+    };
+  },
+
+  "guild.modNotes.add": async ({ guildId, actorId, input }) => {
+    await container.db.ensureGuild(guildId);
+    const note = await container.db.modNotes.create(
+      guildId,
+      input.userId,
+      actorId,
+      input.message,
+    );
+    return {
+      success: true,
+      note: {
+        id: note.id,
+        userId: note.userId,
+        authorId: note.authorId,
+        message: note.message,
+        createdAt: note.createdAt.toISOString(),
+      },
+    };
+  },
+
+  "guild.modNotes.remove": async ({ guildId, input }) => {
+    const deleted = await container.db.modNotes.delete(guildId, input.id);
+    return { success: true, deleted };
+  },
+
+  "guild.appeals.verify": ({ guildId, input }) =>
+    verifyAppeal(requireGuildId(guildId), input.caseId, input.token),
+
+  "guild.appeals.submit": async ({ guildId, input }) => {
+    const verifiedGuildId = requireGuildId(guildId);
+    const resolved = await resolveAppealToken(
+      verifiedGuildId,
+      input.caseId,
+      input.token,
+    );
+    if (!resolved.ok) throw new Error(resolved.reason);
+
+    const existing = await container.db.appeals.findByCaseId(input.caseId);
+    if (existing) {
+      throw new Error("An appeal has already been submitted for this case.");
+    }
+
+    await container.db.ensureGuild(verifiedGuildId);
+    const appeal = await container.db.appeals.create(
+      verifiedGuildId,
+      resolved.userId,
+      input.caseId,
+      input.message,
+    );
+    return {
+      success: true,
+      appeal: {
+        id: appeal.id,
+        status: appeal.status,
+        createdAt: appeal.createdAt.toISOString(),
+      },
+    };
+  },
+
+  "guild.appeals.list": async ({ guildId, input }) => {
+    const { pageSize, take } = resolvePageSize(input);
+    const { appeals, total, nextCursor } = await container.db.appeals.listForGuild(guildId, {
+      status: input.status,
+      take,
+      cursor: input.cursor,
+    });
+    const cases = await container.db.moderation.getModerationCasesByIds(
+      appeals.map((a) => a.caseId),
+    );
+    const caseById = new Map(cases.map((c) => [c.id, c]));
+
+    return {
+      appeals: appeals.map((a) => ({
+        id: a.id,
+        guildId: a.guildId,
+        userId: a.userId,
+        caseId: a.caseId,
+        caseNumber: caseById.get(a.caseId)?.caseNumber ?? 0,
+        action: caseById.get(a.caseId)?.action ?? "unknown",
+        status: a.status,
+        message: a.message,
+        reviewedBy: a.reviewedBy,
+        reviewedAt: a.reviewedAt?.toISOString() ?? null,
+        createdAt: a.createdAt.toISOString(),
+      })),
+      total,
+      pageSize,
+      nextCursor,
+    };
+  },
+
+  "guild.appeals.review": async ({ guildId, actorId, input }) => {
+    const { id, status } = input;
+    const appeal = await container.db.appeals.review(guildId, id, status, actorId);
+    if (!appeal) throw new Error(`Appeal #${id} not found or already reviewed`);
+
+    if (
+      status === "denied_blacklisted" &&
+      !(await container.db.access.isUserBlocklisted(appeal.userId, guildId))
+    ) {
+      await container.db.access.addBlocklistEntry(
+        appeal.userId,
+        actorId,
+        "Appeal denied - blacklisted",
+        guildId,
+      );
+    }
+
+    return {
+      success: true,
+      appeal: {
+        id: appeal.id,
+        status: appeal.status,
+        reviewedBy: appeal.reviewedBy,
+        reviewedAt: appeal.reviewedAt?.toISOString() ?? null,
+      },
+    };
+  },
+});

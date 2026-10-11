@@ -1,0 +1,97 @@
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { container } from "#src/lib/Services.js";
+import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
+import { AfkRepository } from "#src/modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+
+const GUILD_ID = "123456789012345678";
+const OTHER_GUILD_ID = "999999999999999999";
+const OWNER_ID = "111111111111111111";
+const INTRUDER_ID = "333333333333333333";
+
+function mockGuildManagerRest(): void {
+  const fake = new FakeDiscordRestPort();
+  fake.seedGuild({
+    id: GUILD_ID,
+    owner_id: OWNER_ID,
+    roles: [{ id: GUILD_ID, permissions: "0" }],
+  } as any);
+  fake.seedMember(GUILD_ID, { user: { id: OWNER_ID }, roles: [] } as any);
+  fake.seedMember(GUILD_ID, { user: { id: INTRUDER_ID }, roles: [] } as any);
+  (container as any).discordRest = fake;
+}
+
+describe("afk module RPC handlers", () => {
+  let prisma: ReturnType<typeof createMockPrismaClient>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    prisma = createMockPrismaClient();
+
+    container.logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as any;
+
+    mockGuildManagerRest();
+    repositoryCache.clear();
+
+    (container as any).invalidation = { invalidate: vi.fn() };
+
+    const valkey = {
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn(),
+      set: vi.fn(),
+      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
+    };
+    (container as any).valkey = valkey;
+
+    const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
+    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
+    (container as any).db = db;
+
+    registerRpcHandlers();
+  });
+
+  const call = (actorId = OWNER_ID) => {
+    const handler = getRpcHandler("guild.afk.list");
+    if (!handler) throw new Error("guild.afk.list handler not registered");
+    return handler({ id: "req", action: "guild.afk.list", guildId: GUILD_ID, actorId });
+  };
+
+  it("returns this guild's entries with serialized timestamps", async () => {
+    prisma.$seed("afkEntry", [
+      {
+        userId: OWNER_ID,
+        guildId: GUILD_ID,
+        reason: "lunch",
+        since: new Date("2026-01-01T00:00:00.000Z"),
+      },
+      {
+        userId: INTRUDER_ID,
+        guildId: OTHER_GUILD_ID,
+        reason: "AFK",
+        since: new Date(),
+      },
+    ]);
+
+    const res = (await call()) as any;
+
+    expect(res.entries).toEqual([
+      {
+        userId: OWNER_ID,
+        reason: "lunch",
+        since: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("rejects an actor without ManageGuild", async () => {
+    await expect(call(INTRUDER_ID)).rejects.toThrow("Missing ManageGuild permission");
+  });
+});
