@@ -1,5 +1,5 @@
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { SlashCommandBuilder, ChannelType } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder, ChannelType } from "discord.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { buildDmWelcomeCard, loadWelcomeConfig, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, sendWelcomeCard, templateVarsFor } from "#src/modules/welcome/services/Welcome.js";
 
@@ -18,6 +18,7 @@ export const welcomeDef: CommandDef = {
   description: "Preview the welcome, goodbye, or DM greeting card.",
   guildOnly: true,
   requiredPermit: "admin.welcome",
+  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   prefixEnabled: true,
   build: () => {
     const builder = new SlashCommandBuilder().setName("welcome");

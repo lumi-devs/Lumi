@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { getLevelingConfig } from "#src/modules/leveling/Config.js";
@@ -85,6 +85,7 @@ export const levelDef: CommandDef = {
   description: "Adjust member XP and levels (staff only).",
   guildOnly: true,
   requiredPermit: "leveling.admin",
+  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   prefixEnabled: true,
   cooldownMs: 3000,
   build: () => {

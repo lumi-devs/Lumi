@@ -97,9 +97,9 @@ export async function postOrEditVerifyPanel(
   services: Container,
   guildId: string,
   opts: {
-    channelId?: string;
-    createChannel?: boolean;
-    deleteOldMessage?: boolean;
+    channelId?: string | undefined;
+    createChannel?: boolean | undefined;
+    deleteOldMessage?: boolean | undefined;
   },
 ): Promise<VerifyPanelSetResult> {
   const config = await loadVerificationConfig(services, guildId);

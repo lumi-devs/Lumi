@@ -5,10 +5,10 @@ export interface RequestContext {
 
   correlationId: string;
 
-  source?: string;
-  guildId?: string;
-  userId?: string;
-  name?: string;
+  source?: string | undefined;
+  guildId?: string | undefined;
+  userId?: string | undefined;
+  name?: string | undefined;
 }
 
 const als = new AsyncLocalStorage<RequestContext>();

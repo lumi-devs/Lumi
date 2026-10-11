@@ -100,12 +100,12 @@ const reactionRolesUtility = defineUtility({
     guildId: string,
     input: {
       title: string;
-      description?: string | null;
-      color?: string | null;
-      mode?: ReactionRoleMode;
-      exclusive?: boolean;
-      maxRoles?: number;
-      richContent?: MessageDocumentV2;
+      description?: string | null | undefined;
+      color?: string | null | undefined;
+      mode?: ReactionRoleMode | undefined;
+      exclusive?: boolean | undefined;
+      maxRoles?: number | undefined;
+      richContent?: MessageDocumentV2 | undefined;
     },
   ): Promise<ReactionRoleMenu> {
     const errors = validateMenuDraft({

@@ -239,7 +239,10 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   "guild.settings.set": async ({ guildId, input }) => {
     const tx = await container.db.transaction(guildId);
     try {
-      tx.write(input);
+      tx.write({
+        ...(input.prefix !== undefined ? { prefix: input.prefix } : {}),
+        ...(input.locale !== undefined ? { locale: input.locale } : {}),
+      });
       await tx.submit();
     } finally {
       tx.dispose();

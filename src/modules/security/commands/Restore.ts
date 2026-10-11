@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import type { CommandContext } from "#src/lib/commands/Context.js";
@@ -11,6 +11,7 @@ export const restoreDef: CommandDef = {
   description: "Restore server structure from a role/channel backup",
   guildOnly: true,
   requiredPermit: "admin.*",
+  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   build: () => {
     return new SlashCommandBuilder()
       .setName("restore")

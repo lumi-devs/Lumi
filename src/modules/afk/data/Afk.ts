@@ -201,13 +201,16 @@ export function getAfkEntriesForGuild(
   return services.db.afk.findForGuild(guildId);
 }
 
-export async function getAfkStats(services: Container): Promise<{
-  activeEntries: number;
-  activeCooldowns: number;
-}> {
-  const activeEntries = await services.db.afk.countAll();
-  const keys = await scanKeys(services, AfkKeys.removalCooldownPattern());
-  return { activeEntries, activeCooldowns: keys.length };
+export async function getAfkStatsForGuild(
+  services: Container,
+  guildId: string,
+): Promise<{ activeEntries: number; activeCooldowns: number }> {
+  const entries = await services.db.afk.findForGuild(guildId);
+  const keys = await scanKeys(
+    services,
+    `lumi:afk:cd:removal:${guildId}:*`,
+  );
+  return { activeEntries: entries.length, activeCooldowns: keys.length };
 }
 
 export async function getAfkMentions(

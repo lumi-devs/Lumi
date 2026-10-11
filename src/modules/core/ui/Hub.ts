@@ -54,7 +54,7 @@ interface HubOverview {
   enabledCount: number;
   prefix: string | null;
   locale: string;
-  iconUrl?: string | null;
+  iconUrl?: string | null | undefined;
 }
 
 export function buildHubView(o: HubOverview, t?: LumiT): CardReply {

@@ -18,7 +18,7 @@ type ThresholdAction = WarnThresholdAction;
 interface ThresholdEntry {
   action: ThresholdAction;
 
-  duration?: number;
+  duration?: number | undefined;
 }
 
 export type WarnThresholds = Record<string, ThresholdEntry>;

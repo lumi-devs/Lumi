@@ -1,5 +1,6 @@
 import { container } from "#src/lib/Services.js";
-import { CaseAction, type $Enums, type ModerationCase } from "@prisma/client";
+import type { ModerationCase } from "@prisma/client";
+import { isCaseAction } from "#src/modules/mod/commands/Cases.js";
 import {
   CodedRpcError,
   modRpc,
@@ -19,10 +20,6 @@ import {
 } from "#src/modules/mod/data/ThresholdRules.js";
 
 const AppealableCaseActions = new Set(["ban", "mute"]);
-
-function isCaseAction(value: string): value is $Enums.CaseAction {
-  return (Object.values(CaseAction) as string[]).includes(value);
-}
 
 type AppealTokenResolution =
   | { ok: false; reason: string }

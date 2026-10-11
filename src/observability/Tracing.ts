@@ -28,11 +28,11 @@ let provider: NodeTracerProvider | null = null;
 
 export interface TracingOptions {
   service: string;
-  version?: string;
+  version?: string | undefined;
 
-  endpoint?: string;
+  endpoint?: string | undefined;
 
-  sampleRatio?: number;
+  sampleRatio?: number | undefined;
 }
 
 export function startTracing(opts: TracingOptions): boolean {
@@ -49,9 +49,9 @@ export function startTracing(opts: TracingOptions): boolean {
     ...(opts.version ? { [ATTR_SERVICE_VERSION]: opts.version } : {}),
   });
 
-  const exporter = new OTLPTraceExporter({
-    url: opts.endpoint ? `${opts.endpoint}/v1/traces` : undefined,
-  });
+  const exporter = new OTLPTraceExporter(
+    opts.endpoint ? { url: `${opts.endpoint}/v1/traces` } : {},
+  );
 
   provider = new NodeTracerProvider({
     resource,

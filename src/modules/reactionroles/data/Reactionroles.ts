@@ -79,11 +79,11 @@ interface MenuValidationError {
 
 export function validateMenuDraft(input: {
   title: string;
-  description?: string | null;
-  color?: string | null;
+  description?: string | null | undefined;
+  color?: string | null | undefined;
   mode: string;
-  exclusive?: boolean;
-  maxRoles?: number;
+  exclusive?: boolean | undefined;
+  maxRoles?: number | undefined;
 }): MenuValidationError[] {
   const errors: MenuValidationError[] = [];
   const title = input.title.trim();

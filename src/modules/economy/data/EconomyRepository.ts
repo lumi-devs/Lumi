@@ -123,7 +123,7 @@ export class EconomyRepository extends Repository {
           kind: input.kind,
           amount: input.walletDelta + input.bankDelta,
           balanceAfter,
-          reason: input.reason,
+          reason: input.reason ?? null,
           createdAt: new Date(),
         },
       });
@@ -189,7 +189,7 @@ export class EconomyRepository extends Repository {
             amount: -input.amount,
             balanceAfter:
               (from as EconomyAccount).wallet + (from as EconomyAccount).bank,
-            reason: input.reason,
+            reason: input.reason ?? null,
             createdAt: now,
           },
           {
@@ -199,7 +199,7 @@ export class EconomyRepository extends Repository {
             amount: net,
             balanceAfter:
               (to as EconomyAccount).wallet + (to as EconomyAccount).bank,
-            reason: input.reason,
+            reason: input.reason ?? null,
             createdAt: now,
           },
         ],
@@ -253,7 +253,7 @@ export class EconomyRepository extends Repository {
           kind: "slots_bid",
           amount: -input.bid,
           balanceAfter: balanceAfter - input.win,
-          reason: input.reason,
+          reason: input.reason ?? null,
           createdAt: now,
         },
       });
@@ -265,7 +265,7 @@ export class EconomyRepository extends Repository {
             kind: "slots_win",
             amount: input.win,
             balanceAfter,
-            reason: input.reason,
+            reason: input.reason ?? null,
             createdAt: now,
           },
         });
@@ -319,7 +319,6 @@ export class EconomyRepository extends Repository {
           kind: "payday",
           amount: input.amount,
           balanceAfter,
-          reason: undefined,
           createdAt: input.now,
         },
       });

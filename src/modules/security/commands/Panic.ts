@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { enterPanic } from "#src/modules/security/services/Panic.js";
@@ -15,6 +15,7 @@ export const panicDef: CommandDef = {
   description: "Lock down the server: pause invites and mute @everyone in text channels.",
   guildOnly: true,
   requiredPermit: "admin.*",
+  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   build: () => {
     return new SlashCommandBuilder()
       .setName("panic")

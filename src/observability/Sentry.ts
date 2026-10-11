@@ -1,8 +1,8 @@
 interface SentryInit {
   init: (options: {
     dsn: string;
-    environment?: string;
-    tracesSampleRate?: number;
+    environment?: string | undefined;
+    tracesSampleRate?: number | undefined;
   }) => void;
   flush?: (timeoutMs?: number) => Promise<boolean>;
 }

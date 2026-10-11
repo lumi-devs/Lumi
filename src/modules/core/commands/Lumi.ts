@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { loadFeatures } from "#src/modules/core/services/ConfigPanel.js";
@@ -9,6 +9,7 @@ export const lumiDef: CommandDef = {
   description: "Open the Lumi control panel",
   guildOnly: true,
   requiredPermit: "admin.*",
+  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   prefixEnabled: true,
   build: () =>
     new SlashCommandBuilder()

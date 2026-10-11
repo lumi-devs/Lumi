@@ -7,7 +7,7 @@ export async function repoNameChoices(
   services: Container,
   downloaderService: DownloaderUtility,
   focusedValue: string,
-  opts?: { extra?: string[] },
+  opts?: { extra?: string[] | undefined },
 ): Promise<string[]> {
   const names = (await downloaderService.listRepos(services)).map((r) => r.name);
   if (opts?.extra) names.push(...opts.extra);
@@ -18,7 +18,7 @@ export async function installedModuleChoices(
   services: Container,
   downloaderService: DownloaderUtility,
   focusedValue: string,
-  opts?: { pinned?: boolean },
+  opts?: { pinned?: boolean | undefined },
 ): Promise<string[]> {
   const installed = await downloaderService.getInstalledModules(services);
   const names = installed

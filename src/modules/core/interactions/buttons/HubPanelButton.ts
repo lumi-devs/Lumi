@@ -241,137 +241,137 @@ async function updateAllRepos(services: Container, downloader: DownloaderUtility
       case "installed":
         return renderAddonInstalled(services, downloader, interaction, t);
       case "autoupdate": {
-      const config = await downloader.getAutoUpdateConfig(services);
-      return interaction.editReply(buildAutoUpdateSettingsView(config, t));
-    }
-      case "autoupdate_toggle": {
-      const config = await downloader.getAutoUpdateConfig(services);
-      await downloader.setAutoUpdateConfig(services, { enabled: !config.enabled });
-      const next = await downloader.getAutoUpdateConfig(services);
-      return interaction.editReply(buildAutoUpdateSettingsView(next, t));
-    }
-      case "toggle": {
-      const moduleName = rest.join(":");
-      if (!moduleName) return undefined;
-      try {
-        const record = services.moduleStore.getRecord(moduleName);
-        await downloader.toggleModule(services, moduleName, !record?.enabled);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return interaction.followUp(
-          ephemeralCard(makeErrorCard("Action Failed", msg)),
-        );
+        const config = await downloader.getAutoUpdateConfig(services);
+        return interaction.editReply(buildAutoUpdateSettingsView(config, t));
       }
-      return renderAddonInstalled(services, downloader, interaction, t);
-    }
-      case "update_repo": {
-      const repoName = rest.join(":");
-      if (!repoName) return undefined;
-      try {
-        const check = await downloader.checkRepoUpdate(services, repoName);
-        if (!check.ok) {
-          await interaction.followUp(
-            ephemeralCard(makeErrorCard("Check Failed", check.reason)),
+      case "autoupdate_toggle": {
+        const config = await downloader.getAutoUpdateConfig(services);
+        await downloader.setAutoUpdateConfig(services, { enabled: !config.enabled });
+        const next = await downloader.getAutoUpdateConfig(services);
+        return interaction.editReply(buildAutoUpdateSettingsView(next, t));
+      }
+      case "toggle": {
+        const moduleName = rest.join(":");
+        if (!moduleName) return undefined;
+        try {
+          const record = services.moduleStore.getRecord(moduleName);
+          await downloader.toggleModule(services, moduleName, !record?.enabled);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return interaction.followUp(
+            ephemeralCard(makeErrorCard("Action Failed", msg)),
           );
-          return renderAddonRepos(services, downloader, interaction, t);
         }
-        if (!check.hasUpdate) {
+        return renderAddonInstalled(services, downloader, interaction, t);
+      }
+      case "update_repo": {
+        const repoName = rest.join(":");
+        if (!repoName) return undefined;
+        try {
+          const check = await downloader.checkRepoUpdate(services, repoName);
+          if (!check.ok) {
+            await interaction.followUp(
+              ephemeralCard(makeErrorCard("Check Failed", check.reason)),
+            );
+            return renderAddonRepos(services, downloader, interaction, t);
+          }
+          if (!check.hasUpdate) {
+            await interaction.followUp(
+              ephemeralCard(
+                makeInfoCard(
+                  "Already Up To Date",
+                  `**${repoName}** has no pending updates.`,
+                ),
+              ),
+            );
+            return renderAddonRepos(services, downloader, interaction, t);
+          }
+          return interaction.editReply(
+            buildRepoUpdateConfirmView(repoName, check.changelog, t),
+          );
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return interaction.followUp(
+            ephemeralCard(makeErrorCard("Action Failed", msg)),
+          );
+        }
+      }
+      case "update_repo_confirm": {
+        const repoName = rest.join(":");
+        if (!repoName) return undefined;
+        try {
+          const result = await downloader.updateRepo(services, repoName);
+          const shaLine = result.changed
+            ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
+            : "Already up to date.";
           await interaction.followUp(
             ephemeralCard(
-              makeInfoCard(
-                "Already Up To Date",
-                `**${repoName}** has no pending updates.`,
+              makeSuccessCard(
+                "Repository Updated",
+                [`**${repoName}** was updated.`, shaLine, result.diffStat]
+                  .filter(Boolean)
+                  .join("\n\n"),
               ),
             ),
           );
-          return renderAddonRepos(services, downloader, interaction, t);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await interaction.followUp(
+            ephemeralCard(makeErrorCard("Update Failed", msg)),
+          );
         }
-        return interaction.editReply(
-          buildRepoUpdateConfirmView(repoName, check.changelog, t),
-        );
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return interaction.followUp(
-          ephemeralCard(makeErrorCard("Action Failed", msg)),
-        );
+        return renderAddonRepos(services, downloader, interaction, t);
       }
-    }
-      case "update_repo_confirm": {
-      const repoName = rest.join(":");
-      if (!repoName) return undefined;
-      try {
-        const result = await downloader.updateRepo(services, repoName);
-        const shaLine = result.changed
-          ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
-          : "Already up to date.";
-        await interaction.followUp(
-          ephemeralCard(
-            makeSuccessCard(
-              "Repository Updated",
-              [`**${repoName}** was updated.`, shaLine, result.diffStat]
-                .filter(Boolean)
-                .join("\n\n"),
-            ),
-          ),
-        );
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        await interaction.followUp(
-          ephemeralCard(makeErrorCard("Update Failed", msg)),
-        );
-      }
-      return renderAddonRepos(services, downloader, interaction, t);
-    }
       case "update_repo_skip":
         return renderAddonRepos(services, downloader, interaction, t);
       case "browsepage": {
-      const [repoName, dir, pageStr] = rest;
-      if (!repoName || dir === "indicator") return undefined;
-      const page = parseInt(pageStr ?? "0", 10) || 0;
-      return renderRepoModules(services, interaction, repoName, t, page);
-    }
+        const [repoName, dir, pageStr] = rest;
+        if (!repoName || dir === "indicator") return undefined;
+        const page = parseInt(pageStr ?? "0", 10) || 0;
+        return renderRepoModules(services, interaction, repoName, t, page);
+      }
       case "modact": {
-      const [act, repoName, ...moduleParts] = rest;
-      const moduleName = moduleParts.join(":");
-      if (!act || !repoName || !moduleName) return undefined;
-      try {
-        if (act === "install") {
-          await downloader.installModule(services, repoName, moduleName);
-        } else if (act === "uninstall") {
-          await downloader.uninstallModule(services, moduleName);
+        const [act, repoName, ...moduleParts] = rest;
+        const moduleName = moduleParts.join(":");
+        if (!act || !repoName || !moduleName) return undefined;
+        try {
+          if (act === "install") {
+            await downloader.installModule(services, repoName, moduleName);
+          } else if (act === "uninstall") {
+            await downloader.uninstallModule(services, moduleName);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return interaction.followUp(
+            ephemeralCard(makeErrorCard("Action Failed", msg)),
+          );
         }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return interaction.followUp(
-          ephemeralCard(makeErrorCard("Action Failed", msg)),
-        );
+        return renderRepoModules(services, interaction, repoName, t);
       }
-      return renderRepoModules(services, interaction, repoName, t);
-    }
       case "modinfo": {
-      const [repoName, ...moduleParts] = rest;
-      const moduleName = moduleParts.join(":");
-      if (!repoName || !moduleName) return undefined;
-      const modules = await downloader.getModulesInRepo(repoName);
-      const mod = modules.find((m) => m.name === moduleName);
-      if (!mod) {
+        const [repoName, ...moduleParts] = rest;
+        const moduleName = moduleParts.join(":");
+        if (!repoName || !moduleName) return undefined;
+        const modules = await downloader.getModulesInRepo(repoName);
+        const mod = modules.find((m) => m.name === moduleName);
+        if (!mod) {
+          return interaction.followUp(
+            ephemeralCard(makeErrorCard("Not Found", `Module **${moduleName}** was not found in **${repoName}**.`)),
+          );
+        }
+        const lines = [
+          `### 📦 __${mod.name}__ (v${mod.version})`,
+          mod.description ? `*${mod.description}*` : "*No description provided.*",
+          "",
+          `**Author:** ${mod.author || "Unknown"}`,
+          `**Min Bot Version:** \`${mod.min_bot_version || "Any"}\``,
+          "",
+          "### 🛡️ __Data & Privacy Statement__",
+          mod.end_user_data_statement || "*This module has not specified an end-user data statement.*",
+        ];
         return interaction.followUp(
-          ephemeralCard(makeErrorCard("Not Found", `Module **${moduleName}** was not found in **${repoName}**.`)),
+          ephemeralCard(makeInfoCard(`Module Info: ${mod.name}`, lines)),
         );
-      }
-      const lines = [
-        `### 📦 __${mod.name}__ (v${mod.version})`,
-        mod.description ? `*${mod.description}*` : "*No description provided.*",
-        "",
-        `**Author:** ${mod.author || "Unknown"}`,
-        `**Min Bot Version:** \`${mod.min_bot_version || "Any"}\``,
-        "",
-        "### 🛡️ __Data & Privacy Statement__",
-        mod.end_user_data_statement || "*This module has not specified an end-user data statement.*",
-      ];
-      return interaction.followUp(
-        ephemeralCard(makeInfoCard(`Module Info: ${mod.name}`, lines)),
-      );
       }
       default:
         return undefined;

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
@@ -11,14 +11,22 @@ function afkService(): AfkUtility {
 export const afkcleanDef: CommandDef = {
   name: "afkclean",
   module: "afk",
-  description: "Remove AFK entries whose users are no longer cached (owner only).",
+  description: "Remove AFK entries whose users are no longer cached (server owner only).",
   guildOnly: true,
-  requiredPermit: "owner.*",
+  defaultMemberPermissions: PermissionFlagsBits.Administrator,
   build: () => {
     const b = new SlashCommandBuilder().setName("afkclean");
-    return b.setDescription("Remove AFK entries whose users are no longer cached (owner only).");
+    return b
+      .setDescription("Remove AFK entries whose users are no longer cached (server owner only).");
   },
   run: async (ctx: CommandContext) => {
+    if (ctx.guild?.ownerId !== ctx.user.id) {
+      await ctx.replyError(
+        "Server Owner Only",
+        "Only the server owner can use this command.",
+      );
+      return;
+    }
     const t = await ctx.fetchT();
     await ctx.defer();
     const removed = await afkService().cleanStaleEntries(ctx.services);

@@ -44,12 +44,12 @@ interface AddonInstalledRow {
 interface AddonRepoModuleRow {
   name: string;
   version: string;
-  short?: string;
+  short?: string | undefined;
   description?: string;
   endUserDataStatement?: string;
-  author?: string | string[];
-  minBotVersion?: string;
-  hidden?: boolean;
+  author?: string | string[] | undefined;
+  minBotVersion?: string | undefined;
+  hidden?: boolean | undefined;
   isInstalled: boolean;
 }
 

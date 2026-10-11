@@ -43,12 +43,12 @@ export class AppealRepository extends Repository {
   public async listForGuild(
     guildId: string,
     filter: {
-      status?: AppealStatus;
-      take?: number;
+      status?: AppealStatus | undefined;
+      take?: number | undefined;
 
-      cursor?: string;
+      cursor?: string | undefined;
     } = {},
-  ): Promise<{ appeals: Appeal[]; total?: number; nextCursor: string | null }> {
+  ): Promise<{ appeals: Appeal[]; total?: number | undefined; nextCursor: string | null }> {
     const baseWhere = {
       guildId,
       ...(filter.status ? { status: filter.status } : {}),

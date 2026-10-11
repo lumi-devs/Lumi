@@ -60,7 +60,7 @@ export class DownloaderRepository extends Repository {
         ...(version ? { version } : {}),
         signedBy: signedBy ?? null,
       },
-      create: { repoId, moduleName, version, signedBy: signedBy ?? null },
+      create: { repoId, moduleName, version: version ?? null, signedBy: signedBy ?? null },
     });
   }
 

@@ -8,7 +8,7 @@ import { makeInfoCard } from "#src/lib/ui/Cards.js";
 import { decrementWarnCount } from "#src/modules/mod/services/Thresholds.js";
 import { CaseAction, type $Enums } from "@prisma/client";
 
-function isCaseAction(value: string): value is $Enums.CaseAction {
+export function isCaseAction(value: string): value is $Enums.CaseAction {
   return (Object.values(CaseAction) as string[]).includes(value);
 }
 

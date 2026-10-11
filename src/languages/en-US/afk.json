@@ -7,7 +7,7 @@
   "listDuration": "(for {{duration}})",
   "listFooterPages": "Page {{page}}/{{totalPages}} • Total AFK in this server: {{total}}",
   "listFooter": "Total AFK in this server: {{total}}",
-  "statsTitle": "AFK System Stats",
+  "statsTitle": "AFK Server Stats",
   "statsBody": "**Active AFK entries:** {{activeEntries}}\n**Active cooldowns:** {{activeCooldowns}}",
   "mentionsTitle": "Recent Mentions",
   "jumpToMessage": "Jump to Message",

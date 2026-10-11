@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 
 import { userMention } from "@discordjs/formatters";
@@ -10,14 +10,22 @@ import { getAfkEntriesForGuild } from "#src/modules/afk/data/Afk.js";
 export const afklistDef: CommandDef = {
   name: "afklist",
   module: "afk",
-  description: "List users currently AFK in this server (owner only).",
+  description: "List users currently AFK in this server (server owner only).",
   guildOnly: true,
-  requiredPermit: "owner.*",
+  defaultMemberPermissions: PermissionFlagsBits.Administrator,
   build: () => {
     const b = new SlashCommandBuilder().setName("afklist");
-    return b.setDescription("List users currently AFK in this server (owner only).");
+    return b
+      .setDescription("List users currently AFK in this server (server owner only).");
   },
   run: async (ctx: CommandContext) => {
+    if (ctx.guild?.ownerId !== ctx.user.id) {
+      await ctx.replyError(
+        "Server Owner Only",
+        "Only the server owner can use this command.",
+      );
+      return;
+    }
     const t = await ctx.fetchT();
     const entries = await getAfkEntriesForGuild(ctx.services, ctx.guildId!);
 
