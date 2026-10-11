@@ -1,4 +1,0 @@
-[test]
-root = "tests"
-coverageReporter = ["text", "lcov"]
-coverageDir = "../../coverage/api"
