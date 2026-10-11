@@ -34,9 +34,10 @@ export async function resolveCaseType(
   name: string,
 ): Promise<ResolvedCaseType> {
   const def = registeredCaseType(name);
-  const setting = await services.prisma.caseTypeSetting.findUnique({
-    where: { guildId_name: { guildId, name: name.toLowerCase() } },
-  });
+  const setting = await services.db.moderation.findCaseTypeSetting(
+    guildId,
+    name.toLowerCase(),
+  );
   return {
     name: name.toLowerCase(),
     enabled: setting?.enabled ?? def?.defaultEnabled ?? true,
@@ -54,21 +55,7 @@ export async function setCaseType(
 ): Promise<ResolvedCaseType> {
   await services.db.ensureGuild(guildId);
   const key = name.toLowerCase();
-  await services.prisma.caseTypeSetting.upsert({
-    where: { guildId_name: { guildId, name: key } },
-    update: {
-      ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
-      ...(patch.channelId !== undefined ? { channelId: patch.channelId } : {}),
-      ...(patch.emoji !== undefined ? { emoji: patch.emoji } : {}),
-    },
-    create: {
-      guildId,
-      name: key,
-      enabled: patch.enabled ?? true,
-      channelId: patch.channelId ?? null,
-      emoji: patch.emoji ?? null,
-    },
-  });
+  await services.db.moderation.upsertCaseTypeSetting(guildId, key, patch);
   if (actorId) {
     await services.db.configHistory
       ?.logConfigChange({

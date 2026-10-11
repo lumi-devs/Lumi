@@ -139,7 +139,11 @@ model Guild {
   configOverrides   ModuleConfigOverride[]
   economyAccounts   EconomyAccount[]
   economyTxns       EconomyTransaction[]
+  levelAccounts     LevelAccount[]
+  levelXpGains      LevelXpGain[]
   reactionRoleMenus ReactionRoleMenu[]
+  allowlists        Allowlist[]
+  caseTypeSettings  CaseTypeSetting[]
 
   @@index([leftAt])
   @@map("guilds")
@@ -171,6 +175,20 @@ model GuildModuleConfig {
   @@map("guild_module_config")
 }
 
+model ModuleScopedConfig {
+  guildId    String   @default("") @map("guild_id") @db.VarChar(20)
+  moduleName String   @map("module_name") @db.VarChar(64)
+  scope      String   @db.VarChar(16)
+  scopeId    String   @default("") @map("scope_id") @db.VarChar(191)
+  configKey  String   @map("config_key") @db.VarChar(64)
+  value      Json     @map("value_json")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([guildId, moduleName, scope, scopeId, configKey])
+  @@index([guildId, moduleName, scope, scopeId])
+  @@map("module_scoped_config")
+}
+
 model Permit {
   id        Int            @id @default(autoincrement())
   guildId   String         @map("guild_id") @db.VarChar(20)
@@ -179,6 +197,7 @@ model Permit {
   polarity  PermitPolarity @default(grant)
   nodes     String[]       @map("nodes")
   builtin   Boolean        @default(false)
+  position  Int            @default(0) @map("position")
   createdAt DateTime       @default(now()) @map("created_at")
   updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
 
@@ -187,6 +206,7 @@ model Permit {
 
   @@unique([guildId, name], name: "uq_permit_guild_name")
   @@index([guildId, kind])
+  @@index([guildId, position])
   @@map("permits")
 }
 
@@ -224,6 +244,7 @@ model ModerationCase {
   userId      String     @map("user_id") @db.VarChar(20)
   moderatorId String     @map("moderator_id") @db.VarChar(20)
   action      CaseAction
+  customAction String? @map("custom_action") @db.VarChar(64)
   reason      String?    @db.VarChar(1000)
   duration    Int?       @map("duration_seconds")
   expiresAt   DateTime?  @map("expires_at")
@@ -241,10 +262,8 @@ model ModerationCase {
   @@index([userId])
   @@index([moderatorId])
   @@index([guildId, active, expiresAt])
-
   @@index([active, id])
   @@index([action, active, id])
-
   @@index([active, createdAt, id])
   @@map("moderation_cases")
 }
@@ -265,11 +284,9 @@ model Appeal {
 
   @@index([guildId, status, createdAt])
   @@index([guildId, createdAt])
-
   @@index([guildId, createdAt, id])
   @@index([userId])
   @@index([reviewedBy])
-
   @@index([status, createdAt, id])
   @@map("appeals")
 }
@@ -314,6 +331,32 @@ model Blocklist {
   @@index([guildId, createdAt])
   @@index([blockedBy])
   @@map("blocklist")
+}
+
+model GlobalAllow {
+  userId    String   @id @map("user_id") @db.VarChar(20)
+  reason    String?  @db.VarChar(500)
+  allowedBy String   @map("allowed_by") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([allowedBy])
+  @@map("global_allowlist")
+}
+
+model Allowlist {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  userId    String   @map("user_id") @db.VarChar(20)
+  reason    String?  @db.VarChar(500)
+  allowedBy String   @map("allowed_by") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, guildId], name: "uq_allowlist_user_guild")
+  @@index([guildId, createdAt])
+  @@index([allowedBy])
+  @@map("allowlist")
 }
 
 model FeatureFlag {
@@ -380,7 +423,6 @@ model AfkEntry {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([userId, guildId])
-
   @@index([guildId])
   @@map("afk_entries")
 }
@@ -428,27 +470,27 @@ model AuditLedger {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
-
   @@index([guildId, createdAt, id])
   @@index([guildId, userId])
   @@index([createdAt])
-
   @@index([userId])
   @@map("audit_ledger")
 }
 
 model ModuleData {
-  guildId    String @map("guild_id") @db.VarChar(20)
-  moduleName String @map("module_name") @db.VarChar(64)
-  targetId   String @map("target_id") @db.VarChar(191)
-  key        String @db.VarChar(64)
+  guildId    String    @map("guild_id") @db.VarChar(20)
+  moduleName String    @map("module_name") @db.VarChar(64)
+  targetId   String    @map("target_id") @db.VarChar(191)
+  key        String    @db.VarChar(64)
   value      Json
+  expiresAt  DateTime? @map("expires_at")
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, moduleName, targetId, key])
   @@index([moduleName, key])
   @@index([targetId])
+  @@index([expiresAt])
   @@index([value(ops: JsonbOps)], type: Gin)
   @@map("module_dynamic_data")
 }
@@ -466,11 +508,9 @@ model ModuleConfigHistory {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt])
-
   @@index([guildId, createdAt, id])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
-
   @@index([createdAt])
   @@map("module_config_history")
 }
@@ -504,6 +544,19 @@ model WarnThreshold {
 
   @@id([guildId, warnCount])
   @@map("warn_thresholds")
+}
+
+model CaseTypeSetting {
+  guildId   String  @map("guild_id") @db.VarChar(20)
+  name      String  @db.VarChar(64)
+  enabled   Boolean @default(true)
+  channelId String? @map("channel_id") @db.VarChar(20)
+  emoji     String? @db.VarChar(16)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, name])
+  @@map("case_type_settings")
 }
 
 model PanicState {
@@ -572,6 +625,39 @@ model TempVcRecord {
   @@map("tempvc_records")
 }
 
+model LevelAccount {
+  guildId      String    @map("guild_id") @db.VarChar(20)
+  userId       String    @map("user_id") @db.VarChar(20)
+  level        Int       @default(1)
+  xp           Int       @default(0)
+  totalXp      Int       @default(0) @map("total_xp")
+  messageCount Int       @default(0) @map("message_count")
+  voiceMinutes Int       @default(0) @map("voice_minutes")
+  lastXpAt     DateTime? @map("last_xp_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@id([guildId, userId])
+  @@index([userId])
+  @@index([guildId, level, xp])
+  @@map("level_accounts")
+}
+
+model LevelXpGain {
+  id        Int      @id @default(autoincrement())
+  guildId   String   @map("guild_id") @db.VarChar(20)
+  userId    String   @map("user_id") @db.VarChar(20)
+  amount    Int
+  source    String   @db.VarChar(16)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt])
+  @@index([guildId, userId, createdAt])
+  @@map("level_xp_gains")
+}
+
 model EconomyAccount {
   guildId      String    @map("guild_id") @db.VarChar(20)
   userId       String    @map("user_id") @db.VarChar(20)
@@ -582,7 +668,6 @@ model EconomyAccount {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, userId])
-
   @@index([userId])
   @@map("economy_accounts")
 }
@@ -601,7 +686,6 @@ model EconomyTransaction {
 
   @@index([guildId, userId, createdAt])
   @@index([guildId, createdAt])
-
   @@index([userId])
   @@map("economy_transactions")
 }
@@ -629,8 +713,8 @@ model ReactionRoleMenu {
 }
 
 model ReactionRoleOption {
-  id             Int     @id @default(autoincrement())
-  menuId         String  @map("menu_id") @db.VarChar(32)
+  id     Int    @id @default(autoincrement())
+  menuId String @map("menu_id") @db.VarChar(32)
 
   slug           String  @db.VarChar(32)
   position       Int     @default(0)
@@ -645,4 +729,12 @@ model ReactionRoleOption {
   @@unique([menuId, slug])
   @@index([menuId, position])
   @@map("reactionrole_options")
+}
+
+model SharedApiToken {
+  service   String   @id @db.VarChar(64)
+  token     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("shared_api_tokens")
 }

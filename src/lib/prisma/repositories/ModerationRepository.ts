@@ -1,4 +1,4 @@
-import { Prisma, type CaseAction, type ModerationCase } from "@prisma/client";
+import { Prisma, type CaseAction, type CaseTypeSetting, type ModerationCase } from "@prisma/client";
 import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import {
@@ -15,6 +15,38 @@ import {
 const SweepPageSize = 500;
 
 export class ModerationRepository extends Repository {
+  public findCaseTypeSetting(
+    guildId: string,
+    name: string,
+  ): Promise<CaseTypeSetting | null> {
+    return this.prisma.caseTypeSetting.findUnique({
+      where: { guildId_name: { guildId, name } },
+    });
+  }
+
+  public async upsertCaseTypeSetting(
+    guildId: string,
+    name: string,
+    patch: { enabled?: boolean; channelId?: string | null; emoji?: string | null },
+  ): Promise<CaseTypeSetting> {
+    await this.db.ensureGuild(guildId);
+    return this.prisma.caseTypeSetting.upsert({
+      where: { guildId_name: { guildId, name } },
+      update: {
+        ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
+        ...(patch.channelId !== undefined ? { channelId: patch.channelId } : {}),
+        ...(patch.emoji !== undefined ? { emoji: patch.emoji } : {}),
+      },
+      create: {
+        guildId,
+        name,
+        enabled: patch.enabled ?? true,
+        channelId: patch.channelId ?? null,
+        emoji: patch.emoji ?? null,
+      },
+    });
+  }
+
   public async createModerationCase(data: {
     guildId: string;
     userId: string;
