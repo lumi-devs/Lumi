@@ -69,7 +69,10 @@ describe("CommandContext", () => {
 
     it("throws MissingArgument error when required member option is missing on slash path", async () => {
       const mockInteraction = {
-        options: { getMember: vi.fn().mockReturnValue(null) },
+        options: {
+          getMember: vi.fn().mockReturnValue(null),
+          getUser: vi.fn().mockReturnValue(null),
+        },
       } as any;
 
       const ctx = CommandContext.fromInteraction(mockInteraction);

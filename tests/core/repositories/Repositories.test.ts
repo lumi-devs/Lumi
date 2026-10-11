@@ -56,8 +56,8 @@ describe('ModerationRepository Tests', () => {
         action: 'warn',
         customAction: null,
         reason: 'test',
-        duration: undefined,
-        expiresAt: undefined,
+        duration: null,
+        expiresAt: null,
         active: true,
       }
     });

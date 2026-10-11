@@ -15,7 +15,7 @@ const attachClient = mock(() => {});
 const loginLumi = mock(() => Promise.resolve("mock.bot.token.12345"));
 const destroyLumi = mock(() => Promise.resolve(undefined));
 
-mock.module("../../../src/lib/client/lumi-client.js", () => ({
+mock.module("#src/lib/client/LumiClient.js", () => ({
   attachClient,
   loginLumi,
   destroyLumi,
@@ -31,18 +31,18 @@ const container: Record<string, any> = { logger };
 const createServices = mock(() => ({ client: undefined }));
 const useServices = mock(() => {});
 
-mock.module("../../../src/lib/services.js", () => ({
+mock.module("#src/lib/Services.js", () => ({
   container,
   createServices,
   useServices,
   ownedEventBusOf: () => undefined,
 }));
 
-mock.module("../../../src/lib/client/client-options.js", () => ({
+mock.module("#src/lib/client/ClientOptions.js", () => ({
   buildClientOptions: () => ({ intents: [] }),
 }));
 
-mock.module("#src/observability/index.ts", () => ({
+mock.module("#src/observability/Index.ts", () => ({
   shutdownTracing: () => Promise.resolve(undefined),
   runDrainSequence: () => Promise.resolve(undefined),
 }));
