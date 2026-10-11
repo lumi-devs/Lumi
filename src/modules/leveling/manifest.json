@@ -1,0 +1,177 @@
+{
+  "name": "leveling",
+  "displayName": "Leveling",
+  "emoji": "🏆",
+  "description": "Message and voice XP with 7 selectable level formulas, rank cards, leaderboards, level-up announcements, and role rewards.",
+  "short": "Message and voice XP with rank cards and leaderboards.",
+  "endUserDataStatement": "Stores user ID with level, XP, message counts, and voice minutes per server. Deleted on GDPR erasure.",
+  "version": "0.6.0",
+  "disableable": true,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "configFields": [
+    {
+      "key": "level_formula",
+      "type": "ENUM",
+      "label": "Level Formula",
+      "description": "Curve for XP required per level: disgaea, fibonacci, linear, mee6, atlas, arcane, or lurkr.",
+      "group": "Formulas",
+      "default": "disgaea",
+      "choices": ["disgaea", "fibonacci", "linear", "mee6", "atlas", "arcane", "lurkr"]
+    },
+    {
+      "key": "message_xp",
+      "type": "NUMBER",
+      "label": "Message XP",
+      "description": "XP granted per rewarded message, before multipliers.",
+      "group": "Messages",
+      "default": 15,
+      "min": 1,
+      "max": 1000
+    },
+    {
+      "key": "message_cooldown",
+      "type": "DURATION",
+      "label": "Message Cooldown",
+      "description": "How long a member waits between rewarded messages.",
+      "group": "Messages",
+      "default": "1m",
+      "quickPicks": ["30s", "1m", "2m", "5m"]
+    },
+    {
+      "key": "min_message_length",
+      "type": "NUMBER",
+      "label": "Minimum Message Length",
+      "description": "Messages shorter than this earn no XP but still count.",
+      "group": "Messages",
+      "default": 4,
+      "min": 0,
+      "max": 500
+    },
+    {
+      "key": "voice_enabled",
+      "type": "BOOLEAN",
+      "label": "Voice XP Enabled",
+      "description": "Track voice minutes and grant XP for time in voice channels.",
+      "group": "Voice",
+      "default": true
+    },
+    {
+      "key": "voice_xp_per_minute",
+      "type": "NUMBER",
+      "label": "Voice XP Per Minute",
+      "description": "XP granted per audible minute in voice, before multipliers.",
+      "group": "Voice",
+      "default": 4,
+      "min": 1,
+      "max": 1000
+    },
+    {
+      "key": "announce_enabled",
+      "type": "BOOLEAN",
+      "label": "Level-Up Announcements",
+      "description": "Post a message when a member levels up.",
+      "group": "Announcements",
+      "default": true
+    },
+    {
+      "key": "announce_channel",
+      "type": "CHANNEL",
+      "label": "Announcement Channel",
+      "description": "Channel for level-up messages. Empty falls back to where they leveled up, then the system channel.",
+      "group": "Announcements"
+    },
+    {
+      "key": "announce_message",
+      "type": "STRING",
+      "label": "Announcement Message",
+      "description": "Level-up message template. Supports {user}, {level}, {xp} and {xpNeeded}.",
+      "group": "Announcements",
+      "default": "{user} reached level {level}!",
+      "format": "template",
+      "templateVars": ["user", "level", "xp", "xpNeeded"]
+    },
+    {
+      "key": "ignored_channels",
+      "type": "MULTI_CHANNEL",
+      "label": "Ignored Channels",
+      "description": "Messages here earn no XP.",
+      "group": "Filters",
+      "default": []
+    },
+    {
+      "key": "ignored_roles",
+      "type": "MULTI_ROLE",
+      "label": "Ignored Roles",
+      "description": "Members with any of these roles earn no XP.",
+      "group": "Filters",
+      "default": []
+    },
+    {
+      "key": "level_rewards",
+      "type": "OBJECT_ARRAY",
+      "label": "Level Role Rewards",
+      "description": "Roles granted when members reach levels.",
+      "group": "Rewards",
+      "default": [],
+      "subfields": [
+        {
+          "key": "level",
+          "type": "NUMBER",
+          "label": "Level",
+          "description": "Level that grants the role."
+        },
+        {
+          "key": "roleId",
+          "type": "ROLE",
+          "label": "Role",
+          "description": "Role granted at the level."
+        }
+      ]
+    },
+    {
+      "key": "role_stack",
+      "type": "BOOLEAN",
+      "label": "Stack Reward Roles",
+      "description": "Keep every earned reward role. Off swaps to the highest earned one.",
+      "group": "Rewards",
+      "default": true
+    },
+    {
+      "key": "keep_xp_on_leave",
+      "type": "BOOLEAN",
+      "label": "Keep XP On Leave",
+      "description": "Keep progress and restore reward roles on rejoin. Off wipes progress when a member leaves.",
+      "group": "General",
+      "default": true
+    },
+    {
+      "key": "global_multiplier",
+      "type": "NUMBER",
+      "label": "Global XP Multiplier",
+      "description": "Multiplies all XP gains on this server.",
+      "group": "Multipliers",
+      "default": 1,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "role_multipliers",
+      "type": "STRING_LIST",
+      "label": "Role Multipliers",
+      "description": "Per-role XP multipliers as roleId:mult entries. Highest applies.",
+      "group": "Multipliers",
+      "default": []
+    },
+    {
+      "key": "channel_multipliers",
+      "type": "STRING_LIST",
+      "label": "Channel Multipliers",
+      "description": "Per-channel XP multipliers as channelId:mult entries.",
+      "group": "Multipliers",
+      "default": []
+    }
+  ],
+  "category": "Community"
+}
