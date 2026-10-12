@@ -485,7 +485,7 @@ export class ModuleStore {
   }
 
   async #findIndex(dir: string) {
-    for (const c of ["Index.ts", "Index.js", "Index.mts"]) {
+    for (const c of ["Index.ts", "Index.js", "Index.mts", "index.ts", "index.js", "index.mts"]) {
       const p = path.join(dir, c);
       if (await this.#exists(p)) return p;
     }

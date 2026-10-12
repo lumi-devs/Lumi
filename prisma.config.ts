@@ -5,10 +5,10 @@ import { defineConfig } from 'prisma/config';
 // does — without this every `db:push`/`migrate` fails on a missing datasource url.
 loadEnv();
 
-const datasourceUrl = process.env.DIRECT_POSTGRES_URL ?? process.env.POSTGRES_URL;
-if (!datasourceUrl) {
-	throw new Error("DIRECT_POSTGRES_URL or POSTGRES_URL must be set for Prisma.");
-}
+const datasourceUrl =
+	process.env.DIRECT_POSTGRES_URL ??
+	process.env.POSTGRES_URL ??
+	"postgresql://dummy:dummy@localhost:5432/dummy";
 
 export default defineConfig({
 	schema: 'prisma/schema.prisma',
