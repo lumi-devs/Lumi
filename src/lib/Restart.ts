@@ -46,5 +46,5 @@ export function scheduleProcessRestart(services: Container, reason: string, dela
     );
     process.kill(process.pid, "SIGTERM");
   }, delayMs);
-  timer.unref?.();
+  timer.unref();
 }

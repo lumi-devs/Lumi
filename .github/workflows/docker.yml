@@ -2,7 +2,7 @@ name: Docker Packaging & Publish
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop/v2]
     tags:
       - 'v*'
   pull_request:
@@ -95,7 +95,7 @@ jobs:
         with:
           images: ${{ steps.image_meta.outputs.image }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop/v2' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short

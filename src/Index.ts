@@ -69,5 +69,5 @@ printBootBanner(
     channels: client.channels.cache.size,
     modules: container.moduleStore.loaded().filter((r) => r.state === "loaded").length,
   },
-  `https://discord.com/oauth2/authorize?client_id=${client.user?.id ?? "unknown"}`,
+  client.user ? `https://discord.com/oauth2/authorize?client_id=${client.user.id}` : null,
 );

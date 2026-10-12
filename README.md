@@ -61,46 +61,30 @@ Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (v1.4+) or [Nix](https://nixos.org) with flakes enabled
-- [PostgreSQL](https://www.postgresql.org) 16+
-- [Valkey](https://valkey.io) 7+
-- Discord Bot Application & Bot Token
+- [Docker](https://docs.docker.com/get-docker/) with the compose plugin
+- Discord Bot Application & Bot Token ([developer portal](https://discord.com/developers/applications))
+  — enable the Server Members, Message Content, and Presence intents under Bot
 
 ### Setup
 
-1. **Clone the repository:**
+No clone, no build. Two commands:
+
+1. **Answer a few questions** (writes `.env` + `compose.yml` into `./lumi`):
    ```bash
-   git clone https://github.com/lumi-devs/Lumi.git
-   cd Lumi
+   mkdir lumi && cd lumi
+   docker run --rm -it -v .:/setup ghcr.io/lumi-devs/lumi:latest lumi-setup init /setup
    ```
 
-2. **Enter development environment:**
+2. **Start everything** (pulls Postgres, Valkey, and the bot; migrations run automatically):
    ```bash
-   nix develop
-   # or ensure bun is installed locally
+   docker compose up -d
+   docker logs -f lumi-bot
    ```
 
-3. **Install dependencies:**
-   ```bash
-   bun install
-   ```
+Then invite the bot via the URL printed in the boot banner (OAuth2 `bot` + `applications.commands`
+scopes) and run `/about` in your server. Updating is `docker compose pull && docker compose up -d`.
 
-4. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your DISCORD_TOKEN, DATABASE_URL, and VALKEY_URL
-   ```
-
-5. **Initialize database schema:**
-   ```bash
-    bun run db:generate
-    bun run db:migrate
-   ```
-
-6. **Start the bot:**
-   ```bash
-   bun run start
-   ```
+Contributors start at [Development](#development) below — that path uses a repo checkout.
 
 ---
 
