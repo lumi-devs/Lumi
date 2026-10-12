@@ -3,6 +3,7 @@ import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { BankService } from "#src/modules/economy/services/BankService.js";
 import { formatAmount, getEconomyConfig } from "#src/modules/economy/Config.js";
+import { bankName } from "#src/lib/api/economy/Bank.js";
 import { reportEconomyError } from "#src/modules/economy/services/Respond.js";
 
 export const balanceDef: CommandDef = {
@@ -25,7 +26,10 @@ export const balanceDef: CommandDef = {
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(ctx.services, guildId);
+    const [config, vaultName] = await Promise.all([
+      getEconomyConfig(ctx.services, guildId),
+      bankName(ctx.services, guildId),
+    ]);
     const target = (await ctx.getUser("user")) ?? ctx.user;
     try {
       const balance = await new BankService().getBalance(
@@ -37,7 +41,7 @@ export const balanceDef: CommandDef = {
         `💰 ${target.username}`,
         [
           `Wallet: **${formatAmount(config, balance.wallet)}**`,
-          `Bank: **${formatAmount(config, balance.bank)}**`,
+          `${vaultName}: **${formatAmount(config, balance.bank)}**`,
           `Total: **${formatAmount(config, balance.total)}**`,
         ].join("\n"),
         { ephemeral: false },

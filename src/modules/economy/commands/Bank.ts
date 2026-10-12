@@ -4,6 +4,7 @@ import { userMention } from "@discordjs/formatters";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { BankService } from "#src/modules/economy/services/BankService.js";
 import { formatAmount, getEconomyConfig } from "#src/modules/economy/Config.js";
+import { bankName } from "#src/lib/api/economy/Bank.js";
 import { reportEconomyError } from "#src/modules/economy/services/Respond.js";
 
 type Vault = "wallet" | "bank";
@@ -183,7 +184,10 @@ export const bankDef: CommandDef = {
   handlers: {
   "deposit": async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(ctx.services, guildId);
+    const [config, vaultName] = await Promise.all([
+      getEconomyConfig(ctx.services, guildId),
+      bankName(ctx.services, guildId),
+    ]);
     const amount = await ctx.getInteger("amount", { required: true });
     try {
       const balance = await new BankService().deposit(
@@ -194,7 +198,7 @@ export const bankDef: CommandDef = {
       );
       await ctx.replySuccess(
         "Deposited",
-        `Moved **${formatAmount(config, amount!)}** to your bank.\nWallet: **${formatAmount(config, balance.wallet)}** · Bank: **${formatAmount(config, balance.bank)}**`,
+        `Moved **${formatAmount(config, amount!)}** to your bank.\nWallet: **${formatAmount(config, balance.wallet)}** · ${vaultName}: **${formatAmount(config, balance.bank)}**`,
         { ephemeral: false },
       );
     } catch (err) {
@@ -203,7 +207,10 @@ export const bankDef: CommandDef = {
   },
   "withdraw": async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
-    const config = await getEconomyConfig(ctx.services, guildId);
+    const [config, vaultName] = await Promise.all([
+      getEconomyConfig(ctx.services, guildId),
+      bankName(ctx.services, guildId),
+    ]);
     const amount = await ctx.getInteger("amount", { required: true });
     try {
       const balance = await new BankService().withdraw(
@@ -214,7 +221,7 @@ export const bankDef: CommandDef = {
       );
       await ctx.replySuccess(
         "Withdrawn",
-        `Moved **${formatAmount(config, amount!)}** to your wallet.\nWallet: **${formatAmount(config, balance.wallet)}** · Bank: **${formatAmount(config, balance.bank)}**`,
+        `Moved **${formatAmount(config, amount!)}** to your wallet.\nWallet: **${formatAmount(config, balance.wallet)}** · ${vaultName}: **${formatAmount(config, balance.bank)}**`,
         { ephemeral: false },
       );
     } catch (err) {
