@@ -13,6 +13,7 @@ import {
   hasAdminPermit,
   hasOwnerPermit,
   renderHub,
+  renderPermitExplain,
   renderPermitOrder,
   renderPermissions,
   renderRepoModules,
@@ -144,6 +145,21 @@ export const hubPanelButton = defineInteraction({
           if (idx >= 0) page = Math.floor(idx / PermitOrderPerPage);
         }
         return renderPermitOrder(services, interaction, page, t);
+      }
+      case "permexplain": {
+        if (sub === "indicator") return undefined;
+        return renderPermitExplain(services, interaction, {}, t);
+      }
+      case "permexplainnodepage": {
+        const [userId, , pageRaw] = rest;
+        if (!userId) return renderPermitExplain(services, interaction, {}, t);
+        const page = Number(pageRaw ?? 0);
+        return renderPermitExplain(
+          services,
+          interaction,
+          { userId, nodePage: Number.isFinite(page) ? page : 0 },
+          t,
+        );
       }
       case "permit": {
         if (

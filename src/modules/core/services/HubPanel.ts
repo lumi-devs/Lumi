@@ -6,10 +6,14 @@ import { loadFeatures } from "#src/modules/core/services/ConfigPanel.js";
 import { buildAddonRepoModulesView } from "#src/modules/core/ui/Addons.js";
 import { buildHubView, buildSettingsView } from "#src/modules/core/ui/Hub.js";
 import {
+  buildPermitExplainPickerView,
+  buildPermitExplainView,
   buildPermissionsView,
   buildPermitOrderView,
   type PermitAssignmentRow,
 } from "#src/modules/core/ui/Permissions.js";
+import { explainPermit } from "#src/lib/api/permissions/PermitResolver.js";
+import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 import { UserError } from "#src/shared/Index.ts";
 import type { Container } from "#src/lib/Services.js";
 import type {
@@ -89,6 +93,41 @@ export async function renderPermissions(
 ) {
   const assignments = await loadPermitAssignments(services, interaction.guildId!);
   return interaction.editReply(buildPermissionsView(assignments, page, t));
+}
+
+export async function renderPermitExplain(
+  services: Container,
+  interaction: ButtonInteraction | AnySelectMenuInteraction,
+  opts: { userId?: string | undefined; node?: string | undefined; nodePage?: number | undefined } = {},
+  t?: LumiT,
+) {
+  const perms = getUtility("permissions");
+  const names = [
+    ...new Set(
+      (await perms.listPermits(services, interaction.guildId!)).map((p) => p.name),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+  const showPicker = () =>
+    interaction.editReply(
+      buildPermitExplainPickerView(
+        { userId: opts.userId, nodeNames: names, nodePage: opts.nodePage },
+        t,
+      ),
+    );
+  if (!opts.userId || !opts.node || !names.includes(opts.node)) return showPicker();
+  const member = await interaction.guild?.members
+    .fetch(opts.userId)
+    .catch(() => null);
+  const rows = await explainPermit(opts.node, {
+    guildId: interaction.guildId!,
+    userId: opts.userId,
+    roleIds: member ? memberRoleIds(member) : [],
+    channelId: interaction.channelId,
+    guildOwnerId: interaction.guild?.ownerId ?? null,
+  });
+  return interaction.editReply(
+    buildPermitExplainView(opts.node, `<@${opts.userId}>`, rows),
+  );
 }
 
 export async function renderPermitOrder(

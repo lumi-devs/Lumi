@@ -36,6 +36,9 @@ export const HubPermitPickId = defineCustomId("lumi:permit:pick", ["kind"]);
 export const HubPermitAssignId = defineCustomId("lumi:permit:assign", [
   "permitId",
 ]);
+export const HubPermitExplainNodeId = defineCustomId("lumi:permexplainnode", [
+  "userId",
+]);
 export const HubAddonModActionId = defineCustomId(
   "lumi:addon:mod_action",
   [],

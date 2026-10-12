@@ -5,6 +5,7 @@ import { resolveCardColor } from "#src/lib/ui/Palette.js";
 import { makeCard, noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
 import {
   componentEmoji,
+  createBackButton,
   createPaginationRow,
   createRoleSelectMenu,
   createStringSelectMenu,
@@ -17,7 +18,7 @@ import {
 } from "@discordjs/builders";
 import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
-import { HubPermitAssignId, HubPermitPickId } from "#src/modules/core/Constants.js";
+import { HubPermitAssignId, HubPermitExplainNodeId, HubPermitPickId } from "#src/modules/core/Constants.js";
 import type { PermitTierExplanation } from "#src/lib/api/permissions/PermitResolver.js";
 
 const tierMark = (verdict: PermitTierExplanation["verdict"]): string =>
@@ -27,6 +28,7 @@ export function buildPermitExplainView(
   node: string,
   subjectLabel: string,
   rows: PermitTierExplanation[],
+  backCustomId = "lumi:permexplain",
 ): CardReply {
   const lines = rows.map(
     (row) =>
@@ -37,7 +39,85 @@ export function buildPermitExplainView(
       resolveCardColor("primary"),
       `🛡️ Why ${subjectLabel} ${rows.some((row) => row.verdict === "deny") ? "can't" : "can"} use \`${node}\``,
       lines.length > 0 ? lines.join("\n") : "-# No tiers evaluated.",
-      { breadcrumbs: ["Hub", "Permissions", "Explain"] },
+      {
+        breadcrumbs: ["Hub", "Permissions", "Explain"],
+        actionRows: [row(createBackButton(backCustomId))],
+      },
+    ),
+  );
+}
+
+export const PermitExplainNodesPerPage = 25;
+
+export interface PermitExplainPickerState {
+  userId?: string | undefined;
+  nodeNames: readonly string[];
+  nodePage?: number | undefined;
+}
+
+function uniqueSortedNodes(names: readonly string[]): string[] {
+  return [...new Set(names)].sort((a, b) => a.localeCompare(b));
+}
+
+function explainUserRow(t?: LumiT): Row {
+  return row(
+    createUserSelectMenu({
+      customId: "lumi:permexplainuser",
+      placeholder: t ? t("panels:permsExplainPickUser") : "Pick a member…",
+    }),
+  );
+}
+
+function explainNodeRow(userId: string, names: readonly string[], t?: LumiT): Row {
+  return row(
+    createStringSelectMenu({
+      customId: HubPermitExplainNodeId.build({ userId }),
+      placeholder: t ? t("panels:permsExplainPickNode") : "Pick a permit…",
+      options: names.map(
+        (name) =>
+          new StringSelectMenuOptionBuilder().setLabel(name).setValue(name),
+      ),
+    }),
+  );
+}
+
+function explainNodePageRow(userId: string, page: number, pages: number): Row | null {
+  if (pages < 2) return null;
+  return createPaginationRow({
+    customIdPrefix: `lumi:permexplainnodepage:${userId}`,
+    currentPage: page,
+    totalPages: pages,
+  });
+}
+
+export function buildPermitExplainPickerView(
+  state: PermitExplainPickerState,
+  t?: LumiT,
+): CardReply {
+  const names = uniqueSortedNodes(state.nodeNames);
+  const totalPages = Math.max(1, Math.ceil(names.length / PermitExplainNodesPerPage));
+  const safePage = Math.max(0, Math.min(state.nodePage ?? 0, totalPages - 1));
+  const shown = names.slice(
+    safePage * PermitExplainNodesPerPage,
+    (safePage + 1) * PermitExplainNodesPerPage,
+  );
+
+  const rows: Row[] = [explainUserRow(t)];
+  if (state.userId) {
+    rows.push(explainNodeRow(state.userId, shown, t));
+    const pageRow = explainNodePageRow(state.userId, safePage, totalPages);
+    if (pageRow) rows.push(pageRow);
+  }
+  rows.push(backToPermissionsRow(t));
+
+  return noPingCard(
+    makeCard(
+      resolveCardColor("primary"),
+      `🔍 ${t ? t("panels:permsExplainTitle") : "Explain Access"}`,
+      state.userId
+        ? `Subject: <@${state.userId}>\n-# Pick a permit to see every tier that decides it.`
+        : "-# Pick a member first, then a permit.",
+      { breadcrumbs: ["Hub", "Permissions", "Explain"], actionRows: rows, separatorAboveActionRows: true },
     ),
   );
 }
@@ -117,6 +197,11 @@ export function buildPermissionsView(
       .setCustomId("lumi:permorder:0")
       .setLabel(t ? t("panels:permsOrder") : "Order…")
       .setEmoji(componentEmoji("↕️"))
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("lumi:permexplain")
+      .setLabel(t ? t("panels:permsExplain") : "Explain…")
+      .setEmoji(componentEmoji("🔍"))
       .setStyle(ButtonStyle.Secondary),
   );
 

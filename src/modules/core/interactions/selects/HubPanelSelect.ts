@@ -11,6 +11,7 @@ import {
   accessDenied,
   hasAdminPermit,
   hasOwnerPermit,
+  renderPermitExplain,
   renderPermissions,
   renderRepoModules,
   renderSettings,
@@ -24,6 +25,7 @@ import { ephemeralCard, makeErrorCard, makeWarningCard } from "#src/lib/ui/Cards
 import {
   HubAddonModActionId,
   HubPermitAssignId,
+  HubPermitExplainNodeId,
   HubPermitPickId,
 } from "#src/modules/core/Constants.js";
 import { UserError } from "#src/shared/Index.ts";
@@ -40,6 +42,8 @@ export const hubPanelSelect = defineInteraction({
     "lumi:setlang",
     HubPermitPickId.prefix,
     HubPermitAssignId.prefix,
+    HubPermitExplainNodeId.prefix,
+    "lumi:permexplainuser",
     "lumi:addon:repo_pick",
     HubAddonModActionId.prefix,
     "lumi:addon:autoupdate_interval",
@@ -50,6 +54,10 @@ export const hubPanelSelect = defineInteraction({
     else if (HubPermitPickId.parse(interaction.customId)) kind = "permit_pick";
     else if (HubPermitAssignId.parse(interaction.customId))
       kind = "permit_assign";
+    else if (interaction.customId === "lumi:permexplainuser")
+      kind = "permexplain_user";
+    else if (HubPermitExplainNodeId.parse(interaction.customId))
+      kind = "permexplain_node";
     else if (interaction.customId === "lumi:addon:repo_pick")
       kind = "addon_repo_pick";
     else if (HubAddonModActionId.parse(interaction.customId))
@@ -144,6 +152,22 @@ export const hubPanelSelect = defineInteraction({
           .catch(() => {});
       }
       return renderPermissions(services, interaction, 0, t);
+    }
+
+    if (kind === "permexplain_user") {
+      const userId = interaction.values[0];
+      return renderPermitExplain(services, interaction, { userId }, t);
+    }
+
+    if (kind === "permexplain_node") {
+      const parsed = HubPermitExplainNodeId.parse(interaction.customId);
+      const node = interaction.values[0];
+      return renderPermitExplain(
+        services,
+        interaction,
+        { userId: parsed?.userId, node },
+        t,
+      );
     }
 
     return renderPermissions(services, interaction, 0, t);
