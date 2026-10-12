@@ -86,6 +86,20 @@ export async function bootstrapClientApp(
     process.exit(1);
   }
 
+  if (process.env["LUMI_DRY_RUN"] === "1") {
+    try {
+      await container.db.probePrisma();
+      await container.valkey.ping();
+    } catch (err: unknown) {
+      console.error(
+        `[DryRun] dependency check failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      process.exit(1);
+    }
+    container.logger.info("[DryRun] services ready - exiting without login");
+    process.exit(0);
+  }
+
   if (container.valkey) {
     await initializeShardLease(container.valkey).catch((err) => {
       container.logger?.warn?.("[ShardLease] Failed to initialize shard lease:", err);
@@ -95,7 +109,10 @@ export async function bootstrapClientApp(
   let shuttingDown = false;
   ["SIGINT", "SIGTERM"].forEach((sig) => {
     process.once(sig, async () => {
-      if (shuttingDown) return;
+      if (shuttingDown) {
+        container.logger?.warn?.("[Shutdown] second signal - force exiting");
+        process.exit(130);
+      }
       shuttingDown = true;
       const log = (
         level: "info" | "warn" | "error",

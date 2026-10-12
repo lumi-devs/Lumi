@@ -20,6 +20,10 @@ export interface BootStats {
   members: number;
   channels: number;
   modules: number;
+  commands: number;
+  prefix: string;
+  storage: string;
+  shards: string;
 }
 
 export function printBootBanner(stats: BootStats, inviteUrl: string | null): void {
@@ -27,8 +31,9 @@ export function printBootBanner(stats: BootStats, inviteUrl: string | null): voi
     "",
     LUMI_ART,
     "",
-    `  Lumi v${LumiInfo.version} · Bun ${Bun.version} · ${stats.modules} modules`,
+    `  Lumi v${LumiInfo.version} · Bun ${Bun.version} · ${stats.modules} modules · ${stats.commands} commands`,
     `  ${stats.guilds} servers · ${stats.members} members · ${stats.channels} channels`,
+    `  Prefix ${stats.prefix} · Store ${stats.storage} · Shards ${stats.shards}`,
     ...(inviteUrl ? [`  Invite: ${inviteUrl}`] : []),
     `  Source: ${LumiInfo.github}`,
     "",

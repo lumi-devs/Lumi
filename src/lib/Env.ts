@@ -130,8 +130,13 @@ export function defineEnv<T extends EnvShape>(shape: T): EnvResult<T> {
 
 export function getShardCount(): number {
   const raw = process.env["SHARD_COUNT"];
-  const n = raw === undefined ? Number.NaN : Number(raw);
-  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  if (raw !== undefined && raw.trim() !== "" && raw.trim() !== "auto") {
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) {
+      throw new Error(`[ENV] SHARD_COUNT=${raw} is not a positive integer (or "auto").`);
+    }
+    return Math.floor(n);
+  }
 
   const list = process.env["SHARDS"];
   if (list) {
@@ -143,6 +148,16 @@ export function getShardCount(): number {
     }
   }
   return 1;
+}
+
+export function getShardOption(): number | "auto" {
+  const raw = process.env["SHARD_COUNT"]?.trim();
+  if (!raw || raw === "auto") return "auto";
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    throw new Error(`[ENV] SHARD_COUNT=${raw} is not a positive integer (or "auto").`);
+  }
+  return n;
 }
 
 export function resolvePgPoolSize(): number {

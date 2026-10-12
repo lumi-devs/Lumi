@@ -1,5 +1,5 @@
 import type { RESTOptions } from "@discordjs/rest";
-import { envParseInteger, getDiscordProxyUrl } from "#src/lib/Env.js";
+import { envParseInteger, getDiscordProxyUrl, getShardOption } from "#src/lib/Env.js";
 import {
   ActivityType,
   GatewayIntentBits,
@@ -42,6 +42,7 @@ export function buildRestOptions(
 
 export function buildClientOptions(): ClientOptions {
   return {
+    shards: getShardOption(),
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
       MessageManager: envParseInteger("CACHE_MESSAGE_LIMIT", 50),

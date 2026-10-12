@@ -8,10 +8,13 @@ const REPO_ROOT = path.resolve(
   "..",
 );
 
-export const help = `Usage: lumi start
+export const help = `Usage: lumi start [--dry-run]
 
 Start the bot. Runs \`bun src/Index.ts\`, inheriting stdio and forwarding
 SIGINT/SIGTERM to the bot process.
+
+With --dry-run, boots services and checks Postgres/Valkey reachability,
+then exits before Discord login.
 `;
 
 export async function run(argv: string[]): Promise<number> {
@@ -20,14 +23,17 @@ export async function run(argv: string[]): Promise<number> {
     console.log(help);
     return 0;
   }
-  if (target) {
-    console.error(`Unknown start target "${target}". Usage: lumi start`);
+  if (target && target !== "--dry-run") {
+    console.error(`Unknown start target "${target}". Usage: lumi start [--dry-run]`);
     return 2;
   }
 
   const proc = Bun.spawn(["bun", path.join(REPO_ROOT, "src", "Index.ts")], {
     cwd: REPO_ROOT,
-    env: process.env,
+    env: {
+      ...process.env,
+      ...(target === "--dry-run" ? { LUMI_DRY_RUN: "1" } : {}),
+    },
     stdio: ["inherit", "inherit", "inherit"],
   });
 

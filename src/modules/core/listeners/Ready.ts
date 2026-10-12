@@ -31,7 +31,7 @@ async function reconcileGuilds(services: Container): Promise<void> {
     await Promise.all(rejoined.map((id: string) => db.markGuildRejoined(id)));
 
     const myShardIds = services.client.shard?.ids ?? [0];
-    const shardCount = getShardCount();
+    const shardCount = services.client.shard?.count ?? getShardCount();
     const cachedSet = new Set(cachedIds);
 
     const activeIds = await db.findActiveGuildIds();
