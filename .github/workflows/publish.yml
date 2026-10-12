@@ -41,4 +41,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm publish --access public
+          VERSION=$(jq -r .version package.json)
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            npm publish --access public
+          else
+            DEV_VERSION="${VERSION}-dev.${GITHUB_SHA:0:7}"
+            npm pkg set version="$DEV_VERSION"
+            npm publish --access public --tag dev || echo "Version already published"
+          fi
