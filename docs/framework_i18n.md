@@ -10,6 +10,7 @@ await ctx.replySuccess(t("commands:doneTitle"), t("commands:doneBody"));
 ```
 
 `applyLocalizedBuilder` localizes slash command builders. Namespaces live
-under `src/languages/en-US/` (`commands`, `common`, `core`, `panels`,
-`preconditions`, ...). `translate` / `getT` cover non-command paths
-(listeners, tasks, schedulers).
+under `src/languages/en-US/` (`afk`, `commands`, `common`, `core`,
+`filter`, `logging`, `panels`, `preconditions`, `tempvc`, ...).
+`translate` / `getT` cover non-command paths (listeners, tasks,
+schedulers).

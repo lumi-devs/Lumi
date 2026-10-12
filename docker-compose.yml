@@ -24,8 +24,8 @@ x-lumi-service: &lumi-service
       required: false
   environment: &lumi-env
     VALKEY_HOST: valkey
-    POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
-    DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+    POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
+    DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -99,8 +99,8 @@ services:
         required: false
     environment:
       VALKEY_HOST: valkey
-      POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
-      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+      POSTGRES_URL: "${POSTGRES_URL:-postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
+      DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -181,7 +181,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: lumi
-      POSTGRES_USER: ${POSTGRES_USER:-lumi}
+      POSTGRES_USER: lumi
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       BACKUP_DIR: /backups
       BACKUP_RETENTION: "${BACKUP_RETENTION:-7}"
@@ -210,7 +210,7 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: lumi
-      DB_USER: ${POSTGRES_USER:-lumi}
+      DB_USER: lumi
       DB_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       LISTEN_PORT: "6432"
       POOL_MODE: transaction
@@ -225,7 +225,7 @@ services:
       - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-lumi}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U lumi"]
       interval: 10s
       timeout: 5s
       retries: 5

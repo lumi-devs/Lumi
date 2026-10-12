@@ -10,7 +10,7 @@ Modules register their types at load; guilds override enabled/channel/
 emoji per type in `case_type_settings`:
 
 ```ts
-import { registerCaseTypes, fileCase } from "#lib/modlog/CaseTypes.js";
+import { registerCaseTypes, fileCase } from "#src/lib/api/moderation/CaseTypes.js";
 
 registerCaseTypes({ name: "spam-wave", emoji: "🌊" });
 

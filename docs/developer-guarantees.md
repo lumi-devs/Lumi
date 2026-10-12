@@ -20,6 +20,6 @@ Public API is exactly the set of names reachable from the addon `api` object. Ev
 
 Reserved member prefixes on addon modules: `lumi_` and `__lumi_*`. The framework may add members with these prefixes non-breakingly; addons must not declare methods or fields using them. The addon validator warns (does not reject) on such declarations.
 
-RPC actions are versioned via the `x-lumi-contract-version` header against `@lumi/contracts`. A missing or incompatible version is rejected like a mismatch.
+RPC actions are versioned via the `x-lumi-contract-version` header against `src/contracts`. A missing or incompatible version is rejected like a mismatch.
 
 Breaking changes to the public API or RPC contract happen only on minor/major releases and are announced with a changelog notice.

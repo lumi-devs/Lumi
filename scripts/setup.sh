@@ -94,7 +94,7 @@ while [[ -z "$PROMPT_RESULT" ]]; do
   warn "A client ID is required."
   prompt "" "Discord application (client) ID"
 done
-ENV_VALUES[CLIENT_ID]="$PROMPT_RESULT"
+ENV_VALUES[APPLICATION_ID]="$PROMPT_RESULT"
 
 prompt "lumi" "Postgres password"
 ENV_VALUES[POSTGRES_PASSWORD]="$PROMPT_RESULT"
@@ -105,11 +105,17 @@ ENV_VALUES[POSTGRES_POOL_MAX]="10"
 
 prompt "lumi" "Valkey password"
 ENV_VALUES[VALKEY_PASSWORD]="$PROMPT_RESULT"
-ENV_VALUES[VALKEY_URL]="valkeys://localhost:6379"
 ENV_VALUES[VALKEY_HOST]="localhost"
 ENV_VALUES[VALKEY_PORT]="6379"
 ENV_VALUES[VALKEY_CACHE_DB]="0"
 ENV_VALUES[VALKEY_TASK_DB]="1"
+
+if command -v openssl >/dev/null 2>&1; then
+  ENV_VALUES[APPEAL_TOKEN_SECRET]="$(openssl rand -hex 32)"
+else
+  warn "openssl not found - set APPEAL_TOKEN_SECRET manually before starting the bot."
+  ENV_VALUES[APPEAL_TOKEN_SECRET]=""
+fi
 
 ENV_VALUES[RPC_HTTP_HOST]="127.0.0.1"
 # RPC_HTTP_PORT is deliberately not written: 8091 is already the built-in
@@ -183,7 +189,7 @@ if confirm "Configure the web dashboard now?" "n"; then
   info "Add this redirect URI on the Developer Portal's OAuth2 tab:"
   info "  http://localhost:${ENV_VALUES[DASHBOARD_PORT]}/api/auth/callback/discord"
 else
-  info "Skipping - uncomment the '[ 5 ] DASHBOARD CONFIGURATION' block in .env later if you need it."
+  info "Skipping - add the dashboard variables to .env later if you need it."
 fi
 
 # ── Write .env ─────────────────────────────────────────────────────────────

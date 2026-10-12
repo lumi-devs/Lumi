@@ -24,7 +24,7 @@ Utility types are extended through the `Utilities` interface.
 
 ## Scoped bus
 
-`scopedEventBus(services, moduleName)` (`src/lib/commands/Hooks.ts`)
+`scopedEventBus(services, moduleName)` (`src/lib/event-bus/ScopedBus.ts`)
 wraps `services.eventBus` with the same `publish`/`subscribe` shape.
 `subscribe` records the consumer's stop function per module;
 `detachScopedBus(moduleName)` stops them all and is idempotent:

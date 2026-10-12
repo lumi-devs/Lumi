@@ -31,6 +31,6 @@ await bankName(services, guildId);         // e.g. "Bank"
 silently; any other throw still refunds and propagates.
 
 Need something custom? The same functions live unscoped in
-`src/lib/economy/Bank.ts` (they take `services` first). Currency
+`src/lib/api/economy/Bank.ts` (they take `services` first). Currency
 names, starting balances, and caps live in the economy module config.
 Leaderboards run as single SQL window queries, not in-memory sorts.

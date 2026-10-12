@@ -11,7 +11,9 @@ in-process with no sandbox.
 ## Writing modules
 
 - `guide_module.md` - creating a module: shape, commands, config, framework API.
+- `guide_data_storage.md` - config vs KV vs files vs repositories.
 - `guide_publish.md` - publishing an addon: repos, manifests, signatures.
+- `developer-guarantees.md` - the public addon API surface and RPC versioning.
 
 ## Framework reference
 
@@ -24,7 +26,7 @@ in-process with no sandbox.
 - `framework_tasks.md` - scheduled tasks and one-shot timers.
 - `framework_i18n.md` - translations.
 - `framework_modlog.md` - cases, case types, modlog routing.
-- `framework_rpc.md` - dashboard RPC bridge.
+- `framework_rpc.md` - RPC bridge.
 - `framework_utils.md` - formatting, cards, antispam, filters, purge, tunnel.
 - `framework_data.md` - KV store, module files, shared tokens, feature flags.
 

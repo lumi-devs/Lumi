@@ -22,5 +22,3 @@ export const levelingGuildMemberRemoveListener = defineListener({
       .catch(() => null);
   },
 });
-
-export default levelingGuildMemberRemoveListener;

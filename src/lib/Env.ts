@@ -148,11 +148,7 @@ export function getShardCount(): number {
 export function resolvePgPoolSize(): number {
   const explicit = Number(process.env["POSTGRES_POOL_MAX"]);
   if (Number.isFinite(explicit) && explicit > 0) return Math.floor(explicit);
-
-  const budget = Number(process.env["POSTGRES_POOL_TOTAL"]);
-  const total = Number.isFinite(budget) && budget > 0 ? budget : 80;
-
-  return Math.max(2, Math.floor(total / getShardCount()));
+  return 20;
 }
 
 export function resolveDbSlowQueryThresholdMs(): number {
@@ -220,20 +216,6 @@ export const getPostgresReplicaUrl = (): string | undefined =>
 export const getPostgresAppName = (): string =>
   process.env["POSTGRES_APP_NAME"] ||
   `lumi-worker-${process.env["SHARDS"] ?? "0"}`;
-
-export function getValkeyClusterNodes(): { host: string; port: number }[] | null {
-  const raw = process.env["VALKEY_CLUSTER_NODES"];
-  if (!raw) return null;
-  const nodes = raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry) => {
-      const [host = "localhost", port] = entry.split(":");
-      return { host, port: Number(port) || 6379 };
-    });
-  return nodes.length > 0 ? nodes : null;
-}
 
 export function getWriteBucket(streamBuckets = 16): number {
   const shards = process.env["SHARDS"];

@@ -21,9 +21,9 @@ router under `src/contracts/rpc/`.
 });
 ```
 
-Auth levels: `session` (logged-in user), `guildManager` (can manage the
-guild), plus owner-only actions (`system.tokens.*`). Mark pure reads
-`readOnly: true`.
+Auth levels: `public`, `session` (logged-in user), `guildManager`
+(can manage the guild), `botOwner` (`system.tokens.*` and other
+owner-only actions). Mark pure reads `readOnly: true`.
 
 ## Generic actions (no per-module slice needed)
 

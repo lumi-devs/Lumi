@@ -187,7 +187,7 @@ export const ValkeyTTL = {
 export function valkeyConnectionOptions(
   config?: ValkeyConnectionConfig,
 ): ValkeyOptions {
-  const url = config?.url ?? process.env.VALKEY_URL;
+  const url = config?.url;
   if (url) {
     try {
       const parsed = new URL(url);

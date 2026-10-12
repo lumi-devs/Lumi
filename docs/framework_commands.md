@@ -26,21 +26,9 @@ are reported with the offending list, not silence.
 
 ## Follow-up prompts
 
-`src/lib/utilities/Predicates.ts`, built on the native
-`awaitMessages`/`awaitMessageComponent` collectors:
-
-```ts
-import { awaitYesNo, awaitInt, awaitChoice, awaitReply, awaitButton } from "#lib/utilities/Predicates.js";
-
-const ok = await awaitYesNo(channel, userId, { prompt: "Proceed?", timeoutMs: 30_000 });
-const n = await awaitInt(channel, userId, { min: 1, max: 10 });
-const pick = await awaitChoice(channel, userId, ["red", "blue"]);
-const text = await awaitReply(channel, userId, { match: /^[a-z]+$/ });
-const clicked = await awaitButton(message, userId, ["confirm", "cancel"]);
-```
-
-`confirmPrompt` (`src/lib/utilities/Confirm.ts`) is the card-styled yes/no
-path; predicates are the plain-text path.
+`confirmPrompt` (`src/lib/utilities/Confirm.ts`), built on the native
+`awaitMessageComponent` collector, is the card-styled yes/no path for
+follow-up confirmation.
 
 ## Before-invoke hooks
 
@@ -59,15 +47,6 @@ removeBeforeInvokeHook("my-check");
 The registry is intentionally unwired: dispatch calls
 `runBeforeInvokeHooks(ctx)` and reports the denial, which is owned by
 the dispatch/unload wiring pass, not by hook authors.
-
-## Help visibility
-
-`/help` lists only the commands the invoker may actually run. Filtering
-reuses the existing `authorize()` path (`canSeeCommand` in
-`src/modules/core/commands/Help.ts`): guild-only commands hide outside
-servers, owner commands hide from non-owners, permit commands hide without
-the node, and commands from guild-disabled modules hide. Empty sections
-drop out; the card shape and pagination are unchanged.
 
 ## Unknown-command suggestions
 

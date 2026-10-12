@@ -1,7 +1,7 @@
 # Framework: Permits
 
 Permit nodes (`mod.ban`, `admin.*`) gate commands and actions. All
-decisions go through `authorize()` (`src/lib/permissions/Authorize.ts`) -
+decisions go through `authorize()` (`src/lib/api/permissions/Authorize.ts`) -
 never touch `PermitResolver` directly from command, precondition, or RPC
 code.
 

@@ -19,5 +19,3 @@ export const levelingGuildMemberAddListener = defineListener({
       .catch(() => null);
   },
 });
-
-export default levelingGuildMemberAddListener;

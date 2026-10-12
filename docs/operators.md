@@ -7,8 +7,9 @@ configuration without starting anything.
 
 ## Database
 
-Postgres via Prisma. `prisma/migrations/` holds a single `v1` baseline
-generated from `schema.prisma` - new databases start there:
+Postgres via Prisma. `prisma/migrations/` holds the migration history
+starting from the `20261011000000_v1` baseline - new databases start
+there:
 
 ```
 bun run db:migrate    # prisma migrate dev (needs Postgres up)
@@ -30,10 +31,10 @@ runs everything: gateway, RPC, and scheduling together.
 
 ```
 bun src/Index.ts            # the bot
-docker compose up bot       # bot + postgres + valkey (+ dashboard)
+docker compose up bot       # bot + postgres + valkey
 ```
 
-`CMD` runs `bun src/Index.ts`; `/usr/local/bin/lumi` links the CLI.
+`CMD` runs `bun src/Index.ts`; `/usr/local/bin/lumi` is the compiled CLI.
 
 ## CLI
 
@@ -45,4 +46,5 @@ lumi addon validate <dir>   # structure, import, and UI checks
 lumi commands               # deploy slash commands to Discord
 lumi module                 # inspect bundled modules
 lumi config                 # print resolved env config
+lumi setup                  # preflight check for a Docker-first install
 ```

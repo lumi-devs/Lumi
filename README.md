@@ -22,7 +22,7 @@
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It runs as a single process: one Discord gateway client, an embedded RPC bridge for the dashboard, and in-process BullMQ scheduling.
+Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It runs as a single process: one Discord gateway client, an embedded RPC bridge, and in-process BullMQ scheduling.
 
 Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
@@ -38,7 +38,7 @@ Lumi is a single-package monolith under `src/`:
 | `src/modules/*` | Self-contained feature modules (commands, listeners, interactions, tasks, services, data). |
 | `src/lib/*` | Shared framework: database, cache, permits, scheduler, RPC, UI kit, utilities. |
 | `src/cli` | Command-line tool (`lumi`) for operations, migrations, and addon scaffolding. |
-| `src/contracts` | Typed RPC router and schemas for the dashboard bridge. |
+| `src/contracts` | Typed RPC router and schemas for the RPC bridge. |
 | `data/addons` | Third-party addon root. Addons load in-process through the same module loader. |
 
 Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
@@ -49,7 +49,7 @@ Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
 
 - **Single Process**: Gateway, RPC, and scheduling run in one Bun process.
 - **Red-Style Modules**: Self-contained modules plus third-party addons, loaded by one in-process loader with dependency sorting and per-guild toggles.
-- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution, reorderable from the dashboard, RPC, and the hub panel.
+- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution, reorderable from the RPC and the hub panel.
 - **Leveling**: Message and voice XP with 7 selectable level formulas, image rank cards, and Overall / Voice / Weekly / Monthly image leaderboards.
 - **Guild Economy**: Wallet + bank balances with payday, taxed transfers, slots, and a fully audited transaction ledger.
 - **Observability Built-in**: OpenTelemetry tracing and Prometheus metrics.

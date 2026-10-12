@@ -44,18 +44,6 @@ const { deleted, scanned } = await massPurge(services, channel, {
 Under-14-day messages go through `bulkDelete` (with split-retry on
 unknown-message races); older ones fall back to slow single deletes.
 
-## Tunnel
-
-Two-way DM relay for modmail-style flows (`src/lib/discord/Tunnel.ts`):
-
-```ts
-const tunnel = await Tunnel.open(services, staffUser, memberUser);
-await tunnel.close("Done.");
-```
-
-Forwards content + attachments both ways with an author header, ignores
-bots, closes on timeout (30 min default) or explicitly.
-
 ## Time, snowflakes, durations
 
 `src/lib/utilities/Time.ts` (`parseDuration`, `formatDuration`),

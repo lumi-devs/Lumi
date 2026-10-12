@@ -57,5 +57,3 @@ export const levelingVoiceStateUpdateListener = defineListener({
       .catch(() => null);
   },
 });
-
-export default levelingVoiceStateUpdateListener;

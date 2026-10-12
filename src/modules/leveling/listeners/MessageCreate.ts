@@ -45,5 +45,3 @@ export const levelingMessageCreateListener = defineListener({
       .catch(() => null);
   },
 });
-
-export default levelingMessageCreateListener;

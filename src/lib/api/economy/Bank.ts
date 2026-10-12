@@ -1,7 +1,6 @@
 import type { Container } from "#src/lib/Services.js";
 import {
   BankService,
-  EconomyError,
   type LeaderboardEntry,
 } from "#src/modules/economy/services/BankService.js";
 import { getEconomyConfig } from "#src/modules/economy/Config.js";
@@ -32,28 +31,12 @@ function service(services: Container): BankService {
   return new BankService(services.db.economy);
 }
 
-export function isGlobal(): boolean {
-  return false;
-}
-
-export function setGlobal(_global: boolean): never {
-  throw new EconomyError("Unsupported", "The bank is guild-scoped; global mode is not supported.");
-}
-
 export async function getBalance(
   services: Container,
   guildId: string,
   userId: string,
 ): Promise<BankBalance> {
   return service(services).getBalance(guildId, userId, await getEconomyConfig(services, guildId));
-}
-
-export async function getAccount(
-  services: Container,
-  guildId: string,
-  userId: string,
-): Promise<BankBalance> {
-  return getBalance(services, guildId, userId);
 }
 
 export async function account(
@@ -80,27 +63,6 @@ export async function currencyName(services: Container, guildId: string): Promis
 
 export async function bankName(services: Container, guildId: string): Promise<string> {
   return getBankName(services, guildId);
-}
-
-export async function canSpend(
-  services: Container,
-  guildId: string,
-  userId: string,
-  amount: number,
-): Promise<boolean> {
-  const balance = await getBalance(services, guildId, userId);
-  return balance.total >= amount;
-}
-
-export async function setBalance(
-  services: Container,
-  guildId: string,
-  userId: string,
-  amount: number,
-  actorId: string,
-): Promise<BankBalance> {
-  const config = await getEconomyConfig(services, guildId);
-  return service(services).adjust(guildId, userId, "set", amount, "wallet", `set balance ${amount}`, actorId, config);
 }
 
 export async function deposit(
@@ -167,44 +129,13 @@ export function cost(amount: number) {
   ): Promise<T> => withCost(services, guildId, userId, amount, run);
 }
 
-export async function wipeBank(
-  services: Container,
-  guildId: string,
-): Promise<number> {
-  return services.db.economy.wipeGuild(guildId);
-}
-
 export async function getCurrencyName(services: Container, guildId: string): Promise<string> {
   return (await getEconomyConfig(services, guildId)).currencyName;
-}
-
-export async function setCurrencyName(services: Container, guildId: string, name: string): Promise<void> {
-  await services.db.config.setModuleConfig(guildId, EconomyModuleName, "currency_name", name);
 }
 
 export async function getBankName(services: Container, guildId: string): Promise<string> {
   const stored = await services.db.config.getModuleConfig(guildId, EconomyModuleName, "bank_name");
   return typeof stored === "string" && stored.length > 0 ? stored : "Bank";
-}
-
-export async function setBankName(services: Container, guildId: string, name: string): Promise<void> {
-  await services.db.config.setModuleConfig(guildId, EconomyModuleName, "bank_name", name);
-}
-
-export async function getMaxBalance(services: Container, guildId: string): Promise<number> {
-  return (await getEconomyConfig(services, guildId)).maxBalance;
-}
-
-export async function setMaxBalance(services: Container, guildId: string, amount: number): Promise<void> {
-  await services.db.config.setModuleConfig(guildId, EconomyModuleName, "max_balance", amount);
-}
-
-export async function getDefaultBalance(services: Container, guildId: string): Promise<number> {
-  return (await getEconomyConfig(services, guildId)).startingWallet;
-}
-
-export async function setDefaultBalance(services: Container, guildId: string, amount: number): Promise<void> {
-  await services.db.config.setModuleConfig(guildId, EconomyModuleName, "starting_wallet", amount);
 }
 
 export async function getLeaderboard(

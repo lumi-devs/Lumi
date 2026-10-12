@@ -13,11 +13,11 @@ Ensure the following prerequisites are installed on your workstation:
 
 | Dependency | Minimum Version | Recommended Installation | Notes |
 | :--- | :--- | :--- | :--- |
-| **[Bun](https://bun.sh)** | `1.3.0+` | <code>curl -fsSL https://bun.sh/install &#124; bash</code> | Primary JavaScript runtime, package manager, and test runner |
+| **[Bun](https://bun.sh)** | `1.4.2+` | <code>curl -fsSL https://bun.sh/install &#124; bash</code> | Primary JavaScript runtime, package manager, and test runner |
 | **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
 | **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
 | **Valkey** | `8.0+` | Docker / Native | High-speed cache, rate limiting, and Valkey Streams event bus |
-| **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix-shell` |
+| **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix develop` |
 
 ---
 
@@ -35,7 +35,7 @@ cd lumi
 bun install
 
 # Alternatively, if using Nix:
-nix-shell -p bun nodejs --run "bun install"
+nix develop --command bun install
 ```
 
 ### 2. Infrastructure Backends (Docker Compose)
@@ -81,36 +81,35 @@ bun run dev
 
 ## Releases & Release Notes
 
-Versions are managed with Changesets. If your PR touches `packages/` or `apps/`, run
-`bun run changeset` and include the generated file — CI fails the PR without one.
-`@lumi-devs/contracts` and `@lumi-devs/observability` are versioned/published in lockstep
-and reach npm automatically when the `chore: version packages` PR merges; everything else
-is private and versioned together but never published. Pushing a `v*` tag still runs
-`.github/workflows/release.yml`, which publishes a GitHub Release with notes generated
-from the merged pull requests since the previous tag.
+Notable changes are tracked with Changesets (`.changeset/`). If your PR
+changes behavior, run `bunx changeset` and include the generated file.
 
-Because the notes are built from PR titles, give your PR a clear, specific title (for example `fix(mod): warn count ignores decayed cases`), and add the relevant `area:*` label.
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which publishes
+a GitHub Release with notes generated from the merged pull requests
+since the previous tag.
+
+Because the notes are built from PR titles, give your PR a clear, specific title (for example `fix(mod): warn count ignores decayed cases`).
 
 ---
 
 ## Code Standards & Architectural Rules
 
-To maintain high software quality across the monorepo, all contributions must strictly conform to these core development rules:
+To maintain high software quality across the single-process monolith, all contributions must strictly conform to these core development rules:
 
 > [!WARNING]
 > PRs that violate module boundaries or data layer abstractions will be requested to make architectural revisions before code review.
 
 ### 1. Module Isolation Boundary
 
-Modules inside `packages/core/src/modules/` **must never** import code directly from sibling modules.
+Modules inside `src/modules/` **must never** import code directly from sibling modules.
 
 ```ts
 // ❌ Disallowed: Cross-module direct import
-import { MuteService } from "../moderation/services/MuteService.js";
+import { MuteService } from "../mod/services/MuteService.js";
 
-// ✅ Allowed: Inter-module communication via global EventBus or shared Services
-import { container } from "@sapphire/framework";
-const eventBus = container.stores.get("services").get("event-bus");
+// ✅ Allowed: Inter-module communication via typed utilities or the event bus
+import { getUtility } from "#src/lib/module-system/Utility.js";
+const filter = getUtility("filter");
 ```
 
 ### 2. Data Access Layer Abstraction
@@ -125,29 +124,28 @@ const guild = await container.prisma.guild.findUnique({ where: { id: guildId } }
 const guild = await container.db.guilds.get(guildId);
 ```
 
-### 3. Card UI System (`@lumi/ui-cards`)
+### 3. Card UI System
 
 Raw Discord embeds (`EmbedBuilder`) are strictly prohibited in user-facing command responses. Always construct UI responses using Lumi's standardized card primitives:
 
 ```ts
-import { makeSuccessCard, makeErrorCard } from "#utilities/cards.js";
-import { replySuccess } from "@lumi/lib/commands.js";
+import { makeSuccessCard } from "#src/lib/ui/Cards.js";
 
 // Respond with standardized success feedback
-await replySuccess(interaction, "Settings Saved", "Updated moderation threshold.");
+await ctx.replySuccess("Settings Saved", "Updated moderation threshold.");
 ```
 
 ### 4. Code Hygiene & Utility Functions
 
-* **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `@sapphire/utilities`.
-* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `@sapphire/utilities`.
-* **Configuration Validation**: All module configurations must define a strict schema using `@sapphire/shapeshift` `cfg.*` helpers inside `@DefineModule`.
+* **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `#src/shared/Index.ts`.
+* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `#src/shared/Index.ts`.
+* **Configuration Validation**: All module configurations must define a strict schema using the `cfg.*` helpers from `#src/lib/module-system/ConfigSchema.js` inside `defineModule`.
 
 ### 5. Internationalization (i18n)
 
-All user-facing strings must be localized using Sapphire's `@sapphire/plugin-i18next`. Every command string key must exist in `en-US` at minimum; translations for other locales are sourced via Crowdin. 30 Discord locales are supported (from `af-ZA` to `zh-TW`), falling back to `en-US` for untranslated strings.
+All user-facing strings must be localized through `src/lib/i18n/` (`ctx.fetchT()` / `fetchTyped()`). Every command string key must exist in `en-US` at minimum; translations for other locales are sourced via Crowdin (`crowdin.yml`).
 
-Translation files reside in `packages/core/src/languages/<locale>/`.
+Translation files reside in `src/languages/<locale>/`.
 
 ---
 
@@ -156,7 +154,7 @@ Translation files reside in `packages/core/src/languages/<locale>/`.
 Run the full verification suite locally prior to pushing your branch:
 
 ```bash
-# 1. Monorepo TypeScript compilation check
+# 1. TypeScript compilation check
 bun run typecheck
 
 # 2. ESLint linting (check-only, matches CI)
@@ -165,24 +163,24 @@ bun run lint
 # 2b. ESLint with auto-fixes, for local cleanup
 bun run lint:fix
 
-# 3. Unit and integration tests (Vitest)
+# 3. Unit and integration tests (Bun)
 bun run test
 
-# 4. End-to-end black-box tests
-bun run test:e2e
+# 4. Coverage (matches CI)
+bun run test:coverage
 
-# 5. Fault tolerance & event bus resilience verification
-bun run verify:resilience
+# 5. Addon structure, import, and UI checks
+bun run validate
 ```
 
 | Verification Command | Execution Tool | Target / Description |
 | :--- | :--- | :--- |
-| `bun run typecheck` | `tsc` | Monorepo-wide type checking without emitting files |
+| `bun run typecheck` | `tsc` | Type checking without emitting files |
 | `bun run lint` | `eslint` | Code style enforcement (check-only, no auto-fix) |
 | `bun run lint:fix` | `eslint --fix` | Same checks, with auto-fixes applied locally |
-| `bun run test` | `vitest` | Fast unit and integration tests across packages |
-| `bun run test:e2e` | `vitest` | Black-box E2E tests executing full bot flows |
-| `bun run verify:resilience` | Bun TS | Valkey Streams event bus fault tolerance test suite |
+| `bun run test` | `bun test` | Unit and integration tests under `tests/` |
+| `bun run test:coverage` | `bun test --coverage` | Same tests with coverage |
+| `bun run validate` | Bun TS | Addon structure, import, and UI checks |
 
 ---
 
@@ -205,7 +203,7 @@ Lumi follows standard commit conventions:
 | `refactor` | Code change that neither fixes a bug nor adds a feature | `refactor(db): optimize guild query caching` |
 | `docs` | Documentation updates | `docs(config): document tempo tracing pipeline` |
 | `test` | Adding or updating tests | `test(resilience): add event-bus burst test` |
-| `chore` | Build tasks, package management, dependencies | `chore(deps): update sapphire framework packages` |
+| `chore` | Build tasks, package management, dependencies | `chore(deps): update discord.js` |
 | `perf` | Code changes that improve performance | `perf(event-bus): reduce stream consumer allocation overhead` |
 
 ---

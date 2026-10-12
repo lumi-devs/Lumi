@@ -14,9 +14,11 @@
 cp .env.example .env   # if present, otherwise create .env
 ```
 
-Required keys: `DISCORD_TOKEN`, `POSTGRES_URL`, `VALKEY_URL`, `OWNER_IDS`
-(comma-separated user IDs). `lumi config` prints the resolved
-configuration without starting anything.
+Required keys: `BOT_TOKEN`, `APPEAL_TOKEN_SECRET`, `POSTGRES_URL`,
+`OWNER_IDS` (comma-separated user IDs). Valkey via `VALKEY_HOST` /
+`VALKEY_PORT` (see `.env.example`; `VALKEY_URL` override supported).
+`lumi config` prints the resolved configuration without starting
+anything.
 
 ## Migrate and run
 
@@ -28,7 +30,7 @@ bun src/Index.ts     # the bot: db -> modules -> slash -> RPC -> gateway
 With Docker:
 
 ```sh
-docker compose up bot   # bot + postgres + valkey (+ dashboard)
+docker compose up bot   # bot + postgres + valkey
 ```
 
 The `migrate` one-shot service runs `prisma migrate deploy` before the

@@ -14,7 +14,7 @@ export async function publishDashboardEvent(services: Container, event: Dashboar
   const validated = DashboardEventSchema.safeParse(stamped);
   if (!validated.success) {
     dashboardEventPublishFailures.inc({ reason: "invalid" });
-    services.logger?.warn?.("[DashboardEvents] dropping invalid event", {
+    services.logger.warn("[DashboardEvents] dropping invalid event", {
       type: stamped.type,
       guildId: (stamped as { guildId?: unknown }).guildId,
       err: validated.error.message,
@@ -24,10 +24,10 @@ export async function publishDashboardEvent(services: Container, event: Dashboar
 
   const value = validated.data;
   try {
-    await services.eventBus?.publish(DashboardEventStream, value);
+    await services.eventBus.publish(DashboardEventStream, value);
   } catch (err) {
     dashboardEventPublishFailures.inc({ reason: "publish_failed" });
-    services.logger?.warn?.("[DashboardEvents] publish failed", {
+    services.logger.warn("[DashboardEvents] publish failed", {
       type: value.type,
       guildId: value.guildId,
       err: err instanceof Error ? err.message : String(err),

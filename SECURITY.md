@@ -32,33 +32,51 @@ We take the security of Lumi very seriously. If you suspect or discover a securi
 
 ## Addons and Sandboxing Policy
 
-Every addon is bundled and run in a V8 isolate inside a Node sidecar (`packages/core/src/lib/addon-sandbox/`, `packages/core/src/runtime/addon-isolate-runner.mjs`). There is no other execution mode. Inside the isolate:
+There is no sandbox or isolate. Addons load in-process through the same
+module loader as core modules (`src/lib/module-system/ModuleStore.ts`,
+`#loadAddon` path for roots outside `src/modules`): an addon can import
+anything core code can. Treat installing an addon like adding a
+dependency — only install addons from sources you trust.
 
-- **No ambient authority**: no filesystem, network, subprocess, `process`, `fetch`, `WebSocket`, or `require` access at all. The only host contact is the `__hostCall` bridge, which speaks the same JSON RPC as the protocol.
-- **Memory and CPU bounds**: each isolate has a configurable memory limit (`LUMI_ISOLATE_MEMORY_MB`, default 128) and invocations run under timeouts; an out-of-memory or wedged isolate is discarded and the host crash-loop guard applies.
-- **No secret inheritance**: the sidecar gets an allowlisted environment (`PATH`, `HOME`, `TZ`, `LANG`, `LC_ALL`, `NODE_ENV`) plus `LUMI_ADDON_*` metadata. Bot token, database URIs, and API keys are never passed through.
-- **Capability-gated host RPC**: every host method declares a required capability (`capabilities.ts`); unknown methods are denied by default. Broad capabilities (`valkey`, `scheduling`, Discord management scopes) are opt-in per addon manifest.
-- **Namespaced interactions**: an addon only receives button/select/modal interactions under its own `<addonName>:` prefix; prefixes outside its namespace are ignored.
-- **Optional signature enforcement**: `ADDON_SIGNATURE_POLICY=warn|require` verifies git SSH commit signatures against `ADDON_ALLOWED_SIGNERS_FILE`; `require` refuses to start on misconfiguration.
+What the framework does enforce, via `bun run validate` and the install
+path (`src/lib/downloader/`):
+
+- **Self-containment**: no imports from sibling modules; shared code
+  comes from `src/lib/` or `src/contracts/`.
+- **No raw embeds or direct DB access in commands**: the validator warns
+  on `new EmbedBuilder()` and on `container.prisma` use outside the
+  repository layer.
+- **Optional signature enforcement**: `ADDON_SIGNATURE_POLICY=off|warn|require`
+  verifies git SSH commit signatures against
+  `ADDON_ALLOWED_SIGNERS_FILE`; `require` refuses to install or update
+  from unsigned or untrusted commits.
+- **Revision-pinned installs**: a revision-pinned install checks out a
+  detached revision and never silently changes underneath a guild;
+  `/module pin` holds a revision across updates.
 
 > [!WARNING]
-> Granted capabilities convey real power (sending messages, managing roles, KV writes) — only install addons from sources you trust, review requested capabilities before enabling, and inspect third-party privacy statements via `/mydata 3rdparty`.
+> An installed addon runs with full in-process authority — only install
+> addons from sources you trust, and inspect third-party privacy
+> statements via `/mydata 3rdparty`.
 
-## RPC Bridge (Dashboard ↔ API)
+## RPC Bridge (Dashboard ↔ Bot)
 
-`apps/api` serves the dashboard over an internal HTTP RPC bridge (`rpc-http-server.ts`):
+The embedded RPC server (`src/lib/rpc/HttpServer.ts`, started from
+`src/Index.ts`) serves the dashboard over HTTP. There is no separate API
+service and no REST surface: every action is a typed entry in the
+contract router under `src/contracts/rpc/`.
 
-- **Bearer auth**: dashboard calls present `Authorization: Bearer <RPC_INTERNAL_TOKEN>`, compared in constant time. `apps/api` refuses to start unauthenticated when `NODE_ENV=production`.
+- **Bearer auth**: dashboard calls present `Authorization: Bearer <RPC_INTERNAL_TOKEN>`, compared in constant time. The server refuses a non-loopback `RPC_HTTP_HOST` with no token set.
 - **Loopback by default**: keep `RPC_HTTP_HOST=127.0.0.1` unless the dashboard runs in another container/pod; never expose the RPC port to the public internet — `actorId` on an RPC body is an unsigned claim.
-- **Contract enforcement**: callers must send `x-lumi-contract-version` within `COMPATIBLE_CONTRACT_RANGE`; mismatched callers are rejected.
+- **Contract enforcement**: callers must send `x-lumi-contract-version` within `COMPATIBLE_CONTRACT_RANGE` (`src/contracts/Version.ts`); mismatched callers are rejected.
 
-Generate the token with `openssl rand -hex 32` and set it identically on `apps/api` and the dashboard.
+Generate the token with `openssl rand -hex 32` and set it identically on the bot and the dashboard.
 
 ## Data Privacy (GDPR/CCPA)
 
-- `/mydata whatdata|getmydata|forgetme` gives end users access, export (JSON), and erasure with per-module `exportUserData`/`deleteUserData` hooks. A failing module hook is reported, not silently swallowed — partial erasure beats none, but follow up on failures.
-- Retention is operator-configured: `AUDIT_RETENTION_DAYS`, `CONFIG_HISTORY_RETENTION_DAYS`, `MODERATION_RETENTION_DAYS`, `ECONOMY_TRANSACTION_RETENTION_DAYS`, `GUILD_DATA_RETENTION_DAYS`, with optional pre-delete archival via `AUDIT_ARCHIVE_DIR`.
-- Ban/timeout appeal links are HMAC-SHA256 signed with `APPEAL_TOKEN_SECRET` (bot-only; the dashboard forwards the opaque token for verification).
+- `/mydata whatdata|3rdparty|getmydata|forgetme` gives end users access, export (JSON), and erasure with per-module `exportUserData`/`deleteUserData` hooks. A failing module hook is reported, not silently swallowed — partial erasure beats none, but follow up on failures.
+- Retention is operator-configured: `AUDIT_RETENTION_DAYS`, `CONFIG_HISTORY_RETENTION_DAYS`, `MODERATION_RETENTION_DAYS`, with optional pre-delete archival via `AUDIT_ARCHIVE_DIR`. GDPR exports are signed download tokens (`GDPR_EXPORT_SIGNING_SECRET`, falling back to `RPC_INTERNAL_TOKEN`).
+- Ban/timeout appeal links are HMAC-SHA256 signed with `APPEAL_TOKEN_SECRET` (required at boot; the dashboard forwards the opaque token for verification).
 
 ## Telemetry
 

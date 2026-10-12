@@ -1,10 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["config/*.ts"],
   "entry": [
-    "src/index.ts",
-    "src/cli/main.ts",
-    "src/modules/*/index.ts",
+    "src/Index.ts",
+    "src/cli/Main.ts",
+    "src/modules/*/Index.ts",
     "src/modules/*/commands/*.ts",
     "src/modules/*/listeners/*.ts",
     "src/modules/*/interactions/**/*.ts",
