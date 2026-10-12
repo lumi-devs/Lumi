@@ -240,9 +240,19 @@ export class DownloadResolver {
       const isExisting =
         (await this._exists(repoPath)) && (await this._exists(gitFolder));
       if (!isExisting) {
-        throw new Error(
-          `Repository **${name}** is not cloned locally. Use \`,repo add\` first.`,
+        container.logger?.info?.(
+          `[Downloader] Repository ${name} tracked in DB but missing from disk. Auto-restoring clone...`,
         );
+        const added = await this.addRepo(name, url, branch);
+        return {
+          oldSha: null,
+          newSha: added.sha ?? "",
+          changed: true,
+          diffStat: "Restored fresh clone from remote.",
+          recloned: true,
+          signedBy: added.signedBy,
+          signatureWarning: added.signatureWarning,
+        };
       }
 
       const oldSha = await this._getHeadSha(repoPath);
