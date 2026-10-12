@@ -11,7 +11,7 @@ vi.mock("#lib/i18n/Index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/permissions/Index.js", () => ({
+vi.mock("#lib/api/permissions/Index.js", () => ({
   hasRequiredPermit: vi.fn().mockResolvedValue(true),
 }));
 

@@ -1,5 +1,5 @@
 import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
-import { hasRequiredPermit } from "#src/lib/permissions/Index.js";
+import { hasRequiredPermit } from "#src/lib/api/permissions/Index.js";
 import type { FeatureListEntry } from "#src/modules/core/ui/Modules.js";
 import { UserError } from "#src/shared/Index.ts";
 import type { Container } from "#src/lib/Services.js";

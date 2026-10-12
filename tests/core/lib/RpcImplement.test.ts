@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { PermissionFlagsBits } from "discord.js";
 import { container } from "#src/lib/Services.js";
 import { rpcRouter, type RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
+import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 import { dispatchRpc } from "#src/lib/rpc/Dispatch.js";
 import { requireGuildId, requireGuildManager } from "#src/lib/rpc/Implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";

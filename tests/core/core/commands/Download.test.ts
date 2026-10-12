@@ -3,7 +3,7 @@ import { container } from "#src/lib/Services.js";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
 import { downloadDef } from "#src/modules/core/commands/Download.js";
-import { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
+import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({
   getUtility: vi.fn(),

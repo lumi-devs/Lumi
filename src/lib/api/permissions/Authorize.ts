@@ -1,6 +1,6 @@
 import { container } from "#src/lib/Services.js";
 import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
-import { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
+import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 
 export interface Actor {
   userId: string;

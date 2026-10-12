@@ -6,7 +6,7 @@ import type { DiscordRestPort } from "#src/lib/discord/RestPort.js";
 import type { EventBus } from "#src/lib/event-bus/Types.js";
 import type { ModuleStore } from "#src/lib/module-system/ModuleStore.js";
 import type { TaskQueue } from "#src/lib/scheduler/Runner.js";
-import type { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
+import type { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 import type { ILogger } from "#src/shared/Index.ts";
 import type { Client } from "discord.js";
 import {
@@ -26,7 +26,7 @@ import {
 } from "#src/lib/Env.js";
 import { LumiPinoLogger } from "#src/lib/logging/PinoLogger.js";
 import { ModuleStore as ModuleStoreImpl } from "#src/lib/module-system/ModuleStore.js";
-import { permitResolver } from "#src/lib/permissions/PermitResolver.js";
+import { permitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 import { prisma, prismaReader } from "#src/lib/prisma/Client.js";
 import { DatabaseService as DatabaseServiceImpl } from "#src/lib/prisma/DatabaseService.js";
 import { createEventBus, type OwnedEventBus } from "#src/lib/event-bus/Factory.js";

@@ -7,7 +7,7 @@ import {
 import { fetchTyped } from "#src/lib/i18n/Index.js";
 import { revertPanic } from "#src/modules/security/services/Panic.js";
 import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { memberRoleIds } from "#src/lib/permissions/Subject.js";
+import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 import { PanicRevertId, buildPanicRevertedCard } from "#src/modules/security/ui/PanicCard.js";
 
 export const panicRevert = defineInteraction({

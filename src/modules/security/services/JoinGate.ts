@@ -2,8 +2,8 @@ import { container } from "#src/lib/Services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
 import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
 import { ValkeyKeys } from "#src/lib/valkey/Client.js";
-import { QuarantineAction } from "#src/lib/moderation/Quarantine.js";
-import { logToChannel } from "#src/lib/discord/ModLog.js";
+import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
+import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
 import { tryGetUtility } from "#src/lib/module-system/Utility.js";
 import {

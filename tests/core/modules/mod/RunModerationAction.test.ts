@@ -8,7 +8,7 @@ Object.assign(container, {
   },
 });
 
-vi.mock("#lib/discord/ModLog.js", () => ({
+vi.mock("#lib/api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn(),
 }));
 
@@ -20,7 +20,7 @@ vi.mock("#src/modules/mod/services/AppealDm.js", () => ({
   sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { logToChannel } from "#src/lib/discord/ModLog.js";
+import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";
 import { sendAppealLinkDm } from "#src/modules/mod/services/AppealDm.js";
 

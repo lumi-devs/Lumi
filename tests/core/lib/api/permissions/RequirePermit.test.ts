@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { memberRoleIds } from "#src/lib/permissions/Subject.js";
+import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 
 function fakeRoleCache(roles: Array<{ id: string; position: number }>): Map<string, { position: number }> {
   const map = new Map<string, { position: number }>();

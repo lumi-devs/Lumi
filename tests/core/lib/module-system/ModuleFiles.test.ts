@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { ensureModuleFilesDir, listModuleFiles } from "#src/lib/files/ModuleFiles.js";
+import { ensureModuleFilesDir, listModuleFiles } from "#src/lib/module-system/ModuleFiles.js";
 
 const Module = "sweep-test";
 

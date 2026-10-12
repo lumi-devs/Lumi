@@ -5,14 +5,14 @@ import {
   loadJoinGateConfig,
   evaluateJoinFilters,
 } from "#src/modules/security/services/JoinGate.js";
-import { QuarantineAction } from "#src/lib/moderation/Quarantine.js";
-import { logToChannel } from "#src/lib/discord/ModLog.js";
+import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
+import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 
-vi.mock("#lib/moderation/Quarantine.js", () => ({
+vi.mock("#lib/api/moderation/Quarantine.js", () => ({
   QuarantineAction: { apply: vi.fn() },
 }));
 
-vi.mock("#lib/discord/ModLog.js", () => ({
+vi.mock("#lib/api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn(),
 }));
 

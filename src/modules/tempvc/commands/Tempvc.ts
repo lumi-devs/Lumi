@@ -16,7 +16,7 @@ import {
   StringSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { getVcRecord } from "#src/modules/tempvc/data/Tempvc.js";
 import { buildPanel } from "#src/modules/tempvc/ui/Panel.js";
 import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";

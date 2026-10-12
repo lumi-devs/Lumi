@@ -1,4 +1,4 @@
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import type { Container } from "#src/lib/Services.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
 import { UserError } from "#src/shared/Index.ts";

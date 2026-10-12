@@ -3,7 +3,7 @@ import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import { Result } from "#src/shared/Index.ts";
 import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
-import { runModerationFlow, type ModerationCommand as MC } from "#src/lib/commands/ModerationFlow.js";
+import { runModerationFlow, type ModerationCommand as MC } from "#src/lib/api/moderation/ModerationFlow.js";
 import type { LumiT } from "#src/lib/i18n/Index.js";
 import type { GuildMember } from "discord.js";
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import {
   PermitResolver,
   evaluateNodeMatch,
-} from "#src/lib/permissions/PermitResolver.js";
+} from "#src/lib/api/permissions/PermitResolver.js";
 import { container } from "#src/lib/Services.js";
 import { UserError } from "#src/shared/Index.ts";
 

@@ -15,7 +15,7 @@ import { MuteAction } from '#src/modules/mod/services/actions/MuteAction.js';
 import { VoiceMuteAction } from '#src/modules/mod/services/actions/VoiceMuteAction.js';
 import { KickAction } from '#src/modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#src/modules/mod/services/actions/WarnAction.js';
-import { QuarantineAction } from '#src/lib/moderation/Quarantine.js';
+import { QuarantineAction } from '#src/lib/api/moderation/Quarantine.js';
 import { QueuePriority } from '#src/lib/scheduler/Schedule.js';
 import { FakeDiscordRestPort } from '#src/lib/discord/FakeRestPort.js';
 

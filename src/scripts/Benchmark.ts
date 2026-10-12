@@ -1,5 +1,5 @@
 import { performance } from "perf_hooks";
-import { evaluateNodeMatch } from "#src/lib/permissions/PermitResolver.js";
+import { evaluateNodeMatch } from "#src/lib/api/permissions/PermitResolver.js";
 import { makeInfoCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
 import { userMention, roleMention, channelMention, time } from "@discordjs/formatters";
 import { cutText, isNullish } from "#src/shared/Index.ts";

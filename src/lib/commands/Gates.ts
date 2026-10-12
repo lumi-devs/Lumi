@@ -4,7 +4,7 @@ import {
   type GateCommand,
   type GateDenial,
   type GateSource,
-} from "#src/lib/permissions/PreconditionChecks.js";
+} from "#src/lib/api/permissions/PreconditionChecks.js";
 import { handleDenied } from "#src/lib/utilities/CommandResponse.js";
 import { UserError } from "#src/shared/Index.ts";
 import {

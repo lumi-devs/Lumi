@@ -10,7 +10,7 @@ import {
   startGdprExportJob,
 } from "#src/lib/gdpr/Requests.js";
 import { signGdprExportToken } from "#src/lib/gdpr/ExportToken.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { implementRpc } from "#src/lib/rpc/Implement.js";
 
 async function canAccessUserData(

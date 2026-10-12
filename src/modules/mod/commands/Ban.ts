@@ -7,7 +7,7 @@ import type { CommandContext } from "#src/lib/commands/Context.js";
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/commands/ModerationFlow.js";
+} from "#src/lib/api/moderation/ModerationFlow.js";
 import { parseSnowflakeList, resolveUsers } from "#src/lib/discord/MassTargets.js";
 import { Result } from "#src/shared/Index.ts";
 import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";

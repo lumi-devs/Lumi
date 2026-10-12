@@ -1,7 +1,7 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/commands/ModerationFlow.js";
+} from "#src/lib/api/moderation/ModerationFlow.js";
 import type { Container } from "#src/lib/Services.js";
 import { formatDuration, parseDuration } from "#src/lib/utilities/Time.js";
 import { Result, Time } from "#src/shared/Index.ts";

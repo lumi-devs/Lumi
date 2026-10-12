@@ -10,7 +10,7 @@ import {
   type RpcSliceEntry,
 } from "#src/contracts/rpc/Index.ts";
 import { snowflakeString } from "#src/lib/module-system/ConfigSchema.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { checkGuildManagerRest } from "#src/lib/rpc/DiscordRestLookup.js";
 
 interface RpcAuthContexts {

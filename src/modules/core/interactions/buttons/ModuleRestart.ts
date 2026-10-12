@@ -1,6 +1,6 @@
 import { UserError } from "#src/shared/Index.ts";
 import type { Container } from "#src/lib/Services.js";
-import { PermitResolver } from "#src/lib/permissions/PermitResolver.js";
+import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 import { type ButtonInteraction } from "discord.js";
 import {
   acknowledge,

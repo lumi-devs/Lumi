@@ -4,7 +4,7 @@ import {
   preconditionChecks,
   type GateCheck,
   type GateSource,
-} from "#src/lib/permissions/PreconditionChecks.js";
+} from "#src/lib/api/permissions/PreconditionChecks.js";
 import { denyGated } from "#src/lib/commands/Gates.js";
 
 vi.mock("#lib/utilities/CommandResponse.js", () => ({

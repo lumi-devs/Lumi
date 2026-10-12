@@ -1,7 +1,7 @@
 import { defineModule } from "#src/lib/module-system/Module.js";
 import { container, type Container } from "#src/lib/Services.js";
 import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { registerCaseTypes } from "#src/lib/modlog/CaseTypes.js";
+import { registerCaseTypes } from "#src/lib/api/moderation/CaseTypes.js";
 import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
 import { invalidateThresholds } from "#src/modules/mod/data/ThresholdRules.js";
 import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";

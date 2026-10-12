@@ -17,7 +17,7 @@ Object.assign(container, {
   },
 });
 
-vi.mock("#lib/discord/ModLog.js", () => ({
+vi.mock("#lib/api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn().mockResolvedValue(undefined),
 }));
 

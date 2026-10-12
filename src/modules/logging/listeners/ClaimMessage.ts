@@ -2,7 +2,7 @@ import type { Container } from "#src/lib/Services.js";
 import { Colors } from "discord.js";
 import { fetchTyped } from "#src/lib/i18n/Index.js";
 import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { memberRoleIds } from "#src/lib/permissions/Subject.js";
+import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 import { LumiEvents, type GuildMessage } from "#src/lib/types/Common.js";
 import { makeCard } from "#src/lib/ui/Cards.js";
 import { logError } from "#src/lib/utilities/Errors.js";

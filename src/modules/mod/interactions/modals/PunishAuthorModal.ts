@@ -11,11 +11,11 @@ import {
   checkDuplicateCase,
   checkHierarchy,
   type DuplicateCaseCheckContext,
-} from "#src/lib/commands/ModerationFlow.js";
+} from "#src/lib/api/moderation/ModerationFlow.js";
 import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
 import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
 import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
-import { QuarantineAction } from "#src/lib/moderation/Quarantine.js";
+import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
 import { WarnAction } from "#src/modules/mod/services/actions/WarnAction.js";
 import { PunishAuthorModalId } from "#src/modules/mod/Constants.js";
 import type { CaseAction } from "@prisma/client";

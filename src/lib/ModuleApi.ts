@@ -3,18 +3,18 @@ import {
   defineModuleConfig,
   type ConfigScope,
   type ScopedConfig,
-} from "#src/lib/config/Scoped.js";
-import * as bank from "#src/lib/economy/Bank.js";
-import * as levels from "#src/lib/leveling/Levels.js";
-import { isFlagEnabled } from "#src/lib/feature-flags/Index.js";
+} from "#src/lib/module-system/ModuleConfig.js";
+import * as bank from "#src/lib/api/economy/Bank.js";
+import * as levels from "#src/lib/api/economy/Levels.js";
+import { isFlagEnabled } from "#src/lib/api/feature-flags/Index.js";
 import {
   deleteModuleFile,
   ensureModuleFilesDir,
   listModuleFiles,
   readModuleFile,
   writeModuleFile,
-} from "#src/lib/files/ModuleFiles.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+} from "#src/lib/module-system/ModuleFiles.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { scheduleOneshot } from "#src/lib/scheduler/Oneshot.js";
 import { UserError } from "#src/shared/Index.ts";
 import {

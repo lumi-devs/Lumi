@@ -9,9 +9,9 @@ import { thresholdKey } from "#src/modules/mod/data/ThresholdRules.js";
 import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
 import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
 import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
-import { QuarantineAction } from "#src/lib/moderation/Quarantine.js";
+import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
 import { VoiceMuteAction } from "#src/modules/mod/services/actions/VoiceMuteAction.js";
-import { isImmuneToAutomatedAction } from "#src/lib/moderation/Immunity.js";
+import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
 
 type ThresholdAction = WarnThresholdAction;
 

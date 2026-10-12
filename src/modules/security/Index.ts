@@ -2,7 +2,7 @@ import { defineModule } from "#src/lib/module-system/Module.js";
 import { NoEndUserData } from "#src/lib/module-system/Meta.js";
 import { cfg } from "#src/lib/module-system/ConfigSchema.js";
 import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { registerCaseTypes } from "#src/lib/modlog/CaseTypes.js";
+import { registerCaseTypes } from "#src/lib/api/moderation/CaseTypes.js";
 import { handleVerifySweepFire } from "#src/modules/security/services/VerifySweepHandler.js";
 import { handleBackupSnapshotFire } from "#src/modules/security/services/BackupSnapshotHandler.js";
 

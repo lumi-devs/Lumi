@@ -2,7 +2,7 @@ import type { CommandContext } from "#src/lib/commands/Context.js";
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { LumiT } from "#src/lib/i18n/Index.js";
-import { runModerationFlow, type ModerationCommand } from "#src/lib/commands/ModerationFlow.js";
+import { runModerationFlow, type ModerationCommand } from "#src/lib/api/moderation/ModerationFlow.js";
 import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
 import type { GuildMember } from "discord.js";
 import { NotesAction } from "#src/modules/mod/services/actions/NotesAction.js";

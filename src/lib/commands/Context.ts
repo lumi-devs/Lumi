@@ -15,7 +15,7 @@ import {
 import type { LumiT } from "#src/lib/i18n/Index.js";
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#src/lib/ui/Cards.js";
 import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
-import { permitSubject } from "#src/lib/permissions/Subject.js";
+import { permitSubject } from "#src/lib/api/permissions/Subject.js";
 import { BrandColors } from "#src/lib/ui/Palette.js";
 import { getGuildContext } from "#src/lib/cache/GuildContext.js";
 

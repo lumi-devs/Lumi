@@ -102,9 +102,9 @@ describe("monolith layering", () => {
     const violations: string[] = [];
     const RESTRICTED_ROOTS = [
       join(REPO_ROOT, "src/lib/rpc"),
-      join(REPO_ROOT, "src/lib/permissions/preconditions"),
+      join(REPO_ROOT, "src/lib/api/permissions/preconditions"),
     ];
-    const PERMIT_RESOLVER = join(REPO_ROOT, "src/lib/permissions/permit-resolver.ts");
+    const PERMIT_RESOLVER = join(REPO_ROOT, "src/lib/api/permissions/permit-resolver.ts");
 
     for (const { file, ref } of allImports) {
       if (!RESTRICTED_ROOTS.some((root) => file === root || file.startsWith(`${root}/`))) continue;

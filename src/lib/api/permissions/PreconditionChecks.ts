@@ -4,8 +4,8 @@ import type {
   Guild,
   Message,
 } from "discord.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
-import { permitSubject } from "#src/lib/permissions/Subject.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
+import { permitSubject } from "#src/lib/api/permissions/Subject.js";
 
 export interface GateSource {
   userId: string;

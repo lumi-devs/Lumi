@@ -7,7 +7,7 @@ import {
   SCHEDULED_TASKS_QUEUE_NAME,
 } from "#src/lib/scheduler/Queue.js";
 import { getClusterName } from "#src/lib/Env.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { implementRpc } from "#src/lib/rpc/Implement.js";
 import { paginate, resolvePageSize } from "#src/lib/rpc/Validation.js";
 import { readSchedulerHeartbeat } from "#src/lib/scheduler/Heartbeat.js";

@@ -16,8 +16,8 @@ import {
   isZalgo,
   type HeatConfig,
 } from "#src/modules/filter/services/Heat.js";
-import { QuarantineAction } from "#src/lib/moderation/Quarantine.js";
-import { isImmuneToAutomatedAction } from "#src/lib/moderation/Immunity.js";
+import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
+import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
 import { lockAllTextChannels } from "#src/lib/discord/ChannelLocks.js";
 import { scheduleTask } from "#src/lib/scheduler/Schedule.js";
 import { swallow } from "#src/lib/utilities/Errors.js";

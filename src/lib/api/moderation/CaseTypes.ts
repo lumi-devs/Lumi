@@ -1,5 +1,5 @@
 import type { Container } from "#src/lib/Services.js";
-import { logToChannel } from "#src/lib/discord/ModLog.js";
+import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 import type { User } from "discord.js";
 
 export interface CaseTypeDef {

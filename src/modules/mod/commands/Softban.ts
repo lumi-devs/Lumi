@@ -1,7 +1,7 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/commands/ModerationFlow.js";
+} from "#src/lib/api/moderation/ModerationFlow.js";
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";

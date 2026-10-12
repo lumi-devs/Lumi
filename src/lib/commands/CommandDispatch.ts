@@ -19,13 +19,13 @@ import {
   type SubcommandHandler,
 } from "#src/lib/commands/CommandDef.js";
 import { PrefixArgs } from "#src/lib/commands/PrefixArgs.js";
-import { authorize } from "#src/lib/permissions/Authorize.js";
+import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import {
   gateSourceFromChatInput,
   gateSourceFromMessage,
   type GateSource,
-} from "#src/lib/permissions/PreconditionChecks.js";
-import { memberRoleIds } from "#src/lib/permissions/Subject.js";
+} from "#src/lib/api/permissions/PreconditionChecks.js";
+import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 import { denyGated } from "#src/lib/commands/Gates.js";
 import { instrumentedRun } from "#src/lib/Telemetry.js";
 import {

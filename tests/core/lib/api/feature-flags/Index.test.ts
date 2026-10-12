@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#src/lib/Services.js";
-import { isFlagEnabled } from "#src/lib/feature-flags/Index.js";
+import { isFlagEnabled } from "#src/lib/api/feature-flags/Index.js";
 
 describe("isFlagEnabled", () => {
   let getOverride: ReturnType<typeof vi.fn>;

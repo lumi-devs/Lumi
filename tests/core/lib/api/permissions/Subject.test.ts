@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { permitSubject } from "#src/lib/permissions/Subject.js";
+import { permitSubject } from "#src/lib/api/permissions/Subject.js";
 
 interface GuildStub {
   id: string;
