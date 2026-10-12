@@ -242,7 +242,7 @@ export function buildRepoUpdateConfirmView(
     resolveCardColor("warning"),
     `📦 Update available for ${repoName}`,
     changelog
-      ? `-# \`\`\`\n${cutText(changelog, 820)}\n\`\`\``
+      ? `\`\`\`\n${cutText(changelog, 820)}\n\`\`\``
       : "New commits are available on the tracked branch.",
     {
       footer: "Update pulls the repo's latest commit for every installed module from it.",

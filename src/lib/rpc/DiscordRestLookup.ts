@@ -23,7 +23,7 @@ export async function fetchGuildRest(guildId: string): Promise<APIGuild | null> 
       icon: cached.icon,
       banner: cached.banner,
       approximate_member_count: cached.memberCount ?? 0,
-      roles: Array.from(cached.roles?.cache?.values() ?? []).map((r) => ("toJSON" in r ? (r as any).toJSON() : r)),
+      roles: Array.from(cached.roles?.cache?.values() ?? []).map((r) => ("toJSON" in r ? (r.toJSON() as APIRole) : (r as unknown as APIRole))),
     } as unknown as APIGuild;
   }
 
@@ -44,7 +44,7 @@ export async function fetchGuildMemberRest(
 ): Promise<APIGuildMember | null> {
   const cachedMember = container.client?.guilds?.cache?.get(guildId)?.members?.cache?.get(userId);
   if (cachedMember && "toJSON" in cachedMember) {
-    return (cachedMember as any).toJSON() as APIGuildMember;
+    return cachedMember.toJSON() as APIGuildMember;
   }
 
   return repositoryCache.getOrLoad<APIGuildMember | null>(

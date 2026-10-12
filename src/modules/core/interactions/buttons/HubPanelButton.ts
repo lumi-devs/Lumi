@@ -320,11 +320,12 @@ async function updateAllRepos(services: Container, downloader: DownloaderUtility
           const shaLine = result.changed
             ? `\`${(result.oldSha ?? "?").slice(0, 7)}\` → \`${result.newSha.slice(0, 7)}\``
             : "Already up to date.";
+          const diffBlock = result.diffStat ? `\`\`\`diff\n${result.diffStat}\n\`\`\`` : null;
           await interaction.followUp(
             ephemeralCard(
               makeSuccessCard(
                 "Repository Updated",
-                [`**${repoName}** was updated.`, shaLine, result.diffStat]
+                [`**${repoName}** was updated.`, shaLine, diffBlock]
                   .filter(Boolean)
                   .join("\n\n"),
               ),
