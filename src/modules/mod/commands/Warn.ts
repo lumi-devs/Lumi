@@ -53,7 +53,7 @@ export const warnDef: CommandDef = {
                 .setRequired(false)
                 .setAutocomplete(true),
             )
-    ) as SlashCommandBuilder;
+    );
   },
   run: (ctx: CommandContext) => runModerationFlow(ctx, warnDefFlow),
   autocomplete: async (_services: Container, interaction: AutocompleteInteraction) =>

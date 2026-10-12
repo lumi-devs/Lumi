@@ -36,7 +36,7 @@ export const slotsDef: CommandDef = {
           .setDescription("How much to bet.")
           .setMinValue(1)
           .setRequired(true),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;

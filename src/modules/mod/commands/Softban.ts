@@ -90,6 +90,6 @@ export const softbanDef: CommandDef = {
         )
         .addStringOption((o) =>
           o.setName("reason").setDescription("Reason for softban"),
-        ) as SlashCommandBuilder,
+        ),
   run: (ctx: CommandContext) => runModerationFlow(ctx, softbanDefFlow),
 };

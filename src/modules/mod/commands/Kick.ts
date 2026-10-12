@@ -84,7 +84,7 @@ export const kickDef: CommandDef = {
             .addStringOption((o) =>
               applyLocalizedBuilder(o, "commands:modReason").setAutocomplete(true),
             )
-    ) as SlashCommandBuilder;
+    );
   },
   run: (ctx: CommandContext) => runModerationFlow(ctx, kickDefFlow),
   autocomplete: async (_services: Container, interaction: AutocompleteInteraction) =>

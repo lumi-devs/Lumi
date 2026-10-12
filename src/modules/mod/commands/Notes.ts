@@ -46,7 +46,7 @@ export const notesDef: CommandDef = {
             .addStringOption((o) =>
               applyLocalizedBuilder(o, "commands:modReason").setRequired(true),
             )
-    ) as SlashCommandBuilder;
+    );
   },
   run: (ctx: CommandContext) => runModerationFlow(ctx, notesDefFlow)
 };

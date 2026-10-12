@@ -29,7 +29,7 @@ export const payDef: CommandDef = {
           .setDescription("How much to send.")
           .setMinValue(1)
           .setRequired(true),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;

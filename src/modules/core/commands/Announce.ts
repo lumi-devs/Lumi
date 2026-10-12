@@ -45,7 +45,7 @@ export const announceDef: CommandDef = {
           .setDescription("Announcement text sent to every server")
           .setRequired(true)
           .setMaxLength(2000),
-      ) as SlashCommandBuilder,
+      ),
   run: async (ctx: CommandContext) => {
     await ctx.defer();
     const message = (await ctx.getString("message", { required: true, rest: true }))!;

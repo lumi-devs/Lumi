@@ -72,7 +72,7 @@ export const sanitizeDef: CommandDef = {
     applyLocalizedBuilder(b, "commands:sanitize").addUserOption((o) =>
             applyLocalizedBuilder(o, "commands:sanitizeMember").setRequired(true),
           )
-    ) as SlashCommandBuilder;
+    );
   },
   run: (ctx: CommandContext) => runModerationFlow(ctx, sanitizeDefFlow)
 };

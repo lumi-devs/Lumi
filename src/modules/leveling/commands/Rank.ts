@@ -24,7 +24,7 @@ export const rankDef: CommandDef = {
           .setName("user")
           .setDescription("Whose rank card to show. Defaults to you.")
           .setRequired(false),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;

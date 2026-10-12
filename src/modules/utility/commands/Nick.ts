@@ -23,7 +23,7 @@ export const nickDef: CommandDef = {
           .setName("nickname")
           .setDescription("New nickname; omit to reset")
           .setRequired(false),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext): Promise<void> => {
     const t = await ctx.fetchT();

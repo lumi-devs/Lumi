@@ -22,7 +22,7 @@ import {
 import { loadFeatures } from "#src/modules/core/services/ConfigPanel.js";
 import {
   buildAddonInstalledView,
-  buildAddonReposView,
+  buildAddonReposCard,
   buildAddonsView,
   buildAutoUpdateSettingsView,
   buildRepoUpdateConfirmView,
@@ -438,31 +438,8 @@ async function updateAllRepos(services: Container, downloader: DownloaderUtility
   }
 
   async function renderAddonRepos(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
-    const [repos, installed] = await Promise.all([
-      downloader.listRepos(services),
-      downloader.getInstalledModulesDetailed(services),
-    ]);
-
-    const installedByRepo = new Map<number, number>();
-    for (const row of installed) {
-      installedByRepo.set(
-        row.repoId,
-        (installedByRepo.get(row.repoId) ?? 0) + 1,
-      );
-    }
-
-    return interaction.editReply(
-      buildAddonReposView(
-        repos.map((repo) => ({
-          name: repo.name,
-          url: repo.url,
-          branch: repo.branch,
-          commit: repo.commit,
-          installedCount: installedByRepo.get(repo.id) ?? 0,
-        })),
-        t,
-      ),
-    );
+    const card = await buildAddonReposCard(services, downloader, t);
+    return interaction.editReply(card);
   }
 
   async function renderAddonInstalled(services: Container, downloader: DownloaderUtility, interaction: ButtonInteraction, t?: LumiT) {
@@ -537,7 +514,7 @@ function openAddonModal(interaction: ButtonInteraction, action: string) {
             "Leave blank to derive from the URL",
             false,
           ),
-          field("branch", "Branch", "default: main", false),
+          field("branch", "Branch", "default: repository default", false),
         );
     } else if (action === "rm_repo") {
       modal

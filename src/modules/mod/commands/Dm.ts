@@ -24,7 +24,7 @@ export const dmDef: CommandDef = {
                 .setDescription("Message to send")
                 .setRequired(true)
                 .setMaxLength(MaxMessageLength),
-            ) as SlashCommandBuilder,
+            ),
   run: async (ctx: CommandContext) => {
     const target = await ctx.getUser("user", { required: true });
     const message = await ctx.getString("message", {

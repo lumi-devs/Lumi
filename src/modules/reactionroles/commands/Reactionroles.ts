@@ -50,7 +50,7 @@ export const reactionrolesDef: CommandDef = {
                 )
                 .setRequired(false),
             )
-    ) as SlashCommandBuilder;
+    );
   },
   run: async (ctx: CommandContext) => { const interaction: ChatInputCommandInteraction = ctx.interaction;
     const t = await fetchTyped(interaction);

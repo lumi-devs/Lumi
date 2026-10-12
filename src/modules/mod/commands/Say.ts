@@ -30,7 +30,7 @@ export const sayDef: CommandDef = {
                   ChannelType.GuildAnnouncement,
                 )
                 .setRequired(false),
-            ) as SlashCommandBuilder,
+            ),
   run: async (ctx: CommandContext) => {
     const message = await ctx.getString("message", {
       required: true,

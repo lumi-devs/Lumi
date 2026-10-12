@@ -25,7 +25,7 @@ export const leaderboardDef: CommandDef = {
           .setMinValue(1)
           .setMaxValue(50)
           .setRequired(false),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;

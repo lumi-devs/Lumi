@@ -1,3 +1,5 @@
+import type { Container } from "#src/lib/Services.js";
+import type { DownloaderUtility } from "#src/modules/core/utilities/DownloaderUtility.js";
 import type { LumiT } from "#src/lib/i18n/Index.js";
 import { formatPageFooter, row, type Row } from "#src/modules/core/ui/Common.js";
 import { hubTabRow } from "#src/modules/core/ui/Hub.js";
@@ -129,6 +131,33 @@ export function buildAddonsView(
       actionRows: [navButtons, hubTabRow("addons", t)],
       separatorAboveActionRows: true,
     },
+  );
+}
+
+export async function buildAddonReposCard(
+  services: Container,
+  downloader: DownloaderUtility,
+  t?: LumiT,
+): Promise<CardReply> {
+  const [repos, installed] = await Promise.all([
+    downloader.listRepos(services),
+    downloader.getInstalledModulesDetailed(services),
+  ]);
+
+  const installedByRepo = new Map<number, number>();
+  for (const row of installed) {
+    installedByRepo.set(row.repoId, (installedByRepo.get(row.repoId) ?? 0) + 1);
+  }
+
+  return buildAddonReposView(
+    repos.map((repo) => ({
+      name: repo.name,
+      url: repo.url,
+      branch: repo.branch,
+      commit: repo.commit,
+      installedCount: installedByRepo.get(repo.id) ?? 0,
+    })),
+    t,
   );
 }
 

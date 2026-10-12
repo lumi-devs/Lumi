@@ -53,7 +53,7 @@ export const welcomeDef: CommandDef = {
                 )
                 .setRequired(false),
             )
-    ) as SlashCommandBuilder;
+    );
   },
   run: async (ctx: CommandContext) => {
     const guild = ctx.guild;

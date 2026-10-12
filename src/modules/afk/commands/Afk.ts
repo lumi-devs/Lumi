@@ -49,7 +49,7 @@ export const afkDef: CommandDef = {
       applyLocalizedBuilder(opt, "commands:afkReason")
         .setMaxLength(AfkMaxReasonLength)
         .setRequired(false),
-    ) as SlashCommandBuilder;
+    );
   },
   run: async (ctx: CommandContext) => {
     const t = await ctx.fetchT();

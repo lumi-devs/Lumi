@@ -153,7 +153,7 @@ export const whoisDef: CommandDef = {
           .setName("user")
           .setDescription("The user whose info to display (defaults to you).")
           .setRequired(false),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const t = await ctx.fetchT();

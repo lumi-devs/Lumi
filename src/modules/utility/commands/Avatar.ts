@@ -18,7 +18,7 @@ export const avatarDef: CommandDef = {
           .setDescription(
             "The user whose avatar to display (defaults to you).",
           ),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const user = (await ctx.getUser("user")) ?? ctx.user;

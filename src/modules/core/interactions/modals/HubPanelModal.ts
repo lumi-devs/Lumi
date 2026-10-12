@@ -13,6 +13,7 @@ import { HubAddonModalId } from "#src/modules/core/Constants.js";
 import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
 import type { Container } from "#src/lib/Services.js";
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
+import { buildAddonReposCard } from "#src/modules/core/ui/Addons.js";
 
 export const hubPanelModal = defineInteraction({
   prefix: ["lumi:prefixmodal", HubAddonModalId.prefix],
@@ -81,7 +82,7 @@ async function submitAddon(
         const rawName = interaction.fields.getTextInputValue("name").trim();
         const name = rawName || deriveRepoNameFromUrl(url);
         const branch =
-          interaction.fields.getTextInputValue("branch").trim() || "main";
+          interaction.fields.getTextInputValue("branch").trim() || "default";
         await downloader.addRepo(services, name, url, branch);
         await interaction.editReply(
           ephemeralCard(
@@ -91,6 +92,11 @@ async function submitAddon(
             ),
           ),
         );
+        if (interaction.message?.editable) {
+          const t = await fetchTyped(interaction);
+          const card = await buildAddonReposCard(services, downloader, t);
+          await interaction.message.edit(card).catch(() => null);
+        }
       } else if (action === "rm_repo") {
         const name = interaction.fields.getTextInputValue("name").trim();
         await downloader.removeRepo(services, name);
@@ -102,6 +108,11 @@ async function submitAddon(
             ),
           ),
         );
+        if (interaction.message?.editable) {
+          const t = await fetchTyped(interaction);
+          const card = await buildAddonReposCard(services, downloader, t);
+          await interaction.message.edit(card).catch(() => null);
+        }
       } else if (action === "install") {
         const repo = interaction.fields.getTextInputValue("repo").trim();
         const module = interaction.fields.getTextInputValue("module").trim();

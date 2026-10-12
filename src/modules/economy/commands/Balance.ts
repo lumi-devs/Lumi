@@ -22,7 +22,7 @@ export const balanceDef: CommandDef = {
           .setName("user")
           .setDescription("Whose balance to show. Defaults to you.")
           .setRequired(false),
-      ) as SlashCommandBuilder;
+      );
   },
   run: async (ctx: CommandContext) => {
     const guildId = ctx.guildId!;
