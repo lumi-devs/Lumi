@@ -187,8 +187,17 @@ export class DownloadResolver {
         (await this._exists(repoPath)) && (await this._exists(gitFolder));
 
       if (isExisting) {
+        const inDb = await container.db?.downloader?.readDownloaderRepo(name);
+        if (inDb) {
+          const sha = await this._getHeadSha(repoPath);
+          throw new RepoAlreadyInstalledError(name, sha);
+        }
+        container.logger?.info?.(
+          `[Downloader] ${name} exists on disk but is not registered in DB. Re-registering...`,
+        );
         const sha = await this._getHeadSha(repoPath);
-        throw new RepoAlreadyInstalledError(name, sha);
+        const repoInfo = await this._readRepoInfo(repoPath);
+        return { sha, signedBy: null, signatureWarning: null, repoInfo };
       }
 
       container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
