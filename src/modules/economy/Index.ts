@@ -3,6 +3,11 @@ import type { Container } from "#src/lib/Services.js";
 import { cfg } from "#src/lib/module-system/ConfigSchema.js";
 import { defaultSlotPayoutEntries } from "#src/modules/economy/services/Slots.js";
 import { EconomyModuleName } from "#src/modules/economy/Constants.js";
+import { onCommandError } from "#src/lib/commands/CommandDispatch.js";
+import { InsufficientFundsError } from "#src/modules/economy/services/BankService.js";
+import { ephemeralCard, makeWarningCard } from "#src/lib/ui/Cards.js";
+
+let removeErrorHandler: (() => void) | null = null;
 
 export const economyModule = defineModule({
   name: EconomyModuleName,
@@ -119,6 +124,25 @@ export const economyModule = defineModule({
     await services.db.economy.deleteForUser(userId);
   },
 
+  onLoad() {
+    const offs = ["pay", "slots", "bank"].map((name) =>
+      onCommandError(name, async (error, context) => {
+        if (!(error instanceof InsufficientFundsError)) return;
+        await context.respond(
+          ephemeralCard(makeWarningCard("Not enough funds", error.message)),
+        );
+        return true;
+      }),
+    );
+    removeErrorHandler = () => {
+      for (const off of offs) off();
+    };
+  },
+
+  onUnload() {
+    removeErrorHandler?.();
+    removeErrorHandler = null;
+  },
   async exportUserData(
     services: Container,
     userId: string,

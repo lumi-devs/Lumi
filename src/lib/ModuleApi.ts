@@ -15,6 +15,10 @@ import {
   writeModuleFile,
 } from "#src/lib/module-system/ModuleFiles.js";
 import { authorize } from "#src/lib/api/permissions/Authorize.js";
+import {
+  explainPermit,
+  type PermitTierExplanation,
+} from "#src/lib/api/permissions/PermitResolver.js";
 import { scheduleOneshot } from "#src/lib/scheduler/Oneshot.js";
 import { UserError } from "#src/shared/Index.ts";
 import {
@@ -38,6 +42,7 @@ export interface ModuleActor {
 export interface ModulePermits {
   allows(node: string, actor: ModuleActor): Promise<boolean>;
   check(node: string, actor: ModuleActor): Promise<void>;
+  explain(node: string, actor: ModuleActor): Promise<PermitTierExplanation[]>;
 }
 
 export interface ModuleLevels {
@@ -60,6 +65,9 @@ export interface ModuleBank {
   leaderboard(limit?: number): Promise<{ entries: bank.LeaderboardEntry[]; total: number }>;
   position(userId: string): Promise<number | null>;
   prune(): Promise<number>;
+  account(userId: string): Promise<bank.BankAccountView>;
+  currencyName(): Promise<string>;
+  bankName(): Promise<string>;
 }
 
 export interface ModuleUi {
@@ -134,6 +142,9 @@ export function createModuleApi<D extends Record<string, unknown>>(
       leaderboard: (limit) => bank.getLeaderboard(services, guildId, limit),
       position: (userId) => bank.getLeaderboardPosition(services, guildId, userId),
       prune: () => bank.bankPrune(services, guildId),
+      account: (userId) => bank.account(services, guildId, userId),
+      currencyName: () => bank.currencyName(services, guildId),
+      bankName: () => bank.bankName(services, guildId),
     },
     levels: {
       account: (userId) => levels.getAccount(services, guildId, userId),
@@ -157,6 +168,14 @@ export function createModuleApi<D extends Record<string, unknown>>(
           });
         }
       },
+      explain: (node, actor) =>
+        explainPermit(node, {
+          guildId,
+          userId: actor.userId,
+          roleIds: actor.roleIds ? [...actor.roleIds] : undefined,
+          channelId: actor.channelId,
+          guildOwnerId: actor.guildOwnerId,
+        }),
     },
     ui: {
       success: (title, body) => makeSuccessCard(title, body ?? ""),

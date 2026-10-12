@@ -34,13 +34,19 @@ import {
   respond,
   respondMessage,
 } from "#src/lib/utilities/CommandResponse.js";
-import { ephemeralCard, makeWarningCard } from "#src/lib/ui/Cards.js";
+import { ephemeralCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
 import { suggestSimilar, didYouMean } from "#src/lib/utilities/DidYouMean.js";
+import { runBeforeInvokeHooks } from "#src/lib/commands/Hooks.js";
 import { getDefaultPrefix } from "#src/lib/Env.js";
+
+export interface CommandErrorContext {
+  commandName: string;
+  respond(card: CardReply): Promise<void>;
+}
 
 export type CommandErrorHandler = (
   error: unknown,
-  context: { commandName: string },
+  context: CommandErrorContext,
 ) => Promise<boolean | void> | boolean | void;
 
 const commandErrorHandlers = new Map<string, CommandErrorHandler>();
@@ -59,11 +65,12 @@ export function onCommandError(
 async function tryLocalErrorHandler(
   commandName: string,
   error: unknown,
+  respond: (card: CardReply) => Promise<void>,
 ): Promise<{ handled: boolean; error: unknown }> {
   const handler = commandErrorHandlers.get(commandName.toLowerCase());
   if (!handler) return { handled: false, error };
   try {
-    const handled = await handler(error, { commandName });
+    const handled = await handler(error, { commandName, respond });
     return { handled: handled === true, error };
   } catch (next) {
     return { handled: false, error: next };
@@ -237,7 +244,9 @@ async function reportChatError(
   error: unknown,
 ): Promise<void> {
   try {
-    const local = await tryLocalErrorHandler(def.name, error);
+    const local = await tryLocalErrorHandler(def.name, error, async (card) => {
+      await respond(interaction, card);
+    });
     if (local.handled) return;
     const { card } = resolveErrorCard(`Command:${def.name}`, local.error);
     await respond(interaction, card);
@@ -263,6 +272,13 @@ export async function dispatchChatInput(
   const def = commandRegistry.get(interaction.commandName);
   if (!def) return;
   if (await denyCommand(services, interaction, gateSourceFromChatInput(interaction), def)) {
+    return;
+  }
+  const hookDenial = await runBeforeInvokeHooks(
+    CommandContext.fromInteraction(interaction, services),
+  );
+  if (hookDenial) {
+    await respond(interaction, ephemeralCard(makeWarningCard("Blocked", hookDenial.reason)));
     return;
   }
   const wait = def.cooldownMs
@@ -343,7 +359,9 @@ export async function dispatchContextMenu(
       def.contextMenu!.run(services, interaction),
     );
   } catch (error) {
-    const local = await tryLocalErrorHandler(def.name, error);
+    const local = await tryLocalErrorHandler(def.name, error, async (card) => {
+      await respond(interaction, card);
+    });
     if (local.handled) return;
     const { card } = resolveErrorCard(`Command:${def.name}`, local.error);
     try {
@@ -381,6 +399,13 @@ export async function dispatchMessage(
   }
   if (def.prefixEnabled === false) return;
   if (await denyCommand(services, message, gateSourceFromMessage(message), def)) {
+    return;
+  }
+  const hookDenial = await runBeforeInvokeHooks(
+    CommandContext.fromMessage(message, new PrefixArgs(message, ""), services),
+  );
+  if (hookDenial) {
+    await respondMessage(message, ephemeralCard(makeWarningCard("Blocked", hookDenial.reason)));
     return;
   }
   const wait = def.cooldownMs
@@ -449,7 +474,11 @@ export async function dispatchMessage(
     await instrumentedRun(def.name, "message", message, () => def.run!(ctx));
   } catch (error) {
     try {
-      const { card } = resolveErrorCard(`Command:${def.name}`, error);
+      const local = await tryLocalErrorHandler(def.name, error, async (card) => {
+        await respondMessage(message, card);
+      });
+      if (local.handled) return;
+      const { card } = resolveErrorCard(`Command:${def.name}`, local.error);
       await respondMessage(message, card);
     } catch (reportError) {
       services.logger.error(
