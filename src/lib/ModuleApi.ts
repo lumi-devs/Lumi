@@ -6,7 +6,7 @@ import {
 } from "#src/lib/module-system/ModuleConfig.js";
 import * as bank from "#src/lib/api/economy/Bank.js";
 import * as levels from "#src/lib/api/economy/Levels.js";
-import { isFlagEnabled } from "#src/lib/api/feature-flags/Index.js";
+import { isFlagEnabled } from "#src/lib/flags/Index.js";
 import {
   deleteModuleFile,
   ensureModuleFilesDir,
