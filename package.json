@@ -1,10 +1,43 @@
 {
-  "name": "lumi",
+  "name": "@lumi-devs/lumi",
   "version": "0.6.0",
   "license": "AGPL-3.0-only",
   "description": "Lumi - modular Discord bot (TypeScript / discord.js / Postgres / Valkey). Monorepo root.",
-  "private": true,
   "type": "module",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lumi-devs/lumi.git"
+  },
+  "imports": {
+    "#src/*.js": "./src/*.ts",
+    "#src/*": "./src/*",
+    "#lib/*.js": "./src/lib/*.ts",
+    "#lib/*": "./src/lib/*"
+  },
+  "exports": {
+    ".": "./src/Index.ts",
+    "./module": "./src/lib/module-system/Module.ts",
+    "./commands": "./src/lib/commands/CommandDef.ts",
+    "./context": "./src/lib/commands/Context.ts",
+    "./listeners": "./src/lib/listeners/ListenerDef.ts",
+    "./interactions": "./src/lib/interactions/InteractionDef.ts",
+    "./ui": "./src/lib/ui/Cards.ts",
+    "./config": "./src/lib/module-system/ConfigSchema.ts",
+    "./api": "./src/lib/ModuleApi.ts",
+    "./lib/*": "./src/lib/*"
+  },
+  "files": [
+    "src",
+    "prisma",
+    "tsconfig.base.json",
+    "tsconfig.json",
+    "prisma.config.ts",
+    "LICENSE",
+    "README.md"
+  ],
   "bin": {
     "lumi": "./src/cli/Main.ts"
   },
@@ -26,15 +59,11 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@discordjs/builders": "^1.14.1",
-    "@discordjs/formatters": "^0.6.2",
     "@eslint/js": "^10.0.1",
-    "@prisma/client": "^7.10.0",
     "@types/bun": "^1.4.1",
     "@types/node": "^26.4.1",
     "@types/pg": "^8.23.1",
     "@types/semver": "^7.8.0",
-    "discord-api-types": "^0.38.55",
     "dotenv": "^17.4.2",
     "dts-bundle-generator": "^9.5.1",
     "eslint": "^10.10.0",

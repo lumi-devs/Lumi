@@ -4,6 +4,7 @@ import { z } from "zod";
 import semver from "semver";
 import { LumiInfo } from "#src/lib/utilities/Version.js";
 import { isValidDependencySpec } from "#src/lib/module-system/Dependencies.js";
+import { FieldType } from "#src/contracts/Config.js";
 
 export interface ValidationResult {
   errors: string[];
@@ -13,15 +14,7 @@ export interface ValidationResult {
 const configFieldSchema = z.object({
   key: z.string().min(1),
   label: z.string(),
-  type: z.enum([
-    "BOOLEAN",
-    "NUMBER",
-    "STRING",
-    "ENUM",
-    "CHANNEL",
-    "ROLE",
-    "USER",
-  ]),
+  type: z.nativeEnum(FieldType),
   description: z.string(),
   default: z.unknown().optional(),
   choices: z.array(z.string()).optional(),
@@ -87,7 +80,8 @@ async function walkTsFiles(dir: string): Promise<string[]> {
   return out;
 }
 
-const ImportRe = /(?:import|export)[^"'`]*?["']([^"'`]+)["']/g;
+const ImportRe =
+  /\b(?:import(?:\s+type)?\s+(?:(?:\{[^}]*\}|[\w*]+(?:\s+as\s+[\w]+)?)\s+from\s+)?|export(?:\s+type)?\s+(?:\{[^}]*\}|\*)\s+from\s+)["']([^"'\r\n]+)["']/g;
 const EmbedImportRe =
   /import\s*(?:type\s*)?\{[^}]*\bEmbedBuilder\b[^}]*\}\s*from\s*["'](?:discord\.js|@discordjs\/builders)["']/;
 
@@ -341,20 +335,14 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     ImportRe.lastIndex = 0;
     while ((match = ImportRe.exec(src)) !== null) {
       const spec = match[1]!;
-      if (/^lumi(\/|$)/.test(spec) || spec.startsWith("@lumi/")) {
-        errors.push(
-          `${rel}: imports "${spec}", which does not resolve - the "lumi/*" SDK no longer exists. Import shared code with a relative path into src/lib/ instead.`,
-        );
-        continue;
-      }
-      if (/^#(lib|src)\//.test(spec)) {
-        if (/^#src\/modules\//.test(spec)) {
+      if (/^@lumi-devs\/lumi(\/|$)/.test(spec)) {
+        if (/^@lumi-devs\/lumi\/(src\/modules|modules)\//.test(spec)) {
           errors.push(
             `${rel}: imports another module via "${spec}" - addons must be self-contained.`,
           );
           continue;
         }
-        if (/^#(lib|src\/lib)\/(prisma|database|rpc|client|event-bus)\//.test(spec)) {
+        if (/^@lumi-devs\/lumi\/(src\/lib|lib)\/(prisma|database|rpc|client|event-bus)\//.test(spec)) {
           errors.push(
             `${rel}: imports bot internals via "${spec}" - go through the \`services\` argument your hooks receive instead of reaching into the database, RPC, or client wiring directly.`,
           );
@@ -362,9 +350,15 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         }
         continue;
       }
+      if (/^(lumi|@lumi\/|@lumi-devs\/)/.test(spec)) {
+        errors.push(
+          `${rel}: imports "${spec}", which does not resolve - import from "@lumi-devs/lumi" instead.`,
+        );
+        continue;
+      }
       if (spec.startsWith("#")) {
         errors.push(
-          `${rel}: imports "${spec}", which does not resolve - only #lib/ and #src/ aliases exist. Use a relative import into src/lib/ instead.`,
+          `${rel}: imports "${spec}", which does not resolve - addons must import from "@lumi-devs/lumi" instead of internal aliases.`,
         );
         continue;
       }

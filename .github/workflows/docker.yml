@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop/v2]
   release:
     types: [published]
   workflow_dispatch:

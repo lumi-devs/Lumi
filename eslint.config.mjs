@@ -52,12 +52,12 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
             },
           ],
         },
@@ -65,14 +65,14 @@ export default tseslint.config(
     },
   },
   {
-    // RPC and permissions make "what may you do" decisions through the single
-    // `authorize()` evaluator, not by reaching into PermitResolver's internals
-    // directly (`authorize.ts` itself is exempt — it IS the evaluator).
     files: [
       'src/lib/rpc/**/*.ts',
-      'src/lib/permissions/**/*.ts',
+      'src/lib/api/permissions/**/*.ts',
     ],
-    ignores: ['src/lib/permissions/authorize.ts'],
+    ignores: [
+      'src/lib/api/permissions/Authorize.ts',
+      'src/lib/api/permissions/PreconditionChecks.ts',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -81,16 +81,16 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #lib/ui/cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
             },
             {
-              name: '#lib/permissions/permit-resolver.js',
-              message: 'Authorization decisions go through authorize() (#lib/permissions/authorize.js), not PermitResolver directly.',
+              name: '#src/lib/api/permissions/PermitResolver.js',
+              message: 'Authorization decisions go through authorize() (#src/lib/api/permissions/Authorize.js), not PermitResolver directly.',
             },
           ],
         },
