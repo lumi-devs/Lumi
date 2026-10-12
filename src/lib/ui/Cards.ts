@@ -12,7 +12,8 @@ import {
 import { cutText } from "#src/shared/Index.ts";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+import { resolveCardColor, BrandColors } from "#src/lib/ui/Palette.js";
+export { resolveCardColor, BrandColors };
 import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "#src/lib/ui/Layout.js";
 
 export interface CardReply {

@@ -280,6 +280,8 @@ export class ModuleStore {
     await loadInteractionHandlers(record.dir);
     await loadCommandDefs(record.dir);
     await loadUtilities(record.dir);
+    const { loadScheduledTasks } = await import("#src/lib/scheduler/Tasks.js");
+    await loadScheduledTasks(record.dir);
   }
 
   public detachModuleLoaders(dir: string): void {

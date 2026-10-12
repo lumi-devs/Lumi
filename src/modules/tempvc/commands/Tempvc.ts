@@ -194,10 +194,10 @@ export async function renderGeneratorCard(
   return makeInfoCard(`🔊 ${label}`, [
     `**Name template:** \`${gen.name}\``,
     `**User limit:** ${limit}`,
-    `-# Members joining ${label} get a temp channel named like \`${gen.name.replace("{username}", "someone")}\`.`,
+    `-# Placeholders: \`{username}\`, \`{nickname}\`, \`{number}\`, \`{position}\` / \`{pos}\`.`,
   ], {
     breadcrumbs: ["Temp VC", "Generators", label],
-    footer: "Rename edits the template · Set Limit caps each temp channel · 0 means unlimited.",
+    footer: "Rename edits the template ({number}, {pos}, {username}) · Set Limit caps users · 0 = unlimited.",
     separatorAboveActionRows: true,
     actionRows: rows,
   });

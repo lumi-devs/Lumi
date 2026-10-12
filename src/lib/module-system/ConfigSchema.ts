@@ -6,8 +6,9 @@ import {
   type ConfigWidget,
   type MessageDocumentV2,
 } from "#src/contracts/Index.ts";
+import { defineModuleConfig } from "#src/lib/module-system/ModuleConfig.js";
 
-export { FieldType, type ConfigField };
+export { FieldType, type ConfigField, defineModuleConfig };
 
 export type ModuleConfigSchema = z.ZodType<Record<string, unknown>>;
 

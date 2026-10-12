@@ -46,13 +46,15 @@ export function resolveGeneratorName(
 ): string {
   const trimmed = template.trim();
   const hasPlaceholder =
-    /\{\}|\{number\}|\{position\}|\{username\}|\{name\}|\{nickname\}/.test(
+    /\{\}|\{number\}|\{num\}|\{position\}|\{pos\}|\{username\}|\{name\}|\{nickname\}/.test(
       trimmed,
     );
   const substituted = hasPlaceholder
     ? renderTemplate(trimmed.replaceAll("{}", "{number}"), {
         number: String(number),
+        num: String(number),
         position: String(number),
+        pos: String(number),
         username: member.user.username,
         name: member.displayName,
         nickname: member.displayName,

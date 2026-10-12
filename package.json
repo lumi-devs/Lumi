@@ -27,6 +27,12 @@
     "./ui": "./src/lib/ui/Cards.ts",
     "./config": "./src/lib/module-system/ConfigSchema.ts",
     "./api": "./src/lib/ModuleApi.ts",
+    "./services": "./src/lib/Services.ts",
+    "./scheduler": "./src/lib/scheduler/Oneshot.ts",
+    "./bank": "./src/lib/api/economy/Bank.ts",
+    "./time": "./src/lib/utilities/Time.ts",
+    "./panels": "./src/lib/ui/Panels.ts",
+    "./cooldown": "./src/lib/valkey/Cooldown.ts",
     "./lib/*": "./src/lib/*"
   },
   "files": [

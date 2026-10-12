@@ -62,6 +62,13 @@ export function createClient(services: Container): Client {
 }
 
 export async function wireApp(client: Client, services: Container): Promise<void> {
+  registerCoreFireHandlers();
+  const taskFireConsumer = new TaskFireConsumer(services, services.eventBus, {
+    consumerId: getConsumerId(),
+  });
+  await taskFireConsumer.start();
+  stateOf(client).taskFireConsumer = taskFireConsumer;
+
   await services.moduleStore.discover();
   for (const record of services.moduleStore.all()) {
     if (!record.enabled) continue;
@@ -90,13 +97,6 @@ export async function wireApp(client: Client, services: Container): Promise<void
       services.logger.error("[CommandDispatch] prefix dispatch failed:", error);
     });
   });
-
-  registerCoreFireHandlers();
-  const taskFireConsumer = new TaskFireConsumer(services, services.eventBus, {
-    consumerId: getConsumerId(),
-  });
-  await taskFireConsumer.start();
-  stateOf(client).taskFireConsumer = taskFireConsumer;
 
   registerWorkerProbes(client);
 }

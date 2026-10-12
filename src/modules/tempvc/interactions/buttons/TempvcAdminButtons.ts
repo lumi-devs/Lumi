@@ -66,7 +66,8 @@ export const tempvcAdminButtons = defineInteraction({
           new ActionRowBuilder<TextInputBuilder>().addComponents(
             new TextInputBuilder()
               .setCustomId("name")
-              .setLabel("Template ({username} supported)")
+              .setLabel("Template ({username}, {number}, {pos})")
+              .setPlaceholder("e.g. {username}'s Lounge #{number}")
               .setStyle(TextInputStyle.Short)
               .setMaxLength(100)
               .setRequired(true),
