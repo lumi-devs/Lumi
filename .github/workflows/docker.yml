@@ -1,12 +1,6 @@
 name: Docker Packaging & Publish
 
 on:
-  push:
-    branches: [main, develop/v2]
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [main, develop/v2]
   release:
     types: [published]
   workflow_dispatch:
