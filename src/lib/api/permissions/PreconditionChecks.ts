@@ -5,7 +5,8 @@ import type {
   Message,
 } from "discord.js";
 import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { permitSubject } from "#src/lib/api/permissions/Subject.js";
+import { explainPermit } from "#src/lib/api/permissions/PermitResolver.js";
+import { memberRoleIds, permitSubject } from "#src/lib/api/permissions/Subject.js";
 import { handleDenied } from "#src/lib/utilities/CommandResponse.js";
 import { UserError } from "#src/shared/Index.ts";
 
@@ -112,11 +113,31 @@ async function checkLumiPermission(
       ? context
       : command.requiredPermit;
   if (!node) return null;
-  return checkPermitNode(
+  const denial = await checkPermitNode(
     source,
     node,
     `You lack the required permit (\`${node}\`) to use this.`,
   );
+  if (!denial || !source.guildId) return denial;
+  const rows = await explainPermit(node, {
+    guildId: source.guildId,
+    userId: source.userId,
+    roleIds: memberRoleIds(source.member),
+    channelId: source.channelId ?? undefined,
+    guildOwnerId: source.guild?.ownerId ?? null,
+  });
+  const decisive = rows.filter((row) => row.verdict !== "pass");
+  if (decisive.length === 0) return denial;
+  const mark = (verdict: string): string =>
+    verdict === "allow" ? "✅" : "⛔";
+  return {
+    ...denial,
+    message:
+      `${denial.message}\n` +
+      decisive
+        .map((row) => `-# ${mark(row.verdict)} \`${row.tier}\` → ${row.verdict}${row.detail ? ` (${row.detail})` : ""}`)
+        .join("\n"),
+  };
 }
 
 async function checkMaintenanceMode(

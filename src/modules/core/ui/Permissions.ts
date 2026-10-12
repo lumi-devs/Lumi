@@ -18,6 +18,29 @@ import {
 import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
 import { HubPermitAssignId, HubPermitPickId } from "#src/modules/core/Constants.js";
+import type { PermitTierExplanation } from "#src/lib/api/permissions/PermitResolver.js";
+
+const tierMark = (verdict: PermitTierExplanation["verdict"]): string =>
+  verdict === "allow" ? "✅" : verdict === "deny" ? "⛔" : "➖";
+
+export function buildPermitExplainView(
+  node: string,
+  subjectLabel: string,
+  rows: PermitTierExplanation[],
+): CardReply {
+  const lines = rows.map(
+    (row) =>
+      `-# ${tierMark(row.verdict)} \`${row.tier}\` → ${row.verdict}${row.detail ? ` (${row.detail})` : ""}`,
+  );
+  return noPingCard(
+    makeCard(
+      resolveCardColor("primary"),
+      `🛡️ Why ${subjectLabel} ${rows.some((row) => row.verdict === "deny") ? "can't" : "can"} use \`${node}\``,
+      lines.length > 0 ? lines.join("\n") : "-# No tiers evaluated.",
+      { breadcrumbs: ["Hub", "Permissions", "Explain"] },
+    ),
+  );
+}
 
 export const PermsPerPage = 4;
 export const PermitOrderPerPage = 3;
