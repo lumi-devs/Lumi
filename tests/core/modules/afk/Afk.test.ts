@@ -1,0 +1,262 @@
+import { describe, it, expect, vi, beforeEach } from "bun:test";
+import {
+  getAfkEntry,
+  setAfkEntry,
+  clearAfkEntry,
+  clearAllAfkForUser,
+  iterateAllAfkEntries,
+  getAfkEntriesForGuild,
+  getAfkStatsForGuild,
+  getAfkMentions,
+  addAfkMention,
+  clearAfkMentions,
+  isAfkOnCooldown,
+  setAfkCooldown,
+  addAfkMentionsBatch,
+} from "#src/modules/afk/data/Afk.js";
+import { AfkKeys, AfkTTL } from "#src/modules/afk/Constants.js";
+import { container } from "#src/lib/Services.js";
+
+Object.assign(container, {
+  valkey: {
+    get: vi.fn(),
+    setex: vi.fn(),
+    del: vi.fn(),
+    scan: vi.fn(),
+    pipeline: vi.fn().mockReturnThis(),
+    multi: vi.fn().mockReturnThis(),
+    lpush: vi.fn().mockReturnThis(),
+    ltrim: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
+    lrange: vi.fn(),
+    exists: vi.fn(),
+    set: vi.fn(),
+  },
+  db: {
+    afk: {
+      findEntry: vi.fn(),
+      upsertEntry: vi.fn(),
+      deleteEntry: vi.fn(),
+      deleteAllForUser: vi.fn(),
+      iterateAll: vi.fn(),
+      findForGuild: vi.fn(),
+      countAll: vi.fn(),
+    },
+  },
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+  invalidation: undefined as any,
+});
+
+vi.mock("#src/modules/afk/services/Format.js", () => ({
+  sanitizeReason: vi.fn((s) => s),
+}));
+
+describe("AFK Module Tests", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+  });
+
+  describe("AfkKeys and AfkTTL", () => {
+    it("should generate correct key strings and TTL values", () => {
+      expect(AfkKeys.afk("g1", "u1")).toBe("lumi:afk:g1:u1");
+      expect(AfkKeys.mentionCooldown("c1")).toBe("lumi:afk:cd:mention:c1");
+      expect(AfkKeys.welcomeCooldown("c1", "u1")).toBe("lumi:afk:cd:welcome:c1:u1");
+      expect(AfkKeys.removalCooldown("g1", "u1")).toBe("lumi:afk:cd:removal:g1:u1");
+      expect(AfkKeys.removalCooldownPattern()).toBe("lumi:afk:cd:removal:*");
+      expect(AfkKeys.nickEditCooldown("u1")).toBe("lumi:afk:cd:nick:u1");
+      expect(AfkKeys.allForUserPattern("u1")).toBe("lumi:afk:*:u1");
+      expect(AfkKeys.mentions("g1", "u1")).toBe("lumi:afk:mentions:g1:u1");
+
+      expect(AfkTTL.entry).toBe(86400);
+      expect(AfkTTL.mentions).toBe(86400);
+    });
+  });
+
+  describe("getAfkEntry", () => {
+    it("returns cached entry if present in Valkey", async () => {
+      const nowStr = new Date().toISOString();
+      (container.valkey.get as any).mockResolvedValue(
+        JSON.stringify({ since: nowStr, reason: "lunch" })
+      );
+      const result = await getAfkEntry(container, "guild-1", "user-1");
+      expect(result).toBeDefined();
+      expect(result!.reason).toBe("lunch");
+      expect(result!.since).toBeInstanceOf(Date);
+      expect(container.db.afk.findEntry).not.toHaveBeenCalled();
+    });
+
+    it("fetches from DB and sets Valkey cache on Valkey cache miss", async () => {
+      (container.valkey.get as any).mockResolvedValue(null);
+      const mockDbEntry = { guildId: "g1", userId: "u1", reason: "sleeping", since: new Date() };
+      (container.db.afk.findEntry as any).mockResolvedValue(mockDbEntry);
+
+      const result = await getAfkEntry(container, "g1", "u1");
+      expect(result).toEqual(mockDbEntry);
+      expect(container.valkey.setex).toHaveBeenCalledWith(
+        "lumi:afk:g1:u1",
+        86400,
+        JSON.stringify(mockDbEntry)
+      );
+    });
+
+    it("returns null if Valkey cache contains string 'null'", async () => {
+      (container.valkey.get as any).mockResolvedValue("null");
+      const result = await getAfkEntry(container, "g1", "u1");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("setAfkEntry", () => {
+    it("upserts entry in DB and caches in Valkey", async () => {
+      const mockEntry = { guildId: "g1", userId: "u1", reason: "brb", since: new Date() };
+      (container.db.afk.upsertEntry as any).mockResolvedValue(mockEntry);
+
+      const result = await setAfkEntry(container, "g1", "u1", "brb");
+      expect(result).toBe(mockEntry);
+      expect(container.valkey.setex).toHaveBeenCalledWith(
+        "lumi:afk:g1:u1",
+        86400,
+        JSON.stringify(mockEntry)
+      );
+    });
+  });
+
+  describe("clearAfkEntry", () => {
+    it("uses invalidation service when available", async () => {
+      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+      (container.db.afk.deleteEntry as any).mockResolvedValue(undefined);
+
+      const res = await clearAfkEntry(container, "g1", "u1");
+      expect(res).toBe(true);
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith("lumi:afk:g1:u1");
+      expect(container.valkey.del).not.toHaveBeenCalled();
+    });
+
+    it("logs error and returns false on failure", async () => {
+      (container.db.afk.deleteEntry as any).mockRejectedValue(new Error("DB error"));
+
+      const res = await clearAfkEntry(container, "g1", "u1");
+      expect(res).toBe(false);
+      expect(container.logger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe("clearAllAfkForUser", () => {
+    it("handles cursor scanning and invalidates user keys", async () => {
+      (container.db.afk.deleteAllForUser as any).mockResolvedValue(2);
+      (container.valkey.scan as any)
+        .mockResolvedValueOnce(["42", ["key1"]])
+        .mockResolvedValueOnce(["0", ["key2"]]);
+
+      const count = await clearAllAfkForUser(container, "u1");
+      expect(count).toBe(2);
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith("key1", "key2");
+    });
+
+    it("uses invalidation service for user keys when available", async () => {
+      (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
+      (container.db.afk.deleteAllForUser as any).mockResolvedValue(1);
+      (container.valkey.scan as any).mockResolvedValueOnce(["0", ["key1"]]);
+
+      await clearAllAfkForUser(container, "u1");
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith("key1");
+      expect(container.valkey.del).not.toHaveBeenCalled();
+    });
+
+    it("does nothing with valkey/invalidation if no keys matched", async () => {
+      (container.db.afk.deleteAllForUser as any).mockResolvedValue(0);
+      (container.valkey.scan as any).mockResolvedValueOnce(["0", []]);
+
+      const count = await clearAllAfkForUser(container, "u1");
+      expect(count).toBe(0);
+      expect(container.valkey.del).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("AFK bulk & stats queries", () => {
+    it("iterateAllAfkEntries delegates to db.afk.iterateAll", async () => {
+      const pages = [[{ id: "1" }], [{ id: "2" }]];
+      (container.db.afk.iterateAll as any).mockImplementation(
+        async function* () {
+          yield* pages;
+        },
+      );
+
+      const seen = [];
+      for await (const page of iterateAllAfkEntries(container)) seen.push(page);
+
+      expect(seen).toEqual<typeof pages>(pages);
+    });
+
+    it("getAfkEntriesForGuild delegates to db.afk.findForGuild", async () => {
+      const mockGuild = [{ id: "1" }];
+      (container.db.afk.findForGuild as any).mockResolvedValue(mockGuild);
+      const res = await getAfkEntriesForGuild(container, "G1");
+      expect(res).toBe<typeof mockGuild>(mockGuild);
+      expect(container.db.afk.findForGuild).toHaveBeenCalledWith("G1");
+    });
+
+    it("getAfkStatsForGuild counts this guild's entries and cooldown keys", async () => {
+      (container.db.afk.findForGuild as any).mockResolvedValue([{ id: "1" }, { id: "2" }]);
+      (container.valkey.scan as any).mockResolvedValueOnce(["0", ["cd1"]]);
+
+      const stats = await getAfkStatsForGuild(container, "G1");
+      expect(stats).toEqual({ activeEntries: 2, activeCooldowns: 1 });
+      expect(container.db.afk.findForGuild).toHaveBeenCalledWith("G1");
+    });
+  });
+
+  describe("AFK Mentions", () => {
+    it("adds and retrieves AFK mentions", async () => {
+      const mockMention = { authorId: "u2", authorName: "Bob", channelId: "c1", messageId: "m1", ts: 100 };
+      await addAfkMention(container, "g1", "u1", mockMention);
+      expect(container.valkey.multi).toHaveBeenCalled();
+
+      (container.valkey.lrange as any).mockResolvedValue([
+        JSON.stringify(mockMention),
+        "null",
+      ]);
+      const mentions = await getAfkMentions(container, "g1", "u1");
+      expect(mentions.length).toBe(1);
+      expect(mentions[0]!.authorId).toBe("u2");
+    });
+
+    it("batch adds mentions for multiple users", async () => {
+      const mentions = [
+        { userId: "u1", mention: { authorId: "a1", authorName: "Alice", channelId: "c1", messageId: "m1", ts: 1 } },
+        { userId: "u2", mention: { authorId: "a2", authorName: "Bob", channelId: "c1", messageId: "m2", ts: 2 } },
+      ];
+
+      await addAfkMentionsBatch(container, "g1", mentions);
+
+      expect(container.valkey.pipeline).toHaveBeenCalled();
+      expect(container.valkey.lpush).toHaveBeenCalledTimes(mentions.length);
+    });
+
+    it("addAfkMentionsBatch returns early for empty mentions array", async () => {
+      await addAfkMentionsBatch(container, "g1", []);
+      expect(container.valkey.multi).not.toHaveBeenCalled();
+    });
+
+    it("clearAfkMentions invalidates the mentions key", async () => {
+      await clearAfkMentions(container, "g1", "u1");
+      expect(container.invalidation.invalidate).toHaveBeenCalledWith("lumi:afk:mentions:g1:u1");
+    });
+  });
+
+  describe("AFK Cooldowns", () => {
+    it("checks and sets cooldowns", async () => {
+      (container.valkey.exists as any).mockResolvedValue(1);
+      const res = await isAfkOnCooldown(container, "cd-key");
+      expect(res).toBe(true);
+
+      await setAfkCooldown(container, "cd-key", 5000);
+      expect(container.valkey.set).toHaveBeenCalledWith("cd-key", "1", "PX", 5000);
+    });
+  });
+});

@@ -5,6 +5,11 @@ import { defineConfig } from 'prisma/config';
 // does — without this every `db:push`/`migrate` fails on a missing datasource url.
 loadEnv();
 
+const datasourceUrl = process.env.DIRECT_POSTGRES_URL ?? process.env.POSTGRES_URL;
+if (!datasourceUrl) {
+	throw new Error("DIRECT_POSTGRES_URL or POSTGRES_URL must be set for Prisma.");
+}
+
 export default defineConfig({
 	schema: 'prisma/schema.prisma',
 	migrations: {
@@ -12,6 +17,6 @@ export default defineConfig({
 	},
 	datasource: {
 		// Connect directly to bypass transaction pooler if present.
-		url: process.env.DIRECT_POSTGRES_URL ?? process.env.POSTGRES_URL
+		url: datasourceUrl
 	}
 });

@@ -67,33 +67,10 @@ if [[ ! -f "$ENV_EXAMPLE" ]]; then
   exit 1
 fi
 
-# Each app is started with its own directory as cwd, and Bun auto-loads the
-# `.env` it finds there. Pointing them all at the root file is what keeps them
-# from drifting into separately-maintained copies (which is how apps/worker/.env
-# ended up missing RPC_INTERNAL_TOKEN). `.env` is gitignored at every level, so
-# these links can't be committed - they have to be (re)made here.
-link_app_envs() {
-  local app
-  for app in worker dashboard; do
-    local link="${ROOT_DIR}/apps/${app}/.env"
-    [[ -d "${ROOT_DIR}/apps/${app}" ]] || continue
-    if [[ -L "$link" && "$(readlink "$link")" == "../../.env" ]]; then
-      continue
-    fi
-    if [[ -e "$link" && ! -L "$link" ]]; then
-      warn "apps/${app}/.env is a real file, not a symlink to the root .env - replacing it."
-    fi
-    rm -f "$link"
-    ln -s "../../.env" "$link"
-    ok "Linked apps/${app}/.env -> ../../.env"
-  done
-}
-
 if [[ -f "$ENV_FILE" ]]; then
   warn "${ENV_FILE} already exists."
   if ! confirm "Overwrite it?" "n"; then
     info "Keeping the existing .env. Re-run 'bun run setup' any time to regenerate it."
-    link_app_envs
     exit 0
   fi
 fi
@@ -117,7 +94,7 @@ while [[ -z "$PROMPT_RESULT" ]]; do
   warn "A client ID is required."
   prompt "" "Discord application (client) ID"
 done
-ENV_VALUES[CLIENT_ID]="$PROMPT_RESULT"
+ENV_VALUES[APPLICATION_ID]="$PROMPT_RESULT"
 
 prompt "lumi" "Postgres password"
 ENV_VALUES[POSTGRES_PASSWORD]="$PROMPT_RESULT"
@@ -128,11 +105,17 @@ ENV_VALUES[POSTGRES_POOL_MAX]="10"
 
 prompt "lumi" "Valkey password"
 ENV_VALUES[VALKEY_PASSWORD]="$PROMPT_RESULT"
-ENV_VALUES[VALKEY_URL]="valkeys://localhost:6379"
 ENV_VALUES[VALKEY_HOST]="localhost"
 ENV_VALUES[VALKEY_PORT]="6379"
 ENV_VALUES[VALKEY_CACHE_DB]="0"
 ENV_VALUES[VALKEY_TASK_DB]="1"
+
+if command -v openssl >/dev/null 2>&1; then
+  ENV_VALUES[APPEAL_TOKEN_SECRET]="$(openssl rand -hex 32)"
+else
+  warn "openssl not found - set APPEAL_TOKEN_SECRET manually before starting the bot."
+  ENV_VALUES[APPEAL_TOKEN_SECRET]=""
+fi
 
 ENV_VALUES[RPC_HTTP_HOST]="127.0.0.1"
 # RPC_HTTP_PORT is deliberately not written: 8091 is already the built-in
@@ -206,7 +189,7 @@ if confirm "Configure the web dashboard now?" "n"; then
   info "Add this redirect URI on the Developer Portal's OAuth2 tab:"
   info "  http://localhost:${ENV_VALUES[DASHBOARD_PORT]}/api/auth/callback/discord"
 else
-  info "Skipping - uncomment the '[ 5 ] DASHBOARD CONFIGURATION' block in .env later if you need it."
+  info "Skipping - add the dashboard variables to .env later if you need it."
 fi
 
 # ── Write .env ─────────────────────────────────────────────────────────────
@@ -223,8 +206,6 @@ header "Writing ${ENV_FILE}"
 
 chmod 600 "$ENV_FILE"
 ok "Wrote $(wc -l < "$ENV_FILE" | tr -d ' ') variables to .env (permissions set to 600)."
-
-link_app_envs
 
 # ── [ 4 ] Verify the bot token ────────────────────────────────────────────────
 header "[4/4] Verifying bot token"
@@ -272,7 +253,7 @@ header "Next steps"
 cat <<EOF
   1. bun install
   2. bun run db:migrate   ${DIM}# applies prisma/schema.prisma to Postgres${RESET}
-  3. bun run dev          ${DIM}# starts worker (+ dashboard via turbo)${RESET}
+  3. bun run dev          ${DIM}# starts the bot with file watching${RESET}
 
 See https://lumi-devs.github.io/Lumi-docs/getting-started/quickstart for the full walkthrough, or https://lumi-devs.github.io/Lumi-docs/getting-started/configuration
 for every environment variable this project understands.

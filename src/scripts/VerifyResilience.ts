@@ -1,0 +1,211 @@
+import { createEventBus } from "#src/lib/event-bus/Factory.js";
+import type { EventBus, BusMessage } from "#src/lib/event-bus/Types.js";
+
+const VALKEY_HOST = process.env["VALKEY_HOST"] ?? "localhost";
+const VALKEY_PORT = Number(process.env["VALKEY_PORT"] ?? 6379);
+
+const GROUP_ALPHA = "verify-resilience-alpha";
+const GROUP_BETA = "verify-resilience-beta";
+const CONSUMER_PRIMARY = "consumer-0";
+
+const RED = "\x1b[31m";
+const GREEN = "\x1b[32m";
+const DIM = "\x1b[2m";
+const RESET = "\x1b[0m";
+
+interface Scenario {
+  name: string;
+  run: () => Promise<void>;
+}
+
+function pass(name: string): void {
+  process.stdout.write(`  ${GREEN}✓${RESET} ${name}\n`);
+}
+
+function fail(name: string, err: unknown): void {
+  const reason = err instanceof Error ? err.message : String(err);
+  process.stderr.write(`  ${RED}✗${RESET} ${name}: ${DIM}${reason}${RESET}\n`);
+}
+
+async function drainStream<T>(
+  bus: EventBus,
+  stream: string,
+  limit: number,
+  group = GROUP_ALPHA,
+  timeoutMs = 2000,
+): Promise<T[]> {
+  const collected: T[] = [];
+  const stop = await bus.consume<T>(
+    [stream],
+    { group, consumer: CONSUMER_PRIMARY, blockMs: 100, batchSize: 16 },
+    async (msg: BusMessage<T>) => {
+      collected.push(msg.body);
+      await msg.ack();
+    },
+  );
+  await new Promise((r) => setTimeout(r, timeoutMs));
+  await stop();
+  return collected.slice(0, limit);
+}
+
+const valkeyConfig = {
+  host: VALKEY_HOST,
+  port: VALKEY_PORT,
+  db: 0,
+  lazyConnect: true,
+};
+
+const valkeyScenarios: Scenario[] = [
+  {
+    name: "Valkey Streams - basic publish & consume round-trip",
+    async run() {
+      const { bus, close } = createEventBus({
+        valkey: valkeyConfig,
+      });
+      await bus.publish("verify.guild_create", { guildId: "resilience-test-1" });
+      const msgs = await drainStream<{ guildId: string }>(
+        bus,
+        "verify.guild_create",
+        1,
+      );
+      await close();
+      if (!msgs.some((m) => m.guildId === "resilience-test-1")) {
+        throw new Error(
+          `Payload verification failed (received ${msgs.length} messages)`,
+        );
+      }
+    },
+  },
+  {
+    name: "Valkey Streams - sequential message ordering under queue load",
+    async run() {
+      const { bus, close } = createEventBus({
+        valkey: valkeyConfig,
+      });
+      const itemCount = 10;
+      for (let i = 0; i < itemCount; i++) {
+        await bus.publish("verify.sequence", { sequenceNumber: i });
+      }
+      const msgs = await drainStream<{ sequenceNumber: number }>(
+        bus,
+        "verify.sequence",
+        itemCount,
+      );
+      await close();
+      if (msgs.length < itemCount) {
+        throw new Error(
+          `Expected ${itemCount} ordered messages, received ${msgs.length}`,
+        );
+      }
+    },
+  },
+  {
+    name: "Valkey Streams - consumer group isolation & fanout",
+    async run() {
+      const { bus, close } = createEventBus({
+        valkey: valkeyConfig,
+      });
+      await bus.publish("verify.broadcast", { broadcastId: "fanout-100" });
+
+      const [groupAlphaMsgs, groupBetaMsgs] = await Promise.all([
+        drainStream<{ broadcastId: string }>(
+          bus,
+          "verify.broadcast",
+          1,
+          GROUP_ALPHA,
+        ),
+        drainStream<{ broadcastId: string }>(
+          bus,
+          "verify.broadcast",
+          1,
+          GROUP_BETA,
+        ),
+      ]);
+
+      await close();
+
+      if (groupAlphaMsgs.length === 0 || groupBetaMsgs.length === 0) {
+        throw new Error("Consumer group broadcast isolation check failed");
+      }
+    },
+  },
+  {
+    name: "Valkey Streams - high-throughput burst load (100 parallel dispatches)",
+    async run() {
+      const { bus, close } = createEventBus({
+        valkey: valkeyConfig,
+      });
+      const TOTAL_BURST = 100;
+      const pubPromises: Promise<string>[] = [];
+      for (let i = 0; i < TOTAL_BURST; i++) {
+        pubPromises.push(bus.publish("verify.burst", { index: i }));
+      }
+      await Promise.all(pubPromises);
+
+      const msgs = await drainStream<{ index: number }>(
+        bus,
+        "verify.burst",
+        TOTAL_BURST,
+        GROUP_ALPHA,
+        1500,
+      );
+      await close();
+
+      if (msgs.length < Math.floor(TOTAL_BURST * 0.9)) {
+        throw new Error(
+          `Burst load dropped messages: ${msgs.length}/${TOTAL_BURST} received`,
+        );
+      }
+    },
+  },
+  {
+    name: "Valkey Streams - lifecycle initialization and graceful shutdown",
+    async run() {
+      const { close } = createEventBus({
+        valkey: valkeyConfig,
+      });
+      await close();
+    },
+  },
+  {
+    name: "Valkey Streams - bus re-initialization after connection termination",
+    async run() {
+      const busInstanceA = createEventBus({
+        valkey: valkeyConfig,
+      });
+      await busInstanceA.close();
+
+      const busInstanceB = createEventBus({
+        valkey: valkeyConfig,
+      });
+      await busInstanceB.bus.publish("verify.lifecycle_reopen", { active: true });
+      await busInstanceB.close();
+    },
+  },
+];
+
+async function executeResilienceSuite(): Promise<void> {
+  process.stdout.write(
+    `\n${DIM}[verify:resilience]${RESET} Running ${valkeyScenarios.length} scenario(s) (Valkey Streams)\n\n`,
+  );
+
+  let failureCount = 0;
+  for (const scenario of valkeyScenarios) {
+    try {
+      await scenario.run();
+      pass(scenario.name);
+    } catch (err) {
+      fail(scenario.name, err);
+      failureCount++;
+    }
+  }
+
+  const badge = failureCount === 0 ? `${GREEN}PASSED${RESET}` : `${RED}FAILED${RESET}`;
+  process.stdout.write(
+    `\n${DIM}[verify:resilience]${RESET} ${badge} - ${valkeyScenarios.length - failureCount}/${valkeyScenarios.length} scenario(s) succeeded\n\n`,
+  );
+
+  process.exit(failureCount > 0 ? 1 : 0);
+}
+
+void executeResilienceSuite();

@@ -1,0 +1,112 @@
+import { container, type Container } from "#src/lib/Services.js";
+import { LumiInfo } from "#src/lib/utilities/Version.js";
+import { fieldsFromSchema, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
+import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
+
+export interface ModuleHooks {
+  onLoad?: (services: Container) => unknown;
+  onUnload?: (services: Container) => unknown;
+  reconcileScheduledJobs?: (services: Container) => unknown;
+  deleteUserData?: (
+    services: Container,
+    userId: string,
+    requester?: string,
+  ) => unknown;
+  exportUserData?: (services: Container, userId: string) => unknown;
+}
+
+export interface ModuleObject extends ModuleHooks {
+  __lumiModule: true;
+  name: string;
+  dir: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  short?: string | undefined;
+  endUserDataStatement?: string | undefined;
+  version: string;
+  disableable: boolean;
+  conflicts: string[];
+  dependencies: string[];
+  configFields: ConfigField[];
+  configSchema?: ModuleDefinition["configSchema"] | undefined;
+  configOverrides: boolean;
+  category?: ModuleDefinition["category"] | undefined;
+  dashboardHref?: string | undefined;
+  meta: ModuleMeta;
+  enabled: boolean;
+}
+
+export function defineModule(
+  options: ModuleDefinition & ModuleHooks & { name: string },
+): Omit<ModuleObject, "dir"> {
+  const fields =
+    options.configFields ??
+    (options.configSchema ? fieldsFromSchema(options.configSchema) : []);
+
+  const meta: ModuleMeta = {
+    name: options.name,
+    displayName: options.displayName ?? options.name,
+    emoji: options.emoji ?? "⚙️",
+    description: options.description ?? "",
+    short: options.short,
+    endUserDataStatement: options.endUserDataStatement,
+    version: options.version ?? LumiInfo.version,
+    disableable: options.disableable ?? true,
+    conflicts: options.conflicts ?? [],
+    dependencies: options.dependencies ?? [],
+    configFields: fields,
+    configSchema: options.configSchema,
+    configOverrides: options.configOverrides ?? true,
+    category: options.category,
+    dashboardHref: options.dashboardHref,
+    author: options.author,
+    requirements: options.requirements,
+    install_msg: options.install_msg,
+    tags: options.tags,
+    hidden: options.hidden,
+    disabled: options.disabled,
+    min_bot_version: options.min_bot_version,
+    max_bot_version: options.max_bot_version,
+  };
+
+  const reconcile: (services: Container) => unknown =
+    options.reconcileScheduledJobs ?? (() => undefined);
+
+  return {
+    __lumiModule: true,
+    name: options.name,
+    displayName: meta.displayName,
+    emoji: meta.emoji,
+    description: meta.description,
+    short: options.short,
+    endUserDataStatement: options.endUserDataStatement,
+    version: meta.version,
+    disableable: meta.disableable ?? true,
+    conflicts: meta.conflicts ?? [],
+    dependencies: meta.dependencies ?? [],
+    configFields: fields,
+    configSchema: options.configSchema,
+    configOverrides: meta.configOverrides ?? true,
+    category: options.category,
+    dashboardHref: options.dashboardHref,
+    meta,
+    enabled: true,
+    onLoad: async (services: Container = container) => {
+      await options.onLoad?.(services);
+      void Promise.resolve(reconcile(services)).catch((err: unknown) => {
+        services.logger.error(
+          `[Module:${options.name}] reconcileScheduledJobs failed:`,
+          err,
+        );
+      });
+    },
+    onUnload: (services: Container = container) =>
+      options.onUnload?.(services) ?? undefined,
+    reconcileScheduledJobs: reconcile,
+    deleteUserData: options.deleteUserData ?? (() => undefined),
+    exportUserData: options.exportUserData ?? (() => null),
+  };
+}
+
+export type ModuleOptions = ModuleDefinition;

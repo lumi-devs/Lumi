@@ -1,0 +1,18 @@
+import { cutText } from "#src/shared/Index.ts";
+import { formatDuration } from "#src/lib/utilities/Time.js";
+import { AfkMaxReasonLength } from "#src/modules/afk/Constants.js";
+
+export function sanitizeReason(reason: string): string {
+  const f =
+    reason
+      ?.split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .join(" ")
+      .replace(/\s+/g, " ") || "AFK";
+  return cutText(f, AfkMaxReasonLength);
+}
+
+export function afkDurationSince(since: Date): string {
+  return formatDuration(Date.now() - since.getTime());
+}

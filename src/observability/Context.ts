@@ -1,0 +1,41 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { context as otelContext, propagation, trace } from "@opentelemetry/api";
+
+export interface RequestContext {
+
+  correlationId: string;
+
+  source?: string | undefined;
+  guildId?: string | undefined;
+  userId?: string | undefined;
+  name?: string | undefined;
+}
+
+const als = new AsyncLocalStorage<RequestContext>();
+
+export function runWithContext<T>(ctx: RequestContext, fn: () => T): T {
+  return als.run(ctx, fn);
+}
+
+export function getRequestContext(): RequestContext | undefined {
+  return als.getStore();
+}
+
+export function activeTraceIds(): { traceId?: string; spanId?: string } {
+  const span = trace.getSpan(otelContext.active());
+  if (!span) return {};
+  const sc = span.spanContext();
+  return { traceId: sc.traceId, spanId: sc.spanId };
+}
+
+export function injectTraceContext(): Record<string, string> {
+  const carrier: Record<string, string> = {};
+  propagation.inject(otelContext.active(), carrier);
+  return carrier;
+}
+
+export function extractTraceContext(carrier: Record<string, unknown>) {
+  return propagation.extract(otelContext.active(), carrier);
+}
+
+export { otelContext };

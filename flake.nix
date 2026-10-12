@@ -20,12 +20,11 @@
             gh
             jq
             coreutils
-            turbo
             openssl
             prisma-engines
             postgresql
             valkey
-            rabbitmq-server
+            stdenv.cc.cc.lib
           ];
 
           env = {
@@ -34,6 +33,7 @@
           };
 
           shellHook = ''
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
             echo "========================================="
             echo "  Lumi Multi-Platform Dev Shell (Flake)  "
             echo "========================================="
@@ -42,7 +42,6 @@
             echo "  Git:        $(git --version 2>/dev/null || echo 'N/A')"
             echo "  GitHub CLI: $(gh --version 2>/dev/null | head -n1 || echo 'N/A')"
             echo "  jq:         $(jq --version 2>/dev/null || echo 'N/A')"
-            echo "  Turbo:      $(turbo --version 2>/dev/null || echo 'N/A')"
             echo "========================================="
           '';
         };

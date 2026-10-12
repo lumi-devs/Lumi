@@ -5,8 +5,8 @@ commit_message: 'chore(i18n-crowdin): new translations for %original_file_name% 
 append_commit_message: false
 
 files:
-  - source: /packages/core/src/languages/en-US/**/*.json
-    translation: /packages/core/src/languages/%locale%/**/%original_file_name%
+  - source: /src/languages/en-US/**/*.json
+    translation: /src/languages/%locale%/**/%original_file_name%
     # Crowdin's %locale% placeholder resolves to each language's *default CLDR
     # locale* (e.g. "cs" -> "cs-CZ", "de" -> "de-DE", "ja" -> "ja-JP"), which
     # for most languages does NOT match the exact locale code Discord's

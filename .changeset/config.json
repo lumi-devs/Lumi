@@ -3,10 +3,9 @@
   "changelog": ["@changesets/changelog-github", { "repo": "lumi-devs/Lumi" }],
   "commit": false,
   "fixed": [],
-  "linked": [["@lumi/contracts", "@lumi/observability"]],
-  "access": "restricted",
-  "baseBranch": "main",
+  "linked": [],
+  "access": "public",
+  "baseBranch": "develop/v2",
   "updateInternalDependencies": "patch",
-  "ignore": [],
-  "privatePackages": { "version": true, "tag": false }
+  "ignore": []
 }

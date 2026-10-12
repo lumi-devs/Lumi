@@ -1,0 +1,47 @@
+import { container } from "#src/lib/Services.js";
+import { tempvcRpc } from "#src/contracts/rpc/Index.ts";
+import { getUtility } from "#src/lib/module-system/Utility.js";
+import { implementRpc } from "#src/lib/rpc/Implement.js";
+
+export const tempvcRpcHandlers = implementRpc(tempvcRpc, {
+  "guild.tempvc.generators.list": async ({ guildId }) => {
+    const generators = await container.db.tempvc.listGenerators(guildId);
+    return {
+      generators: generators.map((g) => ({
+        channelId: g.channelId,
+        name: g.name,
+        limit: g.limit,
+      })),
+    };
+  },
+
+  "guild.tempvc.generators.set": async ({ guildId, input }) => {
+    const { channelId, name, limit } = input;
+    const tempvc = getUtility("tempvc");
+
+    if (name === null) {
+      const deleted = await tempvc.removeGenerator(container, guildId, channelId);
+      return { success: true, channelId, deleted };
+    }
+
+    await container.db.ensureGuild(guildId);
+    await tempvc.addGenerator(container, guildId, channelId, { name, limit: limit ?? 0 });
+    return { success: true, channelId, deleted: false };
+  },
+
+  "guild.tempvc.records.list": async ({ guildId }) => {
+    const records = await container.db.tempvc.listRecords(guildId);
+    return {
+      records: records.map((r) => ({
+        channelId: r.channelId,
+        ownerId: r.ownerId,
+        generatorId: r.generatorId,
+        name: r.name,
+        number: r.number,
+        locked: r.locked,
+        hidden: r.hidden,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    };
+  },
+});

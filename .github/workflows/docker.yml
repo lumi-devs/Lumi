@@ -2,7 +2,7 @@ name: Docker Packaging & Publish
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop/v2]
     tags:
       - 'v*'
   pull_request:
@@ -35,15 +35,16 @@ jobs:
             docker:
               - 'Dockerfile*'
               - '.dockerignore'
-              - 'apps/**'
-              - '!apps/**/*.md'
-              - 'packages/**'
+              - 'src/**'
+              - '!src/**/*.md'
+              - 'prisma/**'
+              - 'package.json'
+              - 'bun.lock'
               - '!packages/**/*.md'
               - 'prisma/**'
               - '.github/**'
               - 'package.json'
               - 'bun.lock'
-              - 'turbo.json'
               - 'tsconfig*.json'
               - '.github/workflows/docker.yml'
 
@@ -60,14 +61,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [worker, api, scheduler]
+        target: [bot]
         include:
-          - target: worker
+          - target: bot
             image-suffix: ""
-          - target: api
-            image-suffix: "-api"
-          - target: scheduler
-            image-suffix: "-scheduler"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -97,7 +94,7 @@ jobs:
         with:
           images: ${{ steps.image_meta.outputs.image }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop/v2' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short

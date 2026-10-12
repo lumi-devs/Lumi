@@ -4,16 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/**'
-      - 'packages/**'
+      - 'src/**'
+      - 'src/**'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/security.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'apps/**'
-      - 'packages/**'
+      - 'src/**'
+      - 'src/**'
       - 'package.json'
       - 'bun.lock'
   schedule:

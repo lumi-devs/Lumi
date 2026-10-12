@@ -1,0 +1,167 @@
+import { SupportedLanguages, type LumiT } from "#src/lib/i18n/Index.js";
+import { row, type Row } from "#src/modules/core/ui/Common.js";
+import { resolveCardColor } from "#src/lib/ui/Palette.js";
+import { makeCard, type CardReply } from "#src/lib/ui/Cards.js";
+import {
+  componentEmoji,
+  createStringSelectMenu,
+  settingRow,
+  tabRow,
+  type Tab,
+} from "#src/lib/ui/Panels.js";
+import {
+  ButtonBuilder,
+  SectionBuilder,
+  StringSelectMenuOptionBuilder,
+} from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+
+export const DefaultPrefix = ",";
+
+type HubTabId =
+  "home" | "modules" | "permissions" | "settings" | "addons";
+
+const hubTabs = (t?: LumiT): Tab[] => [
+  { id: "home", label: t ? t("panels:tabHome") : "Hub", emoji: "🤖" },
+  {
+    id: "modules",
+    label: t ? t("panels:tabModules") : "Modules",
+    emoji: "⚙️",
+  },
+  {
+    id: "permissions",
+    label: t ? t("panels:tabPermissions") : "Permissions",
+    emoji: "🛡️",
+  },
+  {
+    id: "settings",
+    label: t ? t("panels:tabSettings") : "Settings",
+    emoji: "🏰",
+  },
+  {
+    id: "addons",
+    label: t ? t("panels:tabAddons") : "Addons",
+    emoji: "📦",
+  },
+];
+
+export function hubTabRow(active: HubTabId, t?: LumiT): Row {
+  return tabRow("lumi:tab", hubTabs(t), active);
+}
+
+interface HubOverview {
+  moduleCount: number;
+  enabledCount: number;
+  prefix: string | null;
+  locale: string;
+  iconUrl?: string | null | undefined;
+}
+
+export function buildHubView(o: HubOverview, t?: LumiT): CardReply {
+  const prefix = o.prefix ?? DefaultPrefix;
+  const glanceLines = [
+    t
+      ? t("panels:hubIntro")
+      : "Manage everything for this server from one place - no scattered commands to remember.",
+    `⚙️ ${
+      t
+        ? t("panels:hubGlanceModules", {
+            enabled: o.enabledCount,
+            total: o.moduleCount,
+          })
+        : `**${o.enabledCount}** of **${o.moduleCount}** modules enabled`
+    }`,
+    `🏰 ${
+      t
+        ? t("panels:hubGlanceLocale", { locale: o.locale, prefix })
+        : `Language \`${o.locale}\`  •  Prefix \`${prefix}\``
+    }`,
+  ];
+
+  const hints = [
+    `⚙️ **${t ? t("panels:tabModules") : "Modules"}** - ${t ? t("panels:tabHintModules") : "enable, disable, and configure every feature"}`,
+    `🛡️ **${t ? t("panels:tabPermissions") : "Permissions"}** - ${t ? t("panels:tabHintPermissions") : "permit grants and per-command overrides"}`,
+    `🏰 **${t ? t("panels:tabSettings") : "Settings"}** - ${t ? t("panels:tabHintSettings") : "server language and command prefix"}`,
+    `📦 **${t ? t("panels:tabAddons") : "Addons"}** - ${t ? t("panels:tabHintAddons") : "extend Lumi with add-on modules"}`,
+  ].join("\n");
+
+  return makeCard(
+    resolveCardColor("primary"),
+    `🤖 ${t ? t("panels:hubTitle") : "Lumi Control Panel"}`,
+    [glanceLines.join("\n"), hints],
+    {
+      breadcrumbs: ["Hub"],
+      footer: t ? t("panels:hubFooter") : "Select a tab below to continue.",
+      thumbnailUrl: o.iconUrl ?? undefined,
+      actionRows: [hubTabRow("home", t)],
+      separatorAboveActionRows: true,
+    },
+  );
+}
+
+export function buildSettingsView(
+  settings: { prefix: string | null; locale: string },
+  t?: LumiT,
+): CardReply {
+  const prefixLabel = t ? t("panels:settingsPrefix") : "Prefix";
+  const prefixValue = `\`${settings.prefix ?? DefaultPrefix}\`${
+    settings.prefix
+      ? ""
+      : ` *${t ? t("panels:settingsPrefixDefault") : "(default)"}*`
+  }`;
+
+  const sections: SectionBuilder[] = [
+    settingRow(
+      [
+        `💻 **${prefixLabel}** - ${prefixValue}`,
+        `-# ${t ? t("panels:settingsFooter") : "Prefix commands work for a curated set of moderation and utility commands."}`,
+      ],
+      {
+        customId: "lumi:prefix:set",
+        label: t ? t("panels:settingsEdit") : "Edit",
+        emoji: "✏️",
+      },
+    ),
+  ];
+
+  const langSelect = createStringSelectMenu({
+    customId: "lumi:setlang",
+    placeholder: t ? t("panels:settingsChangeLanguage") : "Change language…",
+    options: SupportedLanguages.slice(0, 25).map((lang) =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(lang)
+        .setValue(lang)
+        .setDefault(lang === settings.locale),
+    ),
+  });
+
+  const maintenanceButtons = row(
+    new ButtonBuilder()
+      .setCustomId("lumi:prefix:reset")
+      .setLabel(t ? t("panels:settingsReset") : "Reset")
+      .setEmoji(componentEmoji("🗑️"))
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(settings.prefix === null),
+    new ButtonBuilder()
+      .setCustomId("lumi:update_all")
+      .setLabel(t ? t("panels:settingsUpdateAddons") : "Update Addons")
+      .setEmoji(componentEmoji("🔄"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  return makeCard(
+    resolveCardColor("primary"),
+    `🏰 ${t ? t("panels:settingsTitle") : "Server Settings"}`,
+    `🏰 **${t ? t("panels:settingsLanguage") : "Language"}** - \`${settings.locale}\``,
+    {
+      breadcrumbs: ["Hub", "Settings"],
+      sections,
+      actionRows: [
+        row(langSelect),
+        maintenanceButtons,
+        hubTabRow("settings", t),
+      ],
+      separatorAboveActionRows: true,
+    },
+  );
+}

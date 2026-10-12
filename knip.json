@@ -1,47 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["config/*.ts", "packages/core/tests/fixtures/addons/**"],
-  "ignoreDependencies": [
-    "postcss-load-config",
-    "tailwindcss",
-    "tw-animate-css",
-    "@discordjs/builders",
-    "@discordjs/formatters",
-    "discord-api-types"
+  "entry": [
+    "src/Index.ts",
+    "src/cli/Main.ts",
+    "src/modules/*/Index.ts",
+    "src/modules/*/commands/*.ts",
+    "src/modules/*/listeners/*.ts",
+    "src/modules/*/interactions/**/*.ts",
+    "src/modules/*/tasks/*.ts",
+    "src/modules/*/utilities/*.ts",
+    "src/scripts/*.ts",
+    "prisma.config.ts"
   ],
-  "workspaces": {
-    ".": {
-      "entry": ["prisma.config.ts"],
-      "project": ["prisma.config.ts"]
-    },
-    "packages/core": {
-      "entry": [
-        "index.ts",
-        "src/lib/client/lumi-client.ts",
-        "src/lib/env.ts",
-        "src/runtime/*.ts",
-        "src/lib/regex-worker/worker.ts",
-        "src/lib/addon-sandbox/sdk/*.ts",
-        "src/lib/permissions/*.ts",
-        "src/modules/*/index.ts",
-        "src/modules/*/{commands,listeners,interactions,scheduled-tasks,utilities}/**/*.ts",
-        "scripts/*.ts",
-        "tests/**/*.test.ts",
-        "src/**/*.test.ts"
-      ],
-      "project": ["index.ts", "src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
-    },
-    "packages/contracts": {
-      "entry": ["src/index.ts", "src/views.ts", "src/**/*.test.ts"],
-      "project": ["src/**/*.ts"]
-    },
-    "packages/observability": {
-      "entry": ["src/index.ts", "src/tracing.ts", "tests/**/*.test.ts"],
-      "project": ["src/**/*.ts", "tests/**/*.ts"]
-    },
-    "apps/worker": {
-      "entry": ["src/main.ts", "src/shard-client.ts"],
-      "project": ["src/**/*.ts"]
-    }
-  }
+  "project": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "prisma.config.ts"]
 }

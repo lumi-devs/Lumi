@@ -18,14 +18,14 @@ x-lumi-service: &lumi-service
   build:
     context: .
     dockerfile: Dockerfile
-    target: worker
+    target: bot
   env_file:
     - path: .env
       required: false
   environment: &lumi-env
     VALKEY_HOST: valkey
-    POSTGRES_URL: "postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
-    DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+    POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
+    DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
     OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -43,6 +43,9 @@ x-lumi-service: &lumi-service
       condition: service_healthy
     valkey:
       condition: service_healthy
+  # Exit-code contract: 0 clean shutdown, 1 crash, 26 requested restart.
+  # unless-stopped restarts on all of them; use `docker exec lumi-bot lumi-setup`
+  # for preflight and `docker logs lumi-bot` for the boot banner.
   restart: unless-stopped
   cap_drop:
     - ALL
@@ -73,26 +76,31 @@ services:
       postgres:
         condition: service_healthy
 
-  worker:
+  bot:
     <<: *lumi-service
-    container_name: lumi-worker
+    container_name: lumi-bot
     environment:
       <<: *lumi-env
+      RPC_HTTP_HOST: "0.0.0.0"
+      RPC_HTTP_PORT: "8091"
+      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}"
       METRICS_HOST: "0.0.0.0"
+    expose:
+      - "8091"
 
   lumi-dev:
     build:
       context: .
       dockerfile: Dockerfile
-      target: worker
+      target: bot
     container_name: lumi-dev
     env_file:
       - path: .env
         required: false
     environment:
       VALKEY_HOST: valkey
-      POSTGRES_URL: "${POSTGRES_URL:-postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
-      DIRECT_POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
+      POSTGRES_URL: "${POSTGRES_URL:-postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
+      DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
       OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-1}"
@@ -120,55 +128,6 @@ services:
     profiles:
       - development
 
-  worker-scale:
-    <<: *lumi-service
-    container_name: lumi-worker-scale
-    environment:
-      <<: *lumi-env
-      LUMI_CONSUMER_ID: "${LUMI_CONSUMER_ID:-worker-1}"
-      METRICS_HOST: "0.0.0.0"
-      POSTGRES_URL: postgresql://${POSTGRES_USER:-lumi}:${POSTGRES_PASSWORD:-lumi}@pgbouncer:6432/lumi
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      pgbouncer:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      valkey:
-        condition: service_healthy
-    profiles:
-      - scale
-
-  api:
-    <<: *lumi-service
-    container_name: lumi-api
-    image: ghcr.io/lumi-devs/lumi-api:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: api
-    environment:
-      <<: *lumi-env
-      RPC_HTTP_HOST: "0.0.0.0"
-      RPC_HTTP_PORT: "8091"
-      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}"
-      METRICS_HOST: "0.0.0.0"
-    expose:
-      - "8091"
-
-  scheduler:
-    <<: *lumi-service
-    container_name: lumi-scheduler
-    image: ghcr.io/lumi-devs/lumi-scheduler:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: scheduler
-    environment:
-      <<: *lumi-env
-      METRICS_HOST: "0.0.0.0"
-
   dashboard:
     image: ghcr.io/lumi-devs/lumi-dashboard:${LUMI_DASHBOARD_TAG:-latest}
     container_name: lumi-dashboard
@@ -177,11 +136,11 @@ services:
       DASHBOARD_HOST: "0.0.0.0"
       DASHBOARD_PORT: "8080"
       DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env}"
-      RPC_HTTP_URL: "http://api:8091"
+      RPC_HTTP_URL: "http://bot:8091"
       DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
       DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
     depends_on:
-      api:
+      bot:
         condition: service_started
     ports:
       - "${DASHBOARD_PORT:-8080}:8080"
@@ -222,7 +181,7 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: lumi
-      POSTGRES_USER: ${POSTGRES_USER:-lumi}
+      POSTGRES_USER: lumi
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       BACKUP_DIR: /backups
       BACKUP_RETENTION: "${BACKUP_RETENTION:-7}"
@@ -251,7 +210,7 @@ services:
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: lumi
-      DB_USER: ${POSTGRES_USER:-lumi}
+      DB_USER: lumi
       DB_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       LISTEN_PORT: "6432"
       POOL_MODE: transaction
@@ -266,7 +225,7 @@ services:
       - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-lumi}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U lumi"]
       interval: 10s
       timeout: 5s
       retries: 5

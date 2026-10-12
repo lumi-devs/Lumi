@@ -1,0 +1,97 @@
+import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
+import { CaptchaButtonId } from "#src/modules/security/Constants.js";
+
+export const EmojiPool = [
+  "🍎",
+  "🐶",
+  "🚀",
+  "⭐",
+  "🎸",
+  "🌊",
+  "🦁",
+  "🍕",
+  "🎯",
+  "🌈",
+  "🦋",
+  "🔥",
+] as const;
+
+export const SequenceLength = 4;
+export const MaxAttempts = 3;
+
+export interface CaptchaState {
+
+  sequence: number[];
+
+  buttons: number[];
+  progress: number;
+  attempts: number;
+
+  expiresAt: number;
+}
+
+function cryptoShuffle<T>(input: readonly T[]): T[] {
+  const a = [...input];
+  for (let i = a.length - 1; i > 0; i--) {
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    const j = buf[0]! % (i + 1);
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+export function buildChallenge(): { sequence: number[]; buttons: number[] } {
+  const pool = cryptoShuffle(EmojiPool.map((_, i) => i));
+  const sequence = pool.slice(0, SequenceLength);
+  const distractors = pool.slice(SequenceLength, SequenceLength * 2);
+  return { sequence, buttons: cryptoShuffle([...sequence, ...distractors]) };
+}
+
+export function buildCaptchaRows(
+  buttons: number[],
+  solved: ReadonlySet<number>,
+): ActionRowBuilder<ButtonBuilder>[] {
+  const half = Math.ceil(buttons.length / 2);
+  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+  for (let r = 0; r < 2; r++) {
+    const slice = buttons.slice(r * half, r * half + half);
+    rows.push(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        slice.map((idx) =>
+          createActionButton({
+            customId: CaptchaButtonId.build({ idx: String(idx) }),
+            emoji: EmojiPool[idx]!,
+            style: solved.has(idx) ? ButtonStyle.Success : ButtonStyle.Secondary,
+            disabled: solved.has(idx),
+          })
+        ),
+      ),
+    );
+  }
+  return buildSafeActionRows(rows);
+}
+
+export function sequenceDisplay(sequence: number[]): string {
+  return sequence.map((i) => EmojiPool[i]).join("  ");
+}
+
+export type CaptchaOutcome = "progress" | "solved" | "wrong" | "failed";
+
+export function advanceCaptcha(
+  state: CaptchaState,
+  clickedIdx: number,
+): { state: CaptchaState; outcome: CaptchaOutcome } {
+  if (clickedIdx === state.sequence[state.progress]) {
+    state.progress++;
+    return {
+      state,
+      outcome: state.progress >= state.sequence.length ? "solved" : "progress",
+    };
+  }
+  state.progress = 0;
+  state.attempts--;
+  return { state, outcome: state.attempts <= 0 ? "failed" : "wrong" };
+}

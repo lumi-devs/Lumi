@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/core/src/languages/en-US/**'
+      - 'src/languages/en-US/**'
       - 'crowdin.yml'
       - '.github/workflows/crowdin.yml'
   workflow_dispatch:

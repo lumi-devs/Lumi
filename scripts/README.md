@@ -15,7 +15,6 @@ This directory contains CLI tools, build-time code generators, integration testi
 | `generate-manifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
 | `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
 | `create-addon.ts` | `bun run addon:create <name>` | Scaffolds a new addon/module directory from a minimal template | Offline CLI |
-| `seed.ts` | `bun run db:seed` | Populates local PostgreSQL database with QA test guilds & config | PostgreSQL |
 | `benchmark.ts` | `bun run bench` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
 | `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Valkey Streams |
 
@@ -121,29 +120,6 @@ bun run addon:create tag-manager --dir ../lumi-addons --author "Your Name"
 
 # Validate what got generated
 bun run validate ./addons/welcome-messages
-```
-
----
-
-### `seed.ts`
-
-**Command:** `bun run db:seed`
-
-Development database seeding utility that populates local PostgreSQL databases with sample Global configuration, QA Test Guilds (`123456789012345678`), enabled module states, Wick-style custom permits, and sample moderation cases.
-
-#### Provisioned Entities
-
-- **Global Config**: Default prefix (`!`), maintenance mode flag.
-- **QA Test Guild**: Guild ID `123456789012345678` with default role IDs.
-- **Module States**: Enable state for all 8 core modules (`core`, `mod`, `filter`, `utility`, `afk`, `tempvc`, `logging`, `dashboard`).
-- **Custom Permits**: Permissive `mod.*` wildcard node assigned to QA Moderator Role.
-- **Moderation Cases**: Sample warning case history.
-
-#### Usage Examples
-
-```bash
-# Seed development database
-bun run db:seed
 ```
 
 ---
