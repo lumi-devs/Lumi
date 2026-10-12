@@ -223,6 +223,25 @@ describe("validateAddon", () => {
     expect(errors.some((e) => e.includes('"Not Valid@^1.0.0"'))).toBe(true);
   });
 
+  it("warns on user-facing replies without the locale pipeline", async () => {
+    const dir = await makeAddon("no-locale", {
+      "Index.ts": GOOD_INDEX,
+      "commands/x.ts": `export async function run(ctx: any) { await ctx.replySuccess("Done", "It worked."); }\n`,
+    });
+    const { errors, warnings } = await validateAddon(dir);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes("locale pipeline"))).toBe(true);
+  });
+
+  it("stays quiet when replies go through fetchT", async () => {
+    const dir = await makeAddon("with-locale", {
+      "Index.ts": GOOD_INDEX,
+      "commands/x.ts": `export async function run(ctx: any) { const t = await ctx.fetchT(); await ctx.replySuccess(t("commands:doneTitle"), t("commands:doneBody")); }\n`,
+    });
+    const { warnings } = await validateAddon(dir);
+    expect(warnings.some((w) => w.includes("locale pipeline"))).toBe(false);
+  });
+
   it("flags an invalid manifest.json schema or mismatched name", async () => {
     const dir = await makeAddon("bad-manifest", {
       "Index.ts": `import { defineModule } from "../../../../src/lib/module-system/Module.js";\n@DefineModule({ name: "bad-manifest", displayName: "B", emoji: "🧪", version: "1.0.0", description: "d" })\nexport class BModule extends Module {}\n`,

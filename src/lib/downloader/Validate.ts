@@ -103,6 +103,29 @@ const GlobalLetRe = /^(?:export\s+)?let\s+(\w+)\b/gm;
 const GlobalCollectionRe =
   /^(?:export\s+)?const\s+(\w+)\s*(?::\s*[^=;]+)?=\s*(?:\[\s*\]|new\s+Map\s*\(\s*\)|new\s+Set\s*\(\s*\))/gm;
 
+const ReservedDeclKeywordRe =
+  /\b(?:function|const|let|var|class|interface|type|enum)\s+(lumi_\w+|__lumi\w*)/g;
+const ReservedMemberRe =
+  /^\s*(?:(?:public|private|protected|static|async|readonly|get|set)\s+)*(lumi_\w+|__lumi\w*)\s*[(:=?;]/gm;
+const ReservedQuotedRe = /["'](lumi_\w+|__lumi\w*)["']\s*:/g;
+
+function checkReservedPrefixes(src: string, rel: string, warnings: string[]): void {
+  const found = new Set<string>();
+  for (const re of [ReservedDeclKeywordRe, ReservedMemberRe, ReservedQuotedRe]) {
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) {
+      found.add(m[1]!);
+    }
+  }
+  if (found.size > 0) {
+    const names = [...found].map((n) => `"${n}"`).join(", ");
+    warnings.push(
+      `${rel}: declares ${names} with a reserved prefix (lumi_ and __lumi_* are reserved for the framework) - rename it to avoid colliding with future framework members.`,
+    );
+  }
+}
+
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -311,6 +334,8 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       );
 
     checkLeakHeuristics(src, rel, warnings);
+    checkI18nHeuristics(src, rel, warnings);
+    checkReservedPrefixes(src, rel, warnings);
 
     let match: RegExpExecArray | null;
     ImportRe.lastIndex = 0;
@@ -388,4 +413,18 @@ export async function validateAddonOrRepo(
       results.set(entry.name, await validateAddon(child));
   }
   return results;
+}
+
+const ReplyRe =
+  /\.(?:reply|replySuccess|replyError|replyWarning|replyInfo|replyEmpty)\s*\(|interaction\.reply\s*\(|message\.reply\s*\(|channel\.send\s*\(/;
+
+const LocaleRe =
+  /fetchT|fetchTyped|getT|translate\s*\(|applyLocalizedBuilder/;
+
+function checkI18nHeuristics(src: string, rel: string, warnings: string[]): void {
+  if (!ReplyRe.test(src)) return;
+  if (LocaleRe.test(src)) return;
+  warnings.push(
+    `${rel}: user-facing reply without the locale pipeline (no fetchT/fetchTyped/getT/translate found) - fetch a translator (ctx.fetchT()/fetchTyped()) and pass t("namespace:key") strings instead of hardcoded reply text.`,
+  );
 }

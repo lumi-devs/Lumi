@@ -3,7 +3,10 @@
 ## Formatting and cards
 
 Never construct `new EmbedBuilder()` in a command. Pure string formatting
-lives in `src/lib/ui/Format.ts` (`box`, `pagify`, headers, escapes);
+lives in `src/lib/ui/Format.ts` (`pagify`, headers, escapes); code blocks
+and inline code come from `codeBlock` / `inlineCode` in
+`@discordjs/formatters`. Chat-input mentions use
+`chatInputApplicationCommandMention` from the same package.
 embeds come from the card builders in `src/lib/ui/Cards.ts`
 (`makeSuccessCard`, `makeErrorCard`, `makeInfoCard`, `makeWarningCard`,
 `makeListCard`) or the `ctx.reply*` shortcuts. `api.ui` / `api.fmt`

@@ -35,7 +35,72 @@ import {
   respondMessage,
 } from "#src/lib/utilities/CommandResponse.js";
 import { ephemeralCard, makeWarningCard } from "#src/lib/ui/Cards.js";
+import { suggestSimilar, didYouMean } from "#src/lib/utilities/DidYouMean.js";
 import { getDefaultPrefix } from "#src/lib/Env.js";
+
+export type CommandErrorHandler = (
+  error: unknown,
+  context: { commandName: string },
+) => Promise<boolean | void> | boolean | void;
+
+const commandErrorHandlers = new Map<string, CommandErrorHandler>();
+
+export function onCommandError(
+  name: string,
+  handler: CommandErrorHandler,
+): () => void {
+  const key = name.toLowerCase();
+  commandErrorHandlers.set(key, handler);
+  return () => {
+    if (commandErrorHandlers.get(key) === handler) commandErrorHandlers.delete(key);
+  };
+}
+
+async function tryLocalErrorHandler(
+  commandName: string,
+  error: unknown,
+): Promise<{ handled: boolean; error: unknown }> {
+  const handler = commandErrorHandlers.get(commandName.toLowerCase());
+  if (!handler) return { handled: false, error };
+  try {
+    const handled = await handler(error, { commandName });
+    return { handled: handled === true, error };
+  } catch (next) {
+    return { handled: false, error: next };
+  }
+}
+
+function unknownCommandSuggestions(input: string): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const def of commandRegistry.values()) {
+    if (seen.has(def.name)) continue;
+    seen.add(def.name);
+    names.push(def.name);
+  }
+  const best = didYouMean(input, names);
+  if (!best) return [];
+  return suggestSimilar(input, names);
+}
+
+async function replyUnknownCommand(
+  services: Container,
+  message: Message,
+  input: string,
+): Promise<void> {
+  const suggestions = unknownCommandSuggestions(input.toLowerCase());
+  if (suggestions.length === 0) return;
+  const [first] = suggestions;
+  const body =
+    suggestions.length === 1
+      ? `Unknown command \`${input}\`. Did you mean \`/${first ?? input}\`?`
+      : `Unknown command \`${input}\`. Did you mean ${suggestions.map((s) => `\`/${s}\``).join(", ")}?`;
+  try {
+    await respondMessage(message, ephemeralCard(makeWarningCard("Unknown Command", body)));
+  } catch (reportError) {
+    services.logger.error("[CommandDispatch] Failed to report unknown command:", reportError);
+  }
+}
 
 function denyCommand(
   services: Container,
@@ -172,7 +237,9 @@ async function reportChatError(
   error: unknown,
 ): Promise<void> {
   try {
-    const { card } = resolveErrorCard(`Command:${def.name}`, error);
+    const local = await tryLocalErrorHandler(def.name, error);
+    if (local.handled) return;
+    const { card } = resolveErrorCard(`Command:${def.name}`, local.error);
     await respond(interaction, card);
   } catch (reportError) {
     services.logger.error(
@@ -276,7 +343,9 @@ export async function dispatchContextMenu(
       def.contextMenu!.run(services, interaction),
     );
   } catch (error) {
-    const { card } = resolveErrorCard(`Command:${def.name}`, error);
+    const local = await tryLocalErrorHandler(def.name, error);
+    if (local.handled) return;
+    const { card } = resolveErrorCard(`Command:${def.name}`, local.error);
     try {
       await respond(interaction, card);
     } catch (reportError) {
@@ -306,7 +375,11 @@ export async function dispatchMessage(
   const [name, ...tokens] = withoutPrefix.split(/ +/g);
   if (!name) return;
   const def = commandRegistry.get(name.toLowerCase());
-  if (!def || def.prefixEnabled === false) return;
+  if (!def) {
+    await replyUnknownCommand(services, message, name);
+    return;
+  }
+  if (def.prefixEnabled === false) return;
   if (await denyCommand(services, message, gateSourceFromMessage(message), def)) {
     return;
   }

@@ -16,6 +16,18 @@ export interface BankBalance {
   lastPaydayAt: Date | null;
 }
 
+export interface BankAccountView {
+  name: string;
+  balance: number;
+}
+
+export class AbortPurchase extends Error {
+  public constructor(message = "Purchase aborted.") {
+    super(message);
+    this.name = "AbortPurchase";
+  }
+}
+
 function service(services: Container): BankService {
   return new BankService(services.db.economy);
 }
@@ -42,6 +54,32 @@ export async function getAccount(
   userId: string,
 ): Promise<BankBalance> {
   return getBalance(services, guildId, userId);
+}
+
+export async function account(
+  services: Container,
+  guildId: string,
+  userId: string,
+): Promise<BankAccountView> {
+  const config = await getEconomyConfig(services, guildId);
+  const record = await services.db.economy.ensureAccount(
+    guildId,
+    userId,
+    config.startingWallet,
+    config.startingBank,
+  );
+  return {
+    name: await getBankName(services, guildId),
+    balance: record.wallet + record.bank,
+  };
+}
+
+export async function currencyName(services: Container, guildId: string): Promise<string> {
+  return getCurrencyName(services, guildId);
+}
+
+export async function bankName(services: Container, guildId: string): Promise<string> {
+  return getBankName(services, guildId);
 }
 
 export async function canSpend(
@@ -107,6 +145,7 @@ export async function withCost<T>(
     return await run();
   } catch (err) {
     await svc.deposit(guildId, userId, amount, config).catch(() => undefined);
+    if (err instanceof AbortPurchase) return undefined as T;
     throw err;
   }
 }

@@ -58,3 +58,33 @@ default_member_permissions at slash sync. Members lacking those bits
 don't see the command; server owners, administrators, and per-command
 Integration overwrites bypass it. This is display-level hiding only —
 `requiredPermit` and the gates above still decide at execution.
+
+## Explaining a decision
+
+`explainPermit(node, actor)` (`src/lib/api/permissions/PermitResolver.ts`)
+walks the same tiers as the resolver — owner, manager, enforced user,
+then one custom row per chain tier (`user`, `channel`, `role:<id>`) — and
+reports each tier's verdict (`allow` | `deny` | `pass`) without
+short-circuiting, so a deny and a later grant both show up. Read-only:
+it never writes assignments. Surfaced via `/lumi explain node:<node>
+target:<user?>`.
+
+```ts
+const rows = await explainPermit("mod.ban", { guildId, userId, roleIds });
+```
+
+## Permit-or-Discord-permissions gate
+
+`permitOrPermissions(node, perms)` (`src/lib/api/permissions/PreconditionChecks.ts`)
+builds a `GateCheck` that passes when the permit node allows (via
+`authorize()`) OR the actor's Discord member permissions satisfy `perms`
+(`{ ManageGuild: true }`, flag names from `PermissionFlagsBits`; unknown
+names never pass). Discord bits are read from `GateSource.member`,
+accepting a `PermissionsBitField`, a raw bigint, or an API-style bitfield
+string. Parameterized like `LumiPermission`'s context node, so it is used
+where gates are composed rather than as a static registry entry.
+
+```ts
+const check = permitOrPermissions("mod.ban", { ManageGuild: true });
+const denial = await check(source, {});
+```

@@ -51,3 +51,6 @@ with `/module load`, `unload`, `reload`, `status`.
   (`src/lib/ui/Cards.ts`) or `ctx.replySuccess` / `ctx.replyError`.
 - `Index.ts` exports the `meta` object from `defineModule()`;
   `configFields` come from a `configSchema`, never hand-authored.
+- User-facing reply strings go through the locale pipeline (`ctx.fetchT()`
+  / `fetchTyped()` + `t("namespace:key")`). Replies without it warn,
+  never fail.

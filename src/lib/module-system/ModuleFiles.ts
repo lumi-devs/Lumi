@@ -3,6 +3,27 @@ import path from "node:path";
 
 const FilesRoot = path.resolve("data", "files");
 
+const BundledRoot = path.resolve("data", "installed-modules");
+
+export function bundledModuleDir(moduleName: string): string {
+  if (!/^[a-z0-9][a-z0-9-]*$/i.test(moduleName)) {
+    throw new Error(`Invalid module name for bundled storage: ${moduleName}`);
+  }
+  return path.join(BundledRoot, moduleName.toLowerCase());
+}
+
+export async function readBundledFile(
+  moduleName: string,
+  name: string,
+): Promise<Buffer | null> {
+  const full = resolveIn(bundledModuleDir(moduleName), name);
+  try {
+    return await fs.readFile(full);
+  } catch {
+    return null;
+  }
+}
+
 export function moduleFilesDir(moduleName: string): string {
   if (!/^[a-z0-9][a-z0-9-]*$/i.test(moduleName)) {
     throw new Error(`Invalid module name for file storage: ${moduleName}`);

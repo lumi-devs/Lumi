@@ -125,4 +125,91 @@ export class PermitResolver {
   }
 }
 
+export interface ExplainPermitActor {
+  guildId: string;
+  userId: string;
+  roleIds?: string[] | undefined;
+  channelId?: string | undefined;
+  guildOwnerId?: string | null | undefined;
+}
+
+export interface PermitTierExplanation {
+  tier: string;
+  verdict: "allow" | "deny" | "pass";
+  detail?: string | undefined;
+}
+
+function matchDetail(
+  nodes: readonly string[],
+  permitNode: string,
+): string | undefined {
+  return nodes.find((granted) => evaluateNodeMatch(granted, permitNode));
+}
+
+function verdictForBucket(
+  tier: string,
+  bucket: { grant: string[]; deny: string[] },
+  permitNode: string,
+): PermitTierExplanation {
+  const deny = matchDetail(bucket.deny, permitNode);
+  if (deny !== undefined) return { tier, verdict: "deny", detail: `deny ${deny}` };
+  const grant = matchDetail(bucket.grant, permitNode);
+  if (grant !== undefined)
+    return { tier, verdict: "allow", detail: `grant ${grant}` };
+  return { tier, verdict: "pass" };
+}
+
+export async function explainPermit(
+  node: string,
+  actor: ExplainPermitActor,
+): Promise<PermitTierExplanation[]> {
+  const { guildId, userId, roleIds = [], channelId, guildOwnerId } = actor;
+  const rows: PermitTierExplanation[] = [];
+  if (PermitResolver.isBotOwner(userId)) {
+    rows.push({ tier: "owner", verdict: "allow", detail: "bot owner" });
+  } else if (PermitResolver.isGuildOwner(guildOwnerId, userId)) {
+    rows.push({ tier: "owner", verdict: "allow", detail: "server owner" });
+  } else {
+    rows.push({ tier: "owner", verdict: "pass" });
+  }
+  if (rows[0]?.verdict === "allow") return rows;
+  const cached = container.client?.guilds?.cache?.get(guildId)?.members?.cache?.get(userId);
+  const manager = Boolean(
+    cached?.permissions?.has(PermissionFlagsBits.Administrator) ||
+      cached?.permissions?.has(PermissionFlagsBits.ManageGuild),
+  );
+  rows.push(
+    manager
+      ? { tier: "manager", verdict: "allow", detail: "Administrator or ManageGuild" }
+      : { tier: "manager", verdict: "pass" },
+  );
+  const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
+    { targetType: "user", targetId: userId },
+    ...(channelId ? [{ targetType: "channel" as const, targetId: channelId }] : []),
+    ...roleIds.map((roleId) => ({ targetType: "role" as const, targetId: roleId })),
+  ];
+  const labels = [
+    "user",
+    ...(channelId ? ["channel"] : []),
+    ...roleIds.map((roleId) => `role:${roleId}`),
+  ];
+  const { tiers, isQuarantined } = await container.db.permissions.getPermitChain(
+    guildId,
+    userId,
+    chain,
+  );
+  const userTier = tiers[0];
+  if (userTier) rows.push(verdictForBucket("enforced:user", userTier.enforced, node));
+  tiers.forEach((tier, index) => {
+    const row = verdictForBucket(`custom:${labels[index] ?? `tier:${index}`}`, tier.custom, node);
+    if (isQuarantined) {
+      row.detail = row.detail
+        ? `${row.detail}, ignored while quarantined`
+        : "ignored while quarantined";
+    }
+    rows.push(row);
+  });
+  return rows;
+}
+
 export const permitResolver = new PermitResolver();

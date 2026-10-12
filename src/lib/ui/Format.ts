@@ -1,13 +1,5 @@
 import { AttachmentBuilder } from "discord.js";
 
-export function box(text: string, lang = ""): string {
-  return `\`\`\`${lang}\n${text}\n\`\`\``;
-}
-
-export function inline(text: string): string {
-  return text.includes("`") ? `\`\` ${text} \`\`` : `\`${text}\``;
-}
-
 export function humanizeList(items: readonly string[]): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0]!;

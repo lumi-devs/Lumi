@@ -3,8 +3,23 @@ import {
   FieldType,
   fieldsFromSchema,
 } from "#src/lib/module-system/ConfigSchema.js";
+import { configLock } from "#src/lib/prisma/GuildTransaction.js";
 
 export async function clearStaleConfigRefs(
+  services: Container,
+  guildId: string,
+  deletedId: string,
+  kind: "channel" | "role",
+): Promise<void> {
+  const release = await configLock(guildId);
+  try {
+    await clearStaleRefs(services, guildId, deletedId, kind);
+  } finally {
+    release();
+  }
+}
+
+async function clearStaleRefs(
   services: Container,
   guildId: string,
   deletedId: string,
