@@ -3,8 +3,8 @@ import { container } from "#src/lib/Services.js";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { GuildKVRepository } from "#src/lib/prisma/repositories/GuildKvRepository.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
+import { createMockPrismaClient } from "../../../mocks/Prisma.js";
+import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "999999999999999999";

@@ -88,8 +88,8 @@ describe('Mod Helpers & Duration Parsing', () => {
   });
 
   it('formatDuration converts ms into human readable string', () => {
-    expect(formatDuration(5000)).toBe('5 seconds');
-    expect(formatDuration(120000)).toBe('2 minutes');
+    expect(formatDuration(5000)).toBe('5s');
+    expect(formatDuration(120000)).toBe('2m');
     expect(formatDuration(7200000)).toBe('2 hours');
     expect(formatDuration(172800000)).toBe('2 days');
   });

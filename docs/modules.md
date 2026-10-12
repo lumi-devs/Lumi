@@ -8,7 +8,6 @@ Every module is managed with `/module` (owner-only): `list`, `info`,
 |---|---|---|
 | 💤 AFK | `/module info afk` (owner) | Set yourself AFK with automated status and mention alerts. |
 | 🛡️ Core | `/module info core` (owner) | Essential bot commands, module management, and administrative panels. |
-| 🖥️ Dashboard | `/module info dashboard` (owner) | Web dashboard integration and RPC management endpoints. |
 | 🪙 Economy | `/module info economy` (owner) | Guild currency with payday, transfers, slots, and an audit ledger. |
 | 🚫 Filter | `/module info filter` (owner) | Automod rule engine with regex patterns, invite blocking, and heat scoring. |
 | 📋 Logging | `/module info logging` (owner) | Server event logging for moderation, messages, and member actions. |

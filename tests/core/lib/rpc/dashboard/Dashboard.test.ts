@@ -4,7 +4,7 @@ import { container } from "#src/lib/Services.js";
 import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";

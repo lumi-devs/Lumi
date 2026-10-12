@@ -5,7 +5,7 @@ import type { RpcBoundHandler, RpcImplementation } from "#src/lib/rpc/Implement.
 import { systemRpcHandlers } from "#src/lib/rpc/SystemRpc.js";
 import { afkRpcHandlers } from "#src/modules/afk/Rpc.js";
 import { coreRpcHandlers, downloaderRpcHandlers } from "#src/modules/core/Rpc.js";
-import { dashboardRpcHandlers } from "#src/modules/dashboard/Rpc.js";
+import { dashboardRpcHandlers } from "#src/lib/rpc/DashboardRpc.js";
 import { loggingRpcHandlers } from "#src/modules/logging/Rpc.js";
 import { modRpcHandlers } from "#src/modules/mod/Rpc.js";
 import { reactionrolesRpcHandlers } from "#src/modules/reactionroles/Rpc.js";

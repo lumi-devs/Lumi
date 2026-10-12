@@ -3,7 +3,7 @@ import { container } from "#src/lib/Services.js";
 import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 let configUtility: any;
 vi.mock("#lib/module-system/Utility.js", () => ({

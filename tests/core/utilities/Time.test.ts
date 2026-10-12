@@ -4,13 +4,14 @@ import { parseDuration, formatDuration } from "#src/lib/utilities/Time.js";
 
 describe("time utilities", () => {
   it("formatDuration", () => {
-    expect(formatDuration(50000)).toBe("50 seconds");
-    expect(formatDuration(90000)).toBe("1 minute 30 seconds");
+    expect(formatDuration(50000)).toBe("50s");
+    expect(formatDuration(90000)).toBe("1m 30s");
+    expect(formatDuration(90061000)).toBe("1d 1h 1m 1s");
   });
 
-  it("formatDuration passes through zero and negatives unclamped", () => {
-    expect(formatDuration(0)).toBe("0 seconds");
-    expect(formatDuration(-5000)).toBe("-5 seconds");
+  it("formatDuration clamps zero and negatives to 0s", () => {
+    expect(formatDuration(0)).toBe("0s");
+    expect(formatDuration(-5000)).toBe("0s");
   });
 
   it("parseDuration", () => {

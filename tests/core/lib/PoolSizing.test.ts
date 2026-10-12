@@ -39,23 +39,10 @@ describe("getShardCount", () => {
 
 describe("resolvePgPoolSize", () => {
 
-  it("keeps total fleet connections flat as shards grow", () => {
-    process.env["POSTGRES_POOL_TOTAL"] = "80";
-
-    process.env["SHARD_COUNT"] = "1";
-    const one = resolvePgPoolSize();
-    process.env["SHARD_COUNT"] = "40";
-    const forty = resolvePgPoolSize();
-
-    expect(one).toBe(80);
-    expect(forty).toBe(2);
-    expect(forty * 40).toBeLessThanOrEqual(one * 1 + 80);
-  });
-
-  it("never drops below a usable floor", () => {
-    process.env["POSTGRES_POOL_TOTAL"] = "10";
-    process.env["SHARD_COUNT"] = "1000";
-    expect(resolvePgPoolSize()).toBe(2);
+  it("defaults to a flat pool size", () => {
+    delete process.env["POSTGRES_POOL_MAX"];
+    delete process.env["POSTGRES_POOL_TOTAL"];
+    expect(resolvePgPoolSize()).toBe(20);
   });
 
   it("lets an explicit POSTGRES_POOL_MAX win, for pooler-fronted deploys", () => {

@@ -6,8 +6,8 @@ import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js
 import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
 import { ConfigOverrideRepository } from "#src/lib/prisma/repositories/ConfigOverrideRepository.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
+import { createMockPrismaClient } from "../../../mocks/Prisma.js";
+import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 let config: { setConfig: ReturnType<typeof vi.fn> };
 vi.mock("#lib/module-system/Utility.js", () => ({

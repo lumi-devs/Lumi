@@ -416,7 +416,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       const res = (await call("guild.warnThresholds.list")) as any;
 
       expect(res.thresholds).toEqual([
-        { warnCount: 3, action: "mute", duration: "1 hour" },
+        { warnCount: 3, action: "mute", duration: "1h" },
         { warnCount: 5, action: "ban", duration: null },
       ]);
     });
