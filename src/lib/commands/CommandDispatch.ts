@@ -4,6 +4,7 @@ import { RateLimitManager } from "@sapphire/ratelimits";
 import {
   ApplicationIntegrationType,
   InteractionContextType,
+  PermissionFlagsBits,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type Client,
@@ -120,11 +121,21 @@ function denyCommand(
   const names = ["AccessLists", "MaintenanceMode", "ModuleEnabled"];
   if (def.guildOnly || handler?.guildOnly) names.push("GuildOnly");
   if (def.botOwner || handler?.botOwner) names.push("BotOwner");
+  if (def.guildOwner || handler?.guildOwner) names.push("GuildOwner");
   if (requiredPermit) names.push("LumiPermission");
   return denyGated(services, target, source, {
     names,
     command: { module: def.module, requiredPermit },
   });
+}
+
+function derivedMemberPermissions(def: CommandDef): bigint | null {
+  if (def.botOwner || def.guildOwner) return PermissionFlagsBits.Administrator;
+  if (!def.requiredPermit) return null;
+  if (def.requiredPermit === "admin.*" || def.requiredPermit.startsWith("admin.")) {
+    return PermissionFlagsBits.Administrator;
+  }
+  return PermissionFlagsBits.ManageGuild;
 }
 
 const cooldowns = new Map<string, number>();
@@ -581,7 +592,7 @@ export function finalizeBuilder(def: CommandDef) {
   if (!def.build) throw new Error(`Command ${def.name} has no slash builder.`);
   const builder = def.build();
   const guildOnly = def.guildOnly ?? false;
-  builder.setDefaultMemberPermissions(def.defaultMemberPermissions ?? null);
+  builder.setDefaultMemberPermissions(derivedMemberPermissions(def));
   builder.setContexts(
     ...(guildOnly
       ? [InteractionContextType.Guild]

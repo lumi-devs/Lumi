@@ -103,6 +103,19 @@ async function checkBotOwner(source: GateSource): Promise<GateDenial | null> {
       };
 }
 
+async function checkGuildOwner(source: GateSource): Promise<GateDenial | null> {
+  const allowed = await authorize(
+    { userId: source.userId, guildOwnerId: source.guild?.ownerId ?? null },
+    { kind: "guildOwner" },
+  );
+  return allowed
+    ? null
+    : {
+        identifier: "PermissionDenied",
+        message: "Only the server owner can use this.",
+      };
+}
+
 async function checkLumiPermission(
   source: GateSource,
   command: GateCommand,
@@ -212,6 +225,7 @@ export const preconditionChecks: Record<string, GateCheck> = {
   AccessLists: checkAccessLists,
   GuildOnly: checkGuildOnly,
   BotOwner: checkBotOwner,
+  GuildOwner: checkGuildOwner,
   LumiPermission: checkLumiPermission,
   MaintenanceMode: checkMaintenanceMode,
   ModuleEnabled: checkModuleEnabled,

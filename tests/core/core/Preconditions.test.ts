@@ -58,12 +58,13 @@ describe("precondition gates", () => {
     (container as any).logger = { error: vi.fn(), warn: vi.fn() };
   });
 
-  it("exposes exactly the six supported gates", () => {
+  it("exposes exactly the seven supported gates", () => {
     expect(Object.keys(preconditionChecks).sort()).toEqual(
       [
         "AccessLists",
         "BotOwner",
         "GuildOnly",
+        "GuildOwner",
         "LumiPermission",
         "MaintenanceMode",
         "ModuleEnabled",

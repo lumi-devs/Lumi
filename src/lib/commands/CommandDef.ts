@@ -21,6 +21,7 @@ export interface SubcommandHandler {
   requiredPermit?: string;
   guildOnly?: boolean;
   botOwner?: boolean;
+  guildOwner?: boolean;
 }
 
 export type CooldownScope = "user" | "guild" | "channel" | "member";
@@ -38,9 +39,9 @@ export interface CommandDef {
   aliases?: string[];
   guildOnly?: boolean;
   botOwner?: boolean;
+  guildOwner?: boolean;
   requiredPermit?: string;
   requiredClientPermissions?: bigint[];
-  defaultMemberPermissions?: bigint | null;
   prefixEnabled?: boolean;
   cooldownMs?: number;
   cooldownBucket?: CooldownBucket;

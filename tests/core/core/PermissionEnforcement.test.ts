@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test";
+import { PermissionFlagsBits } from "discord.js";
 import { asHandler, type CommandDef } from "#src/lib/commands/CommandDef.js";
+import { finalizeBuilder } from "#src/lib/commands/CommandDispatch.js";
 import { banDef } from "#src/modules/mod/commands/Ban.js";
 import { kickDef } from "#src/modules/mod/commands/Kick.js";
 import { timeoutDef } from "#src/modules/mod/commands/Timeout.js";
@@ -103,8 +105,11 @@ describe("command permission enforcement", () => {
       expect(def.botOwner).toBe(true);
     });
 
-    it("repo carries no ambient Discord permission gate of its own", () => {
-      expect(repoDef.defaultMemberPermissions).toBe(undefined);
+    it("repo derives Administrator from its botOwner flag", () => {
+      const payload = finalizeBuilder(repoDef).toJSON() as unknown as Record<string, unknown>;
+      expect(payload["default_member_permissions"] ?? null).toBe(
+        String(PermissionFlagsBits.Administrator),
+      );
     });
   });
 
@@ -122,6 +127,38 @@ describe("command permission enforcement", () => {
       { name: "help", def: helpDef },
     ])("$name stays usable outside a guild", ({ def }) => {
       expect(def.guildOnly).toBeFalsy();
+    });
+  });
+
+  describe("derived member permissions", () => {
+    const dmpOf = (def: CommandDef): unknown =>
+      (finalizeBuilder(def).toJSON() as unknown as Record<string, unknown>)[
+        "default_member_permissions"
+      ] ?? null;
+
+    it("derives Administrator for admin.* nodes", () => {
+      expect(dmpOf({ ...mydataDef, requiredPermit: "admin.config" })).toBe(
+        String(PermissionFlagsBits.Administrator),
+      );
+    });
+
+    it("derives ManageGuild for other nodes", () => {
+      expect(dmpOf({ ...mydataDef, requiredPermit: "mod.ban" })).toBe(
+        String(PermissionFlagsBits.ManageGuild),
+      );
+    });
+
+    it("derives Administrator for owner-only commands", () => {
+      expect(dmpOf({ ...mydataDef, botOwner: true })).toBe(
+        String(PermissionFlagsBits.Administrator),
+      );
+      expect(dmpOf({ ...mydataDef, guildOwner: true })).toBe(
+        String(PermissionFlagsBits.Administrator),
+      );
+    });
+
+    it("derives no restriction without a gate", () => {
+      expect(dmpOf(mydataDef)).toBeNull();
     });
   });
 

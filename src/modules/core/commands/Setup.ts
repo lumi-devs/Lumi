@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { emptySetupState } from "#src/modules/core/services/SetupWizard.js";
@@ -8,7 +8,7 @@ export const setupDef: CommandDef = {
   name: "setup",
   description: "Launch the ephemeral server setup wizard.",
   guildOnly: true,
-  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
+  requiredPermit: "admin.setup",
   build: () =>
     new SlashCommandBuilder()
       .setName("setup")

@@ -343,12 +343,13 @@ export class PermissionRepository extends Repository {
 
 function collapseAssignments(
   assignments: Array<{
-    permit: { kind: string; polarity: string; nodes: string[] };
+    permit: { kind: string; polarity: string; nodes: string[]; position: number };
   }>,
 ): TargetPermitPayload {
   const custom: PolarityBucket = { grant: [], deny: [] };
   const enforced: PolarityBucket = { grant: [], deny: [] };
-  for (const { permit } of assignments) {
+  const ordered = [...assignments].sort((a, b) => a.permit.position - b.permit.position);
+  for (const { permit } of ordered) {
     const kindBucket = permit.kind === "enforced" ? enforced : custom;
     const polarityBucket =
       permit.polarity === "deny" ? kindBucket.deny : kindBucket.grant;

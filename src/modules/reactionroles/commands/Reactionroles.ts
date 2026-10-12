@@ -1,6 +1,6 @@
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import type { Container } from "#src/lib/Services.js";
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import {
   filterAutocompleteChoices,
@@ -28,7 +28,6 @@ export const reactionrolesDef: CommandDef = {
   description: "Post a role menu card in a channel.",
   guildOnly: true,
   requiredPermit: "reactionroles.manage",
-  defaultMemberPermissions: PermissionFlagsBits.ManageGuild,
   build: () => {
     const builder = new SlashCommandBuilder().setName("reactionroles");
     return (

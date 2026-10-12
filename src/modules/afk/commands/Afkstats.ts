@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
 import { makeCard } from "#src/lib/ui/Cards.js";
@@ -9,20 +9,13 @@ export const afkstatsDef: CommandDef = {
   module: "afk",
   description: "Show AFK stats for this server (server owner only).",
   guildOnly: true,
-  defaultMemberPermissions: PermissionFlagsBits.Administrator,
+  guildOwner: true,
   build: () => {
     const b = new SlashCommandBuilder().setName("afkstats");
     return b
       .setDescription("Show AFK stats for this server (server admin only).");
   },
   run: async (ctx: CommandContext) => {
-    if (ctx.guild?.ownerId !== ctx.user.id) {
-      await ctx.replyError(
-        "Server Owner Only",
-        "Only the server owner can use this command.",
-      );
-      return;
-    }
     const t = await ctx.fetchT();
     const { activeEntries, activeCooldowns } = await getAfkStatsForGuild(
       ctx.services,
