@@ -504,6 +504,7 @@ export const downloaderUtility = defineUtility({
       result.newSha,
       result.signedBy,
     );
+    await bustUpdateCheckCache(services);
     return result;
   },
 
