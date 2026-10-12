@@ -7,6 +7,7 @@ import type {
   ContextMenuCommandBuilder,
   MessageContextMenuCommandInteraction,
   SlashCommandBuilder,
+  SlashCommandOptionsOnlyBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
@@ -14,7 +15,8 @@ import type { Container } from "#src/lib/Services.js";
 
 export type CommandBuilder =
   | SlashCommandBuilder
-  | SlashCommandSubcommandsOnlyBuilder;
+  | SlashCommandSubcommandsOnlyBuilder
+  | SlashCommandOptionsOnlyBuilder;
 
 export interface SubcommandHandler {
   run: (ctx: CommandContext) => unknown;
