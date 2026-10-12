@@ -790,6 +790,9 @@ export const downloaderUtility = defineUtility({
     }
 
     await services.db.downloader.deleteDownloaderRepo(name);
+    await resolver.deleteRepoDisk(name).catch((err: unknown) => {
+      services.logger.warn(`[DownloaderUtility] Failed to clean up disk for ${name}:`, err);
+    });
   }
 });
 

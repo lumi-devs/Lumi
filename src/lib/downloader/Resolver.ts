@@ -726,6 +726,14 @@ export class DownloadResolver {
     }
   }
 
+  public async deleteRepoDisk(repoName: string): Promise<void> {
+    repoName = repoSchema.parse(repoName);
+    const repoPath = path.join(ModuleRoot, repoName);
+    const pinRepoPath = path.join(PinRoot, repoName);
+    await fs.rm(pinRepoPath, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(repoPath, { recursive: true, force: true }).catch(() => {});
+  }
+
   private async _exists(filePath: string): Promise<boolean> {
     try {
       await fs.access(filePath);
