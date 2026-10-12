@@ -1,7 +1,7 @@
 import { container } from "#src/lib/Services.js";
 import { tryParseJSON } from "#src/shared/Index.ts";
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 
 const PublishIntervalMs = 10_000;
 const TtlMs = PublishIntervalMs * 3;

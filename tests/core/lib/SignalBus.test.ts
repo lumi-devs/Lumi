@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#src/lib/Services.js";
-import { SignalBus } from "#src/lib/valkey/Buses.js";
+import { SignalBus } from "#src/lib/valkey/Store.js";
 
 const CHANNEL = "lumi:signals";
 

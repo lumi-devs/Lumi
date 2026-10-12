@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { container } from "#src/lib/Services.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { acquireSchedulerLock } from "#src/lib/scheduler/Lock.js";
 
 function mockValkey() {

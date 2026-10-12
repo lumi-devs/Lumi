@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { container } from "#src/lib/Services.js";
 import { tryParseJSON } from "#src/shared/Index.ts";
 import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);

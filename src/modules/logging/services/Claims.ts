@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { container } from "#src/lib/Services.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import { mgetSafe } from "#src/lib/valkey/Cluster.js";
 
 const LogClaimCodeLength = 6;

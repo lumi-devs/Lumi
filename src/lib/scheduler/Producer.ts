@@ -6,7 +6,7 @@ import {
 import type { Container } from "#src/lib/Services.js";
 import type { TaskQueue } from "#src/lib/scheduler/Runner.js";
 import type { ScheduleOptions } from "#src/lib/scheduler/Schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/JobOptions.js";
+import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/Schedule.js";
 import {JobQueue} from "#src/lib/scheduler/JobQueue.js";
 
 export function installProducerOnlyTasks(services: Container): void {

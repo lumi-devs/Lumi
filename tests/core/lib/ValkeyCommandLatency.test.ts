@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { Command } from "iovalkey";
 import { valkeyCommandDuration } from "#src/observability/Index.ts";
-import { instrumentValkeyLatency } from "#src/lib/valkey/Client.js";
+import { instrumentValkeyLatency } from "#src/lib/valkey/Store.js";
 
 function makeFakeClient(resolveValue: unknown = "OK") {
   const sendCommand = (command: Command) => {

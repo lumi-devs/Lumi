@@ -7,7 +7,7 @@ import { loadScheduledTasks } from "#src/lib/scheduler/Tasks.js";
 import { registerBuiltinTasks } from "#src/lib/scheduler/Oneshot.js";
 import { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
 import { acquireSchedulerLock } from "#src/lib/scheduler/Lock.js";
-import { watchFailedJobs } from "#src/lib/scheduler/FailedJobs.js";
+import { watchFailedJobs } from "#src/lib/scheduler/QueueEvents.js";
 import { watchQueueDepth } from "#src/lib/scheduler/QueueMetrics.js";
 import { publishSchedulerHeartbeat } from "#src/lib/scheduler/Heartbeat.js";
 import { getConsumerId } from "#src/lib/Env.js";

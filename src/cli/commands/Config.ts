@@ -3,11 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const ENV_FILE = path.join(REPO_ROOT, "packages/core/src/lib/env.ts");
+const ENV_FILE = path.join(REPO_ROOT, "src/lib/Env.ts");
 
 export const help = `Usage: lumi config
 
-Prints every environment variable \`packages/core/src/lib/env.ts\` reads
+Prints every environment variable \`src/lib/Env.ts\` reads
 (discovered by scanning that file, so the list can never drift from the
 real accessors) along with its currently resolved value.
 

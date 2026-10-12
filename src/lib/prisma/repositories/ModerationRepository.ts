@@ -1,5 +1,5 @@
 import { Prisma, type CaseAction, type CaseTypeSetting, type ModerationCase } from "@prisma/client";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,

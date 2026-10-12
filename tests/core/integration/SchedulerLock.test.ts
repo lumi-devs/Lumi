@@ -3,7 +3,7 @@ import type Valkey from "iovalkey";
 import {acquireValkeyLock} from "#src/lib/valkey/Lock.js";
 import { type ValkeyLock } from "#src/lib/valkey/Lock.js";
 import { acquireSchedulerLock } from "#src/lib/scheduler/Lock.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { createTestValkey, deleteByPrefix, integrationDescribe } from "./Setup.js";
 
 const TestLockPrefix = "lumi:test:int:lock:";

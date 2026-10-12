@@ -1,4 +1,4 @@
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import {mgetSafe, pipelineBySlot} from "#src/lib/valkey/Cluster.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import { tryParseJSON } from "#src/shared/Index.ts";

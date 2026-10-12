@@ -10,7 +10,7 @@ import {
   SCHEDULED_TASKS_QUEUE_NAME,
 } from "#src/lib/scheduler/Queue.js";
 import type { ScheduleOptions } from "#src/lib/scheduler/Schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/JobOptions.js";
+import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/Schedule.js";
 
 export interface RepeatedTaskSpec {
   name: string;

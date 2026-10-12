@@ -5,7 +5,7 @@ import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { TempVcRepository } from "#src/modules/tempvc/data/TempVcRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 let utilities: Map<string, unknown>;
 let loadedModules: Set<string>;

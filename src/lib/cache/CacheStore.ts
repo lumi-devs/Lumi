@@ -1,4 +1,4 @@
-import type { InvalidationBus } from "#src/lib/valkey/Buses.js";
+import type { InvalidationBus } from "#src/lib/valkey/Store.js";
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import { cacheHits, cacheMisses } from "#src/observability/Index.ts";
 import { container } from "#src/lib/Services.js";

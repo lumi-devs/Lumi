@@ -247,7 +247,7 @@ header "Next steps"
 cat <<EOF
   1. bun install
   2. bun run db:migrate   ${DIM}# applies prisma/schema.prisma to Postgres${RESET}
-  3. bun run dev          ${DIM}# starts worker (+ dashboard via turbo)${RESET}
+  3. bun run dev          ${DIM}# starts the bot with file watching${RESET}
 
 See https://lumi-devs.github.io/Lumi-docs/getting-started/quickstart for the full walkthrough, or https://lumi-devs.github.io/Lumi-docs/getting-started/configuration
 for every environment variable this project understands.

@@ -2,7 +2,7 @@ import { container } from "#src/lib/Services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
 import { tryParseJSON } from "#src/shared/Index.ts";
 import { formatAuditReason } from "#src/lib/utilities/AuditReason.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 import { acquireValkeyLock } from "#src/lib/valkey/Lock.js";
 

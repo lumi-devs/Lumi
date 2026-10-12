@@ -1,5 +1,5 @@
 import { Queue, type QueueOptions } from "bullmq";
-import type { IJobQueue, JobStatus, QueueConnectionOptions, QueueJobOptions } from "#src/lib/scheduler/QueueTypes.js";
+import type { IJobQueue, JobStatus, QueueConnectionOptions, QueueJobOptions } from "#src/lib/scheduler/Queue.js";
 
 export class JobQueue<T = unknown> implements IJobQueue<T> {
   readonly #queue: Queue;

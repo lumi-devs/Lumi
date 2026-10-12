@@ -1,7 +1,7 @@
 import type { AuditLedger, AuditPlatform, Prisma } from "@prisma/client";
 import { hostname } from "node:os";
 import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import { getWriteBucket } from "#src/lib/Env.js";
 import {

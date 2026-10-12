@@ -1,5 +1,5 @@
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import type { Global } from "@prisma/client";
 
 export interface UpdateGlobalInput {

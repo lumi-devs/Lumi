@@ -5,7 +5,7 @@ import {
   type GateCheck,
   type GateSource,
 } from "#src/lib/api/permissions/PreconditionChecks.js";
-import { denyGated } from "#src/lib/commands/Gates.js";
+import { denyGated } from "#src/lib/api/permissions/PreconditionChecks.js";
 
 vi.mock("#lib/utilities/CommandResponse.js", () => ({
   handleDenied: vi.fn().mockResolvedValue(undefined),

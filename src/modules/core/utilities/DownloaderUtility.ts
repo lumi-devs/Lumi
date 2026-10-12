@@ -12,7 +12,7 @@ import { pathExists } from "#src/lib/downloader/Validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { errorFrom } from "#src/lib/utilities/Errors.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
 import { execFileAsync } from "#src/lib/utilities/ExecFile.js";
 import { commandRegistry } from "#src/lib/commands/CommandDef.js";

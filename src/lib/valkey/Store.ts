@@ -1,6 +1,13 @@
 import Valkey, { Cluster, Command, type RedisOptions } from "iovalkey";
 import { performance } from "perf_hooks";
 import { delSafe, type ValkeyClient } from "#src/lib/valkey/Cluster.js";
+import { valkeyCommandDuration } from "#src/observability/Metrics.js";
+
+const MAX_KEYS_PER_INVALIDATION = 500;
+
+function observeValkeyDuration(command: string, seconds: number): void {
+  valkeyCommandDuration.observe({ command }, seconds);
+}
 
 export interface CacheLogger {
   debug?(message: string, ...args: unknown[]): void;
@@ -272,10 +279,8 @@ const BLOCKING_COMMANDS = new Set([
 
 export function instrumentValkeyLatency(
   client: ValkeyClient,
-  onDuration?: (command: string, seconds: number) => void,
+  onDuration: (command: string, seconds: number) => void = observeValkeyDuration,
 ): ValkeyClient {
-  if (!onDuration) return client;
-
   const sendCommand = client.sendCommand.bind(client);
   client.sendCommand = (command: Command, stream?: unknown, node?: unknown) => {
     if (command.name && BLOCKING_COMMANDS.has(command.name.toLowerCase())) {
@@ -300,7 +305,7 @@ export interface CreateValkeyClientOptions {
 export function createValkeyClient(
   options: CreateValkeyClientOptions = {},
 ): ValkeyClient {
-  const { config, logger, onDuration } = options;
+  const { config, logger, onDuration = observeValkeyDuration } = options;
   const clusterNodesEnv = config?.clusterNodes ?? process.env.VALKEY_CLUSTER_NODES;
   const nodes = clusterNodesEnv
     ? clusterNodesEnv
@@ -391,6 +396,12 @@ export class InvalidationBus {
 
   public async invalidate(...keys: string[]): Promise<void> {
     if (keys.length === 0) return;
+    for (let i = 0; i < keys.length; i += MAX_KEYS_PER_INVALIDATION) {
+      await this.invalidateChunk(keys.slice(i, i + MAX_KEYS_PER_INVALIDATION));
+    }
+  }
+
+  private async invalidateChunk(keys: string[]): Promise<void> {
     const now = Date.now();
     if (now > this.#lastInvalidationTime) this.#lastInvalidationTime = now;
     for (const fn of this.#listeners) fn(keys);

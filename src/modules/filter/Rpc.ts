@@ -1,7 +1,7 @@
 import { container } from "#src/lib/Services.js";
 import { filterRpc } from "#src/contracts/rpc/Index.ts";
 import { implementRpc } from "#src/lib/rpc/Implement.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
 import type { FilterUtility } from "#src/modules/filter/utilities/FilterUtility.js";
 

@@ -8,7 +8,7 @@ import { DefaultModuleRoot, walk } from "#src/scripts/GenerateManifests.ts";
 
 export const help = `Usage: lumi commands deploy [--guild <id>]
 
-Collects every module's CommandDefs (packages/core/src/modules/*, plus any
+Collects every module's CommandDefs (src/modules/*, plus any
 extra LUMI_DEV_PATHS roots - the same directory walk \`bun run
 modules:manifest\` uses), finalizes their builders with the shared Discord
 defaults, and overwrites Discord's command list with a single full-overwrite

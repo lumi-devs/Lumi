@@ -26,7 +26,7 @@ import {
   type GateSource,
 } from "#src/lib/api/permissions/PreconditionChecks.js";
 import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
-import { denyGated } from "#src/lib/commands/Gates.js";
+import { denyGated } from "#src/lib/api/permissions/PreconditionChecks.js";
 import { instrumentedRun } from "#src/lib/Telemetry.js";
 import {
   handleDenied,

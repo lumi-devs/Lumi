@@ -1,6 +1,6 @@
 import type { GuildBackup, PanicState, VerificationPanel } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import type { GuildBackupData } from "#src/modules/security/data/BackupTypes.js";
 
 export type LockedChannelSnapshot = Record<string, boolean | null>;

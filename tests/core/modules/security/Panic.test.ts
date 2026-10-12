@@ -4,7 +4,7 @@ import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { enterPanic, revertPanic } from "#src/modules/security/services/Panic.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const SendMessagesBit = PermissionFlagsBits.SendMessages.toString();
 

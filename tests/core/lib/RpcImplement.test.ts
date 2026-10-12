@@ -7,7 +7,7 @@ import { dispatchRpc } from "#src/lib/rpc/Dispatch.js";
 import { requireGuildId, requireGuildManager } from "#src/lib/rpc/Implement.js";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";

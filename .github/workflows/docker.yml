@@ -45,7 +45,6 @@ jobs:
               - '.github/**'
               - 'package.json'
               - 'bun.lock'
-              - 'turbo.json'
               - 'tsconfig*.json'
               - '.github/workflows/docker.yml'
 

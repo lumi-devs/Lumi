@@ -17,7 +17,7 @@ import { KickAction } from '#src/modules/mod/services/actions/KickAction.js';
 import { WarnAction } from '#src/modules/mod/services/actions/WarnAction.js';
 import { QuarantineAction } from '#src/lib/api/moderation/Quarantine.js';
 import { QueuePriority } from '#src/lib/scheduler/Schedule.js';
-import { FakeDiscordRestPort } from '#src/lib/discord/FakeRestPort.js';
+import { FakeDiscordRestPort } from '../../helpers/FakeRestPort.js';
 
 const discordRest = new FakeDiscordRestPort();
 

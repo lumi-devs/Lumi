@@ -7,7 +7,7 @@ import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHist
 import { ConfigOverrideRepository } from "#src/lib/prisma/repositories/ConfigOverrideRepository.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 let config: { setConfig: ReturnType<typeof vi.fn> };
 vi.mock("#lib/module-system/Utility.js", () => ({

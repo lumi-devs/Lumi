@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#src/lib/Services.js";
 import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
 import { LogClaimCodeTtlMs } from "#src/modules/logging/services/Claims.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";

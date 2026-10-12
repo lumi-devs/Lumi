@@ -9,7 +9,7 @@ import {
 } from "#src/modules/security/services/Verification.js";
 import { MaxAttempts, type CaptchaState } from "#src/modules/security/services/Captcha.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 vi.mock("#lib/i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),

@@ -1,4 +1,4 @@
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import { type ILogger } from "#src/shared/Index.ts";
 import { container } from "#src/lib/Services.js";
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";

@@ -1,6 +1,6 @@
 import type { FeatureFlag } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 
 export interface SetFeatureFlagInput {
   key: string;

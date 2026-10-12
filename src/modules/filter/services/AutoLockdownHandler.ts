@@ -1,5 +1,5 @@
 import { type Container } from "#src/lib/Services.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { unlockAllTextChannels } from "#src/lib/discord/ChannelLocks.js";
 import { swallow } from "#src/lib/utilities/Errors.js";
 import { tryGetUtility } from "#src/lib/module-system/Utility.js";

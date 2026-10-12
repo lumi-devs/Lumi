@@ -1,5 +1,5 @@
 import { CacheStore } from "#src/lib/cache/CacheStore.js";
-import { InvalidationBus } from "#src/lib/valkey/Buses.js";
+import { InvalidationBus } from "#src/lib/valkey/Store.js";
 import { container } from "#src/lib/Services.js";
 import { describe, expect, test, vi, beforeEach } from "bun:test";
 

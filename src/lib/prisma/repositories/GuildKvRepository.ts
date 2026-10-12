@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 
 export class GuildKVRepository extends Repository {
   public async getModuleData<T = unknown>(

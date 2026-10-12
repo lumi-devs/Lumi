@@ -9,7 +9,7 @@ import {
   type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
 import { authorize } from "#src/lib/api/permissions/Authorize.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
 import { swallow } from "#src/lib/utilities/Errors.js";

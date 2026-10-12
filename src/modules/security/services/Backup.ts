@@ -1,6 +1,6 @@
 import { container } from "#src/lib/Services.js";
 import type { Guild } from "discord.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { snapshotGuild } from "#src/modules/security/data/BackupTypes.js";
 import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
 import { getConfigNumber } from "#src/modules/security/services/ConfigHelpers.js";

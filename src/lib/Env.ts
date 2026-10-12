@@ -22,8 +22,6 @@ export function envParseInteger(key: string, defaultValue?: number): number {
   throw new Error(`[ENV] Missing: ${key}`);
 }
 
-export const envIsDefined = (key: string) => Boolean(process.env[key]);
-
 export const getNodeEnv = (): string => process.env["NODE_ENV"] || "development";
 export const isDevelopment = (): boolean => getNodeEnv() === "development";
 export const isProduction = (): boolean => getNodeEnv() === "production";
@@ -237,9 +235,6 @@ export function getValkeyClusterNodes(): { host: string; port: number }[] | null
   return nodes.length > 0 ? nodes : null;
 }
 
-export const getValkeyClusterScaleReads = (): "all" | "slave" | "master" =>
-  (process.env["VALKEY_CLUSTER_SCALE_READS"] as "all" | "slave" | "master") || "master";
-
 export function getWriteBucket(streamBuckets = 16): number {
   const shards = process.env["SHARDS"];
   if (shards) {
@@ -259,11 +254,6 @@ export const getRpcInternalToken = (): string | null => {
   return token && token.length > 0 ? token : null;
 };
 
-export const getRpcHealthUrl = (): string | null => {
-  const raw = process.env["RPC_HTTP_URL"]?.trim();
-  return raw ? raw.replace(/\/+$/, "") : null;
-};
-
 export function resolveRpcDiscordBulkheadSize(): number {
   return envParseInteger("RPC_DISCORD_BULKHEAD_SIZE", 16);
 }
@@ -273,16 +263,6 @@ export function resolveRpcDiscordBulkheadQueueLimit(): number {
 }
 
 export const getBotToken = (): string => envParseString("BOT_TOKEN");
-
-export function getTotalShards(): number | "auto" {
-  const raw = process.env["TOTAL_SHARDS"];
-  if (!raw || raw === "auto") return "auto";
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 1) {
-    throw new Error(`[ENV] TOTAL_SHARDS=${raw} is not a positive integer (or "auto").`);
-  }
-  return n;
-}
 
 export type AddonSignaturePolicy = "off" | "warn" | "require";
 
@@ -348,21 +328,4 @@ export const getGdprExportSigningSecret = (): string | null => {
   const raw = process.env["GDPR_EXPORT_SIGNING_SECRET"]?.trim();
   return raw && raw.length > 0 ? raw : null;
 };
-
-export function getShardList(): number[] | "auto" {
-  const raw = process.env["SHARD_LIST"];
-  if (!raw || raw === "auto") return "auto";
-  const ids = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .map((s) => {
-      const n = Number.parseInt(s, 10);
-      if (!Number.isFinite(n) || n < 0) {
-        throw new Error(`[ENV] SHARD_LIST contains non-integer "${s}".`);
-      }
-      return n;
-    });
-  return ids.length > 0 ? ids : "auto";
-}
 

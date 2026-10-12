@@ -20,12 +20,10 @@
             gh
             jq
             coreutils
-            turbo
             openssl
             prisma-engines
             postgresql
             valkey
-            rabbitmq-server
             stdenv.cc.cc.lib
           ];
 
@@ -44,7 +42,6 @@
             echo "  Git:        $(git --version 2>/dev/null || echo 'N/A')"
             echo "  GitHub CLI: $(gh --version 2>/dev/null | head -n1 || echo 'N/A')"
             echo "  jq:         $(jq --version 2>/dev/null || echo 'N/A')"
-            echo "  Turbo:      $(turbo --version 2>/dev/null || echo 'N/A')"
             echo "========================================="
           '';
         };

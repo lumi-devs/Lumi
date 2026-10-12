@@ -1,7 +1,7 @@
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import {scanKeysSafe} from "#src/lib/valkey/Cluster.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
-import type { InvalidationBus } from "#src/lib/valkey/Buses.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import type { InvalidationBus } from "#src/lib/valkey/Store.js";
 import type { ILogger } from "#src/shared/Index.ts";
 
 const SCAN_COUNT = 500;

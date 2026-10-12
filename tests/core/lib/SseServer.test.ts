@@ -7,7 +7,7 @@ import {
   MaxSseConnections,
 } from "#src/lib/rpc/SseServer.js";
 import { dashboardEventPublishFailures } from "#src/observability/Index.ts";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
 const OTHER_GUILD_ID = "987654321098765432";
@@ -26,7 +26,7 @@ type CapturedHandler = (msg: {
   body: unknown;
 }) => Promise<void>;
 
-describe("SSE endpoint (apps/api /events)", () => {
+describe("SSE endpoint (rpc /events)", () => {
   let consumeFn: ReturnType<typeof vi.fn>;
   let destroyGroupFn: ReturnType<typeof vi.fn>;
   let stopFn: ReturnType<typeof vi.fn>;

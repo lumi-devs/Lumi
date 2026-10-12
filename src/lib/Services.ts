@@ -1,6 +1,5 @@
 import type { DatabaseClient } from "#src/lib/prisma/Client.js";
 import type { ValkeyClient } from "#src/lib/valkey/Cluster.js";
-import type { InvalidationBus, SignalBus } from "#src/lib/valkey/Buses.js";
 import type { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
 import type { DiscordRestPort } from "#src/lib/discord/RestPort.js";
 import type { EventBus } from "#src/lib/event-bus/Types.js";
@@ -12,11 +11,9 @@ import type { Client } from "discord.js";
 import {
   createValkeyClient,
   valkeyConnectionOptions,
-} from "#src/lib/valkey/Client.js";
-import {
-  InvalidationBus as InvalidationBusImpl,
-  SignalBus as SignalBusImpl,
-} from "#src/lib/valkey/Buses.js";
+  InvalidationBus,
+  SignalBus,
+} from "#src/lib/valkey/Store.js";
 import { AddonModulesRoot } from "#src/lib/downloader/Resolver.js";
 import { DiscordRestAdapter } from "#src/lib/discord/RestAdapter.js";
 import {
@@ -110,8 +107,8 @@ export function createServices(
     logger,
     prisma,
     valkey,
-    invalidation: new InvalidationBusImpl(createValkeyClient(), valkey, logger),
-    signals: new SignalBusImpl(createValkeyClient(), valkey, logger),
+    invalidation: new InvalidationBus(createValkeyClient(), valkey, logger),
+    signals: new SignalBus(createValkeyClient(), valkey, logger),
     db: new DatabaseServiceImpl(prisma, valkey, logger, prismaReader),
     discordRest: new DiscordRestAdapter(),
     eventBus: ownedEventBus.bus,

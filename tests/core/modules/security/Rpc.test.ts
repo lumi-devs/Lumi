@@ -9,7 +9,7 @@ import { postOrEditVerifyPanel } from "#src/modules/security/services/Verificati
 import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
 import { repositoryCache } from "#src/lib/cache/CacheStore.js";
 import { createMemoryValkey } from "../../mocks/MemoryValkey.js";
-import { FakeDiscordRestPort } from "#src/lib/discord/FakeRestPort.js";
+import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 vi.mock("#src/modules/security/services/Panic.js", () => ({
   enterPanic: vi.fn(),

@@ -1,5 +1,8 @@
 import { QueueEvents, type QueueEventsOptions } from "bullmq";
-import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "#src/lib/scheduler/QueueTypes.js";
+import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "#src/lib/scheduler/Queue.js";
+import { container } from "#src/lib/Services.js";
+import { failedJobsTotal } from "#src/observability/Index.ts";
+import type { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
 
 export class QueueEventsWatcher {
   readonly #events: QueueEvents;
@@ -71,4 +74,25 @@ export class QueueEventsWatcher {
   public async close(): Promise<void> {
     await this.#events.close();
   }
+}
+
+export function watchFailedJobs(
+  runner: ScheduledTaskRunner,
+): { close(): Promise<void> } {
+  const watcher = new QueueEventsWatcher(runner.queue, {
+    connection: runner.options.connection,
+    logger: container.logger,
+  });
+
+  watcher.watchExhaustedRetries(
+    async (jobId) => runner.client.getJob(jobId),
+    (info) => {
+      failedJobsTotal.inc({ task: info.name });
+      container.logger.error(
+        `[Scheduler] Job '${info.name}' failed after ${info.attemptsMade} attempt(s).`,
+      );
+    },
+  );
+
+  return { close: () => watcher.close() };
 }

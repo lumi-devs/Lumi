@@ -1,6 +1,6 @@
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import type {CacheLogger} from "#src/lib/valkey/Store.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import { getConsumerId } from "#src/lib/Env.js";
 import {acquireValkeyLock} from "#src/lib/valkey/Lock.js";
 import { type ValkeyLock } from "#src/lib/valkey/Lock.js";

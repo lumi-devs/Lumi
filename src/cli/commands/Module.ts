@@ -5,7 +5,7 @@ import { DefaultModuleRoot, walk } from "#src/scripts/GenerateManifests.ts";
 
 export const help = `Usage: lumi module list
 
-Lists every bundled module (packages/core/src/modules/*, plus any extra
+Lists every bundled module (src/modules/*, plus any extra
 LUMI_DEV_PATHS roots), reading each module's manifest.json - the same
 directory walk \`bun run modules:manifest\` uses to discover module
 directories, without importing module code.

@@ -3,7 +3,7 @@ import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
 import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { ValkeyKeys } from "#src/lib/valkey/Client.js";
+import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
