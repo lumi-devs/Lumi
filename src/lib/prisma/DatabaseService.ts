@@ -14,7 +14,7 @@ import { ModuleRepository } from "#src/lib/prisma/repositories/ModuleRepository.
 import { GuildKVRepository } from "#src/lib/prisma/repositories/GuildKvRepository.js";
 import { AccessRepository } from "#src/lib/prisma/repositories/AccessRepository.js";
 import { PermissionRepository } from "#src/lib/prisma/repositories/PermissionRepository.js";
-import { DownloaderRepository } from "#src/modules/core/data/DownloaderRepository.js";
+import { DownloaderRepository } from "#src/modules/admin/data/DownloaderRepository.js";
 import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js";
 import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
 import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { moduleDef } from "#src/modules/core/commands/Module.js";
+import { moduleDef } from "#src/modules/admin/commands/Module.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({
   getUtility: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock("#lib/utilities/Pagination.js", () => ({
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#src/modules/core/services/Operations.js", () => ({
+vi.mock("#src/modules/admin/services/Operations.js", () => ({
   installModule: vi.fn(),
   pinModule: vi.fn(),
   reloadModule: vi.fn(),
@@ -33,14 +33,14 @@ vi.mock("#src/modules/core/services/Operations.js", () => ({
   updateModule: vi.fn(),
 }));
 
-vi.mock("#src/modules/core/services/Pieces.js", () => ({
+vi.mock("#src/modules/admin/services/Pieces.js", () => ({
   getModulePiecesInfo: vi.fn().mockResolvedValue({ totalPieces: 0, piecesByStore: {} }),
 }));
 
 import { getUtility } from "#src/lib/module-system/Utility.js";
 import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
 import { paginateList } from "#src/lib/utilities/Pagination.js";
-import { setModuleEnabled } from "#src/modules/core/services/Operations.js";
+import { setModuleEnabled } from "#src/modules/admin/services/Operations.js";
 
 function makeServices(records: any[] = []) {
   return {

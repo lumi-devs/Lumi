@@ -7,7 +7,9 @@ Every module is managed with `/module` (owner-only): `list`, `info`,
 | Module | Manage | What it does |
 |---|---|---|
 | 💤 AFK | `/module info afk` (owner) | Set yourself AFK with automated status and mention alerts. |
-| 🛡️ Core | `/module info core` (owner) | Essential bot commands, module management, and administrative panels. |
+| 🛡️ Core | `/module info core` (owner) | Gateway routing, data retention, GDPR jobs. Cannot be disabled. |
+| 🛠️ Admin | `/module info admin` (owner) | Module management, addon downloads, server administration. Cannot be disabled. |
+| 👋 Onboarding | `/module info onboarding` (owner) | Help, setup wizard, ping, and server info commands. |
 | 🪙 Economy | `/module info economy` (owner) | Guild currency with payday, transfers, slots, and an audit ledger. |
 | 🚫 Filter | `/module info filter` (owner) | Automod rule engine with regex patterns, invite blocking, and heat scoring. |
 | 📋 Logging | `/module info logging` (owner) | Server event logging for moderation, messages, and member actions. |

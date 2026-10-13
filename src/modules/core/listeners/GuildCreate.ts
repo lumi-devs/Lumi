@@ -6,8 +6,8 @@ import { makeWarningCard } from "#src/lib/ui/Cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,
-} from "#src/modules/core/services/ServerLock.js";
-import { resolveAnnounceChannel } from "#src/modules/core/services/GlobalAnnounce.js";
+} from "#src/modules/admin/services/ServerLock.js";
+import { resolveAnnounceChannel } from "#src/modules/admin/services/GlobalAnnounce.js";
 
 async function leaveWhenLocked(
   services: Container,

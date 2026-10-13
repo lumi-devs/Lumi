@@ -16,11 +16,11 @@ import { notesDef } from "#src/modules/mod/commands/Notes.js";
 import { casesDef } from "#src/modules/mod/commands/Cases.js";
 import { sanitizeDef } from "#src/modules/mod/commands/Sanitize.js";
 import { vcmuteDef } from "#src/modules/mod/commands/Vcmute.js";
-import { lumiDef } from "#src/modules/core/commands/Lumi.js";
-import { repoDef } from "#src/modules/core/commands/Repo.js";
-import { downloadDef } from "#src/modules/core/commands/Download.js";
-import { helpDef } from "#src/modules/core/commands/Help.js";
-import { mydataDef } from "#src/modules/core/commands/Mydata.js";
+import { lumiDef } from "#src/modules/onboarding/commands/Lumi.js";
+import { repoDef } from "#src/modules/admin/commands/Repo.js";
+import { downloadDef } from "#src/modules/admin/commands/Download.js";
+import { helpDef } from "#src/modules/onboarding/commands/Help.js";
+import { mydataDef } from "#src/modules/onboarding/commands/Mydata.js";
 
 const destructiveModCommands: { name: string; def: CommandDef; permit: string }[] = [
   { name: "ban", def: banDef, permit: "mod.*" },

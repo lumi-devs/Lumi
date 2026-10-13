@@ -10,14 +10,14 @@ import {
   segmentsFromState,
   stepCustomId,
   type SetupWizardState,
-} from "#src/modules/core/services/SetupWizard.js";
+} from "#src/modules/onboarding/services/SetupWizard.js";
 import {
   SetupTotalSteps,
   buildSetupReviewView,
   buildSetupStepView,
   buildSetupSuccessCard,
   setupProgressLines,
-} from "#src/modules/core/ui/SetupWizard.js";
+} from "#src/modules/onboarding/ui/SetupWizard.js";
 import type { CardReply } from "#src/lib/ui/Cards.js";
 import { describe, expect, it } from "bun:test";
 

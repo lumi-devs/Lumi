@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { lumiDef } from "#src/modules/core/commands/Lumi.js";
+import { lumiDef } from "#src/modules/onboarding/commands/Lumi.js";
 
-vi.mock("#src/modules/core/services/ConfigPanel.js", () => ({
+vi.mock("#src/modules/admin/services/ConfigPanel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock("#src/modules/core/ui/Hub.js", () => ({
+vi.mock("#src/modules/onboarding/ui/Hub.js", () => ({
   buildHubView: vi.fn().mockReturnValue({ components: [] }),
 }));
 
@@ -20,8 +20,8 @@ vi.mock("#lib/utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { loadFeatures } from "#src/modules/core/services/ConfigPanel.js";
-import { buildHubView } from "#src/modules/core/ui/Hub.js";
+import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
+import { buildHubView } from "#src/modules/onboarding/ui/Hub.js";
 
 function makeServices() {
   return {

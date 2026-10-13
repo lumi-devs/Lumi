@@ -177,8 +177,8 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   },
 
   "guild.module.toggle": async ({ guildId, actorId, input }) => {
-    if (input.moduleName === "core") {
-      throw new Error("Cannot disable the core module");
+    if (input.moduleName === "core" || input.moduleName === "admin") {
+      throw new Error("Cannot disable a system module");
     }
     if (!container.moduleStore.get(input.moduleName)) {
       throw new Error(`No module named \`${input.moduleName}\`.`);

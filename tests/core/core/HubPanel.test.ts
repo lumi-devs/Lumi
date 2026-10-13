@@ -1,12 +1,12 @@
 import {
   buildAddonReposView,
   buildAddonsView,
-} from "#src/modules/core/ui/Addons.js";
-import { buildHubView, buildSettingsView } from "#src/modules/core/ui/Hub.js";
+} from "#src/modules/admin/ui/Addons.js";
+import { buildHubView, buildSettingsView } from "#src/modules/onboarding/ui/Hub.js";
 import {
   buildPermissionsView,
   PermsPerPage,
-} from "#src/modules/core/ui/Permissions.js";
+} from "#src/modules/admin/ui/Permissions.js";
 import type { CardReply } from "#src/lib/ui/Cards.js";
 import { describe, it, expect } from "bun:test";
 

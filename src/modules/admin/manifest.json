@@ -1,0 +1,15 @@
+{
+  "name": "admin",
+  "displayName": "Admin",
+  "emoji": "🛠️",
+  "description": "Module management, addon downloads, and server administration.",
+  "short": "Module manager and server admin tools.",
+  "endUserDataStatement": "Stores module enablement, downloader repos, and server-lock state. Handled centrally during GDPR erasure.",
+  "version": "0.6.0",
+  "disableable": false,
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "configFields": [],
+  "category": "System"
+}

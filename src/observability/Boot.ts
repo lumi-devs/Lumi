@@ -1,7 +1,6 @@
 import { startTracing } from "#src/observability/Tracing.js";
 import { startEventLoopMonitor } from "#src/observability/EventLoop.js";
 import { initMetrics, startMetricsServer } from "#src/observability/Metrics.js";
-import { startSentry } from "#src/observability/Sentry.js";
 
 function resolveMetricsPort(service: string | undefined): number {
   const scoped = service
@@ -36,7 +35,6 @@ export function bootstrapTelemetry(
 
   initMetrics(svc);
   startEventLoopMonitor();
-  startSentry();
   if (opts.exposeHttp ?? true) {
     startMetricsServer(resolveMetricsPort(svc));
   }

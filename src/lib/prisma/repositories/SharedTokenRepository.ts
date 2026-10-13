@@ -1,8 +1,26 @@
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import {
+  dataFile,
+  loadOrMintKeyFile,
+  openSealedString,
+  sealString,
+} from "#src/lib/crypto/Seal.js";
 
 export interface SharedTokenView {
   service: string;
   updatedAt: Date;
+}
+
+function tokenKey(): Buffer {
+  return loadOrMintKeyFile(dataFile("secrets", "tokens.key"));
+}
+
+function sealToken(token: string): string {
+  return sealString(tokenKey(), token);
+}
+
+function openToken(sealed: string): string | null {
+  return openSealedString(tokenKey(), sealed);
 }
 
 export class SharedTokenRepository extends Repository {
@@ -19,14 +37,22 @@ export class SharedTokenRepository extends Repository {
       where: { service },
       select: { token: true },
     });
-    return row?.token ?? null;
+    if (!row) return null;
+    const opened = openToken(row.token);
+    if (opened !== null) return opened;
+    if (!row.token.startsWith("v1.")) {
+      await this.setToken(service, row.token);
+      return row.token;
+    }
+    return null;
   }
 
   public async setToken(service: string, token: string): Promise<void> {
+    const sealed = sealToken(token);
     await this.prisma.sharedApiToken.upsert({
       where: { service },
-      create: { service, token },
-      update: { token },
+      create: { service, token: sealed },
+      update: { token: sealed },
     });
   }
 

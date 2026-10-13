@@ -3,7 +3,7 @@ import { ComponentType, MessageFlags } from "discord.js";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
 import { commandRegistry } from "#src/lib/commands/CommandDef.js";
-import { getCategories, buildHelpPages, firstPageOfCategory, renderHelpCard, helpDef, HelpCommandsPerPage } from "#src/modules/core/commands/Help.js";
+import { getCategories, buildHelpPages, firstPageOfCategory, renderHelpCard, helpDef, HelpCommandsPerPage } from "#src/modules/onboarding/commands/Help.js";
 import { timeoutDef } from "#src/modules/mod/commands/Timeout.js";
 
 vi.mock("#lib/i18n/Index.js", () => ({

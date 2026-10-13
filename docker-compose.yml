@@ -24,7 +24,8 @@ x-lumi-service: &lumi-service
       required: false
   environment: &lumi-env
     VALKEY_HOST: valkey
-    POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-postgres}:5432/lumi"
+    VALKEY_PASSWORD: "${VALKEY_PASSWORD:-lumi}"
+    POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-pgbouncer}:6432/lumi"
     DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
     OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
@@ -79,6 +80,15 @@ services:
   bot:
     <<: *lumi-service
     container_name: lumi-bot
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     environment:
       <<: *lumi-env
       RPC_HTTP_HOST: "0.0.0.0"
@@ -241,9 +251,6 @@ services:
           memory: 64m
     ports:
       - "127.0.0.1:6432:6432"
-    profiles:
-      - pgbouncer
-      - scale
 
   valkey:
     image: docker.io/valkey/valkey:8-alpine

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { moduleDef } from "#src/modules/core/commands/Module.js";
+import { moduleDef } from "#src/modules/admin/commands/Module.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({
   getUtility: vi.fn(),

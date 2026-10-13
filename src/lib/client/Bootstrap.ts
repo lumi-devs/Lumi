@@ -2,7 +2,7 @@ process.env["NODE_ENV"] ??= "development";
 
 import { Client } from "discord.js";
 import { container, createServices, useServices } from "#src/lib/Services.js";
-import { flushSentry, shutdownTracing, runDrainSequence } from "#src/observability/Index.ts";
+import { shutdownTracing, runDrainSequence } from "#src/observability/Index.ts";
 import { attachClient, destroyLumi, loginLumi } from "#src/lib/client/LumiClient.js";
 import { buildClientOptions } from "#src/lib/client/ClientOptions.js";
 import {
@@ -124,7 +124,6 @@ export async function bootstrapClientApp(
       const drainSteps = [
         ...(options.extraDrainSteps ?? []),
         { name: "client-destroy", run: () => destroyLumi(client, container) },
-        { name: "sentry-flush", run: () => { void flushSentry(); } },
         { name: "tracing-shutdown", run: () => shutdownTracing() },
       ];
       try {

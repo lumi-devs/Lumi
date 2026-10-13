@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { dispatchRpc } from "#src/lib/rpc/Dispatch.js";
 import { findGdprExportJob, verifyGdprExportToken } from "#src/lib/gdpr/ExportToken.js";
+import { loadOrMintKeyFile, dataFile, openSealedBytes } from "#src/lib/crypto/Seal.js";
 import { GdprExportSigningKeyUnavailable } from "#src/lib/gdpr/ExportToken.js";
 import { handleSseRequest } from "#src/lib/rpc/SseServer.js";
 import { logError } from "#src/lib/utilities/Errors.js";
@@ -126,7 +127,11 @@ async function handleGdprExportDownload(req: Request): Promise<Response> {
     return Response.json({ error: "Export file is no longer available" }, { status: 404 });
   }
 
-  return new Response(file, {
+  const raw = await file.arrayBuffer().then((ab) => Buffer.from(ab));
+  const key = loadOrMintKeyFile(dataFile("secrets", "gdpr-export.key"));
+  const body = openSealedBytes(key, raw.toString("utf8")) ?? raw;
+
+  return new Response(body, {
     headers: {
       "content-type": "application/gzip",
       "content-disposition": `attachment; filename="lumi-user-data-${job.userId}.json.gz"`,

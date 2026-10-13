@@ -4,7 +4,7 @@ import {
   collectPingData,
   getRuntimeLabel,
   resetPingCachesForTests,
-} from "#src/modules/core/services/PingCollect.js";
+} from "#src/modules/onboarding/services/PingCollect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 

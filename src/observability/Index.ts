@@ -4,7 +4,6 @@ export * from "#src/observability/EventLoop.js";
 export * from "#src/observability/Logger.js";
 export * from "#src/observability/Metrics.js";
 export * from "#src/observability/Readiness.js";
-export * from "#src/observability/Sentry.js";
 export * from "#src/observability/Shutdown.js";
 export {
   getTracer,

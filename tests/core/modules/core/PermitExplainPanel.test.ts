@@ -4,7 +4,7 @@ import {
   buildPermitExplainPickerView,
   buildPermitExplainView,
   PermitExplainNodesPerPage,
-} from "#src/modules/core/ui/Permissions.js";
+} from "#src/modules/admin/ui/Permissions.js";
 import type { CardReply } from "#src/lib/ui/Cards.js";
 
 type ComponentJson = {
@@ -115,7 +115,7 @@ describe("renderPermitExplain", () => {
 
   it("renders the picker when nothing is picked yet", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/core/services/HubPanel.js"
+      "#src/modules/onboarding/services/HubPanel.js"
     );
     const editReply = vi.fn();
     await renderPermitExplain(
@@ -130,7 +130,7 @@ describe("renderPermitExplain", () => {
 
   it("renders the explanation when member and node are picked", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/core/services/HubPanel.js"
+      "#src/modules/onboarding/services/HubPanel.js"
     );
     const { container } = await import("#src/lib/Services.js");
     (container as any).db = {
@@ -161,7 +161,7 @@ describe("renderPermitExplain", () => {
 
   it("falls back to the picker for an unknown node", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/core/services/HubPanel.js"
+      "#src/modules/onboarding/services/HubPanel.js"
     );
     const editReply = vi.fn();
     await renderPermitExplain(

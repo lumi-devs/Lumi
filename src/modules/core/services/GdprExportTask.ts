@@ -6,6 +6,7 @@ import { type Container } from "#src/lib/Services.js";
 import { Time } from "#src/shared/Index.ts";
 import { getGdprExportDir, resolveGdprExportTtlHours } from "#src/lib/Env.js";
 import { executeGdprExport } from "#src/lib/gdpr/Requests.js";
+import { loadOrMintKeyFile, dataFile, sealBytes } from "#src/lib/crypto/Seal.js";
 
 export interface GdprExportFirePayload {
   jobId: string;
@@ -29,18 +30,20 @@ export async function handleGdprExportFire(
   try {
     const data = await executeGdprExport(services, job.userId);
     const compressed = gzipSync(Buffer.from(JSON.stringify(data), "utf-8"));
+    const key = loadOrMintKeyFile(dataFile("secrets", "gdpr-export.key"));
+    const sealed = Buffer.from(sealBytes(key, compressed), "utf8");
 
     const dir = getGdprExportDir();
     await mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${randomUUID()}.json.gz`);
-    await writeFile(filePath, compressed);
+    const filePath = path.join(dir, `${randomUUID()}.json.gz.enc`);
+    await writeFile(filePath, sealed);
 
     const expiresAt = new Date(
       Date.now() + resolveGdprExportTtlHours() * Time.Hour,
     );
     await services.db.gdprExportJobs.markDone(jobId, {
       filePath,
-      sizeBytes: compressed.byteLength,
+      sizeBytes: sealed.byteLength,
       expiresAt,
     });
   } catch (err) {
