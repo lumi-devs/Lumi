@@ -59,6 +59,8 @@ export async function evictGuildValkeyState(
     ValkeyKeys.moduleEnabled("*", guildId),
 
     ValkeyKeys.moduleData(guildId, "*", "*", "*"),
+    `lumi:kvcache:${guildId}:*`,
+    `lumi:allow:${guildId}:*`,
 
     ValkeyKeys.guildPermitsPattern(guildId),
     ValkeyKeys.permOverrides("*", guildId),

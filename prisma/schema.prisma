@@ -709,6 +709,7 @@ model ReactionRoleMenu {
 
   @@index([guildId])
   @@index([channelId])
+  @@index([messageIds], type: Gin)
   @@map("reactionrole_menus")
 }
 
