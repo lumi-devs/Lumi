@@ -1,0 +1,19 @@
+{
+  "default": "The key {{key}} has not been localized for en-US yet.",
+  "yes": "Yes",
+  "no": "No",
+  "none": "None",
+  "enabled": "Enabled",
+  "disabled": "Disabled",
+  "unknown": "Unknown",
+  "loading": "Loading…",
+  "success": "Success",
+  "error": "Error",
+  "warning": "Warning",
+  "info": "Info",
+  "nothingHere": "*Nothing here yet.*",
+  "pagination": "Page {{page}}/{{total}} · {{count}} items",
+  "permissionDenied": "You need at least **{{level}}** level to use this.",
+  "guildOnly": "This command can only be used in a server.",
+  "unexpectedError": "Something went wrong while running that command. The error has been logged."
+}
