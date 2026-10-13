@@ -38,7 +38,7 @@ describe("validateAddon - reserved lumi_ / __lumi_* prefixes", () => {
   it("warns without erroring when an addon declares lumi_ and __lumi_* members", async () => {
     const addonDir = await writeAddon(
       "reserved-addon",
-      `import { defineModule } from "#src/lib/module-system/Module.js";\nexport const meta = defineModule({ name: "reserved-addon" });\nexport function lumi_cleanup() {}\nexport const __lumi_state = 1;\nexport const helper = { lumi_field: 1 };\n`,
+      `import { defineModule } from "@lumi-devs/lumi/module";\nexport const meta = defineModule({ name: "reserved-addon" });\nexport function lumi_cleanup() {}\nexport const __lumi_state = 1;\nexport const helper = { lumi_field: 1 };\n`,
     );
 
     const result = await validateAddon(addonDir);
@@ -52,7 +52,7 @@ describe("validateAddon - reserved lumi_ / __lumi_* prefixes", () => {
   it("passes normal names with no reserved-prefix warning", async () => {
     const addonDir = await writeAddon(
       "normal-addon",
-      `import { defineModule } from "#src/lib/module-system/Module.js";\nexport const meta = defineModule({ name: "normal-addon" });\nexport function cleanup() {}\nexport const state = 1;\n`,
+      `import { defineModule } from "@lumi-devs/lumi/module";\nexport const meta = defineModule({ name: "normal-addon" });\nexport function cleanup() {}\nexport const state = 1;\n`,
     );
 
     const result = await validateAddon(addonDir);

@@ -132,10 +132,10 @@ describe("BankService", () => {
     const rows = prisma.$all("economyTransaction");
     const out = rows.find((r) => r["kind"] === "transfer_out")!;
     const inn = rows.find((r) => r["kind"] === "transfer_in")!;
-    expect(out["amount"]).toBe(-99);
-    expect(out["balanceAfter"]).toBe(1);
-    expect(inn["amount"]).toBe(90);
-    expect(inn["balanceAfter"]).toBe(190);
+    expect(out["amount"]).toBe(-99n);
+    expect(out["balanceAfter"]).toBe(1n);
+    expect(inn["amount"]).toBe(90n);
+    expect(inn["balanceAfter"]).toBe(190n);
     expect(String(out["reason"])).toContain("tax 9 burned");
   });
 
@@ -227,7 +227,7 @@ describe("BankService", () => {
     expect(result.balanceAfter).toBe(90);
     const rows = prisma.$all("economyTransaction");
     expect(rows.map((r) => r["kind"])).toEqual(["slots_bid"]);
-    expect(rows[0]!["balanceAfter"]).toBe(90);
+    expect(rows[0]!["balanceAfter"]).toBe(90n);
   });
 
   it("ranks the leaderboard by wallet plus bank", async () => {

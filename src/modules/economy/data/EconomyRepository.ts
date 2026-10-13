@@ -9,6 +9,48 @@ import {
   rankPosition,
 } from "#src/lib/prisma/Ranking.js";
 
+export interface EconomyBalance {
+  guildId: string;
+  userId: string;
+  wallet: number;
+  bank: number;
+  lastPaydayAt: Date | null;
+}
+
+export interface EconomyLedgerEntry {
+  id: number;
+  guildId: string;
+  userId: string;
+  kind: EconomyTxnKind;
+  amount: number;
+  balanceAfter: number;
+  reason: string | null;
+  createdAt: Date;
+}
+
+function toBalance(account: EconomyAccount): EconomyBalance {
+  return {
+    guildId: account.guildId,
+    userId: account.userId,
+    wallet: Number(account.wallet),
+    bank: Number(account.bank),
+    lastPaydayAt: account.lastPaydayAt,
+  };
+}
+
+function toLedgerEntry(entry: EconomyTransaction): EconomyLedgerEntry {
+  return {
+    id: entry.id,
+    guildId: entry.guildId,
+    userId: entry.userId,
+    kind: entry.kind,
+    amount: Number(entry.amount),
+    balanceAfter: Number(entry.balanceAfter),
+    reason: entry.reason,
+    createdAt: entry.createdAt,
+  };
+}
+
 interface EconomyMutationInput {
   guildId: string;
   userId: string;
@@ -55,13 +97,14 @@ interface EconomyPaydayInput {
 }
 
 export class EconomyRepository extends Repository {
-  public findAccount(
+  public async findAccount(
     guildId: string,
     userId: string,
-  ): Promise<EconomyAccount | null> {
-    return this.prisma.economyAccount.findUnique({
+  ): Promise<EconomyBalance | null> {
+    const account = await this.prisma.economyAccount.findUnique({
       where: { guildId_userId: { guildId, userId } },
     });
+    return account ? toBalance(account) : null;
   }
 
   public async ensureAccount(
@@ -69,18 +112,19 @@ export class EconomyRepository extends Repository {
     userId: string,
     startWallet: number,
     startBank: number,
-  ): Promise<EconomyAccount> {
+  ): Promise<EconomyBalance> {
     await this.db.ensureGuild(guildId);
-    return this.prisma.economyAccount.upsert({
+    const account = await this.prisma.economyAccount.upsert({
       where: { guildId_userId: { guildId, userId } },
       update: {},
-      create: { guildId, userId, wallet: startWallet, bank: startBank },
+      create: { guildId, userId, wallet: BigInt(startWallet), bank: BigInt(startBank) },
     });
+    return toBalance(account);
   }
 
   public async applyMutation(
     input: EconomyMutationInput,
-  ): Promise<{ account: EconomyAccount; balanceAfter: number }> {
+  ): Promise<{ account: EconomyBalance; balanceAfter: number }> {
     const { guildId, userId } = input;
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
@@ -90,23 +134,23 @@ export class EconomyRepository extends Repository {
         create: {
           guildId,
           userId,
-          wallet: input.startWallet,
-          bank: input.startBank,
+          wallet: BigInt(input.startWallet),
+          bank: BigInt(input.startBank),
         },
       });
 
       const where: Record<string, unknown> = { guildId, userId };
       if (input.walletDelta < 0) {
-        where["wallet"] = { gte: -input.walletDelta };
+        where["wallet"] = { gte: BigInt(-input.walletDelta) };
       }
       if (input.bankDelta < 0) {
-        where["bank"] = { gte: -input.bankDelta };
+        where["bank"] = { gte: BigInt(-input.bankDelta) };
       }
       const { count } = await tx.economyAccount.updateMany({
         where,
         data: {
-          wallet: { increment: input.walletDelta },
-          bank: { increment: input.bankDelta },
+          wallet: { increment: BigInt(input.walletDelta) },
+          bank: { increment: BigInt(input.bankDelta) },
         },
       });
       if (count === 0) {
@@ -118,25 +162,25 @@ export class EconomyRepository extends Repository {
       const account = (await tx.economyAccount.findUnique({
         where: { guildId_userId: { guildId, userId } },
       })) as EconomyAccount;
-      const balanceAfter = account.wallet + account.bank;
+      const balanceAfter = Number(account.wallet) + Number(account.bank);
       await tx.economyTransaction.create({
         data: {
           guildId,
           userId,
           kind: input.kind,
-          amount: input.walletDelta + input.bankDelta,
-          balanceAfter,
+          amount: BigInt(input.walletDelta + input.bankDelta),
+          balanceAfter: BigInt(balanceAfter),
           reason: input.reason ?? null,
           createdAt: new Date(),
         },
       });
-      return { account, balanceAfter };
+      return { account: toBalance(account), balanceAfter };
     });
   }
 
   public async applyTransfer(
     input: EconomyTransferInput,
-  ): Promise<{ from: EconomyAccount; to: EconomyAccount }> {
+  ): Promise<{ from: EconomyBalance; to: EconomyBalance }> {
     const { guildId, fromUserId, toUserId } = input;
     await this.db.ensureGuild(guildId);
     const sortedUserIds = [fromUserId, toUserId].sort();
@@ -148,8 +192,8 @@ export class EconomyRepository extends Repository {
           create: {
             guildId,
             userId,
-            wallet: input.startWallet,
-            bank: input.startBank,
+            wallet: BigInt(input.startWallet),
+            bank: BigInt(input.startBank),
           },
         });
       }
@@ -158,9 +202,9 @@ export class EconomyRepository extends Repository {
         where: {
           guildId,
           userId: fromUserId,
-          wallet: { gte: input.amount },
+          wallet: { gte: BigInt(input.amount) },
         },
-        data: { wallet: { decrement: input.amount } },
+        data: { wallet: { decrement: BigInt(input.amount) } },
       });
       if (count === 0) {
         throw Object.assign(new Error("Insufficient funds."), {
@@ -171,7 +215,7 @@ export class EconomyRepository extends Repository {
       const net = input.amount - input.fee;
       await tx.economyAccount.update({
         where: { guildId_userId: { guildId, userId: toUserId } },
-        data: { wallet: { increment: net } },
+        data: { wallet: { increment: BigInt(net) } },
       });
 
       const [from, to] = await Promise.all([
@@ -189,9 +233,10 @@ export class EconomyRepository extends Repository {
             guildId,
             userId: fromUserId,
             kind: "transfer_out",
-            amount: -input.amount,
-            balanceAfter:
-              (from as EconomyAccount).wallet + (from as EconomyAccount).bank,
+            amount: BigInt(-input.amount),
+            balanceAfter: BigInt(
+              Number((from as EconomyAccount).wallet) + Number((from as EconomyAccount).bank),
+            ),
             reason: input.reason ?? null,
             createdAt: now,
           },
@@ -199,21 +244,22 @@ export class EconomyRepository extends Repository {
             guildId,
             userId: toUserId,
             kind: "transfer_in",
-            amount: net,
-            balanceAfter:
-              (to as EconomyAccount).wallet + (to as EconomyAccount).bank,
+            amount: BigInt(net),
+            balanceAfter: BigInt(
+              Number((to as EconomyAccount).wallet) + Number((to as EconomyAccount).bank),
+            ),
             reason: input.reason ?? null,
             createdAt: now,
           },
         ],
       });
-      return { from: from as EconomyAccount, to: to as EconomyAccount };
+      return { from: toBalance(from as EconomyAccount), to: toBalance(to as EconomyAccount) };
     });
   }
 
   public async recordSlots(
     input: EconomySlotsInput,
-  ): Promise<{ account: EconomyAccount; balanceAfter: number }> {
+  ): Promise<{ account: EconomyBalance; balanceAfter: number }> {
     const { guildId, userId } = input;
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
@@ -223,8 +269,8 @@ export class EconomyRepository extends Repository {
         create: {
           guildId,
           userId,
-          wallet: input.startWallet,
-          bank: input.startBank,
+          wallet: BigInt(input.startWallet),
+          bank: BigInt(input.startBank),
         },
       });
 
@@ -238,7 +284,7 @@ export class EconomyRepository extends Repository {
             createdAt: { gte: input.dayStart },
           },
         });
-        if (-(wagered._sum.amount ?? 0) + input.bid > input.dailyCap) {
+        if (-Number(wagered._sum.amount ?? 0) + input.bid > input.dailyCap) {
           throw Object.assign(new Error("Daily slots cap reached."), {
             code: "LimitExceeded",
           });
@@ -246,8 +292,8 @@ export class EconomyRepository extends Repository {
       }
 
       const { count } = await tx.economyAccount.updateMany({
-        where: { guildId, userId, wallet: { gte: input.bid } },
-        data: { wallet: { decrement: input.bid } },
+        where: { guildId, userId, wallet: { gte: BigInt(input.bid) } },
+        data: { wallet: { decrement: BigInt(input.bid) } },
       });
       if (count === 0) {
         throw Object.assign(new Error("Insufficient funds."), {
@@ -257,22 +303,22 @@ export class EconomyRepository extends Repository {
       if (input.win > 0) {
         await tx.economyAccount.update({
           where: { guildId_userId: { guildId, userId } },
-          data: { wallet: { increment: input.win } },
+          data: { wallet: { increment: BigInt(input.win) } },
         });
       }
 
       const account = (await tx.economyAccount.findUnique({
         where: { guildId_userId: { guildId, userId } },
       })) as EconomyAccount;
-      const balanceAfter = account.wallet + account.bank;
+      const balanceAfter = Number(account.wallet) + Number(account.bank);
       const now = new Date();
       await tx.economyTransaction.create({
         data: {
           guildId,
           userId,
           kind: "slots_bid",
-          amount: -input.bid,
-          balanceAfter: balanceAfter - input.win,
+          amount: BigInt(-input.bid),
+          balanceAfter: BigInt(balanceAfter - input.win),
           reason: input.reason ?? null,
           createdAt: now,
         },
@@ -283,20 +329,20 @@ export class EconomyRepository extends Repository {
             guildId,
             userId,
             kind: "slots_win",
-            amount: input.win,
-            balanceAfter,
+            amount: BigInt(input.win),
+            balanceAfter: BigInt(balanceAfter),
             reason: input.reason ?? null,
             createdAt: now,
           },
         });
       }
-      return { account, balanceAfter };
+      return { account: toBalance(account), balanceAfter };
     });
   }
 
   public async claimPayday(
     input: EconomyPaydayInput,
-  ): Promise<{ account: EconomyAccount; balanceAfter: number } | null> {
+  ): Promise<{ account: EconomyBalance; balanceAfter: number } | null> {
     const { guildId, userId } = input;
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
@@ -306,8 +352,8 @@ export class EconomyRepository extends Repository {
         create: {
           guildId,
           userId,
-          wallet: input.startWallet,
-          bank: input.startBank,
+          wallet: BigInt(input.startWallet),
+          bank: BigInt(input.startBank),
           lastPaydayAt: null,
         },
       });
@@ -322,7 +368,7 @@ export class EconomyRepository extends Repository {
           ],
         },
         data: {
-          wallet: { increment: input.amount },
+          wallet: { increment: BigInt(input.amount) },
           lastPaydayAt: input.now,
         },
       });
@@ -332,26 +378,26 @@ export class EconomyRepository extends Repository {
         where: { guildId_userId: { guildId, userId } },
       })) as EconomyAccount;
       if (input.maxBalance !== undefined) {
-        const excess = account.wallet + account.bank - input.maxBalance;
+        const excess = Number(account.wallet) + Number(account.bank) - input.maxBalance;
         if (excess > 0) {
           account = await tx.economyAccount.update({
             where: { guildId_userId: { guildId, userId } },
-            data: { wallet: { decrement: excess } },
+            data: { wallet: { decrement: BigInt(excess) } },
           });
         }
       }
-      const balanceAfter = account.wallet + account.bank;
+      const balanceAfter = Number(account.wallet) + Number(account.bank);
       await tx.economyTransaction.create({
         data: {
           guildId,
           userId,
           kind: "payday",
-          amount: input.amount,
-          balanceAfter,
+          amount: BigInt(input.amount),
+          balanceAfter: BigInt(balanceAfter),
           createdAt: input.now,
         },
       });
-      return { account, balanceAfter };
+      return { account: toBalance(account), balanceAfter };
     });
   }
 
@@ -401,14 +447,14 @@ export class EconomyRepository extends Repository {
       _sum: { amount: true },
       where: { guildId, userId, kind: { in: kinds }, createdAt: { gte: since } },
     });
-    return result._sum.amount ?? 0;
+    return Number(result._sum.amount ?? 0);
   }
 
   public async findTransactionsForUser(
     userId: string,
     pageSize = 1_000,
-  ): Promise<EconomyTransaction[]> {
-    const transactions: EconomyTransaction[] = [];
+  ): Promise<EconomyLedgerEntry[]> {
+    const transactions: EconomyLedgerEntry[] = [];
     let cursor: number | undefined;
 
     for (;;) {
@@ -419,7 +465,7 @@ export class EconomyRepository extends Repository {
         ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
       });
 
-      transactions.push(...page);
+      transactions.push(...page.map(toLedgerEntry));
       if (page.length < pageSize) return transactions;
       cursor = page[page.length - 1]!.id;
     }
@@ -428,8 +474,8 @@ export class EconomyRepository extends Repository {
   public async findAccountsForUser(
     userId: string,
     pageSize = 1_000,
-  ): Promise<EconomyAccount[]> {
-    const accounts: EconomyAccount[] = [];
+  ): Promise<EconomyBalance[]> {
+    const accounts: EconomyBalance[] = [];
     let cursor: string | undefined;
 
     for (;;) {
@@ -442,7 +488,7 @@ export class EconomyRepository extends Repository {
           : { cursor: { guildId_userId: { guildId: cursor, userId } }, skip: 1 }),
       });
 
-      accounts.push(...page);
+      accounts.push(...page.map(toBalance));
       if (page.length < pageSize) return accounts;
       cursor = page[page.length - 1]!.guildId;
     }
@@ -468,8 +514,8 @@ export class EconomyRepository extends Repository {
   public async pruneZeroBalances(guildId?: string, userId?: string): Promise<number> {
     const { count } = await this.prisma.economyAccount.deleteMany({
       where: {
-        wallet: 0,
-        bank: 0,
+        wallet: BigInt(0),
+        bank: BigInt(0),
         ...(guildId ? { guildId } : {}),
         ...(userId ? { userId } : {}),
       },
@@ -481,9 +527,9 @@ export class EconomyRepository extends Repository {
     const { count } = await this.prisma.economyAccount.updateMany({
       where: {
         guildId,
-        OR: [{ wallet: { gt: 0 } }, { bank: { gt: 0 } }],
+        OR: [{ wallet: { gt: BigInt(0) } }, { bank: { gt: BigInt(0) } }],
       },
-      data: { wallet: 0, bank: 0 },
+      data: { wallet: BigInt(0), bank: BigInt(0) },
     });
     return count;
   }

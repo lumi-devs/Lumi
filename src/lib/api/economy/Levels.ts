@@ -1,5 +1,5 @@
 import type { Container } from "#src/lib/Services.js";
-import type { LevelAccount } from "@prisma/client";
+import type { LevelBalance } from "#src/modules/leveling/data/LevelRepository.js";
 import {
   LevelService,
   type BoardEntry,
@@ -7,7 +7,7 @@ import {
 } from "#src/modules/leveling/services/LevelService.js";
 import { getLevelingConfig } from "#src/modules/leveling/Config.js";
 
-export type { BoardEntry, BoardKind, LevelAccount };
+export type { BoardEntry, BoardKind, LevelBalance as LevelAccount };
 
 function service(services: Container): LevelService {
   return new LevelService(services.db.leveling);
@@ -17,7 +17,7 @@ export async function getAccount(
   services: Container,
   guildId: string,
   userId: string,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   return services.db.leveling.ensureAccount(guildId, userId);
 }
 
@@ -26,7 +26,7 @@ export async function addXp(
   guildId: string,
   userId: string,
   amount: number,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   const config = await getLevelingConfig(services, guildId);
   return service(services).adjustXp(guildId, userId, amount, config);
 }
@@ -36,7 +36,7 @@ export async function removeXp(
   guildId: string,
   userId: string,
   amount: number,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   const config = await getLevelingConfig(services, guildId);
   return service(services).adjustXp(guildId, userId, -amount, config);
 }
@@ -46,7 +46,7 @@ export async function addLevels(
   guildId: string,
   userId: string,
   amount: number,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   const config = await getLevelingConfig(services, guildId);
   return service(services).adjustLevels(guildId, userId, amount, config);
 }
@@ -56,7 +56,7 @@ export async function removeLevels(
   guildId: string,
   userId: string,
   amount: number,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   const config = await getLevelingConfig(services, guildId);
   return service(services).adjustLevels(guildId, userId, -amount, config);
 }
@@ -67,7 +67,7 @@ export async function setLevel(
   userId: string,
   level: number,
   xp = 0,
-): Promise<LevelAccount> {
+): Promise<LevelBalance> {
   const config = await getLevelingConfig(services, guildId);
   return service(services).setLevel(guildId, userId, level, xp, config);
 }

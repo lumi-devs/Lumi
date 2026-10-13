@@ -1,7 +1,8 @@
 import { container } from "#src/lib/Services.js";
 import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
 import { EconomyKeys } from "#src/modules/economy/Constants.js";
-import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
+import type { EconomyTxnKind } from "@prisma/client";
+import type { EconomyBalance } from "#src/modules/economy/data/EconomyRepository.js";
 import type { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
 import {
   resolveSlotPayout,
@@ -93,7 +94,7 @@ export interface LeaderboardEntry {
   total: number;
 }
 
-function toBalance(account: EconomyAccount): BalanceView {
+function toBalance(account: EconomyBalance): BalanceView {
   return {
     wallet: account.wallet,
     bank: account.bank,

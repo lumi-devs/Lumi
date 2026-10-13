@@ -1,5 +1,5 @@
 import { container } from "#src/lib/Services.js";
-import type { LevelAccount } from "@prisma/client";
+import type { LevelBalance } from "#src/modules/leveling/data/LevelRepository.js";
 import {
   PermissionsBitField,
   type Guild,
@@ -28,7 +28,7 @@ export class LevelError extends Error {
 }
 
 export interface LevelUpResult {
-  account: LevelAccount;
+  account: LevelBalance;
   granted: boolean;
   levelsGained: number;
 }
@@ -74,7 +74,7 @@ function sessionKey(guildId: string, userId: string): string {
 function renderAnnouncement(
   template: string,
   member: GuildMember,
-  account: LevelAccount,
+  account: LevelBalance,
   xpNeeded: number,
 ): string {
   return template
@@ -173,7 +173,7 @@ export class LevelService {
     userId: string,
     delta: number,
     config: LevelingConfig,
-  ): Promise<LevelAccount> {
+  ): Promise<LevelBalance> {
     if (!Number.isInteger(delta)) {
       throw new LevelError("InvalidAmount", "Amount must be a whole number.");
     }
@@ -196,7 +196,7 @@ export class LevelService {
     userId: string,
     delta: number,
     config: LevelingConfig,
-  ): Promise<LevelAccount> {
+  ): Promise<LevelBalance> {
     if (!Number.isInteger(delta)) {
       throw new LevelError("InvalidAmount", "Amount must be a whole number.");
     }
@@ -229,7 +229,7 @@ export class LevelService {
     level: number,
     xp: number,
     config: LevelingConfig,
-  ): Promise<LevelAccount> {
+  ): Promise<LevelBalance> {
     if (!Number.isInteger(level) || level < 1) {
       throw new LevelError("InvalidAmount", "Level must be 1 or higher.");
     }
@@ -377,7 +377,7 @@ export class LevelService {
 
   private async onLevelUp(
     member: GuildMember,
-    account: LevelAccount,
+    account: LevelBalance,
     config: LevelingConfig,
     fallbackChannel?: TextBasedChannel | null,
   ): Promise<void> {

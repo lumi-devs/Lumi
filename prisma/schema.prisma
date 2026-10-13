@@ -628,8 +628,8 @@ model LevelAccount {
   guildId      String    @map("guild_id") @db.VarChar(20)
   userId       String    @map("user_id") @db.VarChar(20)
   level        Int       @default(1)
-  xp           Int       @default(0)
-  totalXp      Int       @default(0) @map("total_xp")
+  xp           BigInt    @default(0)
+  totalXp      BigInt    @default(0) @map("total_xp")
   messageCount Int       @default(0) @map("message_count")
   voiceMinutes Int       @default(0) @map("voice_minutes")
   lastXpAt     DateTime? @map("last_xp_at")
@@ -646,7 +646,7 @@ model LevelXpGain {
   id        Int      @id @default(autoincrement())
   guildId   String   @map("guild_id") @db.VarChar(20)
   userId    String   @map("user_id") @db.VarChar(20)
-  amount    Int
+  amount    BigInt
   source    String   @db.VarChar(16)
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -660,8 +660,8 @@ model LevelXpGain {
 model EconomyAccount {
   guildId      String    @map("guild_id") @db.VarChar(20)
   userId       String    @map("user_id") @db.VarChar(20)
-  wallet       Int       @default(0)
-  bank         Int       @default(0)
+  wallet       BigInt    @default(0)
+  bank         BigInt    @default(0)
   lastPaydayAt DateTime? @map("last_payday_at")
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
@@ -676,8 +676,8 @@ model EconomyTransaction {
   guildId      String         @map("guild_id") @db.VarChar(20)
   userId       String         @map("user_id") @db.VarChar(20)
   kind         EconomyTxnKind
-  amount       Int
-  balanceAfter Int            @map("balance_after")
+  amount       BigInt
+  balanceAfter BigInt          @map("balance_after")
   reason       String?        @db.VarChar(500)
   createdAt    DateTime       @default(now()) @map("created_at")
 

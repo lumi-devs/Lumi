@@ -1,4 +1,4 @@
-import type { LevelAccount, LevelXpGain } from "@prisma/client";
+import type { LevelAccount } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import {
   rankedAccountPage,
@@ -57,6 +57,30 @@ export interface LevelBoardEntry {
   rank: number;
 }
 
+export interface LevelBalance {
+  guildId: string;
+  userId: string;
+  level: number;
+  xp: number;
+  totalXp: number;
+  messageCount: number;
+  voiceMinutes: number;
+  lastXpAt: Date | null;
+}
+
+function toBalance(account: LevelAccount): LevelBalance {
+  return {
+    guildId: account.guildId,
+    userId: account.userId,
+    level: account.level,
+    xp: Number(account.xp),
+    totalXp: Number(account.totalXp),
+    messageCount: account.messageCount,
+    voiceMinutes: account.voiceMinutes,
+    lastXpAt: account.lastXpAt,
+  };
+}
+
 const LevelBoardColumns =
   '"level", "xp", "message_count" AS "messageCount", "voice_minutes" AS "voiceMinutes"';
 
@@ -78,37 +102,39 @@ function toBoardEntries(rows: AccountRankRow[]): {
 }
 
 export class LevelRepository extends Repository {
-  public findAccount(
+  public async findAccount(
     guildId: string,
     userId: string,
-  ): Promise<LevelAccount | null> {
-    return this.prisma.levelAccount.findUnique({
+  ): Promise<LevelBalance | null> {
+    const account = await this.prisma.levelAccount.findUnique({
       where: { guildId_userId: { guildId, userId } },
     });
+    return account ? toBalance(account) : null;
   }
 
   public async ensureAccount(
     guildId: string,
     userId: string,
-  ): Promise<LevelAccount> {
+  ): Promise<LevelBalance> {
     await this.db.ensureGuild(guildId);
-    return this.prisma.levelAccount.upsert({
+    const account = await this.prisma.levelAccount.upsert({
       where: { guildId_userId: { guildId, userId } },
       update: {},
-      create: { guildId, userId, level: StartLevel, xp: 0 },
+      create: { guildId, userId, level: StartLevel, xp: BigInt(0) },
     });
+    return toBalance(account);
   }
 
   public async awardXp(
     input: AwardXpInput,
-  ): Promise<{ account: LevelAccount; granted: boolean; levelsGained: number }> {
+  ): Promise<{ account: LevelBalance; granted: boolean; levelsGained: number }> {
     const { guildId, userId } = input;
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
       await tx.levelAccount.upsert({
         where: { guildId_userId: { guildId, userId } },
         update: {},
-        create: { guildId, userId, level: StartLevel, xp: 0 },
+        create: { guildId, userId, level: StartLevel, xp: BigInt(0) },
       });
 
       let granted = false;
@@ -123,8 +149,8 @@ export class LevelRepository extends Repository {
         const { count } = await tx.levelAccount.updateMany({
           where,
           data: {
-            xp: { increment: input.amount },
-            totalXp: { increment: input.amount },
+            xp: { increment: BigInt(input.amount) },
+            totalXp: { increment: BigInt(input.amount) },
             ...(input.countMessage
               ? { messageCount: { increment: 1 } }
               : {}),
@@ -147,40 +173,40 @@ export class LevelRepository extends Repository {
           data: {
             guildId,
             userId,
-            amount: input.amount,
+            amount: BigInt(input.amount),
             source: "text",
           },
         });
       }
-      const next = levelUp(input.formula, current.level, current.xp);
+      const next = levelUp(input.formula, current.level, Number(current.xp));
       if (next.gained === 0) {
-        return { account: current, granted, levelsGained: 0 };
+        return { account: toBalance(current), granted, levelsGained: 0 };
       }
       const account = await tx.levelAccount.update({
         where: { guildId_userId: { guildId, userId } },
-        data: { level: next.level, xp: next.xp },
+        data: { level: next.level, xp: BigInt(next.xp) },
       });
-      return { account, granted, levelsGained: next.gained };
+      return { account: toBalance(account), granted, levelsGained: next.gained };
     });
   }
 
   public async awardVoice(
     input: AwardVoiceInput,
-  ): Promise<{ account: LevelAccount; levelsGained: number }> {
+  ): Promise<{ account: LevelBalance; levelsGained: number }> {
     const { guildId, userId } = input;
     await this.db.ensureGuild(guildId);
     return this.prisma.$transaction(async (tx) => {
       await tx.levelAccount.upsert({
         where: { guildId_userId: { guildId, userId } },
         update: {},
-        create: { guildId, userId, level: StartLevel, xp: 0 },
+        create: { guildId, userId, level: StartLevel, xp: BigInt(0) },
       });
 
       await tx.levelAccount.update({
         where: { guildId_userId: { guildId, userId } },
         data: {
-          xp: { increment: input.amount },
-          totalXp: { increment: input.amount },
+          xp: { increment: BigInt(input.amount) },
+          totalXp: { increment: BigInt(input.amount) },
           voiceMinutes: { increment: input.minutes },
         },
       });
@@ -193,20 +219,20 @@ export class LevelRepository extends Repository {
           data: {
             guildId,
             userId,
-            amount: input.amount,
+            amount: BigInt(input.amount),
             source: "voice",
           },
         });
       }
-      const next = levelUp(input.formula, current.level, current.xp);
+      const next = levelUp(input.formula, current.level, Number(current.xp));
       if (next.gained === 0) {
-        return { account: current, levelsGained: 0 };
+        return { account: toBalance(current), levelsGained: 0 };
       }
       const account = await tx.levelAccount.update({
         where: { guildId_userId: { guildId, userId } },
-        data: { level: next.level, xp: next.xp },
+        data: { level: next.level, xp: BigInt(next.xp) },
       });
-      return { account, levelsGained: next.gained };
+      return { account: toBalance(account), levelsGained: next.gained };
     });
   }
 
@@ -216,13 +242,14 @@ export class LevelRepository extends Repository {
     level: number,
     xp: number,
     totalXp: number,
-  ): Promise<LevelAccount> {
+  ): Promise<LevelBalance> {
     await this.db.ensureGuild(guildId);
-    return this.prisma.levelAccount.upsert({
+    const account = await this.prisma.levelAccount.upsert({
       where: { guildId_userId: { guildId, userId } },
-      update: { level, xp, totalXp },
-      create: { guildId, userId, level, xp, totalXp },
+      update: { level, xp: BigInt(xp), totalXp: BigInt(totalXp) },
+      create: { guildId, userId, level, xp: BigInt(xp), totalXp: BigInt(totalXp) },
     });
+    return toBalance(account);
   }
 
   public async deleteAccount(
@@ -239,11 +266,12 @@ export class LevelRepository extends Repository {
     userId: string,
     amount: number,
     source: string,
-  ): Promise<LevelXpGain> {
+  ): Promise<{ id: number; amount: number }> {
     await this.db.ensureGuild(guildId);
-    return this.prisma.levelXpGain.create({
-      data: { guildId, userId, amount, source: source.slice(0, 16) },
+    const row = await this.prisma.levelXpGain.create({
+      data: { guildId, userId, amount: BigInt(amount), source: source.slice(0, 16) },
     });
+    return { id: row.id, amount: Number(row.amount) };
   }
 
   public async rankedAccounts(
@@ -319,8 +347,8 @@ export class LevelRepository extends Repository {
   public async findAccountsForUser(
     userId: string,
     pageSize = 1_000,
-  ): Promise<LevelAccount[]> {
-    const accounts: LevelAccount[] = [];
+  ): Promise<LevelBalance[]> {
+    const accounts: LevelBalance[] = [];
     let cursor: string | undefined;
 
     for (;;) {
@@ -333,7 +361,7 @@ export class LevelRepository extends Repository {
           : { cursor: { guildId_userId: { guildId: cursor, userId } }, skip: 1 }),
       });
 
-      accounts.push(...page);
+      accounts.push(...page.map(toBalance));
       if (page.length < pageSize) return accounts;
       cursor = page[page.length - 1]!.guildId;
     }

@@ -47,7 +47,7 @@ describe("Bank api additions", () => {
     const stored = await prisma.delegateFor("economyAccount").findUnique({
       where: { guildId_userId: { guildId: "g1", userId: "u1" } },
     });
-    expect(stored).toMatchObject({ wallet: 100, bank: 0 });
+    expect(stored).toMatchObject({ wallet: 100n, bank: 0n });
   });
 
   it("account reports the stored total", async () => {
