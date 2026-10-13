@@ -68,7 +68,7 @@ export function buildClientOptions(): ClientOptions {
       BaseGuildEmojiManager: 0,
       ApplicationCommandManager: 0,
       ApplicationEmojiManager: 0,
-      PresenceManager: 0,
+      PresenceManager: envParseInteger("CACHE_PRESENCE_LIMIT", 5000),
       VoiceStateManager: 0,
     }),
     sweepers: {
@@ -82,7 +82,6 @@ export function buildClientOptions(): ClientOptions {
         filter: () => (user) => user.bot && user.id !== user.client.user.id,
       },
       threads: { interval: 3600, lifetime: 3600 },
-      presences: { interval: 3600, filter: () => () => true },
       guildMembers: {
         interval: envParseInteger("SWEEPER_MEMBERS_INTERVAL", 1800),
         filter: Sweepers.filterByLifetime({
