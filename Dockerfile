@@ -28,4 +28,4 @@ FROM source AS bot
 ENV NODE_ENV=production
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["/usr/local/bin/lumi"]
+CMD ["sh", "-c", "exec bun src/Index.ts"]
