@@ -95,10 +95,11 @@ export class CacheStore {
     }
   }
 
-  public delete(key: string): void {
+  public delete(key: string, opts?: { publish?: boolean }): void {
     this.#bumpGeneration(key);
     this.#l1.delete(key);
     this.#negativeUntil.delete(key);
+    if (opts?.publish === false) return;
     void this.#l2().del(key)?.catch?.(() => {});
     this.#publishInvalidate(key);
   }
@@ -112,7 +113,7 @@ export class CacheStore {
 
   public attachToInvalidationBus(bus: InvalidationBus): () => void {
     const unbindInvalidate = bus.onInvalidate((keys) => {
-      for (const key of keys) this.delete(key);
+      for (const key of keys) this.delete(key, { publish: false });
     });
     const unbindResync = bus.onResync(() => {
       this.clear();
