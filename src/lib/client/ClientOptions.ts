@@ -60,7 +60,7 @@ export function buildClientOptions(): ClientOptions {
       BaseGuildEmojiManager: 0,
       ApplicationCommandManager: 0,
       ApplicationEmojiManager: 0,
-      PresenceManager: 0,
+      PresenceManager: envParseInteger("CACHE_PRESENCE_LIMIT", 200),
       VoiceStateManager: 0,
     }),
     sweepers: {
