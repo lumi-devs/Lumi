@@ -1,4 +1,5 @@
 import type { Container } from "#src/lib/Services.js";
+import { PermissionFlagsBits } from "discord.js";
 import { renderMessageContent } from "#src/lib/utilities/MessageContent.js";
 import { LumiEvents } from "#src/lib/types/Common.js";
 import type { GuildMessage } from "#src/lib/types/Common.js";
@@ -32,9 +33,14 @@ export const StickyMessageListener = defineListener({
       message.channelId,
     ).catch(swallow("Sticky: read last message id"));
     if (oldId) {
-      await message.channel.messages
+      const me = message.guild.members.me;
+      if (!me) return;
+      if (!message.channel.permissionsFor(me)?.has(PermissionFlagsBits.ManageMessages)) return;
+      const deleted = await message.channel.messages
         .delete(oldId)
-        .catch(swallow("Sticky: delete old message"));
+        .then(() => true)
+        .catch(() => false);
+      if (!deleted) return;
     }
     const sent = await message.channel
       .send(

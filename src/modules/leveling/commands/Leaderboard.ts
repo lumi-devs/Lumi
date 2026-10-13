@@ -30,6 +30,9 @@ import {
   renderLeaderboardCard,
   type BoardCardRow,
 } from "#src/modules/leveling/services/LeaderboardCard.js";
+import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+
+const userFetch = new Semaphore(4);
 
 export const BoardPageSize = 10;
 
@@ -211,9 +214,9 @@ async function renderEntries(
   }
   const rows: BoardCardRow[] = await Promise.all(
     entries.map(async (entry: BoardEntry) => {
-      const user = await services.client.users
-        .fetch(entry.userId)
-        .catch(() => null);
+      const user = await userFetch.run(() =>
+        services.client.users.fetch(entry.userId).catch(() => null),
+      );
       return buildRow(board, entry, config.formula, user);
     }),
   );

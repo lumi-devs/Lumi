@@ -96,7 +96,7 @@ export class RegexWorkerHandler {
       const id = ++this.#nextId;
       const index = await this.#request(
         worker,
-        { kind: "test", id, key, content },
+        { kind: "test", id, key, content: content.slice(0, 2000) },
         this.#evalTimeoutMs,
       );
       return Array.isArray(index) ? null : index;
@@ -139,7 +139,7 @@ export class RegexWorkerHandler {
       const id = ++this.#nextId;
       const result = await this.#request(
         worker,
-        { kind: "matchAll", id, pattern, contents },
+        { kind: "matchAll", id, pattern, contents: contents.map((c) => c.slice(0, 2000)) },
         this.#matchTimeoutMs,
       );
       return Array.isArray(result) ? result : [];

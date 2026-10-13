@@ -1,4 +1,6 @@
 import { container } from "#src/lib/Services.js";
+import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { EconomyKeys } from "#src/modules/economy/Constants.js";
 import type { EconomyAccount, EconomyTxnKind } from "@prisma/client";
 import type { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
 import {
@@ -52,6 +54,17 @@ function isRepoInsufficient(err: unknown): boolean {
     err instanceof Error &&
     (err as Error & { code?: string }).code === "InsufficientFunds"
   );
+}
+
+function isRepoLimitExceeded(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    (err as Error & { code?: string }).code === "LimitExceeded"
+  );
+}
+
+function slotDailyCapMessage(cap: number): string {
+  return `Daily slots cap reached (${cap.toLocaleString("en-US")} wagered per day).`;
 }
 
 export interface BalanceView {
@@ -245,10 +258,11 @@ export class BankService {
         "Payday is on cooldown. Try again later.",
       );
     }
-    const currentTotal =
-      (existing?.wallet ?? config.startingWallet) +
-      (existing?.bank ?? config.startingBank);
-    const headroom = Math.max(0, config.maxBalance - currentTotal);
+    const fresh = await this.store.findAccount(guildId, userId);
+    const freshTotal =
+      (fresh?.wallet ?? config.startingWallet) +
+      (fresh?.bank ?? config.startingBank);
+    const headroom = Math.max(0, config.maxBalance - freshTotal);
     if (headroom <= 0) {
       throw new EconomyLimitError(
         "Balance is already at the server maximum.",
@@ -263,6 +277,7 @@ export class BankService {
       now,
       startWallet: config.startingWallet,
       startBank: config.startingBank,
+      maxBalance: config.maxBalance,
     });
     if (!claimed) {
       const retryAfterMs = await this.paydayRetryAfterMs(
@@ -382,9 +397,22 @@ export class BankService {
         `Bid must be between ${config.slotMinBid} and ${config.slotMaxBid}.`,
       );
     }
+    if (config.slotCooldownMs > 0) {
+      const claimed = await claimCooldown(
+        container,
+        EconomyKeys.slotCooldown(guildId, userId),
+        config.slotCooldownMs,
+      );
+      if (!claimed) {
+        throw new CooldownError(
+          config.slotCooldownMs,
+          "The slots are cooling down.",
+        );
+      }
+    }
+    const dayStart = new Date(now);
+    dayStart.setUTCHours(0, 0, 0, 0);
     if (config.slotDailyCap > 0) {
-      const dayStart = new Date(now);
-      dayStart.setUTCHours(0, 0, 0, 0);
       const wagered = -(await this.store.sumKindsSince(
         guildId,
         userId,
@@ -393,7 +421,7 @@ export class BankService {
       ));
       if (wagered + bid > config.slotDailyCap) {
         throw new EconomyLimitError(
-          `Daily slots cap reached (${config.slotDailyCap.toLocaleString("en-US")} wagered per day).`,
+          slotDailyCapMessage(config.slotDailyCap),
         );
       }
     }
@@ -408,6 +436,8 @@ export class BankService {
         reason: `slots bid ${bid} won ${outcome.pay}`,
         startWallet: config.startingWallet,
         startBank: config.startingBank,
+        dailyCap: config.slotDailyCap,
+        dayStart,
       });
       return {
         spin,
@@ -423,6 +453,11 @@ export class BankService {
       if (isRepoInsufficient(err)) {
         const balance = await this.getBalance(guildId, userId, config);
         throw new InsufficientFundsError(balance.wallet);
+      }
+      if (isRepoLimitExceeded(err)) {
+        throw new EconomyLimitError(
+          slotDailyCapMessage(config.slotDailyCap),
+        );
       }
       throw err;
     }

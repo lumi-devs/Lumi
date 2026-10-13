@@ -148,6 +148,8 @@ export function getShardCount(): number {
 export function resolvePgPoolSize(): number {
   const explicit = Number(process.env["POSTGRES_POOL_MAX"]);
   if (Number.isFinite(explicit) && explicit > 0) return Math.floor(explicit);
+  const url = process.env["POSTGRES_URL"] ?? "";
+  if (url.includes(":6432") || url.includes("pgbouncer")) return 10;
   return 20;
 }
 
@@ -250,8 +252,8 @@ export type AddonSignaturePolicy = "off" | "warn" | "require";
 
 export function getAddonSignaturePolicy(): AddonSignaturePolicy {
   const raw = process.env["ADDON_SIGNATURE_POLICY"]?.trim();
-  if (!raw || raw === "off") return "off";
-  if (raw === "warn" || raw === "require") return raw;
+  if (!raw) return "warn";
+  if (raw === "off" || raw === "warn" || raw === "require") return raw;
   throw new Error(
     `[ENV] Invalid ADDON_SIGNATURE_POLICY: "${raw}" (expected off, warn, or require)`,
   );

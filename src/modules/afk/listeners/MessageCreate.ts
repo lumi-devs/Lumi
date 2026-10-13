@@ -188,7 +188,7 @@ async function notifyMentioned(services: Container, message: GuildMessage) {
     );
     if (!mentionedUsers.length) return;
 
-    const mentionedIds = mentionedUsers.map((u) => u.id);
+    const mentionedIds = mentionedUsers.map((user) => user.id);
     const afkMap = await getAfkEntriesBatch(services, message.guildId, mentionedIds);
     const hits: AfkHit[] = [];
     for (const userId of mentionedIds) {

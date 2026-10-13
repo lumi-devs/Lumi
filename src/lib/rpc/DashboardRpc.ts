@@ -61,7 +61,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       container.db.config.getGuildSettings(guildId),
       container.db.modules.areModulesEnabled(
         guildId,
-        modules.map((m) => m.meta.name),
+        modules.map((mod) => mod.meta.name),
       ),
       fetchGuildRest(guildId),
     ]);
@@ -77,8 +77,8 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       banner: guildBannerUrl(apiGuild),
       memberCount: apiGuild.approximate_member_count ?? 0,
       settings,
-      modules: modules.map((m) =>
-        moduleSummary(m, enabled.get(m.meta.name) ?? true),
+      modules: modules.map((mod) =>
+        moduleSummary(mod, enabled.get(mod.meta.name) ?? true),
       ),
     };
   },
@@ -86,7 +86,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
   "guild.module.get": async ({ guildId, input }) => {
     const module = container.moduleStore
       .loaded()
-      .find((m) => m.meta.name === input.module);
+      .find((mod) => mod.meta.name === input.module);
     if (!module) return { module: null };
     const [enabled, stored] = await Promise.all([
       container.db.modules.areModulesEnabled(guildId, [module.meta.name]),
@@ -112,32 +112,32 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       fetchGuildMembersSampleRest(guildId, MemberSampleSize),
     ]);
 
-    const rolesById = new Map((apiRoles ?? []).map((r) => [r.id, r]));
+    const rolesById = new Map((apiRoles ?? []).map((role) => [role.id, role]));
     const botRoleId = highestRoleId(botMember?.roles ?? [], rolesById);
 
     const roles = (apiRoles ?? [])
-      .filter((r) => r.id !== guildId)
-      .map((r) => ({
-        id: r.id,
-        name: r.name,
-        color: r.color,
-        position: r.position,
-        permissions: r.permissions,
-        isBotRole: r.id === botRoleId,
+      .filter((role) => role.id !== guildId)
+      .map((role) => ({
+        id: role.id,
+        name: role.name,
+        color: role.color,
+        position: role.position,
+        permissions: role.permissions,
+        isBotRole: role.id === botRoleId,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const channels = (apiChannels ?? [])
-      .filter((c) => PickableChannelTypes.has(c.type))
-      .map((c) => ({ id: c.id, name: c.name ?? "", type: c.type }));
+      .filter((channel) => PickableChannelTypes.has(channel.type))
+      .map((channel) => ({ id: channel.id, name: channel.name ?? "", type: channel.type }));
 
     const members: { id: string; username: string; displayName: string }[] = [];
-    for (const m of memberSample ?? []) {
-      if (!m.user || m.user.bot) continue;
+    for (const sample of memberSample ?? []) {
+      if (!sample.user || sample.user.bot) continue;
       members.push({
-        id: m.user.id,
-        username: m.user.username,
-        displayName: m.nick ?? m.user.global_name ?? m.user.username,
+        id: sample.user.id,
+        username: sample.user.username,
+        displayName: sample.nick ?? sample.user.global_name ?? sample.user.username,
       });
       if (members.length >= MemberSampleSize) break;
     }
@@ -262,14 +262,14 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       cursor: input.cursor,
     });
     return {
-      entries: entries.map((e) => ({
-        id: e.id,
-        guildId: e.guildId,
-        userId: e.userId,
-        action: e.action,
-        platform: e.platform,
-        details: e.details,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        guildId: entry.guildId,
+        userId: entry.userId,
+        action: entry.action,
+        platform: entry.platform,
+        details: entry.details,
+        createdAt: entry.createdAt.toISOString(),
       })),
       total,
       pageSize,
@@ -288,14 +288,14 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
         cursor: input.cursor,
       });
     return {
-      entries: entries.map((e) => ({
-        id: e.id,
-        moduleName: e.moduleName,
-        key: e.key,
-        oldValue: e.oldValue,
-        newValue: e.newValue,
-        actorId: e.actorId,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        moduleName: entry.moduleName,
+        key: entry.key,
+        oldValue: entry.oldValue,
+        newValue: entry.newValue,
+        actorId: entry.actorId,
+        createdAt: entry.createdAt.toISOString(),
       })),
       total,
       pageSize,
@@ -348,13 +348,13 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
         input.moduleName,
       );
     return {
-      overrides: overrides.map((o) => ({
-        id: o.id,
-        moduleName: o.moduleName,
-        key: o.key,
-        modelType: o.modelType,
-        modelId: o.modelId,
-        value: o.value,
+      overrides: overrides.map((override) => ({
+        id: override.id,
+        moduleName: override.moduleName,
+        key: override.key,
+        modelType: override.modelType,
+        modelId: override.modelId,
+        value: override.value,
       })),
     };
   },

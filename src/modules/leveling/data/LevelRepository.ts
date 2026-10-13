@@ -65,13 +65,13 @@ function toBoardEntries(rows: AccountRankRow[]): {
   total: number;
 } {
   return {
-    entries: rows.map((r) => ({
-      userId: r.userId,
-      level: Number(r["level"]),
-      xp: Number(r["xp"]),
-      messageCount: Number(r["messageCount"]),
-      voiceMinutes: Number(r["voiceMinutes"]),
-      rank: Number(r.rank),
+    entries: rows.map((row) => ({
+      userId: row.userId,
+      level: Number(row["level"]),
+      xp: Number(row["xp"]),
+      messageCount: Number(row["messageCount"]),
+      voiceMinutes: Number(row["voiceMinutes"]),
+      rank: Number(row.rank),
     })),
     total: rows.length > 0 ? Number(rows[0]!.fullCount) : 0,
   };
@@ -142,6 +142,16 @@ export class LevelRepository extends Repository {
       const current = (await tx.levelAccount.findUnique({
         where: { guildId_userId: { guildId, userId } },
       })) as LevelAccount;
+      if (granted && input.amount > 0) {
+        await tx.levelXpGain.create({
+          data: {
+            guildId,
+            userId,
+            amount: input.amount,
+            source: "text",
+          },
+        });
+      }
       const next = levelUp(input.formula, current.level, current.xp);
       if (next.gained === 0) {
         return { account: current, granted, levelsGained: 0 };
@@ -297,10 +307,10 @@ export class LevelRepository extends Repository {
       offset,
     );
     return {
-      entries: rows.map((r) => ({
-        userId: r.userId,
-        total: Number(r.total),
-        rank: Number(r.rank),
+      entries: rows.map((row) => ({
+        userId: row.userId,
+        total: Number(row.total),
+        rank: Number(row.rank),
       })),
       total: rows.length > 0 ? Number(rows[0]!.fullCount) : 0,
     };

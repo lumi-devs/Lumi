@@ -72,12 +72,12 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
       take,
     });
     return {
-      entries: entries.map((e) => ({
-        id: "id" in e ? String(e.id) : e.userId,
-        userId: e.userId,
-        reason: e.reason,
-        blockedBy: e.blockedBy,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: "id" in entry ? String(entry.id) : entry.userId,
+        userId: entry.userId,
+        reason: entry.reason,
+        blockedBy: entry.blockedBy,
+        createdAt: entry.createdAt.toISOString(),
       })),
       total,
       page,
@@ -106,10 +106,10 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
   "guild.ignored.list": async ({ guildId }) => {
     const entries = await container.db.access.listIgnoreEntries(guildId);
     return {
-      entries: entries.map((e) => ({
-        id: e.id,
-        channelId: e.channelId,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        channelId: entry.channelId,
+        createdAt: entry.createdAt.toISOString(),
       })),
     };
   },
@@ -118,7 +118,7 @@ export const coreRpcHandlers = implementRpc(coreRpc, {
     const { channelId } = input;
     const alreadyIgnored = channelId
       ? (await container.db.access.listIgnoreEntries(guildId)).some(
-          (e) => e.channelId === channelId,
+          (entry) => entry.channelId === channelId,
         )
       : (await container.db.config.getGuildSettings(guildId)).ignored;
     if (alreadyIgnored) {
@@ -162,18 +162,18 @@ export const downloaderRpcHandlers = implementRpc(downloaderRpc, {
     );
     const installedMap = new Map(
       repo?.installedModules.map(
-        (m: { moduleName: string; commit: string | null; pinned: boolean }) => [
-          m.moduleName,
-          m,
+        (installed: { moduleName: string; commit: string | null; pinned: boolean }) => [
+          installed.moduleName,
+          installed,
         ],
       ) || [],
     );
     return {
       repoName: input.repoName,
-      modules: modules.map((m) => {
-        const installed = installedMap.get(m.name);
+      modules: modules.map((mod) => {
+        const installed = installedMap.get(mod.name);
         return {
-          ...m,
+          ...mod,
           isInstalled: !!installed,
           commit: installed?.commit ?? null,
           pinned: installed?.pinned ?? false,

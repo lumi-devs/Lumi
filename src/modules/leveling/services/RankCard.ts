@@ -1,4 +1,8 @@
-import sharp, { type OverlayOptions } from "sharp";
+import type { OverlayOptions } from "sharp";
+import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+
+const avatarFetch = new Semaphore(4);
+const avatarCache = new Map<string, { buf: Buffer; expires: number }>();
 
 export interface RankCardData {
   username: string;
@@ -23,8 +27,8 @@ function escapeXml(value: string): string {
 function formatVoiceMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  const restMinutes = minutes % 60;
+  return restMinutes === 0 ? `${h}h` : `${h}h ${restMinutes}m`;
 }
 
 async function fetchAvatar(url: string | null): Promise<Buffer | null> {
@@ -36,22 +40,31 @@ export async function fetchCircleAvatar(
   size: number,
 ): Promise<Buffer | null> {
   if (!url) return null;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const raw = Buffer.from(await res.arrayBuffer());
-    const r = size / 2;
-    const circle = Buffer.from(
-      `<svg width="${size}" height="${size}"><circle cx="${r}" cy="${r}" r="${r}" fill="white"/></svg>`,
-    );
-    return await sharp(raw)
-      .resize(size, size, { fit: "cover" })
-      .composite([{ input: circle, blend: "dest-in" }])
-      .png()
-      .toBuffer();
-  } catch {
-    return null;
-  }
+  const key = `${url}:${size}`;
+  const hit = avatarCache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.buf;
+  return avatarFetch.run(async () => {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return null;
+      const raw = Buffer.from(await res.arrayBuffer());
+      const radius = size / 2;
+      const circle = Buffer.from(
+        `<svg width="${size}" height="${size}"><circle cx="${radius}" cy="${radius}" r="${radius}" fill="white"/></svg>`,
+      );
+      const sharp = (await import("sharp")).default;
+      const buf = await sharp(raw)
+        .resize(size, size, { fit: "cover" })
+        .composite([{ input: circle, blend: "dest-in" }])
+        .png()
+        .toBuffer();
+      if (avatarCache.size >= 500) avatarCache.delete(avatarCache.keys().next().value!);
+      avatarCache.set(key, { buf, expires: Date.now() + 600_000 });
+      return buf;
+    } catch {
+      return null;
+    }
+  });
 }
 
 export async function renderRankCard(data: RankCardData): Promise<Buffer> {
@@ -97,6 +110,7 @@ export async function renderRankCard(data: RankCardData): Promise<Buffer> {
   const avatar = await fetchAvatar(data.avatarUrl);
   if (avatar) layers.push({ input: avatar, left: 50, top: 50 });
 
+  const sharp = (await import("sharp")).default;
   return await sharp({
     create: {
       width,

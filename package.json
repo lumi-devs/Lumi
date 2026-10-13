@@ -26,7 +26,6 @@
     "./interactions": "./src/lib/interactions/InteractionDef.ts",
     "./ui": "./src/lib/ui/Cards.ts",
     "./config": "./src/lib/module-system/ConfigSchema.ts",
-    "./api": "./src/lib/ModuleApi.ts",
     "./services": "./src/lib/Services.ts",
     "./scheduler": "./src/lib/scheduler/Oneshot.ts",
     "./bank": "./src/lib/api/economy/Bank.ts",

@@ -1,5 +1,6 @@
 import { QueueEvents, type QueueEventsOptions } from "bullmq";
 import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "#src/lib/scheduler/Queue.js";
+import { getQueuePrefix } from "#src/lib/scheduler/Queue.js";
 import { container } from "#src/lib/Services.js";
 import { failedJobsTotal } from "#src/observability/Index.ts";
 import type { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
@@ -19,7 +20,8 @@ export class QueueEventsWatcher {
     this.#queueName = queueName;
     this.#logger = options.logger;
     const eventOpts: QueueEventsOptions = {
-      connection: options.connection ?? { host: "localhost", port: 6379 },
+      prefix: getQueuePrefix(),
+      connection: { ...(options.connection ?? { host: "localhost", port: 6379 }), enableOfflineQueue: false },
     };
     this.#events = new QueueEvents(queueName, eventOpts);
 

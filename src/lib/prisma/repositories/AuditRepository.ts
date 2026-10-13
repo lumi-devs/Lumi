@@ -44,6 +44,10 @@ export interface AuditLedgerFilter {
   cursor?: string | undefined;
 }
 
+function escapeLikeWildcards(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 export class AuditRepository extends Repository {
   public async queueAuditLog(payload: AuditLogPayload) {
     await this.valkey.xadd(
@@ -200,7 +204,7 @@ export class AuditRepository extends Repository {
     const baseWhere = {
       ...(filter.guildId ? { guildId: filter.guildId } : {}),
       ...(filter.userId ? { userId: filter.userId } : {}),
-      ...(filter.action ? { action: { contains: filter.action } } : {}),
+      ...(filter.action ? { action: { contains: escapeLikeWildcards(filter.action) } } : {}),
       ...(filter.platform ? { platform: filter.platform } : {}),
     };
     const result = await paginateCreatedAtId(

@@ -63,17 +63,20 @@ export const tempVcPanelButton = defineInteraction({
     };
 
     if (action === "claim") {
-      const { channel, record } = (await resolveVc(
+      const resolved = await resolveVc(
         interaction.guild,
         guildId,
         channelId,
         notFound,
-      ))!;
+        services,
+      );
+      if (!resolved) return;
+      const { channel, record } = resolved;
       await claim(services, service, interaction, channel, record);
       return;
     }
 
-    const { channel, record } = (await resolveOwnedVc(
+    const owned = await resolveOwnedVc(
       interaction.guild,
       guildId,
       channelId,
@@ -81,7 +84,10 @@ export const tempVcPanelButton = defineInteraction({
       member,
       t,
       notFound,
-    ))!;
+      services,
+    );
+    if (!owned) return;
+    const { channel, record } = owned;
 
     switch (action) {
       case "panel":
@@ -211,7 +217,8 @@ async function claim(
       });
     }
 
-    const fullRecord = (await getVcRecord(services, interaction.guildId!, channel.id))!;
+    const fullRecord = await getVcRecord(services, interaction.guildId!, channel.id);
+    if (!fullRecord) return;
     const next = await service.setOwner(services, channel, fullRecord, member.id);
     await interaction.editReply(await buildPanel(services, channel, next, t));
 }

@@ -40,8 +40,16 @@ export function buildRestOptions(
   };
 }
 
+function resolveShardCount(): number | undefined {
+  const raw = process.env.SHARD_COUNT?.trim();
+  if (!raw) return undefined;
+  const n = Number(raw);
+  if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  return undefined;
+}
+
 export function buildClientOptions(): ClientOptions {
-  return {
+  const options: ClientOptions = {
     shards: "auto",
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
@@ -108,4 +116,7 @@ export function buildClientOptions(): ClientOptions {
     },
     rest: buildRestOptions(),
   };
+  const shardCount = resolveShardCount();
+  if (shardCount !== undefined) options.shardCount = shardCount;
+  return options;
 }

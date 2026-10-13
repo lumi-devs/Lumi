@@ -1,23 +1,13 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { Container } from "#src/lib/Services.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
-import { formatDuration } from "#src/lib/utilities/Time.js";
-import { BankService } from "#src/modules/economy/services/BankService.js";
+import { BankService, InvalidAmountError } from "#src/modules/economy/services/BankService.js";
 import {
   formatAmount,
   getEconomyConfig,
-  type EconomyConfig,
 } from "#src/modules/economy/Config.js";
-import { EconomyKeys } from "#src/modules/economy/Constants.js";
 import { SlotPayoutLabels, renderSlotGrid } from "#src/modules/economy/services/Slots.js";
 import { reportEconomyError } from "#src/modules/economy/services/Respond.js";
-
-async function claimSlotCooldown(services: Container, config: EconomyConfig, guildId: string, userId: string): Promise<boolean> {
-  if (config.slotCooldownMs <= 0) return true;
-  return claimCooldown(services, EconomyKeys.slotCooldown(guildId, userId), config.slotCooldownMs);
-}
 
 export const slotsDef: CommandDef = {
   name: "slots",
@@ -42,10 +32,12 @@ export const slotsDef: CommandDef = {
     const guildId = ctx.guildId!;
     const config = await getEconomyConfig(ctx.services, guildId);
     const bid = await ctx.getInteger("bid", { required: true });
-    if (!(await claimSlotCooldown(ctx.services, config, guildId, ctx.user.id))) {
-      await ctx.replyError(
-        "On cooldown",
-        `The slots are cooling down. Try again in ${formatDuration(config.slotCooldownMs)}.`,
+    if (!Number.isInteger(bid) || bid! < config.slotMinBid || bid! > config.slotMaxBid) {
+      await reportEconomyError(
+        ctx,
+        new InvalidAmountError(
+          `Bid must be between ${config.slotMinBid} and ${config.slotMaxBid}.`,
+        ),
       );
       return;
     }

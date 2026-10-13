@@ -5,8 +5,14 @@ export async function claimCooldown(
   key: string,
   ms: number,
 ): Promise<boolean> {
-  const set = await services.valkey.set(key, "1", "PX", ms, "NX");
-  return set === "OK";
+  if (ms <= 0) return true;
+  try {
+    const set = await services.valkey.set(key, "1", "PX", Math.floor(ms), "NX");
+    return set === "OK";
+  } catch (err) {
+    services.logger.warn("[Cooldown] Valkey unavailable, failing closed:", err);
+    return false;
+  }
 }
 
 export async function isOnCooldown(

@@ -267,7 +267,7 @@ describe("command-response utilities", () => {
       );
       expect(interaction.editReply).toHaveBeenCalledWith({
         content: "hello",
-        flags: MessageFlags.IsComponentsV2,
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
       expect(res).toEqual<{ id: string }>({ id: "msg-2" });
     });

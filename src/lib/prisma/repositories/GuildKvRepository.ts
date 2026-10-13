@@ -9,7 +9,7 @@ export class GuildKVRepository extends Repository {
     targetId: string,
     key: string,
   ): Promise<T | null> {
-    const r = await this.prisma.moduleData.findUnique({
+    const row = await this.prisma.moduleData.findUnique({
       where: {
         guildId_moduleName_targetId_key: {
           guildId,
@@ -19,8 +19,8 @@ export class GuildKVRepository extends Repository {
         },
       },
     });
-    if (!r) return null;
-    if (r.expiresAt && r.expiresAt.getTime() <= Date.now()) {
+    if (!row) return null;
+    if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) {
       await this.prisma.moduleData
         .delete({
           where: {
@@ -35,7 +35,7 @@ export class GuildKVRepository extends Repository {
         .catch(() => undefined);
       return null;
     }
-    return r.value as T;
+    return row.value as T;
   }
 
   public async getModuleDataMany<T = unknown>(
@@ -116,10 +116,10 @@ export class GuildKVRepository extends Repository {
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
     });
-    return rows.map((r) => ({
-      guildId: r.guildId,
-      targetId: r.targetId,
-      value: r.value as T,
+    return rows.map((row) => ({
+      guildId: row.guildId,
+      targetId: row.targetId,
+      value: row.value as T,
     }));
   }
 
@@ -159,14 +159,38 @@ export class GuildKVRepository extends Repository {
     ]);
 
     return {
-      entries: rows.map((r) => ({
-        moduleName: r.moduleName,
-        targetId: r.targetId,
-        key: r.key,
-        value: r.value,
+      entries: rows.map((row) => ({
+        moduleName: row.moduleName,
+        targetId: row.targetId,
+        key: row.key,
+        value: row.value,
       })),
       total,
     };
+  }
+
+  public async takeModuleData<T = unknown>(
+    guildId: string,
+    module: string,
+    targetId: string,
+    key: string,
+  ): Promise<T | null> {
+    try {
+      const row = await this.prisma.moduleData.delete({
+        where: {
+          guildId_moduleName_targetId_key: {
+            guildId,
+            moduleName: module,
+            targetId,
+            key,
+          },
+        },
+      });
+      if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
+      return row.value as T;
+    } catch {
+      return null;
+    }
   }
 
   public async deleteModuleData(
@@ -188,7 +212,7 @@ export class GuildKVRepository extends Repository {
     const rows = await this.prisma.moduleData.findMany({
       where: { moduleName: module, targetId },
     });
-    return rows.map((r) => ({ guildId: r.guildId, key: r.key, value: r.value as T }));
+    return rows.map((row) => ({ guildId: row.guildId, key: row.key, value: row.value as T }));
   }
 
   public async deleteModuleDataForTarget(

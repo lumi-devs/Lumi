@@ -116,6 +116,12 @@ export async function dispatchInteraction(
     const label = prefixes[0] ?? "addon";
     const guildId = interaction.guildId ?? interaction.guild?.id ?? null;
     if (def.module && guildId && !(await services.db.modules.isModuleEnabled(guildId, def.module))) {
+      if (interaction.isRepliable()) {
+        await respond(
+          interaction,
+          ephemeralCard(makeErrorCard("Feature Disabled", "This feature is currently disabled on this server.")),
+        ).catch(() => null);
+      }
       return;
     }
     try {

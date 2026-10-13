@@ -45,10 +45,15 @@ export interface IJobQueue<T = unknown> {
 
 export const SCHEDULED_TASKS_QUEUE_NAME = "scheduled-tasks";
 
+export function getQueuePrefix(): string {
+  return `lumi:${process.env["NODE_ENV"] ?? "development"}:`;
+}
+
 export function getScheduledTasksConnectionOptions(): ConnectionOptions {
   return {
     ...parseValkeyConnectionOption(),
-    db: envParseInteger("VALKEY_TASK_DB", 1),
+    db: process.env["VALKEY_CLUSTER_NODES"] ? 0 : envParseInteger("VALKEY_TASK_DB", 1),
+    enableOfflineQueue: false,
   };
 }
 

@@ -342,7 +342,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
           );
           continue;
         }
-        if (/^@lumi-devs\/lumi\/(src\/lib|lib)\/(prisma|database|rpc|client|event-bus)\//.test(spec)) {
+        if (/^@lumi-devs\/lumi\/(src\/lib|lib)\/(prisma|database|rpc|client|event-bus|valkey|sharding)\//.test(spec)) {
           errors.push(
             `${rel}: imports bot internals via "${spec}" - go through the \`services\` argument your hooks receive instead of reaching into the database, RPC, or client wiring directly.`,
           );
@@ -364,7 +364,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
       }
       if (spec.startsWith(".")) {
         const resolved = path.resolve(path.dirname(file), spec);
-        if (/\/src\/lib\/(prisma|database|rpc|client|event-bus)\//.test(resolved)) {
+        if (/\/src\/lib\/(prisma|database|rpc|client|event-bus|valkey|sharding)\//.test(resolved)) {
           errors.push(
             `${rel}: imports bot internals via "${spec}" - go through the \`services\` argument your hooks receive instead of reaching into the database, RPC, or client wiring directly.`,
           );

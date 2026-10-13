@@ -283,7 +283,6 @@ model Appeal {
   case  ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@index([guildId, status, createdAt])
-  @@index([guildId, createdAt])
   @@index([guildId, createdAt, id])
   @@index([userId])
   @@index([reviewedBy])
@@ -398,6 +397,7 @@ model GdprExportJob {
 
   @@index([userId, createdAt])
   @@index([expiresAt])
+  @@index([status, createdAt])
   @@map("gdpr_export_jobs")
 }
 
@@ -469,7 +469,6 @@ model AuditLedger {
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@index([guildId, createdAt])
   @@index([guildId, createdAt, id])
   @@index([guildId, userId])
   @@index([createdAt])
@@ -507,7 +506,6 @@ model ModuleConfigHistory {
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
-  @@index([guildId, createdAt])
   @@index([guildId, createdAt, id])
   @@index([guildId, moduleName, createdAt])
   @@index([actorId])
@@ -622,6 +620,7 @@ model TempVcRecord {
 
   @@id([guildId, channelId])
   @@index([ownerId])
+  @@index([generatorId])
   @@map("tempvc_records")
 }
 
@@ -709,6 +708,7 @@ model ReactionRoleMenu {
   options ReactionRoleOption[]
 
   @@index([guildId])
+  @@index([channelId])
   @@map("reactionrole_menus")
 }
 

@@ -1,6 +1,7 @@
 import type { Container } from "#src/lib/Services.js";
 import {
   BankService,
+  InvalidAmountError,
   type LeaderboardEntry,
 } from "#src/modules/economy/services/BankService.js";
 import { getEconomyConfig } from "#src/modules/economy/Config.js";
@@ -102,11 +103,19 @@ export async function withCost<T>(
 ): Promise<T> {
   const svc = service(services);
   const config = await getEconomyConfig(services, guildId);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new InvalidAmountError("Amount must be a positive whole number.");
+  }
   await svc.withdraw(guildId, userId, amount, config);
   try {
     return await run();
   } catch (err) {
-    await svc.deposit(guildId, userId, amount, config).catch(() => undefined);
+    try {
+      await svc.deposit(guildId, userId, amount, config);
+    } catch (refundErr) {
+      services.logger.error("[Bank.withCost] refund failed", refundErr);
+      throw refundErr;
+    }
     if (err instanceof AbortPurchase) return undefined as T;
     throw err;
   }

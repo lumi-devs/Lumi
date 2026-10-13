@@ -95,13 +95,14 @@ async function claimShards(): Promise<number[]> {
 }
 
 async function rebalanceLeases(totalShards: number): Promise<void> {
-  const nodes = await valkey.zrangebyscore(NODES_KEY, 0, Date.now(), "LIMIT", 0, 100);
+  const nodes = await valkey.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
   if (nodes.length === 0) return;
 
   const nodeCapacities = new Map<string, number>();
   for (const n of nodes) {
     const cap = await valkey.hget(`lumi:cluster:node:${n}`, "capacity");
-    nodeCapacities.set(n, cap ? Number(cap) : totalShards);
+    const capacity = cap ? Number(cap) : totalShards;
+    nodeCapacities.set(n, Number.isFinite(capacity) ? capacity : 1);
   }
 
   const assignments = new Map<string, number[]>();
@@ -158,7 +159,7 @@ export async function gracefulShutdown(): Promise<void> {
 }
 
 async function handoffShards(shards: number[]): Promise<void> {
-  const nodes = await valkey.zrangebyscore(NODES_KEY, 0, Date.now(), "LIMIT", 0, 100);
+  const nodes = await valkey.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
   const otherNodes = nodes.filter((n) => n !== nodeId);
   if (otherNodes.length === 0) return;
 

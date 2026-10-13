@@ -6,10 +6,10 @@ export const afkRpcHandlers = implementRpc(afkRpc, {
   "guild.afk.list": async ({ guildId }) => {
     const entries = await container.db.afk.findForGuild(guildId);
     return {
-      entries: entries.map((e) => ({
-        userId: e.userId,
-        reason: e.reason,
-        since: e.since.toISOString(),
+      entries: entries.map((entry) => ({
+        userId: entry.userId,
+        reason: entry.reason,
+        since: entry.since.toISOString(),
       })),
     };
   },

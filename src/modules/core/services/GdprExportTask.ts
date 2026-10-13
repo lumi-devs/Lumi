@@ -1,4 +1,5 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
 import { type Container } from "#src/lib/Services.js";
@@ -31,7 +32,7 @@ export async function handleGdprExportFire(
 
     const dir = getGdprExportDir();
     await mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${jobId}.json.gz`);
+    const filePath = path.join(dir, `${randomUUID()}.json.gz`);
     await writeFile(filePath, compressed);
 
     const expiresAt = new Date(

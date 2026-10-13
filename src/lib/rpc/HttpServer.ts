@@ -145,6 +145,16 @@ export async function handleRpcHttpRequest(
     return new Response("ok");
   }
 
+  if (
+    !internalToken &&
+    isProduction() &&
+    !(req.method === "GET" && pathname === GdprExportDownloadPath)
+  ) {
+    return Response.json(makeRpcFailure("", "Unauthorized", RpcFailureCodes.Unauthorized), {
+      status: 401,
+    });
+  }
+
   if (req.method === "GET" && pathname === "/events") {
     if (internalToken && !tokenMatches(internalToken, presentedToken(req))) {
       return Response.json(makeRpcFailure("", "Unauthorized", RpcFailureCodes.Unauthorized), {
@@ -182,15 +192,21 @@ export async function handleRpcHttpRequest(
         { status: 400 },
       );
     }
+    if (batchBody.requests.length > 25) {
+      return Response.json(
+        makeRpcFailure("", "Batch too large (max 25 requests)", RpcFailureCodes.BadRequest),
+        { status: 413 },
+      );
+    }
     const responses = await Promise.all(
-      batchBody.requests.map(async (r) => {
-        if (!r?.action) {
-          return makeRpcFailure(r?.id ?? "", "Missing action", RpcFailureCodes.BadRequest);
+      batchBody.requests.map(async (request) => {
+        if (!request?.action) {
+          return makeRpcFailure(request?.id ?? "", "Missing action", RpcFailureCodes.BadRequest);
         }
         try {
-          return await dispatchRpc(r);
+          return await dispatchRpc(request);
         } catch {
-          return makeRpcFailure(r?.id ?? "", "Internal error", RpcFailureCodes.Internal);
+          return makeRpcFailure(request?.id ?? "", "Internal error", RpcFailureCodes.Internal);
         }
       }),
     );

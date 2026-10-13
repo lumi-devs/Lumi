@@ -3,6 +3,7 @@
   "entry": [
     "src/Index.ts",
     "src/cli/Main.ts",
+    "src/lib/**/*.ts",
     "src/modules/*/Index.ts",
     "src/modules/*/commands/*.ts",
     "src/modules/*/listeners/*.ts",

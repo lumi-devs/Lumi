@@ -31,8 +31,8 @@ export function renderAuditCard(entry: AuditEntry, at: number): CardReply {
   }
 
   if (entry.extra) {
-    for (const [key, val] of Object.entries(entry.extra)) {
-      lines.push(`**${key}**: ${String(val)}`);
+    for (const [key, value] of Object.entries(entry.extra)) {
+      lines.push(`**${key}**: ${String(value)}`);
     }
   }
 

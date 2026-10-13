@@ -12,7 +12,7 @@ scrape_configs:
       # All four services share one image and expose /metrics on :9090. In the
       # thin phase only `worker` runs; the others are listed for the scale phase.
       - targets:
-          - worker:9090
+          - bot:9090
           - worker-scale:9090
           - scheduler:9090
           - api:9090

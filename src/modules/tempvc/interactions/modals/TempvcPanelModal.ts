@@ -37,6 +37,8 @@ export const tempVcPanelModal = defineInteraction({
       service,
       member,
       t,
+      undefined,
+      services,
     );
     if (!resolved) return;
     const { channel } = resolved;

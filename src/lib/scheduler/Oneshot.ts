@@ -39,16 +39,18 @@ class ModuleOneshotTask extends LumiScheduledTask {
     super({ name: "module-oneshot" });
   }
 
-  public async run(payload: unknown): Promise<void> {
+  public async run(payload: unknown, services: Container = container): Promise<void> {
     const { module, name, guildId, data } = payload as ModuleOneshotPayload;
-    const handler = container.moduleStore.getOneshot(module, name);
+    const store = services.moduleStore ?? container.moduleStore;
+    const logger = services.logger ?? container.logger;
+    const handler = store.getOneshot(module, name);
     if (!handler) {
-      container.logger.warn(
+      logger.warn(
         `[Scheduler] No oneshot '${name}' in module '${module}', dropping.`,
       );
       return;
     }
-    await handler(container, { guildId, data: data ?? null });
+    await handler(services, { guildId, data: data ?? null });
   }
 }
 

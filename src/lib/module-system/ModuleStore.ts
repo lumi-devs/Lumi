@@ -171,8 +171,6 @@ export class ModuleStore {
 
     if (record) {
       this.detachModuleLoaders(record.dir);
-      const { detachScopedBus } = await import("#src/lib/event-bus/ScopedBus.js");
-      await detachScopedBus(name);
       await unloadUtilitiesForDir(record.dir).catch(() => undefined);
       for (const def of commandRegistry.values()) {
         if (def.module === name) await def.onUnload?.();

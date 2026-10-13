@@ -1,5 +1,5 @@
 import { UserError } from "#src/shared/Index.ts";
-import { container } from "#src/lib/Services.js";
+import { container, type Container } from "#src/lib/Services.js";
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import type { LumiT } from "#src/lib/i18n/Index.js";
 import { getVcRecord, type VcRecord } from "#src/modules/tempvc/data/Tempvc.js";
@@ -21,6 +21,7 @@ export async function resolveVc(
   guildId: string,
   channelId: string,
   notFound?: NotFoundErrors,
+  services: Container = container,
 ): Promise<ResolvedVc | null> {
   const channel = guild?.channels.cache.get(channelId);
   if (!channel || !channel.isVoiceBased()) {
@@ -28,7 +29,7 @@ export async function resolveVc(
     return null;
   }
 
-  const record = await getVcRecord(container, guildId, channelId);
+  const record = await getVcRecord(services, guildId, channelId);
   if (!record) {
     if (notFound) throw new UserError(notFound.channel);
     return null;
@@ -45,8 +46,9 @@ export async function resolveOwnedVc(
   member: GuildMember,
   t?: LumiT,
   notFound?: NotFoundErrors,
+  services: Container = container,
 ): Promise<ResolvedVc | null> {
-  const resolved = await resolveVc(guild, guildId, channelId, notFound);
+  const resolved = await resolveVc(guild, guildId, channelId, notFound, services);
   if (!resolved) return null;
   assertOwner(service, member, resolved.channel, resolved.record.ownerId, t);
   return resolved;
@@ -59,8 +61,9 @@ export async function resolveOwnedRecord(
   service: TempVcUtility,
   member: GuildMember,
   t?: LumiT,
+  services: Container = container,
 ): Promise<VcRecord | null> {
-  const record = await getVcRecord(container, guildId, channelId);
+  const record = await getVcRecord(services, guildId, channelId);
   if (!record) return null;
   assertOwner(service, member, channel, record.ownerId, t);
   return record;

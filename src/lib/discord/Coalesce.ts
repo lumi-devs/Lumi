@@ -61,29 +61,29 @@ async function flush(channelId: string): Promise<void> {
   while (q.entries.length > 0) {
     const batch = q.entries.splice(0, MaxBatch);
     if (batch.length === 1) {
-      const e = batch[0]!;
+      const entry = batch[0]!;
       try {
-        await singleDelete(channelId, e.messageId);
-        e.resolve();
+        await singleDelete(channelId, entry.messageId);
+        entry.resolve();
       } catch (err) {
-        e.reject(err);
+        entry.reject(err);
       }
       continue;
     }
 
     try {
       await container.client.rest.post(Routes.channelBulkDelete(channelId), {
-        body: { messages: batch.map((e) => e.messageId) },
+        body: { messages: batch.map((entry) => entry.messageId) },
       });
-      for (const e of batch) e.resolve();
+      for (const entry of batch) entry.resolve();
     } catch {
       await Promise.all(
-        batch.map(async (e) => {
+        batch.map(async (entry) => {
           try {
-            await singleDelete(channelId, e.messageId);
-            e.resolve();
+            await singleDelete(channelId, entry.messageId);
+            entry.resolve();
           } catch (err) {
-            e.reject(err);
+            entry.reject(err);
           }
         }),
       );

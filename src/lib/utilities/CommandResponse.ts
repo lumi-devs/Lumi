@@ -178,7 +178,7 @@ export async function sendInteractionReply(
   const cleanFlags =
     flags === undefined
       ? undefined
-      : Number(flags) & MessageFlags.IsComponentsV2;
+      : Number(flags) & (MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral);
 
   if (interaction.replied) {
     if (mode === "followUp") return interaction.followUp(options);
@@ -203,7 +203,7 @@ export async function updatePanel(
 ): Promise<void> {
   const flags =
     Number(card.flags ?? MessageFlags.IsComponentsV2) &
-    MessageFlags.IsComponentsV2;
+    (MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral);
   const payload = {
     components: card.components,
     flags,

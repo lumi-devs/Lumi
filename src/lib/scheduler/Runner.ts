@@ -5,6 +5,7 @@ import {
   repeatedScheduledTasks,
 } from "#src/lib/scheduler/Tasks.js";
 import {
+  getQueuePrefix,
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
@@ -42,13 +43,14 @@ export class ScheduledTaskRunner implements TaskQueue {
     const connection = getScheduledTasksConnectionOptions();
     this.options = { connection };
     this.client = new Queue(this.queue, {
+      prefix: getQueuePrefix(),
       connection,
       defaultJobOptions: { ...SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS },
     });
     this.#worker = new Worker(
       this.queue,
       (job) => this.execute(job.name, job.data),
-      { connection, concurrency: 10 },
+      { prefix: getQueuePrefix(), connection, concurrency: 10 },
     );
   }
 

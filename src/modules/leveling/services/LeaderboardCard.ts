@@ -1,5 +1,8 @@
-import sharp, { type OverlayOptions } from "sharp";
+import type { OverlayOptions } from "sharp";
 import { fetchCircleAvatar } from "#src/modules/leveling/services/RankCard.js";
+import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+
+const boardFetch = new Semaphore(4);
 
 export interface BoardCardRow {
   rank: number;
@@ -74,13 +77,14 @@ export async function renderLeaderboardCard(opts: {
     { input: Buffer.from(svg), left: 0, top: 0 },
   ];
   const avatars = await Promise.all(
-    opts.rows.map((row) => fetchCircleAvatar(row.avatarUrl, 56)),
+    opts.rows.map((row) => boardFetch.run(() => fetchCircleAvatar(row.avatarUrl, 56))),
   );
   avatars.forEach((avatar, i) => {
     if (avatar)
       layers.push({ input: avatar, left: 82, top: headerH + i * rowH + 8 });
   });
 
+  const sharp = (await import("sharp")).default;
   return await sharp({
     create: {
       width,

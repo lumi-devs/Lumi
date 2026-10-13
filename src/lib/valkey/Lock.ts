@@ -94,7 +94,7 @@ export async function acquireValkeyLock(
     const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${plural})`;
     if (err === undefined) log.error?.(message);
     else log.error?.(message, err);
-    if (consecutiveRenewFailures === 1) {
+    if (consecutiveRenewFailures === 2) {
       opts.onLostLock();
     }
   };

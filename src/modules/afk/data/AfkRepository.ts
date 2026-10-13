@@ -64,8 +64,12 @@ export class AfkRepository extends Repository {
     }
   }
 
-  public findForGuild(guildId: string): Promise<AfkEntry[]> {
-    return this.prisma.afkEntry.findMany({ where: { guildId } });
+  public findForGuild(guildId: string, limit = 1000): Promise<AfkEntry[]> {
+    return this.prisma.afkEntry.findMany({ where: { guildId }, take: limit });
+  }
+
+  public countForGuild(guildId: string): Promise<number> {
+    return this.prisma.afkEntry.count({ where: { guildId } });
   }
 
   public async findAllForUser(userId: string, pageSize = 1_000): Promise<AfkEntry[]> {

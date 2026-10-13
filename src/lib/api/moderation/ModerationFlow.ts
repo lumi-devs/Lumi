@@ -34,7 +34,7 @@ export interface DuplicateCaseCheckContext
 function isOwnerBypass(ctx: HierarchyCheckContext): boolean {
   const guild = ctx.guild;
   const moderator = ctx.member;
-  if (!guild || !moderator) return true;
+  if (!guild || !moderator) return false;
   return guild.ownerId === moderator.id;
 }
 

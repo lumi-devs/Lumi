@@ -206,6 +206,9 @@ export function createBackButton(
 export function createActionButton(
   options: CreateActionButtonOptions,
 ): ButtonBuilder {
+  if (options.customId && options.url) {
+    throw new Error("createActionButton: customId and url are mutually exclusive.");
+  }
   const button = new ButtonBuilder();
   if (options.customId) button.setCustomId(options.customId);
   if (options.url) button.setURL(options.url);
@@ -266,14 +269,13 @@ export function buildSafeActionRows<
   }
 
   const finalRows = validRows.slice(0, MaxRows);
-  for (const row of finalRows) {
+  return finalRows.map((row) => {
     if (row.components.length > MaxComponents) {
       container.logger?.warn(`[PanelSafety] Component limit exceeded in row (${row.components.length} > ${MaxComponents}). Truncating.`);
-      row.setComponents(row.components.slice(0, MaxComponents));
+      return new ActionRowBuilder<T>().addComponents(row.components.slice(0, MaxComponents));
     }
-  }
-
-  return finalRows;
+    return row;
+  });
 }
 export interface CategoryTab {
   id: string;

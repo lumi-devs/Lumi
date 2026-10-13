@@ -7,14 +7,6 @@ export function humanizeList(items: readonly string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
-export function escapeMentions(text: string): string {
-  return text.replace(/@(here|everyone)/g, "@\u200b$1");
-}
-
-export function escapeMarkdown(text: string): string {
-  return text.replace(/([*_`~|>])/g, "\\$1");
-}
-
 export function* pagify(text: string, pageLength = 2000, delims: readonly string[] = ["\n", " ", ""]): Generator<string> {
   let remaining = text;
   while (remaining.length > pageLength) {

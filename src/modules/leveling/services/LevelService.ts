@@ -431,12 +431,12 @@ export class LevelService {
     config: LevelingConfig,
   ): Promise<void> {
     if (config.levelRewards.length === 0) return;
-    const earned = config.levelRewards.filter((r) => r.level <= level);
+    const earned = config.levelRewards.filter((reward) => reward.level <= level);
     if (earned.length === 0) return;
     const keep = config.roleStack
       ? earned
       : [earned[earned.length - 1]!];
-    const keepIds = new Set(keep.map((r) => r.roleId));
+    const keepIds = new Set(keep.map((reward) => reward.roleId));
     for (const reward of keep) {
       if (!member.roles.cache.has(reward.roleId)) {
         await member.roles.add(reward.roleId).catch(() => null);

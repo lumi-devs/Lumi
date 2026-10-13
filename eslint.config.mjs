@@ -37,7 +37,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.ts', 'src/**/*.tsx', 'tests/**/*.ts'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: [
+      'src/lib/api/permissions/Authorize.ts',
+      'src/lib/api/permissions/PreconditionChecks.ts',
+    ],
     languageOptions: {
       parserOptions: {
         project: true,
@@ -60,15 +64,19 @@ export default tseslint.config(
               message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
             },
           ],
+          patterns: [
+            {
+              group: ['../modules/**', '../../modules/**', '../**/modules/**'],
+              message:
+                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
+            },
+          ],
         },
       ],
     },
   },
   {
-    files: [
-      'src/lib/rpc/**/*.ts',
-      'src/lib/api/permissions/**/*.ts',
-    ],
+    files: ['src/lib/rpc/**/*.ts', 'src/lib/api/permissions/**/*.ts'],
     ignores: [
       'src/lib/api/permissions/Authorize.ts',
       'src/lib/api/permissions/PreconditionChecks.ts',
@@ -79,16 +87,6 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: 'discord.js',
-              importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
-            },
-            {
-              name: '@discordjs/builders',
-              importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
-            },
-            {
               name: '#src/lib/api/permissions/PermitResolver.js',
               message: 'Authorization decisions go through authorize() (#src/lib/api/permissions/Authorize.js), not PermitResolver directly.',
             },
@@ -98,9 +96,20 @@ export default tseslint.config(
     },
   },
   {
+    files: [
+      'src/lib/api/permissions/Authorize.ts',
+      'src/lib/api/permissions/PreconditionChecks.ts',
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     // Enforce CommandContext reply helper conventions.
-    files: ['src/**/commands/*.ts'],
-    rules: {
+    files: ['src/**/commands/*.ts'],    rules: {
       'no-restricted-syntax': [
         'error',
         {
@@ -116,25 +125,13 @@ export default tseslint.config(
     },
   },
   {
-    // Allow relative imports within a module's own folder.
-    files: ['src/modules/*/**/*.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['../modules/**', '../../modules/**', '../**/modules/**'],
-              message:
-                'Modules must not import from sibling modules. Move the shared code to src/lib/ or expose it via container.modules.',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
     files: ['tests/**/*.ts', 'src/**/*.test.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       // bun:test types vi.mock/mock.module as returning a Promise, but module mocks are hoisted and never awaited.
       '@typescript-eslint/no-floating-promises': [

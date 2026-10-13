@@ -109,12 +109,12 @@ export function findBlockedLink(
   content: string,
   allowlist: string[],
 ): string | null {
-  for (const match of content.matchAll(UrlRe)) {
+  for (const match of content.matchAll(new RegExp(UrlRe.source, "gi"))) {
     const host = match[1]?.split(":")[0]?.toLowerCase();
     if (!host) continue;
     const allowed = allowlist.some((domain) => {
-      const d = domain.toLowerCase();
-      return host === d || host.endsWith(`.${d}`);
+      const allowed = domain.toLowerCase();
+      return host === allowed || host.endsWith(`.${allowed}`);
     });
     if (!allowed) return host;
   }
@@ -168,15 +168,14 @@ export function evaluateStatic(
     };
   }
 
-  if (
-    config.maxCapsPercent > 0 &&
-    content.length >= config.capsMinLength &&
-    capsPercent(content) > config.maxCapsPercent
-  ) {
-    return {
-      rule: "caps",
-      detail: `${Math.round(capsPercent(content))}% caps (limit ${config.maxCapsPercent}%)`,
-    };
+  if (config.maxCapsPercent > 0 && content.length >= config.capsMinLength) {
+    const pct = capsPercent(content);
+    if (pct > config.maxCapsPercent) {
+      return {
+        rule: "caps",
+        detail: `${Math.round(pct)}% caps (limit ${config.maxCapsPercent}%)`,
+      };
+    }
   }
 
   return null;

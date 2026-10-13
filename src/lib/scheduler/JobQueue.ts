@@ -1,5 +1,6 @@
 import { Queue, type QueueOptions } from "bullmq";
 import type { IJobQueue, JobStatus, QueueConnectionOptions, QueueJobOptions } from "#src/lib/scheduler/Queue.js";
+import { getQueuePrefix } from "#src/lib/scheduler/Queue.js";
 
 export class JobQueue<T = unknown> implements IJobQueue<T> {
   readonly #queue: Queue;
@@ -12,7 +13,8 @@ export class JobQueue<T = unknown> implements IJobQueue<T> {
     } = {},
   ) {
     const queueOpts: QueueOptions = {
-      connection: options.connection ?? { host: "localhost", port: 6379 },
+      prefix: getQueuePrefix(),
+      connection: { ...(options.connection ?? { host: "localhost", port: 6379 }), enableOfflineQueue: false },
       ...(options.defaultJobOptions !== undefined
         ? { defaultJobOptions: options.defaultJobOptions }
         : {}),

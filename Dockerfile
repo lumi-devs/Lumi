@@ -1,6 +1,6 @@
 FROM docker.io/oven/bun:1-alpine AS base
 WORKDIR /app
-RUN apk upgrade --no-cache && apk add --no-cache dumb-init git nodejs
+RUN apk upgrade --no-cache && apk add --no-cache dumb-init
 
 FROM base AS deps
 COPY package.json bun.lock ./
@@ -28,4 +28,4 @@ FROM source AS bot
 ENV NODE_ENV=production
 USER bun
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "exec bun src/Index.ts"]
+CMD ["/usr/local/bin/lumi"]

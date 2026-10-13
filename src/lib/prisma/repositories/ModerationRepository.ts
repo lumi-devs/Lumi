@@ -74,20 +74,38 @@ export class ModerationRepository extends Repository {
       );
     }
 
-    return this.prisma.moderationCase.create({
-      data: {
-        guildId: data.guildId,
-        caseNumber: row.caseNumber,
-        userId: data.userId,
-        moderatorId: data.moderatorId,
-        action: data.action,
-        customAction: data.customType ?? null,
-        reason: data.reason ?? null,
-        duration: data.durationSeconds ?? null,
-        expiresAt: data.expiresAt ?? null,
-        active: true,
-      },
-    });
+    try {
+      return await this.prisma.moderationCase.create({
+        data: {
+          guildId: data.guildId,
+          caseNumber: row.caseNumber,
+          userId: data.userId,
+          moderatorId: data.moderatorId,
+          action: data.action,
+          customAction: data.customType ?? null,
+          reason: data.reason ?? null,
+          duration: data.durationSeconds ?? null,
+          expiresAt: data.expiresAt ?? null,
+          active: true,
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        const existing = await this.prisma.moderationCase.findUnique({
+          where: {
+            uq_cases_guild_number: {
+              guildId: data.guildId,
+              caseNumber: row.caseNumber,
+            },
+          },
+        });
+        if (existing) return existing;
+      }
+      throw err;
+    }
   }
 
   public getModerationCases(

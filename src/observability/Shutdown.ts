@@ -17,25 +17,6 @@ export interface DrainOptions {
   stepTimeoutMs?: number;
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms,
-    );
-    p.then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
-
 export async function runDrainSequence(
   steps: DrainStep[],
   opts: DrainOptions,
@@ -77,11 +58,17 @@ export async function runDrainSequence(
       continue;
     }
     try {
-      await withTimeout(
+      let t: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
         Promise.resolve(step.run()),
-        budget,
-        `drain step "${step.name}"`,
-      );
+        new Promise<never>((_, reject) => {
+          t = setTimeout(
+            () => reject(new Error(`drain step "${step.name}" timed out after ${budget}ms`)),
+            budget,
+          );
+          t.unref?.();
+        }),
+      ]).finally(() => clearTimeout(t));
       log("info", "drain step ok", { step: step.name });
     } catch (err) {
       log("warn", "drain step failed", {

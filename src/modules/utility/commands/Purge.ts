@@ -44,7 +44,7 @@ async function runPurge(
 ) {
   const t = await ctx.fetchT();
 
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000) {
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 500) {
     return ctx.replyError(
       t("commands:purgeInvalidAmountTitle"),
       t("commands:purgeInvalidAmount"),
@@ -95,7 +95,7 @@ async function runPurge(
         t("commands:purgeInitiatingTitle"),
         `Initiating deletion of up to ${amount} message(s)${suffix}.`,
       ),
-      allowedMentions: {},
+      allowedMentions: { parse: [] },
     });
   }
 
@@ -134,7 +134,7 @@ async function executePurge(
         t("commands:purgeCompleteTitle"),
         t("commands:purgeComplete", { count: deletedCount }),
       ),
-      allowedMentions: {},
+      allowedMentions: { parse: [] },
     });
     deleteMessageLater(
       completedCard,
@@ -155,7 +155,7 @@ async function executePurge(
       const card = await channel
         .send({
           ...makeWarningCard("Purge Stopped", err.message),
-          allowedMentions: {},
+          allowedMentions: { parse: [] },
         })
         .catch(() => null);
       if (card) {
@@ -220,10 +220,10 @@ export const purgeDef: CommandDef = {
             .addIntegerOption((o) =>
               o
                 .setName("amount")
-                .setDescription("Number of messages to delete (1-1000)")
+                .setDescription("Number of messages to delete (1-500)")
                 .setRequired(true)
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
         .addSubcommand((s) =>
@@ -238,7 +238,7 @@ export const purgeDef: CommandDef = {
                 .setName("amount")
                 .setDescription("How many matching messages to delete (default 100)")
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
         .addSubcommand((s) =>
@@ -250,7 +250,7 @@ export const purgeDef: CommandDef = {
                 .setName("amount")
                 .setDescription("How many matching messages to delete (default 100)")
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
         .addSubcommand((s) =>
@@ -262,7 +262,7 @@ export const purgeDef: CommandDef = {
                 .setName("amount")
                 .setDescription("How many matching messages to delete (default 100)")
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
         .addSubcommand((s) =>
@@ -280,7 +280,7 @@ export const purgeDef: CommandDef = {
                 .setName("amount")
                 .setDescription("How many matching messages to delete (default 100)")
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
         .addSubcommand((s) =>
@@ -299,7 +299,7 @@ export const purgeDef: CommandDef = {
                 .setName("amount")
                 .setDescription("How many matching messages to delete (default 100)")
                 .setMinValue(1)
-                .setMaxValue(1000),
+                .setMaxValue(500),
             ),
         )
     );
@@ -315,20 +315,20 @@ export const purgeDef: CommandDef = {
       return runPurge(
         ctx,
         amount,
-        (m) => m.author.id === target!.id,
+        (msg) => msg.author.id === target!.id,
         `from **${target!.tag}**`,
       );
     },
     bots: async (ctx: CommandContext) => {
       const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
-      return runPurge(ctx, amount, (m) => m.author.bot, "sent by bots");
+      return runPurge(ctx, amount, (msg) => msg.author.bot, "sent by bots");
     },
     links: async (ctx: CommandContext) => {
       const amount = (await ctx.getInteger("amount")) ?? DefaultFilterScan;
       return runPurge(
         ctx,
         amount,
-        (m) => UrlRe.test(m.content),
+        (msg) => UrlRe.test(msg.content),
         "containing a link",
       );
     },
@@ -351,7 +351,7 @@ export const purgeDef: CommandDef = {
           const indexes = await getRegexWorker()
             .matchAll(
               pattern!,
-              batch.map((m) => m.content),
+              batch.map((msg) => msg.content),
             )
             .catch(() => {
 
@@ -391,7 +391,7 @@ export const purgeDef: CommandDef = {
       return runPurge(
         ctx,
         amount,
-        (m) => m.createdTimestamp >= cutoff,
+        (msg) => msg.createdTimestamp >= cutoff,
         `sent within the last ${formatDuration(ms)}`,
       );
     },

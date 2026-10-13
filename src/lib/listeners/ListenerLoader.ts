@@ -83,7 +83,11 @@ export function attachDefs(
   const emitter = client as unknown as Emitter;
   const detachAll: (() => void)[] = [];
   for (const def of defs) {
-    const invoke = (...args: never[]): unknown => runDef(services, def, args);
+    const invoke = (...args: never[]): void => {
+      void Promise.resolve(runDef(services, def, args)).catch((err: unknown) =>
+        services.logger.error(`[Listener:${def.name}]`, err),
+      );
+    };
     if (def.once) emitter.once(def.event, invoke);
     else emitter.on(def.event, invoke);
     detachAll.push(() => {

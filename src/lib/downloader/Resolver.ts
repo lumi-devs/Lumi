@@ -599,6 +599,16 @@ export class DownloadResolver {
     await fs.rm(targetPath, { recursive: true, force: true }).catch(() => { });
     await fs.symlink(sourcePath, targetPath, "dir");
 
+    const pinSha = commit ?? (await this._getHeadSha(repoPath));
+    if (pinSha) {
+      const tree = await execGit(["-C", repoPath, "rev-parse", `${pinSha}^{tree}`])
+        .then(({ stdout }) => stdout.trim())
+        .catch(() => null);
+      container.logger?.info?.(
+        `[Downloader] Pin ${repoName}@${pinSha}${tree ? ` tree ${tree}` : ""} -> ${moduleName}`,
+      );
+    }
+
     if (previousSourcePath !== null && previousSourcePath !== path.resolve(sourcePath)) {
       await this._releasePinIfUnused(repoPath, previousSourcePath).catch((err: unknown) => {
         container.logger?.warn?.(

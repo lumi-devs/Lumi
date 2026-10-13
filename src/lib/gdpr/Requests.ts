@@ -46,16 +46,20 @@ export async function executeGdprExport(
     modules.map((m) => m.exportUserData?.(services, userId)),
   );
 
+  const failedModules: string[] = [];
   for (const [i, res] of exports.entries()) {
     if (res.status === "fulfilled" && res.value != null) {
       result[modules[i]!.name] = res.value;
     } else if (res.status === "rejected") {
+      failedModules.push(modules[i]!.name);
       services.logger.warn(
         `[GDPR] Module '${modules[i]!.name}' failed exportUserData for ${userId}:`,
         res.reason,
       );
     }
   }
+
+  if (failedModules.length > 0) result["failedModules"] = failedModules;
 
   return result;
 }

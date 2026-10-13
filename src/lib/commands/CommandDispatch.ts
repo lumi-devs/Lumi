@@ -515,11 +515,20 @@ export async function isCommandMessage(
   return !!def && def.prefixEnabled !== false;
 }
 
+const prefixMemo = new Map<string, { prefixes: string[]; expires: number }>();
+
 async function resolvePrefix(services: Container, client: Client, message: Message): Promise<string | null> {
   const content = message.content;
   const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(content);
   if (mention) return mention[0];
   if (!message.guild) return null;
+  const memo = prefixMemo.get(message.guild.id);
+  if (memo && memo.expires > Date.now()) {
+    for (const prefix of memo.prefixes) {
+      if (content.startsWith(prefix)) return prefix;
+    }
+    return null;
+  }
   const [settings, global] = await Promise.all([
     services.db.config.getGuildSettings(message.guild.id),
     services.db.global.getGlobalConfig().catch(() => null),
@@ -529,6 +538,8 @@ async function resolvePrefix(services: Container, client: Client, message: Messa
     global?.defaultPrefix,
     getDefaultPrefix(),
   ].filter((p): p is string => typeof p === "string" && p.length > 0);
+  if (prefixMemo.size >= 5000) prefixMemo.delete(prefixMemo.keys().next().value!);
+  prefixMemo.set(message.guild.id, { prefixes, expires: Date.now() + 10_000 });
   for (const prefix of prefixes) {
     if (content.startsWith(prefix)) return prefix;
   }

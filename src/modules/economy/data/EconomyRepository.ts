@@ -39,6 +39,8 @@ interface EconomySlotsInput {
   reason?: string;
   startWallet: number;
   startBank: number;
+  dailyCap?: number;
+  dayStart?: Date;
 }
 
 interface EconomyPaydayInput {
@@ -49,6 +51,7 @@ interface EconomyPaydayInput {
   now: Date;
   startWallet: number;
   startBank: number;
+  maxBalance?: number;
 }
 
 export class EconomyRepository extends Repository {
@@ -138,13 +141,13 @@ export class EconomyRepository extends Repository {
     await this.db.ensureGuild(guildId);
     const sortedUserIds = [fromUserId, toUserId].sort();
     return this.prisma.$transaction(async (tx) => {
-      for (const uId of sortedUserIds) {
+      for (const userId of sortedUserIds) {
         await tx.economyAccount.upsert({
-          where: { guildId_userId: { guildId, userId: uId } },
+          where: { guildId_userId: { guildId, userId } },
           update: {},
           create: {
             guildId,
-            userId: uId,
+            userId,
             wallet: input.startWallet,
             bank: input.startBank,
           },
@@ -224,6 +227,23 @@ export class EconomyRepository extends Repository {
           bank: input.startBank,
         },
       });
+
+      if (input.dailyCap !== undefined && input.dailyCap > 0 && input.dayStart) {
+        const wagered = await tx.economyTransaction.aggregate({
+          _sum: { amount: true },
+          where: {
+            guildId,
+            userId,
+            kind: "slots_bid",
+            createdAt: { gte: input.dayStart },
+          },
+        });
+        if (-(wagered._sum.amount ?? 0) + input.bid > input.dailyCap) {
+          throw Object.assign(new Error("Daily slots cap reached."), {
+            code: "LimitExceeded",
+          });
+        }
+      }
 
       const { count } = await tx.economyAccount.updateMany({
         where: { guildId, userId, wallet: { gte: input.bid } },
@@ -308,9 +328,18 @@ export class EconomyRepository extends Repository {
       });
       if (count === 0) return null;
 
-      const account = (await tx.economyAccount.findUnique({
+      let account = (await tx.economyAccount.findUnique({
         where: { guildId_userId: { guildId, userId } },
       })) as EconomyAccount;
+      if (input.maxBalance !== undefined) {
+        const excess = account.wallet + account.bank - input.maxBalance;
+        if (excess > 0) {
+          account = await tx.economyAccount.update({
+            where: { guildId_userId: { guildId, userId } },
+            data: { wallet: { decrement: excess } },
+          });
+        }
+      }
       const balanceAfter = account.wallet + account.bank;
       await tx.economyTransaction.create({
         data: {
@@ -341,12 +370,12 @@ export class EconomyRepository extends Repository {
       offset,
     );
     return {
-      entries: rows.map((r) => ({
-        userId: r.userId,
-        wallet: Number(r["wallet"]),
-        bank: Number(r["bank"]),
-        total: Number(r["wallet"]) + Number(r["bank"]),
-        rank: Number(r.rank),
+      entries: rows.map((row) => ({
+        userId: row.userId,
+        wallet: Number(row["wallet"]),
+        bank: Number(row["bank"]),
+        total: Number(row["wallet"]) + Number(row["bank"]),
+        rank: Number(row.rank),
       })),
       total: rows.length > 0 ? Number(rows[0]!.fullCount) : 0,
     };

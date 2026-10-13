@@ -63,19 +63,19 @@ export default defineInteraction({
     const safePage = Math.max(0, Math.min(page, totalPages - 1));
     const pageItems = mentions.slice(safePage * PageSize, (safePage + 1) * PageSize);
 
-    const items = pageItems.map((m) => {
+    const items = pageItems.map((mention) => {
       const duration = formatDuration(
-        Date.now() - m.ts * 1000,
+        Date.now() - mention.ts * 1000,
       );
       const link = hyperlink(
         t("afk:jumpToMessage"),
-        messageLink(m.channelId, m.messageId, guildId),
+        messageLink(mention.channelId, mention.messageId, guildId),
       );
       const channelName =
-        interaction.guild?.channels.cache.get(m.channelId)?.name ??
+        interaction.guild?.channels.cache.get(mention.channelId)?.name ??
         "deleted channel";
       return t("afk:mentionLine", {
-        user: userMention(m.authorId),
+        user: userMention(mention.authorId),
         channel: channelName,
         duration,
         link,

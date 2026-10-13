@@ -211,6 +211,9 @@ export async function respond(
         container.logger.warn(
           `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
         );
+        await container.valkey
+          .del(ValkeyKeys.securityTripped(guild.id, executorId, kind))
+          .catch(() => null);
       }
     }
   }

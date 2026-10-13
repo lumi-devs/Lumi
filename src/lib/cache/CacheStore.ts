@@ -45,6 +45,12 @@ export class CacheStore {
     return this.#valkey ?? container.valkey;
   }
 
+  #publishInvalidate(key: string): void {
+    try {
+      void container.invalidation?.invalidate(key)?.catch?.(() => {});
+    } catch {}
+  }
+
   public peek<T>(key: string): T | null | undefined {
     const negUntil = this.#negativeUntil.get(key);
     if (negUntil !== undefined) {
@@ -73,8 +79,8 @@ export class CacheStore {
       this.#l1.delete(key);
       this.#rememberNegative(key);
       if (!opts?.l1Only) {
-
         void this.#l2().del(key)?.catch?.(() => {});
+        this.#publishInvalidate(key);
       }
       return;
     }
@@ -92,6 +98,8 @@ export class CacheStore {
     this.#bumpGeneration(key);
     this.#l1.delete(key);
     this.#negativeUntil.delete(key);
+    void this.#l2().del(key)?.catch?.(() => {});
+    this.#publishInvalidate(key);
   }
 
   public clear(): void {
@@ -160,6 +168,7 @@ export class CacheStore {
 
         if (data === null || data === undefined) {
           this.#rememberNegative(key);
+          void this.#l2().setex(`neg:${key}`, 15, "1")?.catch?.(() => {});
         } else {
           this.#writeL1(key, data, ttlMs);
           const serialized = serializer(data);

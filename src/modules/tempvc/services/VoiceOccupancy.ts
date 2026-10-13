@@ -66,19 +66,19 @@ export async function seedVoiceStates(
     | { key: string; kind: "user"; channelId: string; userId: string };
 
   const writes: Write[] = [];
-  for (const v of voiceStates) {
-    if (!v.channel_id) continue;
+  for (const state of voiceStates) {
+    if (!state.channel_id) continue;
     writes.push({
-      key: occKey(v.channel_id),
+      key: occKey(state.channel_id),
       kind: "occupancy",
-      channelId: v.channel_id,
-      userId: v.user_id,
+      channelId: state.channel_id,
+      userId: state.user_id,
     });
     writes.push({
-      key: userKey(v.user_id),
+      key: userKey(state.user_id),
       kind: "user",
-      channelId: v.channel_id,
-      userId: v.user_id,
+      channelId: state.channel_id,
+      userId: state.user_id,
     });
   }
 

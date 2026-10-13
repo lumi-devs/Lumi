@@ -98,24 +98,24 @@ function isHexColor(value: unknown): value is string {
 
 function clampButton(raw: unknown): MessageBlockButton | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const r = raw as Record<string, unknown>;
+  const record = raw as Record<string, unknown>;
   const style: MessageBlockButtonStyle =
-    r.style === "primary" ||
-    r.style === "secondary" ||
-    r.style === "success" ||
-    r.style === "danger" ||
-    r.style === "link"
-      ? r.style
+    record.style === "primary" ||
+    record.style === "secondary" ||
+    record.style === "success" ||
+    record.style === "danger" ||
+    record.style === "link"
+      ? record.style
       : "secondary";
-  const label = typeof r.label === "string" ? r.label.slice(0, 80) : "";
+  const label = typeof record.label === "string" ? record.label.slice(0, 80) : "";
   if (label.length === 0) return null;
-  const emoji = typeof r.emoji === "string" && r.emoji.length > 0 ? r.emoji.slice(0, 100) : undefined;
+  const emoji = typeof record.emoji === "string" && record.emoji.length > 0 ? record.emoji.slice(0, 100) : undefined;
   if (style === "link") {
-    const url = typeof r.url === "string" ? r.url : "";
+    const url = typeof record.url === "string" ? record.url : "";
     if (url.length === 0) return null;
     return { style, label, url, ...(emoji !== undefined ? { emoji } : {}) };
   }
-  const customId = typeof r.customId === "string" ? r.customId.slice(0, 100) : undefined;
+  const customId = typeof record.customId === "string" ? record.customId.slice(0, 100) : undefined;
   return {
     style,
     label,
@@ -126,13 +126,13 @@ function clampButton(raw: unknown): MessageBlockButton | null {
 
 function clampAccessory(raw: unknown): SectionAccessory | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
-  const r = raw as Record<string, unknown>;
-  if (r.type === "thumbnail") {
-    const url = typeof r.url === "string" ? r.url : "";
+  const record = raw as Record<string, unknown>;
+  if (record.type === "thumbnail") {
+    const url = typeof record.url === "string" ? record.url : "";
     return url.length > 0 ? { type: "thumbnail", url } : undefined;
   }
-  if (r.type === "button") {
-    const button = clampButton(r.button);
+  if (record.type === "button") {
+    const button = clampButton(record.button);
     return button ? { type: "button", button } : undefined;
   }
   return undefined;
@@ -140,20 +140,20 @@ function clampAccessory(raw: unknown): SectionAccessory | undefined {
 
 function clampBlock(raw: unknown): MessageBlockV2 | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const r = raw as Record<string, unknown>;
-  const id = typeof r.id === "string" && r.id.length > 0 ? r.id : crypto.randomUUID();
-  switch (r.type) {
+  const record = raw as Record<string, unknown>;
+  const id = typeof record.id === "string" && record.id.length > 0 ? record.id : crypto.randomUUID();
+  switch (record.type) {
     case "section": {
-      const texts = Array.isArray(r.texts)
-        ? r.texts.filter((t): t is string => typeof t === "string").slice(0, MessageBlockLimits.maxTextsPerSection)
+      const texts = Array.isArray(record.texts)
+        ? record.texts.filter((t): t is string => typeof t === "string").slice(0, MessageBlockLimits.maxTextsPerSection)
         : [];
       if (texts.length === 0) return null;
-      const accessory = clampAccessory(r.accessory);
+      const accessory = clampAccessory(record.accessory);
       return { id, type: "section", texts, ...(accessory ? { accessory } : {}) };
     }
     case "mediaGallery": {
-      const imageUrls = Array.isArray(r.imageUrls)
-        ? r.imageUrls
+      const imageUrls = Array.isArray(record.imageUrls)
+        ? record.imageUrls
             .filter((u): u is string => typeof u === "string" && u.length > 0)
             .slice(0, MessageBlockLimits.maxImagesPerGallery)
         : [];
@@ -161,13 +161,13 @@ function clampBlock(raw: unknown): MessageBlockV2 | null {
       return { id, type: "mediaGallery", imageUrls };
     }
     case "separator": {
-      const size = r.size === "large" ? "large" : "small";
-      const divider = r.divider !== false;
+      const size = record.size === "large" ? "large" : "small";
+      const divider = record.divider !== false;
       return { id, type: "separator", size, divider };
     }
     case "actionRow": {
-      const buttons = Array.isArray(r.buttons)
-        ? r.buttons
+      const buttons = Array.isArray(record.buttons)
+        ? record.buttons
             .map(clampButton)
             .filter((b): b is MessageBlockButton => b !== null)
             .slice(0, MessageBlockLimits.maxButtonsPerActionRow)
@@ -182,9 +182,9 @@ function clampBlock(raw: unknown): MessageBlockV2 | null {
 
 export function clampMessageDocumentV2(raw: unknown): MessageDocumentV2 {
   if (typeof raw !== "object" || raw === null) return { blocks: [] };
-  const r = raw as Record<string, unknown>;
-  const accentColor = isHexColor(r.accentColor) ? r.accentColor : undefined;
-  const rawBlocks = Array.isArray(r.blocks) ? r.blocks : [];
+  const record = raw as Record<string, unknown>;
+  const accentColor = isHexColor(record.accentColor) ? record.accentColor : undefined;
+  const rawBlocks = Array.isArray(record.blocks) ? record.blocks : [];
 
   const blocks: MessageBlockV2[] = [];
   let actionRowCount = 0;

@@ -3,6 +3,7 @@ import { systemRpc, type SystemStatusData } from "#src/contracts/rpc/Index.ts";
 import { streamConsumerLag, getEventLoopLagP99Ms } from "#src/observability/Index.ts";
 import { Queue } from "bullmq";
 import {
+  getQueuePrefix,
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
 } from "#src/lib/scheduler/Queue.js";
@@ -25,6 +26,7 @@ let scheduledTasksQueue: Queue | null = null;
 
 function getScheduledTasksQueue(): Queue {
   scheduledTasksQueue ??= new Queue(SCHEDULED_TASKS_QUEUE_NAME, {
+    prefix: getQueuePrefix(),
     connection: getScheduledTasksConnectionOptions(),
   });
   return scheduledTasksQueue;
@@ -107,10 +109,10 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
     ]);
     const allModules = container.moduleStore
       .loaded()
-      .map((m) => ({
-        name: m.meta.name,
-        displayName: m.meta.displayName,
-        emoji: m.meta.emoji,
+      .map((mod) => ({
+        name: mod.meta.name,
+        displayName: mod.meta.displayName,
+        emoji: mod.meta.emoji,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName));
     return {
@@ -177,14 +179,14 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       cursor: input.cursor,
     });
     return {
-      entries: entries.map((e) => ({
-        id: e.id,
-        guildId: e.guildId,
-        userId: e.userId,
-        action: e.action,
-        platform: e.platform,
-        details: e.details,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: entry.id,
+        guildId: entry.guildId,
+        userId: entry.userId,
+        action: entry.action,
+        platform: entry.platform,
+        details: entry.details,
+        createdAt: entry.createdAt.toISOString(),
       })),
       total,
       pageSize,
@@ -199,12 +201,12 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       take,
     });
     return {
-      entries: entries.map((e) => ({
-        id: "id" in e ? String(e.id) : e.userId,
-        userId: e.userId,
-        reason: e.reason,
-        blockedBy: e.blockedBy,
-        createdAt: e.createdAt.toISOString(),
+      entries: entries.map((entry) => ({
+        id: "id" in entry ? String(entry.id) : entry.userId,
+        userId: entry.userId,
+        reason: entry.reason,
+        blockedBy: entry.blockedBy,
+        createdAt: entry.createdAt.toISOString(),
       })),
       total,
       page,

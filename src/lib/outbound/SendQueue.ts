@@ -18,8 +18,17 @@ export interface OutboundSendPayload {
   logCard?: LogCard;
 }
 
+const deadChannelUntil = new Map<string, number>();
+
 export async function queueSend(services: Container, payload: OutboundSendPayload): Promise<void> {
   payload.at ??= Date.now();
+  const cached = services.client.channels.cache.get(payload.channelId);
+  if (cached && cached.isTextBased() && "send" in cached) {
+    try {
+      await deliver(services, payload);
+      return;
+    } catch {}
+  }
   try {
     await scheduleTask("send-message", payload, {
       customJobOptions: { priority: QueuePriority.UTILITY },
@@ -61,6 +70,7 @@ export async function handleSendMessageFire(
 }
 
 async function deliver(services: Container, payload: OutboundSendPayload): Promise<void> {
+  if ((deadChannelUntil.get(payload.channelId) ?? 0) > Date.now()) return;
   const channel =
     services.client.channels.cache.get(payload.channelId) ??
     (await services.client.channels
@@ -68,6 +78,8 @@ async function deliver(services: Container, payload: OutboundSendPayload): Promi
       .catch(() => null));
 
   if (!channel || !channel.isTextBased() || !("send" in channel)) {
+    deadChannelUntil.set(payload.channelId, Date.now() + 60_000);
+    if (deadChannelUntil.size > 5000) deadChannelUntil.delete(deadChannelUntil.keys().next().value!);
     services.logger.debug(
       `[OutboundSend] Dropping send for unresolvable channel ${payload.channelId}.`,
     );

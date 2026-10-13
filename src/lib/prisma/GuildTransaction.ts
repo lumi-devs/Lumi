@@ -67,9 +67,12 @@ export class GuildWriteTransaction {
         );
       }
 
-      await this.prisma.guild.update({
-        where: { id: this.guildId },
-        data: this.#changes,
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT 1 FROM "guilds" WHERE "guild_id" = ${this.guildId} FOR UPDATE`;
+        await tx.guild.update({
+          where: { id: this.guildId },
+          data: this.#changes,
+        });
       });
 
       await container.db.config.invalidateGuildSettings(this.guildId);

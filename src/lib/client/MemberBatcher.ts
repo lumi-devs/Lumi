@@ -19,11 +19,15 @@ export function createMemberBatcher(
     timer = null;
     if (!currentBatch || currentBatch.length === 0) return;
 
-    const ids = currentBatch.map((b) => b.userId);
+    const ids = [...new Set(currentBatch.map((b) => b.userId))];
     try {
-      const members = await guild.members.fetch({ user: ids });
+      const found = new Map<string, GuildMember>();
+      for (let i = 0; i < ids.length; i += 100) {
+        const members = await guild.members.fetch({ user: ids.slice(i, i + 100) });
+        for (const [id, member] of members) found.set(id, member);
+      }
       for (const item of currentBatch) {
-        item.resolve(members.get(item.userId) ?? null);
+        item.resolve(found.get(item.userId) ?? null);
       }
     } catch (err) {
       for (const item of currentBatch) {
@@ -35,10 +39,19 @@ export function createMemberBatcher(
   return (userId: string): Promise<GuildMember | null> => {
     return new Promise((resolve, reject) => {
       if (!batch) batch = [];
-      batch.push({ userId, resolve, reject });
+      const dup = batch.find((b) => b.userId === userId);
+      if (dup) {
+        const prevResolve = dup.resolve;
+        const prevReject = dup.reject;
+        dup.resolve = (m) => { prevResolve(m); resolve(m); };
+        dup.reject = (e) => { prevReject(e); reject(e); };
+      } else {
+        batch.push({ userId, resolve, reject });
+      }
 
       if (!timer) {
         timer = setTimeout(flush, windowMs);
+        timer.unref?.();
       }
     });
   };

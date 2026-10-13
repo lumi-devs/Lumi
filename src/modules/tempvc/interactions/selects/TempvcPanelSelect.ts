@@ -94,6 +94,7 @@ export const tempVcPanelSelect = defineInteraction({
       service,
       member,
       t,
+      services,
     );
     if (!record) return;
 
@@ -153,9 +154,11 @@ export const tempVcPanelSelect = defineInteraction({
 
     const ids = interaction.values.filter((id) => id !== record.ownerId);
 
+    const firstValue = interaction.values[0];
+    if (!firstValue) return;
     const result =
       action === "select_transfer" || action === "xsel"
-        ? await transfer(services, service, channel, record, interaction.values[0]!, t)
+        ? await transfer(services, service, channel, record, firstValue, t)
         : await applyAccess(services, channel, action, ids, t);
 
     const backRows = buildBackRows(channelId);
@@ -185,8 +188,8 @@ async function applyAccess(
         switch (action) {
           case "select_kick":
           case "ksel": {
-            const m = channel.members.get(id);
-            if (m) await m.voice.disconnect("Kicked from temp VC");
+            const member = channel.members.get(id);
+            if (member) await member.voice.disconnect("Kicked from temp VC");
             done.push(userMention(id));
             break;
           }
@@ -205,8 +208,8 @@ async function applyAccess(
           case "select_block":
           case "select_block_role":
           case "bsel": {
-            const m = channel.members.get(id);
-            if (m) await m.voice.disconnect("Blocked from temp VC");
+            const member = channel.members.get(id);
+            if (member) await member.voice.disconnect("Blocked from temp VC");
             await channel.permissionOverwrites.edit(id, {
               Connect: false,
               ViewChannel: false,

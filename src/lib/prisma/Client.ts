@@ -60,7 +60,7 @@ const replicaUrl = getPostgresReplicaUrl();
 const replicaPool = replicaUrl
   ? new Pool({
       connectionString: replicaUrl,
-      max: PoolMax,
+      max: Math.max(2, Math.floor(PoolMax / 2)),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
       application_name: `${appName}-replica`,
@@ -72,7 +72,7 @@ export const prismaReader = replicaPool
   : prisma;
 
 export async function disconnectDatabase(): Promise<void> {
-  poolStatsTimer.close();
+  if (typeof clearInterval !== "undefined") clearInterval(poolStatsTimer);
   await prisma.$disconnect().catch(() => undefined);
   if (replicaPool) {
     await prismaReader.$disconnect().catch(() => undefined);

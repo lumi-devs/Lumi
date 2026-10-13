@@ -154,7 +154,7 @@ describe("valkey-lock", () => {
         '[valkey-lock] Failed to renew lock "lock:renew:err" (1 consecutive failure)',
         valkeyErr,
       );
-      expect(onLostLock).toHaveBeenCalledTimes(1);
+      expect(onLostLock).not.toHaveBeenCalled();
 
       valkey.eval.mockRejectedValueOnce(new Error("Still down"));
       await sleep(2000);
@@ -164,7 +164,7 @@ describe("valkey-lock", () => {
       delete (container as any).logger;
     }, 10_000);
 
-    it("calls onLostLock on the first renewal failure only, not on subsequent failures", async () => {
+    it("calls onLostLock on the second consecutive renewal failure only, not on subsequent failures", async () => {
       const errorLogger = vi.fn();
       (container as any).logger = { error: errorLogger };
 
@@ -178,7 +178,7 @@ describe("valkey-lock", () => {
       valkey.store.delete("lock:renew:stolen:callback");
 
       await sleep(2000);
-      expect(onLostLock).toHaveBeenCalledTimes(1);
+      expect(onLostLock).not.toHaveBeenCalled();
 
       await sleep(2000);
       expect(onLostLock).toHaveBeenCalledTimes(1);

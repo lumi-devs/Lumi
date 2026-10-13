@@ -15,7 +15,12 @@ export function resolveGdprExportSigningKey(): string {
   const dedicated = getGdprExportSigningSecret();
   if (dedicated) return dedicated;
   const rpcToken = getRpcInternalToken();
-  if (rpcToken) return rpcToken;
+  if (rpcToken) {
+    console.warn(
+      "[GDPR] GDPR_EXPORT_SIGNING_SECRET is unset - falling back to RPC_INTERNAL_TOKEN for export signing. Set a dedicated secret.",
+    );
+    return rpcToken;
+  }
   throw new GdprExportSigningKeyUnavailable();
 }
 
