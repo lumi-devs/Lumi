@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
-import { connect } from "node:net";
 import { randomBytes } from "node:crypto";
-import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { LUMI_ART } from "#src/lib/Branding.js";
 import { ExitCodes } from "#src/lib/ExitCodes.js";
@@ -27,15 +26,25 @@ interface Check {
 
 function tcpReachable(host: string, port: number, timeoutMs = 5_000): Promise<boolean> {
   return new Promise((resolve) => {
-    const socket = connect({ host, port });
-    const done = (ok: boolean): void => {
-      socket.destroy();
-      resolve(ok);
-    };
-    socket.setTimeout(timeoutMs);
-    socket.once("connect", () => done(true));
-    socket.once("timeout", () => done(false));
-    socket.once("error", () => done(false));
+    const timer = setTimeout(() => resolve(false), timeoutMs);
+    Bun.connect({
+      hostname: host,
+      port,
+      socket: {
+        open(socket) {
+          socket.end();
+          clearTimeout(timer);
+          resolve(true);
+        },
+        error() {
+          clearTimeout(timer);
+          resolve(false);
+        },
+      },
+    }).catch(() => {
+      clearTimeout(timer);
+      resolve(false);
+    });
   });
 }
 
@@ -282,9 +291,9 @@ async function runInit(argv: string[]): Promise<number> {
     ];
     const envPath = path.join(dir, ".env");
     const composePath = path.join(dir, "compose.yml");
-    await writeFile(envPath, envLines.join("\n"));
+    await Bun.write(envPath, envLines.join("\n"));
     await chmod(envPath, 0o600);
-    await writeFile(composePath, composeYml(image));
+    await Bun.write(composePath, composeYml(image));
     console.log(`\n  Wrote ${envPath} (mode 600) and ${composePath}.`);
     console.log(`\n  Start everything:\n  cd ${dir} && docker compose up -d\n`);
     console.log(`  Then watch it boot:\n  docker logs -f lumi-bot\n`);

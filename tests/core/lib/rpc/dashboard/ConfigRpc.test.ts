@@ -112,7 +112,15 @@ describe("dashboard module config write RPC handlers", () => {
     it("refuses to disable the core module", async () => {
       await expect(
         call("guild.module.toggle", { moduleName: "core", enabled: false }),
-      ).rejects.toThrow("Cannot disable the core module");
+      ).rejects.toThrow("Cannot disable a system module");
+
+      expect(container.db.modules.setModuleGuildEnabled).not.toHaveBeenCalled();
+    });
+
+    it("refuses to disable the admin module", async () => {
+      await expect(
+        call("guild.module.toggle", { moduleName: "admin", enabled: false }),
+      ).rejects.toThrow("Cannot disable a system module");
 
       expect(container.db.modules.setModuleGuildEnabled).not.toHaveBeenCalled();
     });

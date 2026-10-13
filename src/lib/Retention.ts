@@ -1,6 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { gzipSync } from "node:zlib";
 import type { ILogger } from "#src/shared/Index.ts";
 
 export const RetentionBatchSize = 1000;
@@ -27,7 +26,7 @@ export async function writeRetentionArchive(
   const filename = `${day}-${now.getTime()}-${process.pid}.jsonl.gz`;
   const jsonl = `${rows.map((row) => JSON.stringify(row)).join("\n")}\n`;
 
-  await writeFile(path.join(dir, filename), gzipSync(jsonl));
+  await Bun.write(path.join(dir, filename), Bun.gzipSync(jsonl));
 }
 
 export interface PurgeBatchRunnerOptions<TRow extends { id: number }> {

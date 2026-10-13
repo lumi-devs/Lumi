@@ -43,7 +43,7 @@ async function drainStream<T>(
       await msg.ack();
     },
   );
-  await new Promise((r) => setTimeout(r, timeoutMs));
+  await Bun.sleep(timeoutMs);
   await stop();
   return collected.slice(0, limit);
 }

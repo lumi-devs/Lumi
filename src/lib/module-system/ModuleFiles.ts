@@ -34,7 +34,9 @@ export async function readModuleFile(
 ): Promise<Buffer | null> {
   const full = resolveModuleFile(moduleName, name);
   try {
-    return await fs.readFile(full);
+    const file = Bun.file(full);
+    if (!(await file.exists())) return null;
+    return Buffer.from(await file.arrayBuffer());
   } catch {
     return null;
   }
@@ -48,7 +50,7 @@ export async function writeModuleFile(
   const dir = await ensureModuleFilesDir(moduleName);
   const full = resolveIn(dir, name);
   await fs.mkdir(path.dirname(full), { recursive: true });
-  await fs.writeFile(full, data);
+  await Bun.write(full, data);
   return full;
 }
 

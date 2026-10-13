@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { CONTRACT_VERSION } from "#src/contracts/Version.js";
 import {
   parseRpcResponse,
@@ -201,7 +200,7 @@ function jitteredBackoff(baseDelayMs: number, attempt: number): number {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return Bun.sleep(ms);
 }
 
 export class RpcClient {
@@ -234,7 +233,7 @@ export class RpcClient {
   ): RpcRequest {
     const traceCarrier = this.injectTraceHeaders();
     return {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       action,
       guildId,
       actorId,

@@ -1,7 +1,6 @@
 import { container } from "#src/lib/Services.js";
 import { Time } from "#src/shared/Index.ts";
 import { promises as fs } from "node:fs";
-import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import type { ModuleInfo, RepoInfo } from "#src/lib/downloader/Types.js";
@@ -269,7 +268,7 @@ export class DownloadResolver {
           `[Downloader] Git fetch failed for ${name}, attempting clean clone fallback...`,
         );
         recloned = true;
-        const tmpClone = `${repoPath}.reclone-${randomUUID()}`;
+        const tmpClone = `${repoPath}.reclone-${crypto.randomUUID()}`;
         const cloneArgs = buildGitCloneArgs(branch, url, tmpClone);
         await execGit(cloneArgs).catch(async (cloneErr) => {
           await fs.rm(tmpClone, { recursive: true, force: true }).catch(() => { });
@@ -336,7 +335,7 @@ export class DownloadResolver {
 
       const tmpDir = path.join(
         os.tmpdir(),
-        `lumi-repo-update-${name}-${randomUUID()}`,
+        `lumi-repo-update-${name}-${crypto.randomUUID()}`,
       );
       let signedBy: string | null = null;
       let signatureWarning: string | null = null;
@@ -413,10 +412,10 @@ export class DownloadResolver {
     const indexPath = path.join(repoPath, "modules.json");
     if (await this._exists(indexPath)) {
       try {
-        const index = JSON.parse(await fs.readFile(indexPath, "utf8")) as {
+        const index = (await Bun.file(indexPath).json().catch(() => null)) as {
           modules?: ModuleInfo[];
-        };
-        if (Array.isArray(index.modules)) return index.modules;
+        } | null;
+        if (index && Array.isArray(index.modules)) return index.modules;
       } catch (err: unknown) {
         container.logger?.warn?.(
           `[Downloader] Failed to parse modules.json in ${repoName}, falling back to scan:`,
@@ -438,10 +437,8 @@ export class DownloadResolver {
       const manifestPath = path.join(repoPath, entry.name, "manifest.json");
       if (await this._exists(manifestPath)) {
         try {
-          const info = JSON.parse(
-            await fs.readFile(manifestPath, "utf8"),
-          ) as ModuleInfo;
-          modules.push(info);
+          const info = (await Bun.file(manifestPath).json().catch(() => null)) as ModuleInfo | null;
+          if (info) modules.push(info);
         } catch (err: unknown) {
           container.logger?.warn?.(
             `[Downloader] Failed to parse manifest.json for ${entry.name}:`,
@@ -547,7 +544,7 @@ export class DownloadResolver {
         `Module ${moduleName} has no manifest.json - generate one with \`lumi addon validate\` or \`bun run modules:manifest\`.`,
       );
     }
-    const info = JSON.parse(await fs.readFile(manifestPath, "utf8")) as ModuleInfo;
+    const info = (await Bun.file(manifestPath).json()) as ModuleInfo;
 
     const { errors } = await validateAddon(sourcePath);
     if (errors.length) {
@@ -571,7 +568,7 @@ export class DownloadResolver {
           version: "1.0.0",
           private: true,
         };
-        await fs.writeFile(
+        await Bun.write(
           localPackageJsonPath,
           JSON.stringify(localPackageJson, null, 2),
         );
@@ -745,7 +742,8 @@ export class DownloadResolver {
     const manifestPath = path.join(repoPath, "manifest.json");
     if (!(await this._exists(manifestPath))) return null;
     try {
-      const raw = JSON.parse(await fs.readFile(manifestPath, "utf8")) as Record<string, unknown>;
+      const raw = (await Bun.file(manifestPath).json().catch(() => null)) as Record<string, unknown> | null;
+      if (!raw) return null;
       const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
       const strs = (v: unknown): string[] | undefined =>
         Array.isArray(v) ? v.filter((e): e is string => typeof e === "string") : undefined;

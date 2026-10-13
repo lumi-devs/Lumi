@@ -11,6 +11,11 @@ vi.mock("#lib/gdpr/Requests.js", () => ({
 
 import { executeGdprExport } from "#src/lib/gdpr/Requests.js";
 import {
+  dataFile,
+  loadOrMintKeyFile,
+  openSealedBytes,
+} from "#src/lib/crypto/Seal.js";
+import {
   handleGdprExportCleanupFire,
   handleGdprExportFire,
 } from "#src/modules/core/services/GdprExportTask.js";
@@ -32,6 +37,7 @@ describe("handleGdprExportFire", () => {
   beforeEach(async () => {
     dir = await mkdtemp(path.join(tmpdir(), "lumi-gdpr-export-"));
     process.env["GDPR_EXPORT_DIR"] = dir;
+    process.env["DATA_DIR"] = dir;
     process.env["GDPR_EXPORT_TTL_HOURS"] = "24";
     container.logger = mockLogger() as any;
     asMock(executeGdprExport).mockReset();
@@ -60,12 +66,15 @@ describe("handleGdprExportFire", () => {
     expect(markRunning).toHaveBeenCalledWith("job-1");
     expect(markDone).toHaveBeenCalledTimes(1);
     const [, doneArgs] = markDone.mock.calls[0]!;
-    expect(doneArgs.filePath).toBe(path.join(dir, "job-1.json.gz"));
+    expect(doneArgs.filePath).toMatch(/\.json\.gz\.enc$/);
     expect(doneArgs.sizeBytes).toBeGreaterThan(0);
     expect(doneArgs.expiresAt).toBeInstanceOf(Date);
 
-    const raw = await readFile(doneArgs.filePath);
-    const json = JSON.parse(gunzipSync(raw).toString("utf8"));
+    const raw = await readFile(doneArgs.filePath, "utf8");
+    const key = loadOrMintKeyFile(dataFile("secrets", "gdpr-export.key"));
+    const sealed = openSealedBytes(key, raw);
+    expect(sealed).not.toBeNull();
+    const json = JSON.parse(gunzipSync(sealed!).toString("utf8"));
     expect(json).toEqual({ core: { foo: "bar" } });
   });
 

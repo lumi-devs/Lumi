@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fieldsFromSchema } from "#src/lib/module-system/ConfigSchema.js";
 import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
@@ -76,8 +75,7 @@ export async function readManifest(
 ): Promise<ModuleManifest | null> {
   const file = path.join(dir, ManifestFile);
   try {
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as ModuleManifest;
+    return (await Bun.file(file).json()) as ModuleManifest;
   } catch {
     return null;
   }
@@ -88,5 +86,5 @@ export async function writeManifest(
   manifest: ModuleManifest,
 ): Promise<void> {
   const file = path.join(dir, ManifestFile);
-  await fs.writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await Bun.write(file, `${JSON.stringify(manifest, null, 2)}\n`);
 }

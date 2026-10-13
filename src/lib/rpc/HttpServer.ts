@@ -293,7 +293,7 @@ export async function startRpcHttpServer(
           `[RpcHttp] Failed to bind internal RPC HTTP server on attempt ${attempt}/${maxAttempts}, retrying in ${delay}ms`,
           { host, port, error: err instanceof Error ? err.message : String(err) },
         );
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await Bun.sleep(delay);
       } else {
 
         log("error", "[RpcHttp] Failed to start internal RPC HTTP server", {

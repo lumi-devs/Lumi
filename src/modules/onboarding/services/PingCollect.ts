@@ -146,15 +146,13 @@ function computeJitter() {
 
 async function measureLoopLag(): Promise<number> {
   return new Promise((resolve) => {
-    const t = process.hrtime.bigint();
-    setImmediate(() =>
-      resolve(Number(process.hrtime.bigint() - t) / 1_000_000),
-    );
+    const t = Bun.nanoseconds();
+    setImmediate(() => resolve((Bun.nanoseconds() - t) / 1_000_000));
   });
 }
 
 async function readProcFile(file: string) {
-  const text = await fs.readFile(file, "utf-8").catch(() => "");
+  const text = await Bun.file(file).text().catch(() => "");
   const result: Record<string, string> = {};
   for (const line of text.split("\n")) {
     const idx = line.indexOf(":");
@@ -317,11 +315,9 @@ async function hostStats() {
     readProcFile("/proc/meminfo"),
     readProcFile("/proc/self/status"),
     readProcFile("/proc/self/io"),
-    fs
-      .readFile("/sys/class/thermal/thermal_zone0/temp", "utf-8")
-      .catch(() => null),
-    fs.readFile("/proc/cpuinfo", "utf-8").catch(() => ""),
-    fs.readFile("/proc/stat", "utf-8").catch(() => ""),
+    Bun.file("/sys/class/thermal/thermal_zone0/temp").text().catch(() => null),
+    Bun.file("/proc/cpuinfo").text().catch(() => ""),
+    Bun.file("/proc/stat").text().catch(() => ""),
   ]);
 
   const swapTotalKb = parseInt(
@@ -378,7 +374,7 @@ async function countDeps() {
   if (cachedDepCount !== null) return cachedDepCount;
   try {
     const pkgJsonPath = path.join(RepoRoot, "package.json");
-    const raw = await fs.readFile(pkgJsonPath, "utf-8").catch(() => null);
+    const raw = await Bun.file(pkgJsonPath).text().catch(() => null);
     if (raw) {
       const parsed = JSON.parse(raw);
       const deps = Object.keys(parsed.dependencies ?? {}).length +
@@ -420,7 +416,7 @@ async function countCodeLines() {
         continue;
       }
       if (!e.name.endsWith(".ts") || e.name.endsWith(".d.ts")) continue;
-      const content = await fs.readFile(full, "utf-8").catch(() => "");
+      const content = await Bun.file(full).text().catch(() => "");
       total += content.split("\n").length;
     }
     return total;

@@ -1,7 +1,5 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { gzipSync } from "node:zlib";
 import { type Container } from "#src/lib/Services.js";
 import { Time } from "#src/shared/Index.ts";
 import { getGdprExportDir, resolveGdprExportTtlHours } from "#src/lib/Env.js";
@@ -29,14 +27,14 @@ export async function handleGdprExportFire(
 
   try {
     const data = await executeGdprExport(services, job.userId);
-    const compressed = gzipSync(Buffer.from(JSON.stringify(data), "utf-8"));
+    const compressed = Buffer.from(Bun.gzipSync(Buffer.from(JSON.stringify(data), "utf-8")));
     const key = loadOrMintKeyFile(dataFile("secrets", "gdpr-export.key"));
     const sealed = Buffer.from(sealBytes(key, compressed), "utf8");
 
     const dir = getGdprExportDir();
     await mkdir(dir, { recursive: true });
-    const filePath = path.join(dir, `${randomUUID()}.json.gz.enc`);
-    await writeFile(filePath, sealed);
+    const filePath = path.join(dir, `${crypto.randomUUID()}.json.gz.enc`);
+    await Bun.write(filePath, sealed);
 
     const expiresAt = new Date(
       Date.now() + resolveGdprExportTtlHours() * Time.Hour,

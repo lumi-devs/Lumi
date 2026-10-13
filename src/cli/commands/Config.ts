@@ -1,4 +1,3 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,7 +30,7 @@ export function redactValue(key: string, value: string): string {
 }
 
 export async function discoverEnvKeys(file: string = ENV_FILE): Promise<string[]> {
-  const src = await fs.readFile(file, "utf8");
+  const src = await Bun.file(file).text();
   const keys = new Set<string>();
   const directRe = /process\.env\[\s*["']([A-Z0-9_]+)["']\s*\]/g;
   const helperRe = /env(?:ParseString|ParseInteger)\(\s*["']([A-Z0-9_]+)["']/g;

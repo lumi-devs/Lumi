@@ -52,7 +52,6 @@
         "@types/node": "^26.4.1",
         "@types/pg": "^8.23.1",
         "@types/semver": "^7.8.0",
-        "dotenv": "^17.4.2",
         "dts-bundle-generator": "^9.5.1",
         "eslint": "^10.10.0",
         "fast-check": "^4.10.2",

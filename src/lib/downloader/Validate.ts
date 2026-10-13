@@ -233,9 +233,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     );
   } else {
     try {
-      const manifest = JSON.parse(
-        await fs.readFile(manifestPath, "utf8"),
-      ) as unknown;
+      const manifest = (await Bun.file(manifestPath).json()) as unknown;
       const parsed = manifestSchema.safeParse(manifest);
       if (!parsed.success) {
         for (const issue of parsed.error.issues) {
@@ -289,7 +287,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
 
   const indexPath = path.join(dir, "Index.ts");
   if (await pathExists(indexPath)) {
-    const src = await fs.readFile(indexPath, "utf8");
+    const src = await Bun.file(indexPath).text();
     if (!/\bdefineModule\s*\(/.test(src))
       errors.push("Index.ts does not define a module (defineModule).");
     if (!/\bexport\b/.test(src))
@@ -307,7 +305,7 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   const files = (await pathExists(dir)) ? await walkTsFiles(dir) : [];
   const addonRoot = path.resolve(dir);
   for (const file of files) {
-    const src = await fs.readFile(file, "utf8");
+    const src = await Bun.file(file).text();
     const rel = path.relative(dir, file);
 
     if (EmbedImportRe.test(src) || /\bnew\s+EmbedBuilder\s*\(/.test(src))
