@@ -41,6 +41,7 @@ Object.assign(container, {
       deleteAllForUser: vi.fn(),
       iterateAll: vi.fn(),
       findForGuild: vi.fn(),
+      countForGuild: vi.fn(),
       countAll: vi.fn(),
     },
   },
@@ -202,12 +203,12 @@ describe("AFK Module Tests", () => {
     });
 
     it("getAfkStatsForGuild counts this guild's entries and cooldown keys", async () => {
-      (container.db.afk.findForGuild as any).mockResolvedValue([{ id: "1" }, { id: "2" }]);
+      (container.db.afk.countForGuild as any).mockResolvedValue(2);
       (container.valkey.scan as any).mockResolvedValueOnce(["0", ["cd1"]]);
 
       const stats = await getAfkStatsForGuild(container, "G1");
       expect(stats).toEqual({ activeEntries: 2, activeCooldowns: 1 });
-      expect(container.db.afk.findForGuild).toHaveBeenCalledWith("G1");
+      expect(container.db.afk.countForGuild).toHaveBeenCalledWith("G1");
     });
   });
 

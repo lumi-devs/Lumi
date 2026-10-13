@@ -1,6 +1,7 @@
 import type { Container } from "#src/lib/Services.js";
 import { mgetSafe, pipelineBySlot, scanKeysSafe } from "#src/lib/valkey/Cluster.js";
 import { claimCooldown, isOnCooldown } from "#src/lib/valkey/Cooldown.js";
+import { withTimeout } from "#src/lib/utilities/Resilience.js";
 import { isNullish, filterNullish, tryParseJSON } from "#src/shared/Index.ts";
 import { AfkKeys, AfkTTL } from "#src/modules/afk/Constants.js";
 import { sanitizeReason } from "#src/modules/afk/services/Format.js";
@@ -36,13 +37,13 @@ async function getOrSet<T>(
 ): Promise<T> {
   const neg = negativeUntil.get(key);
   if (neg !== undefined && neg > Date.now()) return null as T;
-  const cached = await services.valkey.get(key);
+  const cached = await withTimeout(() => services.valkey.get(key), 5000);
   if (cached) return parser(cached);
 
   const pending = inflight.get(key);
   if (pending) return pending as Promise<T>;
   const run = (async () => {
-    const data = await fetcher();
+    const data = await withTimeout(() => fetcher(), 10000);
     if (isNullish(data)) {
       if (negativeUntil.size > 5000) negativeUntil.clear();
       negativeUntil.set(key, Date.now() + NegativeTtlMs);

@@ -1,6 +1,7 @@
 import type { InvalidationBus } from "#src/lib/valkey/Store.js";
 import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import { cacheHits, cacheMisses } from "#src/observability/Index.ts";
+import { withTimeout } from "#src/lib/utilities/Resilience.js";
 import { container } from "#src/lib/Services.js";
 
 export interface CacheStoreOptions {
@@ -146,7 +147,7 @@ export class CacheStore {
 
     const flight = (async (): Promise<T> => {
       try {
-        const cached = await this.#l2().get(key);
+        const cached = await withTimeout(() => this.#l2().get(key), 5000);
         if (cached) {
           try {
             const value = parser(cached);
@@ -161,14 +162,13 @@ export class CacheStore {
         }
 
         cacheMisses.inc({ cache });
-        const data = await loader();
+        const data = await withTimeout(() => loader(), 10000);
         if ((this.#generations.get(key) ?? 0) !== generation) {
           return data as T;
         }
 
         if (data === null || data === undefined) {
           this.#rememberNegative(key);
-          void this.#l2().setex(`neg:${key}`, 15, "1")?.catch?.(() => {});
         } else {
           this.#writeL1(key, data, ttlMs);
           const serialized = serializer(data);

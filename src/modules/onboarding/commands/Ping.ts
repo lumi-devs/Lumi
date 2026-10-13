@@ -75,11 +75,10 @@ export const pingDef: CommandDef = {
   run: async (ctx) => {
     if (ctx.isSlash) {
       const interaction = ctx.interaction;
-      const data = await collectPingData(ctx.services);
-
       if (!interaction.deferred && !interaction.replied) {
         await interaction.deferReply({ flags: EphemeralFlags });
       }
+      const data = await collectPingData(ctx.services);
 
       const card = buildOverviewCard({ roundTrip: null, ...data }, interaction.user.id);
       const msg = await interaction.editReply({

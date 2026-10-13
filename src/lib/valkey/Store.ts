@@ -335,6 +335,8 @@ export function createValkeyClient(
         redisOptions: {
           ...valkeyConnectionOptions(config),
           maxRetriesPerRequest: 3,
+          offlineQueue: false,
+          commandTimeout: 5000,
         },
       })
     : new Valkey({
@@ -343,6 +345,8 @@ export function createValkeyClient(
         lazyConnect: true,
         maxRetriesPerRequest: 3,
         enableReadyCheck: true,
+        offlineQueue: false,
+        commandTimeout: 5000,
       });
 
   client.on("error", (err: unknown) => logger?.error?.("[Valkey] Error:", err));

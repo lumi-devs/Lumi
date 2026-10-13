@@ -281,7 +281,10 @@ export async function dispatchChatInput(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
   const def = commandRegistry.get(interaction.commandName);
-  if (!def) return;
+  if (!def) {
+    services.logger.warn(`[CommandDispatch] Unknown slash command "${interaction.commandName}".`);
+    return;
+  }
   if (await denyCommand(services, interaction, gateSourceFromChatInput(interaction), def)) {
     return;
   }
