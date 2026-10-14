@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { buildPermitExplainView } from "#src/modules/admin/ui/Permissions.js";
+import { buildPermitExplainView } from "#src/admin/ui/Permissions.js";
 import type { PermitTierExplanation } from "#src/lib/api/permissions/PermitResolver.js";
 
 function cardText(card: { components?: unknown }): string {

@@ -1,7 +1,6 @@
 import { container } from "#src/lib/Services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
-import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { isNullish } from "#src/shared/Index.ts";
 import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
 import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
 import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
@@ -55,7 +54,6 @@ interface JoinFilterResult {
 const RaidModeSeconds = 600;
 const GateTimeoutMs = 60 * 60 * 1000;
 const RecentJoinersCap = 20;
-const RecentJoinersTtlSeconds = 300;
 
 export async function loadJoinGateConfig(guildId: string): Promise<JoinGateConfig> {
   const raw = await container.db.config.getAllModuleConfig(guildId, "security");
@@ -139,21 +137,19 @@ export function evaluateJoinFilters(
   return { action, triggered };
 }
 
+const recentJoinersMap = new Map<string, RecentJoiner[]>();
+const joinBurstMap = new Map<string, { count: number; expiresAt: number }>();
+const raidActiveMap = new Map<string, number>();
+
 export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
-  const key = ValkeyKeys.recentJoiners(guildId);
-  await container.valkey
-    .multi()
-    .lpush(key, JSON.stringify(joiner))
-    .ltrim(key, 0, RecentJoinersCap - 1)
-    .expire(key, RecentJoinersTtlSeconds)
-    .exec();
+  const list = recentJoinersMap.get(guildId) ?? [];
+  list.unshift(joiner);
+  if (list.length > RecentJoinersCap) list.length = RecentJoinersCap;
+  recentJoinersMap.set(guildId, list);
 }
 
 async function getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
-  const raw = await container.valkey.lrange(ValkeyKeys.recentJoiners(guildId), 0, -1);
-  return raw
-    .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
-    .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
+  return recentJoinersMap.get(guildId) ?? [];
 }
 
 export async function isSuspiciousJoiner(
@@ -174,27 +170,29 @@ export async function recordJoin(
   guildId: string,
   config: JoinGateConfig,
 ): Promise<boolean> {
-  const key = ValkeyKeys.joinBurst(guildId);
-  const results = await container.valkey
-    .multi()
-    .incr(key)
-    .expire(key, config.raidWindowSeconds, "NX")
-    .exec();
-  const count = results?.[0]?.[1] as number;
+  const now = Date.now();
+  const entry = joinBurstMap.get(guildId);
+  let count = 1;
+  if (entry && entry.expiresAt > now) {
+    count = entry.count + 1;
+    entry.count = count;
+  } else {
+    joinBurstMap.set(guildId, { count: 1, expiresAt: now + config.raidWindowSeconds * 1000 });
+  }
+
   if (count < config.raidJoinCount) return false;
 
-  const started = await container.valkey.set(
-    ValkeyKeys.raidMode(guildId),
-    String(Date.now()),
-    "EX",
-    RaidModeSeconds,
-    "NX",
-  );
-  return started === "OK";
+  const activeUntil = raidActiveMap.get(guildId);
+  if (!activeUntil || activeUntil <= now) {
+    raidActiveMap.set(guildId, now + RaidModeSeconds * 1000);
+    return true;
+  }
+  return false;
 }
 
 export async function isRaidActive(guildId: string): Promise<boolean> {
-  return (await container.valkey.exists(ValkeyKeys.raidMode(guildId))) === 1;
+  const activeUntil = raidActiveMap.get(guildId);
+  return Boolean(activeUntil && activeUntil > Date.now());
 }
 
 export async function applyGateAction(

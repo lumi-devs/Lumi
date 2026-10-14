@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import type { ContainerBuilder } from "@discordjs/builders";
-import { moduleUpdateResultCard } from "#src/modules/admin/ui/ModuleUpdateCard.js";
+import { moduleUpdateResultCard } from "#src/admin/ui/ModuleUpdateCard.js";
 
 function textOf(container: ContainerBuilder): string {
   const data = container.toJSON() as {

@@ -5,7 +5,7 @@ import {
 } from "#src/modules/onboarding/services/SetupWizard.js";
 import { buildSetupStepView } from "#src/modules/onboarding/ui/SetupWizard.js";
 import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { SetupAgeModalId } from "#src/modules/core/Constants.js";
+import { SetupAgeModalId } from "#src/lib/interactions/Ids.js";
 import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
 import type { Container } from "#src/lib/Services.js";
 import type { ModalSubmitInteraction } from "discord.js";

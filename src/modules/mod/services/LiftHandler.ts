@@ -1,6 +1,6 @@
 import { type Container } from "#src/lib/Services.js";
 import { Time } from "#src/shared/Index.ts";
-import {acquireValkeyLock} from "#src/lib/valkey/Lock.js";
+import { acquireLock } from "#src/lib/cache/Lock.js";
 import type { ModLiftPayload } from "#src/modules/mod/tasks/ModLift.js";
 import { liftModerationCaseWithUndo } from "#src/modules/mod/services/CaseLift.js";
 import { errorCode } from "#src/lib/utilities/Errors.js";
@@ -15,15 +15,14 @@ export async function handleModLiftFire(
   services: Container,
   payload: ModLiftPayload,
 ): Promise<void> {
-  const { release } = await acquireValkeyLock(
-    services.valkey,
-    `lumi:lock:mod-lift:${payload.caseId}`,
+  const lock = await acquireLock(
+    `lock:mod-lift:${payload.caseId}`,
     { ttlMs: Time.Second * 30, acquireTimeoutMs: Time.Minute },
   );
   try {
     await liftCase(services, payload);
   } finally {
-    await release();
+    lock.release();
   }
 }
 

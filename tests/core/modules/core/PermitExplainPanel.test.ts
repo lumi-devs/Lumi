@@ -4,7 +4,7 @@ import {
   buildPermitExplainPickerView,
   buildPermitExplainView,
   PermitExplainNodesPerPage,
-} from "#src/modules/admin/ui/Permissions.js";
+} from "#src/admin/ui/Permissions.js";
 import type { CardReply } from "#src/lib/ui/Cards.js";
 
 type ComponentJson = {

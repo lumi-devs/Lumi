@@ -11,7 +11,7 @@ import {
   stateFromSegments,
 } from "#src/modules/onboarding/services/SetupWizard.js";
 import { buildSetupStepView } from "#src/modules/onboarding/ui/SetupWizard.js";
-import { SetupStepId } from "#src/modules/core/Constants.js";
+import { SetupStepId } from "#src/lib/interactions/Ids.js";
 import type { AnySelectMenuInteraction } from "discord.js";
 
 export const setupWizardSelect = defineInteraction({

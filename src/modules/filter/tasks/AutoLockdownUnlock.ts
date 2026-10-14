@@ -1,6 +1,6 @@
-import { RelayTask, type CatchUpMeta } from "#src/lib/scheduler/Tasks.js";
+import { RelayTask } from "#src/lib/scheduler/Tasks.js";
 
-export interface AutoLockdownUnlockPayload extends CatchUpMeta {
+export interface AutoLockdownUnlockPayload {
   guildId: string;
 }
 

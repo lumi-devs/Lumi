@@ -62,9 +62,7 @@ class ReactionRoleRegistry {
   public async invalidateMenus(guildId: string): Promise<void> {
     this.#menus.delete(guildId);
     this.#loaded.delete(guildId);
-    await container.signals
-      .publish("reactionroles", { kind: "menusreload", g: guildId })
-      .catch((err: unknown) => logError("ReactionRoles: registry broadcast", err));
+    container.signals.publish("reactionroles", { kind: "menusreload", g: guildId });
   }
 
   async #ensure(guildId: string): Promise<void> {

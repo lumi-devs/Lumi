@@ -12,7 +12,7 @@ import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
 import type { PingData } from "#src/modules/onboarding/services/PingCollect.js";
 import { componentEmoji } from "#src/lib/ui/Panels.js";
 import type { LumiT } from "#src/lib/i18n/Index.js";
-import { PingId } from "#src/modules/core/Constants.js";
+import { PingId } from "#src/lib/interactions/Ids.js";
 import { formatDuration } from "#src/lib/utilities/Time.js";
 
 export const PingFlags = MessageFlags.IsComponentsV2;
@@ -121,7 +121,7 @@ export function buildOverviewCard(
   }
 
   content += `### __External Services__\n`;
-  content += `${E.valkey} **Valkey Cache**: ${fmtMs(data.valkeyReadMs)} | Hit Ratio: ${data.valkeyHitRatio.toFixed(1)}%\n`;
+  content += `${E.valkey} **Memory Cache**: Hit Ratio: ${data.valkeyHitRatio.toFixed(1)}%\n`;
   content += `${E.sql} **Database**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
 
   c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));

@@ -1,97 +1,61 @@
-import { container } from "#src/lib/Services.js";
-import { pipelineBySlot } from "#src/lib/valkey/Cluster.js";
+const activeMembers = new Map<string, Set<string>>();
 
-const TtlSeconds = 24 * 60 * 60;
-
-const OccPrefix = "lumi:tempvc:voice:occ:";
-const occKey = (channelId: string) => `${OccPrefix}${channelId}`;
-const userKey = (userId: string) => `lumi:tempvc:voice:user:${userId}`;
-
-const TrackScript = `
-local prev = redis.call('GET', KEYS[1])
-if prev == false then prev = nil end
-local newChannel = ARGV[1]
-if newChannel == '' then newChannel = nil end
-if prev == newChannel then return prev or false end
-if prev then redis.call('SREM', ARGV[4] .. prev, ARGV[2]) end
-if newChannel then
-  local occ = ARGV[4] .. newChannel
-  redis.call('SADD', occ, ARGV[2])
-  redis.call('EXPIRE', occ, ARGV[3])
-  redis.call('SET', KEYS[1], newChannel, 'EX', ARGV[3])
-else
-  redis.call('DEL', KEYS[1])
-end
-return prev or false
-`;
-
-export async function trackVoiceState(
-  userId: string,
+export async function trackVoiceOccupancy(
+  _userId: string,
+  oldChannelId: string | null,
   newChannelId: string | null,
-): Promise<{ prevChannelId: string | null }> {
-  const prev = (await container.valkey.eval(
-    TrackScript,
-    1,
-    userKey(userId),
-    newChannelId ?? "",
-    userId,
-    String(TtlSeconds),
-    OccPrefix,
-  )) as string | null;
-  return { prevChannelId: prev ?? null };
+): Promise<{ channelId: string; wasEmpty: boolean; isEmpty: boolean } | null> {
+  if (oldChannelId === newChannelId) return null;
+
+  if (oldChannelId) {
+    const set = activeMembers.get(oldChannelId);
+    if (set) {
+      set.delete(_userId);
+      if (set.size === 0) {
+        activeMembers.delete(oldChannelId);
+        return { channelId: oldChannelId, wasEmpty: false, isEmpty: true };
+      }
+    }
+  }
+
+  if (newChannelId) {
+    let set = activeMembers.get(newChannelId);
+    if (!set) {
+      set = new Set();
+      activeMembers.set(newChannelId, set);
+      set.add(_userId);
+      return { channelId: newChannelId, wasEmpty: true, isEmpty: false };
+    }
+    set.add(_userId);
+  }
+
+  return null;
 }
 
 export async function isVoiceChannelEmpty(channelId: string): Promise<boolean> {
-  const n = await container.valkey.scard(occKey(channelId));
-  return n === 0;
+  const set = activeMembers.get(channelId);
+  return !set || set.size === 0;
 }
+
+export async function clearVoiceOccupancyForChannels(
+  channelIds: string[],
+): Promise<void> {
+  for (const id of channelIds) {
+    activeMembers.delete(id);
+  }
+}
+
+export async function trackVoiceState(
+  _userId: string,
+  _channelId: string | null,
+): Promise<void> {}
+
+export async function seedVoiceStates(
+  _states: ReadonlyArray<{ user_id: string; channel_id: string | null }>,
+): Promise<void> {}
 
 export async function clearVoiceChannelOccupancy(
   channelId: string,
 ): Promise<void> {
-  await container.invalidation.invalidate(occKey(channelId));
-}
-
-export async function seedVoiceStates(
-  voiceStates: ReadonlyArray<{
-    user_id: string;
-    channel_id: string | null;
-  }>,
-): Promise<void> {
-  if (voiceStates.length === 0) return;
-  const { valkey } = container;
-
-  type Write =
-    | { key: string; kind: "occupancy"; channelId: string; userId: string }
-    | { key: string; kind: "user"; channelId: string; userId: string };
-
-  const writes: Write[] = [];
-  for (const state of voiceStates) {
-    if (!state.channel_id) continue;
-    writes.push({
-      key: occKey(state.channel_id),
-      kind: "occupancy",
-      channelId: state.channel_id,
-      userId: state.user_id,
-    });
-    writes.push({
-      key: userKey(state.user_id),
-      kind: "user",
-      channelId: state.channel_id,
-      userId: state.user_id,
-    });
-  }
-
-  await pipelineBySlot(
-    valkey,
-    writes,
-    (w) => w.key,
-    (pipe, w) => {
-      if (w.kind === "occupancy") {
-        pipe.sadd(w.key, w.userId).expire(w.key, TtlSeconds);
-      } else {
-        pipe.set(w.key, w.channelId, "EX", TtlSeconds);
-      }
-    },
-  );
+  activeMembers.delete(channelId);
 }

@@ -1,42 +1,32 @@
-import { container } from "#src/lib/Services.js";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import type { Guild } from "@prisma/client";
 import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import {acquireValkeyLock, verifyValkeyLock} from "#src/lib/valkey/Lock.js";
+import { acquireLock, type Lock } from "#src/lib/cache/Lock.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 
-const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
+const GuildLockKey = (guildId: string) => `lock:guild:${guildId}`;
 
 export async function configLock(guildId: string): Promise<() => void> {
-  const { release } = await acquireValkeyLock(container.valkey, GuildLock(guildId), {
-    ttlMs: 10_000,
-    acquireTimeoutMs: 20_000,
-  });
+  const lock = await acquireLock(GuildLockKey(guildId));
   return () => {
-    void release();
+    lock.release();
   };
 }
 
 export class GuildWriteTransaction {
   #changes: Partial<Guild> = {};
   #hasChanges = false;
-  #locking = true;
   #used = false;
 
   public constructor(
     public readonly settings: Readonly<Guild>,
-    private readonly release: () => Promise<void>,
+    private readonly lock: Lock,
     private readonly guildId: string,
     private readonly prisma: DatabaseClient,
-    private readonly valkey: ValkeyClient,
-    private readonly lockToken: string,
   ) {}
 
   public get hasChanges() {
     return this.#hasChanges;
-  }
-
-  public get locking() {
-    return this.#locking;
   }
 
   public write(data: Partial<Guild>): this {
@@ -47,83 +37,45 @@ export class GuildWriteTransaction {
 
   public async submit(): Promise<void> {
     if (this.#used) {
-      throw new Error(
-        `GuildWriteTransaction for guild ${this.guildId} was already submitted; create a new transaction instead of reusing this one`,
-      );
+      throw new Error(`GuildWriteTransaction for guild ${this.guildId} was already submitted`);
     }
     this.#used = true;
 
-    if (!this.#hasChanges) {
-      await this.#release();
-      return;
-    }
-
     try {
-      const key = GuildLock(this.guildId);
-      const stillHeld = await verifyValkeyLock(this.valkey, key, this.lockToken);
-      if (!stillHeld) {
-        throw new Error(
-          `Lock lost before write for guild ${this.guildId}; refusing to write unlocked`,
-        );
-      }
-
-      await this.prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT 1 FROM "guilds" WHERE "guild_id" = ${this.guildId} FOR UPDATE`;
-        await tx.guild.update({
+      if (this.#hasChanges) {
+        await this.prisma.guild.update({
           where: { id: this.guildId },
           data: this.#changes,
         });
-      });
-
-      await container.db.config.invalidateGuildSettings(this.guildId);
-
-      this.#hasChanges = false;
+        cacheStore.delete(CacheKeys.guildSettings(this.guildId));
+      }
     } finally {
-      await this.#release();
+      this.lock.release();
     }
   }
 
-  public dispose() {
-    this.#releaseQuietly();
-  }
-
-  public [Symbol.dispose](): void {
-    this.#releaseQuietly();
-  }
-
-  #releaseQuietly(): void {
-    this.#release().catch((err: unknown) =>
-      container.logger.error("[GuildWriteTransaction] release failed", err),
-    );
-  }
-
-  async #release() {
-    if (this.#locking) {
-      this.#locking = false;
-      await this.release();
+  public rollback(): void {
+    if (!this.#used) {
+      this.#used = true;
+      this.lock.release();
     }
   }
 }
 
 export async function createGuildTransaction(
   guildId: string,
-  valkey: ValkeyClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
-  const { release, token } = await acquireValkeyLock(valkey, GuildLock(guildId), {
-    ttlMs: 15_000,
-    acquireTimeoutMs: 30_000,
-  });
-
+  const lock = await acquireLock(GuildLockKey(guildId));
   try {
-    let settings = await prisma.guild.findUnique({ where: { id: guildId } });
+    const settings = await prisma.guild.findUnique({ where: { id: guildId } });
     if (!settings) {
-      settings = await prisma.guild.create({ data: { id: guildId } });
+      lock.release();
+      throw new Error(`Guild not found: ${guildId}`);
     }
-
-    return new GuildWriteTransaction(settings, release, guildId, prisma, valkey, token);
+    return new GuildWriteTransaction(settings, lock, guildId, prisma);
   } catch (err) {
-    await release();
+    lock.release();
     throw err;
   }
 }

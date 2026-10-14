@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { readyListener } from "#src/modules/core/listeners/Ready.js";
+import { readyListener } from "#src/core/listeners/Ready.js";
 
 function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));

@@ -1,5 +1,5 @@
 import { container } from "#src/lib/Services.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { claimCooldown } from "#src/lib/cache/Cooldown.js";
 import { EconomyKeys } from "#src/modules/economy/Constants.js";
 import type { EconomyTxnKind } from "@prisma/client";
 import type { EconomyBalance } from "#src/modules/economy/data/EconomyRepository.js";
@@ -399,8 +399,7 @@ export class BankService {
       );
     }
     if (config.slotCooldownMs > 0) {
-      const claimed = await claimCooldown(
-        container,
+      const claimed = claimCooldown(
         EconomyKeys.slotCooldown(guildId, userId),
         config.slotCooldownMs,
       );

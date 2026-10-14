@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { downloaderUtility, ModuleAlreadyInstalledError } from "#src/modules/admin/utilities/DownloaderUtility.js";
+import { downloaderUtility, ModuleAlreadyInstalledError } from "#src/admin/utilities/DownloaderUtility.js";
 import { container } from "#src/lib/Services.js";
 import { resolver } from "#src/lib/downloader/Resolver.js";
 import { promises as fs } from "node:fs";

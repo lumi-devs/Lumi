@@ -5,7 +5,7 @@ import { makeSuccessCard, makeListCard, ephemeralCard } from "#src/lib/ui/Cards.
 import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
 import { executeGdprDeletion, executeGdprExport } from "#src/lib/gdpr/Requests.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
+import type { DownloaderUtility } from "#src/admin/utilities/DownloaderUtility.js";
 
 function downloaderService(): DownloaderUtility {
   return getUtility("downloader");

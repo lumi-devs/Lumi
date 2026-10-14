@@ -1,5 +1,5 @@
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
 import type { Global } from "@prisma/client";
 
 export interface UpdateGlobalInput {
@@ -19,8 +19,8 @@ export interface UpdateGlobalInput {
 export class GlobalRepository extends Repository {
 
   public async getGlobalConfig(): Promise<Global> {
-    const key = ValkeyKeys.globalConfig();
-    return this.getOrSet(key, ValkeyTTL.globalConfig, async () => {
+    const key = CacheKeys.globalConfig();
+    return this.getOrSet(key, CacheTTL.globalConfig, async () => {
       let config = await this.prisma.global.findUnique({ where: { id: 1 } });
       if (!config) {
         config = await this.prisma.global.create({
@@ -32,7 +32,7 @@ export class GlobalRepository extends Repository {
   }
 
   public async updateGlobalConfig(input: UpdateGlobalInput): Promise<Global> {
-    const key = ValkeyKeys.globalConfig();
+    const key = CacheKeys.globalConfig();
     const updated = await this.prisma.global.upsert({
       where: { id: 1 },
       create: { id: 1, ...input },

@@ -11,7 +11,7 @@ import {
   checkSecurity,
   defineInteraction,
 } from "#src/lib/interactions/InteractionDef.js";
-import { PingId } from "#src/modules/core/Constants.js";
+import { PingId } from "#src/lib/interactions/Ids.js";
 
 export const ping = defineInteraction({
   prefix: PingId.prefix,

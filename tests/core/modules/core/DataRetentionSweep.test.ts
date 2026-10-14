@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
 import { container } from "#src/lib/Services.js";
-import { handleDataRetentionFire } from "#src/modules/core/services/DataRetention.js";
+import { handleDataRetentionFire } from "#src/core/services/DataRetention.js";
 import { readClusterShards } from "#src/lib/sharding/ShardTelemetry.js";
 
 function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {

@@ -18,7 +18,7 @@ import {
 import {
   handleGdprExportCleanupFire,
   handleGdprExportFire,
-} from "#src/modules/core/services/GdprExportTask.js";
+} from "#src/core/services/GdprExportTask.js";
 
 function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {
   return fn as unknown as Mock<T>;

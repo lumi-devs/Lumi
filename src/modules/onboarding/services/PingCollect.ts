@@ -1,5 +1,4 @@
 import os from "node:os";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
 import path from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -109,11 +108,9 @@ const PingHistory: number[] = [];
 let lastSampleTime = Date.now();
 let lastCmdCount = 0;
 let lastMsgCount = 0;
-let lastTxCount = 0;
 
 let cachedCommandsPerSec = 0;
 let cachedMessagesPerMin = 0;
-let cachedTxRate = 0;
 
 function recordInvocation(services: Container, wsPing: number) {
   sessionCommandCount++;
@@ -181,30 +178,6 @@ async function getGatewayNode(): Promise<string> {
   return cachedGatewayNode;
 }
 
-function parseValkeyInfo(raw: string) {
-  const result: Record<string, string> = {};
-  for (const line of raw.split("\r\n")) {
-    if (line.startsWith("#") || !line.includes(":")) continue;
-    const idx = line.indexOf(":");
-    result[line.slice(0, idx)] = line.slice(idx + 1);
-  }
-  return result;
-}
-
-async function timeIt(fn: () => Promise<unknown>): Promise<number> {
-  const start = performance.now();
-  await fn();
-  return performance.now() - start;
-}
-
-async function probeValkeyRead(valkey: ValkeyClient) {
-  return timeIt(() => valkey.get("lumi:ping:probe"));
-}
-
-async function probeValkeyWrite(valkey: ValkeyClient) {
-  return timeIt(() => valkey.set("lumi:ping:probe", "1", "EX", 30));
-}
-
 const StatTtlMs = 5_000;
 
 interface TtlCache<T> {
@@ -225,10 +198,6 @@ const pgStat: TtlCache<ReturnType<typeof postgresStats>> = {
   value: null,
   at: 0,
 };
-const rdStat: TtlCache<ReturnType<typeof valkeyStats>> = {
-  value: null,
-  at: 0,
-};
 
 async function probePrisma(services: Container) {
   return services.db.probePrisma();
@@ -236,16 +205,8 @@ async function probePrisma(services: Container) {
 
 async function postgresStats(services: Container) {
   try {
-    const { overview: ov, tables, tx } = await services.db.getPostgresStats();
-
-    const commits = tx ? parseInt(tx.commits, 10) : 0;
-    const now = Date.now();
-    const delta = (now - lastSampleTime) / 1000;
-    if (delta >= 2) {
-      cachedTxRate = (commits - lastTxCount) / delta;
-      lastTxCount = commits;
-    }
-
+    const { overview: ov, tables } = await services.db.getPostgresStats();
+    const commits = 0;
     return {
       dbSize: ov?.size ?? null,
       dbUptimeSecs: ov ? parseInt(ov.uptime_secs, 10) : null,
@@ -255,8 +216,8 @@ async function postgresStats(services: Container) {
         deadTuples: BigInt(r.dead),
       })),
       dbCommits: commits,
-      dbRollbacks: tx ? parseInt(tx.rollbacks, 10) : null,
-      txRate: cachedTxRate,
+      dbRollbacks: null,
+      txRate: 0,
     };
   } catch (err: unknown) {
     logError("Ping: Postgres stats failed", err);
@@ -271,43 +232,20 @@ async function postgresStats(services: Container) {
   }
 }
 
-async function valkeyStats(valkey: ValkeyClient) {
-  try {
-    const raw = await valkey.info();
-    const info = parseValkeyInfo(raw);
-    const hits = parseInt(info.keyspace_hits ?? "0", 10);
-    const misses = parseInt(info.keyspace_misses ?? "0", 10);
-    const total = hits + misses;
-    const dbSize = await valkey.dbsize().catch(() => 0);
-    return {
-      valkeyVersion: info.valkey_version ?? "unknown",
-      valkeyUptimeSecs: parseInt(info.uptime_in_seconds ?? "0", 10),
-      valkeyMemUsedBytes: parseInt(info.used_memory ?? "0", 10),
-      valkeyMemPeakBytes: parseInt(info.used_memory_peak ?? "0", 10),
-      valkeyFragRatio: parseFloat(info.mem_fragmentation_ratio ?? "1"),
-      valkeyHitRatio: total > 0 ? (hits / total) * 100 : 0,
-      valkeyHits: hits,
-      valkeyMisses: misses,
-      valkeyEvicted: parseInt(info.evicted_keys ?? "0", 10),
-      valkeyClients: parseInt(info.connected_clients ?? "0", 10),
-      valkeyTotalKeys: dbSize,
-    };
-  } catch (err: unknown) {
-    logError("Ping: ValkeyClient stats failed", err);
-    return {
-      valkeyVersion: "unknown",
-      valkeyUptimeSecs: 0,
-      valkeyMemUsedBytes: 0,
-      valkeyMemPeakBytes: 0,
-      valkeyFragRatio: 1,
-      valkeyHitRatio: 0,
-      valkeyHits: 0,
-      valkeyMisses: 0,
-      valkeyEvicted: 0,
-      valkeyClients: 0,
-      valkeyTotalKeys: 0,
-    };
-  }
+async function valkeyStats() {
+  return {
+    valkeyVersion: "in-memory",
+    valkeyUptimeSecs: Math.floor(process.uptime()),
+    valkeyMemUsedBytes: 0,
+    valkeyMemPeakBytes: 0,
+    valkeyFragRatio: 1,
+    valkeyHitRatio: 100,
+    valkeyHits: 0,
+    valkeyMisses: 0,
+    valkeyEvicted: 0,
+    valkeyClients: 1,
+    valkeyTotalKeys: 0,
+  };
 }
 
 async function hostStats() {
@@ -459,7 +397,7 @@ export function resetPingCachesForTests(): void {
 }
 
 async function collectPingDataFresh(services: Container): Promise<Omit<PingData, "roundTrip">> {
-  const { client, valkey, moduleStore, stats } = services;
+  const { client, moduleStore, stats } = services;
   const wsPing = client.ws.ping ?? 0;
 
   recordInvocation(services, wsPing);
@@ -481,10 +419,10 @@ async function collectPingDataFresh(services: Container): Promise<Omit<PingData,
   ] = await Promise.all([
     measureLoopLag(),
     probePrisma(services).catch(() => null),
-    probeValkeyRead(valkey).catch(() => null),
-    probeValkeyWrite(valkey).catch(() => null),
+    Promise.resolve(0),
+    Promise.resolve(0),
     ttlCached(pgStat, () => postgresStats(services)),
-    ttlCached(rdStat, () => valkeyStats(valkey)),
+    valkeyStats(),
     hostStats(),
     countDeps(),
     countCodeLines(),

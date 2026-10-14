@@ -1,6 +1,6 @@
 import type { GuildBackup, PanicState, VerificationPanel } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
 import type { GuildBackupData } from "#src/modules/security/data/BackupTypes.js";
 
 export type LockedChannelSnapshot = Record<string, boolean | null>;
@@ -8,7 +8,7 @@ export type LockedChannelSnapshot = Record<string, boolean | null>;
 export class SecurityRepository extends Repository {
 
   public getPanicState(guildId: string): Promise<PanicState | null> {
-    return this.getOrSet(ValkeyKeys.panicState(guildId), ValkeyTTL.panicState, () =>
+    return this.getOrSet(CacheKeys.panicState(guildId), CacheTTL.panicState, () =>
       this.prisma.panicState.findUnique({ where: { guildId } }),
     );
   }
@@ -34,7 +34,7 @@ export class SecurityRepository extends Repository {
         lockedChannels: input.lockedChannels,
       },
     });
-    await this.invalidate(ValkeyKeys.panicState(input.guildId));
+    await this.invalidate(CacheKeys.panicState(input.guildId));
     return state;
   }
 
@@ -42,7 +42,7 @@ export class SecurityRepository extends Repository {
     const result = await this.prisma.panicState.deleteMany({
       where: { guildId },
     });
-    if (result.count > 0) await this.invalidate(ValkeyKeys.panicState(guildId));
+    if (result.count > 0) await this.invalidate(CacheKeys.panicState(guildId));
     return result.count > 0;
   }
 

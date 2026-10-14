@@ -200,12 +200,7 @@ async function checkModuleEnabled(
       : null) ??
     moduleNameFor(command);
   if (!moduleName) return null;
-  if (
-    container.moduleStore &&
-    !container.moduleStore.isModuleDisableable(moduleName)
-  ) {
-    return null;
-  }
+  if (moduleName === "core" || moduleName === "admin") return null;
   const enabled = await container.db.modules.isModuleEnabled(
     source.guildId,
     moduleName,

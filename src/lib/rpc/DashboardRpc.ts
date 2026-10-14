@@ -245,7 +245,7 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
       });
       await tx.submit();
     } finally {
-      tx.dispose();
+      tx.rollback();
     }
     const settings = await container.db.config.getGuildSettings(guildId);
     return { success: true, settings };
@@ -255,11 +255,11 @@ export const dashboardRpcHandlers = implementRpc(dashboardRpc, {
     const { pageSize, take } = resolvePageSize(input);
     const { entries, total, nextCursor } = await container.db.audit.listAuditLogs({
       guildId,
-      userId: input.userId,
-      action: input.action,
-      platform: input.platform,
+      ...(input.userId ? { userId: input.userId } : {}),
+      ...(input.action ? { action: input.action } : {}),
+      ...(input.platform ? { platform: input.platform } : {}),
       take,
-      cursor: input.cursor,
+      ...(input.cursor ? { cursor: input.cursor } : {}),
     });
     return {
       entries: entries.map((entry) => ({

@@ -1,10 +1,9 @@
 import { randomInt } from "node:crypto";
-import { container } from "#src/lib/Services.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { mgetSafe } from "#src/lib/valkey/Cluster.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 
 const LogClaimCodeLength = 6;
-export const LogClaimCodeTtlMs = ValkeyTTL.logClaimCode * 1000;
+export const LogClaimCodeTtlMs = CacheTTL.logClaimCode * 1000;
 
 const CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -13,10 +12,12 @@ export interface LogClaim {
   authorId: string;
   messageId: string;
   claimedAt: string;
-
   replyChannelId?: string;
   replyMessageId?: string;
 }
+
+const activeClaims = new Map<string, Map<string, LogClaim>>();
+const activeCodes = new Map<string, string>();
 
 function randomLogClaimCode(): string {
   let code = "";
@@ -39,62 +40,49 @@ export async function issueLogClaimCode(
   guildId: string,
   issuerId: string,
 ): Promise<string> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const code = randomLogClaimCode();
-    const set = await container.valkey.set(
-      ValkeyKeys.logClaimCode(guildId, code),
-      issuerId,
-      "PX",
-      LogClaimCodeTtlMs,
-      "NX",
-    );
-    if (set === "OK") return code;
-  }
-  throw new Error("Could not issue a claim code, try again.");
-}
-
-export async function peekLogClaimCode(
-  guildId: string,
-  code: string,
-): Promise<string | null> {
-  return container.valkey.get(ValkeyKeys.logClaimCode(guildId, code));
+  const code = randomLogClaimCode();
+  activeCodes.set(`${guildId}:${code}`, issuerId);
+  setTimeout(() => activeCodes.delete(`${guildId}:${code}`), LogClaimCodeTtlMs);
+  return code;
 }
 
 export async function consumeLogClaimCode(
   guildId: string,
   code: string,
 ): Promise<string | null> {
-  return container.valkey.getdel(ValkeyKeys.logClaimCode(guildId, code));
+  const key = `${guildId}:${code}`;
+  const issuerId = activeCodes.get(key) ?? null;
+  activeCodes.delete(key);
+  return issuerId;
 }
 
-export async function registerLogClaim(
+export async function peekLogClaimCode(
+  guildId: string,
+  code: string,
+): Promise<string | null> {
+  const key = `${guildId}:${code}`;
+  return activeCodes.get(key) ?? null;
+}
+
+export const registerLogClaim = recordLogClaim;
+
+export async function recordLogClaim(
   guildId: string,
   claim: LogClaim,
 ): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.logClaim(guildId, claim.channelId),
-    JSON.stringify(claim),
-    "EX",
-    ValkeyTTL.logClaim,
-  );
-  await container.valkey.sadd(ValkeyKeys.logClaimIndex(guildId), claim.channelId);
-  await container.valkey.expire(ValkeyKeys.logClaimIndex(guildId), ValkeyTTL.logClaim);
+  let map = activeClaims.get(guildId);
+  if (!map) {
+    map = new Map();
+    activeClaims.set(guildId, map);
+  }
+  map.set(claim.channelId, claim);
+  cacheStore.set(CacheKeys.logClaim(guildId, claim.channelId), claim, CacheTTL.logClaim * 1000);
 }
 
 export async function listLogClaims(guildId: string): Promise<LogClaim[]> {
-  const channelIds = await container.valkey.smembers(
-    ValkeyKeys.logClaimIndex(guildId),
-  );
-  if (channelIds.length === 0) return [];
-  const raws = await mgetSafe(
-    container.valkey,
-    channelIds.map((channelId) => ValkeyKeys.logClaim(guildId, channelId)),
-  );
-  const claims: LogClaim[] = [];
-  for (const raw of raws) {
-    const claim = parseLogClaim(raw);
-    if (claim) claims.push(claim);
-  }
+  const map = activeClaims.get(guildId);
+  if (!map) return [];
+  const claims = [...map.values()];
   claims.sort((a, b) => a.claimedAt.localeCompare(b.claimedAt));
   return claims;
 }
@@ -103,40 +91,10 @@ export async function dismissLogClaim(
   guildId: string,
   channelId: string,
 ): Promise<LogClaim | null> {
-  const key = ValkeyKeys.logClaim(guildId, channelId);
-  const claim = parseLogClaim(await container.valkey.get(key));
-  await Promise.all([
-    container.invalidation.invalidate(key),
-    container.valkey.srem(ValkeyKeys.logClaimIndex(guildId), channelId),
-  ]);
+  const map = activeClaims.get(guildId);
+  if (!map) return null;
+  const claim = map.get(channelId) ?? null;
+  map.delete(channelId);
+  cacheStore.delete(CacheKeys.logClaim(guildId, channelId));
   return claim;
-}
-
-function parseLogClaim(raw: string | null): LogClaim | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<LogClaim>;
-    if (
-      typeof parsed.channelId !== "string" ||
-      typeof parsed.authorId !== "string" ||
-      typeof parsed.messageId !== "string" ||
-      typeof parsed.claimedAt !== "string"
-    ) {
-      return null;
-    }
-    return {
-      channelId: parsed.channelId,
-      authorId: parsed.authorId,
-      messageId: parsed.messageId,
-      claimedAt: parsed.claimedAt,
-      ...(typeof parsed.replyChannelId === "string"
-        ? { replyChannelId: parsed.replyChannelId }
-        : {}),
-      ...(typeof parsed.replyMessageId === "string"
-        ? { replyMessageId: parsed.replyMessageId }
-        : {}),
-    };
-  } catch {
-    return null;
-  }
 }

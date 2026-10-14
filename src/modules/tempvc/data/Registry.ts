@@ -133,9 +133,7 @@ class TempVcRegistry {
   async #broadcast(
     payload: Record<string, string | number>,
   ): Promise<void> {
-    await container.signals
-      .publish("tempvc", payload)
-      .catch((err: unknown) => logError("TempVC: registry broadcast", err));
+    container.signals.publish("tempvc", payload);
   }
 
   async #ensureGens(guildId: string): Promise<void> {

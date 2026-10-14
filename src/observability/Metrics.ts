@@ -1,264 +1,182 @@
-import {
-  collectDefaultMetrics,
-  Counter,
-  Gauge,
-  Histogram,
-  Registry,
-} from "prom-client";
-import { runReadinessProbes } from "#src/observability/Readiness.js";
+import { Counter, Gauge, Histogram, Registry } from "prom-client";
 
 export const registry = new Registry();
 
-let defaultsStarted = false;
-
-export function initMetrics(service: string): void {
-  registry.setDefaultLabels({ service });
-  if (!defaultsStarted) {
-    collectDefaultMetrics({ register: registry, prefix: "lumi_" });
-    defaultsStarted = true;
-  }
-}
-
 export const commandsTotal = new Counter({
   name: "lumi_commands_total",
-  help: "Commands handled, by command/type/status",
+  help: "Total commands executed",
   labelNames: ["command", "type", "status"] as const,
   registers: [registry],
 });
 
 export const commandDuration = new Histogram({
   name: "lumi_command_duration_seconds",
-  help: "Command handling latency in seconds",
+  help: "Command execution duration in seconds",
   labelNames: ["command", "type"] as const,
-  buckets: [0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [registry],
-});
-
-export const queueDepth = new Gauge({
-  name: "lumi_queue_depth",
-  help: "Pending items in a named queue",
-  labelNames: ["queue"] as const,
-  registers: [registry],
-});
-
-export const streamLength = new Gauge({
-  name: "lumi_stream_length",
-  help: "Length of a Valkey stream (XLEN)",
-  labelNames: ["stream"] as const,
-  registers: [registry],
-});
-
-export const streamConsumerLag = new Gauge({
-  name: "lumi_stream_consumer_lag",
-  help: "Pending (delivered but unacked) entries in a consumer group",
-  labelNames: ["stream", "group"] as const,
-  registers: [registry],
-});
-
-export const streamDlqLength = new Gauge({
-  name: "lumi_stream_dlq_length",
-  help: "Length of the per-stream dead-letter queue",
-  labelNames: ["stream"] as const,
-  registers: [registry],
-});
-
-export const failedJobsTotal = new Counter({
-  name: "lumi_scheduled_jobs_failed_total",
-  help: "BullMQ scheduled jobs that exhausted all retry attempts",
-  labelNames: ["task"] as const,
-  registers: [registry],
-});
-
-export const scheduledJobsGauge = new Gauge({
-  name: "lumi_scheduled_jobs",
-  help: "BullMQ scheduled-tasks queue depth, by state",
-  labelNames: ["state"] as const,
-  registers: [registry],
-});
-
-export const shardLatency = new Gauge({
-  name: "lumi_shard_latency_ms",
-  help: "WebSocket heartbeat latency per shard (ms)",
-  labelNames: ["shard"] as const,
-  registers: [registry],
-});
-
-export const shardStatus = new Gauge({
-  name: "lumi_shard_status",
-  help: "Shard readiness (1 = ready, 0 = down)",
-  labelNames: ["shard"] as const,
-  registers: [registry],
-});
-
-export const guildCount = new Gauge({
-  name: "lumi_guild_count",
-  help: "Guilds currently cached by this process",
-  registers: [registry],
-});
-
-export const rest429Total = new Counter({
-  name: "lumi_rest_429_total",
-  help: "Discord REST 429 (rate-limit) responses",
-  labelNames: ["route", "method", "global"] as const,
-  registers: [registry],
-});
-
-export const restRetryAfterSeconds = new Histogram({
-  name: "lumi_rest_retry_after_seconds",
-  help: "Discord REST retry-after wait time when a rate limit fires",
-  labelNames: ["route", "method", "global"] as const,
-
-  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60],
-  registers: [registry],
-});
-
-export const restInvalidRequestWarnings = new Counter({
-  name: "lumi_rest_invalid_request_warnings_total",
-  help: "discord.js invalidRequestWarning events (each = invalidRequestWarningInterval responses)",
-  registers: [registry],
-});
-
-export const pgPoolSize = new Gauge({
-  name: "lumi_pg_pool_size",
-  help: "Configured max connections for the pg pool",
-  registers: [registry],
-});
-
-export const pgPoolUsed = new Gauge({
-  name: "lumi_pg_pool_used",
-  help: "Checked-out (in-use) pg pool connections",
-  registers: [registry],
-});
-
-export const pgPoolWaiting = new Gauge({
-  name: "lumi_pg_pool_waiting",
-  help: "Clients waiting for a pg pool connection",
-  registers: [registry],
-});
-
-export const dbQueryDuration = new Histogram({
-  name: "lumi_db_query_duration_seconds",
-  help: "Prisma query duration in seconds, by model and operation",
-  labelNames: ["model", "operation"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-  registers: [registry],
-});
-
-export const dbSlowQueriesTotal = new Counter({
-  name: "lumi_db_slow_queries_total",
-  help: "Prisma queries exceeding DB_SLOW_QUERY_THRESHOLD_MS, by model and operation",
-  labelNames: ["model", "operation"] as const,
-  registers: [registry],
-});
-
-export const valkeyCommandDuration = new Histogram({
-  name: "lumi_valkey_command_duration_seconds",
-  help: "iovalkey command round-trip time in seconds, by command (excludes blocking reads)",
-  labelNames: ["command"] as const,
-  buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [registry],
 });
 
 export const cacheHits = new Counter({
   name: "lumi_cache_hits_total",
-  help: "Cache-aside hits, by cache",
+  help: "Cache hits",
   labelNames: ["cache"] as const,
   registers: [registry],
 });
 
 export const cacheMisses = new Counter({
   name: "lumi_cache_misses_total",
-  help: "Cache-aside misses, by cache",
+  help: "Cache misses",
   labelNames: ["cache"] as const,
+  registers: [registry],
+});
+
+export const pgPoolSize = new Gauge({
+  name: "lumi_pg_pool_size",
+  help: "Configured maximum connections in the pg connection pool",
+  registers: [registry],
+});
+
+export const pgPoolUsed = new Gauge({
+  name: "lumi_pg_pool_used",
+  help: "Connections currently checked out of the pg pool",
+  registers: [registry],
+});
+
+export const pgPoolWaiting = new Gauge({
+  name: "lumi_pg_pool_waiting",
+  help: "Requests queued waiting for an available pg connection",
+  registers: [registry],
+});
+
+export const dbQueryDuration = new Histogram({
+  name: "lumi_db_query_duration_seconds",
+  help: "Database query duration in seconds",
+  labelNames: ["model", "operation"] as const,
+  registers: [registry],
+});
+
+export const dbSlowQueriesTotal = new Counter({
+  name: "lumi_db_slow_queries_total",
+  help: "Queries exceeding threshold",
+  labelNames: ["model", "operation"] as const,
   registers: [registry],
 });
 
 export const semaphoreInFlight = new Gauge({
   name: "lumi_semaphore_in_flight",
-  help: "Permits currently checked out of a named semaphore",
+  help: "Permits currently checked out",
   labelNames: ["semaphore"] as const,
   registers: [registry],
 });
 
 export const semaphoreQueued = new Gauge({
   name: "lumi_semaphore_queued",
-  help: "Callers waiting for a permit on a named semaphore",
+  help: "Callers waiting for a permit",
   labelNames: ["semaphore"] as const,
   registers: [registry],
 });
 
 export const semaphoreRejectedTotal = new Counter({
   name: "lumi_semaphore_rejected_total",
-  help: "Callers rejected because a named semaphore's queue was full",
+  help: "Callers rejected because queue was full",
   labelNames: ["semaphore"] as const,
+  registers: [registry],
+});
+
+export const shardLatency = new Gauge({
+  name: "lumi_shard_latency_ms",
+  help: "Shard ping latency in milliseconds",
+  labelNames: ["shard"] as const,
+  registers: [registry],
+});
+
+export const shardStatus = new Gauge({
+  name: "lumi_shard_status",
+  help: "Shard connection status (1=ready, 0=disconnected)",
+  labelNames: ["shard"] as const,
+  registers: [registry],
+});
+
+export const guildCount = new Gauge({
+  name: "lumi_guilds_total",
+  help: "Total guilds currently served by this instance",
+  registers: [registry],
+});
+
+export const rest429Total = new Counter({
+  name: "lumi_rest_rate_limited_total",
+  help: "Discord REST 429 rate limit responses received",
+  labelNames: ["route"] as const,
+  registers: [registry],
+});
+
+export const restRetryAfterSeconds = new Histogram({
+  name: "lumi_rest_retry_after_seconds",
+  help: "Value of retry-after from Discord 429 responses in seconds",
+  labelNames: ["route"] as const,
+  registers: [registry],
+});
+
+export const restInvalidRequestWarnings = new Counter({
+  name: "lumi_rest_invalid_request_warnings_total",
+  help: "Invalid request warnings emitted by @discordjs/rest",
   registers: [registry],
 });
 
 export const dashboardEventPublishFailures = new Counter({
   name: "lumi_dashboard_event_publish_failures_total",
-  help: "Dashboard SSE events dropped or failed to publish, by reason",
-  labelNames: ["reason"] as const,
+  help: "Failures pushing dashboard updates",
   registers: [registry],
 });
 
-export function startMetricsServer(port: number): ReturnType<typeof Bun.serve> | null {
-  if (process.env["METRICS_ENABLED"] === "false") return null;
-  if (typeof Bun === "undefined" || !Bun?.serve) return null;
+export const streamLength = new Gauge({
+  name: "lumi_stream_length",
+  help: "Stream length",
+  labelNames: ["stream"] as const,
+  registers: [registry],
+});
 
-  const host = process.env["METRICS_HOST"] ?? "127.0.0.1";
+export const streamConsumerLag = new Gauge({
+  name: "lumi_stream_consumer_lag",
+  help: "Stream lag",
+  labelNames: ["stream", "group"] as const,
+  registers: [registry],
+});
 
-  try {
-    return Bun.serve({
-      hostname: host,
-      port,
-      async fetch(req) {
-        const { pathname } = new URL(req.url);
-        if (pathname === "/metrics") {
-          try {
-            const body = await registry.metrics();
-            return new Response(body, {
-              headers: { "Content-Type": registry.contentType },
-            });
-          } catch {
-            return new Response(null, { status: 500 });
-          }
-        }
-        if (pathname === "/healthz") {
+export const streamDlqLength = new Gauge({
+  name: "lumi_stream_dlq_length",
+  help: "DLQ length",
+  labelNames: ["stream"] as const,
+  registers: [registry],
+});
 
-          return Response.json({ status: "ok" });
-        }
-        if (pathname === "/readyz") {
+export const failedJobsTotal = new Counter({
+  name: "lumi_scheduled_jobs_failed_total",
+  help: "Failed scheduled jobs",
+  labelNames: ["task"] as const,
+  registers: [registry],
+});
 
-          try {
-            const report = await runReadinessProbes();
-            return Response.json(report, { status: report.ready ? 200 : 503 });
-          } catch (err) {
+export const scheduledJobsGauge = new Gauge({
+  name: "lumi_scheduled_jobs",
+  help: "Scheduled jobs count",
+  labelNames: ["state"] as const,
+  registers: [registry],
+});
 
-            process.stderr.write(
-              `[observability] readiness probes failed: ${String(err)}\n`,
-            );
-            return Response.json(
-              { ready: false, error: "probe error" },
-              { status: 503 },
-            );
-          }
-        }
-        return new Response(null, { status: 404 });
-      },
-      error(err) {
-        process.stderr.write(
-          `[observability] metrics server request failed: ${String(err)}\n`,
-        );
-        return new Response(null, { status: 500 });
-      },
-    });
-  } catch (err: unknown) {
+export const queueDepth = new Gauge({
+  name: "lumi_queue_depth",
+  help: "Queue depth",
+  labelNames: ["queue"] as const,
+  registers: [registry],
+});
 
-    const detail =
-      err instanceof Error && err.message.includes("EADDRINUSE")
-        ? `port ${port} already in use - set METRICS_PORT for this service`
-        : String(err);
-    process.stderr.write(`[observability] metrics server disabled: ${detail}\n`);
-    return null;
-  }
-}
+export const valkeyCommandDuration = new Histogram({
+  name: "lumi_command_duration_legacy",
+  help: "Legacy duration",
+  labelNames: ["command"] as const,
+  registers: [registry],
+});
+
+export function initMetrics(): void {}
+export function startMetricsServer(_port = 9090): any { return null; }

@@ -1,0 +1,277 @@
+import type { ModuleRecord } from "#src/lib/module-system/ModuleStore.js";
+import { container } from "#src/lib/Services.js";
+import { restartChoiceRow } from "#src/lib/Restart.js";
+import { componentEmoji } from "#src/lib/ui/Panels.js";
+import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { ModulePiecesInfo } from "#src/admin/services/Pieces.js";
+import { ModuleUpdateId } from "#src/lib/interactions/Ids.js";
+import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
+import { ButtonStyle } from "discord.js";
+
+function stateEmoji(state: string | undefined): string {
+  if (state === "loaded") return "🟢";
+  if (state === "failed") return "🟡";
+  return "❌";
+}
+
+export function noModulesDiscoveredCard(): CardReply {
+  return makeInfoCard("Modules", "No modules discovered.");
+}
+
+export function moduleListEntries(records: readonly ModuleRecord[]): string[] {
+  return [...records]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((record) => {
+      const globalStatus = record.enabled ? "Enabled" : "Disabled";
+      const stateLabel = record.state ? `[${record.state}]` : "";
+      const kindLabel = container.moduleStore.isAddonModule(record) ? " (Addon)" : " (Built-in)";
+      const statusEmoji = stateEmoji(record.state);
+      return `${statusEmoji} **${record.meta.emoji} ${record.meta.displayName}** (\`${record.name}\` v${record.meta.version})${kindLabel}\n  - Status: ${globalStatus} ${stateLabel}${record.failureReason ? ` (Error: ${record.failureReason})` : ""}`;
+    });
+}
+
+export function moduleNotFoundCard(name: string): CardReply {
+  return makeErrorCard("Not Found", `Module **${name}** was not discovered.`);
+}
+
+export function moduleInfoCard(
+  record: ModuleRecord,
+  pieces: ModulePiecesInfo,
+  pinned = false,
+): CardReply {
+  const description = record.meta.description || "No description provided.";
+  const kindLabel = container.moduleStore.isAddonModule(record) ? "Addon" : "Built-in";
+  const globalStatus = record.enabled ? "Enabled" : "Disabled";
+  const stateLabel = record.state ? `${record.state}` : "unknown";
+  const statusEmoji = stateEmoji(record.state);
+
+  const detailLines = [
+    `**Display Name:** ${record.meta.displayName}`,
+    `**Version:** \`v${record.meta.version}\``,
+    `**Kind:** ${kindLabel}`,
+    `**Global Toggle:** ${globalStatus}`,
+    `**Runtime Status:** ${statusEmoji} \`${stateLabel}\``,
+  ];
+
+  if (pinned) {
+    detailLines.push(
+      `**Update Lock:** 📌 Pinned (\`,module update\` skips this module)`,
+    );
+  }
+
+  if (record.failureReason) {
+    detailLines.push(`**Failure Reason:** \`${record.failureReason}\``);
+  }
+
+  detailLines.push(
+    `**Dependencies:** ${record.meta.dependencies?.length ? record.meta.dependencies.map((d) => `\`${d}\``).join(", ") : "None"}`,
+    `**Conflicts:** ${record.meta.conflicts?.length ? record.meta.conflicts.map((c) => `\`${c}\``).join(", ") : "None"}`,
+  );
+
+  if (record.meta.configFields?.length) {
+    detailLines.push(
+      `**Config Fields:**`,
+      ...record.meta.configFields.map(
+        (f) => `  - \`${f.key}\` (${f.type}): *${f.description || f.label}*`,
+      ),
+    );
+  }
+
+  detailLines.push(`**Registered Pieces:** ${pieces.totalPieces} total`);
+
+  for (const [storeName, names] of Object.entries(pieces.piecesByStore)) {
+    detailLines.push(
+      `- **${storeName}:** ${names.map((p) => `\`${p}\``).join(", ")}`,
+    );
+  }
+
+  return makeInfoCard(
+    `${record.meta.emoji} Module: ${record.meta.displayName} (${record.name})`,
+    [`*${description}*`, detailLines.join("\n")].join("\n\n"),
+  );
+}
+
+function progressCard(title: string, body: string): CardReply {
+  return makeInfoCard(title, body);
+}
+
+export function installProgressCard(
+  repoName: string,
+  moduleName: string,
+): CardReply {
+  return progressCard(
+    "Installing Module",
+    `Installing **${moduleName}** from **${repoName}**...`,
+  );
+}
+
+export function moduleAlreadyInstalledCard(
+  moduleName: string,
+  userId: string,
+): CardReply {
+  const updateRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(ModuleUpdateId.build({ moduleName, userId }))
+      .setLabel("Update Module")
+      .setEmoji(componentEmoji("📥"))
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  return makeWarningCard(
+    `🟡 Already Installed`,
+    `**${moduleName}** is already installed. Would you like to update it instead?`,
+    { actionRows: [updateRow] },
+  );
+}
+
+export function uninstallProgressCard(moduleName: string): CardReply {
+  return progressCard(
+    "Uninstalling Module",
+    `Uninstalling **${moduleName}**...`,
+  );
+}
+
+export function reloadProgressCard(moduleName: string): CardReply {
+  return progressCard(
+    "Reloading Module",
+    `⏳ Unloading and reloading **${moduleName}**...`,
+  );
+}
+
+export function loadProgressCard(moduleName: string): CardReply {
+  return progressCard(
+    "Loading Module",
+    `⏳ Loading **${moduleName}**...`,
+  );
+}
+
+export function unloadProgressCard(moduleName: string): CardReply {
+  return progressCard(
+    "Unloading Module",
+    `⏳ Unloading **${moduleName}**...`,
+  );
+}
+
+export function updateProgressCard(moduleName: string): CardReply {
+  return progressCard(
+    "Updating Module",
+    `⏳ Checking and downloading updates for **${moduleName}**...`,
+  );
+}
+
+export function updateAllProgressCard(): CardReply {
+  return progressCard(
+    "Updating All Modules",
+    `⏳ Scanning and updating all installed modules...`,
+  );
+}
+
+export function noInstalledModulesCard(): CardReply {
+  return makeWarningCard(
+    "No Modules Installed",
+    "You have not installed any third-party modules via the Downloader.",
+  );
+}
+
+export function modulePinnedCard(moduleName: string): CardReply {
+  return makeSuccessCard(
+    `📌 Module Pinned`,
+    `**${moduleName}** is now pinned. \`,module update ${moduleName}\` and \`,module update\` (all) will both skip it until you run \`,module unpin ${moduleName}\`.`,
+  );
+}
+
+export function moduleUnpinnedCard(moduleName: string): CardReply {
+  return makeSuccessCard(
+    `✅ Module Unpinned`,
+    `**${moduleName}** is unpinned and will be updated normally again.`,
+  );
+}
+
+export interface ModuleUpdateOutcome {
+  moduleName: string;
+  status: "updated" | "up-to-date" | "failed" | "skipped-pinned";
+
+  needsRestart: boolean;
+
+  error?: string;
+}
+
+export function multiUpdateReportCard(
+  outcomes: readonly ModuleUpdateOutcome[],
+  userId: string,
+): CardReply {
+  const succeeded = outcomes
+    .filter((outcome) => outcome.status === "updated")
+    .map(
+      (outcome) =>
+        `🟢 **${outcome.moduleName}**${outcome.needsRestart ? "" : " (hot-reloaded)"}`,
+    );
+  const skipped = outcomes
+    .filter((outcome) => outcome.status === "up-to-date")
+    .map((outcome) => `- **${outcome.moduleName}** (up-to-date)`);
+  const pinned = outcomes
+    .filter((outcome) => outcome.status === "skipped-pinned")
+    .map((outcome) => `📌 **${outcome.moduleName}** (pinned)`);
+  const failed = outcomes
+    .filter((outcome) => outcome.status === "failed")
+    .map(
+      (outcome) =>
+        `🔴 **${outcome.moduleName}** - ${outcome.error}`,
+    );
+  const needsRestart = outcomes.some(
+    (outcome) => outcome.status === "updated" && outcome.needsRestart,
+  );
+
+  const report: string[] = [];
+  if (succeeded.length > 0)
+    report.push(`### Updated:\n${succeeded.join("\n")}`);
+  if (skipped.length > 0) report.push(`### Up-To-Date:\n${skipped.join("\n")}`);
+  if (pinned.length > 0) report.push(`### Pinned (skipped):\n${pinned.join("\n")}`);
+  if (failed.length > 0) report.push(`### Failed:\n${failed.join("\n")}`);
+  if (needsRestart) {
+    report.push(
+      "_New code is on disk. A restart is needed to load it; one restart applies every updated module._",
+    );
+  }
+
+  return makeSuccessCard("Multi-Module Update Report", report.join("\n\n"), {
+    actionRows: needsRestart ? [restartChoiceRow(userId)] : undefined,
+  });
+}
+
+export function moduleHelpCard(): CardReply {
+  const panelRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:modules")
+      .setLabel("Open Modules Panel")
+      .setEmoji(componentEmoji("⚙️"))
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId("lumi:tab:addons")
+      .setLabel("Open Add-ons Manager")
+      .setEmoji(componentEmoji("📦"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  return makeInfoCard(
+    "Module Management Commands",
+    [
+      "Tip: if you prefer buttons and menus, use the panel buttons below.",
+      "",
+      "**Global & Local Module Commands:**",
+      "- `,module list` or `/module list` - List all discovered modules and their status.",
+      "- `,module info <name>` or `/module info <name>` - Show detailed info and registered pieces.",
+      "- `,module enable <name>` or `/module enable <name>` - Enable a module globally.",
+      "- `,module disable <name>` or `/module disable <name>` - Disable a module globally.",
+      "- `,module reload <name>` or `/module reload <name>` - Reload a module's source code dynamically.",
+      "",
+      "**Downloader Commands (Addons):**",
+      "- `,module install <repo> <module>` or `/module install` - Install a module from a repo.",
+      "- `,module uninstall <module>` or `/module uninstall` - Uninstall a downloader module.",
+      "- `,module update [module]` or `/module update` - Update an installed module (or all).",
+      "- `,module pin <module>` or `/module pin` - Freeze a module's version; updates skip it.",
+      "- `,module unpin <module>` or `/module unpin` - Remove the update lock.",
+    ].join("\n"),
+    { actionRows: [panelRow] },
+  );
+}

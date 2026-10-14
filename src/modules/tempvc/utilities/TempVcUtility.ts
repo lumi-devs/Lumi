@@ -13,7 +13,7 @@ import { Routes } from "discord-api-types/v10";
 import { errorCode, logError } from "#src/lib/utilities/Errors.js";
 import { renderTemplate } from "#src/lib/utilities/Template.js";
 import { scheduleTask, QueuePriority } from "#src/lib/scheduler/Schedule.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { claimCooldown } from "#src/lib/cache/Cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
@@ -184,11 +184,10 @@ const tempVcUtility = defineUtility({
     userId: string,
   ): Promise<boolean> {
     const cooldownMs = await getCreateCooldownMs(services, guildId);
-    return !(await claimCooldown(
-      services,
+    return !claimCooldown(
       TempVcKeys.createCooldown(guildId, userId),
       cooldownMs,
-    ));
+    );
   },
 
   async createVc(

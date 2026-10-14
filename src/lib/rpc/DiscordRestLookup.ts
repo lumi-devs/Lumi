@@ -9,9 +9,9 @@ import {
   type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
 import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 import { swallow } from "#src/lib/utilities/Errors.js";
 
 export async function fetchGuildRest(guildId: string): Promise<APIGuild | null> {
@@ -27,14 +27,13 @@ export async function fetchGuildRest(guildId: string): Promise<APIGuild | null> 
     } as unknown as APIGuild;
   }
 
-  return repositoryCache.getOrLoad<APIGuild | null>(
-    ValkeyKeys.restGuild(guildId),
-    ValkeyTTL.restGuild * 1000,
+  return cacheStore.getOrLoad<APIGuild | null>(
+    CacheKeys.restGuild(guildId),
+    CacheTTL.minute,
     () =>
       container.client.rest.get(Routes.guild(guildId), {
         query: new URLSearchParams({ with_counts: "true" }),
       }) as Promise<APIGuild>,
-    (data) => JSON.parse(data) as APIGuild,
   ).catch(swallow("discord-rest-lookup: guild fetch failed"));
 }
 
@@ -47,14 +46,13 @@ export async function fetchGuildMemberRest(
     return cachedMember.toJSON() as APIGuildMember;
   }
 
-  return repositoryCache.getOrLoad<APIGuildMember | null>(
-    ValkeyKeys.restMember(guildId, userId),
-    ValkeyTTL.restMember * 1000,
+  return cacheStore.getOrLoad<APIGuildMember | null>(
+    CacheKeys.restMember(guildId, userId),
+    CacheTTL.minute,
     () =>
       container.client.rest.get(
         Routes.guildMember(guildId, userId),
       ) as Promise<APIGuildMember>,
-    (data) => JSON.parse(data) as APIGuildMember,
   ).catch(swallow("discord-rest-lookup: member fetch failed"));
 }
 
@@ -80,11 +78,10 @@ export async function fetchGuildMemberRestUncached(
 }
 
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {
-  return repositoryCache.getOrLoad<APIChannel | null>(
-    ValkeyKeys.restChannel(channelId),
-    ValkeyTTL.restChannel * 1000,
+  return cacheStore.getOrLoad<APIChannel | null>(
+    CacheKeys.restChannel(channelId),
+    CacheTTL.minute,
     () => container.client.rest.get(Routes.channel(channelId)) as Promise<APIChannel>,
-    (data) => JSON.parse(data) as APIChannel,
   ).catch(swallow("discord-rest-lookup: channel fetch failed"));
 }
 
@@ -110,20 +107,18 @@ export const GuildTextBasedChannelTypes = new Set<ChannelType>([
 ]);
 
 export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | null> {
-  return repositoryCache.getOrLoad<APIRole[] | null>(
-    ValkeyKeys.restGuildRoles(guildId),
-    ValkeyTTL.restGuildRoles * 1000,
+  return cacheStore.getOrLoad<APIRole[] | null>(
+    CacheKeys.restGuildRoles(guildId),
+    CacheTTL.minute,
     () => container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>,
-    (data) => JSON.parse(data) as APIRole[],
   ).catch(swallow("discord-rest-lookup: guild roles fetch failed"));
 }
 
 export async function fetchGuildChannelsRest(guildId: string): Promise<APIChannel[] | null> {
-  return repositoryCache.getOrLoad<APIChannel[] | null>(
-    ValkeyKeys.restGuildChannels(guildId),
-    ValkeyTTL.restGuildChannels * 1000,
+  return cacheStore.getOrLoad<APIChannel[] | null>(
+    CacheKeys.restGuildChannels(guildId),
+    CacheTTL.minute,
     () => container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>,
-    (data) => JSON.parse(data) as APIChannel[],
   ).catch(swallow("discord-rest-lookup: guild channels fetch failed"));
 }
 
@@ -151,14 +146,13 @@ export async function fetchGuildMembersSampleRest(
   guildId: string,
   limit: number,
 ): Promise<APIGuildMember[] | null> {
-  return repositoryCache.getOrLoad<APIGuildMember[] | null>(
-    ValkeyKeys.restGuildMembersSample(guildId, limit),
-    ValkeyTTL.restGuildMembersSample * 1000,
+  return cacheStore.getOrLoad<APIGuildMember[] | null>(
+    CacheKeys.restGuildMembersSample(guildId, limit),
+    CacheTTL.minute,
     () =>
       container.client.rest.get(Routes.guildMembers(guildId), {
         query: new URLSearchParams({ limit: String(limit) }),
       }) as Promise<APIGuildMember[]>,
-    (data) => JSON.parse(data) as APIGuildMember[],
   ).catch(swallow("discord-rest-lookup: guild members sample fetch failed"));
 }
 

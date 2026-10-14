@@ -51,7 +51,7 @@ async function buildAboutCard(
     `### ⚙️ __${coreArchHeader}__\n` +
       `_Lumi version_ v${LumiInfo.version}\n` +
       `*Bun* v${data.runtime.replace(/^Bun v/, "")} · *discord.js* v${data.djsVersion}\n` +
-      `*PostgreSQL* 18 · *Valkey* v${data.valkeyVersion}`,
+      `*PostgreSQL* 18 · *In-Memory Architecture*`,
 
     `### 📦 __Codebase__\n` +
       `**${data.codeLines.toLocaleString()}** lines of TypeScript · **${data.modules.length}** modules · **${data.depCount.toLocaleString()}** dependencies\n` +

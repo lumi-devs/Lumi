@@ -196,6 +196,7 @@ export class ModuleStore {
   }
 
   public isModuleDisableable(name: string): boolean {
+    if (name === "core" || name === "admin") return false;
     const record = this.#records.get(name);
     return record ? record.meta.disableable !== false : true;
   }

@@ -1,6 +1,6 @@
 import { defineUtility } from "#src/lib/module-system/Utility.js";
 import type { Container } from "#src/lib/Services.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
 import {
   compileRules,
@@ -20,29 +20,6 @@ import {
 
 const DuplicateWindowSeconds = 30;
 const WarnCooldownSeconds = 30;
-
-const AddHeatScript = `
-local h = tonumber(redis.call('HGET', KEYS[1], 'h')) or 0
-local t = tonumber(redis.call('HGET', KEYS[1], 't'))
-local now = tonumber(ARGV[1])
-local decay = tonumber(ARGV[2])
-local points = tonumber(ARGV[3])
-if t == nil then t = now end
-local cur = h
-if decay > 0 then
-  local minutes = (now - t) / 60000
-  if minutes < 0 then minutes = 0 end
-  cur = h - minutes * decay
-end
-if cur < 0 then cur = 0 end
-local nxt = cur + points
-local ttl = 3600
-if decay > 0 then ttl = math.ceil(nxt / decay * 60) + 60 end
-local value = string.format('%.3f', nxt)
-redis.call('HSET', KEYS[1], 'h', value, 't', string.format('%d', now))
-redis.call('EXPIRE', KEYS[1], string.format('%d', ttl))
-return value
-`;
 
 const DuplicateContentCap = 300;
 
@@ -294,32 +271,34 @@ export const filterUtility = defineUtility({
   },
 
   async addHeat(
-    services: Container,
+    _services: Container,
     guildId: string,
     userId: string,
     points: number,
     config: HeatConfig,
   ): Promise<number> {
-    const key = ValkeyKeys.filterHeat(guildId, userId);
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const key = CacheKeys.filterHeat(guildId, userId);
     const now = Date.now();
-    return Number.parseFloat(
-      (await services.valkey.eval(
-        AddHeatScript,
-        1,
-        key,
-        String(now),
-        String(config.decayPerMinute),
-        String(points),
-      )) as string,
-    );
+    const stored = cacheStore.get<{ h: number; t: number }>(key);
+    let cur = stored?.h ?? 0;
+    const t = stored?.t ?? now;
+    if (config.decayPerMinute > 0) {
+      const minutes = Math.max(0, (now - t) / 60000);
+      cur = Math.max(0, cur - minutes * config.decayPerMinute);
+    }
+    const nxt = cur + points;
+    cacheStore.set(key, { h: nxt, t: now }, 3600 * 1000);
+    return nxt;
   },
 
-  async clearHeat(services: Container, guildId: string, userId: string): Promise<void> {
-    await services.invalidation.invalidate(ValkeyKeys.filterHeat(guildId, userId));
+  async clearHeat(_services: Container, guildId: string, userId: string): Promise<void> {
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    cacheStore.delete(CacheKeys.filterHeat(guildId, userId));
   },
 
   async checkDuplicate(
-    services: Container,
+    _services: Container,
     guildId: string,
     userId: string,
     content: string,
@@ -327,129 +306,113 @@ export const filterUtility = defineUtility({
     const trimmed = content.trim();
     if (trimmed.length === 0) return { exact: false, similarity: 0 };
     const capped = trimmed.slice(0, DuplicateContentCap);
-    const key = ValkeyKeys.filterLastMsg(guildId, userId);
-    const prev = await services.valkey.getset(key, capped);
-    await services.valkey.expire(key, DuplicateWindowSeconds);
+    const key = CacheKeys.filterLastMsg(guildId, userId);
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const prev = cacheStore.get<string>(key) ?? null;
+    cacheStore.set(key, capped, DuplicateWindowSeconds * 1000);
     if (prev === null) return { exact: false, similarity: 0 };
     if (prev === capped) return { exact: true, similarity: 1 };
     return { exact: false, similarity: similarityRatio(prev, capped) };
   },
 
   async claimEscalation(
-    services: Container,
+    _services: Container,
     guildId: string,
     userId: string,
     action: string,
   ): Promise<boolean> {
-    const set = await services.valkey.set(
-      `${ValkeyKeys.filterHeatActed(guildId, userId)}:${action}`,
-      "1",
-      "EX",
-      WarnCooldownSeconds,
-      "NX",
+    const { claimCooldown } = await import("#src/lib/cache/Cooldown.js");
+    return claimCooldown(
+      `${CacheKeys.filterHeatActed(guildId, userId)}:${action}`,
+      WarnCooldownSeconds * 1000,
     );
-    return set === "OK";
   },
 
-  async recordViolation(services: Container, guildId: string, userId: string): Promise<number> {
-    const key = ValkeyKeys.filterHeatViolations(guildId, userId);
-    const results = await services.valkey
-      .multi()
-      .incr(key)
-      .expire(key, VIOLATION_RESET_SECONDS)
-      .exec();
-    return (results?.[0]?.[1] as number) ?? 1;
+  async recordViolation(_services: Container, guildId: string, userId: string): Promise<number> {
+    const key = `filter:violation:${guildId}:${userId}`;
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const current = cacheStore.get<number>(key) ?? 0;
+    const nxt = current + 1;
+    cacheStore.set(key, nxt, VIOLATION_RESET_SECONDS * 1000);
+    return nxt;
   },
 
   async recordHeatPanicRaider(
-    services: Container,
+    _services: Container,
     guildId: string,
     userId: string,
     config: Pick<HeatConfig, "panicWindowSeconds" | "panicRaiderCount">,
   ): Promise<boolean> {
     if (config.panicRaiderCount <= 0) return false;
-    const key = ValkeyKeys.filterHeatPanicRaiders(guildId);
-    const results = await services.valkey
-      .multi()
-      .sadd(key, userId)
-      .expire(key, config.panicWindowSeconds)
-      .scard(key)
-      .exec();
-    const distinct = (results?.[2]?.[1] as number) ?? 0;
-    if (distinct < config.panicRaiderCount) return false;
+    const key = CacheKeys.filterHeatPanicRaiders(guildId);
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const set = cacheStore.get<Set<string>>(key) ?? new Set<string>();
+    set.add(userId);
+    cacheStore.set(key, set, config.panicWindowSeconds * 1000);
+    if (set.size < config.panicRaiderCount) return false;
 
-    await services.valkey.set(
-      ValkeyKeys.filterHeatPanicFlagged(guildId, userId),
+    cacheStore.set(
+      CacheKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
-      "EX",
-      HEAT_PANIC_FLAG_SECONDS,
+      HEAT_PANIC_FLAG_SECONDS * 1000,
     );
-    const activated = await services.valkey.set(
-      ValkeyKeys.filterHeatPanicActive(guildId),
-      String(Date.now()),
-      "EX",
-      HEAT_PANIC_FLAG_SECONDS,
-      "NX",
-    );
-    return activated === "OK";
+    const activeKey = CacheKeys.filterHeatPanicActive(guildId);
+    if (!cacheStore.has(activeKey)) {
+      cacheStore.set(activeKey, String(Date.now()), HEAT_PANIC_FLAG_SECONDS * 1000);
+      return true;
+    }
+    return false;
   },
 
-  async flagHeatPanicRaider(services: Container, guildId: string, userId: string): Promise<void> {
-    await services.valkey.set(
-      ValkeyKeys.filterHeatPanicFlagged(guildId, userId),
+  async flagHeatPanicRaider(_services: Container, guildId: string, userId: string): Promise<void> {
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    cacheStore.set(
+      CacheKeys.filterHeatPanicFlagged(guildId, userId),
       "1",
-      "EX",
-      HEAT_PANIC_FLAG_SECONDS,
+      HEAT_PANIC_FLAG_SECONDS * 1000,
     );
   },
 
-  async isHeatPanicActive(services: Container, guildId: string): Promise<boolean> {
-    return (await services.valkey.exists(ValkeyKeys.filterHeatPanicActive(guildId))) === 1;
+  async isHeatPanicActive(_services: Container, guildId: string): Promise<boolean> {
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    return cacheStore.has(CacheKeys.filterHeatPanicActive(guildId));
   },
 
-  async isFlaggedRaider(services: Container, guildId: string, userId: string): Promise<boolean> {
-    return (
-      (await services.valkey.exists(ValkeyKeys.filterHeatPanicFlagged(guildId, userId))) === 1
-    );
+  async isFlaggedRaider(_services: Container, guildId: string, userId: string): Promise<boolean> {
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    return cacheStore.has(CacheKeys.filterHeatPanicFlagged(guildId, userId));
   },
 
   async recordMentions(
-    services: Container,
+    _services: Container,
     guildId: string,
     count: number,
     windowSeconds: number,
   ): Promise<number> {
     if (count <= 0) return 0;
-    const key = ValkeyKeys.filterMentionWindow(guildId);
-    const results = await services.valkey
-      .multi()
-      .incrby(key, count)
-      .expire(
-        key,
-        windowSeconds > 0 ? windowSeconds : MENTION_WINDOW_DEFAULT_SECONDS,
-        "NX",
-      )
-      .exec();
-    return (results?.[0]?.[1] as number) ?? count;
+    const key = CacheKeys.filterMentionWindow(guildId);
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const current = cacheStore.get<number>(key) ?? 0;
+    const nxt = current + count;
+    cacheStore.set(key, nxt, (windowSeconds > 0 ? windowSeconds : MENTION_WINDOW_DEFAULT_SECONDS) * 1000);
+    return nxt;
   },
 
   async activateAutoLockdown(
-    services: Container,
+    _services: Container,
     guildId: string,
     durationMinutes: number,
   ): Promise<boolean> {
-    const activated = await services.valkey.set(
-      ValkeyKeys.filterAutoLockdown(guildId),
-      String(Date.now()),
-      "EX",
-      Math.max(60, durationMinutes * 60),
-      "NX",
-    );
-    return activated === "OK";
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    const key = CacheKeys.filterAutoLockdown(guildId);
+    if (cacheStore.has(key)) return false;
+    cacheStore.set(key, String(Date.now()), Math.max(60, durationMinutes * 60) * 1000);
+    return true;
   },
 
-  async releaseAutoLockdown(services: Container, guildId: string): Promise<void> {
-    await services.invalidation.invalidate(ValkeyKeys.filterAutoLockdown(guildId));
+  async releaseAutoLockdown(_services: Container, guildId: string): Promise<void> {
+    const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+    cacheStore.delete(CacheKeys.filterAutoLockdown(guildId));
   }
 });
 

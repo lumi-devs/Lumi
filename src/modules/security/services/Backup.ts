@@ -1,6 +1,6 @@
 import { container } from "#src/lib/Services.js";
 import type { Guild } from "discord.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 import { snapshotGuild } from "#src/modules/security/data/BackupTypes.js";
 import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
 import { getConfigNumber } from "#src/modules/security/services/ConfigHelpers.js";
@@ -23,24 +23,22 @@ export async function createBackup(guild: Guild, keepCount: number): Promise<num
 }
 
 export async function flagRestorePending(guildId: string): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.securityRestorePending(guildId),
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  cacheStore.set(
+    CacheKeys.securityRestorePending(guildId),
     "1",
-    "EX",
-    24 * 60 * 60,
+    24 * 60 * 60 * 1000,
   );
 }
 
 export async function isRestorePending(guildId: string): Promise<boolean> {
-  return (
-    (await container.valkey.exists(ValkeyKeys.securityRestorePending(guildId))) === 1
-  );
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  return cacheStore.has(CacheKeys.securityRestorePending(guildId));
 }
 
 export async function clearRestorePending(guildId: string): Promise<void> {
-  await container.invalidation.invalidate(
-    ValkeyKeys.securityRestorePending(guildId),
-  );
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  cacheStore.delete(CacheKeys.securityRestorePending(guildId));
 }
 
 export async function restoreFromBackup(

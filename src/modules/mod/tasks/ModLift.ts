@@ -1,6 +1,6 @@
-import { RelayTask, type CatchUpMeta } from "#src/lib/scheduler/Tasks.js";
+import { RelayTask } from "#src/lib/scheduler/Tasks.js";
 
-export interface ModLiftPayload extends CatchUpMeta {
+export interface ModLiftPayload {
   caseId: number;
 }
 

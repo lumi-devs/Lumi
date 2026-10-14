@@ -15,7 +15,7 @@ declare module "discord.js" {
 }
 
 import type { OutboundSendPayload } from "#src/lib/outbound/SendQueue.js";
-import type { GdprExportFirePayload } from "#src/modules/core/services/GdprExportTask.js";
+import type { GdprExportFirePayload } from "#src/core/services/GdprExportTask.js";
 import type { ModLiftPayload } from "#src/modules/mod/tasks/ModLift.js";
 import type { WarnDecayPayload } from "#src/modules/mod/tasks/WarnDecay.js";
 import type { AutoLockdownUnlockPayload } from "#src/modules/filter/tasks/AutoLockdownUnlock.js";

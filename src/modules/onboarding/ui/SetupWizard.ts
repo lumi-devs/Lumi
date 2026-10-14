@@ -7,7 +7,7 @@ import {
   stepCustomId,
   type SetupWizardState,
 } from "#src/modules/onboarding/services/SetupWizard.js";
-import { SetupStepId } from "#src/modules/core/Constants.js";
+import { SetupStepId } from "#src/lib/interactions/Ids.js";
 import { makeCard, makeSuccessCard, type CardReply } from "#src/lib/ui/Cards.js";
 import { resolveCardColor } from "#src/lib/ui/Palette.js";
 import {

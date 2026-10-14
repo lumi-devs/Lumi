@@ -1,5 +1,5 @@
 import type { Container } from "#src/lib/Services.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 import { BrandColors } from "#src/lib/ui/Palette.js";
 
 export interface GuildContextData {
@@ -10,7 +10,7 @@ export interface GuildContextData {
 }
 
 export async function getGuildContext(services: Container, guildId: string): Promise<GuildContextData> {
-  return repositoryCache.getOrLoad(`gc:${guildId}`, 7500, async () => {
+  return cacheStore.getOrLoad(`gc:${guildId}`, 7500, async () => {
     const [settings, ignoredGuild, brandColorConfig] = await Promise.all([
       services.db.config.getGuildSettings(guildId),
       services.db.access.isGuildIgnored(guildId),

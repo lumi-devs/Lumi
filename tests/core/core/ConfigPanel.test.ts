@@ -6,7 +6,7 @@ import {
   buildFeatureDetailView,
   buildFeatureListView,
   buildFieldEditView,
-} from "#src/modules/admin/ui/Modules.js";
+} from "#src/admin/ui/Modules.js";
 import type { CardReply } from "#src/lib/ui/Cards.js";
 import { resolveCardColor } from "#src/lib/ui/Palette.js";
 import { describe, expect, it } from "bun:test";

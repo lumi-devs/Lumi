@@ -1,51 +1,44 @@
 import type { Container } from "#src/lib/Services.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { claimCooldown } from "#src/lib/cache/Cooldown.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 
 export const StickyCooldownMs = 1_000;
 
 export const stickyKey = (guildId: string, channelId: string): string =>
-  `lumi:sticky:${guildId}:${channelId}`;
+  `sticky:${guildId}:${channelId}`;
 
 const stickyCooldownKey = (guildId: string, channelId: string): string =>
-  `lumi:sticky:cd:${guildId}:${channelId}`;
+  `sticky:cd:${guildId}:${channelId}`;
 
 export async function getStickyMessageId(
-  services: Container,
+  _services: Container,
   guildId: string,
   channelId: string,
 ): Promise<string | null> {
-  return services.valkey.get(stickyKey(guildId, channelId));
+  return cacheStore.get<string>(stickyKey(guildId, channelId)) ?? null;
 }
 
 export async function setStickyMessageId(
-  services: Container,
+  _services: Container,
   guildId: string,
   channelId: string,
   messageId: string,
 ): Promise<void> {
-  await services.valkey.set(stickyKey(guildId, channelId), messageId);
+  cacheStore.set(stickyKey(guildId, channelId), messageId, 86400 * 1000);
 }
 
 export async function delStickyMessageId(
-  services: Container,
+  _services: Container,
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  if (services.invalidation) {
-    await services.invalidation.invalidate(stickyKey(guildId, channelId));
-  } else {
-    await services.valkey.del(stickyKey(guildId, channelId));
-  }
+  cacheStore.delete(stickyKey(guildId, channelId));
 }
 
 export async function isStickyOnCooldown(
-  services: Container,
+  _services: Container,
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  return !(await claimCooldown(
-    services,
-    stickyCooldownKey(guildId, channelId),
-    StickyCooldownMs,
-  ));
+  return !claimCooldown(stickyCooldownKey(guildId, channelId), StickyCooldownMs);
 }

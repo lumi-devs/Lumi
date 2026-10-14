@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { repoDef } from "#src/modules/admin/commands/Repo.js";
+import { repoDef } from "#src/admin/commands/Repo.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({
   getUtility: vi.fn(),

@@ -17,7 +17,7 @@ import {
   buildSetupStepView,
   buildSetupSuccessCard,
 } from "#src/modules/onboarding/ui/SetupWizard.js";
-import { SetupId } from "#src/modules/core/Constants.js";
+import { SetupId } from "#src/lib/interactions/Ids.js";
 import type { ButtonInteraction } from "discord.js";
 
 export const setupWizardButton = defineInteraction({

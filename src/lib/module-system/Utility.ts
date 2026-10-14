@@ -39,6 +39,11 @@ function isUtilityDef(value: unknown): value is UtilityDef {
   );
 }
 
+export async function registerUtility(def: UtilityDef): Promise<void> {
+  utilityRegistry.set(def.name, def);
+  await def.onLoad?.();
+}
+
 export async function loadUtilities(moduleDir: string): Promise<void> {
   let entries: import("node:fs").Dirent[];
   try {

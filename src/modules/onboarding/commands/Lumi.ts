@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
 import type { CommandDef } from "#src/lib/commands/CommandDef.js";
 import { CommandContext } from "#src/lib/commands/Context.js";
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
+import { loadFeatures } from "#src/admin/services/ConfigPanel.js";
 import { buildHubView } from "#src/modules/onboarding/ui/Hub.js";
 
 export const lumiDef: CommandDef = {

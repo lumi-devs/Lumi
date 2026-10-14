@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { guildDeleteEventBusListener } from "#src/modules/core/listeners/bus/GuildDelete.js";
+import { guildDeleteEventBusListener } from "#src/core/listeners/bus/GuildDelete.js";
 import { tryGetUtility } from "#src/lib/module-system/Utility.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({

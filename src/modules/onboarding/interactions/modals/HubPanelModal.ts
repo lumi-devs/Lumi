@@ -1,19 +1,19 @@
 import { fetchTyped } from "#src/lib/i18n/Index.js";
 import { deriveRepoNameFromUrl } from "#src/contracts/Index.ts";
 import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#src/modules/admin/utilities/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#src/admin/utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#src/admin/utilities/GuildSettingsUtility.js";
 import {
   hasAdminPermit,
   hasOwnerPermit,
   renderSettings,
 } from "#src/modules/onboarding/services/HubPanel.js";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { HubAddonModalId } from "#src/modules/core/Constants.js";
+import { HubAddonModalId } from "#src/lib/interactions/Ids.js";
 import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
 import type { Container } from "#src/lib/Services.js";
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
-import { buildAddonReposCard } from "#src/modules/admin/ui/Addons.js";
+import { buildAddonReposCard } from "#src/admin/ui/Addons.js";
 
 export const hubPanelModal = defineInteraction({
   prefix: ["lumi:prefixmodal", HubAddonModalId.prefix],

@@ -1,44 +1,38 @@
-import type { Container } from "#src/lib/Services.js";
+import { RateLimitManager } from "@sapphire/ratelimits";
 
 export interface AntiSpamInterval {
   windowMs: number;
   limit: number;
 }
 
-function keyFor(key: string, id: string, windowMs: number): string {
-  return `lumi:antispam:${key}:${windowMs}:${id}`;
-}
-
 export class AntiSpam {
-  private readonly intervals: AntiSpamInterval[];
+  private readonly managers: RateLimitManager[];
 
   public constructor(
-    private readonly services: Container,
-    private readonly key: string,
+    _services: any,
+    _key: string,
     intervals: AntiSpamInterval | AntiSpamInterval[],
   ) {
-    this.intervals = Array.isArray(intervals) ? intervals : [intervals];
+    const list = Array.isArray(intervals) ? intervals : [intervals];
+    this.managers = list.map((i) => new RateLimitManager(i.windowMs, i.limit));
   }
 
   public async stamp(id: string): Promise<void> {
-    for (const { windowMs } of this.intervals) {
-      const key = keyFor(this.key, id, windowMs);
-      const count = await this.services.valkey.incr(key);
-      if (count === 1) await this.services.valkey.pexpire(key, windowMs);
+    for (const m of this.managers) {
+      m.acquire(id).consume();
     }
   }
 
   public async isSpammy(id: string): Promise<boolean> {
-    for (const { windowMs, limit } of this.intervals) {
-      const count = await this.services.valkey.get(keyFor(this.key, id, windowMs));
-      if (count !== null && Number(count) >= limit) return true;
+    for (const m of this.managers) {
+      if (m.acquire(id).limited) return true;
     }
     return false;
   }
 
   public async reset(id: string): Promise<void> {
-    for (const { windowMs } of this.intervals) {
-      await this.services.valkey.del(keyFor(this.key, id, windowMs));
+    for (const m of this.managers) {
+      m.delete(id);
     }
   }
 }

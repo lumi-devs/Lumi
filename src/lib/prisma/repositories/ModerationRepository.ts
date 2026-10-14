@@ -1,5 +1,5 @@
 import { Prisma, type CaseAction, type CaseTypeSetting, type ModerationCase } from "@prisma/client";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,
@@ -188,8 +188,8 @@ export class ModerationRepository extends Repository {
 
   public isVoiceMuted(guildId: string, userId: string): Promise<boolean> {
     return this.getOrSet(
-      ValkeyKeys.voiceMuteState(guildId, userId),
-      ValkeyTTL.voiceMute,
+      CacheKeys.voiceMuteState(guildId, userId),
+      CacheTTL.voiceMute,
       () =>
         this.prisma.moderationCase
           .count({

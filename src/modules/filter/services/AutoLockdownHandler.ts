@@ -1,5 +1,5 @@
 import { type Container } from "#src/lib/Services.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 import { unlockAllTextChannels } from "#src/lib/discord/ChannelLocks.js";
 import { swallow } from "#src/lib/utilities/Errors.js";
 import { tryGetUtility } from "#src/lib/module-system/Utility.js";
@@ -10,7 +10,8 @@ export async function handleAutoLockdownUnlockFire(
   payload: AutoLockdownUnlockPayload,
 ): Promise<void> {
   const { guildId } = payload;
-  const active = await services.valkey.exists(ValkeyKeys.filterAutoLockdown(guildId));
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  const active = cacheStore.has(CacheKeys.filterAutoLockdown(guildId));
   if (!active) return;
 
   const guild = await services.client.guilds
@@ -19,7 +20,7 @@ export async function handleAutoLockdownUnlockFire(
   if (!guild) return;
 
   await unlockAllTextChannels(guild);
-  await services.invalidation.invalidate(ValkeyKeys.filterAutoLockdown(guildId));
+  await services.invalidation.invalidate(CacheKeys.filterAutoLockdown(guildId));
 
   const logService = tryGetUtility("guild-log");
   await logService?.dispatch(services, {

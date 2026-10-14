@@ -1,11 +1,8 @@
 import type { Container } from "#src/lib/Services.js";
 import { createMemberBatcher } from "#src/lib/client/MemberBatcher.js";
 import type { Guild, GuildMember } from "discord.js";
-import {pipelineBySlot} from "#src/lib/valkey/Cluster.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
 import { type WarnThresholdAction } from "#src/contracts/rpc/Index.ts";
 import { Time } from "#src/shared/Index.ts";
-import { thresholdKey } from "#src/modules/mod/data/ThresholdRules.js";
 import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
 import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
 import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
@@ -23,14 +20,7 @@ interface ThresholdEntry {
 
 export type WarnThresholds = Record<string, ThresholdEntry>;
 
-const warnCountKey = (guildId: string, userId: string) =>
-  `lumi:mod:${guildId}:warns:${userId}`;
-const thresholdFiredKey = (guildId: string, userId: string, count: number) =>
-  `lumi:mod:${guildId}:threshold-fired:${userId}:${count}`;
-
 const ThresholdFiredTtl = 60;
-
-const ThresholdTtl = 300;
 
 const memberBatchers = new Map<
   string,
@@ -57,16 +47,13 @@ async function actionableMember(
   return member;
 }
 
+const activeWarnCounts = new Map<string, number>();
+const thresholdsFired = new Set<string>();
+
 export async function getThresholds(
   container: Container,
   guildId: string,
 ): Promise<WarnThresholds> {
-  const cached = await container.valkey.get(thresholdKey(guildId));
-  if (cached) {
-    const parsedCache = tryParseJSON(cached) as WarnThresholds | null;
-    if (parsedCache) return parsedCache;
-  }
-
   const rows = await container.db.moderation.getWarnThresholds(guildId);
   const parsed: WarnThresholds = {};
   for (const row of rows) {
@@ -75,78 +62,53 @@ export async function getThresholds(
       duration: row.duration ?? undefined,
     };
   }
-
-  await container.valkey.setex(
-    thresholdKey(guildId),
-    ThresholdTtl,
-    JSON.stringify(parsed),
-  );
   return parsed;
 }
-
-const WarnCountTtl = 365 * 24 * 3600;
 
 export async function incrementWarnCount(
   container: Container,
   guildId: string,
   userId: string,
 ): Promise<number> {
-  const key = warnCountKey(guildId, userId);
-  const exists = await container.valkey.exists(key);
-
-  if (!exists) {
-    const count = await container.db.moderation.countModerationCases(
-      guildId,
-      userId,
-      "warn",
-    );
-    await container.valkey.set(key, String(count), "EX", WarnCountTtl);
-    return count;
+  const key = `${guildId}:${userId}`;
+  const existing = activeWarnCounts.get(key);
+  if (existing !== undefined) {
+    const next = existing + 1;
+    activeWarnCounts.set(key, next);
+    return next;
   }
-
-  const pipe = container.valkey.pipeline();
-  pipe.incr(key);
-  pipe.expire(key, WarnCountTtl);
-  const results = await pipe.exec();
-  if (!results || results[0]?.[0]) {
-    container.logger.error("[Thresholds] Valkey pipeline execution failed:", results?.[0]?.[0]);
-    return 0;
-  }
-  return (results?.[0]?.[1] as number | null) ?? 0;
+  const count = (await container.db.moderation.countModerationCases(
+    guildId,
+    userId,
+    "warn",
+  )) + 1;
+  activeWarnCounts.set(key, count);
+  return count;
 }
 
-const DecrementWarnCountScript =
-  "local v = tonumber(redis.call('GET', KEYS[1])); if v and v > 0 then return redis.call('DECR', KEYS[1]) end return v or 0";
-
 export async function decrementWarnCount(
-  container: Container,
+  _container: Container,
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.valkey.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
+  const key = `${guildId}:${userId}`;
+  const existing = activeWarnCounts.get(key) ?? 0;
+  if (existing > 0) {
+    activeWarnCounts.set(key, existing - 1);
+  }
 }
 
 export async function decrementWarnCounts(
-  container: Container,
-  entries: { guildId: string; userId: string }[],
-): Promise<void> {
-  if (entries.length === 0) return;
-  await pipelineBySlot(
-    container.valkey,
-    entries,
-    ({ guildId, userId }) => warnCountKey(guildId, userId),
-    (pipe, { guildId, userId }) => {
-      pipe.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
-    },
-  );
-}
+  _container: Container,
+  _entries: { guildId: string; userId: string }[],
+): Promise<void> {}
 
 export async function resetWarnCount(
-  container: Container,
+  _container: Container,
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.invalidation.invalidate(warnCountKey(guildId, userId));
+  activeWarnCounts.delete(`${guildId}:${userId}`);
 }
 
 const FallbackThresholdDurationMs = Time.Hour;
@@ -191,14 +153,10 @@ export async function checkThresholds(
   const botUser = container.client.user;
   if (!botUser) return;
 
-  const claimed = await container.valkey.set(
-    thresholdFiredKey(guildId, userId, targetCount),
-    "1",
-    "EX",
-    ThresholdFiredTtl,
-    "NX",
-  );
-  if (claimed !== "OK") return;
+  const firedKey = `${guildId}:${userId}:${targetCount}`;
+  if (thresholdsFired.has(firedKey)) return;
+  thresholdsFired.add(firedKey);
+  setTimeout(() => thresholdsFired.delete(firedKey), ThresholdFiredTtl * 1000);
 
   const reason = `Auto: ${warnCount} warn${warnCount === 1 ? "" : "s"} reached threshold (${targetCount}).`;
 

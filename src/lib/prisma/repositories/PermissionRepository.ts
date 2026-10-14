@@ -1,7 +1,6 @@
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import {mgetSafe, pipelineBySlot} from "#src/lib/valkey/Cluster.js";
+import { CacheKeys, CacheTTL } from "#src/lib/cache/Keys.js";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
 
 export type PermitKind = "enforced" | "custom";
 export type PermitTargetType = "user" | "role" | "channel";
@@ -66,30 +65,25 @@ export class PermissionRepository extends Repository {
     chainTargets: Array<{ targetType: PermitTargetType; targetId: string }>,
   ): Promise<{ tiers: TargetPermitPayload[]; isQuarantined: boolean }> {
     const keys = chainTargets.map((t) =>
-      ValkeyKeys.targetPermits(guildId, t.targetType, t.targetId),
+      CacheKeys.targetPermits(guildId, t.targetType, t.targetId),
     );
 
-    const quarantineKey = ValkeyKeys.quarantineState(guildId, userId);
-
-    const rawResults = await mgetSafe(this.valkey, [...keys, quarantineKey]);
-    const rawQuarantine = rawResults[rawResults.length - 1];
+    const quarantineKey = CacheKeys.quarantineState(guildId, userId);
+    const rawQuarantine = cacheStore.get<string>(quarantineKey);
     const isQuarantined = rawQuarantine != null && rawQuarantine !== "0";
     const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
 
     const missingIndexes: number[] = [];
 
     for (let i = 0; i < chainTargets.length; i++) {
-      const raw = rawResults[i];
-      if (raw) {
-        const parsed = tryParseJSON(raw) as TargetPermitPayload | null;
-        if (
-          parsed &&
-          isPolarityBucket(parsed.custom) &&
-          isPolarityBucket(parsed.enforced)
-        ) {
-          tiers[i] = parsed;
-          continue;
-        }
+      const cached = cacheStore.get<TargetPermitPayload>(keys[i]!);
+      if (
+        cached &&
+        isPolarityBucket(cached.custom) &&
+        isPolarityBucket(cached.enforced)
+      ) {
+        tiers[i] = cached;
+        continue;
       }
       missingIndexes.push(i);
     }
@@ -116,22 +110,14 @@ export class PermissionRepository extends Repository {
         assignmentsByTarget.get(key)!.push(assignment);
       }
 
-      const writes = missingIndexes.map((i) => {
+      for (const i of missingIndexes) {
         const target = chainTargets[i]!;
         const key = `${target.targetType}:${target.targetId}`;
         const forTarget = assignmentsByTarget.get(key) ?? [];
         const payload = collapseAssignments(forTarget);
         tiers[i] = payload;
-        return { cacheKey: keys[i]!, payload };
-      });
-      await pipelineBySlot(
-        this.valkey,
-        writes,
-        (w) => w.cacheKey,
-        (pipe, w) => {
-          pipe.setex(w.cacheKey, ValkeyTTL.permits, JSON.stringify(w.payload));
-        },
-      );
+        cacheStore.set(keys[i]!, payload, CacheTTL.permits * 1000);
+      }
     }
 
     return { tiers, isQuarantined };
@@ -282,7 +268,7 @@ export class PermissionRepository extends Repository {
   ): Promise<void> {
     if (!assignments || assignments.length === 0) return;
     const keys = assignments.map((a) =>
-      ValkeyKeys.targetPermits(
+      CacheKeys.targetPermits(
         a.guildId,
         a.targetType as PermitTargetType,
         a.targetId,
@@ -315,7 +301,7 @@ export class PermissionRepository extends Repository {
       },
     });
     await this.invalidate(
-      ValkeyKeys.targetPermits(permit.guildId, targetType, targetId),
+      CacheKeys.targetPermits(permit.guildId, targetType, targetId),
     );
     return assignment;
   }
@@ -335,7 +321,7 @@ export class PermissionRepository extends Repository {
       where: { permitId, guildId, targetType, targetId },
     });
     await this.invalidate(
-      ValkeyKeys.targetPermits(permit.guildId, targetType, targetId),
+      CacheKeys.targetPermits(permit.guildId, targetType, targetId),
     );
     return count;
   }

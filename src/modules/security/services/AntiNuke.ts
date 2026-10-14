@@ -1,7 +1,7 @@
 import { container } from "#src/lib/Services.js";
 import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
 import { isNullish, type Awaitable } from "#src/shared/Index.ts";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
 import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
 import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
@@ -111,29 +111,34 @@ function loadResponses(raw: Record<string, unknown>): Record<NukeKind, NukeRespo
   ) as Record<NukeKind, NukeResponse>;
 }
 
+const securityWindows = new Map<string, { count: number; expiresAt: number }>();
+const securityTripped = new Map<string, number>();
+
 export async function recordAction(
   guild: Guild,
   executorId: string,
   kind: NukeKind,
   config: AntiNukeConfig,
 ): Promise<number | null> {
-  const key = ValkeyKeys.securityWindow(guild.id, executorId, kind);
-  const results = await container.valkey
-    .multi()
-    .incr(key)
-    .expire(key, config.windowSeconds, "NX")
-    .exec();
-  const count = results?.[0]?.[1] as number;
+  const key = `${guild.id}:${executorId}:${kind}`;
+  const now = Date.now();
+  const entry = securityWindows.get(key);
+  let count = 1;
+  if (entry && entry.expiresAt > now) {
+    count = entry.count + 1;
+    entry.count = count;
+  } else {
+    securityWindows.set(key, { count: 1, expiresAt: now + config.windowSeconds * 1000 });
+  }
+
   if (count <= config.limits[kind]) return null;
 
-  const tripped = await container.valkey.set(
-    ValkeyKeys.securityTripped(guild.id, executorId, kind),
-    String(Date.now()),
-    "EX",
-    TrippedCooldownSeconds,
-    "NX",
-  );
-  return tripped === "OK" ? count : null;
+  const tripUntil = securityTripped.get(key);
+  if (!tripUntil || tripUntil <= now) {
+    securityTripped.set(key, now + TrippedCooldownSeconds * 1000);
+    return count;
+  }
+  return null;
 }
 
 export async function isExempt(
@@ -211,9 +216,7 @@ export async function respond(
         container.logger.warn(
           `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
         );
-        await container.valkey
-          .del(ValkeyKeys.securityTripped(guild.id, executorId, kind))
-          .catch(() => null);
+        securityTripped.delete(`${guild.id}:${executorId}:${kind}`);
       }
     }
   }
@@ -262,7 +265,6 @@ export async function evaluateNukeEvent(
 }
 
 export async function isQuarantined(guildId: string, userId: string): Promise<boolean> {
-  return (
-    (await container.valkey.exists(ValkeyKeys.quarantineState(guildId, userId))) === 1
-  );
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  return cacheStore.has(CacheKeys.quarantineState(guildId, userId));
 }

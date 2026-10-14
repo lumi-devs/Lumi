@@ -4,7 +4,7 @@ import { ButtonStyle } from "discord.js";
 import {
   ModuleRestartCancelId,
   ModuleRestartId,
-} from "#src/modules/core/Constants.js";
+} from "#src/lib/interactions/Ids.js";
 
 export function restartChoiceRow(
   userId: string,

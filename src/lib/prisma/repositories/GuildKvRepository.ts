@@ -1,6 +1,5 @@
 import type { Prisma } from "@prisma/client";
 import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
 
 export class GuildKVRepository extends Repository {
   public async getModuleData<T = unknown>(
@@ -232,8 +231,13 @@ export class GuildKVRepository extends Repository {
     key: string,
     delta = 1,
   ): Promise<number> {
-    const valkeyKey = ValkeyKeys.moduleData(guildId, module, targetId, key);
-    const newValue = await this.valkey.hincrby(valkeyKey, "value", delta);
+    const existing = await this.prisma.moduleData.findUnique({
+      where: {
+        guildId_moduleName_targetId_key: { guildId, moduleName: module, targetId, key },
+      },
+    });
+    const current = typeof existing?.value === "number" ? existing.value : 0;
+    const newValue = current + delta;
 
     await this.prisma.moduleData.upsert({
       where: {

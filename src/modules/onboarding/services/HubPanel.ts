@@ -2,8 +2,8 @@ import type { LumiT } from "#src/lib/i18n/Index.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
 import { hasRequiredPermit } from "#src/lib/api/permissions/Index.js";
 import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
-import { buildAddonRepoModulesView } from "#src/modules/admin/ui/Addons.js";
+import { loadFeatures } from "#src/admin/services/ConfigPanel.js";
+import { buildAddonRepoModulesView } from "#src/admin/ui/Addons.js";
 import { buildHubView, buildSettingsView } from "#src/modules/onboarding/ui/Hub.js";
 import {
   buildPermitExplainPickerView,
@@ -11,7 +11,7 @@ import {
   buildPermissionsView,
   buildPermitOrderView,
   type PermitAssignmentRow,
-} from "#src/modules/admin/ui/Permissions.js";
+} from "#src/admin/ui/Permissions.js";
 import { explainPermit } from "#src/lib/api/permissions/PermitResolver.js";
 import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
 import { UserError } from "#src/shared/Index.ts";

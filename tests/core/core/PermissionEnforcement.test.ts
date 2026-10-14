@@ -17,8 +17,8 @@ import { casesDef } from "#src/modules/mod/commands/Cases.js";
 import { sanitizeDef } from "#src/modules/mod/commands/Sanitize.js";
 import { vcmuteDef } from "#src/modules/mod/commands/Vcmute.js";
 import { lumiDef } from "#src/modules/onboarding/commands/Lumi.js";
-import { repoDef } from "#src/modules/admin/commands/Repo.js";
-import { downloadDef } from "#src/modules/admin/commands/Download.js";
+import { repoDef } from "#src/admin/commands/Repo.js";
+import { downloadDef } from "#src/admin/commands/Download.js";
 import { helpDef } from "#src/modules/onboarding/commands/Help.js";
 import { mydataDef } from "#src/modules/onboarding/commands/Mydata.js";
 

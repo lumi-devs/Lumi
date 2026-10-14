@@ -3,7 +3,7 @@ import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
 import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
 import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { CacheKeys } from "#src/lib/cache/Keys.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
@@ -220,16 +220,8 @@ export async function startChallenge(
     attempts: MaxAttempts,
     expiresAt,
   };
-  await container.valkey
-    .multi()
-    .set(
-      ValkeyKeys.verifyChallenge(guildId, userId),
-      JSON.stringify(state),
-      "EXAT",
-      Math.floor(expiresAt / 1000),
-    )
-    .zadd(ValkeyKeys.verifyPending(guildId), expiresAt, userId)
-    .exec();
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  cacheStore.set(CacheKeys.verifyChallenge(guildId, userId), JSON.stringify(state), config.timeoutMinutes * 60 * 1000);
   return state;
 }
 
@@ -237,7 +229,8 @@ async function getChallenge(
   guildId: string,
   userId: string,
 ): Promise<CaptchaState | null> {
-  const raw = await container.valkey.get(ValkeyKeys.verifyChallenge(guildId, userId));
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  const raw = cacheStore.get<string>(CacheKeys.verifyChallenge(guildId, userId));
   if (isNullish(raw)) return null;
   return tryParseJSON(raw) as CaptchaState | null;
 }
@@ -247,12 +240,8 @@ async function saveChallenge(
   userId: string,
   state: CaptchaState,
 ): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.verifyChallenge(guildId, userId),
-    JSON.stringify(state),
-    "EXAT",
-    Math.floor(state.expiresAt / 1000),
-  );
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  cacheStore.set(CacheKeys.verifyChallenge(guildId, userId), JSON.stringify(state), Math.max(1, state.expiresAt - Date.now()));
 }
 
 export async function advanceChallenge(
@@ -275,10 +264,8 @@ export async function advanceChallenge(
 }
 
 async function clearChallenge(guildId: string, userId: string): Promise<void> {
-  await container.invalidation.invalidate(
-    ValkeyKeys.verifyChallenge(guildId, userId),
-  );
-  await container.valkey.zrem(ValkeyKeys.verifyPending(guildId), userId);
+  const { cacheStore } = await import("#src/lib/cache/CacheStore.js");
+  cacheStore.delete(CacheKeys.verifyChallenge(guildId, userId));
 }
 
 export async function grantVerified(guildId: string, userId: string): Promise<boolean> {
@@ -313,12 +300,6 @@ export async function assignPending(
       .add(config.pendingRoleId, "Awaiting verification")
       .catch(() => null);
   }
-  const expiresAt = Date.now() + config.timeoutMinutes * 60 * 1000;
-  await container.valkey.zadd(
-    ValkeyKeys.verifyPending(member.guild.id),
-    expiresAt,
-    member.id,
-  );
 }
 
 export async function sweepExpiredPending(
@@ -329,19 +310,16 @@ export async function sweepExpiredPending(
     ? [guildOrServices as Container, maybeGuild!]
     : [container, guildOrServices as Guild];
   const config = await loadVerificationConfig(services, guild.id);
-  if (!config.enabled) return;
-  const expired = await services.valkey.zrangebyscore(
-    ValkeyKeys.verifyPending(guild.id),
-    0,
-    Date.now(),
-  );
-  for (const userId of expired) {
-    if (config.kickOnTimeout && config.verifiedRoleId) {
-      const member = await guild.members.fetch(userId).catch(() => null);
-      if (member && !member.roles.cache.has(config.verifiedRoleId)) {
-        await member.kick("Verification timed out").catch(() => null);
-      }
+  if (!config.enabled || !config.kickOnTimeout || !config.verifiedRoleId) return;
+  const members = await guild.members.fetch().catch(() => null);
+  if (!members) return;
+  const timeoutMs = config.timeoutMinutes * 60 * 1000;
+  const now = Date.now();
+  for (const member of members.values()) {
+    if (member.user.bot) continue;
+    if (member.roles.cache.has(config.verifiedRoleId)) continue;
+    if (member.joinedTimestamp && now - member.joinedTimestamp > timeoutMs) {
+      await member.kick("Verification timed out").catch(() => null);
     }
-    await clearChallenge(guild.id, userId);
   }
 }

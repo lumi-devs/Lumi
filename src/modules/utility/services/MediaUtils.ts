@@ -17,7 +17,7 @@ import { makeErrorCard, makeInfoCard } from "#src/lib/ui/Cards.js";
 import { container, type Container } from "#src/lib/Services.js";
 import { capitalizeFirstLetter } from "#src/shared/Index.ts";
 import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { claimCooldown } from "#src/lib/cache/Cooldown.js";
 import { fetchT } from "#src/lib/i18n/Index.js";
 import { UserMediaViewId } from "#src/modules/utility/Constants.js";
 
@@ -55,11 +55,10 @@ export async function handleMediaRequest({
     const cooldownMs = cooldownSeconds * 1000;
     const cooldownKey = `lumi:media:${guildId}:${interactionUser.id}`;
 
-    const claimed = await claimCooldown(svc, cooldownKey, cooldownMs);
+    const claimed = claimCooldown(cooldownKey, cooldownMs);
 
     if (!claimed) {
-      const remainingMs = await svc.valkey.pttl(cooldownKey);
-      const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
+      const timeLeft = (cooldownMs / 1000).toFixed(1);
       const title = t("commands:mediaCooldownTitle");
       const reply = t("commands:mediaCooldown", { timeLeft });
 

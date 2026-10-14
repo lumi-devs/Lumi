@@ -6,8 +6,8 @@ import {
 } from "#src/lib/interactions/InteractionDef.js";
 import type { Container } from "#src/lib/Services.js";
 import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#src/modules/admin/utilities/GuildSettingsUtility.js";
+import type { DownloaderUtility } from "#src/admin/utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "#src/admin/utilities/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -19,19 +19,19 @@ import {
   renderRepoModules,
   renderSettings,
 } from "#src/modules/onboarding/services/HubPanel.js";
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
+import { loadFeatures } from "#src/admin/services/ConfigPanel.js";
 import {
   buildAddonInstalledView,
   buildAddonReposCard,
   buildAddonsView,
   buildAutoUpdateSettingsView,
   buildRepoUpdateConfirmView,
-} from "#src/modules/admin/ui/Addons.js";
+} from "#src/admin/ui/Addons.js";
 import { DefaultPrefix } from "#src/modules/onboarding/ui/Hub.js";
-import { buildFeatureListView } from "#src/modules/admin/ui/Modules.js";
-import { buildPermitPickerView, PermitOrderPerPage } from "#src/modules/admin/ui/Permissions.js";
+import { buildFeatureListView } from "#src/admin/ui/Modules.js";
+import { buildPermitPickerView, PermitOrderPerPage } from "#src/admin/ui/Permissions.js";
 import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { HubAddonModalId, HubId } from "#src/modules/core/Constants.js";
+import { HubAddonModalId, HubId } from "#src/lib/interactions/Ids.js";
 import {
   ActionRowBuilder,
   ModalBuilder,

@@ -33,7 +33,7 @@ export function bootstrapTelemetry(
       : undefined,
   });
 
-  initMetrics(svc);
+  initMetrics();
   startEventLoopMonitor();
   if (opts.exposeHttp ?? true) {
     startMetricsServer(resolveMetricsPort(svc));

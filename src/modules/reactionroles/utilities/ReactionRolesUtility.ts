@@ -7,7 +7,7 @@ import type {
   Message,
 } from "discord.js";
 import { logError } from "#src/lib/utilities/Errors.js";
-import { acquireValkeyLock } from "#src/lib/valkey/Lock.js";
+import { acquireLock } from "#src/lib/cache/Lock.js";
 import { ModuleName, ReactionRoleKeys } from "#src/modules/reactionroles/Constants.js";
 import {
   deleteMenu,
@@ -43,24 +43,21 @@ export class ReactionRoleMenuLockedError extends Error {
 }
 
 async function withMenuLock<T>(
-  services: Container,
+  _services: Container,
   guildId: string,
   menuId: string,
   fn: () => Promise<T>,
 ): Promise<T> {
   let lock;
   try {
-    lock = await acquireValkeyLock(
-      services.valkey,
-      ReactionRoleKeys.menuWrite(guildId, menuId),
-    );
+    lock = await acquireLock(ReactionRoleKeys.menuWrite(guildId, menuId));
   } catch {
     throw new ReactionRoleMenuLockedError();
   }
   try {
     return await fn();
   } finally {
-    await lock.release();
+    lock.release();
   }
 }
 

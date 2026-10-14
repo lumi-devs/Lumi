@@ -1,4 +1,5 @@
 import { UserError } from "#src/shared/Index.ts";
+import { cacheStore } from "#src/lib/cache/CacheStore.js";
 import type { Container } from "#src/lib/Services.js";
 import type {
   ButtonInteraction,
@@ -203,14 +204,12 @@ async function claim(
       });
     }
 
-    const guard = await services.valkey.set(
+    const guard = await cacheStore.setIfAbsent(
       TempVcKeys.claimGuard(channel.id),
       member.id,
-      "PX",
       3000,
-      "NX",
     );
-    if (guard === null) {
+    if (!guard) {
       throw new UserError({
         identifier: "TempVcClaimRace",
         message: `⏳ ${t("tempvc:someoneElseClaiming")}`,

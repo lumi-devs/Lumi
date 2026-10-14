@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { container } from "#src/lib/Services.js";
 import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { downloadDef } from "#src/modules/admin/commands/Download.js";
+import { downloadDef } from "#src/admin/commands/Download.js";
 import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
 
 vi.mock("#lib/module-system/Utility.js", () => ({

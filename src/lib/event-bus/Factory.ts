@@ -1,72 +1,66 @@
+import type { EventBus, BusMessage, PublishOptions, ConsumeOptions } from "#src/lib/event-bus/Types.js";
 
+type Handler = (msg: BusMessage<any>) => Promise<void>;
 
-import Valkey, { type RedisOptions } from "iovalkey";
-import { StreamBus, type StreamStats } from "#src/lib/event-bus/StreamBus.js";
-import type { EventBus } from "#src/lib/event-bus/Types.js";
+export class LocalEventBus implements EventBus {
+  readonly #listeners = new Map<string, Set<Handler>>();
 
-export type ValkeyOptions = RedisOptions;
+  public async publish<T>(stream: string, body: T, _opts?: PublishOptions): Promise<string> {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const handlers = this.#listeners.get(stream);
+    if (handlers) {
+      const msg: BusMessage<T> = {
+        id,
+        body,
+        deliveryCount: 1,
+        ack: async () => {},
+        nack: async () => {},
+      };
+      for (const h of handlers) {
+        queueMicrotask(() => h(msg).catch(() => {}));
+      }
+    }
+    return id;
+  }
 
-export interface CreateEventBusOptions {
+  public async consume<T>(
+    streams: readonly string[],
+    _opts: ConsumeOptions,
+    handler: (msg: BusMessage<T>) => Promise<void>,
+  ): Promise<() => Promise<void>> {
+    for (const s of streams) {
+      let set = this.#listeners.get(s);
+      if (!set) {
+        set = new Set();
+        this.#listeners.set(s, set);
+      }
+      set.add(handler as Handler);
+    }
+    return async () => {
+      for (const s of streams) {
+        this.#listeners.get(s)?.delete(handler as Handler);
+      }
+    };
+  }
 
-  valkey?: ValkeyOptions;
+  public async destroyGroup(_stream: string, _group: string): Promise<void> {}
 
-  defaultMaxLen?: number;
-  log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
-
-  maxDeliveries?: number;
-
-  claimMinIdleMs?: number;
-
-  claimIntervalMs?: number;
-
-  onStats?: (stats: StreamStats) => void;
-
-  statsIntervalMs?: number;
+  public async close(): Promise<void> {
+    this.#listeners.clear();
+  }
 }
 
 export interface OwnedEventBus {
   bus: EventBus;
-
-  publisher: Valkey;
-
+  publisher: any;
   close: () => Promise<void>;
 }
 
-export function createEventBus(
-  opts: CreateEventBusOptions = {},
-): OwnedEventBus {
-  const connectionOpts = opts.valkey;
-  if (!connectionOpts) {
-    throw new Error("createEventBus(): `valkey` options required");
-  }
-
-  const publisher = new Valkey({ ...connectionOpts, lazyConnect: true });
-  const subscriber = new Valkey({
-    ...connectionOpts,
-    lazyConnect: true,
-
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-  });
-
-  const bus = new StreamBus({
-    publisher,
-    subscriber,
-    defaultMaxLen: opts.defaultMaxLen,
-    log: opts.log,
-    maxDeliveries: opts.maxDeliveries,
-    claimMinIdleMs: opts.claimMinIdleMs,
-    claimIntervalMs: opts.claimIntervalMs,
-    onStats: opts.onStats,
-    statsIntervalMs: opts.statsIntervalMs,
-  });
-
+export function createEventBus(_opts: any = {}): OwnedEventBus {
+  const bus = new LocalEventBus();
   return {
     bus,
-    publisher,
-    close: async () => {
-      await bus.close();
-      await Promise.allSettled([publisher.quit(), subscriber.quit()]);
-    },
+    publisher: null,
+    close: async () => bus.close(),
   };
 }

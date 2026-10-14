@@ -3,7 +3,7 @@ import { CommandContext } from "#src/lib/commands/Context.js";
 import { asHandler } from "#src/lib/commands/CommandDef.js";
 import { lumiDef } from "#src/modules/onboarding/commands/Lumi.js";
 
-vi.mock("#src/modules/admin/services/ConfigPanel.js", () => ({
+vi.mock("#src/admin/services/ConfigPanel.js", () => ({
   loadFeatures: vi.fn().mockResolvedValue([]),
 }));
 
@@ -20,7 +20,7 @@ vi.mock("#lib/utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
+import { loadFeatures } from "#src/admin/services/ConfigPanel.js";
 import { buildHubView } from "#src/modules/onboarding/ui/Hub.js";
 
 function makeServices() {

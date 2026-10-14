@@ -1,123 +1,84 @@
-import { Queue, Worker, type Job, type JobsOptions } from "bullmq";
 import { container } from "#src/lib/Services.js";
-import {
-  getScheduledTask,
-  repeatedScheduledTasks,
-} from "#src/lib/scheduler/Tasks.js";
-import {
-  getQueuePrefix,
-  getScheduledTasksConnectionOptions,
-  SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
-  SCHEDULED_TASKS_QUEUE_NAME,
-} from "#src/lib/scheduler/Queue.js";
+import { getScheduledTask, repeatedScheduledTasks } from "#src/lib/scheduler/Tasks.js";
 import type { ScheduleOptions } from "#src/lib/scheduler/Schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/Schedule.js";
-
-export interface RepeatedTaskSpec {
-  name: string;
-  interval?: number | undefined;
-  pattern?: string | undefined;
-  timezone?: string | undefined;
-  customJobOptions?: JobsOptions | undefined;
-}
+import { resolveTaskRef } from "#src/lib/scheduler/Schedule.js";
 
 export interface TaskQueue {
-  readonly queue: string;
-  create(
-    task: string | { name: string; payload?: unknown },
-    options?: ScheduleOptions,
-  ): Promise<unknown>;
-  delete(id: string): Promise<unknown>;
+  create(task: string | { name: string; payload?: unknown }, options?: ScheduleOptions): Promise<any>;
+  delete(id: string): Promise<any>;
   close(): Promise<void>;
 }
 
 export class ScheduledTaskRunner implements TaskQueue {
-  public readonly queue = SCHEDULED_TASKS_QUEUE_NAME;
-  public readonly client: Queue;
-  public readonly options: {
-    connection: ReturnType<typeof getScheduledTasksConnectionOptions>;
-  };
-  readonly #worker: Worker;
-
-  public constructor() {
-    const connection = getScheduledTasksConnectionOptions();
-    this.options = { connection };
-    this.client = new Queue(this.queue, {
-      prefix: getQueuePrefix(),
-      connection,
-      defaultJobOptions: { ...SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS },
-    });
-    this.#worker = new Worker(
-      this.queue,
-      (job) => this.execute(job.name, job.data),
-      { prefix: getQueuePrefix(), connection, concurrency: 10 },
-    );
-  }
+  readonly #intervals: Timer[] = [];
+  readonly #timeouts = new Map<string, Timer>();
 
   public async create(
     task: string | { name: string; payload?: unknown },
     options?: ScheduleOptions,
-  ): Promise<Job> {
+  ): Promise<any> {
     const { name, payload } = resolveTaskRef(task);
-    const jobOptions = toBullMQJobOptions(options);
-    return this.client.add(name, payload, jobOptions);
-  }
+    const delay = typeof options === "number" ? options : options?.delay;
+    const interval = typeof options === "object" ? options?.interval : undefined;
 
-  public async createRepeated(specs?: RepeatedTaskSpec[]): Promise<void> {
-    const list =
-      specs ??
-      repeatedScheduledTasks().map((task) => ({
-        name: task.name,
-        interval: task.interval ?? undefined,
-        pattern: task.pattern ?? undefined,
-        timezone: task.timezone,
-        customJobOptions: task.customJobOptions,
-      }));
-    for (const spec of list) {
-      await this.create(spec.name, {
-        repeated: true,
-        interval: spec.interval,
-        pattern: spec.pattern,
-        timezone: spec.timezone,
-        customJobOptions: spec.customJobOptions,
-      });
+    if (interval && interval > 0) {
+      const timer = setInterval(() => {
+        void this.execute(name, payload);
+      }, interval);
+      this.#intervals.push(timer);
+      return { id: name };
     }
-    await this.pruneStaleSchedulers(list.map((spec) => spec.name));
+
+    if (delay && delay > 0) {
+      const id = `${name}:${Date.now()}:${Math.random().toString(36).slice(2, 6)}`;
+      const timer = setTimeout(() => {
+        this.#timeouts.delete(id);
+        void this.execute(name, payload);
+      }, delay);
+      this.#timeouts.set(id, timer);
+      return { id };
+    }
+
+    queueMicrotask(() => {
+      void this.execute(name, payload);
+    });
+    return { id: name };
   }
 
-  public async pruneStaleSchedulers(known: string[]): Promise<void> {
-    const live = new Set(known);
-    for (const scheduler of await this.client.getJobSchedulers()) {
-      if (!live.has(scheduler.name)) {
-        await this.client.removeJobScheduler(scheduler.name);
-        container.logger.warn(
-          `[Scheduler] Removed orphaned repeatable scheduler '${scheduler.name}'.`,
-        );
+  public async createRepeated(): Promise<void> {
+    const list = repeatedScheduledTasks();
+    for (const task of list) {
+      if (task.interval && task.interval > 0) {
+        const timer = setInterval(() => {
+          void this.execute(task.name, undefined);
+        }, task.interval);
+        this.#intervals.push(timer);
       }
     }
   }
 
   public async execute(name: string, payload: unknown): Promise<void> {
     const task = getScheduledTask(name);
-    if (!task) {
-      container.logger.warn(
-        `[Scheduler] No task registered for job '${name}', dropping.`,
-      );
-      return;
-    }
+    if (!task) return;
     try {
       await task.run(payload);
-    } catch (err: unknown) {
-      container.logger.fatal(`[Task:${name}] failed`, { payload }, err);
-      throw err;
+    } catch (err) {
+      container.logger.error(`[Scheduler] Task '${name}' failed:`, err);
     }
   }
 
   public async delete(id: string): Promise<void> {
-    await (await this.client.getJob(id))?.remove();
+    const timer = this.#timeouts.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      this.#timeouts.delete(id);
+    }
   }
 
   public async close(): Promise<void> {
-    await Promise.all([this.client.close(), this.#worker.close()]);
+    for (const t of this.#intervals) clearInterval(t);
+    for (const t of this.#timeouts.values()) clearTimeout(t);
+    this.#intervals.length = 0;
+    this.#timeouts.clear();
   }
 }
