@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi/bot-kit";
+import type { CommandDef } from "@lumi/module-kit";
 import { runHub } from "../lumi/panel.ts";
 
 export const lumiCommand: CommandDef = {

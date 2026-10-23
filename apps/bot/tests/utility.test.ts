@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import utilityModule from "../src/modules/utility/index.ts";
+import utilityModule from "@modules/utility/index.ts";
 
 describe("utility module", () => {
   it("defines standard utility commands", () => {

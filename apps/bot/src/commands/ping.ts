@@ -17,7 +17,7 @@ import {
   type ButtonInteraction,
   type Interaction,
 } from "discord.js";
-import type { CommandDef, LumiServices } from "@lumi/bot-kit";
+import type { CommandDef, LumiServices } from "@lumi/module-kit";
 import { formatDuration } from "@lumi/foundation";
 import { componentEmoji } from "@lumi/ui";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { SlashCommandBuilder, type Message } from "discord.js";
-import type { CommandDef } from "@lumi/bot-kit";
-import { CommandContextImpl } from "../src/context.ts";
+import type { CommandDef } from "@lumi/module-kit";
+import { CommandContextImpl } from "../src/runtime/context.ts";
 
 const base = {
   content: "",

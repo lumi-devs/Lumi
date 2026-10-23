@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { afkSince, sanitizeReason, stripNickPrefix } from "../src/modules/afk/service.ts";
+import { afkSince, sanitizeReason, stripNickPrefix } from "@modules/afk/service.ts";
 
 describe("afk mentions and formatting", () => {
   it("sanitizes reasons", () => {

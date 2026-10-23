@@ -7,8 +7,8 @@
       "dependencies": {
         "@discordjs/builders": "catalog:",
         "@discordjs/formatters": "catalog:",
-        "@lumi/bot-kit": "workspace:*",
         "@lumi/foundation": "workspace:*",
+        "@lumi/module-kit": "workspace:*",
         "@lumi/ui": "workspace:*",
         "@sapphire/utilities": "catalog:",
         "discord.js": "catalog:",
@@ -26,14 +26,28 @@
       "name": "@lumi/bot",
       "version": "0.1.0",
       "dependencies": {
-        "@lumi/bot-kit": "workspace:*",
         "@lumi/cache": "workspace:*",
         "@lumi/contracts": "workspace:*",
         "@lumi/db": "workspace:*",
         "@lumi/downloader": "workspace:*",
         "@lumi/foundation": "workspace:*",
-        "@lumi/modules": "workspace:*",
+        "@lumi/module-kit": "workspace:*",
+        "@lumi/module-runtime": "workspace:*",
         "@lumi/observability": "workspace:*",
+        "@lumi/redis": "workspace:*",
+        "@lumi/ui": "workspace:*",
+        "discord.js": "catalog:",
+        "zod": "catalog:",
+      },
+    },
+    "modules": {
+      "name": "@lumi/bundled-modules",
+      "version": "0.1.0",
+      "dependencies": {
+        "@discordjs/builders": "catalog:",
+        "@lumi/db": "workspace:*",
+        "@lumi/foundation": "workspace:*",
+        "@lumi/module-kit": "workspace:*",
         "@lumi/redis": "workspace:*",
         "@lumi/ui": "workspace:*",
         "discord.js": "catalog:",
@@ -78,7 +92,7 @@
         "@lumi/contracts": "workspace:*",
         "@lumi/db": "workspace:*",
         "@lumi/foundation": "workspace:*",
-        "@lumi/modules": "workspace:*",
+        "@lumi/module-runtime": "workspace:*",
         "@lumi/redis": "workspace:*",
         "isomorphic-git": "^1.44.3",
       },
@@ -91,7 +105,7 @@
       },
     },
     "packages/module-kit": {
-      "name": "@lumi/bot-kit",
+      "name": "@lumi/module-kit",
       "version": "0.1.0",
       "dependencies": {
         "@lumi/cache": "workspace:*",
@@ -104,12 +118,12 @@
         "zod": "catalog:",
       },
     },
-    "packages/modules": {
-      "name": "@lumi/modules",
+    "packages/module-runtime": {
+      "name": "@lumi/module-runtime",
       "version": "0.1.0",
       "dependencies": {
-        "@lumi/bot-kit": "workspace:*",
         "@lumi/contracts": "workspace:*",
+        "@lumi/module-kit": "workspace:*",
         "semver": "^7.7.3",
         "zod": "catalog:",
       },
@@ -187,7 +201,7 @@
 
     "@lumi/bot": ["@lumi/bot@workspace:apps/bot"],
 
-    "@lumi/bot-kit": ["@lumi/bot-kit@workspace:packages/module-kit"],
+    "@lumi/bundled-modules": ["@lumi/bundled-modules@workspace:modules"],
 
     "@lumi/cache": ["@lumi/cache@workspace:packages/cache"],
 
@@ -199,7 +213,9 @@
 
     "@lumi/foundation": ["@lumi/foundation@workspace:packages/foundation"],
 
-    "@lumi/modules": ["@lumi/modules@workspace:packages/modules"],
+    "@lumi/module-kit": ["@lumi/module-kit@workspace:packages/module-kit"],
+
+    "@lumi/module-runtime": ["@lumi/module-runtime@workspace:packages/module-runtime"],
 
     "@lumi/observability": ["@lumi/observability@workspace:packages/observability"],
 

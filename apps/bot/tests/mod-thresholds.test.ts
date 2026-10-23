@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseWarnThresholds } from "../src/modules/mod/services/thresholds.ts";
+import { parseWarnThresholds } from "@modules/mod/services/thresholds.ts";
 
 describe("warn thresholds", () => {
   test("parses valid rules and their durations", () => {

@@ -10,7 +10,7 @@
     "@lumi/contracts": "workspace:*",
     "@lumi/db": "workspace:*",
     "@lumi/foundation": "workspace:*",
-    "@lumi/modules": "workspace:*",
+    "@lumi/module-runtime": "workspace:*",
     "@lumi/redis": "workspace:*",
     "isomorphic-git": "^1.44.3"
   }

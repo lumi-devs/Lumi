@@ -10,7 +10,7 @@ import type { DownloaderModule, DownloaderRepo } from "@lumi/db";
 import type { Logger } from "@lumi/foundation";
 import type { RedisClient } from "@lumi/redis";
 import { withLock } from "@lumi/redis";
-import { parseManifest, type ModuleManifest } from "@lumi/modules";
+import { parseManifest, type ModuleManifest } from "@lumi/module-runtime";
 import { checkout, clone, fetch, head, materialize, resolveRevision } from "./git.ts";
 import { installAddonRequirements } from "./requirements.ts";
 import { validateAddon } from "./validate.ts";

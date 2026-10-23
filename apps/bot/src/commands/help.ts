@@ -15,7 +15,7 @@ import {
   type ButtonInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js";
-import type { CommandDef, LoadedModule, LumiServices } from "@lumi/bot-kit";
+import type { CommandDef, LoadedModule, LumiServices } from "@lumi/module-kit";
 import { componentEmoji, row } from "@lumi/ui";
 
 const CommandsPerPage = 8;

@@ -1,7 +1,7 @@
 # Commands and dispatch
 
 Built-ins live in `apps/bot/src/commands/` and are wired directly by
-`apps/bot/src/app.ts`. Module commands live in the module directory and arrive
+`apps/bot/src/runtime/app.ts`. Module commands live in the module directory and arrive
 through the loader.
 
 ## Built-in vs module
@@ -43,7 +43,7 @@ export const ping: CommandDef = {
 
 - `build` is optional; dispatch creates a basic slash command if omitted.
 - `guildOnly`, `ownerOnly`, `guildOwnerOnly`, `requiredPermissions`,
-  `cooldownMs` are enforced in `apps/bot/src/dispatch.ts`.
+  `cooldownMs` are enforced in `apps/bot/src/runtime/dispatch.ts`.
 - `prefix` opts into prefix commands. Prefix parsing uses the guild prefix or the
   runtime default. Positional arguments map to the builder's option order, so
   `,modules disable afk guild` fills `action`, `name`, `scope`.
@@ -75,5 +75,5 @@ flags or the context.
 - `defer`
 - `guild`, `channel`, `member`, `user`, `guildId`, `services`
 
-The implementation is `apps/bot/src/context.ts` and handles both interactions and
+The implementation is `apps/bot/src/runtime/context.ts` and handles both interactions and
 messages.

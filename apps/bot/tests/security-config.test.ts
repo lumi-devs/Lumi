@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { modConfigSchema } from "../src/modules/mod/config.ts";
-import { securityConfigSchema } from "../src/modules/security/config.ts";
+import { modConfigSchema } from "@modules/mod/config.ts";
+import { securityConfigSchema } from "@modules/security/config.ts";
 
 describe("module config fallbacks", () => {
   test("security falls back on malformed enum and array values", () => {

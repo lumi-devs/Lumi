@@ -3,6 +3,9 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@modules/*": ["./modules/*"]
+    },
     "lib": ["ESNext"],
     "types": ["bun", "node"],
     "strict": true,
@@ -22,5 +25,5 @@
     "noImplicitOverride": true,
     "useDefineForClassFields": true
   },
-  "include": ["apps/**/*.ts", "packages/**/*.ts", "tests/**/*.ts", "prisma.config.ts"]
+  "include": ["apps/**/*.ts", "modules/**/*.ts", "packages/**/*.ts", "tests/**/*.ts", "prisma.config.ts"]
 }

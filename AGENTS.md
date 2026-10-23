@@ -28,7 +28,7 @@ entry.
   when that module is enabled for the guild.
 - Addons are untrusted. Install with validation, path checks, and atomic
   switches. Never let an addon import bot internals (`@lumi/db`, `@lumi/redis`,
-  `@lumi/cache`, `@lumi/modules`, `@lumi/downloader`). Addons are not sandboxed.
+  `@lumi/cache`, `@lumi/module-runtime`, `@lumi/downloader`). Addons are not sandboxed.
   Addon npm dependencies live in `manifest.json` `requirements` and are installed
   with `bun install --production --ignore-scripts --no-save`; registry semver
   ranges only.

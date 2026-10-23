@@ -17,8 +17,8 @@ import {
   type UserSelectMenuInteraction,
 } from "discord.js";
 import { TTL } from "@lumi/redis";
-import { evaluatePermit, isBotOwner } from "@lumi/bot-kit";
-import type { CommandContext, LumiServices } from "@lumi/bot-kit";
+import { evaluatePermit, isBotOwner } from "@lumi/module-kit";
+import type { CommandContext, LumiServices } from "@lumi/module-kit";
 import {
   ephemeralCard,
   makeErrorCard,

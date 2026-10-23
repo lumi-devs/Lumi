@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import type { Client } from "discord.js";
-import type { LumiServices } from "@lumi/bot-kit";
-import { ModuleLoader } from "@lumi/modules";
+import type { LumiServices } from "@lumi/module-kit";
+import { ModuleLoader } from "@lumi/module-runtime";
 
-const modulesRoot = fileURLToPath(new URL("../src/modules/", import.meta.url));
+const modulesRoot = fileURLToPath(new URL("../../../modules/", import.meta.url));
 const attached = new Map<string, Set<(...args: unknown[]) => void>>();
 
 const client = {

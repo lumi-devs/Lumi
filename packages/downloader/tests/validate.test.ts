@@ -42,7 +42,7 @@ describe("addon validation", () => {
     const dir = await addon("valid", {
       "manifest.json": manifest("valid"),
       "index.ts": [
-        'import { defineModule } from "@lumi/bot-kit";',
+        'import { defineModule } from "@lumi/module-kit";',
         'import { helper } from "./helper.ts";',
         "export default defineModule({ name: \"valid\", helper });",
       ].join("\n"),

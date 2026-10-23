@@ -10,7 +10,7 @@ import {
   type PermitKind,
   type PermitPolarity,
   type PermitTargetType,
-} from "@lumi/bot-kit";
+} from "@lumi/module-kit";
 import {
   makeCard,
   makeErrorCard,

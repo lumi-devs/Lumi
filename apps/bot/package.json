@@ -7,12 +7,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@lumi/bot-kit": "workspace:*",
+    "@lumi/module-kit": "workspace:*",
     "@lumi/cache": "workspace:*",
     "@lumi/contracts": "workspace:*",
     "@lumi/db": "workspace:*",
     "@lumi/downloader": "workspace:*",
-    "@lumi/modules": "workspace:*",
+    "@lumi/module-runtime": "workspace:*",
     "@lumi/foundation": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@lumi/redis": "workspace:*",

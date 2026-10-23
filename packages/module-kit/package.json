@@ -1,5 +1,5 @@
 {
-  "name": "@lumi/bot-kit",
+  "name": "@lumi/module-kit",
   "version": "0.1.0",
   "private": true,
   "type": "module",

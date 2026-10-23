@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi/bot-kit";
+import type { CommandDef } from "@lumi/module-kit";
 import { makeListCard, makeSuccessCard } from "@lumi/ui";
 
 export const addons: CommandDef = {

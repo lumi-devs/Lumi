@@ -1,11 +1,11 @@
 # Modules
 
-Packages: `@lumi/module-kit` (contracts), `@lumi/modules` (discovery + loader).
+Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + loader).
 
 ## Rules
 
 - Every module is toggleable. No module is privileged, essential, or undeletable.
-- Always-on behaviour lives in `apps/bot/src/app.ts` and built-in commands, not in
+- Always-on behaviour lives in `apps/bot/src/runtime/app.ts` and built-in commands, not in
   a module.
 - A module is a directory with `manifest.json` and an entry file.
 - Modules may depend on other modules with semver ranges. A dependency cycle
@@ -14,7 +14,7 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/modules` (discovery + loader).
 
 ## Manifest
 
-`packages/modules/src/manifest.ts` validates:
+`packages/module-runtime/src/manifest.ts` validates:
 
 ```json
 {
@@ -97,7 +97,7 @@ tracks disposers.
 
 ## Roots
 
-- Bundled: `apps/bot/src/modules/` (origin `bundled`).
+- Bundled: `modules/` (origin `bundled`).
 - Addons: `data/addons/` (origin `addon`).
 
 Both go through the same validation, discovery, and lifecycle. There is no

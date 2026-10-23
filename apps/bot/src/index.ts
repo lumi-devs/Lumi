@@ -1,12 +1,12 @@
 import { Client, GatewayIntentBits } from "discord.js";
-import type { LumiServices } from "@lumi/bot-kit";
+import type { LumiServices } from "@lumi/module-kit";
 import { createLogger, env } from "@lumi/foundation";
 import { startMetricsServer } from "@lumi/observability";
 import { AddonInstaller } from "@lumi/downloader";
-import { ModuleLoader } from "@lumi/modules";
-import { builtinCommands, registerApplicationCommands, wireBuiltins } from "./app.ts";
-import { addonsRoot, modulesRoot, repoRoot, version } from "./paths.ts";
-import { composeServices, createCoreServices } from "./services.ts";
+import { ModuleLoader } from "@lumi/module-runtime";
+import { builtinCommands, registerApplicationCommands, wireBuiltins } from "./runtime/app.ts";
+import { addonsRoot, modulesRoot, repoRoot, version } from "./runtime/paths.ts";
+import { composeServices, createCoreServices } from "./runtime/services.ts";
 
 const logger = createLogger({ name: "lumi", level: env.logLevel() });
 

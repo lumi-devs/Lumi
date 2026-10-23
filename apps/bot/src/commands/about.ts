@@ -5,14 +5,14 @@ import {
   SlashCommandBuilder,
   version as djsVersion,
 } from "discord.js";
-import type { CommandDef } from "@lumi/bot-kit";
+import type { CommandDef } from "@lumi/module-kit";
 import {
   createActionButton,
   makeCard,
   resolveCardColor,
   row,
 } from "@lumi/ui";
-import { version } from "../paths.ts";
+import { version } from "../runtime/paths.ts";
 import { collectPingStats } from "./ping.ts";
 
 const DocsUrl = "https://lumi-devs.github.io/Lumi-docs";

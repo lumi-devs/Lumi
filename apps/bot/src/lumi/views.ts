@@ -5,7 +5,7 @@ import {
 import { ButtonStyle, ChannelType, roleMention, userMention, channelMention } from "discord.js";
 import type { ModuleStatus } from "@lumi/contracts";
 import type { PermitWithAssignments } from "@lumi/db";
-import type { ModuleConfigField } from "@lumi/bot-kit";
+import type { ModuleConfigField } from "@lumi/module-kit";
 import {
   componentEmoji,
   createActionButton,

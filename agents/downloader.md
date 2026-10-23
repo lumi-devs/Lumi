@@ -84,7 +84,7 @@ Refuses while any installed module still belongs to that repo.
 - entry exists and stays inside the addon
 - imports are scanned with `Bun.Transpiler.scanImports`
 - relative imports cannot escape the addon
-- `@lumi/db`, `@lumi/cache`, `@lumi/redis`, `@lumi/modules`, `@lumi/downloader`,
+- `@lumi/db`, `@lumi/cache`, `@lumi/redis`, `@lumi/module-runtime`, `@lumi/downloader`,
   `node:*`, `bun`, and `bun:*` are rejected
 - bare imports must be part of the runtime surface or declared in
   `manifest.json` `requirements`
@@ -100,7 +100,7 @@ Refuses while any installed module still belongs to that repo.
 
 The allowed bare packages are installed as root dependencies so addons resolve
 them from `data/addons`. Do not expose `@lumi/db`, `@lumi/cache`, `@lumi/redis`,
-`@lumi/modules`, or `@lumi/downloader` at the root.
+`@lumi/module-runtime`, or `@lumi/downloader` at the root.
 
 Addons run in-process with the bot's permissions. Validation and admin-only
 install are the trust boundary. Do not describe addons as sandboxed.

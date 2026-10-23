@@ -3,7 +3,7 @@ export const AddonRuntimePackages = new Set([
   "@discordjs/builders",
   "@discordjs/formatters",
   "@sapphire/utilities",
-  "@lumi/bot-kit",
+  "@lumi/module-kit",
   "@lumi/ui",
   "@lumi/foundation",
   "zod",

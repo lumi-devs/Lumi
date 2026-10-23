@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { parseManifest } from "@lumi/modules";
+import { parseManifest } from "@lumi/module-runtime";
 import { packageJsonDependencyErrors, parseRequirements } from "./requirements.ts";
 import { AddonRuntimePackages } from "./runtime.ts";
 
@@ -13,7 +13,7 @@ const ForbiddenBare = new Set([
   "@lumi/db",
   "@lumi/cache",
   "@lumi/redis",
-  "@lumi/modules",
+  "@lumi/module-runtime",
   "@lumi/downloader",
 ]);
 
