@@ -39,7 +39,7 @@ export const afkMessageListener: ListenerDef<Events.MessageCreate> = {
         if (message.channel.isSendable()) {
           await message
             .reply(
-              makeInfoCard("👋 Welcome back", `You were AFK for **${afkSince(ownEntry)}**.`),
+              makeInfoCard("👋 Welcome Back!", `AFK removed.\nAFK for **${afkSince(ownEntry)}**.`),
             )
             .catch(() => null);
         }
@@ -60,10 +60,10 @@ export const afkMessageListener: ListenerDef<Events.MessageCreate> = {
     if (!claimed || !message.channel.isSendable()) return;
 
     const lines = entries.map(
-      (entry) => `<@${entry.userId}> is AFK — **${entry.reason}** *(${afkSince(entry)})*`,
+      (entry) => `<@${entry.userId}> is AFK\n**Reason:** ${entry.reason}\n**AFK for:** ${afkSince(entry)}`,
     );
     const reply = await message
-      .reply(makeInfoCard("💤 AFK", lines))
+      .reply(makeInfoCard("💤 Member is AFK", lines))
       .catch(() => null);
     if (!reply) return;
     setTimeout(() => void reply.delete().catch(() => undefined), 15_000).unref();

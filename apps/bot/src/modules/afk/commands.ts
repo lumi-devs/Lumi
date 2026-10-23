@@ -26,7 +26,7 @@ export const afkCommand: CommandDef = {
     const existing = await ctx.services.db.afk.findEntry(guildId, ctx.user.id);
 
     if (existing?.reason === reason) {
-      return ctx.replyInfo("💤 Already AFK", `You are AFK: **${reason}**`);
+      return ctx.replyInfo("💤 Already AFK", `You are already AFK with the reason: **${reason}**`);
     }
 
     await ctx.services.db.afk.upsertEntry(guildId, ctx.user.id, reason);
@@ -43,8 +43,8 @@ export const afkCommand: CommandDef = {
 
     return ctx.reply(
       makeInfoCard(
-        existing ? "✏️ AFK updated" : "💤 You are AFK",
-        `Reason: **${reason}**\nI will tell people who mention you, and clear this when you speak again.`,
+        existing ? "✏️ AFK Updated" : "💤 AFK Set",
+        existing ? `AFK reason updated to: **${reason}**` : `You are now AFK: **${reason}**`,
       ),
     );
   },
