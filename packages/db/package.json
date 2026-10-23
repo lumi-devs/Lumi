@@ -1,0 +1,23 @@
+{
+  "name": "@lumi/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@lumi/cache": "workspace:*",
+    "@lumi/foundation": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "@lumi/redis": "workspace:*",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "@prisma/client-runtime-utils": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "prisma": "catalog:"
+  }
+}

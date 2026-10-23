@@ -1,0 +1,15 @@
+{
+  "name": "@lumi/cache",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lumi/foundation": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "@lumi/redis": "workspace:*",
+    "devalue": "catalog:"
+  }
+}

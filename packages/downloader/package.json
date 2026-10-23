@@ -1,0 +1,17 @@
+{
+  "name": "@lumi/downloader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lumi/contracts": "workspace:*",
+    "@lumi/db": "workspace:*",
+    "@lumi/foundation": "workspace:*",
+    "@lumi/modules": "workspace:*",
+    "@lumi/redis": "workspace:*",
+    "isomorphic-git": "^1.44.3"
+  }
+}

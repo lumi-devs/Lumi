@@ -1,0 +1,14 @@
+{
+  "name": "@lumi/redis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lumi/foundation": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "ioredis": "catalog:"
+  }
+}
