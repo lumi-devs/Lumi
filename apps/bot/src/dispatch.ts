@@ -8,6 +8,7 @@ import {
   type SharedSlashCommand,
 } from "discord.js";
 import type { CommandContext, CommandDef, LumiServices } from "@lumi/bot-kit";
+import { hasPermit } from "@lumi/bot-kit";
 import { claim } from "@lumi/redis";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { CommandContextImpl } from "./context.ts";
@@ -112,6 +113,34 @@ async function execute(
     if (command.requiredPermissions && !context.member?.permissions.has(command.requiredPermissions)) {
       await context.reply(makeErrorCard("Missing permissions", "You do not have permission to run this command."));
       return;
+    }
+    if (command.permitNode && context.guildId) {
+      const nodes = Array.isArray(command.permitNode) ? command.permitNode : [command.permitNode];
+      let hasAny = false;
+      for (const node of nodes) {
+        if (
+          await hasPermit(services, {
+            guildId: context.guildId,
+            userId: context.user.id,
+            channelId: context.channel?.id ?? undefined,
+            member: context.member ?? undefined,
+            guildOwnerId: context.guild?.ownerId ?? undefined,
+            node,
+          })
+        ) {
+          hasAny = true;
+          break;
+        }
+      }
+      if (!hasAny) {
+        const nodeStr = nodes.map((n) => `\`${n}\``).join(" or ");
+        await context.reply(
+          context.isSlash
+            ? ephemeralCard(makeErrorCard("Permission denied", `You lack the required permit (${nodeStr}) to run this command.`))
+            : makeErrorCard("Permission denied", `You lack the required permit (${nodeStr}) to run this command.`),
+        );
+        return;
+      }
     }
     if (command.module !== null && !(await services.modules.isEnabled(context.guildId, command.module))) {
       await context.reply(makeErrorCard("Module disabled", `The **${command.module}** module is disabled here.`));

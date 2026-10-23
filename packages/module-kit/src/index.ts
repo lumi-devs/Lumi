@@ -14,3 +14,16 @@ export type {
   ModuleRegistry,
   RuntimeConfig,
 } from "./services.ts";
+export {
+  assertPermit,
+  evaluatePermit,
+  hasPermit,
+  matchPermitNode,
+  type PermitEvaluationOptions,
+  type PermitEvaluationResult,
+  type PermitEvaluationTarget,
+  type PermitKind,
+  type PermitPolarity,
+  type PermitTargetType,
+  type PermitTierVerdict,
+} from "./permits.ts";

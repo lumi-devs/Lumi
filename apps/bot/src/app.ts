@@ -3,10 +3,11 @@ import type { CommandDef, LumiServices } from "@lumi/bot-kit";
 import { addons } from "./commands/addons.ts";
 import { makeHelpCommand } from "./commands/help.ts";
 import { modules } from "./commands/modules.ts";
+import { permitCommand } from "./commands/permit.ts";
 import { ping } from "./commands/ping.ts";
 import { applicationCommands, createDispatcher, wireDispatcher } from "./dispatch.ts";
 
-const builtinCommands: CommandDef[] = [ping, modules, addons];
+const builtinCommands: CommandDef[] = [ping, modules, addons, permitCommand];
 builtinCommands.push(makeHelpCommand(builtinCommands));
 
 export { builtinCommands };

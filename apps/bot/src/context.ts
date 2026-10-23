@@ -76,6 +76,40 @@ export class CommandContextImpl implements CommandContext {
     return (this.source as ChatInputCommandInteraction).options.getBoolean(name);
   }
 
+  public getSubcommand(): string | null {
+    if (this.isSlash) {
+      try {
+        return (this.source as ChatInputCommandInteraction).options.getSubcommand();
+      } catch {
+        return null;
+      }
+    }
+    return this.#args[0] ?? null;
+  }
+
+  public async getUser(name: string): Promise<User | null> {
+    if (this.isSlash) {
+      return (this.source as ChatInputCommandInteraction).options.getUser(name);
+    }
+    const raw = this.#args[this.#indexOf(name)] ?? this.#args[0];
+    if (!raw) return null;
+    const cleanId = raw.replace(/[^0-9]/g, "");
+    if (!cleanId) return null;
+    return this.services.client.users.fetch(cleanId).catch(() => null);
+  }
+
+  public async getMember(name: string): Promise<GuildMember | null> {
+    if (this.isSlash) {
+      const member = (this.source as ChatInputCommandInteraction).options.getMember(name);
+      return (member as GuildMember | null) ?? null;
+    }
+    const raw = this.#args[this.#indexOf(name)] ?? this.#args[0];
+    if (!raw || !this.guild) return null;
+    const cleanId = raw.replace(/[^0-9]/g, "");
+    if (!cleanId) return null;
+    return this.guild.members.fetch(cleanId).catch(() => null);
+  }
+
   public async reply(card: CardReply): Promise<unknown> {
     return this.isSlash ? this.#replyInteraction(card) : this.#replyMessage(card);
   }

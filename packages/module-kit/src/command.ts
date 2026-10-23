@@ -8,6 +8,7 @@ export interface CommandDef {
   readonly guildOnly?: boolean;
   readonly ownerOnly?: boolean;
   readonly guildOwnerOnly?: boolean;
+  readonly permitNode?: string | string[];
   readonly requiredPermissions?: bigint;
   readonly cooldownMs?: number;
   readonly prefix?: boolean;

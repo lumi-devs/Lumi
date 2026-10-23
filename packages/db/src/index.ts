@@ -14,5 +14,15 @@ export type {
   Guild,
   GuildModuleConfig,
   ModuleData,
+  Permit,
+  PermitAssignment,
   Prisma,
 } from "../generated/client/index.js";
+export {
+  PermitRepository,
+  type PermitKind,
+  type PermitPolarity,
+  type PermitTargetType,
+  type PermitWithAssignments,
+  type TargetPermitPayload,
+} from "./repositories/permits.ts";

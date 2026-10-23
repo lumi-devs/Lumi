@@ -8,6 +8,7 @@ import { DownloaderRepository } from "./repositories/downloader.ts";
 import { GuildRepository } from "./repositories/guild.ts";
 import { ModuleDataRepository } from "./repositories/module-data.ts";
 import { ModuleStateRepository } from "./repositories/module-state.ts";
+import { PermitRepository } from "./repositories/permits.ts";
 
 export interface DatabaseServiceOptions {
   handle: DatabaseHandle;
@@ -25,6 +26,7 @@ export class DatabaseService {
   public readonly moduleData: ModuleDataRepository;
   public readonly afk: AfkRepository;
   public readonly downloader: DownloaderRepository;
+  public readonly permits: PermitRepository;
 
   readonly #handle: DatabaseHandle;
 
@@ -45,6 +47,7 @@ export class DatabaseService {
     this.moduleData = new ModuleDataRepository(deps);
     this.afk = new AfkRepository(deps);
     this.downloader = new DownloaderRepository(deps);
+    this.permits = new PermitRepository(deps);
   }
 
   public ping(role: "primary" | "replica" = "primary"): Promise<number> {

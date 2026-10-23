@@ -1,0 +1,308 @@
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ChannelSelectMenuBuilder,
+  MentionableSelectMenuBuilder,
+  RoleSelectMenuBuilder,
+  SectionBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  TextDisplayBuilder,
+  UserSelectMenuBuilder,
+  type AnyComponentBuilder,
+  type MessageActionRowComponentBuilder,
+} from "@discordjs/builders";
+import {
+  ButtonStyle,
+  ChannelType,
+  parseEmoji,
+  type APIMessageComponentEmoji,
+} from "discord.js";
+
+export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
+
+export function componentEmoji(text: string): APIMessageComponentEmoji {
+  const parsed = parseEmoji(text);
+  if (!parsed?.name) return { name: text };
+  return {
+    name: parsed.name,
+    ...(parsed.id ? { id: parsed.id } : {}),
+    ...(parsed.animated ? { animated: parsed.animated } : {}),
+  };
+}
+
+export function row(...components: MessageActionRowComponentBuilder[]): Row {
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...components);
+}
+
+function setEmojiIfPresent(
+  builder: StringSelectMenuOptionBuilder | ButtonBuilder,
+  emoji?: string | APIMessageComponentEmoji,
+): void {
+  if (emoji) {
+    builder.setEmoji(typeof emoji === "string" ? componentEmoji(emoji) : emoji);
+  }
+}
+
+function applySelectMenuOptions(
+  menu:
+    | UserSelectMenuBuilder
+    | RoleSelectMenuBuilder
+    | ChannelSelectMenuBuilder
+    | MentionableSelectMenuBuilder
+    | StringSelectMenuBuilder,
+  opts: {
+    placeholder?: string;
+    minValues?: number;
+    maxValues?: number;
+    disabled?: boolean;
+  },
+): void {
+  if (opts.placeholder) menu.setPlaceholder(opts.placeholder);
+  if (opts.minValues !== undefined) menu.setMinValues(opts.minValues);
+  if (opts.maxValues !== undefined) menu.setMaxValues(opts.maxValues);
+  if (opts.disabled !== undefined) menu.setDisabled(opts.disabled);
+}
+
+export interface CreateUserSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateRoleSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateChannelSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  channelTypes?: ChannelType[];
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface CreateMentionableSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export interface StringSelectOptionInput {
+  label: string;
+  value: string;
+  description?: string | undefined;
+  emoji?: string | APIMessageComponentEmoji | undefined;
+  default?: boolean;
+}
+
+export interface CreateStringSelectMenuOptions {
+  customId: string;
+  placeholder?: string;
+  options?: (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
+  minValues?: number;
+  maxValues?: number;
+  disabled?: boolean;
+}
+
+export function createUserSelectMenu(
+  options: CreateUserSelectMenuOptions,
+): UserSelectMenuBuilder {
+  const menu = new UserSelectMenuBuilder().setCustomId(options.customId);
+  applySelectMenuOptions(menu, options);
+  return menu;
+}
+
+export function createRoleSelectMenu(
+  options: CreateRoleSelectMenuOptions,
+): RoleSelectMenuBuilder {
+  const menu = new RoleSelectMenuBuilder().setCustomId(options.customId);
+  applySelectMenuOptions(menu, options);
+  return menu;
+}
+
+export function createChannelSelectMenu(
+  options: CreateChannelSelectMenuOptions,
+): ChannelSelectMenuBuilder {
+  const menu = new ChannelSelectMenuBuilder().setCustomId(options.customId);
+  if (options.channelTypes && options.channelTypes.length > 0) {
+    menu.setChannelTypes(options.channelTypes);
+  }
+  applySelectMenuOptions(menu, options);
+  return menu;
+}
+
+export function createMentionableSelectMenu(
+  options: CreateMentionableSelectMenuOptions,
+): MentionableSelectMenuBuilder {
+  const menu = new MentionableSelectMenuBuilder().setCustomId(options.customId);
+  applySelectMenuOptions(menu, options);
+  return menu;
+}
+
+export function createStringSelectMenu(
+  options: CreateStringSelectMenuOptions,
+): StringSelectMenuBuilder {
+  const menu = new StringSelectMenuBuilder().setCustomId(options.customId);
+  applySelectMenuOptions(menu, options);
+  if (options.options && options.options.length > 0) {
+    const formattedOptions = options.options.map((opt) => {
+      if (opt instanceof StringSelectMenuOptionBuilder) {
+        return opt;
+      }
+      const optionBuilder = new StringSelectMenuOptionBuilder()
+        .setLabel(opt.label)
+        .setValue(opt.value);
+      if (opt.description) optionBuilder.setDescription(opt.description);
+      setEmojiIfPresent(optionBuilder, opt.emoji);
+      if (opt.default !== undefined) optionBuilder.setDefault(opt.default);
+      return optionBuilder;
+    });
+    menu.addOptions(formattedOptions);
+  }
+
+  return menu;
+}
+
+export interface CreateActionButtonOptions {
+  customId?: string | undefined;
+  url?: string | undefined;
+  label?: string | undefined;
+  style?: ButtonStyle | undefined;
+  emoji?: string | APIMessageComponentEmoji | undefined;
+  disabled?: boolean | undefined;
+}
+
+export interface CreatePaginationRowOptions {
+  customIdPrefix: string;
+  currentPage: number;
+  totalPages: number;
+  disabled?: boolean;
+}
+
+export const ButtonLabelLimit = 80;
+const clipLabel = (label: string): string =>
+  label.length > ButtonLabelLimit ? label.slice(0, ButtonLabelLimit) : label;
+
+export function createBackButton(
+  customId: string,
+  label = "← Back",
+): ButtonBuilder {
+  return new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel(clipLabel(label))
+    .setStyle(ButtonStyle.Secondary);
+}
+
+export function createActionButton(
+  options: CreateActionButtonOptions,
+): ButtonBuilder {
+  if (options.customId && options.url) {
+    throw new Error("createActionButton: customId and url are mutually exclusive.");
+  }
+  const button = new ButtonBuilder();
+  if (options.customId) button.setCustomId(options.customId);
+  if (options.url) button.setURL(options.url);
+  if (options.label) button.setLabel(clipLabel(options.label));
+  button.setStyle(options.style ?? (options.url ? ButtonStyle.Link : ButtonStyle.Primary));
+  setEmojiIfPresent(button, options.emoji);
+  if (options.disabled !== undefined) button.setDisabled(options.disabled);
+  return button;
+}
+
+export function createPaginationRow(
+  options: CreatePaginationRowOptions,
+): ActionRowBuilder<ButtonBuilder> {
+  const { customIdPrefix, currentPage, totalPages, disabled = false } = options;
+  const safeTotalPages = Math.max(1, totalPages);
+  const isFirstPage = currentPage <= 0;
+  const isLastPage = currentPage >= safeTotalPages - 1;
+
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:prev:${Math.max(0, currentPage - 1)}`)
+    .setLabel("Prev")
+    .setEmoji(componentEmoji("⬅️"))
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled || isFirstPage);
+
+  const indicatorBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:indicator`)
+    .setLabel(`${currentPage + 1} / ${safeTotalPages}`)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`${customIdPrefix}:next:${currentPage + 1}`)
+    .setLabel("Next")
+    .setEmoji(componentEmoji("➡️"))
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled || isLastPage);
+
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    prevBtn,
+    indicatorBtn,
+    nextBtn,
+  );
+}
+
+export function buildSafeActionRows<
+  T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
+>(rows: (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
+  const MaxRows = 5;
+  const MaxComponents = 5;
+
+  if (!Array.isArray(rows)) return [];
+  const validRows = rows.filter((r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder);
+  const finalRows = validRows.slice(0, MaxRows);
+
+  return finalRows.map((row) => {
+    if (row.components.length > MaxComponents) {
+      return new ActionRowBuilder<T>().addComponents(row.components.slice(0, MaxComponents));
+    }
+    return row;
+  });
+}
+
+export interface AccessoryButton {
+  customId: string;
+  label?: string;
+  style?: ButtonStyle;
+  emoji?: string | APIMessageComponentEmoji;
+  disabled?: boolean;
+}
+
+export const SectionLineLimit = 3;
+const clipLines = (lines: string | string[]): string[] =>
+  (Array.isArray(lines) ? lines : [lines]).slice(0, SectionLineLimit);
+
+const toButton = (b: AccessoryButton): ButtonBuilder => {
+  const button = new ButtonBuilder()
+    .setCustomId(b.customId)
+    .setStyle(b.style ?? ButtonStyle.Secondary);
+  if (b.label) button.setLabel(clipLabel(b.label));
+  if (b.emoji) {
+    button.setEmoji(typeof b.emoji === "string" ? componentEmoji(b.emoji) : b.emoji);
+  }
+  if (b.disabled !== undefined) button.setDisabled(b.disabled);
+  return button;
+};
+
+export function settingRow(
+  lines: string | string[],
+  button: AccessoryButton,
+): SectionBuilder {
+  const section = new SectionBuilder().setButtonAccessory(toButton(button));
+  for (const line of clipLines(lines)) {
+    section.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
+  }
+  return section;
+}

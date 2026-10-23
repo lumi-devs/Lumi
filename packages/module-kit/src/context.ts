@@ -20,9 +20,12 @@ export interface CommandContext {
   readonly member: GuildMember | null;
   readonly user: User;
   readonly isSlash: boolean;
+  getSubcommand(): string | null;
   getString(name: string, options?: { rest?: boolean }): Promise<string | null>;
   getInteger(name: string): Promise<number | null>;
   getBoolean(name: string): Promise<boolean | null>;
+  getUser(name: string): Promise<User | null>;
+  getMember(name: string): Promise<GuildMember | null>;
   reply(card: CardReply): Promise<unknown>;
   replySuccess(title: string, body: string | string[]): Promise<unknown>;
   replyError(title: string, body: string | string[]): Promise<unknown>;
