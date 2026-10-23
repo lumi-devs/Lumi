@@ -2,6 +2,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ChannelType,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   PermissionFlagsBits,
   SlashCommandBuilder,
   time,
@@ -18,6 +20,18 @@ import {
   resolveCardColor,
 } from "@lumi/ui";
 
+const KeyPermissions = [
+  { flag: PermissionFlagsBits.Administrator, name: "Administrator" },
+  { flag: PermissionFlagsBits.ManageGuild, name: "Manage Server" },
+  { flag: PermissionFlagsBits.ManageRoles, name: "Manage Roles" },
+  { flag: PermissionFlagsBits.ManageChannels, name: "Manage Channels" },
+  { flag: PermissionFlagsBits.BanMembers, name: "Ban Members" },
+  { flag: PermissionFlagsBits.KickMembers, name: "Kick Members" },
+  { flag: PermissionFlagsBits.ManageMessages, name: "Manage Messages" },
+  { flag: PermissionFlagsBits.ManageWebhooks, name: "Manage Webhooks" },
+  { flag: PermissionFlagsBits.MentionEveryone, name: "Mention Everyone" },
+];
+
 export const avatarCommand: CommandDef = {
   name: "avatar",
   description: "Display a user's avatar in full resolution.",
@@ -31,22 +45,29 @@ export const avatarCommand: CommandDef = {
       .addUserOption((opt) => opt.setName("user").setDescription("User whose avatar to display").setRequired(false)),
   async run(ctx) {
     const targetUser = (await ctx.getUser("user")) ?? ctx.user;
-    const pngUrl = targetUser.displayAvatarURL({ size: 4096, extension: "png" });
-    const webpUrl = targetUser.displayAvatarURL({ size: 4096, extension: "webp" });
+    const avatarUrl = targetUser.displayAvatarURL({ size: 4096, extension: "png" });
 
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-      new ButtonBuilder().setLabel("PNG").setStyle(ButtonStyle.Link).setURL(pngUrl),
-      new ButtonBuilder().setLabel("WebP").setStyle(ButtonStyle.Link).setURL(webpUrl),
+      new ButtonBuilder()
+        .setLabel("Avatar Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL(avatarUrl)
+        .setEmoji({ name: "🖼️" }),
+    );
+
+    const gallery = new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder({ media: { url: avatarUrl } }),
     );
 
     return ctx.reply(
       makeCard(
         resolveCardColor("info"),
         `${targetUser.displayName}'s Avatar`,
-        `Direct link: [Click here](${pngUrl})`,
+        "",
         {
-          thumbnailUrl: pngUrl,
+          mediaGallery: gallery,
           actionRows: [row],
+          breadcrumbs: ["Avatar", targetUser.tag || targetUser.username],
         },
       ),
     );
@@ -67,23 +88,33 @@ export const bannerCommand: CommandDef = {
   async run(ctx) {
     const targetUser = (await ctx.getUser("user")) ?? ctx.user;
     const fetched = await ctx.services.client.users.fetch(targetUser.id, { force: true }).catch(() => null);
-    const bannerUrl = fetched?.bannerURL({ size: 4096 });
+    const bannerUrl = fetched?.bannerURL({ size: 4096, extension: "png" });
 
     if (!bannerUrl) {
       return ctx.reply(makeInfoCard("No Banner", `${targetUser.displayName} does not have a profile banner set.`));
     }
 
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-      new ButtonBuilder().setLabel("View Banner").setStyle(ButtonStyle.Link).setURL(bannerUrl),
+      new ButtonBuilder()
+        .setLabel("Banner Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL(bannerUrl)
+        .setEmoji({ name: "🖼️" }),
+    );
+
+    const gallery = new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder({ media: { url: bannerUrl } }),
     );
 
     return ctx.reply(
       makeCard(
         resolveCardColor("info"),
         `${targetUser.displayName}'s Banner`,
-        `Direct link: [Click here](${bannerUrl})`,
+        "",
         {
+          mediaGallery: gallery,
           actionRows: [row],
+          breadcrumbs: ["Banner", targetUser.tag || targetUser.username],
         },
       ),
     );
@@ -108,39 +139,75 @@ export const whoisCommand: CommandDef = {
     const lines: string[] = [
       `**User Mention**: ${userMention(targetUser.id)}`,
       `**Account ID**: \`${targetUser.id}\``,
-      `**Bot Account**: ${targetUser.bot ? "🤖 Yes" : "👤 No"}`,
-      `**Created At**: ${time(targetUser.createdAt, "R")} (${time(targetUser.createdAt, "F")})`,
+      `**Created At**: ${time(targetUser.createdAt, "R")} (${time(targetUser.createdAt, "D")})`,
     ];
 
+    let cardColor = resolveCardColor("neutral");
+
     if (member) {
+      cardColor = member.displayColor || resolveCardColor("primary");
       lines.push(
         `\n### Member Information`,
-        `**Joined Server**: ${member.joinedAt ? `${time(member.joinedAt, "R")} (${time(member.joinedAt, "F")})` : "Unknown"}`,
+        `**Joined Server**: ${member.joinedAt ? `${time(member.joinedAt, "R")} (${time(member.joinedAt, "D")})` : "Unknown"}`,
       );
       if (member.premiumSince) {
-        lines.push(`**Server Boosting**: Since ${time(member.premiumSince, "R")}`);
+        lines.push(`**Server Boosting Since**: ${time(member.premiumSince, "R")}`);
       }
 
-      const roles = member.roles.cache
+      const sortedRoles = member.roles.cache
         .filter((r) => r.id !== ctx.guildId)
         .sort((a, b) => b.position - a.position);
 
-      const roleMentions = roles.map((r) => r.toString());
-      const roleStr = roleMentions.length > 0 ? (roleMentions.length > 15 ? `${roleMentions.slice(0, 15).join(", ")} ...and ${roleMentions.length - 15} more` : roleMentions.join(", ")) : "None";
+      let rolesText = "No roles";
+      if (sortedRoles.size > 0) {
+        const mentions = sortedRoles.map((role) => role.toString());
+        if (mentions.join(" ").length > 800) {
+          let current = "";
+          let count = 0;
+          for (const mention of mentions) {
+            if (`${current} ${mention}`.length > 750) break;
+            current += (current ? " " : "") + mention;
+            count++;
+          }
+          rolesText = `${current} ...and ${sortedRoles.size - count} more`;
+        } else {
+          rolesText = mentions.join(" ");
+        }
+      }
+      lines.push(`\n### Roles [${sortedRoles.size}]\n${rolesText}`);
 
-      lines.push(`**Roles [${roles.size}]**: ${roleStr}`);
+      let keyPermsText = "None";
+      if (member.permissions.has(PermissionFlagsBits.Administrator)) {
+        keyPermsText = "Administrator";
+      } else {
+        const perms = KeyPermissions.filter((p) => member.permissions.has(p.flag)).map((p) => p.name);
+        if (perms.length > 0) keyPermsText = perms.join(", ");
+      }
+      lines.push(`\n### Key Permissions\n${keyPermsText}`);
     }
 
+    const avatarUrl = targetUser.displayAvatarURL({ size: 4096, extension: "png" });
+    const buttons = [
+      new ButtonBuilder()
+        .setLabel("View Profile")
+        .setStyle(ButtonStyle.Link)
+        .setURL(`discord://-/users/${targetUser.id}`)
+        .setEmoji({ name: "👤" }),
+      new ButtonBuilder()
+        .setLabel("Avatar Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL(avatarUrl)
+        .setEmoji({ name: "🖼️" }),
+    ];
+
+    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...buttons);
+
     return ctx.reply(
-      makeCard(
-        resolveCardColor("info"),
-        targetUser.displayName,
-        lines.join("\n"),
-        {
-          thumbnailUrl: targetUser.displayAvatarURL({ size: 512 }),
-          breadcrumbs: ["Whois", targetUser.tag || targetUser.username],
-        },
-      ),
+      makeCard(cardColor, targetUser.displayName, lines.join("\n"), {
+        thumbnailUrl: targetUser.displayAvatarURL({ size: 512 }),
+        breadcrumbs: ["Whois", targetUser.tag || targetUser.username],
+        actionRows: [row],
+      }),
     );
   },
 };
@@ -165,24 +232,42 @@ export const serverinfoCommand: CommandDef = {
     const categoryCount = channels.filter((c) => c.type === ChannelType.GuildCategory).size;
 
     const lines: string[] = [
-      `**Server Owner**: ${owner ? `${userMention(owner.id)} (\`${owner.id}\`)` : `\`${guild.ownerId}\``}`,
+      `**Server Owner**: ${owner ? `${userMention(owner.id)} (ID: \`${owner.id}\`)` : `\`${guild.ownerId}\``}`,
       `**Guild ID**: \`${guild.id}\``,
-      `**Created At**: ${time(guild.createdAt, "R")} (${time(guild.createdAt, "F")})`,
-      `\n### Members & Boosts`,
-      `**Total Members**: **${guild.memberCount.toLocaleString()}**`,
-      `**Server Boosts**: Level **${guild.premiumTier}** (${guild.premiumSubscriptionCount ?? 0} Boosts)`,
-      `\n### Channels (${channels.size})`,
-      `**Text**: ${textCount} • **Voice**: ${voiceCount} • **Categories**: ${categoryCount}`,
-      `\n### Features & Settings`,
-      `**Roles**: ${guild.roles.cache.size} • **Emojis**: ${guild.emojis.cache.size}`,
-      `**Verification Level**: Level ${guild.verificationLevel}`,
+      `**Created At**: ${time(guild.createdAt, "R")} (${time(guild.createdAt, "D")})`,
+      `\n### MEMBERS`,
+      `**Total Members**: ***${guild.memberCount.toLocaleString()}***`,
+      `**Server Boosts**: ***${guild.premiumSubscriptionCount ?? 0}*** (Level ${guild.premiumTier})`,
+      `\n### CHANNELS`,
+      `**Text Channels**: ***${textCount}***`,
+      `**Voice Channels**: ***${voiceCount}***`,
+      `**Categories**: ***${categoryCount}***`,
+      `**Total Channels**: ***${channels.size}***`,
+      `\n### FEATURES`,
+      `**Roles**: ***${guild.roles.cache.size}***`,
+      `**Emojis**: ***${guild.emojis.cache.size}***`,
+      `**Verification Level**: ***${guild.verificationLevel}***`,
     ];
 
     const iconUrl = guild.iconURL({ size: 512 });
+    const actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+    if (iconUrl) {
+      actionRows.push(
+        new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+          new ButtonBuilder()
+            .setLabel("Server Icon Link")
+            .setStyle(ButtonStyle.Link)
+            .setURL(iconUrl)
+            .setEmoji({ name: "🏰" }),
+        ),
+      );
+    }
+
     return ctx.reply(
       makeCard(resolveCardColor("info"), guild.name, lines.join("\n"), {
         ...(iconUrl ? { thumbnailUrl: iconUrl } : {}),
         breadcrumbs: ["Server Info", guild.name],
+        ...(actionRows.length > 0 ? { actionRows } : {}),
       }),
     );
   },
