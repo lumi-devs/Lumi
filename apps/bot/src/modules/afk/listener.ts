@@ -1,8 +1,26 @@
-import { Events, type Message } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ContainerBuilder,
+  Events,
+  MessageFlags,
+  SeparatorSpacingSize,
+  TextDisplayBuilder,
+  type Message,
+  type MessageActionRowComponentBuilder,
+} from "discord.js";
+import { SeparatorBuilder } from "@discordjs/builders";
 import type { ListenerDef, LumiServices } from "@lumi/bot-kit";
 import { claim } from "@lumi/redis";
-import { makeInfoCard } from "@lumi/ui";
-import { afkSince, NickPrefix, stripNickPrefix } from "./service.ts";
+import { componentEmoji, makeCard } from "@lumi/ui";
+import {
+  afkSince,
+  getAfkMentions,
+  NickPrefix,
+  recordAfkMention,
+  stripNickPrefix,
+} from "./service.ts";
 
 async function isCommand(services: LumiServices, message: Message<true>): Promise<boolean> {
   const guild = await services.db.guild.get(message.guildId);
@@ -22,35 +40,82 @@ export const afkMessageListener: ListenerDef<Events.MessageCreate> = {
     if (!(await services.modules.isEnabled(guildId, "afk"))) return;
     const userId = message.author.id;
 
+    // Check if author was AFK
     const ownEntry = await services.db.afk.findEntry(guildId, userId);
     if (ownEntry && !(await isCommand(services, message))) {
-      const claimed = await claim(
+      await services.db.afk.deleteEntry(guildId, userId);
+
+      if (message.member?.displayName.startsWith(NickPrefix)) {
+        const clean = stripNickPrefix(message.member.displayName);
+        if (message.member.manageable) {
+          await message.member.setNickname(clean).catch(() => null);
+        }
+      }
+
+      const welcomeCooldown = await claim(
         services.redis,
-        services.keys.cooldown("afk:welcome", `${guildId}:${userId}`),
+        services.keys.cooldown("afk:welcome", `${channelId}:${userId}`),
         5_000,
       );
-      if (claimed) {
-        await services.db.afk.deleteEntry(guildId, userId);
-        const member = message.member;
-        if (member && member.displayName.startsWith(NickPrefix)) {
-          const next = stripNickPrefix(member.displayName);
-          await member.setNickname(next).catch(() => null);
+
+      if (welcomeCooldown && message.channel.isSendable()) {
+        const mentions = await getAfkMentions(services, guildId, userId);
+        const actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+
+        if (mentions.length > 0) {
+          actionRows.push(
+            new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId(`afk:mentions:${userId}:0`)
+                .setLabel(`View Mentions (${mentions.length})`)
+                .setEmoji(componentEmoji("📬"))
+                .setStyle(ButtonStyle.Secondary),
+            ),
+          );
         }
-        if (message.channel.isSendable()) {
-          await message
-            .reply(
-              makeInfoCard("👋 Welcome Back!", `AFK removed.\nAFK for **${afkSince(ownEntry)}**.`),
-            )
-            .catch(() => null);
+
+        const welcomeCard = new ContainerBuilder();
+        welcomeCard.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent("**👋 Welcome Back!**"),
+        );
+        welcomeCard.addSeparatorComponents(
+          new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true),
+        );
+        welcomeCard.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(`AFK removed.\nAFK for **${afkSince(ownEntry)}**.`),
+        );
+        if (actionRows.length > 0) {
+          welcomeCard.addActionRowComponents(...actionRows);
         }
+
+        await message
+          .reply({
+            flags: MessageFlags.IsComponentsV2,
+            components: [welcomeCard],
+            allowedMentions: {},
+          })
+          .catch(() => null);
       }
     }
 
+    // Check if others were mentioned
     const mentioned = message.mentions.users.filter((user) => user.id !== userId && !user.bot);
     if (mentioned.size === 0) return;
 
     const entries = await services.db.afk.findEntries(guildId, [...mentioned.keys()]);
     if (entries.length === 0) return;
+
+    const mentionBase = {
+      authorId: message.author.id,
+      channelId: message.channelId,
+      messageId: message.id,
+      ts: Math.floor(message.createdTimestamp / 1000),
+    };
+
+    // Record mentions for all matched AFK users
+    for (const entry of entries) {
+      await recordAfkMention(services, guildId, entry.userId, mentionBase);
+    }
 
     const claimed = await claim(
       services.redis,
@@ -59,13 +124,29 @@ export const afkMessageListener: ListenerDef<Events.MessageCreate> = {
     );
     if (!claimed || !message.channel.isSendable()) return;
 
-    const lines = entries.map(
-      (entry) => `<@${entry.userId}> is AFK\n**Reason:** ${entry.reason}\n**AFK for:** ${afkSince(entry)}`,
-    );
+    const firstEntry = entries[0];
+    if (!firstEntry) return;
+
+    const member = await message.guild.members.fetch(firstEntry.userId).catch(() => null);
+    const name = member?.displayName.startsWith(NickPrefix)
+      ? member.displayName.slice(NickPrefix.length)
+      : (member?.displayName ?? firstEntry.userId);
+
     const reply = await message
-      .reply(makeInfoCard("💤 Member is AFK", lines))
+      .reply({
+        ...makeCard(
+          0,
+          `💤 ${name} is AFK`,
+          `**Reason:** ${firstEntry.reason}\n**AFK for:** ${afkSince(firstEntry)}`,
+        ),
+        allowedMentions: {},
+      })
       .catch(() => null);
-    if (!reply) return;
-    setTimeout(() => void reply.delete().catch(() => undefined), 15_000).unref();
+
+    if (reply) {
+      setTimeout(() => {
+        reply.delete().catch(() => null);
+      }, 15_000);
+    }
   },
 };

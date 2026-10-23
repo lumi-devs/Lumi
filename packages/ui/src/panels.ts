@@ -306,3 +306,27 @@ export function settingRow(
   }
   return section;
 }
+
+export function confirmRow(
+  options: ConfirmRowOptions,
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(options.confirmId)
+      .setLabel(clipLabel(options.confirmLabel ?? "Confirm"))
+      .setStyle(options.confirmStyle ?? ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(options.cancelId)
+      .setLabel(clipLabel(options.cancelLabel ?? "Cancel"))
+      .setStyle(ButtonStyle.Secondary),
+  );
+}
+
+export interface ConfirmRowOptions {
+  confirmId: string;
+  cancelId: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirmStyle?: ButtonStyle;
+}
+

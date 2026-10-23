@@ -27,6 +27,7 @@ export {
 export {
   buildSafeActionRows,
   componentEmoji,
+  confirmRow,
   createActionButton,
   createBackButton,
   createChannelSelectMenu,
@@ -38,6 +39,7 @@ export {
   row,
   settingRow,
   type AccessoryButton,
+  type ConfirmRowOptions,
   type CreateActionButtonOptions,
   type CreateChannelSelectMenuOptions,
   type CreateMentionableSelectMenuOptions,

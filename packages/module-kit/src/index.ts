@@ -15,6 +15,11 @@ export type {
   RuntimeConfig,
 } from "./services.ts";
 export {
+  confirmPrompt,
+  type ConfirmPromptOptions,
+  type ConfirmPromptResult,
+} from "./confirm.ts";
+export {
   assertPermit,
   evaluatePermit,
   hasPermit,

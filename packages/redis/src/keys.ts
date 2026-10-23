@@ -10,6 +10,7 @@ export function createKeys(namespace = "lumi") {
     moduleData: (guildId: string, module: string, targetId: string, key: string) =>
       prefix(["kv", guildId, module, `${targetId.length}:${targetId}:${key}`]),
     afk: (guildId: string, userId: string) => prefix(["afk", guildId, userId]),
+    afkMentions: (guildId: string, userId: string) => prefix(["afk", "mentions", guildId, userId]),
     cooldown: (scope: string, id: string) => prefix(["cd", scope, id]),
     permits: (guildId: string, targetType: string, targetId: string) =>
       prefix(["permits", guildId, targetType, targetId]),

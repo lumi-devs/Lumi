@@ -12,6 +12,8 @@ import { hasPermit } from "@lumi/bot-kit";
 import { claim } from "@lumi/redis";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { handlePingInteraction } from "./commands/ping.ts";
+import { handleAfkInteraction } from "./modules/afk/interactions.ts";
+import { handleUtilityInteraction } from "./modules/utility/interactions.ts";
 import { CommandContextImpl } from "./context.ts";
 
 export type Dispatcher = {
@@ -25,9 +27,19 @@ export function createDispatcher(services: LumiServices, builtins: readonly Comm
 
   const handleInteraction = async (interaction: Interaction): Promise<void> => {
     try {
-      if (interaction.isButton() && interaction.customId.startsWith("ping:")) {
-        await handlePingInteraction(services, interaction);
-        return;
+      if (interaction.isButton()) {
+        if (interaction.customId.startsWith("ping:")) {
+          await handlePingInteraction(services, interaction);
+          return;
+        }
+        if (interaction.customId.startsWith("afk:")) {
+          await handleAfkInteraction(services, interaction);
+          return;
+        }
+        if (interaction.customId.startsWith("user-media:")) {
+          await handleUtilityInteraction(services, interaction);
+          return;
+        }
       }
       if (!interaction.isChatInputCommand()) return;
       const command = find(interaction.commandName);

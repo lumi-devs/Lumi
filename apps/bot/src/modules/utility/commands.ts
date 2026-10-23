@@ -11,7 +11,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "discord.js";
 import { ButtonStyle } from "discord.js";
-import type { CommandDef } from "@lumi/bot-kit";
+import { confirmPrompt, type CommandDef } from "@lumi/bot-kit";
 import {
   makeCard,
   makeErrorCard,
@@ -21,7 +21,7 @@ import {
 } from "@lumi/ui";
 
 const KeyPermissions = [
-  { flag: PermissionFlagsBits.Administrator, name: "Administrator" },
+  { flag: PermissionFlagsBits.Administrator, name: "Administrator (All Permissions)" },
   { flag: PermissionFlagsBits.ManageGuild, name: "Manage Server" },
   { flag: PermissionFlagsBits.ManageRoles, name: "Manage Roles" },
   { flag: PermissionFlagsBits.ManageChannels, name: "Manage Channels" },
@@ -45,18 +45,42 @@ export const avatarCommand: CommandDef = {
       .addUserOption((opt) => opt.setName("user").setDescription("User whose avatar to display").setRequired(false)),
   async run(ctx) {
     const targetUser = (await ctx.getUser("user")) ?? ctx.user;
+    const isSelf = targetUser.id === ctx.user.id;
     const avatarUrl = targetUser.displayAvatarURL({ size: 4096, extension: "png" });
+
+    if (isSelf) {
+      const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setLabel("Avatar Link")
+          .setStyle(ButtonStyle.Link)
+          .setURL(avatarUrl)
+          .setEmoji({ name: "🖼️" }),
+      );
+
+      const gallery = new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder({ media: { url: avatarUrl } }),
+      );
+
+      return ctx.reply(
+        makeCard(
+          resolveCardColor("info"),
+          `${targetUser.displayName}'s Avatar`,
+          "",
+          {
+            mediaGallery: gallery,
+            actionRows: [row],
+            breadcrumbs: ["Avatar", targetUser.tag || targetUser.username],
+          },
+        ),
+      );
+    }
 
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel("Avatar Link")
-        .setStyle(ButtonStyle.Link)
-        .setURL(avatarUrl)
+        .setCustomId(`user-media:view:${targetUser.id}:avatar`)
+        .setLabel("View Avatar")
+        .setStyle(ButtonStyle.Primary)
         .setEmoji({ name: "🖼️" }),
-    );
-
-    const gallery = new MediaGalleryBuilder().addItems(
-      new MediaGalleryItemBuilder({ media: { url: avatarUrl } }),
     );
 
     return ctx.reply(
@@ -65,7 +89,6 @@ export const avatarCommand: CommandDef = {
         `${targetUser.displayName}'s Avatar`,
         "",
         {
-          mediaGallery: gallery,
           actionRows: [row],
           breadcrumbs: ["Avatar", targetUser.tag || targetUser.username],
         },
@@ -87,6 +110,7 @@ export const bannerCommand: CommandDef = {
       .addUserOption((opt) => opt.setName("user").setDescription("User whose banner to display").setRequired(false)),
   async run(ctx) {
     const targetUser = (await ctx.getUser("user")) ?? ctx.user;
+    const isSelf = targetUser.id === ctx.user.id;
     const fetched = await ctx.services.client.users.fetch(targetUser.id, { force: true }).catch(() => null);
     const bannerUrl = fetched?.bannerURL({ size: 4096, extension: "png" });
 
@@ -94,16 +118,39 @@ export const bannerCommand: CommandDef = {
       return ctx.reply(makeInfoCard("No Banner", `${targetUser.displayName} does not have a profile banner set.`));
     }
 
+    if (isSelf) {
+      const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+          .setLabel("Banner Link")
+          .setStyle(ButtonStyle.Link)
+          .setURL(bannerUrl)
+          .setEmoji({ name: "🖼️" }),
+      );
+
+      const gallery = new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder({ media: { url: bannerUrl } }),
+      );
+
+      return ctx.reply(
+        makeCard(
+          resolveCardColor("info"),
+          `${targetUser.displayName}'s Banner`,
+          "",
+          {
+            mediaGallery: gallery,
+            actionRows: [row],
+            breadcrumbs: ["Banner", targetUser.tag || targetUser.username],
+          },
+        ),
+      );
+    }
+
     const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
       new ButtonBuilder()
-        .setLabel("Banner Link")
-        .setStyle(ButtonStyle.Link)
-        .setURL(bannerUrl)
+        .setCustomId(`user-media:view:${targetUser.id}:banner`)
+        .setLabel("View Banner")
+        .setStyle(ButtonStyle.Primary)
         .setEmoji({ name: "🖼️" }),
-    );
-
-    const gallery = new MediaGalleryBuilder().addItems(
-      new MediaGalleryItemBuilder({ media: { url: bannerUrl } }),
     );
 
     return ctx.reply(
@@ -112,7 +159,6 @@ export const bannerCommand: CommandDef = {
         `${targetUser.displayName}'s Banner`,
         "",
         {
-          mediaGallery: gallery,
           actionRows: [row],
           breadcrumbs: ["Banner", targetUser.tag || targetUser.username],
         },
@@ -123,14 +169,14 @@ export const bannerCommand: CommandDef = {
 
 export const whoisCommand: CommandDef = {
   name: "whois",
-  description: "Displays rich information about a user or guild member.",
+  description: "Displays information about a user or guild member.",
   module: "utility",
   prefix: true,
   cooldownMs: 3_000,
   build: () =>
     new SlashCommandBuilder()
       .setName("whois")
-      .setDescription("Displays rich information about a user or guild member.")
+      .setDescription("Displays information about a user or guild member.")
       .addUserOption((opt) => opt.setName("user").setDescription("User whose info to view").setRequired(false)),
   async run(ctx) {
     const targetUser = (await ctx.getUser("user")) ?? ctx.user;
@@ -139,7 +185,7 @@ export const whoisCommand: CommandDef = {
     const lines: string[] = [
       `**User Mention**: ${userMention(targetUser.id)}`,
       `**Account ID**: \`${targetUser.id}\``,
-      `**Created At**: ${time(targetUser.createdAt, "R")} (${time(targetUser.createdAt, "D")})`,
+      `**Created At**: ${time(targetUser.createdAt, "R")} (${time(targetUser.createdAt, "d")})`,
     ];
 
     let cardColor = resolveCardColor("neutral");
@@ -148,7 +194,7 @@ export const whoisCommand: CommandDef = {
       cardColor = member.displayColor || resolveCardColor("primary");
       lines.push(
         `\n### Member Information`,
-        `**Joined Server**: ${member.joinedAt ? `${time(member.joinedAt, "R")} (${time(member.joinedAt, "D")})` : "Unknown"}`,
+        `**Joined Server**: ${member.joinedAt ? `${time(member.joinedAt, "R")} (${time(member.joinedAt, "d")})` : "Unknown"}`,
       );
       if (member.premiumSince) {
         lines.push(`**Server Boosting Since**: ${time(member.premiumSince, "R")}`);
@@ -178,7 +224,7 @@ export const whoisCommand: CommandDef = {
 
       let keyPermsText = "None";
       if (member.permissions.has(PermissionFlagsBits.Administrator)) {
-        keyPermsText = "Administrator";
+        keyPermsText = "Administrator (All Permissions)";
       } else {
         const perms = KeyPermissions.filter((p) => member.permissions.has(p.flag)).map((p) => p.name);
         if (perms.length > 0) keyPermsText = perms.join(", ");
@@ -234,7 +280,7 @@ export const serverinfoCommand: CommandDef = {
     const lines: string[] = [
       `**Server Owner**: ${owner ? `${userMention(owner.id)} (ID: \`${owner.id}\`)` : `\`${guild.ownerId}\``}`,
       `**Guild ID**: \`${guild.id}\``,
-      `**Created At**: ${time(guild.createdAt, "R")} (${time(guild.createdAt, "D")})`,
+      `**Created At**: ${time(guild.createdAt, "R")} (${time(guild.createdAt, "d")})`,
       `\n### MEMBERS`,
       `**Total Members**: ***${guild.memberCount.toLocaleString()}***`,
       `**Server Boosts**: ***${guild.premiumSubscriptionCount ?? 0}*** (Level ${guild.premiumTier})`,
@@ -249,7 +295,7 @@ export const serverinfoCommand: CommandDef = {
       `**Verification Level**: ***${guild.verificationLevel}***`,
     ];
 
-    const iconUrl = guild.iconURL({ size: 512 });
+    const iconUrl = guild.iconURL({ size: 4096, extension: "png" });
     const actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
     if (iconUrl) {
       actionRows.push(
@@ -264,8 +310,7 @@ export const serverinfoCommand: CommandDef = {
     }
 
     return ctx.reply(
-      makeCard(resolveCardColor("info"), guild.name, lines.join("\n"), {
-        ...(iconUrl ? { thumbnailUrl: iconUrl } : {}),
+      makeCard(resolveCardColor("primary"), guild.name, lines.join("\n"), {
         breadcrumbs: ["Server Info", guild.name],
         ...(actionRows.length > 0 ? { actionRows } : {}),
       }),
@@ -332,6 +377,19 @@ export const purgeCommand: CommandDef = {
 
     const amount = (await ctx.getInteger("amount")) ?? 10;
     const filterUser = await ctx.getUser("user");
+
+    if (amount > 50) {
+      const confirmResult = await confirmPrompt(ctx, {
+        title: "Confirmation Required",
+        body: `Are you sure you want to delete the last **${amount}** messages?`,
+        confirmLabel: "Confirm",
+        cancelLabel: "Cancel",
+      });
+
+      if (!confirmResult.confirmed) {
+        return ctx.reply(makeInfoCard("Purge Cancelled", "The purge operation was cancelled."));
+      }
+    }
 
     await ctx.defer();
 
