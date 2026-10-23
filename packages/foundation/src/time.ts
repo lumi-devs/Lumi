@@ -15,6 +15,8 @@ export function duration(ms: number): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
+export const formatDuration = duration;
+
 export function since(date: Date, now = Date.now()): string {
   return duration(Math.max(0, now - date.getTime()));
 }
