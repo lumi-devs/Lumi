@@ -2,6 +2,8 @@ export {
   defineModule,
   parseModuleConfig,
   type ModuleConfig,
+  type ModuleConfigField,
+  type ModuleConfigFieldType,
   type ModuleConfigSchema,
   type ModuleDefinition,
 } from "./module.ts";
@@ -23,6 +25,7 @@ export {
   assertPermit,
   evaluatePermit,
   hasPermit,
+  isBotOwner,
   matchPermitNode,
   type PermitEvaluationOptions,
   type PermitEvaluationResult,
@@ -32,3 +35,8 @@ export {
   type PermitTargetType,
   type PermitTierVerdict,
 } from "./permits.ts";
+export type {
+  CaseAction,
+  ModerationCase,
+  ModNote,
+} from "@lumi/db";

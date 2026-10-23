@@ -8,12 +8,15 @@ import {
   type SharedSlashCommand,
 } from "discord.js";
 import type { CommandContext, CommandDef, LumiServices } from "@lumi/bot-kit";
-import { hasPermit } from "@lumi/bot-kit";
+import { hasPermit, isBotOwner } from "@lumi/bot-kit";
 import { claim } from "@lumi/redis";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import { handleHelpInteraction } from "./commands/help.ts";
 import { handlePingInteraction } from "./commands/ping.ts";
 import { handleAfkInteraction } from "./modules/afk/interactions.ts";
+import { handleSecurityInteraction } from "./modules/security/interactions.ts";
 import { handleUtilityInteraction } from "./modules/utility/interactions.ts";
+import { handleHubInteraction } from "./lumi/panel.ts";
 import { CommandContextImpl } from "./context.ts";
 
 export type Dispatcher = {
@@ -27,18 +30,34 @@ export function createDispatcher(services: LumiServices, builtins: readonly Comm
 
   const handleInteraction = async (interaction: Interaction): Promise<void> => {
     try {
-      if (interaction.isButton()) {
-        if (interaction.customId.startsWith("ping:")) {
-          await handlePingInteraction(services, interaction);
+      if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
+        if (interaction.customId.startsWith("lumi:")) {
+          await handleHubInteraction(services, interaction);
           return;
         }
-        if (interaction.customId.startsWith("afk:")) {
-          await handleAfkInteraction(services, interaction);
+        if (interaction.customId.startsWith("help:")) {
+          if (interaction.isButton() || interaction.isStringSelectMenu()) {
+            await handleHelpInteraction(services, builtins, interaction);
+          }
           return;
         }
-        if (interaction.customId.startsWith("user-media:")) {
-          await handleUtilityInteraction(services, interaction);
-          return;
+        if (interaction.isButton()) {
+          if (interaction.customId.startsWith("ping:")) {
+            await handlePingInteraction(services, interaction);
+            return;
+          }
+          if (interaction.customId.startsWith("afk:")) {
+            await handleAfkInteraction(services, interaction);
+            return;
+          }
+          if (interaction.customId.startsWith("user-media:")) {
+            await handleUtilityInteraction(services, interaction);
+            return;
+          }
+          if (interaction.customId.startsWith("sec:")) {
+            await handleSecurityInteraction(services, interaction);
+            return;
+          }
         }
       }
       if (!interaction.isChatInputCommand()) return;
@@ -119,7 +138,7 @@ async function execute(
       await context.reply(makeErrorCard("Server only", "This command can only be used in a server."));
       return;
     }
-    if (command.ownerOnly && !services.runtime.ownerIds.has(context.user.id)) {
+    if (command.ownerOnly && !isBotOwner(services, context.user.id)) {
       await context.reply(makeErrorCard("Not allowed", "This command is restricted to bot owners."));
       return;
     }

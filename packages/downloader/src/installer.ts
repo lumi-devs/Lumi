@@ -1,6 +1,11 @@
 import { mkdir, readFile, readdir, rename, rm, stat, symlink } from "node:fs/promises";
 import path from "node:path";
-import type { AddonAvailable, AddonControl, AddonUpdateOutcome } from "@lumi/contracts";
+import type {
+  AddonAvailable,
+  AddonControl,
+  AddonModuleSummary,
+  AddonUpdateOutcome,
+} from "@lumi/contracts";
 import type { DownloaderModule, DownloaderRepo } from "@lumi/db";
 import type { Logger } from "@lumi/foundation";
 import type { RedisClient } from "@lumi/redis";
@@ -296,8 +301,21 @@ export class AddonInstaller implements AddonControl {
     await this.#store.deleteRepo(name);
   }
 
-  public listInstalled(): Promise<readonly DownloaderModule[]> {
-    return this.#store.listInstalled();
+  public async listInstalled(): Promise<readonly AddonModuleSummary[]> {
+    const [modules, repos] = await Promise.all([
+      this.#store.listInstalled(),
+      this.#store.listRepos(),
+    ]);
+    const repoById = new Map(repos.map((repo) => [repo.id, repo.name]));
+    return modules.map((module) => {
+      const repoName = repoById.get(module.repoId);
+      return {
+        moduleName: module.moduleName,
+        version: module.version,
+        commit: module.commit,
+        ...(repoName === undefined ? {} : { repoName }),
+      };
+    });
   }
 
   public listRepos(): Promise<readonly DownloaderRepo[]> {

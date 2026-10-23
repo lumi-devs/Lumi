@@ -49,8 +49,6 @@ export class PermitRepository extends Repository {
   }
 
   public async listPermits(guildId: string): Promise<PermitWithAssignments[]> {
-    await this.ensureBuiltinPermits(guildId);
-    await this.normalizePositions(guildId);
     return this.prisma.permit.findMany({
       where: { guildId },
       include: { assignments: true },
@@ -86,6 +84,27 @@ export class PermitRepository extends Repository {
       nodes: string[];
     },
   ): Promise<Permit> {
+    await this.ensureBuiltinPermits(guildId);
+
+    if (data.kind !== undefined && data.kind !== "custom" && data.kind !== "enforced") {
+      throw new Error("Permit kind must be 'custom' or 'enforced'.");
+    }
+    if (data.polarity !== undefined && data.polarity !== "grant" && data.polarity !== "deny") {
+      throw new Error("Permit polarity must be 'grant' or 'deny'.");
+    }
+
+    const name = data.name.trim();
+    if (name.length === 0) throw new Error("Permit name cannot be empty.");
+
+    const duplicate = await this.prisma.permit.findFirst({
+      where: { guildId, name: { equals: name, mode: "insensitive" } },
+      select: { name: true },
+    });
+    if (duplicate) throw new Error(`A permit named '${duplicate.name}' already exists.`);
+
+    const nodes = data.nodes.map((node) => node.trim().toLowerCase()).filter(Boolean);
+    if (nodes.length === 0) throw new Error("A permit needs at least one node.");
+
     const highest = await this.prisma.permit.findFirst({
       where: { guildId },
       orderBy: { position: "desc" },
@@ -96,10 +115,10 @@ export class PermitRepository extends Repository {
     return this.prisma.permit.create({
       data: {
         guildId,
-        name: data.name.trim(),
+        name,
         kind: data.kind ?? "custom",
         polarity: data.polarity ?? "grant",
-        nodes: data.nodes.map((n) => n.trim().toLowerCase()).filter(Boolean),
+        nodes,
         position,
         builtin: false,
       },
@@ -120,13 +139,42 @@ export class PermitRepository extends Repository {
       include: { assignments: true },
     });
     if (!permit) return null;
+    if (permit.builtin && data.name !== undefined && data.name.trim() !== permit.name) {
+      throw new Error("Built-in permits cannot be renamed.");
+    }
+    if (permit.builtin && data.polarity !== undefined && data.polarity !== permit.polarity) {
+      throw new Error("Built-in permits cannot change polarity.");
+    }
+
+    if (data.name !== undefined) {
+      const name = data.name.trim();
+      if (name.length === 0) throw new Error("Permit name cannot be empty.");
+      const duplicate = await this.prisma.permit.findFirst({
+        where: {
+          guildId,
+          id: { not: permitId },
+          name: { equals: name, mode: "insensitive" },
+        },
+        select: { name: true },
+      });
+      if (duplicate) throw new Error(`A permit named '${duplicate.name}' already exists.`);
+    }
+
+    if (data.polarity !== undefined && data.polarity !== "grant" && data.polarity !== "deny") {
+      throw new Error("Permit polarity must be 'grant' or 'deny'.");
+    }
+
+    const nodes = data.nodes?.map((node) => node.trim().toLowerCase()).filter(Boolean);
+    if (nodes !== undefined && nodes.length === 0) {
+      throw new Error("A permit needs at least one node.");
+    }
 
     const updated = await this.prisma.permit.update({
       where: { id: permitId },
       data: {
-        ...(data.name ? { name: data.name.trim() } : {}),
-        ...(data.nodes ? { nodes: data.nodes.map((n) => n.trim().toLowerCase()).filter(Boolean) } : {}),
-        ...(data.polarity ? { polarity: data.polarity } : {}),
+        ...(data.name === undefined ? {} : { name: data.name.trim() }),
+        ...(nodes === undefined ? {} : { nodes }),
+        ...(data.polarity === undefined ? {} : { polarity: data.polarity }),
       },
     });
 
@@ -153,8 +201,18 @@ export class PermitRepository extends Repository {
     targetType: PermitTargetType,
     targetId: string,
   ): Promise<PermitAssignment> {
+    if (targetType !== "user" && targetType !== "role" && targetType !== "channel") {
+      throw new Error("Permit targets must be a user, role, or channel.");
+    }
+    if (!/^[0-9]{1,20}$/.test(targetId)) {
+      throw new Error("Permit target IDs must be Discord snowflakes.");
+    }
+
     const permit = await this.prisma.permit.findFirst({ where: { id: permitId, guildId } });
     if (!permit) throw new Error("Permit not found.");
+    if (permit.kind === "enforced" && targetType !== "user") {
+      throw new Error("Enforced permits can only be assigned to users.");
+    }
 
     const assignment = await this.prisma.permitAssignment.upsert({
       where: {
@@ -230,6 +288,7 @@ export class PermitRepository extends Repository {
       this.prisma.permit.update({ where: { id: current.id }, data: { position: adjacent.position } }),
       this.prisma.permit.update({ where: { id: adjacent.id }, data: { position: current.position } }),
     ]);
+    await this.invalidateGuildAssignments(guildId);
 
     return true;
   }
@@ -255,43 +314,56 @@ export class PermitRepository extends Repository {
 
     if (updates.length > 0) {
       await this.prisma.$transaction(updates);
+      await this.invalidateGuildAssignments(guildId);
     }
   }
 
-  public async getPermitChain(
+  public getPermitChain(
     guildId: string,
     targets: Array<{ targetType: PermitTargetType; targetId: string }>,
   ): Promise<TargetPermitPayload[]> {
-    const results: TargetPermitPayload[] = [];
+    // Targets are independent; a member can easily have 20 roles, so resolve
+    // their cache entries concurrently instead of making 20 sequential round
+    // trips on every command invocation.
+    return Promise.all(
+      targets.map(async (target) => {
+        const cacheKey = this.#permitCacheKey(guildId, target.targetType, target.targetId);
+        const cached = await this.deps.redis.get(cacheKey).catch(() => null);
 
-    for (const target of targets) {
-      const cacheKey = this.#permitCacheKey(guildId, target.targetType, target.targetId);
-      const cached = await this.deps.redis.get(cacheKey).catch(() => null);
-
-      if (cached) {
-        try {
-          results.push(JSON.parse(cached));
-          continue;
-        } catch {
-          // parse error, recompute
+        if (cached) {
+          try {
+            return JSON.parse(cached) as TargetPermitPayload;
+          } catch {
+            // Corrupt cache entry: fall through and recompute it.
+          }
         }
-      }
 
-      const assignments = await this.prisma.permitAssignment.findMany({
-        where: {
-          guildId,
-          targetType: target.targetType,
-          targetId: target.targetId,
-        },
-        include: { permit: true },
-      });
+        const assignments = await this.prisma.permitAssignment.findMany({
+          where: {
+            guildId,
+            targetType: target.targetType,
+            targetId: target.targetId,
+          },
+          include: { permit: true },
+        });
 
-      const payload = collapseAssignments(assignments);
-      await this.deps.redis.set(cacheKey, JSON.stringify(payload), "EX", 300).catch(() => undefined);
-      results.push(payload);
-    }
+        const payload = collapseAssignments(assignments);
+        await this.deps.redis.set(cacheKey, JSON.stringify(payload), "EX", 300).catch(() => undefined);
+        return payload;
+      }),
+    );
+  }
 
-    return results;
+  /**
+   * Priority is part of the cached payload, so moving a permit has to drop
+   * every target cache in the guild, not just the moved permit's assignments.
+   */
+  private async invalidateGuildAssignments(guildId: string): Promise<void> {
+    const assignments = await this.prisma.permitAssignment.findMany({
+      where: { guildId },
+      select: { guildId: true, targetType: true, targetId: true },
+    });
+    await this.invalidateAssignments(assignments);
   }
 
   private async invalidateAssignments(

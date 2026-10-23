@@ -9,6 +9,14 @@ const afkModule = defineModule({
   emoji: "💤",
   description: "Set yourself AFK, mention alerts, nickname prefix, and stale-entry cleanup.",
   config: afkConfigSchema,
+  configFields: [
+    {
+      key: "nick_prefix_enabled",
+      label: "Nickname Prefix",
+      type: "boolean",
+      description: "Prefix nicknames with [AFK] while a member is away.",
+    },
+  ],
   commands: [afkCommand, afkListCommand, afkCleanCommand],
   listeners: [afkMessageListener],
   onLoad(services) {

@@ -3,9 +3,13 @@ export type ModuleState = "loaded" | "disabled" | "failed";
 
 export interface ModuleStatus {
   name: string;
+  displayName: string;
+  emoji: string;
+  description: string;
   version: string;
   origin: ModuleOrigin;
   state: ModuleState;
+  commandCount: number;
   error?: string;
 }
 
@@ -27,6 +31,8 @@ export interface AddonModuleSummary {
   moduleName: string;
   version: string;
   commit: string;
+  /** Repository the module was installed from, when known. */
+  repoName?: string;
 }
 
 export interface AddonAvailable {

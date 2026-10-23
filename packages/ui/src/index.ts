@@ -38,6 +38,7 @@ export {
   createUserSelectMenu,
   row,
   settingRow,
+  tabRow,
   type AccessoryButton,
   type ConfirmRowOptions,
   type CreateActionButtonOptions,
@@ -49,4 +50,5 @@ export {
   type CreateUserSelectMenuOptions,
   type Row,
   type StringSelectOptionInput,
+  type Tab,
 } from "./panels.ts";

@@ -9,6 +9,7 @@
 | [modules.md](./modules.md) | You are adding/changing a module, manifest, command, or listener. |
 | [downloader.md](./downloader.md) | You are changing addon install/update/validation flows. |
 | [commands.md](./commands.md) | You are adding a built-in command or changing dispatch. |
+| [permissions.md](./permissions.md) | You are changing permits, access tiers, the permission panel, or command gating. |
 | [ui.md](./ui.md) | You are changing user-facing cards or message layout. |
 | [testing.md](./testing.md) | You are writing tests or running integration checks. |
 | [conventions.md](./conventions.md) | You need style, naming, error handling, or logging rules. |

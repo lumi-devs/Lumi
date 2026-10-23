@@ -1,13 +1,16 @@
 import { ActivityType, Events, type Client } from "discord.js";
 import type { CommandDef, LumiServices } from "@lumi/bot-kit";
+import { mapWithConcurrency } from "@lumi/foundation";
+import { about } from "./commands/about.ts";
 import { addons } from "./commands/addons.ts";
 import { makeHelpCommand } from "./commands/help.ts";
+import { lumiCommand } from "./commands/lumi.ts";
 import { modules } from "./commands/modules.ts";
 import { permitCommand } from "./commands/permit.ts";
 import { ping } from "./commands/ping.ts";
 import { applicationCommands, createDispatcher, wireDispatcher } from "./dispatch.ts";
 
-const builtinCommands: CommandDef[] = [ping, modules, addons, permitCommand];
+const builtinCommands: CommandDef[] = [about, ping, modules, addons, permitCommand, lumiCommand];
 builtinCommands.push(makeHelpCommand(builtinCommands));
 
 export { builtinCommands };
@@ -47,12 +50,19 @@ export function wireBuiltins(client: Client, services: LumiServices): void {
       },
       "ready",
     );
+
+    void seedPermitDefaults(services).catch((error: unknown) => {
+      services.logger.error({ error }, "failed to seed default permits");
+    });
   });
 
   client.on(Events.GuildCreate, (guild) => {
-    void services.db.guild.markRejoined(guild.id).catch((error: unknown) => {
-      services.logger.error({ error, guildId: guild.id }, "failed to mark guild joined");
-    });
+    void services.db.guild
+      .markRejoined(guild.id)
+      .then(() => services.db.permits.ensureBuiltinPermits(guild.id))
+      .catch((error: unknown) => {
+        services.logger.error({ error, guildId: guild.id }, "failed to mark guild joined");
+      });
   });
 
   client.on(Events.GuildDelete, (guild) => {
@@ -64,4 +74,18 @@ export function wireBuiltins(client: Client, services: LumiServices): void {
   client.on(Events.Error, (error) => {
     services.logger.error({ error }, "discord client error");
   });
+}
+
+/**
+ * Built-in permits are seeded on writes (guild join, permit creation) rather
+ * than on read paths. This backfills servers that existed before the permit
+ * defaults were split out of guild creation.
+ */
+async function seedPermitDefaults(services: LumiServices): Promise<void> {
+  const guildIds = await services.db.guild.activeIds();
+  if (guildIds.length === 0) return;
+
+  await mapWithConcurrency(guildIds, 4, (guildId) =>
+    services.db.permits.ensureBuiltinPermits(guildId),
+  );
 }

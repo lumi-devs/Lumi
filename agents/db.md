@@ -28,13 +28,21 @@ name, and logger. Nothing connects at import time.
 - `modules` — global/guild enablement, effective `isEnabled`.
 - `moduleData` — namespaced module KV with expiry.
 - `afk` — AFK entries.
+- `permits` — permits, assignments, priority order, and the per-target Redis
+  evaluation cache. Reordering invalidates every assignment cache in the guild.
+- `moderation` — cases, per-guild case counters, expiring cases, and notes.
+  Undo actions call `deactivateActiveCases()` before recording the lifting case.
+- `security` — panic snapshots (`panic_states`) and the persisted verification
+  panel (`verification_panels`).
 - `downloader` — repo and installed-module records.
 
 Rules:
 
 - Modules receive `services.db`; they never construct Prisma.
 - Reads go through the repositories so caching and invalidation stay consistent.
-- Never `upsert` on a read path. Create rows on write.
+- Never `upsert` on a read path. Create rows on write. Built-in permits are
+  seeded on guild join, the ready backfill, and permit creation, not from
+  `listPermits()`.
 - Writes invalidate **after** the transaction commits.
 - Use `$transaction` for multi-row invariants. Do not read-modify-write counters.
 - Use `reader` for read-only list/iteration paths when a replica is configured.

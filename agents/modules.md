@@ -51,12 +51,30 @@ export default defineModule({
   emoji: "💤",
   description: "Set yourself AFK.",
   config: z.object({ nick_prefix_enabled: z.boolean().default(true) }),
+  configFields: [
+    {
+      key: "nick_prefix_enabled",
+      label: "Nickname Prefix",
+      type: "boolean",
+      description: "Prefix nicknames while a member is away.",
+    },
+  ],
   commands: [afkCommand],
   listeners: [afkMessageListener],
   onLoad(services) {},
   onUnload(services) {},
 });
 ```
+
+`configFields` is optional display metadata for the `/lumi` module detail panel.
+Zod remains the validator; the metadata only chooses the control (`boolean`,
+`number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`) and
+supplies labels. Multi-select fields store `string[]` values and render a role or
+channel menu with `minValues: 0`; all other fields open a text modal. The detail
+panel renders the first eight metadata rows and up to three select menus
+(Discord's action-row and component budget); put the most important settings
+first. Modules without metadata still open in the panel but show no editable
+settings.
 
 The loader verifies the definition name matches the manifest and that commands and
 listeners declare the same module name. It also checks command names,
@@ -96,3 +114,20 @@ disable the module, so listeners that act on guild events must check
 `services.modules.isEnabled(guildId, module)` is the only gate. Built-in commands
 (`module: null`) bypass it. Enablement is global state AND guild state; there is
 no `config.enabled` key.
+
+## Bundled modules
+
+- `mod` — case-backed moderation. Undo operations deactivate the matching active
+  cases (`untimeout` lifts `mute`, `/quarantine remove` lifts `quarantine`,
+  `/vcmute remove` lifts `voice_mute`). `/unban` and softban intentionally leave
+  the original case active, matching v1. `warn_thresholds` is a JSON map of warn
+  count to `{ action, duration }`; `immune_role_ids` skips automated threshold
+  actions. The expiry sweep lifts expired `voice_mute` cases once the member is
+  in voice, and the voice-state listener re-applies an active mute on rejoin.
+  Voice mutes use Discord's server mute rather than disconnecting the member.
+- `security` — verification and panic. Verification mode is `emoji` or `none`;
+  the pending-role sweep kicks unverified members when configured. `/verifypanel`
+  posts or refreshes the persisted panel, and `/panic` snapshots the previous
+  @everyone send permission so the revert button can restore it.
+- `utility` — avatar, banner, whois, serverinfo, nick, and purge.
+- `afk` — AFK entries and mention replies.

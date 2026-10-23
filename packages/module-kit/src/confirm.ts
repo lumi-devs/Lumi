@@ -22,8 +22,8 @@ export async function confirmPrompt(
   opts: ConfirmPromptOptions,
 ): Promise<ConfirmPromptResult> {
   const id = randomUUID();
-  const confirmId = `lumi:confirm:yes:${id}`;
-  const cancelId = `lumi:confirm:no:${id}`;
+  const confirmId = `confirm:yes:${id}`;
+  const cancelId = `confirm:no:${id}`;
 
   const row = confirmRow({
     confirmId,

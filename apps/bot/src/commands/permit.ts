@@ -1,5 +1,4 @@
 import {
-  PermissionFlagsBits,
   SlashCommandBuilder,
   channelMention,
   roleMention,
@@ -26,7 +25,10 @@ export const permitCommand: CommandDef = {
   description: "Manage and inspect server permission rules and permits.",
   module: null,
   guildOnly: true,
-  requiredPermissions: PermissionFlagsBits.ManageGuild,
+  // Permit management follows the same app-level gate as the /lumi panel.
+  // Discord managers pass the resolver's manager tier; custom `admin.*`
+  // holders pass the permit tier.
+  permitNode: "admin.*",
   build: () =>
     new SlashCommandBuilder()
       .setName("permit")
@@ -244,8 +246,11 @@ export const permitCommand: CommandDef = {
       if (!permit) return ctx.reply(makeErrorCard("Not Found", `Permit **${permitInput}** does not exist.`));
 
       const inputNodes = nodesRaw.split(",").map((n: string) => n.trim().toLowerCase()).filter(Boolean);
-      let updatedNodes: string[] = [];
+      if (inputNodes.length === 0) {
+        return ctx.reply(makeErrorCard("Invalid Nodes", "Provide at least one permit node."));
+      }
 
+      let updatedNodes: string[];
       if (action === "set") {
         updatedNodes = inputNodes;
       } else if (action === "add") {
@@ -253,15 +258,30 @@ export const permitCommand: CommandDef = {
       } else if (action === "remove") {
         const removeSet = new Set(inputNodes);
         updatedNodes = permit.nodes.filter((n) => !removeSet.has(n));
+      } else {
+        return ctx.reply(makeErrorCard("Invalid Action", "Choose `set`, `add`, or `remove`."));
       }
 
-      const updated = await ctx.services.db.permits.updatePermit(guildId, permit.id, { nodes: updatedNodes });
-      return ctx.reply(
-        makeSuccessCard(
-          "Nodes Updated",
-          `Updated nodes for **${permit.name}**:\n${updated?.nodes.map((n) => `\`${n}\``).join(", ") || "*No nodes*"}`,
-        ),
-      );
+      if (updatedNodes.length === 0) {
+        return ctx.reply(
+          makeErrorCard("Invalid Nodes", "A permit must keep at least one node."),
+        );
+      }
+
+      try {
+        const updated = await ctx.services.db.permits.updatePermit(guildId, permit.id, {
+          nodes: updatedNodes,
+        });
+        return ctx.reply(
+          makeSuccessCard(
+            "Nodes Updated",
+            `Updated nodes for **${permit.name}**:\n${updated?.nodes.map((n) => `\`${n}\``).join(", ") || "*No nodes*"}`,
+          ),
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to update nodes.";
+        return ctx.reply(makeErrorCard("Error", msg));
+      }
     }
 
     if (sub === "assign") {
@@ -269,7 +289,11 @@ export const permitCommand: CommandDef = {
       const targetType = (await ctx.getString("type")) as PermitTargetType;
       const targetId = (await ctx.getString("target_id"))?.replace(/[^0-9]/g, "");
 
-      if (!permitInput || !targetType || !targetId) {
+      if (
+        !permitInput ||
+        !targetId ||
+        (targetType !== "user" && targetType !== "role" && targetType !== "channel")
+      ) {
         return ctx.reply(makeErrorCard("Invalid Usage", "Provide permit, target type (user|role|channel), and target ID."));
       }
 
@@ -280,7 +304,12 @@ export const permitCommand: CommandDef = {
         return ctx.reply(makeErrorCard("Invalid Target", "Enforced permits can only be assigned directly to Users."));
       }
 
-      await ctx.services.db.permits.assignPermit(guildId, permit.id, targetType, targetId);
+      try {
+        await ctx.services.db.permits.assignPermit(guildId, permit.id, targetType, targetId);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to assign permit.";
+        return ctx.reply(makeErrorCard("Error", msg));
+      }
       const mention = targetType === "user" ? userMention(targetId) : targetType === "role" ? roleMention(targetId) : channelMention(targetId);
 
       return ctx.reply(
@@ -293,7 +322,11 @@ export const permitCommand: CommandDef = {
       const targetType = (await ctx.getString("type")) as PermitTargetType;
       const targetId = (await ctx.getString("target_id"))?.replace(/[^0-9]/g, "");
 
-      if (!permitInput || !targetType || !targetId) {
+      if (
+        !permitInput ||
+        !targetId ||
+        (targetType !== "user" && targetType !== "role" && targetType !== "channel")
+      ) {
         return ctx.reply(makeErrorCard("Invalid Usage", "Provide permit, target type (user|role|channel), and target ID."));
       }
 
@@ -311,7 +344,7 @@ export const permitCommand: CommandDef = {
       const permitInput = await ctx.getString("permit");
       const direction = (await ctx.getString("direction")) as "up" | "down";
 
-      if (!permitInput || !direction) {
+      if (!permitInput || (direction !== "up" && direction !== "down")) {
         return ctx.reply(makeErrorCard("Invalid Usage", "Specify permit and direction (`up` or `down`)."));
       }
 

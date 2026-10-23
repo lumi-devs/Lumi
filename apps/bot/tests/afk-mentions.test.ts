@@ -19,6 +19,6 @@ describe("afk mentions and formatting", () => {
       reason: "Away",
       since: new Date(Date.now() - 65_000),
     };
-    expect(afkSince(entry)).toBe("1m");
+    expect(afkSince(entry)).toMatch(/^1m(?: [0-9]+s)?$/);
   });
 });

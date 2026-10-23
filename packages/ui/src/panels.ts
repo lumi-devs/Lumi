@@ -272,6 +272,33 @@ export function buildSafeActionRows<
   });
 }
 
+export interface Tab {
+  id: string;
+  label: string;
+  emoji?: string | APIMessageComponentEmoji;
+}
+
+export function tabRow(
+  prefix: string,
+  tabs: readonly Tab[],
+  activeId: string,
+): ActionRowBuilder<ButtonBuilder> {
+  const row = new ActionRowBuilder<ButtonBuilder>();
+  for (const tab of tabs.slice(0, 5)) {
+    const active = tab.id === activeId;
+    const button = new ButtonBuilder()
+      .setCustomId(`${prefix}:${tab.id}`)
+      .setLabel(clipLabel(tab.label))
+      .setStyle(active ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setDisabled(active);
+    if (tab.emoji) {
+      button.setEmoji(typeof tab.emoji === "string" ? componentEmoji(tab.emoji) : tab.emoji);
+    }
+    row.addComponents(button);
+  }
+  return row;
+}
+
 export interface AccessoryButton {
   customId: string;
   label?: string;

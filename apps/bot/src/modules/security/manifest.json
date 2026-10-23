@@ -1,0 +1,13 @@
+{
+  "apiVersion": 2,
+  "name": "security",
+  "displayName": "Security",
+  "emoji": "🛡️",
+  "description": "Verification panels, human checks, join gating, and emergency panic lockdown.",
+  "version": "0.1.0",
+  "entry": "./index.ts",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": ["commands", "listeners"]
+}

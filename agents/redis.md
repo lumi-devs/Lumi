@@ -28,6 +28,10 @@ keys.guildConfig(guildId, module);
 Never hand-build a key in a module. Add a builder and a TTL to `keys.ts` when you
 need a new shape.
 
+Panel sessions (`panelSession(messageId)`, one hour) store `<ownerId>:<guildId>`
+for `/lumi` interactions. They are refreshed on every click and are intentionally
+plain keys, not cached values: the global dispatcher may run on any replica.
+
 ## Invalidation
 
 `InvalidationBus` owns channel `lumi:cache:invalidate`. `invalidate(...keys)`:

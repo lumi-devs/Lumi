@@ -22,7 +22,7 @@ export class CommandContextImpl implements CommandContext {
   public readonly user: User;
   public readonly isSlash: boolean;
   readonly #args: readonly string[];
-  readonly #optionNames: readonly string[];
+  readonly #schema: PrefixSchema;
 
   public constructor(
     services: LumiServices,
@@ -35,7 +35,7 @@ export class CommandContextImpl implements CommandContext {
     this.source = source;
     this.#args = args;
     this.isSlash = !("content" in source);
-    this.#optionNames = this.isSlash ? [] : optionNames(command);
+    this.#schema = this.isSlash ? EmptyPrefixSchema : prefixSchema(command);
     this.guildId = source.guildId ?? null;
     this.guild = source.guild ?? null;
     this.channel = source.channel ?? null;
@@ -47,8 +47,9 @@ export class CommandContextImpl implements CommandContext {
 
   public async getString(name: string, options?: { rest?: boolean }): Promise<string | null> {
     if (this.isSlash) {
-      const interaction = this.source as ChatInputCommandInteraction;
-      return interaction.options.getString(name, options?.rest ?? false);
+      // Discord string options already contain the full value; `rest` is a
+      // prefix-only convenience, not the resolver's `required` argument.
+      return (this.source as ChatInputCommandInteraction).options.getString(name);
     }
     const index = this.#indexOf(name);
     if (index < 0) return null;
@@ -84,14 +85,17 @@ export class CommandContextImpl implements CommandContext {
         return null;
       }
     }
-    return this.#args[0] ?? null;
+    const first = this.#args[0];
+    if (!first) return null;
+    if (this.#schema.groups.has(first)) return this.#args[1] ?? null;
+    return first;
   }
 
   public async getUser(name: string): Promise<User | null> {
     if (this.isSlash) {
       return (this.source as ChatInputCommandInteraction).options.getUser(name);
     }
-    const raw = this.#args[this.#indexOf(name)] ?? this.#args[0];
+    const raw = this.#args[this.#indexOf(name)];
     if (!raw) return null;
     const cleanId = raw.replace(/[^0-9]/g, "");
     if (!cleanId) return null;
@@ -103,7 +107,7 @@ export class CommandContextImpl implements CommandContext {
       const member = (this.source as ChatInputCommandInteraction).options.getMember(name);
       return (member as GuildMember | null) ?? null;
     }
-    const raw = this.#args[this.#indexOf(name)] ?? this.#args[0];
+    const raw = this.#args[this.#indexOf(name)];
     if (!raw || !this.guild) return null;
     const cleanId = raw.replace(/[^0-9]/g, "");
     if (!cleanId) return null;
@@ -160,16 +164,65 @@ export class CommandContextImpl implements CommandContext {
   }
 
   #indexOf(name: string): number {
-    if (this.#optionNames.length === 0) return 0;
-    return this.#optionNames.indexOf(name);
+    const subcommand = this.#args[0];
+    if (!subcommand) return -1;
+
+    const group = this.#schema.groups.get(subcommand);
+    if (group) {
+      const nested = group.get(this.#args[1] ?? "");
+      const offset = nested?.indexOf(name) ?? -1;
+      return offset < 0 ? -1 : 2 + offset;
+    }
+
+    const options = this.#schema.subcommands.get(subcommand);
+    if (options) {
+      const offset = options.indexOf(name);
+      return offset < 0 ? -1 : 1 + offset;
+    }
+
+    return this.#schema.topLevel.indexOf(name);
   }
 }
 
-function optionNames(command: CommandDef): readonly string[] {
+interface PrefixSchema {
+  readonly topLevel: readonly string[];
+  readonly subcommands: ReadonlyMap<string, readonly string[]>;
+  readonly groups: ReadonlyMap<string, ReadonlyMap<string, readonly string[]>>;
+}
+
+const EmptyPrefixSchema: PrefixSchema = {
+  topLevel: [],
+  subcommands: new Map(),
+  groups: new Map(),
+};
+
+function prefixSchema(command: CommandDef): PrefixSchema {
   try {
     const options = command.build?.().toJSON().options ?? [];
-    return options.filter((option) => option.type !== 1 && option.type !== 2).map((option) => option.name);
+    const topLevel: string[] = [];
+    const subcommands = new Map<string, string[]>();
+    const groups = new Map<string, ReadonlyMap<string, string[]>>();
+
+    for (const option of options) {
+      if (option.type === 1 && "options" in option) {
+        subcommands.set(
+          option.name,
+          (option.options ?? []).map((child) => child.name),
+        );
+      } else if (option.type === 2 && "options" in option) {
+        const nested = new Map<string, string[]>();
+        for (const child of option.options ?? []) {
+          if (child.type !== 1) continue;
+          nested.set(child.name, (child.options ?? []).map((grandchild) => grandchild.name));
+        }
+        groups.set(option.name, nested);
+      } else {
+        topLevel.push(option.name);
+      }
+    }
+
+    return { topLevel, subcommands, groups };
   } catch {
-    return [];
+    return EmptyPrefixSchema;
   }
 }

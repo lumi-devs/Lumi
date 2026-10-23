@@ -201,19 +201,31 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
   }
 
   public status(): ModuleStatus[] {
-    const statuses: ModuleStatus[] = [...this.#records.values()].map((record) => ({
-      name: record.discovered.manifest.name,
-      version: record.discovered.manifest.version,
-      origin: record.discovered.origin,
-      state: record.state,
-      ...(record.error ? { error: record.error } : {}),
-    }));
+    const statuses: ModuleStatus[] = [...this.#records.values()].map((record) => {
+      const manifest = record.discovered.manifest;
+      return {
+        name: manifest.name,
+        displayName: manifest.displayName,
+        emoji: manifest.emoji,
+        description: manifest.description,
+        version: manifest.version,
+        origin: record.discovered.origin,
+        state: record.state,
+        commandCount: record.commands.size,
+        ...(record.error ? { error: record.error } : {}),
+      };
+    });
     for (const broken of this.#broken.values()) {
+      const name = path.basename(broken.dir);
       statuses.push({
-        name: path.basename(broken.dir),
+        name,
+        displayName: name,
+        emoji: "⚠️",
+        description: broken.issues.join("; "),
         version: "0.0.0",
         origin: broken.origin,
         state: "failed",
+        commandCount: 0,
         error: broken.issues.join("; "),
       });
     }

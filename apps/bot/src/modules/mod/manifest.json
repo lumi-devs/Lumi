@@ -1,0 +1,13 @@
+{
+  "apiVersion": 2,
+  "name": "mod",
+  "displayName": "Moderation",
+  "emoji": "🔨",
+  "description": "Comprehensive server moderation: ban, kick, timeout, voice mute, softban, warn thresholds, cases, notes, lockdown, and quarantine.",
+  "version": "0.1.0",
+  "entry": "./index.ts",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": ["commands", "listeners"]
+}

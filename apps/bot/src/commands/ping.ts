@@ -72,7 +72,7 @@ function executiveSection(title: string, fields: [string, string][]): string {
   return `${header}\n${lines}`;
 }
 
-async function collectPingStats(services: LumiServices): Promise<CollectedPingData> {
+export async function collectPingStats(services: LumiServices): Promise<CollectedPingData> {
   const client = services.client;
   const botName = client.user?.username ?? "Lumi";
   const avatarURL = client.user?.displayAvatarURL({ size: 256 }) ?? null;

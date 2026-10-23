@@ -15,6 +15,7 @@ export function createKeys(namespace = "lumi") {
     permits: (guildId: string, targetType: string, targetId: string) =>
       prefix(["permits", guildId, targetType, targetId]),
     quarantine: (guildId: string, userId: string) => prefix(["quarantine", guildId, userId]),
+    panelSession: (messageId: string) => prefix(["panel", messageId]),
     lock: (name: string) => prefix(["lock", name]),
     botStats: () => prefix(["stats", "bot"]),
   };
@@ -32,4 +33,5 @@ export const TTL = {
   afkNegative: 15,
   cooldown: 5,
   lock: 10,
+  panelSession: 3_600,
 } as const;
