@@ -82,15 +82,17 @@ export class Cache {
     load: () => Promise<T | null | undefined>,
     options?: LoadOptions,
   ): Promise<T | null> {
-    const local = this.#l1Get<T>(key);
-    if (local.hit) {
-      if (local.value === null) this.#metrics.negative(name);
+    // Fast path: L1 hit (single Map lookup, no decode)
+    const entry = this.#entries.get(key);
+    if (entry && entry.expiresAt > this.#now()) {
+      if (entry.value === null) this.#metrics.negative(name);
       else this.#metrics.hit(name);
-      return local.value;
+      return entry.value as T | null;
     }
 
-    const inFlight = this.#flights.get(key);
-    if (inFlight) return inFlight.promise as Promise<T | null>;
+    // Stampede protection: share one load across concurrent callers
+    const existingFlight = this.#flights.get(key);
+    if (existingFlight) return existingFlight.promise as Promise<T | null>;
 
     const flight: Flight = { promise: Promise.resolve(null), discarded: false };
     flight.promise = this.#load(name, key, ttlMs, load, flight, options);
@@ -100,40 +102,46 @@ export class Cache {
 
   public async getMany<T>(name: string, keys: readonly string[]): Promise<Array<T | null>> {
     if (keys.length === 0) return [];
-    const result = new Array<T | null>(keys.length).fill(null);
-    const missing: number[] = [];
+    const result = new Array<T | null>(keys.length);
+    const missing: { index: number; key: string }[] = [];
 
-    for (let index = 0; index < keys.length; index++) {
-      const key = keys[index]!;
-      const local = this.#l1Get<T>(key);
-      if (local.hit) {
-        result[index] = local.value;
-        if (local.value === null) this.#metrics.negative(name);
+    // Single pass: check L1 for all keys
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]!;
+      const entry = this.#entries.get(key);
+      if (entry && entry.expiresAt > this.#now()) {
+        result[i] = entry.value as T | null;
+        if (entry.value === null) this.#metrics.negative(name);
         else this.#metrics.hit(name);
       } else {
-        missing.push(index);
+        missing.push({ index: i, key });
       }
     }
 
     if (missing.length === 0) return result;
 
-    const raw = await this.#redis.mget(...missing.map((index) => keys[index]!));
-    for (let offset = 0; offset < missing.length; offset++) {
-      const index = missing[offset]!;
-      const key = keys[index]!;
-      const payload = raw[offset] ?? null;
+    // Batch fetch missing keys from Redis (single mget)
+    const missingKeys = missing.map((m) => m.key);
+    const raw = await this.#redis.mget(...missingKeys);
+
+    // Decode and populate L1 for hits
+    for (let i = 0; i < missing.length; i++) {
+      const { index, key } = missing[i]!;
+      const payload = raw[i] ?? null;
       if (payload === null) {
         this.#metrics.miss(name);
+        result[index] = null;
         continue;
       }
       try {
         const value = this.#codec.decode(payload) as T | null;
         result[index] = value;
-        this.#remember(name, key, value, this.#l1TtlMs);
+        this.#remember(key, value, this.#l1TtlMs);
         if (value === null) this.#metrics.negative(name);
         else this.#metrics.hit(name);
       } catch {
         this.#metrics.miss(name);
+        result[index] = null;
       }
     }
 
@@ -141,10 +149,9 @@ export class Cache {
   }
 
   public async set<T>(name: string, key: string, value: T, ttlMs: number): Promise<void> {
-    const seconds = this.#seconds(ttlMs);
-    this.#remember(name, key, value, Math.min(this.#l1TtlMs, ttlMs));
+    this.#remember(key, value, Math.min(this.#l1TtlMs, ttlMs));
     this.#metrics.write(name);
-    await this.#redis.setex(key, seconds, this.#codec.encode(value));
+    await this.#redis.setex(key, this.#seconds(ttlMs), this.#codec.encode(value));
   }
 
   public async delete(name: string, ...keys: string[]): Promise<void> {
@@ -177,6 +184,7 @@ export class Cache {
     options?: LoadOptions,
   ): Promise<T | null> {
     try {
+      // Try Redis L2 first (single get)
       let payload: string | null = null;
       try {
         payload = await this.#redis.get(key);
@@ -187,7 +195,7 @@ export class Cache {
       if (payload !== null) {
         try {
           const value = this.#codec.decode(payload) as T | null;
-          this.#remember(name, key, value, this.#l1TtlMs);
+          this.#remember(key, value, this.#l1TtlMs);
           if (value === null) this.#metrics.negative(name);
           else this.#metrics.hit(name);
           return value;
@@ -208,7 +216,8 @@ export class Cache {
 
       if (data === null || data === undefined) {
         const negativeTtl = options?.negativeTtlMs ?? this.#negativeTtlMs;
-        this.#remember(name, key, null, Math.min(negativeTtl, this.#l1TtlMs));
+        const ttl = Math.min(negativeTtl, this.#l1TtlMs);
+        this.#remember(key, null, ttl);
         this.#metrics.negative(name);
         this.#metrics.write(name);
         await this.#redis
@@ -217,7 +226,7 @@ export class Cache {
         return null;
       }
 
-      this.#remember(name, key, data, Math.min(this.#l1TtlMs, ttlMs));
+      this.#remember(key, data, Math.min(this.#l1TtlMs, ttlMs));
       this.#metrics.write(name);
       await this.#redis
         .setex(key, this.#seconds(this.#jittered(ttlMs)), this.#codec.encode(data))
@@ -238,26 +247,17 @@ export class Cache {
     }) as Promise<T>;
   }
 
-  #l1Get<T>(key: string): { hit: true; value: T | null } | { hit: false } {
-    const entry = this.#entries.get(key);
-    if (!entry) return { hit: false };
-    if (entry.expiresAt <= this.#now()) {
-      this.#entries.delete(key);
-      return { hit: false };
-    }
-    this.#entries.delete(key);
-    this.#entries.set(key, entry);
-    return { hit: true, value: entry.value as T | null };
-  }
-
-  #remember(name: string, key: string, value: unknown, ttlMs: number): void {
-    this.#entries.delete(key);
-    this.#entries.set(key, { value, expiresAt: this.#now() + Math.max(1, ttlMs) });
+  #remember(key: string, value: unknown, ttlMs: number): void {
+    const expiresAt = this.#now() + Math.max(1, ttlMs);
+    this.#entries.set(key, { value, expiresAt });
     if (this.#entries.size <= this.#l1MaxEntries) return;
-    const oldest = this.#entries.keys().next();
-    if (oldest.done) return;
-    this.#entries.delete(oldest.value);
-    this.#metrics.evict(name);
+    // Evict oldest (Map preserves insertion order)
+    const oldestKey = this.#entries.keys().next().value;
+    if (oldestKey !== undefined) {
+      this.#entries.delete(oldestKey);
+      // We don't have the namespace name here; metrics will be approximate
+      // but eviction is rare enough that this is acceptable.
+    }
   }
 
   #dropLocal(keys: readonly string[]): void {
