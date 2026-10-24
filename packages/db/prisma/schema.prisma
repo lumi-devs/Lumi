@@ -173,6 +173,7 @@ model GuildModuleConfig {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, moduleName, configKey])
+  @@index([guildId, moduleName])
   @@map("guild_module_config")
 }
 
@@ -263,6 +264,7 @@ model ModerationCase {
   @@index([userId])
   @@index([moderatorId])
   @@index([guildId, active, expiresAt])
+  @@index([guildId, userId, active, expiresAt])
   @@index([active, id])
   @@index([action, active, id])
   @@index([active, createdAt, id])
@@ -484,6 +486,7 @@ model ModuleData {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@id([guildId, moduleName, targetId, key])
+  @@index([guildId, moduleName, key])
   @@index([moduleName, key])
   @@index([targetId])
   @@index([expiresAt])
