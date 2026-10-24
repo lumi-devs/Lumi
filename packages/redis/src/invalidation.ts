@@ -94,13 +94,12 @@ export class InvalidationBus implements InvalidationPort {
     this.#lastTime = Math.max(this.#lastTime, time);
     this.#notify(keys);
 
-    await this.#publisher.del(...keys).catch((error: unknown) => {
-      this.#logger.error({ error, keys: keys.length }, "redis cache delete failed");
-    });
-
-    const payload: Payload = { keys, time };
-    await this.#publisher.publish(Channel, JSON.stringify(payload)).catch((error: unknown) => {
-      this.#logger.error({ error, keys: keys.length }, "redis invalidate publish failed");
+    // Pipeline the del and publish to reduce round trips
+    const pipeline = this.#publisher.pipeline();
+    pipeline.del(...keys);
+    pipeline.publish(Channel, JSON.stringify({ keys, time }));
+    await pipeline.exec().catch((error: unknown) => {
+      this.#logger.error({ error, keys: keys.length }, "redis invalidate pipeline failed");
     });
   }
 
@@ -123,8 +122,8 @@ export class InvalidationBus implements InvalidationPort {
     }
     if (!Array.isArray(payload.keys)) return;
     this.#lastTime = Math.max(this.#lastTime, payload.time);
-    const keys = payload.keys.filter((key): key is string => typeof key === "string" && key.length > 0);
-    if (keys.length > 0) this.#notify(keys);
+    const filteredKeys = payload.keys.filter((key): key is string => typeof key === "string" && key.length > 0);
+    if (filteredKeys.length > 0) this.#notify(filteredKeys);
   };
 
   #onClose = (): void => {
