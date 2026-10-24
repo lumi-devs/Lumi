@@ -38,13 +38,18 @@ function createPool(
   role: "primary" | "replica",
   timers: Array<ReturnType<typeof setInterval>>,
 ): Pool {
-  const max = role === "primary" ? (options.poolSize ?? 10) : Math.max(2, Math.floor((options.poolSize ?? 10) / 2));
+  // Mass scale: higher default pool size to handle many concurrent replicas
+  const defaultPoolSize = 25;
+  const max = role === "primary" ? (options.poolSize ?? defaultPoolSize) : Math.max(5, Math.floor((options.poolSize ?? defaultPoolSize) / 2));
   const pool = new Pool({
     connectionString: url,
     max,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
     application_name: `${options.appName ?? "lumi"}-${role}`,
+    // Prisma 7 + adapter-pg: keep connections alive for reuse
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000,
   });
   pgPoolSize.set({ role }, max);
 
