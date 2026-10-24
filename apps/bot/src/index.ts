@@ -22,25 +22,35 @@ const client = new Client({
 let stopping = false;
 
 async function main(): Promise<void> {
-  const core = await createCoreServices(logger);
+  // Start core services (Redis, DB) and module loader in parallel
+  const [core, loader] = await Promise.all([
+    createCoreServices(logger),
+    (async () => {
+      const l = new ModuleLoader({
+        roots: [
+          { path: modulesRoot, origin: "bundled" },
+          { path: addonsRoot, origin: "addon" },
+        ],
+        botVersion: version,
+        reservedCommands: builtinCommands.map((command) => command.name),
+        async onChange() {
+          if (!client.isReady() || !services) return;
+          await registerApplicationCommands(client, services);
+        },
+      });
+      return l;
+    })(),
+  ]);
 
   let services: LumiServices | undefined;
-  const loader = new ModuleLoader({
-    roots: [
-      { path: modulesRoot, origin: "bundled" },
-      { path: addonsRoot, origin: "addon" },
-    ],
-    getServices: () => {
+
+  // Set up getServices callback now that loader is created
+  (loader as ModuleLoader & { setGetServices?: (fn: () => LumiServices) => void }).setGetServices?.(
+    () => {
       if (!services) throw new Error("services are not initialized");
       return services;
     },
-    botVersion: version,
-    reservedCommands: builtinCommands.map((command) => command.name),
-    async onChange() {
-      if (!client.isReady() || !services) return;
-      await registerApplicationCommands(client, services);
-    },
-  });
+  );
 
   const installer = new AddonInstaller({
     root: repoRoot,
@@ -58,22 +68,26 @@ async function main(): Promise<void> {
 
   services = composeServices(core, client, logger, loader, installer);
 
-  wireBuiltins(client, services);
-  await loader.load();
-
-  const metrics = startMetricsServer(env.metricsPort(), () => client.isReady(), logger);
+  // Parallelize: wire built-ins, load modules, start metrics
+  await Promise.all([
+    wireBuiltins(client, services),
+    loader.load(),
+    (async () => {
+      const metrics = startMetricsServer(env.metricsPort(), () => client.isReady(), logger);
+      return metrics;
+    })(),
+  ]);
 
   const shutdown = async (signal: string): Promise<void> => {
     if (stopping) return;
     stopping = true;
     logger.info({ signal }, "shutting down");
-    metrics.stop();
-    try {
-      await loader.unloadAll();
-    } finally {
-      await client.destroy().catch(() => undefined);
-      await core.shutdown();
-    }
+    // Stop metrics, unload modules, destroy client in parallel
+    await Promise.allSettled([
+      loader.unloadAll(),
+      client.destroy().catch(() => undefined),
+      core.shutdown(),
+    ]);
   };
 
   const onSignal = (signal: string): void => {
