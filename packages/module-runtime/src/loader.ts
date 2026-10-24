@@ -16,7 +16,7 @@ import { safeParseManifest, type ModuleManifest } from "./manifest.ts";
 
 export interface ModuleLoaderOptions {
   roots: readonly ModuleRoot[];
-  getServices: () => LumiServices;
+  getServices?: () => LumiServices;
   botVersion: string;
   reservedCommands?: readonly string[] | undefined;
   onChange?: (() => void | Promise<void>) | undefined;
@@ -42,10 +42,15 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
 
   public constructor(options: ModuleLoaderOptions) {
     this.#roots = options.roots;
-    this.#getServices = options.getServices;
+    this.#getServices = options.getServices ?? (() => { throw new Error("services not initialized"); });
     this.#botVersion = options.botVersion;
     this.#reservedCommands = new Set(options.reservedCommands ?? []);
     this.#onChange = options.onChange;
+  }
+
+  public setGetServices(getServices: () => LumiServices): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).#getServices = getServices;
   }
 
   public async load(): Promise<void> {
