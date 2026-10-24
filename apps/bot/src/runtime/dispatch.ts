@@ -25,36 +25,41 @@ export type Dispatcher = {
 };
 
 export function createDispatcher(services: LumiServices, builtins: readonly CommandDef[]): Dispatcher {
+  // O(1) builtin command map
+  const builtinMap = new Map(builtins.map((c) => [c.name, c]));
+  const moduleLoader = services.modules;
+
   const find = (name: string): CommandDef | undefined =>
-    builtins.find((command) => command.name === name) ?? services.modules.command(name);
+    builtinMap.get(name) ?? moduleLoader.command(name);
 
   const handleInteraction = async (interaction: Interaction): Promise<void> => {
     try {
       if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
-        if (interaction.customId.startsWith("lumi:")) {
+        const id = interaction.customId;
+        if (id.startsWith("lumi:")) {
           await handleHubInteraction(services, interaction);
           return;
         }
-        if (interaction.customId.startsWith("help:")) {
+        if (id.startsWith("help:")) {
           if (interaction.isButton() || interaction.isStringSelectMenu()) {
             await handleHelpInteraction(services, builtins, interaction);
           }
           return;
         }
         if (interaction.isButton()) {
-          if (interaction.customId.startsWith("ping:")) {
+          if (id.startsWith("ping:")) {
             await handlePingInteraction(services, interaction);
             return;
           }
-          if (interaction.customId.startsWith("afk:")) {
+          if (id.startsWith("afk:")) {
             await handleAfkInteraction(services, interaction);
             return;
           }
-          if (interaction.customId.startsWith("user-media:")) {
+          if (id.startsWith("user-media:")) {
             await handleUtilityInteraction(services, interaction);
             return;
           }
-          if (interaction.customId.startsWith("sec:")) {
+          if (id.startsWith("sec:")) {
             await handleSecurityInteraction(services, interaction);
             return;
           }
@@ -122,11 +127,21 @@ export function applicationCommands(
   });
 }
 
+// Per-interaction guild prefix cache (cheap, avoids DB round-trip for repeated calls)
+const guildPrefixCache = new Map<string, string>();
+
 async function guildPrefix(services: LumiServices, guildId: string | null): Promise<string> {
   if (!guildId) return services.runtime.defaultPrefix;
+  const cached = guildPrefixCache.get(guildId);
+  if (cached !== undefined) return cached;
   const guild = await services.db.guild.get(guildId);
-  return guild?.prefix ?? services.runtime.defaultPrefix;
+  const prefix = guild?.prefix ?? services.runtime.defaultPrefix;
+  guildPrefixCache.set(guildId, prefix);
+  return prefix;
 }
+
+// Clear prefix cache on interval (guild prefixes rarely change)
+setInterval(() => guildPrefixCache.clear(), 60_000);
 
 async function execute(
   services: LumiServices,
@@ -134,6 +149,7 @@ async function execute(
   context: CommandContext,
 ): Promise<void> {
   try {
+    // Fast reject: guild-only / owner-only / guild-owner-only
     if (command.guildOnly && !context.guildId) {
       await context.reply(makeErrorCard("Server only", "This command can only be used in a server."));
       return;
@@ -150,6 +166,8 @@ async function execute(
       await context.reply(makeErrorCard("Missing permissions", "You do not have permission to run this command."));
       return;
     }
+
+    // Permit check: run before module check to fail fast
     if (command.permitNode && context.guildId) {
       const nodes = Array.isArray(command.permitNode) ? command.permitNode : [command.permitNode];
       let hasAny = false;
@@ -178,11 +196,14 @@ async function execute(
         return;
       }
     }
+
+    // Module enabled check (cached per interaction by module state repository)
     if (command.module !== null && !(await services.modules.isEnabled(context.guildId, command.module))) {
       await context.reply(makeErrorCard("Module disabled", `The **${command.module}** module is disabled here.`));
       return;
     }
 
+    // Cooldown: atomic Redis check/set
     const cooldownMs = command.cooldownMs ?? 0;
     if (cooldownMs > 0) {
       const key = services.keys.cooldown(

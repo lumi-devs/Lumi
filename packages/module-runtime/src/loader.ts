@@ -39,6 +39,12 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
   readonly #onChange: (() => void | Promise<void>) | undefined;
   readonly #records = new Map<string, LoadedRecord>();
   readonly #broken = new Map<string, BrokenModule>();
+  // O(1) command lookup instead of linear scan across all modules
+  readonly #commandIndex = new Map<string, CommandDef>();
+  // Cached computed values, refreshed on load/reload/unload
+  #cachedLoadedModules: readonly LoadedModule[] | undefined;
+  #cachedCommands: readonly CommandDef[] | undefined;
+  #cachedStatuses: readonly ModuleStatus[] | undefined;
 
   public constructor(options: ModuleLoaderOptions) {
     this.#roots = options.roots;
@@ -52,6 +58,8 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
     if (this.#records.size > 0) await this.unloadAll();
     this.#records.clear();
     this.#broken.clear();
+    this.#commandIndex.clear();
+    this.#invalidateCaches();
 
     const discovery = await discoverModules(this.#roots);
     for (const broken of discovery.broken) {
@@ -123,6 +131,13 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
   async #unloadRecord(name: string): Promise<void> {
     const record = this.#records.get(name);
     if (!record) return;
+    // Remove commands from index
+    for (const cmdName of record.commands.keys()) {
+      const indexed = this.#commandIndex.get(cmdName);
+      if (indexed === record.commands.get(cmdName)) {
+        this.#commandIndex.delete(cmdName);
+      }
+    }
     for (const dispose of record.disposers.reverse()) {
       try {
         dispose();
@@ -139,6 +154,7 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
     }
     record.definition = undefined;
     record.state = "disabled";
+    this.#invalidateCaches();
   }
 
   public async setEnabled(name: string, enabled: boolean): Promise<void> {
@@ -163,9 +179,12 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
   }
 
   public all(): readonly LoadedModule[] {
-    return [...this.#records.values()]
+    if (this.#cachedLoadedModules) return this.#cachedLoadedModules;
+    const result = [...this.#records.values()]
       .filter((record): record is LoadedRecord & { definition: ModuleDefinition } => record.definition !== undefined)
       .map((record) => ({ definition: record.definition, commands: record.commands }));
+    this.#cachedLoadedModules = result;
+    return result;
   }
 
   public get(name: string): LoadedModule | undefined {
@@ -175,15 +194,14 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
   }
 
   public command(name: string): CommandDef | undefined {
-    for (const record of this.#records.values()) {
-      const command = record.commands.get(name);
-      if (command) return command;
-    }
-    return undefined;
+    return this.#commandIndex.get(name);
   }
 
   public commands(): readonly CommandDef[] {
-    return [...this.#records.values()].flatMap((record) => [...record.commands.values()]);
+    if (this.#cachedCommands) return this.#cachedCommands;
+    const result = [...this.#records.values()].flatMap((record) => [...record.commands.values()]);
+    this.#cachedCommands = result;
+    return result;
   }
 
   public async isEnabled(guildId: string | null, name: string): Promise<boolean> {
@@ -200,7 +218,8 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
     }
   }
 
-  public status(): ModuleStatus[] {
+  public status(): readonly ModuleStatus[] {
+    if (this.#cachedStatuses) return this.#cachedStatuses;
     const statuses: ModuleStatus[] = [...this.#records.values()].map((record) => {
       const manifest = record.discovered.manifest;
       return {
@@ -229,7 +248,14 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
         error: broken.issues.join("; "),
       });
     }
+    this.#cachedStatuses = statuses;
     return statuses;
+  }
+
+  #invalidateCaches(): void {
+    this.#cachedLoadedModules = undefined;
+    this.#cachedCommands = undefined;
+    this.#cachedStatuses = undefined;
   }
 
   async #loadOne(record: LoadedRecord): Promise<void> {
@@ -277,8 +303,9 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
       if (this.#reservedCommands.has(command.name)) {
         throw new Error(`command '${command.name}' conflicts with a built-in command`);
       }
-      const existing = this.command(command.name);
-      if (existing && !record.commands.has(command.name)) {
+      // Check cross-module duplicate via index
+      const existing = this.#commandIndex.get(command.name);
+      if (existing && existing !== record.commands.get(command.name)) {
         throw new Error(`Duplicate command across modules: ${command.name}`);
       }
     }
@@ -311,6 +338,7 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
 
     for (const command of definition.commands ?? []) {
       record.commands.set(command.name, command);
+      this.#commandIndex.set(command.name, command);
     }
 
     try {
@@ -330,6 +358,7 @@ export class ModuleLoader implements ModuleRegistry, ModuleControl {
     }
 
     record.state = "loaded";
+    this.#invalidateCaches();
     services.logger.info(
       { module: definition.name, version: record.discovered.manifest.version },
       "module loaded",
