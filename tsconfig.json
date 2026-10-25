@@ -1,29 +1,116 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "paths": {
-      "@modules/*": ["./modules/*"]
-    },
-    "lib": ["ESNext"],
-    "types": ["bun", "node"],
+    "moduleResolution": "bundler",
+    "lib": [
+      "ES2022"
+    ],
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "verbatimModuleSyntax": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "useDefineForClassFields": true
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@lumi/core": [
+        "apps/bot/src/core/src"
+      ],
+      "@lumi/admin": [
+        "apps/bot/src/admin/src"
+      ],
+      "@lumi/security": [
+        "apps/bot/src/security/src"
+      ],
+      "@lumi/permits": [
+        "packages/permits/src"
+      ],
+      "@lumi/cache": [
+        "packages/cache/src"
+      ],
+      "@lumi/redis": [
+        "packages/redis/src"
+      ],
+      "@lumi/db": [
+        "packages/db/src"
+      ],
+      "@lumi/rpc": [
+        "packages/rpc/src"
+      ],
+      "@lumi/ui": [
+        "packages/ui/src"
+      ],
+      "@lumi/observability": [
+        "packages/observability/src"
+      ],
+      "@lumi/scheduler": [
+        "packages/scheduler/src"
+      ],
+      "@lumi/discord": [
+        "packages/discord/src"
+      ],
+      "@lumi/config": [
+        "packages/config/src"
+      ],
+      "@lumi/module-kit": [
+        "packages/module-kit/src"
+      ],
+      "@lumi/module-runtime": [
+        "packages/module-runtime/src"
+      ],
+      "@lumi/downloader": [
+        "packages/downloader/src"
+      ],
+      "@lumi/mod": [
+        "modules/mod/src"
+      ],
+      "@lumi/leveling": [
+        "modules/leveling/src"
+      ],
+      "@lumi/economy": [
+        "modules/economy/src"
+      ],
+      "@lumi/utility": [
+        "modules/utility/src"
+      ],
+      "@lumi/tempvc": [
+        "modules/tempvc/src"
+      ],
+      "@lumi/logging": [
+        "modules/logging/src"
+      ],
+      "@lumi/welcome": [
+        "modules/welcome/src"
+      ],
+      "@lumi/reactionroles": [
+        "modules/reactionroles/src"
+      ],
+      "@lumi/afk": [
+        "modules/afk/src"
+      ],
+      "@lumi/onboarding": [
+        "modules/onboarding/src"
+      ],
+      "@lumi/sticky": [
+        "modules/sticky/src"
+      ],
+      "@lumi/sheets": [
+        "modules/sheets/src"
+      ],
+      "@prisma/client": [
+        "packages/prisma-client/src"
+      ]
+    }
   },
-  "include": ["apps/**/*.ts", "modules/**/*.ts", "packages/**/*.ts", "tests/**/*.ts", "prisma.config.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }

@@ -1,0 +1,18 @@
+version: v2
+name: buf.build/lumi/lumi-v2
+deps:
+  - buf.build/connectrpc/connect
+  - buf.build/protocolbuffers/googleapis
+lint:
+  use:
+    - DEFAULT
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - ENUM_VALUE_NAME_CONSISTENCY
+  ignore:
+    - node_modules
+breaking:
+  use:
+    - FILE
+  ignore:
+    - node_modules

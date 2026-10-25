@@ -1,17 +1,29 @@
 {
   "name": "@lumi/downloader",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js",
+    "./installer": "./dist/installer.js",
+    "./validator": "./dist/validator.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lumi/contracts": "workspace:*",
-    "@lumi/db": "workspace:*",
-    "@lumi/foundation": "workspace:*",
+    "@lumi/module-kit": "workspace:*",
     "@lumi/module-runtime": "workspace:*",
-    "@lumi/redis": "workspace:*",
-    "isomorphic-git": "^1.44.3"
+    "@lumi/cache": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "semver": "^7.6.0",
+    "tar": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/semver": "^7.5.0",
+    "@types/tar": "^6.1.0"
   }
 }

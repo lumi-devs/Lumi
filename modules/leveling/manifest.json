@@ -1,0 +1,14 @@
+{
+  "apiVersion": 2,
+  "name": "leveling",
+  "displayName": "Leveling",
+  "emoji": "📈",
+  "description": "XP, levels, role rewards, and leaderboards",
+  "version": "2.0.0",
+  "entry": "src/index.ts",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "defaultEnabled": true
+}

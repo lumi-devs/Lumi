@@ -1,0 +1,165 @@
+syntax = "proto3";
+
+package lumi.v2;
+
+option go_package = "github.com/lumi/lumi-v2/proto/lumi/v2";
+
+// Permits
+service PermitService {
+  rpc ListPermits(ListPermitsRequest) returns (ListPermitsResponse);
+  rpc CreatePermit(CreatePermitRequest) returns (CreatePermitResponse);
+  rpc UpdatePermit(UpdatePermitRequest) returns (UpdatePermitResponse);
+  rpc DeletePermit(DeletePermitRequest) returns (DeletePermitResponse);
+  rpc MovePermit(MovePermitRequest) returns (MovePermitResponse);
+  rpc AssignPermit(AssignPermitRequest) returns (AssignPermitResponse);
+  rpc UnassignPermit(UnassignPermitRequest) returns (UnassignPermitResponse);
+  rpc ExplainPermit(ExplainPermitRequest) returns (ExplainPermitResponse);
+  rpc GetExpiringPermits(GetExpiringPermitsRequest) returns (GetExpiringPermitsResponse);
+}
+
+message Permit {
+  int32 id = 1;
+  string name = 2;
+  string node = 3;
+  Polarity polarity = 4;
+  int32 position = 5;
+  bool builtin = 6;
+  string expires_at = 7;
+  string schedule = 8;
+  string timezone = 9;
+  string conditions = 10;
+}
+
+enum Polarity {
+  POLARITY_UNSPECIFIED = 0;
+  GRANT = 1;
+  DENY = 2;
+}
+
+message ListPermitsRequest {
+  string guild_id = 1;
+}
+
+message ListPermitsResponse {
+  repeated Permit permits = 1;
+}
+
+message CreatePermitRequest {
+  string guild_id = 1;
+  string name = 2;
+  string node = 3;
+  Polarity polarity = 4;
+  int32 position = 5;
+  string expires_at = 6;
+  string schedule = 7;
+  string timezone = 8;
+  string conditions = 9;
+}
+
+message CreatePermitResponse {
+  Permit permit = 1;
+}
+
+message UpdatePermitRequest {
+  int32 permit_id = 1;
+  string name = 2;
+  string node = 3;
+  Polarity polarity = 4;
+  int32 position = 5;
+  string expires_at = 6;
+  string schedule = 7;
+  string timezone = 8;
+  string conditions = 9;
+}
+
+message UpdatePermitResponse {
+  Permit permit = 1;
+}
+
+message DeletePermitRequest {
+  int32 permit_id = 1;
+}
+
+message DeletePermitResponse {
+  bool success = 1;
+}
+
+message MovePermitRequest {
+  string guild_id = 1;
+  int32 permit_id = 2;
+  Direction direction = 3;
+}
+
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  UP = 1;
+  DOWN = 2;
+}
+
+message MovePermitResponse {
+  bool success = 1;
+}
+
+message AssignPermitRequest {
+  int32 permit_id = 1;
+  TargetType target_type = 2;
+  string target_id = 3;
+  string granted_by = 4;
+  string expires_at = 5;
+}
+
+enum TargetType {
+  TARGET_TYPE_UNSPECIFIED = 0;
+  USER = 1;
+  ROLE = 2;
+  CHANNEL = 3;
+}
+
+message AssignPermitResponse {
+  bool success = 1;
+}
+
+message UnassignPermitRequest {
+  int32 permit_id = 1;
+  TargetType target_type = 2;
+  string target_id = 3;
+}
+
+message UnassignPermitResponse {
+  bool success = 1;
+}
+
+message ExplainPermitRequest {
+  string guild_id = 1;
+  string user_id = 2;
+  repeated string role_ids = 3;
+  string channel_id = 4;
+  string guild_owner_id = 5;
+  string node = 6;
+}
+
+message ExplainPermitResponse {
+  repeated PermitTierExplanation rows = 1;
+}
+
+message PermitTierExplanation {
+  string tier = 1;
+  Verdict verdict = 2;
+  string detail = 3;
+}
+
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  ALLOW = 1;
+  REJECT = 2;
+  PASS = 3;
+}
+
+message GetExpiringPermitsRequest {
+  string guild_id = 1;
+  string before = 2;
+}
+
+message GetExpiringPermitsResponse {
+  repeated Permit permits = 1;
+}

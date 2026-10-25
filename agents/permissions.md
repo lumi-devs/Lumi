@@ -1,7 +1,7 @@
 # Permits and access control
 
 Code: `packages/module-kit/src/permits.ts`, `packages/db/src/repositories/permits.ts`.
-Panel: `apps/bot/src/lumi/` (`/lumi` → Permissions). Command: `/permit`.
+Panel: `apps/bot/src/admin/src/panel/PermitPanel.ts` (`/lumi` → Permissions → Open Permit Panel).
 Both require `admin.*`; Discord managers (`Administrator` or `ManageGuild`) also
 pass because the resolver's manager tier always allows. A custom `admin.*` role
 or user can therefore use the panel and command without raw Discord admin.

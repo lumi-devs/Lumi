@@ -1,8 +1,2 @@
-export {
-  AddonInstaller,
-  type InstalledAddon,
-  type InstallerOptions,
-  type InstallerStore,
-  type RepoUpdate,
-} from "./installer.ts";
-export { validateAddon, type ValidationResult } from "./validate.ts";
+export { AddonInstaller, type AddonSource, type InstallResult } from "./installer.js";
+export { AddonValidator, type ValidationResult } from "./validator.js";

@@ -1,0 +1,14 @@
+{
+  "apiVersion": 2,
+  "name": "tempvc",
+  "displayName": "Temporary Voice",
+  "emoji": "🔊",
+  "description": "Join-to-create temporary voice channels with ownership controls",
+  "version": "2.0.0",
+  "entry": "src/index.ts",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "defaultEnabled": true
+}

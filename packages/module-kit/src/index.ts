@@ -1,42 +1,46 @@
-export {
-  defineModule,
-  parseModuleConfig,
-  type ModuleConfig,
-  type ModuleConfigField,
-  type ModuleConfigFieldType,
-  type ModuleConfigSchema,
-  type ModuleDefinition,
-} from "./module.ts";
-export type { CommandDef } from "./command.ts";
-export type { ListenerDef } from "./listener.ts";
-export type { CommandContext } from "./context.ts";
-export type {
-  LoadedModule,
-  LumiServices,
-  ModuleRegistry,
-  RuntimeConfig,
-} from "./services.ts";
-export {
-  confirmPrompt,
-  type ConfirmPromptOptions,
-  type ConfirmPromptResult,
-} from "./confirm.ts";
-export {
-  assertPermit,
-  evaluatePermit,
-  hasPermit,
-  isBotOwner,
-  matchPermitNode,
-  type PermitEvaluationOptions,
-  type PermitEvaluationResult,
-  type PermitEvaluationTarget,
-  type PermitKind,
-  type PermitPolarity,
-  type PermitTargetType,
-  type PermitTierVerdict,
-} from "./permits.ts";
-export type {
-  CaseAction,
-  ModerationCase,
-  ModNote,
-} from "@lumi/db";
+import { z } from "zod";
+import type { CommandDefinition, ListenerDefinition, TaskDefinition, ConfigField, ModuleCapability } from "./types.js";
+
+export interface ModuleDefinition {
+  name: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  version: string;
+  config: z.ZodObject<any>;
+  configFields: ConfigField[];
+  commands: CommandDefinition[];
+  listeners: ListenerDefinition[];
+  tasks: TaskDefinition[];
+  onLoad: (services: ModuleServices) => Promise<Disposer[]>;
+  onUnload: (services: ModuleServices) => Promise<void>;
+  dependencies?: Record<string, string>;
+  requirements?: string[];
+  conflicts?: string[];
+  capabilities?: ModuleCapability[];
+}
+
+export interface ModuleServices {
+  db: any;
+  cache: any;
+  redis: any;
+  rpc: any;
+  discord: any;
+  permits: any;
+  config: any;
+  ui: any;
+  scheduler: any;
+  observability: any;
+  modules: {
+    isEnabled: (guildId: string, moduleName: string) => boolean;
+  };
+  __moduleName?: string;
+}
+
+export type Disposer = () => void | Promise<void>;
+
+export function defineModule<T extends ModuleDefinition>(def: T): T {
+  return def;
+}
+
+export * from "./types.js";

@@ -1,0 +1,33 @@
+{
+  "name": "@lumi/core",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./gateway": "./dist/gateway/index.js",
+    "./rpc": "./dist/rpc/index.js",
+    "./scheduler": "./dist/scheduler/index.js",
+    "./lifecycle": "./dist/lifecycle/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lumi/cache": "workspace:*",
+    "@lumi/redis": "workspace:*",
+    "@lumi/db": "workspace:*",
+    "@lumi/rpc": "workspace:*",
+    "@lumi/observability": "workspace:*",
+    "@lumi/scheduler": "workspace:*",
+    "@lumi/discord": "workspace:*",
+    "@lumi/config": "workspace:*",
+    "@lumi/permits": "workspace:*",
+    "discord.js": "^14.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

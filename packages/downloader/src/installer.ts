@@ -1,373 +1,195 @@
-import { mkdir, readFile, readdir, rename, rm, stat, symlink } from "node:fs/promises";
-import path from "node:path";
-import type {
-  AddonAvailable,
-  AddonControl,
-  AddonModuleSummary,
-  AddonUpdateOutcome,
-} from "@lumi/contracts";
-import type { DownloaderModule, DownloaderRepo } from "@lumi/db";
-import type { Logger } from "@lumi/foundation";
-import type { RedisClient } from "@lumi/redis";
-import { withLock } from "@lumi/redis";
-import { parseManifest, type ModuleManifest } from "@lumi/module-runtime";
-import { checkout, clone, fetch, head, materialize, resolveRevision } from "./git.ts";
-import { installAddonRequirements } from "./requirements.ts";
-import { validateAddon } from "./validate.ts";
+import { createModuleLoader, type ModuleManifest } from "@lumi/module-runtime";
+import { join } from "node:path";
+import { mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
-const NamePattern = /^[a-z][a-z0-9-]*$/;
-const BranchPattern = /^[A-Za-z0-9._/-]+$/;
-
-export interface InstallerStore {
-  listRepos(): Promise<DownloaderRepo[]>;
-  getRepo(name: string): Promise<DownloaderRepo | null>;
-  upsertRepo(repo: {
-    name: string;
-    url: string;
-    branch: string;
-    commit: string;
-  }): Promise<DownloaderRepo>;
-  deleteRepo(name: string): Promise<void>;
-  listInstalled(): Promise<DownloaderModule[]>;
-  getInstalled(moduleName: string): Promise<DownloaderModule | null>;
-  recordModule(record: {
-    repoName: string;
-    moduleName: string;
-    version: string;
-    commit: string;
-  }): Promise<void>;
-  deleteModule(moduleName: string): Promise<void>;
+export interface AddonSource {
+  type: "github" | "npm" | "local";
+  url: string;
+  ref?: string; // branch, tag, or version
 }
 
-export interface InstallerOptions {
-  root: string;
-  store: InstallerStore;
-  redis: RedisClient;
-  logger: Logger;
-  onInstalled?: ((moduleName: string) => Promise<void>) | undefined;
-  onRemoved?: ((moduleName: string) => Promise<void>) | undefined;
-}
-
-export interface InstalledAddon {
-  manifest: ModuleManifest;
-  commit: string;
-  previousVersion: string | null;
-}
-
-export interface RepoUpdate {
+export interface InstallResult {
+  success: boolean;
   name: string;
-  oldSha: string;
-  newSha: string;
-  changed: boolean;
-  modules: string[];
+  version: string;
+  path: string;
+  error?: string;
 }
 
-function assertName(value: string, label: string): string {
-  if (!NamePattern.test(value)) throw new Error(`Invalid ${label}: ${value}`);
-  return value;
-}
+export class AddonInstaller {
+  private readonly addonsDir: string;
+  private readonly moduleLoader: ReturnType<typeof createModuleLoader>;
 
-function parseUrl(raw: string): string {
-  const value = raw.trim().replace(/^<|>$/g, "");
-  if (value.startsWith("https://") || value.startsWith("http://")) {
-    const url = new URL(value);
-    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Invalid repository URL");
-    return value;
-  }
-  throw new Error("Repository URL must be HTTP(S); git and SSH transports are not supported");
-}
-
-async function exists(target: string): Promise<boolean> {
-  return stat(target).then(() => true).catch(() => false);
-}
-
-export class AddonInstaller implements AddonControl {
-  readonly #root: string;
-  readonly #store: InstallerStore;
-  readonly #redis: RedisClient;
-  readonly #logger: Logger;
-  readonly #onInstalled: ((moduleName: string) => Promise<void>) | undefined;
-  readonly #onRemoved: ((moduleName: string) => Promise<void>) | undefined;
-
-  public readonly reposRoot: string;
-  public readonly addonsRoot: string;
-  public readonly versionsRoot: string;
-
-  public constructor(options: InstallerOptions) {
-    this.#root = path.resolve(options.root);
-    this.#store = options.store;
-    this.#redis = options.redis;
-    this.#logger = options.logger;
-    this.#onInstalled = options.onInstalled;
-    this.#onRemoved = options.onRemoved;
-    this.reposRoot = path.join(this.#root, "data", "repos");
-    this.addonsRoot = path.join(this.#root, "data", "addons");
-    this.versionsRoot = path.join(this.addonsRoot, ".versions");
+  constructor(addonsDir: string, moduleLoader: ReturnType<typeof createModuleLoader>) {
+    this.addonsDir = addonsDir;
+    this.moduleLoader = moduleLoader;
   }
 
-  public addRepo(name: string, url: string, branch = "default"): Promise<DownloaderRepo> {
-    assertName(name, "repository name");
-    return this.#locked(`addon:repo:${name}`, 300_000, () => this.#addRepo(name, url, branch));
-  }
-
-  async #addRepo(name: string, url: string, branch: string): Promise<DownloaderRepo> {
-    const cleanUrl = parseUrl(url);
-    if (branch !== "default" && !BranchPattern.test(branch)) throw new Error(`Invalid branch: ${branch}`);
-
-    await mkdir(this.reposRoot, { recursive: true });
-    const repoPath = path.join(this.reposRoot, name);
-
-    if (await exists(path.join(repoPath, ".git"))) {
-      const existing = await this.#store.getRepo(name);
-      if (existing) throw new Error(`Repository '${name}' is already installed`);
-      const sha = await head(repoPath);
-      return this.#store.upsertRepo({ name, url: cleanUrl, branch, commit: sha });
-    }
-    if (await exists(repoPath)) await rm(repoPath, { recursive: true, force: true });
-
-    const temp = path.join(this.reposRoot, `.${name}.${crypto.randomUUID()}.tmp`);
+  async install(source: AddonSource): Promise<InstallResult> {
+    const tempDir = join(tmpdir(), `lumi-addon-${Date.now()}`);
+    
     try {
-      const sha = await clone(cleanUrl, temp, branch);
-      await rename(temp, repoPath);
-      return this.#store.upsertRepo({ name, url: cleanUrl, branch, commit: sha });
-    } catch (error) {
-      await rm(temp, { recursive: true, force: true }).catch(() => undefined);
-      throw error;
-    }
-  }
+      await mkdir(tempDir, { recursive: true });
 
-  public updateRepo(name: string): Promise<RepoUpdate> {
-    assertName(name, "repository name");
-    return this.#locked(`addon:repo:${name}`, 300_000, () => this.#updateRepo(name));
-  }
-
-  async #updateRepo(name: string): Promise<RepoUpdate> {
-    const repo = await this.#requireRepo(name);
-    const repoPath = path.join(this.reposRoot, name);
-    if (!(await exists(path.join(repoPath, ".git")))) throw new Error(`Repository '${name}' is missing from disk`);
-
-    const oldSha = repo.commit;
-    const newSha = await fetch(repoPath, repo.branch);
-    if (!newSha) throw new Error(`Could not resolve the fetched revision for '${name}'`);
-    if (newSha === oldSha) {
-      return { name, oldSha, newSha, changed: false, modules: [] };
-    }
-
-    const installed = (await this.#store.listInstalled()).filter((module) => module.repoId === repo.id);
-    const staging = path.join(this.#root, "data", "tmp", `${name}-${crypto.randomUUID()}`);
-    try {
-      for (const module of installed) {
-        const dir = path.join(staging, module.moduleName);
-        await materialize(repoPath, newSha, dir, module.moduleName);
-        const validation = await validateAddon(dir);
-        if (validation.errors.length > 0) {
-          throw new Error(
-            `Repository '${name}' update failed validation for ${module.moduleName}:\n${validation.errors
-              .map((error) => `• ${error}`)
-              .join("\n")}`,
-          );
-        }
+      if (source.type === "github") {
+        await this.cloneGitHub(source, tempDir);
+      } else if (source.type === "npm") {
+        await this.installNpm(source, tempDir);
+      } else if (source.type === "local") {
+        await this.copyLocal(source, tempDir);
       }
-    } finally {
-      await rm(staging, { recursive: true, force: true }).catch(() => undefined);
-    }
 
-    const modules: string[] = [];
-    for (const module of installed) {
-      await this.install(name, module.moduleName, newSha);
-      modules.push(module.moduleName);
-    }
-
-    await checkout(repoPath, newSha);
-    await this.#store.upsertRepo({
-      name,
-      url: repo.url,
-      branch: repo.branch,
-      commit: newSha,
-    });
-
-    return { name, oldSha, newSha, changed: true, modules };
-  }
-
-  public async updateAll(): Promise<readonly AddonUpdateOutcome[]> {
-    const results: AddonUpdateOutcome[] = [];
-    for (const repo of await this.#store.listRepos()) {
-      try {
-        results.push(await this.updateRepo(repo.name));
-      } catch (error) {
-        results.push({ name: repo.name, error: error instanceof Error ? error.message : String(error) });
-      }
-    }
-    return results;
-  }
-
-  public install(repoName: string, moduleName: string, revision?: string): Promise<InstalledAddon> {
-    assertName(moduleName, "module name");
-    return this.#locked(`addon:module:${moduleName}`, 300_000, () =>
-      this.#install(repoName, moduleName, revision),
-    );
-  }
-
-  async #install(repoName: string, moduleName: string, revision: string | undefined): Promise<InstalledAddon> {
-    const repo = await this.#requireRepo(repoName);
-    const repoPath = path.join(this.reposRoot, repoName);
-    if (!(await exists(path.join(repoPath, ".git")))) throw new Error(`Repository '${repoName}' is missing from disk`);
-
-    const commit = revision ? await resolveRevision(repoPath, revision) : await head(repoPath);
-    const installed = await this.#store.getInstalled(moduleName);
-    if (installed && installed.repoId !== repo.id) {
-      throw new Error(`Module '${moduleName}' is already installed from another repository`);
-    }
-
-    const staging = path.join(this.versionsRoot, moduleName, `.staging-${crypto.randomUUID()}`);
-    const stagedModule = path.join(staging, moduleName);
-    await mkdir(staging, { recursive: true });
-    try {
-      await materialize(repoPath, commit, stagedModule, moduleName);
-      const validation = await validateAddon(stagedModule);
-      if (validation.errors.length > 0) {
-        throw new Error(
-          `Module '${moduleName}' failed validation:\n${validation.errors.map((error) => `• ${error}`).join("\n")}`,
-        );
-      }
-      const manifest = parseManifest(
-        JSON.parse(await readFile(path.join(stagedModule, "manifest.json"), "utf8")),
-      );
-      await installAddonRequirements(stagedModule, manifest.requirements, this.#logger);
-
-      const versionDir = path.join(this.versionsRoot, moduleName, commit);
-      await rm(versionDir, { recursive: true, force: true });
-      await rename(stagedModule, versionDir);
-      await rm(staging, { recursive: true, force: true });
-
-      const link = path.join(this.addonsRoot, moduleName);
-      const tempLink = path.join(this.addonsRoot, `.${moduleName}.${crypto.randomUUID()}.tmp`);
-      await mkdir(this.addonsRoot, { recursive: true });
-      await symlink(versionDir, tempLink, "dir");
-      await rename(tempLink, link);
-      await this.#pruneVersions(moduleName, commit).catch((error: unknown) => {
-        this.#logger.warn({ error, module: moduleName }, "failed to prune old addon versions");
-      });
-
-      await this.#store.recordModule({
-        repoName,
-        moduleName,
-        version: manifest.version,
-        commit,
-      });
-
-      this.#logger.info({ module: moduleName, repo: repoName, commit }, "addon installed");
-      await this.#onInstalled?.(moduleName).catch((error: unknown) => {
-        this.#logger.error({ error, module: moduleName }, "addon installed but reload failed");
-      });
-
-      return { manifest, commit, previousVersion: installed?.commit ?? null };
-    } catch (error) {
-      await rm(staging, { recursive: true, force: true }).catch(() => undefined);
-      throw error;
-    }
-  }
-
-  public uninstall(moduleName: string): Promise<void> {
-    assertName(moduleName, "module name");
-    return this.#locked(`addon:module:${moduleName}`, 120_000, () => this.#uninstall(moduleName));
-  }
-
-  async #uninstall(moduleName: string): Promise<void> {
-    const installed = await this.#store.getInstalled(moduleName);
-    if (!installed) throw new Error(`Module '${moduleName}' is not installed`);
-
-    await this.#onRemoved?.(moduleName).catch((error: unknown) => {
-      this.#logger.error({ error, module: moduleName }, "addon unload failed");
-    });
-    await rm(path.join(this.addonsRoot, moduleName), { force: true });
-    await rm(path.join(this.versionsRoot, moduleName), { recursive: true, force: true });
-    await this.#store.deleteModule(moduleName);
-    this.#logger.info({ module: moduleName }, "addon uninstalled");
-  }
-
-  public removeRepo(name: string): Promise<void> {
-    assertName(name, "repository name");
-    return this.#locked(`addon:repo:${name}`, 120_000, () => this.#removeRepo(name));
-  }
-
-  async #removeRepo(name: string): Promise<void> {
-    const repo = await this.#requireRepo(name);
-    const installed = (await this.#store.listInstalled()).filter((module) => module.repoId === repo.id);
-    if (installed.length > 0) {
-      throw new Error(`Uninstall ${installed.map((module) => module.moduleName).join(", ")} before removing '${name}'`);
-    }
-    await rm(path.join(this.reposRoot, name), { recursive: true, force: true });
-    await this.#store.deleteRepo(name);
-  }
-
-  public async listInstalled(): Promise<readonly AddonModuleSummary[]> {
-    const [modules, repos] = await Promise.all([
-      this.#store.listInstalled(),
-      this.#store.listRepos(),
-    ]);
-    const repoById = new Map(repos.map((repo) => [repo.id, repo.name]));
-    return modules.map((module) => {
-      const repoName = repoById.get(module.repoId);
-      return {
-        moduleName: module.moduleName,
-        version: module.version,
-        commit: module.commit,
-        ...(repoName === undefined ? {} : { repoName }),
-      };
-    });
-  }
-
-  public listRepos(): Promise<readonly DownloaderRepo[]> {
-    return this.#store.listRepos();
-  }
-
-  public async listAvailable(repoName: string): Promise<readonly AddonAvailable[]> {
-    const repo = await this.#requireRepo(repoName);
-    const repoPath = path.join(this.reposRoot, repo.name);
-    const entries = await readdir(repoPath, { withFileTypes: true }).catch(() => []);
-    const available: AddonAvailable[] = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") continue;
-      const dir = path.join(repoPath, entry.name);
-      if (!(await exists(path.join(dir, "manifest.json")))) continue;
-      try {
-        const manifest = parseManifest(JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8")));
-        const validation = await validateAddon(dir);
-        available.push({
+      // Validate manifest
+      const manifest = await this.validateManifest(tempDir);
+      
+      // Check conflicts
+      const conflicts = await this.checkConflicts(manifest);
+      if (conflicts.length > 0) {
+        return {
+          success: false,
           name: manifest.name,
-          displayName: manifest.displayName,
-          description: manifest.description,
           version: manifest.version,
-          errors: validation.errors,
-          warnings: validation.warnings,
-        });
-      } catch {
-        continue;
+          path: "",
+          error: `Conflicts with: ${conflicts.join(", ")}`,
+        };
+      }
+
+      // Install to addons directory
+      const targetDir = join(this.addonsDir, manifest.name);
+      await rm(targetDir, { recursive: true, force: true });
+      await mkdir(targetDir, { recursive: true });
+      
+      // Copy files (excluding node_modules, .git, etc.)
+      await this.copyDirectory(tempDir, targetDir);
+
+      // Install npm dependencies if any
+      if (manifest.requirements.length > 0) {
+        await this.installDependencies(targetDir, manifest.requirements);
+      }
+
+      // Reload module loader
+      this.moduleLoader.addRoot(this.addonsDir, "addon");
+      const discovered = await this.moduleLoader.discover();
+      await this.moduleLoader.loadAll(discovered, {} as any);
+
+      return {
+        success: true,
+        name: manifest.name,
+        version: manifest.version,
+        path: targetDir,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        name: "",
+        version: "",
+        path: "",
+        error: String(error),
+      };
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  }
+
+  private async cloneGitHub(source: AddonSource, targetDir: string): Promise<void> {
+    const { execSync } = await import("node:child_process");
+    const url = source.url.endsWith(".git") ? source.url : `${source.url}.git`;
+    const ref = source.ref ?? "main";
+    
+    execSync(`git clone --depth 1 --branch ${ref} ${url} .`, { 
+      cwd: targetDir, 
+      stdio: "ignore" 
+    });
+  }
+
+  private async installNpm(source: AddonSource, targetDir: string): Promise<void> {
+    const { execSync } = await import("node:child_process");
+    const pkg = source.url + (source.ref ? `@${source.ref}` : "");
+    
+    execSync(`bun add ${pkg}`, { 
+      cwd: targetDir, 
+      stdio: "ignore" 
+    });
+    
+    // Extract the package
+    execSync(`bun pm cache dir`, { cwd: targetDir });
+  }
+
+  private async copyLocal(source: AddonSource, targetDir: string): Promise<void> {
+    const { execSync } = await import("node:child_process");
+    execSync(`cp -r ${source.url}/* .`, { cwd: targetDir });
+  }
+
+  private async validateManifest(dir: string): Promise<ModuleManifest> {
+    const manifestPath = join(dir, "manifest.json");
+    const content = await import("node:fs/promises").then(fs => fs.readFile(manifestPath, "utf-8"));
+    return JSON.parse(content);
+  }
+
+  private async checkConflicts(manifest: ModuleManifest): Promise<string[]> {
+    const conflicts: string[] = [];
+    for (const module of this.moduleLoader.listAll()) {
+      if (module.manifest.conflicts.includes(manifest.name) || manifest.conflicts.includes(module.manifest.name)) {
+        conflicts.push(module.manifest.name);
       }
     }
-    return available;
+    return conflicts;
   }
 
-  async #pruneVersions(moduleName: string, keep: string): Promise<void> {
-    const directory = path.join(this.versionsRoot, moduleName);
-    const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
-    await Promise.all(
-      entries
-        .filter((entry) => entry.isDirectory() && entry.name !== keep && !entry.name.startsWith("."))
-        .map((entry) => rm(path.join(directory, entry.name), { recursive: true, force: true })),
-    );
+  private async copyDirectory(src: string, dest: string): Promise<void> {
+    const { readdir, copyFile, stat, mkdir } = await import("node:fs/promises");
+    const entries = await readdir(src, { withFileTypes: true });
+    
+    await mkdir(dest, { recursive: true });
+    
+    for (const entry of entries) {
+      const srcPath = join(src, entry.name);
+      const destPath = join(dest, entry.name);
+      
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      
+      if (entry.isDirectory()) {
+        await this.copyDirectory(srcPath, destPath);
+      } else {
+        await copyFile(srcPath, destPath);
+      }
+    }
   }
 
-  async #locked<T>(key: string, ttlMs: number, work: () => Promise<T>): Promise<T> {
-    const result = await withLock(this.#redis, key, ttlMs, work);
-    if (!result.acquired) throw new Error("Another addon operation is already running");
-    return result.value;
+  private async installDependencies(dir: string, requirements: string[]): Promise<void> {
+    const { execSync } = await import("node:child_process");
+    for (const req of requirements) {
+      execSync(`bun add ${req}`, { cwd: dir, stdio: "ignore" });
+    }
   }
 
-  async #requireRepo(name: string): Promise<DownloaderRepo> {
-    const repo = await this.#store.getRepo(name);
-    if (!repo) throw new Error(`Unknown repository: ${name}`);
-    return repo;
+  async uninstall(name: string): Promise<boolean> {
+    const targetDir = join(this.addonsDir, name);
+    try {
+      await rm(targetDir, { recursive: true, force: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async listInstalled(): Promise<Array<{ name: string; version: string; path: string }>> {
+    const { readdir } = await import("node:fs/promises");
+    const entries = await readdir(this.addonsDir, { withFileTypes: true });
+    
+    const addons = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const manifestPath = join(this.addonsDir, entry.name, "manifest.json");
+      try {
+        const content = await import("node:fs/promises").then(fs => fs.readFile(manifestPath, "utf-8"));
+        const manifest = JSON.parse(content);
+        addons.push({ name: manifest.name, version: manifest.version, path: join(this.addonsDir, entry.name) });
+      } catch {
+        // Invalid addon, skip
+      }
+    }
+    return addons;
   }
 }

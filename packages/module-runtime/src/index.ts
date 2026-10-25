@@ -1,16 +1,2 @@
-export { ModuleLoader, type ModuleLoaderOptions } from "./loader.ts";
-export type { ModuleState, ModuleStatus } from "@lumi/contracts";
-export {
-  ModuleManifestSchema,
-  parseManifest,
-  safeParseManifest,
-  type ModuleManifest,
-} from "./manifest.ts";
-export {
-  discoverModules,
-  type BrokenModule,
-  type DiscoveredModule,
-  type DiscoveryResult,
-  type ModuleOrigin,
-  type ModuleRoot,
-} from "./discovery.ts";
+export { ModuleLoader, createModuleLoader, type ModuleManifest, type LoadedModule } from "./loader.js";
+export { validateManifest, isManifestValid, ManifestSchema, type ModuleManifest as ValidatedManifest } from "./manifest.js";

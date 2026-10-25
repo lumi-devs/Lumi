@@ -1,741 +1,322 @@
 generator client {
-  provider        = "prisma-client-js"
-  output          = "../generated/client"
-  previewFeatures = ["fullTextSearchPostgres"]
-  engineType      = "library"
-  binaryTargets   = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-enum PermitKind {
-  enforced
-  custom
-}
-
-enum PermitPolarity {
-  grant
-  deny
+enum Polarity {
+  GRANT
+  DENY
 }
 
 enum PermitTargetType {
-  user
-  role
-  channel
-}
-
-enum CaseAction {
-  ban
-  unban
-  kick
-  mute
-  unmute
-  softban
-  voice_mute
-  unvoice_mute
-  warn
-  quarantine
-  unquarantine
-  antinuke_alert
-}
-
-enum AppealStatus {
-  pending
-  approved
-  denied
-  denied_blacklisted
-  dismissed
-}
-
-enum OverrideTargetType {
-  channel
-  category
-  role
-  user
-}
-
-enum AuditPlatform {
-  discord
-  web
-}
-
-enum GdprExportJobStatus {
-  pending
-  running
-  done
-  failed
-}
-
-enum EconomyTxnKind {
-  deposit
-  withdraw
-  transfer_out
-  transfer_in
-  slots_bid
-  slots_win
-  payday
-  admin_add
-  admin_remove
-  admin_set
-}
-
-model Global {
-  id                        Int       @id @default(1)
-  botName                   String    @default("Lumi") @map("bot_name") @db.VarChar(64)
-  defaultPrefix             String    @default(",") @map("default_prefix") @db.VarChar(5)
-  maintenanceMode           Boolean   @default(false) @map("maintenance_mode")
-  maintenanceMessage        String?   @map("maintenance_message") @db.VarChar(500)
-  inviteUrl                 String?   @map("invite_url") @db.VarChar(200)
-  supportGuildId            String?   @map("support_guild_id") @db.VarChar(20)
-  serverLockEnabled         Boolean   @default(false) @map("server_lock_enabled")
-  serverLockGuildIds        String[]  @map("server_lock_guild_ids")
-  autoUpdateEnabled         Boolean   @default(false) @map("auto_update_enabled")
-  autoUpdateIntervalMinutes Int       @default(360) @map("auto_update_interval_minutes")
-  autoUpdateLastCheckedAt   DateTime? @map("auto_update_last_checked_at")
-  updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  @@map("global_config")
-}
-
-model GlobalModuleState {
-  moduleName String   @id @map("module_name") @db.VarChar(64)
-  enabled    Boolean  @default(true)
-  reason     String?  @db.VarChar(200)
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-
-  @@map("global_module_state")
+  USER
+  ROLE
+  CHANNEL
 }
 
 model Guild {
-  id        String    @id @map("guild_id") @db.VarChar(20)
-  prefix    String?   @db.VarChar(5)
-  locale    String    @default("en-US") @db.VarChar(10)
-  ignored   Boolean   @default(false)
-  leftAt    DateTime? @map("left_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  discordId     String   @unique @map("discord_id")
+  name          String
+  icon          String?
+  ownerId       String   @map("owner_id")
+  joinedAt      DateTime @default(now()) @map("joined_at")
+  leftAt        DateTime? @map("left_at")
+  settings      Json     @default("{}")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  moduleStates      GuildModuleState[]
-  moduleConfigs     GuildModuleConfig[]
-  moduleData        ModuleData[]
-  permits           Permit[]
+  permits       Permit[]
   permitAssignments PermitAssignment[]
-  cases             ModerationCase[]
-  caseCounter       GuildCaseCounter?
-  modNotes          ModNote[]
-  appeals           Appeal[]
-  afkEntries        AfkEntry[]
-  ignoreEntries     IgnoreEntry[]
-  auditLedgers      AuditLedger[]
-  warnThresholds    WarnThreshold[]
-  panicState        PanicState?
-  verificationPanel VerificationPanel?
-  backups           GuildBackup[]
-  tempVcGenerators  TempVcGenerator[]
-  tempVcRecords     TempVcRecord[]
-  blocklistEntries  Blocklist[]
-  configHistory     ModuleConfigHistory[]
-  configOverrides   ModuleConfigOverride[]
-  economyAccounts   EconomyAccount[]
-  economyTxns       EconomyTransaction[]
-  levelAccounts     LevelAccount[]
-  levelXpGains      LevelXpGain[]
-  reactionRoleMenus ReactionRoleMenu[]
-  allowlists        Allowlist[]
-  caseTypeSettings  CaseTypeSetting[]
+  modules       GuildModule[]
+  levelingConfig LevelingConfig?
+  economyConfig EconomyConfig?
+  tempVcConfig  TempVcConfig?
+  securityConfig SecurityConfig?
+  sheets        Sheet[]
 
-  @@index([leftAt])
+  @@index([discordId])
   @@map("guilds")
 }
 
-model GuildModuleState {
-  guildId    String   @map("guild_id") @db.VarChar(20)
-  moduleName String   @map("module_name") @db.VarChar(64)
-  enabled    Boolean  @default(true)
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, moduleName])
-  @@index([moduleName])
-  @@map("guild_module_state")
-}
-
-model GuildModuleConfig {
-  guildId    String   @map("guild_id") @db.VarChar(20)
-  moduleName String   @map("module_name") @db.VarChar(64)
-  configKey  String   @map("config_key") @db.VarChar(64)
-  value      Json     @map("value_json")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, moduleName, configKey])
-  @@index([guildId, moduleName])
-  @@map("guild_module_config")
-}
-
-model ModuleScopedConfig {
-  guildId    String   @default("") @map("guild_id") @db.VarChar(20)
-  moduleName String   @map("module_name") @db.VarChar(64)
-  scope      String   @db.VarChar(16)
-  scopeId    String   @default("") @map("scope_id") @db.VarChar(191)
-  configKey  String   @map("config_key") @db.VarChar(64)
-  value      Json     @map("value_json")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-
-  @@id([guildId, moduleName, scope, scopeId, configKey])
-  @@index([guildId, moduleName, scope, scopeId])
-  @@map("module_scoped_config")
-}
-
 model Permit {
-  id        Int            @id @default(autoincrement())
-  guildId   String         @map("guild_id") @db.VarChar(20)
-  name      String         @db.VarChar(64)
-  kind      PermitKind
-  polarity  PermitPolarity @default(grant)
-  nodes     String[]       @map("nodes")
-  builtin   Boolean        @default(false)
-  position  Int            @default(0) @map("position")
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @default(now()) @updatedAt @map("updated_at")
+  id          Int           @id @default(autoincrement())
+  guildId     String        @map("guild_id")
+  guild       Guild         @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name        String
+  node        String
+  polarity    Polarity
+  position    Int
+  builtin     Boolean       @default(false)
+  expiresAt   DateTime?     @map("expires_at")
+  schedule    Json?
+  timezone    String?
+  conditions  Json?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
 
-  guild       Guild              @relation(fields: [guildId], references: [id], onDelete: Cascade)
   assignments PermitAssignment[]
 
-  @@unique([guildId, name], name: "uq_permit_guild_name")
-  @@index([guildId, kind])
-  @@index([guildId, position])
+  @@unique([guildId, name])
+  @@index([guildId])
   @@map("permits")
 }
 
 model PermitAssignment {
-  id         Int              @id @default(autoincrement())
-  permitId   Int              @map("permit_id")
-  guildId    String           @map("guild_id") @db.VarChar(20)
-  targetType PermitTargetType @map("target_type")
-  targetId   String           @map("target_id") @db.VarChar(20)
-  createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @default(now()) @updatedAt @map("updated_at")
+  id          Int              @id @default(autoincrement())
+  permitId    Int              @map("permit_id")
+  permit      Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  guildId     String           @map("guild_id")
+  guild       Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  targetType  PermitTargetType @map("target_type")
+  targetId    String           @map("target_id")
+  grantedAt   DateTime         @default(now()) @map("granted_at")
+  grantedBy   String           @map("granted_by")
+  expiresAt   DateTime?        @map("expires_at")
 
-  permit Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
-  guild  Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([permitId, targetType, targetId], name: "uq_permit_assignment")
-  @@index([guildId, targetType, targetId])
+  @@unique([permitId, targetType, targetId])
+  @@index([permitId])
   @@index([targetType, targetId])
+  @@index([guildId])
   @@map("permit_assignments")
 }
 
-model GuildCaseCounter {
-  guildId String @id @map("guild_id") @db.VarChar(20)
-  next    Int    @default(1)
+model GuildModule {
+  id        String   @id @default(cuid())
+  guildId   String   @map("guild_id")
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  module    String
+  enabled   Boolean  @default(true)
+  config    Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@map("guild_case_counter")
-}
-
-model ModerationCase {
-  id          Int        @id @default(autoincrement())
-  guildId     String     @map("guild_id") @db.VarChar(20)
-  caseNumber  Int        @map("case_number")
-  userId      String     @map("user_id") @db.VarChar(20)
-  moderatorId String     @map("moderator_id") @db.VarChar(20)
-  action      CaseAction
-  customAction String? @map("custom_action") @db.VarChar(64)
-  reason      String?    @db.VarChar(1000)
-  duration    Int?       @map("duration_seconds")
-  expiresAt   DateTime?  @map("expires_at")
-  active      Boolean    @default(true)
-  createdAt   DateTime   @default(now()) @map("created_at")
-
-  guild  Guild   @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  appeal Appeal?
-
-  @@unique([guildId, caseNumber], name: "uq_cases_guild_number")
-  @@index([guildId, userId])
-  @@index([guildId, createdAt])
-  @@index([guildId, moderatorId])
-  @@index([guildId, action])
-  @@index([userId])
-  @@index([moderatorId])
-  @@index([guildId, active, expiresAt])
-  @@index([guildId, userId, active, expiresAt])
-  @@index([active, id])
-  @@index([action, active, id])
-  @@index([active, createdAt, id])
-  @@map("moderation_cases")
-}
-
-model Appeal {
-  id         Int          @id @default(autoincrement())
-  guildId    String       @map("guild_id") @db.VarChar(20)
-  userId     String       @map("user_id") @db.VarChar(20)
-  caseId     Int          @unique @map("case_id")
-  status     AppealStatus @default(pending)
-  message    String       @db.VarChar(2000)
-  reviewedBy String?      @map("reviewed_by") @db.VarChar(20)
-  reviewedAt DateTime?    @map("reviewed_at")
-  createdAt  DateTime     @default(now()) @map("created_at")
-
-  guild Guild          @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  case  ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, status, createdAt])
-  @@index([guildId, createdAt, id])
-  @@index([userId])
-  @@index([reviewedBy])
-  @@index([status, createdAt, id])
-  @@map("appeals")
-}
-
-model ModNote {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  userId    String   @map("user_id") @db.VarChar(20)
-  authorId  String   @map("author_id") @db.VarChar(20)
-  message   String   @db.VarChar(1000)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, userId, createdAt])
-  @@index([userId])
-  @@index([authorId])
-  @@map("mod_notes")
-}
-
-model GlobalBlock {
-  userId    String   @id @map("user_id") @db.VarChar(20)
-  reason    String?  @db.VarChar(500)
-  blockedBy String   @map("blocked_by") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([blockedBy])
-  @@map("global_blocklist")
-}
-
-model Blocklist {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  userId    String   @map("user_id") @db.VarChar(20)
-  reason    String?  @db.VarChar(500)
-  blockedBy String   @map("blocked_by") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, guildId], name: "uq_blocklist_user_guild")
-  @@index([guildId, createdAt])
-  @@index([blockedBy])
-  @@map("blocklist")
-}
-
-model GlobalAllow {
-  userId    String   @id @map("user_id") @db.VarChar(20)
-  reason    String?  @db.VarChar(500)
-  allowedBy String   @map("allowed_by") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([allowedBy])
-  @@map("global_allowlist")
-}
-
-model Allowlist {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  userId    String   @map("user_id") @db.VarChar(20)
-  reason    String?  @db.VarChar(500)
-  allowedBy String   @map("allowed_by") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, guildId], name: "uq_allowlist_user_guild")
-  @@index([guildId, createdAt])
-  @@index([allowedBy])
-  @@map("allowlist")
-}
-
-model FeatureFlag {
-  key            String                @id @db.VarChar(100)
-  description    String?               @db.VarChar(500)
-  enabled        Boolean               @default(false)
-  rolloutPercent Int                   @default(0) @map("rollout_percent")
-  updatedAt      DateTime              @default(now()) @updatedAt @map("updated_at")
-  updatedBy      String?               @map("updated_by") @db.VarChar(20)
-  overrides      FeatureFlagOverride[]
-
-  @@map("feature_flags")
-}
-
-model FeatureFlagOverride {
-  id        Int         @id @default(autoincrement())
-  flagKey   String      @map("flag_key") @db.VarChar(100)
-  guildId   String      @map("guild_id") @db.VarChar(20)
-  enabled   Boolean
-  createdAt DateTime    @default(now()) @map("created_at")
-  flag      FeatureFlag @relation(fields: [flagKey], references: [key], onDelete: Cascade)
-
-  @@unique([flagKey, guildId], name: "uq_feature_flag_override")
+  @@unique([guildId, module])
   @@index([guildId])
-  @@map("feature_flag_overrides")
+  @@map("guild_modules")
 }
 
-model GdprExportJob {
-  id          String              @id @default(uuid())
-  userId      String              @map("user_id") @db.VarChar(20)
-  requestedBy String              @map("requested_by") @db.VarChar(20)
-  status      GdprExportJobStatus @default(pending)
-  error       String?             @db.VarChar(1000)
-  filePath    String?             @map("file_path") @db.VarChar(500)
-  sizeBytes   Int?                @map("size_bytes")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  completedAt DateTime?           @map("completed_at")
-  expiresAt   DateTime?           @map("expires_at")
+// Leveling
+model LevelingConfig {
+  id              String   @id @default(cuid())
+  guildId         String   @unique @map("guild_id")
+  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  xpPerMessage    Int      @default(15) @map("xp_per_message")
+  xpPerMinuteVc   Int      @default(10) @map("xp_per_minute_vc")
+  cooldownSeconds Int      @default(60) @map("cooldown_seconds")
+  xpCurve         Json     @default("{}") @map("xp_curve")
+  roleRewards     Json     @default("[]") @map("role_rewards")
+  multiplierRoles Json     @default("[]") @map("multiplier_roles")
+  ignoredChannels Json     @default("[]") @map("ignored_channels")
+  ignoredRoles    Json     @default("[]") @map("ignored_roles")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  @@index([userId, createdAt])
-  @@index([expiresAt])
-  @@index([status, createdAt])
-  @@map("gdpr_export_jobs")
+  @@map("leveling_configs")
 }
 
-model IgnoreEntry {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  channelId String   @map("channel_id") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
+model LevelingUser {
+  id        String   @id @default(cuid())
+  guildId   String   @map("guild_id")
+  userId    String   @map("user_id")
+  xp        BigInt   @default(0)
+  level     Int      @default(0)
+  totalXp   BigInt   @default(0) @map("total_xp")
+  lastXpAt  DateTime? @map("last_xp_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([guildId, channelId], name: "uq_ignore_guild_channel")
-  @@index([guildId])
-  @@map("ignore_list")
+  @@unique([guildId, userId])
+  @@index([guildId, level])
+  @@index([guildId, xp])
+  @@map("leveling_users")
 }
 
-model AfkEntry {
-  userId  String   @map("user_id") @db.VarChar(20)
-  guildId String   @map("guild_id") @db.VarChar(20)
-  reason  String   @default("AFK") @db.VarChar(100)
-  since   DateTime @default(now())
+// Economy
+model EconomyConfig {
+  id              String   @id @default(cuid())
+  guildId         String   @unique @map("guild_id")
+  guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  currencyName    String   @default("Credits") @map("currency_name")
+  currencySymbol  String   @default("💰") @map("currency_symbol")
+  startingBalance Int      @default(0) @map("starting_balance")
+  dailyAmount     Int      @default(100) @map("daily_amount")
+  weeklyAmount    Int      @default(500) @map("weekly_amount")
+  monthlyAmount   Int      @default(2000) @map("monthly_amount")
+  interestRate    Float    @default(0.01) @map("interest_rate")
+  taxRate         Float    @default(0.0) @map("tax_rate")
+  workCooldown    Int      @default(3600) @map("work_cooldown")
+  workMinPay      Int      @default(50) @map("work_min_pay")
+  workMaxPay      Int      @default(200) @map("work_max_pay")
+  shopItems       Json     @default("[]") @map("shop_items")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([userId, guildId])
-  @@index([guildId])
-  @@map("afk_entries")
+  @@map("economy_configs")
 }
 
-model DownloaderRepo {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique @db.VarChar(64)
-  url       String   @db.VarChar(200)
-  branch    String   @default("default") @db.VarChar(64)
-  commit    String   @db.VarChar(40)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+model EconomyUser {
+  id            String   @id @default(cuid())
+  guildId       String   @map("guild_id")
+  userId        String   @map("user_id")
+  balance       BigInt   @default(0)
+  bankBalance   BigInt   @default(0) @map("bank_balance")
+  totalEarned   BigInt   @default(0) @map("total_earned")
+  totalSpent    BigInt   @default(0) @map("total_spent")
+  lastDailyAt   DateTime? @map("last_daily_at")
+  lastWeeklyAt  DateTime? @map("last_weekly_at")
+  lastMonthlyAt DateTime? @map("last_monthly_at")
+  lastWorkAt    DateTime? @map("last_work_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  installedModules DownloaderModule[]
-
-  @@map("downloader_repos")
-}
-
-model DownloaderModule {
-  repoId      Int      @map("repo_id")
-  moduleName  String   @unique @map("module_name") @db.VarChar(64)
-  version     String   @db.VarChar(32)
-  commit      String   @db.VarChar(40)
-  installedAt DateTime @default(now()) @map("installed_at")
-
-  repo DownloaderRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
-
-  @@id([repoId, moduleName])
-  @@map("downloader_modules")
-}
-
-model AuditLedger {
-  id        Int           @id @default(autoincrement())
-  guildId   String        @map("guild_id") @db.VarChar(20)
-  userId    String        @map("user_id") @db.VarChar(20)
-  action    String        @db.VarChar(128)
-  platform  AuditPlatform
-  details   Json?
-  createdAt DateTime      @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, createdAt, id])
-  @@index([guildId, userId])
-  @@index([createdAt])
-  @@index([userId])
-  @@map("audit_ledger")
-}
-
-model ModuleData {
-  guildId    String    @map("guild_id") @db.VarChar(20)
-  moduleName String    @map("module_name") @db.VarChar(64)
-  targetId   String    @map("target_id") @db.VarChar(191)
-  key        String    @db.VarChar(64)
-  value      Json
-  expiresAt  DateTime? @map("expires_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, moduleName, targetId, key])
-  @@index([guildId, moduleName, key])
-  @@index([moduleName, key])
-  @@index([targetId])
-  @@index([expiresAt])
-  @@index([value(ops: JsonbOps)], type: Gin)
-  @@map("module_dynamic_data")
-}
-
-model ModuleConfigHistory {
-  id         Int      @id @default(autoincrement())
-  guildId    String   @map("guild_id") @db.VarChar(20)
-  moduleName String   @map("module_name") @db.VarChar(64)
-  key        String   @db.VarChar(64)
-  oldValue   Json?    @map("old_value")
-  newValue   Json     @map("new_value")
-  actorId    String   @map("actor_id") @db.VarChar(20)
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, createdAt, id])
-  @@index([guildId, moduleName, createdAt])
-  @@index([actorId])
-  @@index([createdAt])
-  @@map("module_config_history")
-}
-
-model ModuleConfigOverride {
-  id         Int                @id @default(autoincrement())
-  guildId    String             @map("guild_id") @db.VarChar(20)
-  moduleName String             @map("module_name") @db.VarChar(64)
-  key        String             @db.VarChar(64)
-  modelType  OverrideTargetType @map("model_type")
-  modelId    String             @map("model_id") @db.VarChar(20)
-  value      Json
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@unique([guildId, moduleName, key, modelType, modelId], name: "uq_config_override")
-  @@index([guildId, moduleName])
-  @@index([modelId])
-  @@map("module_config_overrides")
-}
-
-model WarnThreshold {
-  guildId   String     @map("guild_id") @db.VarChar(20)
-  warnCount Int        @map("warn_count")
-  action    CaseAction
-  duration  Int?       @map("duration_seconds")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @default(now()) @updatedAt @map("updated_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, warnCount])
-  @@map("warn_thresholds")
-}
-
-model CaseTypeSetting {
-  guildId   String  @map("guild_id") @db.VarChar(20)
-  name      String  @db.VarChar(64)
-  enabled   Boolean @default(true)
-  channelId String? @map("channel_id") @db.VarChar(20)
-  emoji     String? @db.VarChar(16)
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, name])
-  @@map("case_type_settings")
-}
-
-model PanicState {
-  guildId        String   @id @map("guild_id") @db.VarChar(20)
-  actorId        String   @map("actor_id") @db.VarChar(20)
-  invitesPaused  Boolean  @default(false) @map("invites_paused")
-  lockedChannels Json     @map("locked_channels")
-  startedAt      DateTime @default(now()) @map("started_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([actorId])
-  @@map("panic_states")
-}
-
-model VerificationPanel {
-  guildId   String   @id @map("guild_id") @db.VarChar(20)
-  channelId String   @map("channel_id") @db.VarChar(20)
-  messageId String   @map("message_id") @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@map("verification_panels")
-}
-
-model GuildBackup {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  data      Json
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, createdAt])
-  @@map("guild_backups")
-}
-
-model TempVcGenerator {
-  guildId   String @map("guild_id") @db.VarChar(20)
-  channelId String @map("channel_id") @db.VarChar(20)
-  name      String @db.VarChar(100)
-  limit     Int    @default(0)
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, channelId])
-  @@map("tempvc_generators")
-}
-
-model TempVcRecord {
-  guildId     String   @map("guild_id") @db.VarChar(20)
-  channelId   String   @map("channel_id") @db.VarChar(20)
-  ownerId     String   @map("owner_id") @db.VarChar(20)
-  generatorId String   @map("generator_id") @db.VarChar(20)
-  name        String   @db.VarChar(100)
-  number      Int
-  locked      Boolean  @default(false)
-  hidden      Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, channelId])
-  @@index([ownerId])
-  @@index([generatorId])
-  @@map("tempvc_records")
-}
-
-model LevelAccount {
-  guildId      String    @map("guild_id") @db.VarChar(20)
-  userId       String    @map("user_id") @db.VarChar(20)
-  level        Int       @default(1)
-  xp           BigInt    @default(0)
-  totalXp      BigInt    @default(0) @map("total_xp")
-  messageCount Int       @default(0) @map("message_count")
-  voiceMinutes Int       @default(0) @map("voice_minutes")
-  lastXpAt     DateTime? @map("last_xp_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, userId])
-  @@index([userId])
-  @@index([guildId, level, xp])
-  @@map("level_accounts")
-}
-
-model LevelXpGain {
-  id        Int      @id @default(autoincrement())
-  guildId   String   @map("guild_id") @db.VarChar(20)
-  userId    String   @map("user_id") @db.VarChar(20)
-  amount    BigInt
-  source    String   @db.VarChar(16)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, createdAt])
-  @@index([guildId, userId, createdAt])
-  @@map("level_xp_gains")
-}
-
-model EconomyAccount {
-  guildId      String    @map("guild_id") @db.VarChar(20)
-  userId       String    @map("user_id") @db.VarChar(20)
-  wallet       BigInt    @default(0)
-  bank         BigInt    @default(0)
-  lastPaydayAt DateTime? @map("last_payday_at")
-
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@id([guildId, userId])
-  @@index([userId])
-  @@map("economy_accounts")
+  @@unique([guildId, userId])
+  @@index([guildId, balance])
+  @@map("economy_users")
 }
 
 model EconomyTransaction {
-  id           Int            @id @default(autoincrement())
-  guildId      String         @map("guild_id") @db.VarChar(20)
-  userId       String         @map("user_id") @db.VarChar(20)
-  kind         EconomyTxnKind
-  amount       BigInt
-  balanceAfter BigInt          @map("balance_after")
-  reason       String?        @db.VarChar(500)
-  createdAt    DateTime       @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  guildId     String   @map("guild_id")
+  fromUserId  String?  @map("from_user_id")
+  toUserId    String?  @map("to_user_id")
+  amount      BigInt
+  type        String   // transfer, deposit, withdraw, purchase, work, daily, etc.
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
-
-  @@index([guildId, userId, createdAt])
-  @@index([guildId, createdAt])
-  @@index([userId])
+  @@index([guildId])
+  @@index([guildId, fromUserId])
+  @@index([guildId, toUserId])
+  @@index([createdAt])
   @@map("economy_transactions")
 }
 
-model ReactionRoleMenu {
-  id          String   @id @db.VarChar(32)
-  guildId     String   @map("guild_id") @db.VarChar(20)
-  title       String   @db.VarChar(100)
-  description String?  @db.VarChar(1000)
-  color       String?  @db.VarChar(7)
-  mode        String   @db.VarChar(16)
-  exclusive   Boolean  @default(false)
-  maxRoles    Int      @default(1) @map("max_roles")
-  channelId   String?  @map("channel_id") @db.VarChar(20)
-  messageIds  String[] @map("message_ids")
-  richContent Json     @map("rich_content")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+model EconomyInventory {
+  id        String   @id @default(cuid())
+  guildId   String   @map("guild_id")
+  userId    String   @map("user_id")
+  itemId    String   @map("item_id")
+  quantity  Int      @default(1)
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  guild   Guild                @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  options ReactionRoleOption[]
+  @@unique([guildId, userId, itemId])
+  @@index([guildId, userId])
+  @@map("economy_inventory")
+}
+
+// TempVC
+model TempVcConfig {
+  id                String   @id @default(cuid())
+  guildId           String   @unique @map("guild_id")
+  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  categoryId        String?  @map("category_id")
+  templateName      String   @default("➕ {user}'s Channel") @map("template_name")
+  defaultBitrate    Int      @default(64000) @map("default_bitrate")
+  defaultUserLimit  Int      @default(0) @map("default_user_limit")
+  maxChannels       Int      @default(50) @map("max_channels")
+  maxPerUser        Int      @default(1) @map("max_per_user")
+  emptyTimeoutMs    Int      @default(300000) @map("empty_timeout_ms")
+  ownerLeaveDelete  Boolean  @default(true) @map("owner_leave_delete")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("tempvc_configs")
+}
+
+model TempVcChannel {
+  id          String   @id @default(cuid())
+  guildId     String   @map("guild_id")
+  channelId   String   @unique @map("channel_id")
+  ownerId     String   @map("owner_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime? @map("expires_at")
 
   @@index([guildId])
-  @@index([channelId])
-  @@index([messageIds], type: Gin)
-  @@map("reactionrole_menus")
+  @@index([guildId, ownerId])
+  @@map("tempvc_channels")
 }
 
-model ReactionRoleOption {
-  id     Int    @id @default(autoincrement())
-  menuId String @map("menu_id") @db.VarChar(32)
+// Security
+model SecurityConfig {
+  id                String   @id @default(cuid())
+  guildId           String   @unique @map("guild_id")
+  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  verificationMode  String   @default("none") @map("verification_mode") // none, emoji, button, captcha, question
+  verificationRole  String?  @map("verification_role")
+  verificationChannel String? @map("verification_channel")
+  captchaProvider   String?  @map("captcha_provider")
+  captchaSecret     String?  @map("captcha_secret")
+  antinukeEnabled   Boolean  @default(true) @map("antinuke_enabled")
+  antinukeThresholds Json     @default("{}") @map("antinuke_thresholds")
+  antinukePunishment String   @default("ban") @map("antinuke_punishment")
+  joinGateEnabled   Boolean  @default(false) @map("join_gate_enabled")
+  joinGateHeuristics Json     @default("{}") @map("join_gate_heuristics")
+  panicEnabled      Boolean  @default(false) @map("panic_enabled")
+  panicPreviousPerms Json?   @map("panic_previous_perms")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  slug           String  @db.VarChar(32)
-  position       Int     @default(0)
-  label          String  @db.VarChar(80)
-  emoji          String? @db.VarChar(100)
-  description    String? @db.VarChar(100)
-  roleId         String  @map("role_id") @db.VarChar(20)
-  requiredRoleId String? @map("required_role_id") @db.VarChar(20)
-
-  menu ReactionRoleMenu @relation(fields: [menuId], references: [id], onDelete: Cascade)
-
-  @@unique([menuId, slug])
-  @@index([menuId, position])
-  @@map("reactionrole_options")
+  @@map("security_configs")
 }
 
-model SharedApiToken {
-  service   String   @id @db.VarChar(64)
-  token     String   @db.Text
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+model VerificationPending {
+  id           String   @id @default(cuid())
+  guildId      String   @map("guild_id")
+  userId       String   @map("user_id")
+  method       String   // emoji, button, captcha, question
+  attempts     Int      @default(0)
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  @@map("shared_api_tokens")
+  @@index([guildId, userId])
+  @@map("verification_pending")
+}
+
+// Sheets
+model Sheet {
+  id          String   @id @default(cuid())
+  guildId     String   @map("guild_id")
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  rows        Json     @default("[]")
+  triggers    Json     @default("[]")
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([guildId])
+  @@map("sheets")
+}
+
+// Module addons
+model InstalledAddon {
+  id          String   @id @default(cuid())
+  name        String
+  version     String
+  source      String   // github, npm, local
+  sourceUrl   String?  @map("source_url")
+  installedAt DateTime @default(now()) @map("installed_at")
+  enabled     Boolean  @default(true)
+  manifest    Json
+
+  @@unique([name, version])
+  @@map("installed_addons")
+}
+
+// Audit log
+model AuditLog {
+  id        String   @id @default(cuid())
+  guildId   String   @map("guild_id")
+  userId    String   @map("user_id")
+  action    String
+  targetId  String?  @map("target_id")
+  targetType String? @map("target_type")
+  changes   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([guildId])
+  @@index([guildId, userId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

@@ -2,12 +2,13 @@
   "apiVersion": 2,
   "name": "utility",
   "displayName": "Utility",
-  "emoji": "🛠️",
-  "description": "Essential server and member utilities: avatar, banner, whois, serverinfo, nick, and purge.",
-  "version": "0.1.0",
-  "entry": "./index.ts",
+  "emoji": "🔧",
+  "description": "Avatar, banner, whois, serverinfo, nick, and info commands",
+  "version": "2.0.0",
+  "entry": "src/index.ts",
   "dependencies": {},
   "requirements": [],
   "conflicts": [],
-  "capabilities": ["commands"]
+  "capabilities": [],
+  "defaultEnabled": true
 }

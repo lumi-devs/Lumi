@@ -1,23 +1,26 @@
 {
   "name": "@lumi/db",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./prisma/schema.prisma"
+    ".": "./dist/index.js",
+    "./repositories": "./dist/repositories/index.js",
+    "./prisma": "./dist/prisma.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@lumi/cache": "workspace:*",
-    "@lumi/foundation": "workspace:*",
-    "@lumi/observability": "workspace:*",
-    "@lumi/redis": "workspace:*",
-    "@prisma/adapter-pg": "catalog:",
-    "@prisma/client": "catalog:",
-    "@prisma/client-runtime-utils": "catalog:",
-    "pg": "catalog:"
+    "@prisma/client": "^5.10.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
-    "prisma": "catalog:"
+    "prisma": "^5.10.0",
+    "@types/node": "^20.0.0"
   }
 }

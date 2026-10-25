@@ -1,147 +1,96 @@
-import type { Logger } from "@lumi/foundation";
-import type { RedisClient } from "./client.ts";
+import Redis from "ioredis";
 
-export interface InvalidationPort {
-  invalidate(...keys: string[]): Promise<void>;
-  onInvalidate(listener: (keys: readonly string[]) => void): () => void;
-  onResync(listener: () => void): () => void;
-  start(): Promise<void>;
-  close(): Promise<void>;
-}
-
-const Channel = "lumi:cache:invalidate";
-const ChunkSize = 500;
-
-interface Payload {
+export interface InvalidationMessage {
+  namespace: string;
   keys: string[];
-  time: number;
+  timestamp: number;
 }
 
-export interface InvalidationBusOptions {
-  publisher: RedisClient;
-  subscriber: RedisClient;
-  logger: Logger;
-}
+export class InvalidationBus {
+  private readonly redis: Redis;
+  private readonly subscriber: Redis;
+  private readonly publisher: Redis;
+  private readonly localListeners = new Map<string, Set<(keys: string[]) => void>>();
+  private readonly channel = "lumi:invalidation";
+  private resyncCallbacks: (() => void)[] = [];
 
-export class InvalidationBus implements InvalidationPort {
-  readonly #publisher: RedisClient;
-  readonly #subscriber: RedisClient;
-  readonly #logger: Logger;
-  readonly #listeners = new Set<(keys: readonly string[]) => void>();
-  readonly #resync = new Set<() => void>();
-  #started = false;
-  #startPromise: Promise<void> | null = null;
-  #dropped = false;
-  #lastTime = 0;
-
-  public constructor(options: InvalidationBusOptions) {
-    this.#publisher = options.publisher;
-    this.#subscriber = options.subscriber;
-    this.#logger = options.logger;
+  constructor(redis: Redis) {
+    this.redis = redis;
+    this.subscriber = redis.duplicate();
+    this.publisher = redis.duplicate();
+    this.setupSubscriber();
   }
 
-  public onInvalidate(listener: (keys: readonly string[]) => void): () => void {
-    this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
-  }
-
-  public onResync(listener: () => void): () => void {
-    this.#resync.add(listener);
-    return () => this.#resync.delete(listener);
-  }
-
-  public start(): Promise<void> {
-    if (this.#started) return Promise.resolve();
-    this.#startPromise ??= this.#startInternal().finally(() => {
-      this.#startPromise = null;
-    });
-    return this.#startPromise;
-  }
-
-  public async invalidate(...keys: string[]): Promise<void> {
-    if (keys.length === 0) return;
-    const unique = [...new Set(keys)];
-    for (let index = 0; index < unique.length; index += ChunkSize) {
-      await this.#invalidateChunk(unique.slice(index, index + ChunkSize));
-    }
-  }
-
-  public async close(): Promise<void> {
-    if (this.#started) {
-      await this.#subscriber.unsubscribe(Channel).catch((error: unknown) => {
-        this.#logger.warn({ error }, "redis invalidation unsubscribe failed");
-      });
-      this.#started = false;
-    }
-    this.#subscriber.removeAllListeners("message");
-    this.#subscriber.removeAllListeners("close");
-    this.#subscriber.removeAllListeners("ready");
-    this.#listeners.clear();
-    this.#resync.clear();
-    await this.#subscriber.quit().catch(() => undefined);
-  }
-
-  async #startInternal(): Promise<void> {
-    this.#subscriber.on("message", this.#onMessage);
-    this.#subscriber.on("close", this.#onClose);
-    this.#subscriber.on("ready", this.#onReady);
-    await this.#subscriber.subscribe(Channel);
-    this.#started = true;
-  }
-
-  async #invalidateChunk(keys: string[]): Promise<void> {
-    const time = Date.now();
-    this.#lastTime = Math.max(this.#lastTime, time);
-    this.#notify(keys);
-
-    // Pipeline the del and publish to reduce round trips
-    const pipeline = this.#publisher.pipeline();
-    pipeline.del(...keys);
-    pipeline.publish(Channel, JSON.stringify({ keys, time }));
-    await pipeline.exec().catch((error: unknown) => {
-      this.#logger.error({ error, keys: keys.length }, "redis invalidate pipeline failed");
-    });
-  }
-
-  #notify(keys: readonly string[]): void {
-    for (const listener of this.#listeners) {
+  private setupSubscriber(): void {
+    this.subscriber.subscribe(this.channel);
+    this.subscriber.on("message", (channel, message) => {
+      if (channel !== this.channel) return;
       try {
-        listener(keys);
-      } catch (error) {
-        this.#logger.error({ error }, "cache invalidation listener failed");
+        const msg: InvalidationMessage = JSON.parse(message);
+        this.handleInvalidation(msg);
+      } catch (e) {
+        // Ignore malformed messages
+      }
+    });
+  }
+
+  private handleInvalidation(msg: InvalidationMessage): void {
+    const listeners = this.localListeners.get(msg.namespace);
+    if (listeners) {
+      for (const listener of listeners) {
+        listener(msg.keys);
+      }
+    }
+    // Also trigger global listeners
+    const globalListeners = this.localListeners.get("");
+    if (globalListeners) {
+      for (const listener of globalListeners) {
+        listener(msg.keys);
       }
     }
   }
 
-  #onMessage = (_channel: string, raw: string): void => {
-    let payload: Payload;
-    try {
-      payload = JSON.parse(raw) as Payload;
-    } catch {
-      return;
+  subscribe(namespace: string, listener: (keys: string[]) => void): () => void {
+    if (!this.localListeners.has(namespace)) {
+      this.localListeners.set(namespace, new Set());
     }
-    if (!Array.isArray(payload.keys)) return;
-    this.#lastTime = Math.max(this.#lastTime, payload.time);
-    const filteredKeys = payload.keys.filter((key): key is string => typeof key === "string" && key.length > 0);
-    if (filteredKeys.length > 0) this.#notify(filteredKeys);
-  };
+    this.localListeners.get(namespace)!.add(listener);
+    
+    return () => {
+      this.localListeners.get(namespace)?.delete(listener);
+    };
+  }
 
-  #onClose = (): void => {
-    if (this.#started) this.#dropped = true;
-  };
+  async invalidate(namespace: string, keys: string[]): Promise<void> {
+    const message: InvalidationMessage = {
+      namespace,
+      keys,
+      timestamp: Date.now(),
+    };
+    
+    // Notify local listeners first
+    this.handleInvalidation(message);
+    
+    // Then publish to other processes
+    await this.publisher.publish(this.channel, JSON.stringify(message));
+  }
 
-  #onReady = (): void => {
-    if (!this.#dropped) return;
-    this.#dropped = false;
-    this.#publisher
-      .publish(Channel, JSON.stringify({ keys: [], time: this.#lastTime }))
-      .catch(() => undefined);
-    for (const listener of this.#resync) {
-      try {
-        listener();
-      } catch (error) {
-        this.#logger.error({ error }, "cache resync listener failed");
-      }
+  onResync(): Promise<void> {
+    return new Promise((resolve) => {
+      this.resyncCallbacks.push(resolve);
+    });
+  }
+
+  triggerResync(): void {
+    for (const cb of this.resyncCallbacks) {
+      cb();
     }
-  };
+    this.resyncCallbacks = [];
+  }
+
+  async close(): Promise<void> {
+    await this.subscriber.unsubscribe(this.channel);
+    await this.subscriber.quit();
+    await this.publisher.quit();
+  }
 }

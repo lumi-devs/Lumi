@@ -1,5 +1,11 @@
 import { Redis, type RedisOptions } from "ioredis";
-import type { Logger } from "@lumi/foundation";
+
+export interface Logger {
+  info: (msg: string, meta?: any) => void;
+  warn: (msg: string, meta?: any) => void;
+  error: (msg: string, meta?: any) => void;
+  debug: (msg: string, meta?: any) => void;
+}
 
 export type RedisClient = Redis;
 
@@ -24,17 +30,13 @@ export function createRedisClient(options: RedisClientOptions): RedisClient {
   };
 
   const client = new Redis(options.url, settings);
-  client.on("error", (error) => options.logger.error({ error, role }, "redis error"));
-  client.on("reconnecting", () => options.logger.warn({ role }, "redis reconnecting"));
-  client.on("ready", () => options.logger.debug({ role }, "redis ready"));
+  client.on("error", (error) => options.logger.error(`redis error: ${error.message}`, { error, role }));
+  client.on("reconnecting", () => options.logger.warn("redis reconnecting", { role }));
+  client.on("ready", () => options.logger.debug("redis ready", { role }));
 
   return client;
 }
 
-/**
- * Pipeline multiple commands for batch execution.
- * Use for mget/mset/del batches to reduce round trips.
- */
 export function createPipeline(redis: RedisClient): ReturnType<RedisClient["pipeline"]> {
   return redis.pipeline();
 }

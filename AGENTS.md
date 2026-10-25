@@ -38,7 +38,12 @@ entry.
   correctness comes from exact-key invalidation over pub/sub.
 - Every cache read has an explicit namespace. Never derive a metrics label from
   a key segment.
-- UI is the card system in `@lumi/ui`. Do not introduce `EmbedBuilder`.
+- UI is the card system in `@lumi/ui`. **Never use Discord embeds.** Do not
+  import `EmbedBuilder`, do not pass `embeds:` to any Discord API call, and do
+  not build ad-hoc message payloads outside `@lumi/ui`. All user-facing output is
+  a Components V2 card (`makeCard`, `makeInfoCard`, `makeSuccessCard`,
+  `makeErrorCard`, `makeWarningCard`) sent with `MessageFlags.IsComponentsV2`;
+  use `ephemeralCard()` for ephemeral replies.
 - No compatibility shims. Change the caller.
 
 ## Verification

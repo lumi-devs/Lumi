@@ -1,0 +1,27 @@
+{
+  "name": "@lumi/permits",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./evaluator": "./dist/evaluator.js",
+    "./repository": "./dist/repository.js",
+    "./panel": "./dist/panel.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lumi/cache": "workspace:*",
+    "@lumi/db": "workspace:*",
+    "@lumi/rpc": "workspace:*",
+    "discord.js": "^14.14.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

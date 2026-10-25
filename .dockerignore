@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+.git
+.gitignore
+*.log
+.env
+.env.*
+nix
+result
+result-*

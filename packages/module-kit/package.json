@@ -1,19 +1,23 @@
 {
   "name": "@lumi/module-kit",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js",
+    "./contracts": "./dist/contracts.js",
+    "./define": "./dist/define.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lumi/cache": "workspace:*",
-    "@lumi/contracts": "workspace:*",
-    "@lumi/db": "workspace:*",
-    "@lumi/foundation": "workspace:*",
-    "@lumi/redis": "workspace:*",
-    "@lumi/ui": "workspace:*",
-    "discord.js": "catalog:",
-    "zod": "catalog:"
+    "zod": "^3.22.0",
+    "discord.js": "^14.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }

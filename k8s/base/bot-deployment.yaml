@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lumi-bot
+  namespace: lumi
+  labels:
+    app: lumi-bot
+    component: bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lumi-bot
+  template:
+    metadata:
+      labels:
+        app: lumi-bot
+        component: bot
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: lumi-bot
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: bot
+          image: lumibot/lumi-v2:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8081
+              name: grpc
+            - containerPort: 8082
+              name: metrics
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: discord-token
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: database-url
+            - name: REDIS_HOST
+              value: "lumi-redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: redis-password
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: OWNER_IDS
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: owner-ids
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - lumi-bot
+                topologyKey: kubernetes.io/hostname

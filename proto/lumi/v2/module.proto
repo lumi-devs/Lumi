@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package lumi.v2;
+
+option go_package = "github.com/lumi/lumi-v2/proto/lumi/v2";
+
+service ModuleService {
+  rpc ListModules(ListModulesRequest) returns (ListModulesResponse);
+  rpc GetModuleConfig(GetModuleConfigRequest) returns (GetModuleConfigResponse);
+  rpc SetModuleConfig(SetModuleConfigRequest) returns (SetModuleConfigResponse);
+  rpc EnableModule(EnableModuleRequest) returns (EnableModuleResponse);
+  rpc DisableModule(DisableModuleRequest) returns (DisableModuleResponse);
+  rpc ReloadModule(ReloadModuleRequest) returns (ReloadModuleResponse);
+}
+
+message ListModulesRequest {}
+
+message ListModulesResponse {
+  repeated ModuleInfo modules = 1;
+}
+
+message ModuleInfo {
+  string name = 1;
+  string display_name = 2;
+  string emoji = 3;
+  string description = 4;
+  string version = 5;
+  bool enabled_by_default = 6;
+}
+
+message GetModuleConfigRequest {
+  string guild_id = 1;
+  string module_name = 2;
+}
+
+message GetModuleConfigResponse {
+  string config = 1;
+}
+
+message SetModuleConfigRequest {
+  string guild_id = 1;
+  string module_name = 2;
+  string config = 3;
+}
+
+message SetModuleConfigResponse {
+  bool success = 1;
+}
+
+message EnableModuleRequest {
+  string guild_id = 1;
+  string module_name = 2;
+}
+
+message EnableModuleResponse {
+  bool success = 1;
+}
+
+message DisableModuleRequest {
+  string guild_id = 1;
+  string module_name = 2;
+}
+
+message DisableModuleResponse {
+  bool success = 1;
+}
+
+message ReloadModuleRequest {
+  string module_name = 1;
+}
+
+message ReloadModuleResponse {
+  bool success = 1;
+}

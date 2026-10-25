@@ -357,3 +357,74 @@ export interface ConfirmRowOptions {
   confirmStyle?: ButtonStyle;
 }
 
+export interface CategoryTab {
+  id: string;
+  label: string;
+  emoji?: string;
+  count?: number;
+  description?: string;
+}
+
+export function createCategorySubmenuRow(
+  customId: string,
+  categories: CategoryTab[],
+  activeCategoryId?: string,
+  placeholder = "Select Category...",
+): ActionRowBuilder<StringSelectMenuBuilder> {
+  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+    createStringSelectMenu({
+      customId,
+      placeholder,
+      options: categories.map((category) => ({
+        label:
+          category.count !== undefined
+            ? `${category.label} (${category.count})`
+            : category.label,
+        value: category.id,
+        description: category.description,
+        emoji: category.emoji,
+        default: category.id === activeCategoryId,
+      })),
+    }),
+  );
+}
+
+export interface NavAction {
+  customId: string;
+  label: string;
+  style?: ButtonStyle;
+  emoji?: string | APIMessageComponentEmoji;
+  disabled?: boolean;
+}
+
+export interface NavRowOptions {
+  backId: string;
+  backLabel?: string;
+  action: NavAction;
+}
+
+export function backRow(
+  customId: string,
+  label = "← Back",
+): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    createBackButton(customId, label),
+  );
+}
+
+export function navRow(
+  options: NavRowOptions,
+): ActionRowBuilder<ButtonBuilder> {
+  const action = createActionButton({
+    customId: options.action.customId,
+    label: options.action.label,
+    style: options.action.style,
+    emoji: options.action.emoji,
+    disabled: options.action.disabled,
+  });
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    createBackButton(options.backId, options.backLabel ?? "← Back"),
+    action,
+  );
+}
+

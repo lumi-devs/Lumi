@@ -1,313 +1,282 @@
-import { Time } from "@lumi/foundation";
-import { noopCacheMetrics, type CacheMetrics } from "@lumi/observability";
-import type { InvalidationPort } from "@lumi/redis";
-import { codec, type Codec } from "./codec.ts";
-import type { CacheRedis } from "./redis-port.ts";
+import { createCodec, type Codec } from "./codec.js";
 
-const DefaultL1MaxEntries = 10_000;
-const DefaultL1TtlMs = 5_000;
-const DefaultNegativeTtlMs = 15_000;
-const DefaultLoadTimeoutMs = 10_000;
-const DefaultJitter = 0.1;
+export interface CacheOptions<T> {
+  redis: any;
+  invalidation: InvalidationBus;
+  metrics?: CacheMetrics;
+  defaultTtlMs?: number;
+  defaultNegativeTtlMs?: number;
+  l1MaxSize?: number;
+  l1MaxTtlMs?: number;
+}
 
-interface Entry {
-  value: unknown;
+export interface InvalidationBus {
+  subscribe(namespace: string, listener: (keys: string[]) => void): () => void;
+  invalidate(namespace: string, keys: string[]): Promise<void>;
+  onResync(): Promise<void>;
+}
+
+export interface CacheMetrics {
+  recordHit(namespace: string): void;
+  recordMiss(namespace: string): void;
+  recordNegativeHit(namespace: string): void;
+  recordWrite(namespace: string): void;
+  recordEviction(namespace: string): void;
+  recordInvalidation(namespace: string): void;
+  recordFillDuration(namespace: string, durationMs: number): void;
+  recordStaleWrite(namespace: string): void;
+}
+
+export interface NamespacedCache<T> {
+  get(key: string): Promise<T | null>;
+  getOrLoad(key: string, ttlMs: number, loader: () => Promise<T | null>, options?: { negativeTtlMs?: number }): Promise<T | null>;
+  getMany(keys: string[]): Promise<Map<string, T | null>>;
+  set(key: string, value: T, ttlMs: number): Promise<void>;
+  delete(...keys: string[]): Promise<void>;
+  namespace(name: string): NamespacedCache<T>;
+}
+
+interface L1Entry<T> {
+  value: T;
   expiresAt: number;
 }
 
-interface Flight {
-  promise: Promise<unknown>;
+interface LoadFlight<T> {
+  promise: Promise<T | null>;
   discarded: boolean;
 }
 
-export interface CacheOptions {
-  redis: CacheRedis;
-  invalidation?: InvalidationPort | undefined;
-  metrics?: CacheMetrics | undefined;
-  codec?: Codec | undefined;
-  l1MaxEntries?: number | undefined;
-  l1TtlMs?: number | undefined;
-  negativeTtlMs?: number | undefined;
-  loadTimeoutMs?: number | undefined;
-  jitter?: number | undefined;
-  now?: (() => number) | undefined;
-  random?: (() => number) | undefined;
-}
+export class Cache<T = any> implements NamespacedCache<T> {
+  private readonly redis: any;
+  private readonly invalidation: InvalidationBus;
+  private readonly metrics?: CacheMetrics;
+  private readonly defaultTtlMs: number;
+  private readonly defaultNegativeTtlMs: number;
+  private readonly l1MaxSize: number;
+  private readonly l1MaxTtlMs: number;
+  private readonly codec: Codec<T>;
+  private namespacePrefix: string;
+  
+  private l1 = new Map<string, L1Entry<T>>();
+  private flights = new Map<string, LoadFlight<T>>();
+  private namespaceListeners = new Map<string, Set<(keys: string[]) => void>>();
 
-export interface LoadOptions {
-  negativeTtlMs?: number | undefined;
-  timeoutMs?: number | undefined;
-}
-
-export class Cache {
-  readonly #redis: CacheRedis;
-  readonly #invalidation: InvalidationPort | undefined;
-  readonly #metrics: CacheMetrics;
-  readonly #codec: Codec;
-  readonly #l1MaxEntries: number;
-  readonly #l1TtlMs: number;
-  readonly #negativeTtlMs: number;
-  readonly #loadTimeoutMs: number;
-  readonly #jitter: number;
-  readonly #now: () => number;
-  readonly #random: () => number;
-  readonly #entries = new Map<string, Entry>();
-  readonly #flights = new Map<string, Flight>();
-
-  public constructor(options: CacheOptions) {
-    this.#redis = options.redis;
-    this.#invalidation = options.invalidation;
-    this.#metrics = options.metrics ?? noopCacheMetrics;
-    this.#codec = options.codec ?? codec;
-    this.#l1MaxEntries = options.l1MaxEntries ?? DefaultL1MaxEntries;
-    this.#l1TtlMs = options.l1TtlMs ?? DefaultL1TtlMs;
-    this.#negativeTtlMs = options.negativeTtlMs ?? DefaultNegativeTtlMs;
-    this.#loadTimeoutMs = options.loadTimeoutMs ?? DefaultLoadTimeoutMs;
-    this.#jitter = options.jitter ?? DefaultJitter;
-    this.#now = options.now ?? Date.now;
-    this.#random = options.random ?? Math.random;
-
-    options.invalidation?.onInvalidate((keys) => this.#dropLocal(keys));
-    options.invalidation?.onResync(() => this.clearLocal());
+  constructor(options: CacheOptions<T>) {
+    this.redis = options.redis;
+    this.invalidation = options.invalidation;
+    this.metrics = options.metrics;
+    this.defaultTtlMs = options.defaultTtlMs ?? 60_000;
+    this.defaultNegativeTtlMs = options.defaultNegativeTtlMs ?? 15_000;
+    this.l1MaxSize = options.l1MaxSize ?? 10_000;
+    this.l1MaxTtlMs = options.l1MaxTtlMs ?? 5_000;
+    this.codec = createCodec<T>();
+    this.namespacePrefix = "";
+    
+    this.setupInvalidationHandlers();
   }
 
-  public namespace(name: string): NamespacedCache {
-    return new NamespacedCache(this, name);
+  private setupInvalidationHandlers(): void {
+    this.invalidation.subscribe("", (keys) => {
+      for (const key of keys) {
+        this.l1.delete(key);
+        const flight = this.flights.get(key);
+        if (flight) flight.discarded = true;
+      }
+    });
+    
+    this.invalidation.onResync().then(() => {
+      this.l1.clear();
+      this.flights.clear();
+    });
   }
 
-  public async getOrLoad<T>(
-    name: string,
+  namespace(name: string): NamespacedCache<T> {
+    const child = new Cache<T>({
+      redis: this.redis,
+      invalidation: this.invalidation,
+      metrics: this.metrics,
+      defaultTtlMs: this.defaultTtlMs,
+      defaultNegativeTtlMs: this.defaultNegativeTtlMs,
+      l1MaxSize: this.l1MaxSize,
+      l1MaxTtlMs: this.l1MaxTtlMs,
+    });
+    child.namespacePrefix = `${this.namespacePrefix}${name}:`;
+    return child as any;
+  }
+
+  private makeKey(key: string): string {
+    return `${this.namespacePrefix}${key}`;
+  }
+
+  private getL1(key: string): T | null {
+    const fullKey = this.makeKey(key);
+    const entry = this.l1.get(fullKey);
+    if (!entry) return null;
+    if (entry.expiresAt < Date.now()) {
+      this.l1.delete(fullKey);
+      return null;
+    }
+    return entry.value;
+  }
+
+  private setL1(key: string, value: T, ttlMs: number): void {
+    const fullKey = this.makeKey(key);
+    if (this.l1.size >= this.l1MaxSize) {
+      const firstKey = this.l1.keys().next().value;
+      if (firstKey) this.l1.delete(firstKey);
+      this.metrics?.recordEviction(this.namespacePrefix.slice(0, -1) || "default");
+    }
+    this.l1.set(fullKey, { value, expiresAt: Date.now() + Math.min(ttlMs, this.l1MaxTtlMs) });
+  }
+
+  async get(key: string): Promise<T | null> {
+    const fullKey = this.makeKey(key);
+    
+    const l1Value = this.getL1(key);
+    if (l1Value !== null) {
+      this.metrics?.recordHit(this.namespacePrefix.slice(0, -1) || "default");
+      return l1Value;
+    }
+
+    this.metrics?.recordMiss(this.namespacePrefix.slice(0, -1) || "default");
+    
+    const redisValue = await this.redis.get(fullKey);
+    if (!redisValue) return null;
+    
+    try {
+      const decoded = this.codec.decode(redisValue);
+      this.setL1(key, decoded, this.defaultTtlMs);
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  async getOrLoad(
     key: string,
     ttlMs: number,
-    load: () => Promise<T | null | undefined>,
-    options?: LoadOptions,
+    loader: () => Promise<T | null>,
+    options?: { negativeTtlMs?: number }
   ): Promise<T | null> {
-    // Fast path: L1 hit (single Map lookup, no decode)
-    const entry = this.#entries.get(key);
-    if (entry && entry.expiresAt > this.#now()) {
-      if (entry.value === null) this.#metrics.negative(name);
-      else this.#metrics.hit(name);
-      return entry.value as T | null;
+    const fullKey = this.makeKey(key);
+    
+    const l1Value = this.getL1(key);
+    if (l1Value !== null) {
+      this.metrics?.recordHit(this.namespacePrefix.slice(0, -1) || "default");
+      return l1Value;
     }
 
-    // Stampede protection: share one load across concurrent callers
-    const existingFlight = this.#flights.get(key);
-    if (existingFlight) return existingFlight.promise as Promise<T | null>;
+    const existingFlight = this.flights.get(fullKey);
+    if (existingFlight) {
+      return existingFlight.promise;
+    }
 
-    const flight: Flight = { promise: Promise.resolve(null), discarded: false };
-    flight.promise = this.#load(name, key, ttlMs, load, flight, options);
-    this.#flights.set(key, flight);
-    return flight.promise as Promise<T | null>;
+    this.metrics?.recordMiss(this.namespacePrefix.slice(0, -1) || "default");
+    
+    const flightPromise = (async () => {
+      const startTime = Date.now();
+      try {
+        const value = await loader();
+        const negativeTtlMs = options?.negativeTtlMs ?? this.defaultNegativeTtlMs;
+        
+        if (value === null) {
+          await this.redis.set(fullKey, this.codec.encodeNull(), "PX", negativeTtlMs);
+          this.setL1(key, null as any, negativeTtlMs);
+          this.metrics?.recordNegativeHit(this.namespacePrefix.slice(0, -1) || "default");
+        } else {
+          const encoded = this.codec.encode(value);
+          await this.redis.set(fullKey, encoded, "PX", ttlMs);
+          this.setL1(key, value, ttlMs);
+          this.metrics?.recordWrite(this.namespacePrefix.slice(0, -1) || "default");
+        }
+        
+        this.metrics?.recordFillDuration(this.namespacePrefix.slice(0, -1) || "default", Date.now() - startTime);
+        return value;
+      } catch (error) {
+        const flight = this.flights.get(fullKey);
+        if (flight) flight.discarded = true;
+        throw error;
+      } finally {
+        this.flights.delete(fullKey);
+      }
+    })();
+
+    this.flights.set(fullKey, { promise: flightPromise, discarded: false });
+    
+    try {
+      return await flightPromise;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  public async getMany<T>(name: string, keys: readonly string[]): Promise<Array<T | null>> {
-    if (keys.length === 0) return [];
-    const result = new Array<T | null>(keys.length);
-    const missing: { index: number; key: string }[] = [];
-
-    // Single pass: check L1 for all keys
+  async getMany(keys: string[]): Promise<Map<string, T | null>> {
+    const result = new Map<string, T | null>();
+    const missingKeys: string[] = [];
+    const fullKeys = keys.map(k => this.makeKey(k));
+    
     for (let i = 0; i < keys.length; i++) {
-      const key = keys[i]!;
-      const entry = this.#entries.get(key);
-      if (entry && entry.expiresAt > this.#now()) {
-        result[i] = entry.value as T | null;
-        if (entry.value === null) this.#metrics.negative(name);
-        else this.#metrics.hit(name);
+      const l1Value = this.getL1(keys[i]);
+      if (l1Value !== null) {
+        result.set(keys[i], l1Value);
+        this.metrics?.recordHit(this.namespacePrefix.slice(0, -1) || "default");
       } else {
-        missing.push({ index: i, key });
+        missingKeys.push(fullKeys[i]);
+        result.set(keys[i], null);
       }
     }
 
-    if (missing.length === 0) return result;
+    if (missingKeys.length === 0) return result;
 
-    // Batch fetch missing keys from Redis (single mget)
-    const missingKeys = missing.map((m) => m.key);
-    const raw = await this.#redis.mget(...missingKeys);
-
-    // Decode and populate L1 for hits
-    for (let i = 0; i < missing.length; i++) {
-      const { index, key } = missing[i]!;
-      const payload = raw[i] ?? null;
-      if (payload === null) {
-        this.#metrics.miss(name);
-        result[index] = null;
+    const redisValues = await this.redis.mget(...missingKeys);
+    
+    for (let i = 0; i < missingKeys.length; i++) {
+      const value = redisValues[i];
+      const originalKey = keys[fullKeys.indexOf(missingKeys[i])];
+      
+      if (!value) {
+        this.metrics?.recordMiss(this.namespacePrefix.slice(0, -1) || "default");
+        result.set(originalKey, null);
         continue;
       }
+      
       try {
-        const value = this.#codec.decode(payload) as T | null;
-        result[index] = value;
-        this.#remember(key, value, this.#l1TtlMs);
-        if (value === null) this.#metrics.negative(name);
-        else this.#metrics.hit(name);
+        const decoded = this.codec.decode(value);
+        this.setL1(originalKey, decoded, this.defaultTtlMs);
+        result.set(originalKey, decoded);
+        this.metrics?.recordHit(this.namespacePrefix.slice(0, -1) || "default");
       } catch {
-        this.#metrics.miss(name);
-        result[index] = null;
+        result.set(originalKey, null);
       }
     }
 
     return result;
   }
 
-  public async set<T>(name: string, key: string, value: T, ttlMs: number): Promise<void> {
-    this.#remember(key, value, Math.min(this.#l1TtlMs, ttlMs));
-    this.#metrics.write(name);
-    await this.#redis.setex(key, this.#seconds(ttlMs), this.#codec.encode(value));
+  async set(key: string, value: T, ttlMs: number): Promise<void> {
+    const fullKey = this.makeKey(key);
+    const encoded = this.codec.encode(value);
+    await this.redis.set(fullKey, encoded, "PX", ttlMs);
+    this.setL1(key, value, ttlMs);
+    this.metrics?.recordWrite(this.namespacePrefix.slice(0, -1) || "default");
   }
 
-  public async delete(name: string, ...keys: string[]): Promise<void> {
-    if (keys.length === 0) return;
-    this.#dropLocal(keys);
-    this.#metrics.invalidate(name, keys.length);
-    if (this.#invalidation) {
-      await this.#invalidation.invalidate(...keys);
-      return;
-    }
-    await this.#redis.del(...keys);
-  }
-
-  public clearLocal(): void {
-    this.#entries.clear();
-    for (const flight of this.#flights.values()) flight.discarded = true;
-    this.#flights.clear();
-  }
-
-  public localSize(): number {
-    return this.#entries.size;
-  }
-
-  async #load<T>(
-    name: string,
-    key: string,
-    ttlMs: number,
-    load: () => Promise<T | null | undefined>,
-    flight: Flight,
-    options?: LoadOptions,
-  ): Promise<T | null> {
-    try {
-      // Try Redis L2 first (single get)
-      let payload: string | null = null;
-      try {
-        payload = await this.#redis.get(key);
-      } catch {
-        payload = null;
-      }
-
-      if (payload !== null) {
-        try {
-          const value = this.#codec.decode(payload) as T | null;
-          this.#remember(key, value, this.#l1TtlMs);
-          if (value === null) this.#metrics.negative(name);
-          else this.#metrics.hit(name);
-          return value;
-        } catch {
-          await this.#redis.del(key).catch(() => undefined);
-        }
-      }
-
-      this.#metrics.miss(name);
-      const started = performance.now();
-      const data = await this.#withTimeout(load, options?.timeoutMs ?? this.#loadTimeoutMs);
-      this.#metrics.fill(name, (performance.now() - started) / 1_000);
-
-      if (flight.discarded) {
-        this.#metrics.stale(name);
-        return (data ?? null) as T | null;
-      }
-
-      if (data === null || data === undefined) {
-        const negativeTtl = options?.negativeTtlMs ?? this.#negativeTtlMs;
-        const ttl = Math.min(negativeTtl, this.#l1TtlMs);
-        this.#remember(key, null, ttl);
-        this.#metrics.negative(name);
-        this.#metrics.write(name);
-        await this.#redis
-          .setex(key, this.#seconds(negativeTtl), this.#codec.encode(null))
-          .catch(() => undefined);
-        return null;
-      }
-
-      this.#remember(key, data, Math.min(this.#l1TtlMs, ttlMs));
-      this.#metrics.write(name);
-      await this.#redis
-        .setex(key, this.#seconds(this.#jittered(ttlMs)), this.#codec.encode(data))
-        .catch(() => undefined);
-      return data;
-    } finally {
-      if (this.#flights.get(key) === flight) this.#flights.delete(key);
-    }
-  }
-
-  #withTimeout<T>(load: () => Promise<T>, timeoutMs: number): Promise<T> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`Cache load timed out after ${timeoutMs}ms`)), timeoutMs);
-    });
-    return Promise.race([load(), timeout]).finally(() => {
-      if (timer !== undefined) clearTimeout(timer);
-    }) as Promise<T>;
-  }
-
-  #remember(key: string, value: unknown, ttlMs: number): void {
-    const expiresAt = this.#now() + Math.max(1, ttlMs);
-    this.#entries.set(key, { value, expiresAt });
-    if (this.#entries.size <= this.#l1MaxEntries) return;
-    // Evict oldest (Map preserves insertion order)
-    const oldestKey = this.#entries.keys().next().value;
-    if (oldestKey !== undefined) {
-      this.#entries.delete(oldestKey);
-      // We don't have the namespace name here; metrics will be approximate
-      // but eviction is rare enough that this is acceptable.
-    }
-  }
-
-  #dropLocal(keys: readonly string[]): void {
+  async delete(...keys: string[]): Promise<void> {
+    const fullKeys = keys.map(k => this.makeKey(k));
+    
     for (const key of keys) {
-      this.#entries.delete(key);
-      const flight = this.#flights.get(key);
-      if (flight) {
-        flight.discarded = true;
-        this.#flights.delete(key);
-      }
+      this.l1.delete(this.makeKey(key));
     }
-  }
-
-  #jittered(ttlMs: number): number {
-    const factor = 1 + (this.#random() * 2 - 1) * this.#jitter;
-    return Math.max(Time.Second, ttlMs * factor);
-  }
-
-  #seconds(ttlMs: number): number {
-    return Math.max(1, Math.ceil(ttlMs / 1_000));
+    
+    if (fullKeys.length > 0) {
+      await this.redis.del(...fullKeys);
+      await this.invalidation.invalidate(this.namespacePrefix.slice(0, -1) || "default", fullKeys);
+    }
+    
+    this.metrics?.recordInvalidation(this.namespacePrefix.slice(0, -1) || "default");
   }
 }
 
-export class NamespacedCache {
-  readonly #cache: Cache;
-  readonly #name: string;
-
-  public constructor(cache: Cache, name: string) {
-    this.#cache = cache;
-    this.#name = name;
-  }
-
-  public getOrLoad<T>(
-    key: string,
-    ttlMs: number,
-    load: () => Promise<T | null | undefined>,
-    options?: LoadOptions,
-  ): Promise<T | null> {
-    return this.#cache.getOrLoad(this.#name, key, ttlMs, load, options);
-  }
-
-  public getMany<T>(keys: readonly string[]): Promise<Array<T | null>> {
-    return this.#cache.getMany<T>(this.#name, keys);
-  }
-
-  public set<T>(key: string, value: T, ttlMs: number): Promise<void> {
-    return this.#cache.set(this.#name, key, value, ttlMs);
-  }
-
-  public delete(...keys: string[]): Promise<void> {
-    return this.#cache.delete(this.#name, ...keys);
-  }
+export function createCache<T>(options: CacheOptions<T>): Cache<T> {
+  return new Cache<T>(options);
 }

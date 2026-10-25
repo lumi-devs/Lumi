@@ -1,5 +1,11 @@
-import type { Logger } from "@lumi/foundation";
-import { registry } from "./metrics.ts";
+import { registry } from "./metrics";
+
+export interface Logger {
+  info: (msg: string, meta?: any) => void;
+  warn: (msg: string, meta?: any) => void;
+  error: (msg: string, meta?: any) => void;
+  debug: (msg: string, meta?: any) => void;
+}
 
 export interface MetricsServer {
   stop(): void;
@@ -23,7 +29,7 @@ export function startMetricsServer(port: number, ready: () => boolean, logger: L
     },
   });
 
-  logger.info({ port }, "metrics server listening");
+  logger.info(`metrics server listening on port ${port}`);
 
   return {
     stop: () => server.stop(true),

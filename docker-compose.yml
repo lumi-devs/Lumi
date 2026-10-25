@@ -1,34 +1,73 @@
 services:
   postgres:
-    image: docker.io/library/postgres:18-alpine
+    image: docker.io/postgres:18-alpine
+    container_name: lumi-postgres
     environment:
       POSTGRES_USER: lumi
-      POSTGRES_PASSWORD: lumi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
       POSTGRES_DB: lumi
-      PGDATA: /var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lumi"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "pg_isready -U lumi -d lumi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
-    image: docker.io/library/redis:8-alpine
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
+    image: docker.io/redis:8-alpine
+    container_name: lumi-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
-      - redisdata:/data
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  bot:
+    image: lumi-v2:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lumi-bot
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      APPLICATION_ID: ${APPLICATION_ID}
+      OWNER_IDS: ${OWNER_IDS}
+      POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
+      DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-pretty}
+      OTEL_ENABLED: "false"
+      METRICS_ENABLED: "true"
+      METRICS_PORT: "9090"
+      METRICS_HOST: 0.0.0.0
+      RPC_HTTP_HOST: 0.0.0.0
+      RPC_HTTP_PORT: "8091"
+      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:9090:9090"
 
 volumes:
-  pgdata:
-  redisdata:
+  postgres_data:
+  redis_data:

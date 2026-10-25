@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": "..",
+    "paths": {
+      "@lumi/core": ["apps/bot/src/core/src"],
+      "@lumi/admin": ["apps/bot/src/admin/src"],
+      "@lumi/security": ["apps/bot/src/security/src"],
+      "@lumi/*": ["packages/*/src"],
+      "@prisma/client": ["packages/prisma-client/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
+}

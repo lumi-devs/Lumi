@@ -1,14 +1,21 @@
 {
   "name": "@lumi/ui",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@discordjs/builders": "catalog:",
-    "@sapphire/utilities": "catalog:",
-    "discord.js": "catalog:"
+    "@discordjs/builders": "^1.14.1",
+    "discord.js": "^14.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }

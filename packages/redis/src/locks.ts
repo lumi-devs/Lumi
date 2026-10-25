@@ -1,48 +1,77 @@
-import type { RedisClient } from "./client.ts";
+import Redis from "ioredis";
 
-const ReleaseScript = `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-  return redis.call("del", KEYS[1])
-end
-return 0
-`;
+export interface LockOptions {
+  ttlMs?: number;
+  retryMs?: number;
+  maxRetries?: number;
+}
 
-const RenewScript = `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-  return redis.call("pexpire", KEYS[1], ARGV[2])
-end
-return 0
-`;
+export class DistributedLock {
+  private readonly redis: Redis;
+  private readonly key: string;
+  private readonly ttlMs: number;
+  private readonly retryMs: number;
+  private readonly maxRetries: number;
+  private acquired = false;
 
-export async function claim(redis: RedisClient, key: string, ttlMs: number): Promise<boolean> {
-  const result = await redis.set(key, crypto.randomUUID(), "PX", Math.max(1, ttlMs), "NX");
-  return result === "OK";
+  constructor(redis: Redis, key: string, options: LockOptions = {}) {
+    this.redis = redis;
+    this.key = `lock:${key}`;
+    this.ttlMs = options.ttlMs ?? 10_000;
+    this.retryMs = options.retryMs ?? 100;
+    this.maxRetries = options.maxRetries ?? 50;
+  }
+
+  async acquire(): Promise<boolean> {
+    for (let i = 0; i < this.maxRetries; i++) {
+      const result = await this.redis.set(this.key, "1", "PX", this.ttlMs, "NX");
+      if (result === "OK") {
+        this.acquired = true;
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, this.retryMs));
+    }
+    return false;
+  }
+
+  async release(): Promise<void> {
+    if (!this.acquired) return;
+    // Use Lua script to only delete if we own it
+    await this.redis.eval(
+      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+      1,
+      this.key,
+      "1"
+    );
+    this.acquired = false;
+  }
+
+  async extend(ttlMs?: number): Promise<boolean> {
+    if (!this.acquired) return false;
+    const newTtl = ttlMs ?? this.ttlMs;
+    const result = await this.redis.pexpire(this.key, newTtl);
+    return result === 1;
+  }
+}
+
+export function createLock(redis: Redis, key: string, options?: LockOptions): DistributedLock {
+  return new DistributedLock(redis, key, options);
 }
 
 export async function withLock<T>(
-  redis: RedisClient,
+  redis: Redis,
   key: string,
-  ttlMs: number,
-  work: () => Promise<T>,
-): Promise<{ acquired: true; value: T } | { acquired: false }> {
-  const token = crypto.randomUUID();
-  const result = await redis.set(key, token, "PX", Math.max(1, ttlMs), "NX");
-  if (result !== "OK") return { acquired: false };
-
-  // Keep the lock alive while the operation runs; a long install must not let a
-  // second replica start the same module operation.
-  const renew = setInterval(
-    () => {
-      void redis.eval(RenewScript, 1, key, token, String(Math.max(1, ttlMs))).catch(() => undefined);
-    },
-    Math.max(1_000, Math.floor(ttlMs / 3)),
-  );
-  renew.unref();
-
+  fn: () => Promise<T>,
+  options?: LockOptions
+): Promise<T> {
+  const lock = createLock(redis, key, options);
+  const acquired = await lock.acquire();
+  if (!acquired) {
+    throw new Error(`Failed to acquire lock: ${key}`);
+  }
   try {
-    return { acquired: true, value: await work() };
+    return await fn();
   } finally {
-    clearInterval(renew);
-    await redis.eval(ReleaseScript, 1, key, token).catch(() => undefined);
+    await lock.release();
   }
 }

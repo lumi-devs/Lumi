@@ -1,14 +1,22 @@
 {
   "name": "@lumi/redis",
-  "version": "0.1.0",
-  "private": true,
-  "type": "module",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js",
+    "./invalidation": "./dist/invalidation.js",
+    "./locks": "./dist/locks.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lumi/foundation": "workspace:*",
-    "@lumi/observability": "workspace:*",
-    "ioredis": "catalog:"
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }

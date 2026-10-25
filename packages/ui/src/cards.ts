@@ -8,11 +8,10 @@ import {
   ThumbnailBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { cutText } from "@sapphire/utilities";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "./palette.ts";
-import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.ts";
+import { resolveCardColor } from "./palette";
+import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout";
 
 export interface CardReply {
   readonly flags?: number;
@@ -30,7 +29,7 @@ export interface CardOptions {
   hideTitle?: boolean | undefined;
   noAccent?: boolean | undefined;
   sections?: SectionBuilder[] | undefined;
-  actionRows?: ActionRowBuilder<MessageActionRowComponentBuilder>[] | undefined;
+  actionRows?: ActionRowBuilder<any>[] | undefined;
   separatorAboveActionRows?: boolean | undefined;
   mediaGallery?: MediaGalleryBuilder | undefined;
   headerImages?: string[] | undefined;
@@ -192,6 +191,9 @@ export const makeCard = (
   body: string | string[],
   opts?: CardOptions,
 ) => wrap(buildContainer(title, body, opts, color || undefined));
+
+const cutText = (text: string, limit: number): string =>
+  text.length > limit ? `${text.slice(0, Math.max(0, limit - 1))}…` : text;
 
 export const TextDisplayLimit = 4000;
 

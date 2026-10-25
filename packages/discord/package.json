@@ -1,0 +1,21 @@
+{
+  "name": "@lumi/discord",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./helpers": "./dist/helpers/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

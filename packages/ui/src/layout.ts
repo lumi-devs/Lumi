@@ -44,6 +44,11 @@ export function formatBreadcrumbs(crumbs: string[], separator = " ❯ "): string
     .join(separator);
 }
 
+export function formatBreadcrumbHeader(crumbs: string[]): string {
+  if (crumbs.length === 0) return "";
+  return formatBreadcrumbs(crumbs);
+}
+
 export function formatPageFooter(
   pageIndex: number,
   totalPages: number,

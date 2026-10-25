@@ -1,0 +1,272 @@
+# Lumi v2 Prometheus Alerting Rules
+# Apply with: kubectl apply -f rules.yml -n monitoring
+
+groups:
+  - name: lumi-bot-alerts
+    interval: 30s
+    rules:
+      # Service Availability
+      - alert: LumiBotDown
+        expr: up{job="lumi-bot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: bot
+        annotations:
+          summary: "Lumi bot instance {{ $labels.instance }} is down"
+          description: "Bot has been down for more than 1 minute. Check pod logs and Discord gateway connection."
+          runbook_url: "https://docs.lumi.bot/runbooks/bot-down"
+
+      - alert: LumiManagerDown
+        expr: up{job="lumi-manager"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: fleet-manager
+        annotations:
+          summary: "Lumi fleet manager {{ $labels.instance }} is down"
+          description: "Fleet manager is down. Workers may not receive shard assignments or deployments."
+
+      - alert: LumiWorkerDown
+        expr: up{job="lumi-worker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: fleet-worker
+        annotations:
+          summary: "Lumi worker {{ $labels.instance }} is down"
+          description: "Worker is down. Shards assigned to this worker are offline."
+
+      # Shard Health
+      - alert: LumiShardOffline
+        expr: lumi_shards_online < lumi_shards_total
+        for: 2m
+        labels:
+          severity: warning
+          component: sharding
+        annotations:
+          summary: "Shards offline: {{ $value }} of {{ $labels.lumi_shards_total }}"
+          description: "Some shards are not online. Check worker logs and Discord gateway status."
+
+      - alert: LumiHighShardLatency
+        expr: histogram_quantile(0.95, rate(lumi_shard_latency_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: sharding
+        annotations:
+          summary: "High shard latency on {{ $labels.instance }}"
+          description: "P95 shard latency exceeds 1 second. May indicate Discord gateway issues or overload."
+
+      # Resource Usage
+      - alert: LumiHighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90%. Consider scaling or investigating memory leaks."
+
+      - alert: LumiHighCPUUsage
+        expr: (1 - rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage sustained above 85% for 10 minutes."
+
+      - alert: LumiDiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Less than 10% disk space remaining. Clean up logs or expand volume."
+
+      # API Performance
+      - alert: LumiHighAPILatency
+        expr: histogram_quantile(0.95, rate(lumi_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API P95 latency on {{ $labels.instance }}"
+          description: "P95 HTTP latency exceeds 2 seconds. Check database and Redis connectivity."
+
+      - alert: LumiHighErrorRate
+        expr: rate(lumi_http_requests_total{status=~"5.."}[5m]) / rate(lumi_http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High HTTP error rate on {{ $labels.instance }}"
+          description: "More than 5% of requests returning 5xx errors."
+
+      # Database
+      - alert: LumiDatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL connections near limit on {{ $labels.instance }}"
+          description: "More than 80% of max connections in use. Check for connection leaks."
+
+      - alert: LumiDatabaseSlowQueries
+        expr: histogram_quantile(0.95, rate(lumi_db_query_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries on {{ $labels.instance }}"
+          description: "P95 query duration exceeds 5 seconds. Check query plans and indexes."
+
+      - alert: LumiDatabaseReplicationLag
+        expr: pg_replication_lag_seconds > 30
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "PostgreSQL replication lag on {{ $labels.instance }}"
+          description: "Replica lag exceeds 30 seconds. Check replica health and network."
+
+      # Redis
+      - alert: LumiRedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis instance {{ $labels.instance }} is down"
+          description: "Redis is unreachable. Cache and pub/sub will fail."
+
+      - alert: LumiRedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis memory usage high on {{ $labels.instance }}"
+          description: "Redis memory usage exceeds 90% of maxmemory. Consider increasing maxmemory or eviction policy."
+
+      - alert: LumiRedisReplicationLag
+        expr: redis_replication_lag_seconds > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis replication lag on {{ $labels.instance }}"
+          description: "Replica lag exceeds 10 seconds."
+
+      # Business Metrics
+      - alert: LumiGuildCountDrop
+        expr: (lumi_guilds_total - lumi_guilds_total offset 1h) < -10
+        for: 5m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Significant guild loss detected"
+          description: "Lost more than 10 guilds in the last hour. Check for bot kicks or API issues."
+
+      - alert: LumiCommandErrorRate
+        expr: rate(lumi_commands_failed_total[5m]) / rate(lumi_commands_executed_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: commands
+        annotations:
+          summary: "High command failure rate"
+          description: "More than 10% of commands failing. Check command handlers and permissions."
+
+      - alert: LumiCacheHitRateLow
+        expr: rate(lumi_cache_hits_total[5m]) / (rate(lumi_cache_hits_total[5m]) + rate(lumi_cache_misses_total[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Cache hit rate below 50%"
+          description: "Cache hit rate is low. Check invalidation patterns and TTL settings."
+
+      # Fleet
+      - alert: LumiFleetRebalanceNeeded
+        expr: lumi_fleet_rebalance_pending > 0
+        for: 1m
+        labels:
+          severity: info
+          component: fleet
+        annotations:
+          summary: "Fleet rebalance pending"
+          description: "Shards need to be rebalanced across workers. Triggered by {{ $labels.reason }}."
+
+      - alert: LumiRollingRestartStuck
+        expr: lumi_rolling_restart_in_progress == 1 and time() - lumi_rolling_restart_start_timestamp > 600
+        for: 1m
+        labels:
+          severity: warning
+          component: fleet
+        annotations:
+          summary: "Rolling restart stuck"
+          description: "Rolling restart has been in progress for more than 10 minutes. Check worker health."
+
+  - name: lumi-slo-alerts
+    interval: 1m
+    rules:
+      # SLO: 99.9% uptime
+      - alert: LumiSLOUptimeBreach
+        expr: |
+          (
+            sum(rate(lumi_http_requests_total{status!~"5.."}[5m])) 
+            / 
+            sum(rate(lumi_http_requests_total[5m]))
+          ) < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          slo: uptime
+        annotations:
+          summary: "SLO breach: Uptime below 99.9%"
+          description: "Request success rate dropped below 99.9% over 5 minutes."
+
+      # SLO: P99 latency < 500ms
+      - alert: LumiSLOLatencyBreach
+        expr: |
+          histogram_quantile(0.99, rate(lumi_http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          slo: latency
+        annotations:
+          summary: "SLO breach: P99 latency above 500ms"
+          description: "P99 HTTP latency exceeded 500ms over 5 minutes."
+
+      # SLO: Command success rate > 99%
+      - alert: LumiSLOCommandSuccessBreach
+        expr: |
+          (
+            sum(rate(lumi_commands_executed_total[5m])) 
+            / 
+            sum(rate(lumi_commands_executed_total[5m]) + rate(lumi_commands_failed_total[5m]))
+          ) < 0.99
+        for: 5m
+        labels:
+          severity: critical
+          slo: command-success
+        annotations:
+          summary: "SLO breach: Command success rate below 99%"
+          description: "Command success rate dropped below 99% over 5 minutes."

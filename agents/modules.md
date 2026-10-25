@@ -2,11 +2,32 @@
 
 Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + loader).
 
+## Architecture: Built-in Services vs Toggleable Modules
+
+**Built-in Services** (always running, non-disableable):
+- `apps/bot/src/core/` — Gateway, sharding, RPC server, scheduler, lifecycle
+- `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
+- `apps/bot/src/security/` — Verification, panic, anti-nuke, join gate
+
+**Toggleable Modules** (enable/disable per guild via `/lumi` → Modules):
+All modules under `modules/` are toggleable:
+- `mod` — case-backed moderation (ban, kick, timeout, warn, purge, notes)
+- `leveling` — XP, ranks, role rewards, leaderboards, rank cards
+- `economy` — Currency, banking, shop, jobs, gambling, balance cards
+- `utility` — avatar, banner, whois, serverinfo, nick, purge
+- `tempvc` — Join-to-create voice channels with ownership
+- `logging` — Message/edit/delete/voice/mod logging
+- `welcome` — Join/leave messages, DM on join, auto-roles
+- `reactionroles` — Button/reaction role menus
+- `afk` — AFK status with mention replies
+- `onboarding` — Rules screening, channel hints
+- `sticky` — Sticky messages
+- `sheets` — Spreadsheet automation (auto-responses, FAQs)
+
 ## Rules
 
-- Every module is toggleable. No module is privileged, essential, or undeletable.
-- Always-on behaviour lives in `apps/bot/src/runtime/app.ts` and built-in commands, not in
-  a module.
+- Every module under `modules/` is toggleable. No module is privileged, essential, or undeletable.
+- Always-on behaviour lives in `apps/bot/src/` as built-in services, not in a module.
 - A module is a directory with `manifest.json` and an entry file.
 - Modules may depend on other modules with semver ranges. A dependency cycle
   marks the involved modules broken and skips them; other modules still load.
@@ -115,19 +136,19 @@ disable the module, so listeners that act on guild events must check
 (`module: null`) bypass it. Enablement is global state AND guild state; there is
 no `config.enabled` key.
 
-## Bundled modules
+## Module List
 
-- `mod` — case-backed moderation. Undo operations deactivate the matching active
-  cases (`untimeout` lifts `mute`, `/quarantine remove` lifts `quarantine`,
-  `/vcmute remove` lifts `voice_mute`). `/unban` and softban intentionally leave
-  the original case active, matching v1. `warn_thresholds` is a JSON map of warn
-  count to `{ action, duration }`; `immune_role_ids` skips automated threshold
-  actions. The expiry sweep lifts expired `voice_mute` cases once the member is
-  in voice, and the voice-state listener re-applies an active mute on rejoin.
-  Voice mutes use Discord's server mute rather than disconnecting the member.
-- `security` — verification and panic. Verification mode is `emoji` or `none`;
-  the pending-role sweep kicks unverified members when configured. `/verifypanel`
-  posts or refreshes the persisted panel, and `/panic` snapshots the previous
-  @everyone send permission so the revert button can restore it.
-- `utility` — avatar, banner, whois, serverinfo, nick, and purge.
-- `afk` — AFK entries and mention replies.
+| Module | Description | Key Features |
+|--------|-------------|--------------|
+| `mod` | Case-backed moderation | Ban, kick, timeout, warn, purge, notes, thresholds, voice mute |
+| `leveling` | XP & ranks | XP curves, role rewards, leaderboards, rank cards (images) |
+| `economy` | Currency & banking | Balance, bank, shop, jobs, gambling, balance cards |
+| `utility` | Info commands | Avatar, banner, whois, serverinfo, nick, purge |
+| `tempvc` | Temp voice channels | Join-to-create, ownership, limits, auto-cleanup |
+| `logging` | Event logging | Message/edit/delete/voice/mod, webhook delivery |
+| `welcome` | Join/leave | Messages, DM on join, auto-roles |
+| `reactionroles` | Role menus | Buttons, selects, unique/multiple modes |
+| `afk` | AFK system | Mention replies, nick prefix |
+| `onboarding` | Server onboarding | Rules screening, channel hints |
+| `sticky` | Sticky messages | Auto-repost at channel bottom |
+| `sheets` | Automation | Spreadsheet rules for auto-responses, FAQs |
