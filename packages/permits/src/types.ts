@@ -7,14 +7,13 @@ export interface Permit {
   guildId: string;
   name: string;
   node: string;
-  kind: PermitKind;
   polarity: Polarity;
   position: number;
   builtin: boolean;
   expiresAt: Date | null;
-  schedule: string | null;
+  schedule: unknown;
   timezone: string | null;
-  conditions: PermitConditions | null;
+  conditions: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +21,7 @@ export interface Permit {
 export interface PermitAssignment {
   id: number;
   permitId: number;
+  guildId: string;
   targetType: PermitTargetType;
   targetId: string;
   grantedAt: Date;

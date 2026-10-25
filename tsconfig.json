@@ -102,9 +102,6 @@
       ],
       "@lumi/sheets": [
         "modules/sheets/src"
-      ],
-      "@prisma/client": [
-        "packages/prisma-client/src"
       ]
     }
   },

@@ -10,5 +10,56 @@
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "defaultEnabled": true
+  "defaultEnabled": true,
+  "configFields": [
+    {
+      "key": "xpPerMessage",
+      "label": "XP per Message",
+      "type": "number",
+      "description": "Base XP per message",
+      "default": 15
+    },
+    {
+      "key": "xpPerMinuteVc",
+      "label": "XP per Minute in VC",
+      "type": "number",
+      "description": "Voice chat XP rate",
+      "default": 10
+    },
+    {
+      "key": "cooldownSeconds",
+      "label": "XP Cooldown",
+      "type": "number",
+      "description": "Seconds between XP gains",
+      "default": 60
+    },
+    {
+      "key": "roleRewards",
+      "label": "Role Rewards",
+      "type": "json",
+      "description": "JSON array: [{level, roleId, removePrevious}]",
+      "default": []
+    },
+    {
+      "key": "multiplierRoles",
+      "label": "XP Multiplier Roles",
+      "type": "json",
+      "description": "JSON array: [{roleId, multiplier}]",
+      "default": []
+    },
+    {
+      "key": "ignoredChannels",
+      "label": "Ignored Channels",
+      "type": "multi-channel",
+      "description": "Channels where XP is disabled",
+      "default": []
+    },
+    {
+      "key": "ignoredRoles",
+      "label": "Ignored Roles",
+      "type": "multi-role",
+      "description": "Roles that don't gain XP",
+      "default": []
+    }
+  ]
 }

@@ -19,7 +19,8 @@
     "@lumi/db": "workspace:*",
     "@lumi/rpc": "workspace:*",
     "discord.js": "^14.14.0",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "@prisma/client": "^7.10.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0"

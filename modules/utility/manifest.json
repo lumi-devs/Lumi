@@ -10,5 +10,21 @@
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "defaultEnabled": true
+  "defaultEnabled": true,
+  "configFields": [
+    {
+      "key": "purgeMaxMessages",
+      "label": "Max Purge Messages",
+      "type": "number",
+      "description": "Maximum messages per purge (1-100)",
+      "default": 100
+    },
+    {
+      "key": "nickMaxLength",
+      "label": "Max Nickname Length",
+      "type": "number",
+      "description": "Maximum nickname length",
+      "default": 32
+    }
+  ]
 }

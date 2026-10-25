@@ -59,19 +59,28 @@ export class PermitRepository {
     position: number;
     builtin?: boolean;
     expiresAt?: Date | null;
-    schedule?: string | null;
+    schedule?: Prisma.InputJsonValue | null;
     timezone?: string | null;
-    conditions?: any | null;
+    conditions?: Prisma.InputJsonValue | null;
   }): Promise<Permit> {
     return this.prisma.permit.create({
       data: {
-        ...data,
+        guildId: data.guildId,
+        name: data.name,
+        node: data.node,
+        polarity: data.polarity,
+        position: data.position,
+        builtin: data.builtin ?? false,
+        expiresAt: data.expiresAt ?? null,
+        schedule: data.schedule ?? Prisma.DbNull,
+        timezone: data.timezone ?? null,
+        conditions: data.conditions ?? Prisma.DbNull,
       },
       include: { assignments: true },
     });
   }
 
-  async updatePermit(permitId: number, data: Partial<Permit>): Promise<Permit | null> {
+  async updatePermit(permitId: number, data: Prisma.PermitUpdateInput): Promise<Permit | null> {
     return this.prisma.permit.update({
       where: { id: permitId },
       data,
@@ -123,13 +132,19 @@ export class PermitRepository {
     grantedBy: string,
     expiresAt?: Date | null
   ): Promise<PermitAssignment> {
+    const permit = await this.prisma.permit.findUnique({
+      where: { id: permitId },
+      select: { guildId: true },
+    });
+    if (!permit) throw new Error("Permit not found");
     return this.prisma.permitAssignment.create({
       data: {
         permitId,
+        guildId: permit.guildId,
         targetType,
         targetId,
         grantedBy,
-        expiresAt,
+        expiresAt: expiresAt ?? null,
       },
     });
   }
@@ -391,9 +406,9 @@ export class PermitRepository {
             position: permitData.position,
             builtin: permitData.builtin,
             expiresAt: permitData.expiresAt ? new Date(permitData.expiresAt) : null,
-            schedule: permitData.schedule,
+            schedule: permitData.schedule ?? Prisma.DbNull,
             timezone: permitData.timezone,
-            conditions: permitData.conditions,
+            conditions: permitData.conditions ?? Prisma.DbNull,
             createdAt: permitData.createdAt ? new Date(permitData.createdAt) : undefined,
             updatedAt: permitData.updatedAt ? new Date(permitData.updatedAt) : undefined,
           },
@@ -405,6 +420,7 @@ export class PermitRepository {
           await this.prisma.permitAssignment.create({
             data: {
               permitId: permit.id,
+              guildId,
               targetType: assignment.targetType,
               targetId: assignment.targetId,
               grantedBy: assignment.grantedBy,

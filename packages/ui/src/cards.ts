@@ -142,7 +142,7 @@ function buildContainer(
 
   const actionRows = opts.actionRows ?? [];
   if (opts.separatorAboveActionRows && actionRows.length > 0) {
-    c.addSeparatorComponents((sep) => sep);
+    c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
   }
   for (let r = 0; r < actionRows.length; r++) {
     const row = actionRows[r]!;

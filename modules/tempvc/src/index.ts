@@ -37,16 +37,12 @@ const stopSweep = (): void => {
 const tempvcCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("tempvc")
-    .setDescription("Open the temporary voice control panel")
-    .addStringOption((option) =>
-      option
-        .setName("panel")
-        .setDescription("Open staff generator tools or module settings")
-        .setRequired(false)
-        .addChoices(
-          { name: "Admin generators", value: "admin" },
-          { name: "Module settings", value: "config" },
-        ),
+    .setDescription("Temporary voice channel controls and generator management")
+    .addSubcommand((sub) =>
+      sub.setName("panel").setDescription("Open your temp VC control panel"),
+    )
+    .addSubcommand((sub) =>
+      sub.setName("admin").setDescription("Manage voice generator channels (staff only)"),
     ),
   async execute(interaction, services) {
     const guildId = interaction.guildId;
@@ -74,8 +70,9 @@ const tempvcCommand: CommandDefinition = {
       return;
     }
 
-    const section = interaction.options.getString("panel");
-    if (section === "admin" || section === "config") {
+    const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "admin") {
       if (!(await canUseTempVcAdmin(interaction, services))) {
         await interaction.reply(
           ephemeralCard(
@@ -88,10 +85,7 @@ const tempvcCommand: CommandDefinition = {
         return;
       }
       const config = await getTempVcConfig(services, guildId);
-      const card =
-        section === "config"
-          ? configPanelCard(config)
-          : adminPanelCard(interaction.guild ?? null, config);
+      const card = adminPanelCard(interaction.guild ?? null, config);
       await interaction.reply(ephemeralCard(card));
       return;
     }
@@ -103,7 +97,7 @@ const tempvcCommand: CommandDefinition = {
         ephemeralCard(
           makeErrorCard(
             "Not Connected",
-            "Join your temporary voice channel first, then run `/tempvc` again.",
+            "Join your temporary voice channel first, then run `/tempvc panel` again.",
           ),
         ),
       );
@@ -127,7 +121,7 @@ const tempvcCommand: CommandDefinition = {
       return;
     }
 
-    await interaction.reply(ephemeralCard(card));
+    await interaction.reply(card);
   },
 };
 

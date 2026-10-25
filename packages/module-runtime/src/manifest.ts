@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const ConfigFieldSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.enum(["boolean", "number", "string", "channel", "role", "multi-channel", "multi-role", "json"]),
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  default: z.unknown().optional(),
+  choices: z.array(z.string()).optional(),
+  channelTypes: z.array(z.number()).optional(),
+});
+
 export const ManifestSchema = z.object({
   apiVersion: z.literal(2),
   name: z.string().regex(/^[a-z][a-z0-9-]*$/),
@@ -16,11 +27,14 @@ export const ManifestSchema = z.object({
     version: z.string(),
     provides: z.array(z.string()),
   })).default([]),
+  configFields: z.array(ConfigFieldSchema).default([]),
+  configOverrides: z.boolean().optional(),
   minBotVersion: z.string().optional(),
   maxBotVersion: z.string().optional(),
 });
 
 export type ModuleManifest = z.infer<typeof ManifestSchema>;
+export type ConfigField = z.infer<typeof ConfigFieldSchema>;
 
 export function validateManifest(data: unknown): ModuleManifest {
   return ManifestSchema.parse(data);

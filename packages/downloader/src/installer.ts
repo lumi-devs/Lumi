@@ -1,6 +1,7 @@
 import { createModuleLoader, type ModuleManifest } from "@lumi/module-runtime";
-import { join } from "node:path";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { join, resolve } from "node:path";
+import { cp, mkdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
 export interface AddonSource {
@@ -20,10 +21,16 @@ export interface InstallResult {
 export class AddonInstaller {
   private readonly addonsDir: string;
   private readonly moduleLoader: ReturnType<typeof createModuleLoader>;
+  private services: Record<string, unknown> = {};
+  private addonRootAdded = false;
 
   constructor(addonsDir: string, moduleLoader: ReturnType<typeof createModuleLoader>) {
     this.addonsDir = addonsDir;
     this.moduleLoader = moduleLoader;
+  }
+
+  bindServices(services: Record<string, unknown>): void {
+    this.services = services;
   }
 
   async install(source: AddonSource): Promise<InstallResult> {
@@ -32,16 +39,16 @@ export class AddonInstaller {
     try {
       await mkdir(tempDir, { recursive: true });
 
+      let sourceDir = tempDir;
       if (source.type === "github") {
         await this.cloneGitHub(source, tempDir);
       } else if (source.type === "npm") {
-        await this.installNpm(source, tempDir);
+        sourceDir = await this.installNpm(source, tempDir);
       } else if (source.type === "local") {
-        await this.copyLocal(source, tempDir);
+        sourceDir = await this.resolveLocal(source);
       }
 
-      // Validate manifest
-      const manifest = await this.validateManifest(tempDir);
+      const manifest = await this.validateManifest(sourceDir);
       
       // Check conflicts
       const conflicts = await this.checkConflicts(manifest);
@@ -60,18 +67,21 @@ export class AddonInstaller {
       await rm(targetDir, { recursive: true, force: true });
       await mkdir(targetDir, { recursive: true });
       
-      // Copy files (excluding node_modules, .git, etc.)
-      await this.copyDirectory(tempDir, targetDir);
+      await this.copyDirectory(sourceDir, targetDir);
 
-      // Install npm dependencies if any
       if (manifest.requirements.length > 0) {
         await this.installDependencies(targetDir, manifest.requirements);
       }
 
-      // Reload module loader
-      this.moduleLoader.addRoot(this.addonsDir, "addon");
+      if (!this.addonRootAdded) {
+        this.moduleLoader.addRoot(this.addonsDir, "addon");
+        this.addonRootAdded = true;
+      }
       const discovered = await this.moduleLoader.discover();
-      await this.moduleLoader.loadAll(discovered, {} as any);
+      await this.moduleLoader.loadAll(
+        discovered.filter((module) => module.manifest.name === manifest.name),
+        this.services,
+      );
 
       return {
         success: true,
@@ -93,38 +103,38 @@ export class AddonInstaller {
   }
 
   private async cloneGitHub(source: AddonSource, targetDir: string): Promise<void> {
-    const { execSync } = await import("node:child_process");
     const url = source.url.endsWith(".git") ? source.url : `${source.url}.git`;
+    if (!/^(https:\/\/|git@)/.test(url)) {
+      throw new Error("GitHub add-ons must use an https:// or git@ URL.");
+    }
     const ref = source.ref ?? "main";
-    
-    execSync(`git clone --depth 1 --branch ${ref} ${url} .`, { 
-      cwd: targetDir, 
-      stdio: "ignore" 
+    execFileSync("git", ["clone", "--depth", "1", "--branch", ref, url, "."], {
+      cwd: targetDir,
+      stdio: "ignore",
     });
   }
 
-  private async installNpm(source: AddonSource, targetDir: string): Promise<void> {
-    const { execSync } = await import("node:child_process");
-    const pkg = source.url + (source.ref ? `@${source.ref}` : "");
-    
-    execSync(`bun add ${pkg}`, { 
-      cwd: targetDir, 
-      stdio: "ignore" 
-    });
-    
-    // Extract the package
-    execSync(`bun pm cache dir`, { cwd: targetDir });
+  private async installNpm(source: AddonSource, tempDir: string): Promise<string> {
+    const name = source.url.trim();
+    if (!/^(@[a-z0-9-._~]+\/)?[a-z0-9-._~]+$/i.test(name)) {
+      throw new Error("npm add-ons must use a package name; put the version in the ref field.");
+    }
+    const spec = source.ref ? `${name}@${source.ref}` : name;
+    execFileSync("bun", ["add", spec], { cwd: tempDir, stdio: "ignore" });
+    return join(tempDir, "node_modules", ...name.split("/"));
   }
 
-  private async copyLocal(source: AddonSource, targetDir: string): Promise<void> {
-    const { execSync } = await import("node:child_process");
-    execSync(`cp -r ${source.url}/* .`, { cwd: targetDir });
+  private async resolveLocal(source: AddonSource): Promise<string> {
+    const dir = resolve(source.url);
+    const info = await stat(dir).catch(() => null);
+    if (!info?.isDirectory()) {
+      throw new Error("Local add-on path is not a directory.");
+    }
+    return dir;
   }
 
   private async validateManifest(dir: string): Promise<ModuleManifest> {
-    const manifestPath = join(dir, "manifest.json");
-    const content = await import("node:fs/promises").then(fs => fs.readFile(manifestPath, "utf-8"));
-    return JSON.parse(content);
+    return JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8"));
   }
 
   private async checkConflicts(manifest: ModuleManifest): Promise<string[]> {
@@ -138,29 +148,21 @@ export class AddonInstaller {
   }
 
   private async copyDirectory(src: string, dest: string): Promise<void> {
-    const { readdir, copyFile, stat, mkdir } = await import("node:fs/promises");
-    const entries = await readdir(src, { withFileTypes: true });
-    
-    await mkdir(dest, { recursive: true });
-    
-    for (const entry of entries) {
-      const srcPath = join(src, entry.name);
-      const destPath = join(dest, entry.name);
-      
-      if (entry.name === "node_modules" || entry.name === ".git") continue;
-      
-      if (entry.isDirectory()) {
-        await this.copyDirectory(srcPath, destPath);
-      } else {
-        await copyFile(srcPath, destPath);
-      }
-    }
+    await cp(src, dest, {
+      recursive: true,
+      force: true,
+      filter: (path) => !path.includes("/node_modules") && !path.includes("/.git"),
+    });
   }
 
   private async installDependencies(dir: string, requirements: string[]): Promise<void> {
-    const { execSync } = await import("node:child_process");
-    for (const req of requirements) {
-      execSync(`bun add ${req}`, { cwd: dir, stdio: "ignore" });
+    for (const requirement of requirements) {
+      if (!/^(@[a-z0-9-._~]+\/)?[a-z0-9-._~]+(@[^\s]+)?$/i.test(requirement)) continue;
+      execFileSync(
+        "bun",
+        ["add", "--production", "--ignore-scripts", "--no-save", requirement],
+        { cwd: dir, stdio: "ignore" },
+      );
     }
   }
 

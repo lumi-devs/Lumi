@@ -3,7 +3,7 @@ import { ChatInputCommandInteraction, AutocompleteInteraction, ButtonInteraction
 export interface ConfigField {
   key: string;
   label: string;
-  type: "boolean" | "number" | "string" | "channel" | "role" | "multi-channel" | "multi-role";
+  type: "boolean" | "number" | "string" | "channel" | "role" | "multi-channel" | "multi-role" | "json";
   description?: string;
 }
 

@@ -831,7 +831,7 @@ const modModule: ModuleDefinition = defineModule({
     { key: "quarantineRoleId", label: "Quarantine Role", type: "role", description: "Role assigned when quarantined" },
     { key: "maxTargets", label: "Max Targets", type: "number", description: "Max members per command" },
     { key: "immuneRoleIds", label: "Immune Roles", type: "multi-role", description: "Roles exempt from auto-actions" },
-    { key: "warnThresholds", label: "Warn Thresholds", type: "string", description: "JSON: warn count -> {action, duration}" },
+    { key: "warnThresholds", label: "Warn Thresholds", type: "json", description: "JSON object: warn count -> {action, duration}" },
   ],
   commands: [banAdd, banRemove, kickDef, timeoutDef, warnDef, purgeDef, noteDef, lockDef, unlockDef, lockdownDef, softbanDef, quarantineDef, unquarantineDef, vcmuteDef, vcmuteRemoveDef, caseDef, casesDef],
   listeners: [casesPaginationListener],

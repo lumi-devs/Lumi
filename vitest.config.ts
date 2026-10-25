@@ -29,10 +29,6 @@ export default defineConfig({
         find: "@lumi/security",
         replacement: resolve(root, "apps/bot/src/security/src"),
       },
-      {
-        find: "@prisma/client",
-        replacement: resolve(root, "packages/prisma-client/src"),
-      },
       ...workspaceAliases,
     ],
   },

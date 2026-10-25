@@ -1,10 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  engineType    = "library"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Polarity {
@@ -19,11 +20,10 @@ enum PermitTargetType {
 }
 
 model Guild {
-  id            String   @id @default(cuid())
-  discordId     String   @unique @map("discord_id")
-  name          String
+  id            String   @id
+  name          String   @default("")
   icon          String?
-  ownerId       String   @map("owner_id")
+  ownerId       String   @default("") @map("owner_id")
   joinedAt      DateTime @default(now()) @map("joined_at")
   leftAt        DateTime? @map("left_at")
   settings      Json     @default("{}")
@@ -39,7 +39,6 @@ model Guild {
   securityConfig SecurityConfig?
   sheets        Sheet[]
 
-  @@index([discordId])
   @@map("guilds")
 }
 

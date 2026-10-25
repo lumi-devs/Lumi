@@ -1,20 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { ModuleDefinition } from "@lumi/module-kit";
-
-export interface ModuleManifest {
-  apiVersion: number;
-  name: string;
-  displayName: string;
-  emoji: string;
-  description: string;
-  version: string;
-  entry: string;
-  dependencies: Record<string, string>;
-  requirements: string[];
-  conflicts: string[];
-  capabilities: Array<{ name: string; version: string; provides: string[] }>;
-}
+import { ModuleManifest, ConfigField } from "./manifest.js";
 
 export interface LoadedModule {
   manifest: ModuleManifest;
@@ -215,13 +202,14 @@ export class ModuleLoader {
     return Array.from(this.modules.values());
   }
 
-  listGlobal(): Array<{ name: string; displayName: string; emoji: string; description: string; version: string }> {
+  listGlobal(): Array<{ name: string; displayName: string; emoji: string; description: string; version: string; configFields: any[] }> {
     return Array.from(this.modules.values()).map(m => ({
       name: m.manifest.name,
       displayName: m.manifest.displayName,
       emoji: m.manifest.emoji,
       description: m.manifest.description,
       version: m.manifest.version,
+      configFields: m.manifest.configFields ?? [],
     }));
   }
 }

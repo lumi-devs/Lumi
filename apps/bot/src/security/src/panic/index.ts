@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { PermissionFlagsBits } from "discord.js";
 import { Redis } from "ioredis";
 
@@ -32,7 +32,7 @@ export class PanicService {
       where: { guildId },
       data: {
         panicEnabled: false,
-        panicPreviousPerms: null,
+        panicPreviousPerms: Prisma.DbNull,
       },
     });
     // Restore @everyone permissions

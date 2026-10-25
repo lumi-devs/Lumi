@@ -88,7 +88,15 @@ export class PermitPanel {
   }
 
   async render(): Promise<void> {
-    await this.interaction.reply(ephemeralCard(await this.mainCard(0)));
+    const card = await this.mainCard(0);
+    if (
+      this.interaction.isButton?.() ||
+      this.interaction.isStringSelectMenu?.()
+    ) {
+      await this.interaction.update(card);
+      return;
+    }
+    await this.interaction.reply(card);
   }
 
   private async mainCard(page: number): Promise<CardReply> {
@@ -491,7 +499,7 @@ export class PermitPanel {
     }
 
     if (customId === "permit_back") {
-      await interaction.message?.delete().catch(() => undefined);
+      await interaction.update(this.closeCard());
       return;
     }
 
@@ -666,7 +674,7 @@ export class PermitPanel {
           .setCustomId("schedule")
           .setLabel("Cron Schedule (optional)")
           .setStyle(TextInputStyle.Short)
-          .setValue(permit.schedule ?? "")
+          .setValue(typeof permit.schedule === "string" ? permit.schedule : "")
           .setRequired(false),
       ),
     );
@@ -1150,6 +1158,13 @@ export class PermitPanel {
         );
       }
     }
+  }
+
+  private closeCard(): CardReply {
+    return makeInfoCard("Permits", "Permit panel closed.", {
+      statusBadge: { status: "inactive", label: "CLOSED" },
+      footer: "Run `/lumi` to reopen",
+    });
   }
 
   async handleConfirmDelete(interaction: any, permitId: number): Promise<void> {

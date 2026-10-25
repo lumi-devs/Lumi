@@ -7,7 +7,6 @@ import {
 import { totalmem } from "node:os";
 import { registry } from "@lumi/observability";
 import {
-  BrandColors,
   createActionButton,
   ephemeralCard,
   makeCard,
@@ -18,6 +17,7 @@ import {
 } from "@lumi/ui";
 
 const pingSessions = new Map<string, number>();
+const ShardsPerPage = 10;
 
 function formatUptime(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -49,7 +49,7 @@ function getCacheHitRatio(): number {
   const hits = getCounterValue("lumi_cache_hits_total");
   const misses = getCounterValue("lumi_cache_misses_total");
   const total = hits + misses;
-  return total > 0 ? Math.round((hits / total) * 100) : 0;
+  return total > 0 ? (hits / total) * 100 : 0;
 }
 
 async function getDbLatency(prisma: any): Promise<number> {
@@ -60,17 +60,46 @@ async function getDbLatency(prisma: any): Promise<number> {
   return Date.now() - t0;
 }
 
+interface ShardBlockInput {
+  shardId: number;
+  ping: number;
+  uptime: number;
+  cpuPercent: number;
+  rss: number;
+  ramPercent: number;
+  servers: number;
+  members: number;
+}
+
+function buildShardBlock(input: ShardBlockInput): string {
+  return [
+    `__🟢 **Shard [${input.shardId}]:** __`,
+    `⠀📡 ${Math.round(input.ping)}ms · ⏱️ ${formatUptime(input.uptime)}`,
+    `⠀**CPU**: ${Math.round(input.cpuPercent)}% . 📊 **RAM:** ${(input.rss / 1024 / 1024).toFixed(1)} MB . **(${input.ramPercent.toFixed(2)}%)**  `,
+    `⠀📈 **Servers:** ${input.servers}· 👥 **Members:** ${input.members}`,
+  ].join("\n");
+}
+
+function totalPagesFor(shardCount: number): number {
+  return Math.max(1, Math.ceil(shardCount / ShardsPerPage));
+}
+
 function buildPingComponents(
   client: any,
   dbLatency: number,
   page: number,
   userId: string,
 ): CardReply {
-  const shardIds = Array.from(client.ws.shards.keys());
-  const totalPages = Math.max(1, shardIds.length);
+  const shardIds = Array.from(client.ws.shards.keys()) as number[];
+  const totalPages = totalPagesFor(shardIds.length);
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const shardId = shardIds[safePage] ?? 0;
-  const shard = client.ws.shards.get(shardId);
+  const pageShardIds =
+    shardIds.length === 0
+      ? [0]
+      : shardIds.slice(
+          safePage * ShardsPerPage,
+          safePage * ShardsPerPage + ShardsPerPage,
+        );
 
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
@@ -78,15 +107,35 @@ function buildPingComponents(
     999,
     ((cpu.user + cpu.system) / 1_000_000 / Math.max(1, process.uptime())) * 100,
   );
-  const ramMb = Math.round(mem.rss / 1024 / 1024);
-  const ramPercent = Math.round((mem.rss / totalmem()) * 1000) / 10;
+  const ramPercent = (mem.rss / totalmem()) * 100;
   const uptime = client.uptime ?? Math.round(process.uptime() * 1000);
+  const cacheHitRatio = getCacheHitRatio();
+  const guilds = Array.from(client.guilds.cache.values()) as any[];
 
-  const guilds = client.guilds.cache.size;
-  const members = Array.from(client.guilds.cache.values()).reduce(
-    (sum: number, g: any) => sum + (g.memberCount ?? 0),
-    0,
-  );
+  const shardBlocks = pageShardIds.map((shardId) => {
+    const shard = client.ws.shards.get(shardId);
+    const shardGuilds = guilds.filter((g) => (g.shardId ?? 0) === shardId);
+    return buildShardBlock({
+      shardId,
+      ping: shard?.ping ?? client.ws.ping ?? 0,
+      uptime,
+      cpuPercent,
+      rss: mem.rss,
+      ramPercent,
+      servers: shardGuilds.length,
+      members: shardGuilds.reduce(
+        (sum: number, g: any) => sum + (g.memberCount ?? 0),
+        0,
+      ),
+    });
+  });
+
+  const botName = client.user?.username ?? "Lumi";
+  const externalServices = [
+    "### External Services:",
+    `⠀🧠 **Cache:** ${cacheHitRatio.toFixed(1)}% hit ratio `,
+    `⠀ 🐘 **Database:** \`${dbLatency}ms\``,
+  ].join("\n");
 
   const actionRows = [
     row(
@@ -111,17 +160,12 @@ function buildPingComponents(
   ];
 
   return makeCard(
-    BrandColors.neutral,
-    `🔴 Shard [${shardId}]`,
-    [
-      `🕐 **Latency:** ${shard?.ping ?? "—"}ms · ⏱️ **Uptime:** ${formatUptime(uptime)}`,
-      `**CPU:** ${cpuPercent.toFixed(1)}% · 💾 **RAM:** ${ramMb} MB (${ramPercent}%)`,
-      `🌐 **Servers:** ${guilds} · 👥 **Members:** ${members}`,
-      `### External Services\n💾 **Cache:** ${getCacheHitRatio()}% hit ratio\n🗄️ **Database:** \`${dbLatency}ms\``,
-    ],
+    undefined,
+    "",
+    [`__## ${botName} Status:__`, ...shardBlocks, externalServices],
     {
-      statusBadge: { status: "online" },
-      footer: `Page ${safePage + 1} of ${totalPages} · Shard ${shardId}`,
+      hideTitle: true,
+      noAccent: true,
       actionRows,
       separatorAboveActionRows: true,
     },
@@ -162,7 +206,7 @@ export async function handlePingButton(
 
   const delta = parseInt(deltaStr, 10);
   const currentPage = pingSessions.get(userId) ?? 0;
-  const maxPage = Math.max(0, services.client.ws.shards.size - 1);
+  const maxPage = totalPagesFor(services.client.ws.shards.size) - 1;
   const newPage = Math.min(maxPage, Math.max(0, currentPage + delta));
 
   const dbLatency = await getDbLatency(services.prisma);

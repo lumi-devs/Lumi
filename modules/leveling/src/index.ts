@@ -79,6 +79,7 @@ async function addXp(services: any, guildId: string, userId: string, xp: number,
     },
   });
 
+  if (!user) return { leveledUp: false, newLevel: 0, oldLevel: 0 };
   const newLevel = calculateLevel(Number(user.xp));
   if (newLevel > user.level) {
     await services.db.prisma.levelingUser.update({
@@ -459,8 +460,8 @@ const levelingModule: ModuleDefinition = defineModule({
     { key: "xpPerMessage", label: "XP per Message", type: "number", description: "Base XP per message" },
     { key: "xpPerMinuteVc", label: "XP per Minute in VC", type: "number", description: "Voice chat XP rate" },
     { key: "cooldownSeconds", label: "XP Cooldown", type: "number", description: "Seconds between XP gains" },
-    { key: "roleRewards", label: "Role Rewards", type: "multi-role", description: "Roles granted at specific levels" },
-    { key: "multiplierRoles", label: "XP Multiplier Roles", type: "multi-role", description: "Roles that boost XP gain" },
+    { key: "roleRewards", label: "Role Rewards", type: "json", description: "JSON array: [{level, roleId, removePrevious}]" },
+    { key: "multiplierRoles", label: "XP Multiplier Roles", type: "json", description: "JSON array: [{roleId, multiplier}]" },
     { key: "ignoredChannels", label: "Ignored Channels", type: "multi-channel", description: "Channels where XP is disabled" },
     { key: "ignoredRoles", label: "Ignored Roles", type: "multi-role", description: "Roles that don't gain XP" },
   ],
