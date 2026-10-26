@@ -1,0 +1,12 @@
+{
+  "apiVersion": 2,
+  "name": "logging-logs",
+  "displayName": "Logging",
+  "emoji": "📝",
+  "description": "Message, edit, delete, voice, and moderation logging",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "logging"
+  ]
+}

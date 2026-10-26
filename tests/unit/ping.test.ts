@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   pingCommand,
   handlePingButton,
-} from "../../apps/bot/src/core/src/commands.js";
+} from "../../apps/bot/src/core/src/commands.ts";
 
 const makeServices = (
   options: {

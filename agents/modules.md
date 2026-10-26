@@ -2,94 +2,157 @@
 
 Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + loader).
 
-## Architecture: Built-in Services vs Toggleable Modules
+## Architecture: Built-in Services vs Toggleable Supermodules
 
 **Built-in Services** (always running, non-disableable):
 - `apps/bot/src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
 - `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
 
-**Toggleable Modules** (enable/disable per guild via `/lumi` → Modules):
-All modules under `modules/` are toggleable:
-- `mod` — case-backed moderation (ban, kick, timeout, warn, purge, notes)
-- `leveling` — XP, ranks, role rewards, leaderboards, rank cards
-- `economy` — Currency, banking, shop, jobs, gambling, balance cards
-- `utility` — avatar, banner, whois, serverinfo, nick, purge
-- `tempvc` — Join-to-create voice channels with ownership
-- `logging` — Message/edit/delete/voice/mod logging
-- `welcome` — Join/leave messages, DM on join, auto-roles
-- `reactionroles` — Button/reaction role menus
-- `afk` — AFK status with mention replies
-- `onboarding` — Rules screening, channel hints
-- `sticky` — Sticky messages
-- `sheets` — Spreadsheet automation (auto-responses, FAQs)
+**Toggleable Supermodules** (enable/disable per guild via `/lumi` → Modules):
+All modules under `modules/` are **supermodules** that contain independently-toggleable **submodules**:
+
+### Utility
+- `utility-afk` — AFK status with mention replies and nickname prefix
+- `utility-tempvc` — Join-to-create temporary voice channels with ownership controls
+- `utility-info` — Avatar, banner, whois, serverinfo, nick, purge
+
+### Community
+- `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
+- `community-economy` — Currency, banking, shop, jobs, gambling, balance cards
+
+### Moderation
+- `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute)
+
+### Logging
+- `logging-logs` — Message, edit, delete, voice, and moderation logging
+
+### Security
+- `security-antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses
+- `security-join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
+- `security-verification` — Member verification with emoji captcha, web verification, pending/verified roles
+- `security-panic` — Automated server lockdown, channel locking, invite disabling
+- `security-backups` — Periodic server structure snapshots for auto-recovery and manual restore
+- `security-betrayal` — Velocity monitoring of whitelisted users with per-action limits
+- `security-autorecovery` — Automatic server restore from latest backup when panic triggers
+- `security-automod` — Heat-based automod with 13 filters, escalating punishments, permit-based immunity
 
 ## Rules
 
-- Every module under `modules/` is toggleable. No module is privileged, essential, or undeletable.
+- Every module under `modules/` is a **supermodule** with submodules in `submodules/`. No regular modules exist.
+- Supermodule manifests use `apiVersion: 2` with a `submodules` object.
+- Submodules are defined in `submodules/` directories with their own manifest and entry point.
+- Submodules declare `requirements: ["supermodule-name"]` to depend on their parent.
+- Supermodules are always enabled globally; submodules are enabled/disabled per guild.
+- The `/lumi` panel shows supermodules with expandable submodule lists.
 - Always-on behaviour lives in `apps/bot/src/` as built-in services, not in a module.
 - A module is a directory with `manifest.json` and an entry file.
 - Modules may depend on other modules with semver ranges. A dependency cycle
   marks the involved modules broken and skips them; other modules still load.
 - Modules never import another module. Shared code goes into a package.
 
-## Manifest
-
-`packages/module-runtime/src/manifest.ts` validates:
+## Supermodule Manifest
 
 ```json
 {
   "apiVersion": 2,
-  "name": "afk",
-  "displayName": "AFK",
-  "emoji": "💤",
-  "description": "Set yourself AFK.",
-  "version": "0.1.0",
+  "name": "utility",
+  "displayName": "Utility",
+  "emoji": "🔧",
+  "description": "Utility tools: AFK, temporary voice, and info commands",
+  "version": "2.0.0",
   "entry": "./index.ts",
-  "dependencies": { "leveling": "^0.1.0" },
-  "requirements": ["lodash@^4.17.21"],
+  "submodules": {
+    "afk": {
+      "name": "utility-afk",
+      "displayName": "AFK",
+      "emoji": "💤",
+      "description": "Set AFK status with mention replies and nickname prefix",
+      "version": "2.0.0",
+      "entry": "submodules/afk/index.ts",
+      "dependencies": {},
+      "requirements": ["utility"],
+      "configFields": [],
+      "enabledByDefault": true
+    },
+    "tempvc": { ... },
+    "utility": { ... }
+  },
+  "dependencies": {},
+  "requirements": [],
   "conflicts": [],
-  "capabilities": []
+  "capabilities": [],
+  "configFields": []
 }
 ```
 
-- `name` must match the directory name and `^[a-z][a-z0-9-]*$`.
-- `entry` must be relative and stay inside the module. Both `apiVersion: 2` and
-  `entry` are required.
-- `minBotVersion` / `maxBotVersion` are enforced by the loader.
-- `dependencies` means **other modules** and their semver ranges.
-- `requirements` means **npm packages**, as registry semver specs
-  (`name`, `name@^1.2.3`, `@scope/name@~2.0.0`). They are installed with
-  `bun install --production --ignore-scripts --no-save` inside the addon version
-  directory. No addon `package.json` dependency section is read or allowed.
+## Submodule Manifest
+
+```json
+{
+  "apiVersion": 2,
+  "name": "utility-afk",
+  "displayName": "AFK",
+  "emoji": "💤",
+  "description": "Set AFK status with mention replies and nickname prefix",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "dependencies": {},
+  "requirements": ["utility"],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [...]
+}
+```
+
+- `name` must match the submodule directory name and `^[a-z][a-z0-9-]*$`.
+- `entry` is relative to the submodule directory (usually `index.ts`).
+- `requirements` must include the parent supermodule name.
+- Submodules receive `services.supermoduleServices` containing the parent's `sharedServices`.
 
 ## Definition
 
 ```ts
+// Supermodule index.ts
+export const UtilitySharedServices = { /* shared internal services */ };
+
 export default defineModule({
-  name: "afk",
+  name: "utility",
+  displayName: "Utility",
+  emoji: "🔧",
+  description: "Utility tools: AFK, temporary voice, and info commands",
+  version: "2.0.0",
+  config: z.object({}),
+  configFields: [...], // Supermodule-level config
+  commands: [],
+  listeners: [],
+  tasks: [],
+  sharedServices: UtilitySharedServices,
+  async onLoad(services) {},
+  async onUnload(services) {},
+});
+
+// Submodule index.ts (e.g., submodules/afk/index.ts)
+export default defineModule({
+  name: "utility-afk",
   displayName: "AFK",
   emoji: "💤",
-  description: "Set yourself AFK.",
-  config: z.object({ nick_prefix_enabled: z.boolean().default(true) }),
-  configFields: [
-    {
-      key: "nick_prefix_enabled",
-      label: "Nickname Prefix",
-      type: "boolean",
-      description: "Prefix nicknames while a member is away.",
-    },
-  ],
+  description: "Set AFK status with mention replies and nickname prefix",
+  version: "2.0.0",
+  config: z.object({ ... }),
+  configFields: [...],
   commands: [afkCommand],
   listeners: [afkMessageListener],
-  onLoad(services) {},
-  onUnload(services) {},
+  async onLoad(services) {
+    const { someSharedService } = services.supermoduleServices; // from parent
+    ...
+  },
 });
 ```
 
 `configFields` is optional display metadata for the `/lumi` module detail panel.
 Zod remains the validator; the metadata only chooses the control (`boolean`,
-`number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`) and
-supplies labels. Multi-select fields store `string[]` values and render a role or
+`number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`, `select`, `multi-string`)
+and supplies labels. Multi-select fields store `string[]` values and render a role or
 channel menu with `minValues: 0`; all other fields open a text modal. The detail
 panel renders the first eight metadata rows and up to three select menus
 (Discord's action-row and component budget); put the most important settings
@@ -98,56 +161,38 @@ settings.
 
 The loader verifies the definition name matches the manifest and that commands and
 listeners declare the same module name. It also checks command names,
-descriptions, unique names within the module, and that a provided builder reports
-the same name. Module commands may not collide with built-in command names
-(`reservedCommands`). It calls `onLoad`, wires listeners, registers commands, and
-tracks disposers.
+subcommand names, and autocomplete handlers for uniqueness within the supermodule.
 
-## Lifecycle
+## Loading Order
 
-- `load()` — unload existing records, discover roots, validate, topologically
-  sort, skip disabled modules, import entries.
-- `reload(name)` — unload, re-read the manifest, import with a cache-busting query.
-- `setEnabled(name, enabled)` — persists the global state and loads/unloads.
-- `unload(name)` — remove listeners, commands, then `onUnload`.
-- `unloadAll()` — reverse order.
-- `onChange` (loader option) runs after load/reload/enable/disable/uninstall. The
-  app uses it to re-register slash commands; it is skipped before the client is
-  ready.
+1. Supermodules load first (topologically sorted by `dependencies`)
+2. Supermodule `onLoad` runs, populating `sharedServices`
+3. Submodules load (topologically sorted including cross-supermodule deps)
+4. Submodules receive `services.supermoduleServices` from their parent
 
-## Roots
+## Panel UI
 
-- Bundled: `modules/` (origin `bundled`).
-- Addons: `data/addons/` (origin `addon`).
+In `/lumi` → Modules tab:
+```
+🔧 Utility [▼]
+  ├── 💤 AFK          [ON]  [Open]
+  ├── 🔊 TempVC       [ON]  [Open]
+  └── 🔧 Info Cmds    [ON]  [Open]
 
-Both go through the same validation, discovery, and lifecycle. There is no
-separate addon loading path. A bundled and an addon module cannot share a name;
-the bundled module wins and the addon is reported broken. Do not install an addon
-under a bundled module name.
+👥 Community [▼]
+  ├── 📈 Leveling     [ON]  [Open]
+  └── 💰 Economy      [ON]  [Open]
 
-Module listeners run while the module is globally loaded. A guild can still
-disable the module, so listeners that act on guild events must check
-`services.modules.isEnabled(guildId, name)` before doing work.
+🛡️ Moderation [▼]
+  └── 🛡️ Moderation   [ON]  [Open]
 
-## Guild enablement
+📝 Logging [▼]
+  └── 📝 Logging      [ON]  [Open]
 
-`services.modules.isEnabled(guildId, module)` is the only gate. Built-in commands
-(`module: null`) bypass it. Enablement is global state AND guild state; there is
-no `config.enabled` key.
+🛡️ Security [▼]
+  ├── ☢️ Anti-Nuke    [ON]  [Open]
+  ├── 🚪 Join Gate    [OFF] [Open]
+  └── ...
+```
 
-## Module List
-
-| Module | Description | Key Features |
-|--------|-------------|--------------|
-| `mod` | Case-backed moderation | Ban, kick, timeout, warn, purge, notes, thresholds, voice mute |
-| `leveling` | XP & ranks | XP curves, role rewards, leaderboards, rank cards (images) |
-| `economy` | Currency & banking | Balance, bank, shop, jobs, gambling, balance cards |
-| `utility` | Info commands | Avatar, banner, whois, serverinfo, nick, purge |
-| `tempvc` | Temp voice channels | Join-to-create, ownership, limits, auto-cleanup |
-| `logging` | Event logging | Message/edit/delete/voice/mod, webhook delivery |
-| `welcome` | Join/leave | Messages, DM on join, auto-roles |
-| `reactionroles` | Role menus | Buttons, selects, unique/multiple modes |
-| `afk` | AFK system | Mention replies, nick prefix |
-| `onboarding` | Server onboarding | Rules screening, channel hints |
-| `sticky` | Sticky messages | Auto-repost at channel bottom |
-| `sheets` | Automation | Spreadsheet rules for auto-responses, FAQs |
+Clicking ▶/▼ expands/collapses submodules. Clicking "Open" opens the submodule's config panel.

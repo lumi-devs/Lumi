@@ -4,7 +4,7 @@ import {
   hasAdminAccess,
   hasExtraOwnerAccess,
   roleIdsFrom,
-} from "../../apps/bot/src/admin/src/access.js";
+} from "../../apps/bot/src/admin/src/access.ts";
 
 function permits(allowed: boolean) {
   return {

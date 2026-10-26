@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect } from "vitest";
 
 interface LoadTestResult {
   testName: string;
@@ -10,9 +10,6 @@ interface LoadTestResult {
   errorRate: number;
   durationMs: number;
 }
-
-const results: LoadTestResult[] = [];
-
 function percentile(arr: number[], p: number): number {
   if (arr.length === 0) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
@@ -94,8 +91,7 @@ describe("Load Tests", () => {
       };
       
       const result = await runLoadTest("Cache 10k ops/sec", 10000, operation, 2000);
-      results.push(result);
-      
+
       expect(result.errorRate).toBeLessThan(0.01);
       expect(result.p99LatencyMs).toBeLessThan(100);
       console.log(`Cache 10k: ${result.actualOpsPerSecond.toFixed(0)} ops/s, P99: ${result.p99LatencyMs}ms`);
@@ -113,7 +109,6 @@ describe("Load Tests", () => {
       };
       
       const result = await runLoadTest("Cache 50k ops/sec", 50000, operation, 2000);
-      results.push(result);
       
       expect(result.errorRate).toBeLessThan(0.01);
       expect(result.p99LatencyMs).toBeLessThan(200);
@@ -135,7 +130,6 @@ describe("Load Tests", () => {
       };
       
       const result = await runLoadTest("DB Read 1k ops/sec", 1000, operation, 2000);
-      results.push(result);
       
       expect(result.errorRate).toBe(0);
       expect(result.p99LatencyMs).toBeLessThan(50);
@@ -153,7 +147,6 @@ describe("Load Tests", () => {
       };
       
       const result = await runLoadTest("DB Write 1k ops/sec", 1000, operation, 2000);
-      results.push(result);
       
       expect(result.errorRate).toBe(0);
       expect(result.p99LatencyMs).toBeLessThan(50);
@@ -177,7 +170,6 @@ describe("Load Tests", () => {
       };
       
       const result = await runLoadTest("Command Processing 100/sec", 100, operation, 2000);
-      results.push(result);
       
       expect(result.errorRate).toBeLessThan(0.15);
       console.log(`Commands 100: ${result.actualOpsPerSecond.toFixed(0)} ops/s, P99: ${result.p99LatencyMs}ms`);

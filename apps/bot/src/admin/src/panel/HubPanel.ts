@@ -230,75 +230,21 @@ function fieldLine(field: ConfigField, value: FieldValue): string[] {
   ];
 }
 
-async function renderModules(
-  interaction: HubInteraction,
-  services: HubServices,
-  page = 0,
-  notice?: string,
-): Promise<CardReply> {
-  const guildId = interaction.guildId!;
-  const modules = services.moduleLoader
-    .listAll()
-    .map((module) => ({
-      name: module.manifest.name,
-      displayName: module.manifest.displayName || module.manifest.name,
-      emoji: module.manifest.emoji || "⚙️",
-      description: module.manifest.description,
-      enabled: services.moduleLoader.isEnabled(guildId, module.manifest.name),
-    }))
-    .sort((left, right) => left.displayName.localeCompare(right.displayName));
 
-  if (modules.length === 0) {
-    return makeEmptyCard(
-      "Modules",
-      "No modules are installed on this bot.",
-      "Add a module under `modules/` and restart the bot.",
-      panelOptions(interaction, "modules", ["Hub", "Modules"]),
-    );
+function getModuleState(interaction: HubInteraction): { expandedSupermodules?: string[] } {
+  if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
+    const msg = interaction.message;
+    if (!msg) return {};
+    const footer = msg.embeds[0]?.footer?.text;
+    if (!footer) return {};
+    try {
+      const data = JSON.parse(footer.split("|")[1] ?? "{}");
+      return data;
+    } catch {
+      return {};
+    }
   }
-
-  const totalPages = Math.max(1, Math.ceil(modules.length / ModulesPerPage));
-  const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const shown = modules.slice(
-    safePage * ModulesPerPage,
-    safePage * ModulesPerPage + ModulesPerPage,
-  );
-
-  const sections = shown.map((module) =>
-    settingRow(
-      [
-        `${module.enabled ? "✅" : "⛔"} ${module.emoji} **${module.displayName}**`,
-        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
-      ],
-      {
-        customId: `lumi:modopen:${module.name}`,
-        label: "Open",
-        style: ButtonStyle.Primary,
-      },
-    ),
-  );
-
-  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  if (totalPages > 1) rows.push(pageRow("lumi:mods", safePage, totalPages));
-
-  const enabledCount = modules.filter((module) => module.enabled).length;
-  const footer = [
-    `${enabledCount} of ${modules.length} enabled`,
-    totalPages > 1 ? `page ${safePage + 1}/${totalPages}` : null,
-    "Open a module to configure it.",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  return makeCard(
-    undefined,
-    "⚙️ Feature Modules",
-    notice ? `**${notice}**` : [],
-    {
-      sections,
-      ...panelOptions(interaction, "modules", ["Hub", "Modules"], rows, footer),
-    },
-  );
+  return {};
 }
 
 async function renderModuleDetail(
@@ -646,7 +592,116 @@ function addonModal(): ModalBuilder {
       ),
     );
 }
+async function renderModules(
+  interaction: HubInteraction,
+  services: HubServices,
+  page = 0,
+  notice?: string,
+): Promise<CardReply> {
+  const guildId = interaction.guildId!;
+  const allModules = services.moduleLoader.listGlobal();
+  
+  const supermodules = allModules.filter(m => !m.isSubmodule);
+  const submodules = allModules.filter(m => m.isSubmodule);
 
+  if (supermodules.length === 0) {
+    return makeEmptyCard(
+      "Modules",
+      "No modules are installed on this bot.",
+      "Add a module under `modules/` and restart the bot.",
+      panelOptions(interaction, "modules", ["Hub", "Modules"]),
+    );
+  }
+
+  const showSubmodules = new Set<string>();
+  const state = getModuleState(interaction);
+  if (state.expandedSupermodules) {
+    for (const name of state.expandedSupermodules) {
+      showSubmodules.add(name);
+    }
+  }
+
+  const displayItems: Array<{
+    name: string;
+    displayName: string;
+    emoji: string;
+    description: string;
+    enabled: boolean;
+    isSubmodule: boolean;
+    supermodule?: string;
+  }> = [];
+
+  for (const mod of supermodules) {
+    const enabled = services.moduleLoader.isEnabled(guildId, mod.name);
+    displayItems.push({ ...mod, enabled });
+    if (showSubmodules.has(mod.name)) {
+      const children = submodules.filter(s => s.supermodule === mod.name);
+      for (const child of children) {
+        const enabled = services.moduleLoader.isEnabled(guildId, child.name);
+        displayItems.push({ ...child, enabled });
+      }
+    }
+  }
+
+  if (displayItems.length === 0) {
+    return makeEmptyCard(
+      "Modules",
+      "No modules are installed on this bot.",
+      "Add a module under `modules/` and restart the bot.",
+      panelOptions(interaction, "modules", ["Hub", "Modules"]),
+    );
+  }
+
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / ModulesPerPage));
+  const safePage = Math.max(0, Math.min(page, totalPages - 1));
+  const shown = displayItems.slice(
+    safePage * ModulesPerPage,
+    safePage * ModulesPerPage + ModulesPerPage,
+  );
+
+  const sections = shown.map((module): any => {
+    const indent = module.isSubmodule ? "    " : "";
+    const toggle = !module.isSubmodule
+      ? (showSubmodules.has(module.name) ? "▼" : "▶")
+      : "";
+    const status = module.enabled ? "✅" : "⛔";
+    return settingRow(
+      [
+        `${status} ${indent}${toggle} ${module.emoji} **${module.displayName}**`,
+        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
+      ],
+      {
+        customId: !module.isSubmodule
+          ? `lumi:modexpand:${module.name}`
+          : `lumi:modopen:${module.name}`,
+        label: !module.isSubmodule ? "Toggle" : "Open",
+        style: ButtonStyle.Primary,
+      },
+    );
+  });
+
+  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  if (totalPages > 1) rows.push(pageRow("lumi:mods", safePage, totalPages));
+
+  const enabledCount = displayItems.filter((module) => module.enabled).length;
+  const footer = [
+    `${enabledCount} of ${displayItems.length} enabled`,
+    totalPages > 1 ? `page ${safePage + 1}/${totalPages}` : null,
+    "Open a module to configure it. ▶ = expand submodules.",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return makeCard(
+    undefined,
+    "⚙️ Feature Modules",
+    notice ? `**${notice}**` : [],
+    {
+      sections,
+      ...panelOptions(interaction, "modules", ["Hub", "Modules"], rows, footer),
+    },
+  );
+}
 async function renderHome(
   interaction: HubInteraction,
   services: HubServices,
@@ -1004,6 +1059,13 @@ export class HubPanel {
             target,
             Number(extra) || 0,
           ),
+        );
+        return true;
+      }
+      case "modexpand": {
+        await interaction.deferUpdate();
+        await interaction.editReply(
+          await renderModules(interaction, services, 0),
         );
         return true;
       }

@@ -1,0 +1,162 @@
+{
+  "apiVersion": 2,
+  "name": "security-antinuke",
+  "displayName": "Anti-Nuke",
+  "emoji": "☢️",
+  "description": "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Anti-Nuke Enabled",
+      "type": "boolean",
+      "description": "Enable anti-nuke monitoring",
+      "default": false
+    },
+    {
+      "key": "windowSeconds",
+      "label": "Detection Window (seconds)",
+      "type": "number",
+      "description": "Sliding window for counting actions",
+      "default": 60,
+      "min": 10,
+      "max": 600
+    },
+    {
+      "key": "maxBans",
+      "label": "Max Bans",
+      "type": "number",
+      "description": "Bans allowed per executor within the window",
+      "default": 5,
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "responseBans",
+      "label": "Response - Bans",
+      "type": "select",
+      "description": "Action taken when ban threshold trips",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "maxKicks",
+      "label": "Max Kicks",
+      "type": "number",
+      "description": "Kicks allowed per executor within the window",
+      "default": 5,
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "responseKicks",
+      "label": "Response - Kicks",
+      "type": "select",
+      "description": "Action taken when kick threshold trips",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "maxChannelDeletes",
+      "label": "Max Channel Deletes",
+      "type": "number",
+      "description": "Channel deletions allowed per executor within the window",
+      "default": 3,
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "responseChannelDeletes",
+      "label": "Response - Channel Deletes",
+      "type": "select",
+      "description": "Action taken when channel-delete threshold trips",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "maxRoleDeletes",
+      "label": "Max Role Deletes",
+      "type": "number",
+      "description": "Role deletions allowed per executor within the window",
+      "default": 3,
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "responseRoleDeletes",
+      "label": "Response - Role Deletes",
+      "type": "select",
+      "description": "Action taken when role-delete threshold trips",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "maxWebhookCreates",
+      "label": "Max Webhook Creates",
+      "type": "number",
+      "description": "Webhook creations allowed per executor within the window",
+      "default": 3,
+      "min": 1,
+      "max": 50
+    },
+    {
+      "key": "responseWebhookCreates",
+      "label": "Response - Webhook Creates",
+      "type": "select",
+      "description": "Action taken when webhook-create threshold trips",
+      "default": "quarantine",
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ]
+    },
+    {
+      "key": "maxVanityChanges",
+      "label": "Max Vanity URL Changes",
+      "type": "number",
+      "description": "Vanity invite code changes allowed per executor within the window",
+      "default": 1,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "maxPermissionGrants",
+      "label": "Max Dangerous Permission Grants",
+      "type": "number",
+      "description": "Times @everyone can be granted dangerous permissions per executor within window",
+      "default": 1,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "maxQuarantineBypass",
+      "label": "Max Quarantine Bypass Attempts",
+      "type": "number",
+      "description": "Times an executor can attempt to change quarantined member's roles",
+      "default": 1,
+      "min": 1,
+      "max": 10
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-export const ConfigFieldSchema = z.object({
+const ConfigFieldSchema = z.object({
   key: z.string(),
   label: z.string(),
-  type: z.enum(["boolean", "number", "string", "channel", "role", "multi-channel", "multi-role", "json"]),
+  type: z.enum(["boolean", "number", "string", "channel", "role", "multi-channel", "multi-role", "json", "select", "multi-string"]),
   description: z.string().optional(),
   required: z.boolean().optional(),
   default: z.unknown().optional(),
@@ -11,8 +11,7 @@ export const ConfigFieldSchema = z.object({
   channelTypes: z.array(z.number()).optional(),
 });
 
-export const ManifestSchema = z.object({
-  apiVersion: z.literal(2),
+const SubmoduleDefSchema = z.object({
   name: z.string().regex(/^[a-z][a-z0-9-]*$/),
   displayName: z.string().min(1).max(50),
   emoji: z.string().min(1).max(10),
@@ -22,24 +21,43 @@ export const ManifestSchema = z.object({
   dependencies: z.record(z.string()).default({}),
   requirements: z.array(z.string()).default([]),
   conflicts: z.array(z.string()).default([]),
+  configFields: z.array(ConfigFieldSchema).default([]),
+  enabledByDefault: z.boolean().default(true),
+});
+
+const SupermoduleManifestSchema = z.object({
+  apiVersion: z.literal(2),
+  name: z.string().regex(/^[a-z][a-z0-9-]*$/),
+  displayName: z.string().min(1).max(50),
+  emoji: z.string().min(1).max(10),
+  description: z.string().min(1).max(200),
+  version: z.string().regex(/^\d+\.\d+\.\d+/),
+  entry: z.string().min(1),
+  submodules: z.record(SubmoduleDefSchema).default({}),
+  dependencies: z.record(z.string()).default({}),
+  requirements: z.array(z.string()).default([]),
+  conflicts: z.array(z.string()).default([]),
   capabilities: z.array(z.object({
     name: z.string(),
     version: z.string(),
     provides: z.array(z.string()),
   })).default([]),
   configFields: z.array(ConfigFieldSchema).default([]),
-  configOverrides: z.boolean().optional(),
   minBotVersion: z.string().optional(),
   maxBotVersion: z.string().optional(),
 });
 
-export type ModuleManifest = z.infer<typeof ManifestSchema>;
+export type SupermoduleManifest = z.infer<typeof SupermoduleManifestSchema>;
+export type SubmoduleDef = z.infer<typeof SubmoduleDefSchema>;
 export type ConfigField = z.infer<typeof ConfigFieldSchema>;
+export type ModuleManifest = SupermoduleManifest; // All modules are supermodules
 
 export function validateManifest(data: unknown): ModuleManifest {
-  return ManifestSchema.parse(data);
+  return SupermoduleManifestSchema.parse(data);
 }
 
 export function isManifestValid(data: unknown): data is ModuleManifest {
-  return ManifestSchema.safeParse(data).success;
+  return SupermoduleManifestSchema.safeParse(data).success;
 }
+
+export { SupermoduleManifestSchema, SubmoduleDefSchema, ConfigFieldSchema };

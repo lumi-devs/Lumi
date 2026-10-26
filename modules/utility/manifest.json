@@ -3,28 +3,43 @@
   "name": "utility",
   "displayName": "Utility",
   "emoji": "🔧",
-  "description": "Avatar, banner, whois, serverinfo, nick, and info commands",
+  "description": "Utility tools: AFK, temporary voice, and info commands",
   "version": "2.0.0",
-  "entry": "src/index.ts",
-  "dependencies": {},
-  "requirements": [],
-  "conflicts": [],
-  "capabilities": [],
-  "defaultEnabled": true,
-  "configFields": [
-    {
-      "key": "purgeMaxMessages",
-      "label": "Max Purge Messages",
-      "type": "number",
-      "description": "Maximum messages per purge (1-100)",
-      "default": 100
+  "isSupermodule": true,
+  "entry": "index.ts",
+  "submodules": {
+    "afk": {
+      "name": "utility-afk",
+      "displayName": "AFK",
+      "emoji": "💤",
+      "description": "Set AFK status with mention replies and nickname prefix",
+      "version": "2.0.0",
+      "entry": "submodules/afk/src/index.ts",
+      "requirements": [
+        "utility"
+      ]
     },
-    {
-      "key": "nickMaxLength",
-      "label": "Max Nickname Length",
-      "type": "number",
-      "description": "Maximum nickname length",
-      "default": 32
+    "tempvc": {
+      "name": "utility-tempvc",
+      "displayName": "Temporary Voice",
+      "emoji": "🔊",
+      "description": "Join-to-create temporary voice channels with ownership controls",
+      "version": "2.0.0",
+      "entry": "submodules/tempvc/src/index.ts",
+      "requirements": [
+        "utility"
+      ]
+    },
+    "utility": {
+      "name": "utility-info",
+      "displayName": "Info Commands",
+      "emoji": "🔧",
+      "description": "Avatar, banner, whois, serverinfo, nick, and info commands",
+      "version": "2.0.0",
+      "entry": "submodules/utility/src/index.ts",
+      "requirements": [
+        "utility"
+      ]
     }
-  ]
+  }
 }

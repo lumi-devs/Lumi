@@ -117,18 +117,21 @@ model LevelingConfig {
 }
 
 model LevelingUser {
-  id        String   @id @default(cuid())
-  guildId   String   @map("guild_id")
-  userId    String   @map("user_id")
-  xp        BigInt   @default(0)
-  level     Int      @default(0)
-  totalXp   BigInt   @default(0) @map("total_xp")
-  lastXpAt  DateTime? @map("last_xp_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  guildId      String   @map("guild_id")
+  userId       String   @map("user_id")
+  xp           BigInt   @default(0)
+  level        Int      @default(0)
+  totalXp      BigInt   @default(0) @map("total_xp")
+  voiceMinutes Int      @default(0) @map("voice_minutes")
+  messageCount Int      @default(0) @map("message_count")
+  lastXpAt     DateTime? @map("last_xp_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@unique([guildId, userId])
   @@index([guildId, level])
   @@index([guildId, xp])
+  @@index([guildId, voiceMinutes])
   @@map("leveling_users")
 }
 

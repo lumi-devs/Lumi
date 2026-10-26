@@ -3,7 +3,7 @@ import { ChannelType } from "discord.js";
 import {
   TempVcConfigSchema,
   createTempVoiceChannel,
-} from "../../modules/tempvc/src/panel.js";
+} from "../../modules/utility/submodules/tempvc/src/panel.ts";
 
 const makeChannel = (
   guild: any,

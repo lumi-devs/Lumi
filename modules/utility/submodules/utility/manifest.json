@@ -1,0 +1,28 @@
+{
+  "apiVersion": 2,
+  "name": "utility-info",
+  "displayName": "Info Commands",
+  "emoji": "🔧",
+  "description": "Avatar, banner, whois, serverinfo, nick, and info commands",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "utility"
+  ],
+  "configFields": [
+    {
+      "key": "purgeMaxMessages",
+      "label": "Max Purge Messages",
+      "type": "number",
+      "description": "Maximum messages per purge (1-100)",
+      "default": 100
+    },
+    {
+      "key": "nickMaxLength",
+      "label": "Max Nickname Length",
+      "type": "number",
+      "description": "Maximum nickname length",
+      "default": 32
+    }
+  ]
+}

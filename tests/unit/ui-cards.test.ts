@@ -8,7 +8,7 @@ import {
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
-} from "../../packages/ui/src/index.js";
+} from "../../packages/ui/src/index.ts";
 
 describe("card system", () => {
   it("builds a Components V2 reply with no embeds", () => {

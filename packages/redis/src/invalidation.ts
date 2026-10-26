@@ -81,13 +81,6 @@ export class InvalidationBus {
     });
   }
 
-  triggerResync(): void {
-    for (const cb of this.resyncCallbacks) {
-      cb();
-    }
-    this.resyncCallbacks = [];
-  }
-
   async close(): Promise<void> {
     await this.subscriber.unsubscribe(this.channel);
     await this.subscriber.quit();

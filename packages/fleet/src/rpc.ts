@@ -174,24 +174,6 @@ export class CrossShardRpc extends EventEmitter {
     });
   }
 
-  async callSingle(method: string, params: any, options: { targetShard?: number; timeout?: number } = {}): Promise<RpcResponse> {
-    const responses = await this.call(method, params, { 
-      targetShards: options.targetShard ? [options.targetShard] : "all", 
-      timeout: options.timeout 
-    });
-    return responses[0];
-  }
-
-  async broadcast(method: string, params: any): Promise<void> {
-    await this.publisher!.publish("lumi:rpc:request", JSON.stringify({
-      id: crypto.randomUUID(),
-      method,
-      params,
-      timeout: 5000,
-      targetShards: "all",
-    }));
-  }
-
   async shutdown(): Promise<void> {
     if (this.subscriber) {
       await this.subscriber.unsubscribe("lumi:rpc:request", "lumi:rpc:response");

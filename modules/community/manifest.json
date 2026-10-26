@@ -1,0 +1,34 @@
+{
+  "apiVersion": 2,
+  "name": "community",
+  "displayName": "Community",
+  "emoji": "👥",
+  "description": "Community features: leveling and economy",
+  "version": "2.0.0",
+  "isSupermodule": true,
+  "entry": "index.ts",
+  "submodules": {
+    "leveling": {
+      "name": "community-leveling",
+      "displayName": "Leveling",
+      "emoji": "📈",
+      "description": "XP, levels, role rewards, and leaderboards with voice XP support",
+      "version": "2.1.0",
+      "entry": "submodules/leveling/src/index.ts",
+      "requirements": [
+        "community"
+      ]
+    },
+    "economy": {
+      "name": "community-economy",
+      "displayName": "Economy",
+      "emoji": "💰",
+      "description": "Currency, banking, shop, jobs, and gambling",
+      "version": "2.0.0",
+      "entry": "submodules/economy/src/index.ts",
+      "requirements": [
+        "community"
+      ]
+    }
+  }
+}

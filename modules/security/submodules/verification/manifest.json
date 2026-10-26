@@ -1,0 +1,72 @@
+{
+  "apiVersion": 2,
+  "name": "security-verification",
+  "displayName": "Verification",
+  "emoji": "✅",
+  "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Verification Enabled",
+      "type": "boolean",
+      "description": "Require members to verify via panel",
+      "default": false
+    },
+    {
+      "key": "verifiedRoleId",
+      "label": "Verified Role",
+      "type": "role",
+      "description": "Role granted after passing verification"
+    },
+    {
+      "key": "pendingRoleId",
+      "label": "Pending Role",
+      "type": "role",
+      "description": "Role assigned on join and removed once verified (optional)"
+    },
+    {
+      "key": "timeoutMinutes",
+      "label": "Verify Timeout (minutes)",
+      "type": "number",
+      "description": "How long a member has to pass the captcha",
+      "default": 10,
+      "min": 1,
+      "max": 1440
+    },
+    {
+      "key": "kickOnTimeout",
+      "label": "Kick on Timeout",
+      "type": "boolean",
+      "description": "Kick members who don't verify before timeout",
+      "default": false
+    },
+    {
+      "key": "mode",
+      "label": "Verification Mode",
+      "type": "select",
+      "description": "How members prove they're human",
+      "default": "emoji",
+      "choices": [
+        "emoji",
+        "none",
+        "web"
+      ]
+    },
+    {
+      "key": "target",
+      "label": "Verification Target",
+      "type": "select",
+      "description": "Require verification from everyone or only suspicious accounts",
+      "default": "everyone",
+      "choices": [
+        "everyone",
+        "suspicious"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { CommandDefinition, ListenerDefinition, TaskDefinition, ConfigField, ModuleCapability } from "./types.js";
+import type { CommandDefinition, ListenerDefinition, TaskDefinition, ConfigField, ModuleCapability, ModuleServices } from "./types.js";
 
 export interface ModuleDefinition {
   name: string;
@@ -18,23 +18,6 @@ export interface ModuleDefinition {
   requirements?: string[];
   conflicts?: string[];
   capabilities?: ModuleCapability[];
-}
-
-export interface ModuleServices {
-  db: any;
-  cache: any;
-  redis: any;
-  rpc: any;
-  discord: any;
-  permits: any;
-  config: any;
-  ui: any;
-  scheduler: any;
-  observability: any;
-  modules: {
-    isEnabled: (guildId: string, moduleName: string) => boolean;
-  };
-  __moduleName?: string;
 }
 
 export type Disposer = () => void | Promise<void>;

@@ -46,12 +46,6 @@ export class DistributedLock {
     this.acquired = false;
   }
 
-  async extend(ttlMs?: number): Promise<boolean> {
-    if (!this.acquired) return false;
-    const newTtl = ttlMs ?? this.ttlMs;
-    const result = await this.redis.pexpire(this.key, newTtl);
-    return result === 1;
-  }
 }
 
 export function createLock(redis: Redis, key: string, options?: LockOptions): DistributedLock {

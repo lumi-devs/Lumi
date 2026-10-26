@@ -1,0 +1,140 @@
+{
+  "apiVersion": 2,
+  "name": "security",
+  "displayName": "Security",
+  "emoji": "🛡️",
+  "description": "Server protection suite: anti-nuke, join gate, verification, panic mode, backups, and automod",
+  "version": "2.0.0",
+  "isSupermodule": true,
+  "entry": "index.ts",
+  "submodules": {
+    "antinuke": {
+      "name": "security-antinuke",
+      "displayName": "Anti-Nuke",
+      "emoji": "☢️",
+      "description": "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
+      "version": "2.0.0",
+      "entry": "submodules/antinuke/index.ts",
+      "requirements": [
+        "security"
+      ]
+    },
+    "join-gate": {
+      "name": "security-join-gate",
+      "displayName": "Join Gate",
+      "emoji": "🚪",
+      "description": "On-join security filters: no avatar, min age, unverified bots, advertising names, suspicious accounts, username patterns, and raid detection",
+      "version": "2.0.0",
+      "entry": "submodules/join-gate/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    },
+    "verification": {
+      "name": "security-verification",
+      "displayName": "Verification",
+      "emoji": "✅",
+      "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
+      "version": "2.0.0",
+      "entry": "submodules/verification/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    },
+    "panic": {
+      "name": "security-panic",
+      "displayName": "Panic Mode",
+      "emoji": "🚨",
+      "description": "Automated server lockdown on threat velocity spikes, channel locking, invite disabling, and permission snapshots",
+      "version": "2.0.0",
+      "entry": "submodules/panic/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    },
+    "backups": {
+      "name": "security-backups",
+      "displayName": "Backups",
+      "emoji": "💾",
+      "description": "Periodic server structure snapshots (roles, channels, permissions) for auto-recovery and manual restore",
+      "version": "2.0.0",
+      "entry": "submodules/backups/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    },
+    "betrayal": {
+      "name": "security-betrayal",
+      "displayName": "Betrayal Guard",
+      "emoji": "🔍",
+      "description": "Velocity monitoring of whitelisted users with per-action minute/hour limits and automatic immunity revocation",
+      "version": "2.0.0",
+      "entry": "submodules/betrayal/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    },
+    "autorecovery": {
+      "name": "security-autorecovery",
+      "displayName": "Auto Recovery",
+      "emoji": "♻️",
+      "description": "Automatic server restore from latest backup when panic mode triggers or nuke detected",
+      "version": "2.0.0",
+      "entry": "submodules/autorecovery/index.ts",
+      "requirements": [
+        "security",
+        "security-backups"
+      ],
+      "enabledByDefault": false
+    },
+    "automod": {
+      "name": "security-automod",
+      "displayName": "Automod",
+      "emoji": "🤖",
+      "description": "Heat-based automod with 13 filters, escalating punishments, heat panic mode, and permit-based immunity",
+      "version": "2.0.0",
+      "entry": "submodules/automod/index.ts",
+      "requirements": [
+        "security"
+      ],
+      "enabledByDefault": false
+    }
+  },
+  "configFields": [
+    {
+      "key": "logChannelId",
+      "label": "Security Log Channel",
+      "type": "channel",
+      "description": "Channel for security logs (anti-nuke, join gate, verification, panic, betrayal)",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "quarantineRoleId",
+      "label": "Quarantine Role",
+      "type": "role",
+      "description": "Role assigned to quarantined members (required for anti-nuke, join gate, verification)"
+    },
+    {
+      "key": "trustedRoleIds",
+      "label": "Trusted Roles",
+      "type": "multi-role",
+      "description": "Role IDs exempt from anti-nuke and join gate filters"
+    },
+    {
+      "key": "minAccountAgeHours",
+      "label": "Min Account Age (hours)",
+      "type": "number",
+      "description": "Accounts younger than this are flagged by join gate (0 disables)",
+      "default": 0,
+      "min": 0,
+      "max": 8760
+    }
+  ]
+}

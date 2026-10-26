@@ -3,6 +3,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "lib": [
       "ES2022"
     ],
@@ -55,41 +56,53 @@
       "@lumi/downloader": [
         "packages/downloader/src"
       ],
-      "@lumi/mod": [
-        "modules/mod/src"
-      ],
-      "@lumi/leveling": [
-        "modules/leveling/src"
-      ],
-      "@lumi/economy": [
-        "modules/economy/src"
-      ],
       "@lumi/utility": [
-        "modules/utility/src"
+        "modules/utility/submodules/utility"
       ],
       "@lumi/tempvc": [
-        "modules/tempvc/src"
+        "modules/utility/submodules/tempvc"
       ],
       "@lumi/logging": [
-        "modules/logging/src"
-      ],
-      "@lumi/welcome": [
-        "modules/welcome/src"
-      ],
-      "@lumi/reactionroles": [
-        "modules/reactionroles/src"
+        "modules/logging/submodules/logging"
       ],
       "@lumi/afk": [
-        "modules/afk/src"
+        "modules/utility/submodules/afk"
       ],
-      "@lumi/onboarding": [
-        "modules/onboarding/src"
+      "@lumi/community-leveling": [
+        "modules/community/submodules/leveling"
       ],
-      "@lumi/sticky": [
-        "modules/sticky/src"
+      "@lumi/community-economy": [
+        "modules/community/submodules/economy"
       ],
-      "@lumi/sheets": [
-        "modules/sheets/src"
+      "@lumi/moderation-mod": [
+        "modules/moderation/submodules/mod"
+      ],
+      "@lumi/security": [
+        "modules/security"
+      ],
+      "@lumi/security-antinuke": [
+        "modules/security/submodules/antinuke"
+      ],
+      "@lumi/security-join-gate": [
+        "modules/security/submodules/join-gate"
+      ],
+      "@lumi/security-verification": [
+        "modules/security/submodules/verification"
+      ],
+      "@lumi/security-panic": [
+        "modules/security/submodules/panic"
+      ],
+      "@lumi/security-backups": [
+        "modules/security/submodules/backups"
+      ],
+      "@lumi/security-betrayal": [
+        "modules/security/submodules/betrayal"
+      ],
+      "@lumi/security-autorecovery": [
+        "modules/security/submodules/autorecovery"
+      ],
+      "@lumi/security-automod": [
+        "modules/security/submodules/automod"
       ]
     }
   },

@@ -1,0 +1,91 @@
+{
+  "apiVersion": 2,
+  "name": "community-economy",
+  "displayName": "Economy",
+  "emoji": "💰",
+  "description": "Currency, banking, shop, jobs, and gambling",
+  "version": "2.0.0",
+  "entry": "src/index.ts",
+  "requirements": [
+    "community"
+  ],
+  "configFields": [
+    {
+      "key": "currencyName",
+      "label": "Currency Name",
+      "type": "string",
+      "description": "Name of the currency",
+      "default": "Credits"
+    },
+    {
+      "key": "currencySymbol",
+      "label": "Currency Symbol",
+      "type": "string",
+      "description": "Emoji or symbol",
+      "default": "💰"
+    },
+    {
+      "key": "startingBalance",
+      "label": "Starting Balance",
+      "type": "number",
+      "description": "Initial balance for new users",
+      "default": 0
+    },
+    {
+      "key": "dailyAmount",
+      "label": "Daily Reward",
+      "type": "number",
+      "description": "Amount for /daily",
+      "default": 100
+    },
+    {
+      "key": "weeklyAmount",
+      "label": "Weekly Reward",
+      "type": "number",
+      "description": "Amount for /weekly",
+      "default": 500
+    },
+    {
+      "key": "monthlyAmount",
+      "label": "Monthly Reward",
+      "type": "number",
+      "description": "Amount for /monthly",
+      "default": 2000
+    },
+    {
+      "key": "interestRate",
+      "label": "Bank Interest Rate",
+      "type": "number",
+      "description": "Daily interest (0.01 = 1%)",
+      "default": 0.01
+    },
+    {
+      "key": "taxRate",
+      "label": "Transaction Tax",
+      "type": "number",
+      "description": "Tax on transfers (0.05 = 5%)",
+      "default": 0
+    },
+    {
+      "key": "workCooldown",
+      "label": "Work Cooldown (seconds)",
+      "type": "number",
+      "description": "Seconds between /work",
+      "default": 3600
+    },
+    {
+      "key": "workMinPay",
+      "label": "Work Min Pay",
+      "type": "number",
+      "description": "Minimum /work payout",
+      "default": 50
+    },
+    {
+      "key": "workMaxPay",
+      "label": "Work Max Pay",
+      "type": "number",
+      "description": "Maximum /work payout",
+      "default": 200
+    }
+  ]
+}

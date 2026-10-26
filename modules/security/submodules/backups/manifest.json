@@ -1,0 +1,39 @@
+{
+  "apiVersion": 2,
+  "name": "security-backups",
+  "displayName": "Backups",
+  "emoji": "💾",
+  "description": "Periodic server structure snapshots for auto-recovery and manual restore",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Backups Enabled",
+      "type": "boolean",
+      "description": "Enable periodic backups",
+      "default": false
+    },
+    {
+      "key": "intervalHours",
+      "label": "Backup Interval (hours)",
+      "type": "number",
+      "description": "How often to snapshot server structure",
+      "default": 3,
+      "min": 1,
+      "max": 168
+    },
+    {
+      "key": "keepCount",
+      "label": "Backups to Keep",
+      "type": "number",
+      "description": "Older backups beyond this are pruned",
+      "default": 10,
+      "min": 1,
+      "max": 50
+    }
+  ]
+}

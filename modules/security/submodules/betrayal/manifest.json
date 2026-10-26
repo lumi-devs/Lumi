@@ -1,0 +1,46 @@
+{
+  "apiVersion": 2,
+  "name": "security-betrayal",
+  "displayName": "Betrayal Guard",
+  "emoji": "🔍",
+  "description": "Velocity monitoring of whitelisted users with per-action minute/hour limits and automatic immunity revocation",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Betrayal Guard Enabled",
+      "type": "boolean",
+      "description": "Enable betrayal guard for whitelisted users",
+      "default": false
+    },
+    {
+      "key": "defaultMinuteLimit",
+      "label": "Default Minute Limit",
+      "type": "number",
+      "description": "Default max actions per minute for whitelisted users",
+      "default": 8,
+      "min": 1,
+      "max": 100
+    },
+    {
+      "key": "defaultHourLimit",
+      "label": "Default Hour Limit",
+      "type": "number",
+      "description": "Default max actions per hour for whitelisted users",
+      "default": 40,
+      "min": 1,
+      "max": 1000
+    },
+    {
+      "key": "actions",
+      "label": "Monitored Actions",
+      "type": "json",
+      "description": "Per-action minute/hour limits override defaults",
+      "default": {}
+    }
+  ]
+}

@@ -6,3 +6,4 @@ data
 packages/db/generated
 *.log
 .DS_Store
+*.tsbuildinfo

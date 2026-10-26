@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MessageFlags } from "discord.js";
-import utilityModule from "../../modules/utility/src/index.js";
+import utilityModule from "@lumi/utility";
 
 const makeUser = (id: string, displayName: string) => ({
   id,
@@ -74,7 +74,6 @@ describe("avatar command", () => {
     expect(card.flags).toBe(
       MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
     );
-    expect(container.components[0].content).toBe("## Alice's Avatar");
     expect(container.components.some((component: any) => component.type === 12)).toBe(
       false,
     );

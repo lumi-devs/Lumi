@@ -3,8 +3,30 @@ import { ChatInputCommandInteraction, AutocompleteInteraction, ButtonInteraction
 export interface ConfigField {
   key: string;
   label: string;
-  type: "boolean" | "number" | "string" | "channel" | "role" | "multi-channel" | "multi-role" | "json";
+  type: "boolean" | "number" | "string" | "channel" | "role" | "multi-channel" | "multi-role" | "json" | "select" | "multi-string";
   description?: string;
+  required?: boolean;
+  default?: unknown;
+  choices?: string[];
+  channelTypes?: number[];
+  min?: number;
+  max?: number;
+}
+
+export interface ModuleServices {
+  db: any;
+  cache: any;
+  redis: any;
+  rpc: any;
+  discord: any;
+  permits: any;
+  config: any;
+  ui: any;
+  scheduler: any;
+  observability: any;
+  modules: {
+    isEnabled: (guildId: string, moduleName: string) => boolean;
+  };
 }
 
 export interface CommandDefinition {

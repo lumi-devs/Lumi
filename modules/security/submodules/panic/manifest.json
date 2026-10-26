@@ -1,0 +1,62 @@
+{
+  "apiVersion": 2,
+  "name": "security-panic",
+  "displayName": "Panic Mode",
+  "emoji": "🚨",
+  "description": "Automated server lockdown on threat velocity spikes, channel locking, invite disabling, and permission snapshots",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Panic Mode Enabled",
+      "type": "boolean",
+      "description": "Enable panic mode system",
+      "default": false
+    },
+    {
+      "key": "burstLimit",
+      "label": "Burst Limit",
+      "type": "number",
+      "description": "Number of anti-nuke punishments to trigger panic mode",
+      "default": 3,
+      "min": 1,
+      "max": 20
+    },
+    {
+      "key": "burstWindowSeconds",
+      "label": "Burst Window (seconds)",
+      "type": "number",
+      "description": "Timeframe for burst limit",
+      "default": 2,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "key": "durationMinutes",
+      "label": "Lockdown Duration (minutes)",
+      "type": "number",
+      "description": "How long the server remains locked down",
+      "default": 30,
+      "min": 1,
+      "max": 1440
+    },
+    {
+      "key": "notifyOwners",
+      "label": "Notify Owners",
+      "type": "boolean",
+      "description": "DM server owners when panic mode activates",
+      "default": true
+    },
+    {
+      "key": "lockModCommands",
+      "label": "Lock Mod Commands",
+      "type": "boolean",
+      "description": "Restrict moderation commands to owner/actor during panic",
+      "default": false
+    }
+  ]
+}

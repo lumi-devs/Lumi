@@ -1,0 +1,319 @@
+{
+  "apiVersion": 2,
+  "name": "security-automod",
+  "displayName": "Automod",
+  "emoji": "🤖",
+  "description": "Heat-based automod with 13 filters, escalating punishments, and permit-based immunity",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "security"
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Automod Enabled",
+      "type": "boolean",
+      "description": "Enable automod system",
+      "default": false
+    },
+    {
+      "key": "perMessage",
+      "label": "Heat per Message",
+      "type": "number",
+      "description": "Heat added for every message",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perMention",
+      "label": "Heat per Mention",
+      "type": "number",
+      "description": "Heat added per user/role mention",
+      "default": 3,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perDuplicate",
+      "label": "Heat per Duplicate",
+      "type": "number",
+      "description": "Heat added when message repeats previous",
+      "default": 5,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perSimilar",
+      "label": "Heat per Similar",
+      "type": "number",
+      "description": "Heat added for near-duplicate messages",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "similarityThreshold",
+      "label": "Similarity Threshold",
+      "type": "number",
+      "description": "How similar (0-1) counts as near-duplicate",
+      "default": 0.85,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "perZalgo",
+      "label": "Heat per Zalgo",
+      "type": "number",
+      "description": "Heat for zalgo/corrupted text",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perFilterHit",
+      "label": "Heat per Filter Hit",
+      "type": "number",
+      "description": "Heat when hard filter triggers",
+      "default": 10,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perAttachment",
+      "label": "Heat per Attachment",
+      "type": "number",
+      "description": "Heat per attachment/image",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perEmoji",
+      "label": "Heat per Emoji",
+      "type": "number",
+      "description": "Heat per custom/unicode emoji",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "perLink",
+      "label": "Heat per Link",
+      "type": "number",
+      "description": "Heat when message contains URL",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "webhookMultiplier",
+      "label": "Webhook Multiplier",
+      "type": "number",
+      "description": "Heat multiplier for webhook messages",
+      "default": 1,
+      "min": 1,
+      "max": 20
+    },
+    {
+      "key": "decayPerMinute",
+      "label": "Heat Decay per Minute",
+      "type": "number",
+      "description": "Heat points bled off per minute",
+      "default": 10,
+      "min": 1,
+      "max": 100
+    },
+    {
+      "key": "warnThreshold",
+      "label": "Warn Threshold",
+      "type": "number",
+      "description": "Heat at which member gets warning",
+      "default": 15,
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "key": "timeoutThreshold",
+      "label": "Timeout Threshold",
+      "type": "number",
+      "description": "Heat at which member is timed out",
+      "default": 30,
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "key": "quarantineThreshold",
+      "label": "Quarantine Threshold",
+      "type": "number",
+      "description": "Heat at which member is quarantined",
+      "default": 0,
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "key": "timeoutMinutes",
+      "label": "Timeout Minutes",
+      "type": "number",
+      "description": "Timeout duration at timeout threshold",
+      "default": 10,
+      "min": 1,
+      "max": 40320
+    },
+    {
+      "key": "multiplierEnabled",
+      "label": "Escalating Timeouts",
+      "type": "boolean",
+      "description": "Increase timeout duration on repeat offenses",
+      "default": false
+    },
+    {
+      "key": "multiplierBase",
+      "label": "Escalation Multiplier",
+      "type": "number",
+      "description": "Each repeat multiplies duration by this",
+      "default": 2,
+      "min": 2,
+      "max": 10
+    },
+    {
+      "key": "panicRaiderCount",
+      "label": "Heat Panic Raider Count",
+      "type": "number",
+      "description": "Distinct raiders to trigger heat panic mode",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "panicWindowSeconds",
+      "label": "Heat Panic Window (seconds)",
+      "type": "number",
+      "description": "Window for counting raiders",
+      "default": 30,
+      "min": 5,
+      "max": 600
+    },
+    {
+      "key": "lockdownMentionThreshold",
+      "label": "Mention Flood Threshold",
+      "type": "number",
+      "description": "Total mentions to trigger auto-lockdown",
+      "default": 0,
+      "min": 0,
+      "max": 10000
+    },
+    {
+      "key": "lockdownWindowSeconds",
+      "label": "Mention Flood Window (seconds)",
+      "type": "number",
+      "description": "Window for counting mentions",
+      "default": 30,
+      "min": 5,
+      "max": 600
+    },
+    {
+      "key": "lockdownDurationMinutes",
+      "label": "Auto-Lockdown Duration (minutes)",
+      "type": "number",
+      "description": "How long lockdown lasts",
+      "default": 10,
+      "min": 1,
+      "max": 1440
+    },
+    {
+      "key": "terms",
+      "label": "Filtered Terms",
+      "type": "multi-string",
+      "description": "Words/phrases to block (one per line)",
+      "default": []
+    },
+    {
+      "key": "regexRules",
+      "label": "Regex Rules",
+      "type": "multi-string",
+      "description": "Regex patterns to block (one per line)",
+      "default": []
+    },
+    {
+      "key": "blockInvites",
+      "label": "Block Invites",
+      "type": "boolean",
+      "description": "Delete messages with Discord invites",
+      "default": false
+    },
+    {
+      "key": "inviteAllowlist",
+      "label": "Allowed Invite Codes",
+      "type": "multi-string",
+      "description": "Invite codes always allowed",
+      "default": []
+    },
+    {
+      "key": "blockLinks",
+      "label": "Block Links",
+      "type": "boolean",
+      "description": "Delete messages with links",
+      "default": false
+    },
+    {
+      "key": "linkAllowlist",
+      "label": "Allowed Link Domains",
+      "type": "multi-string",
+      "description": "Domains exempt from link blocking",
+      "default": []
+    },
+    {
+      "key": "maxMentions",
+      "label": "Max Mentions",
+      "type": "number",
+      "description": "Max user+role mentions per message",
+      "default": 0,
+      "min": 0,
+      "max": 50
+    },
+    {
+      "key": "maxCapsPercent",
+      "label": "Max Caps %",
+      "type": "number",
+      "description": "Max % uppercase letters (0 disables)",
+      "default": 0,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "capsMinLength",
+      "label": "Caps Min Length",
+      "type": "number",
+      "description": "Min message length for caps check",
+      "default": 12,
+      "min": 1,
+      "max": 500
+    },
+    {
+      "key": "exemptRoles",
+      "label": "Exempt Roles (legacy)",
+      "type": "multi-role",
+      "description": "Role IDs bypassing all filters (use automod.bypass permits instead)"
+    },
+    {
+      "key": "filterTimeoutMinutes",
+      "label": "Default Timeout (minutes)",
+      "type": "number",
+      "description": "Timeout duration on filter hit",
+      "default": 0,
+      "min": 0,
+      "max": 40320
+    },
+    {
+      "key": "logChannelId",
+      "label": "Log Channel",
+      "type": "channel",
+      "description": "Channel for filter hit logs",
+      "channelTypes": [
+        0
+      ]
+    }
+  ]
+}
