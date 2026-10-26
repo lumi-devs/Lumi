@@ -5,9 +5,8 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 ## Architecture: Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
-- `apps/bot/src/core/` — Gateway, sharding, RPC server, scheduler, lifecycle
+- `apps/bot/src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
 - `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
-- `apps/bot/src/security/` — Verification, panic, anti-nuke, join gate
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules):
 All modules under `modules/` are toggleable:

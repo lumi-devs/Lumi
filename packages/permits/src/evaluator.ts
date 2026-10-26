@@ -53,7 +53,7 @@ function verdictForBucket(
   return { tier, verdict: "pass" };
 }
 
-function matchesConditions(conditions: PermitConditions | null, options: EvaluatePermitOptions): boolean {
+export function matchesConditions(conditions: PermitConditions | null, options: EvaluatePermitOptions): boolean {
   if (!conditions) return true;
   
   if (conditions.channelIds?.length && options.channelId) {
@@ -97,74 +97,74 @@ function matchesConditions(conditions: PermitConditions | null, options: Evaluat
   return true;
 }
 
-function isPermitValid(permit: any, at: Date): boolean {
+export function isPermitValid(permit: any, at: Date): boolean {
   if (permit.expiresAt && new Date(permit.expiresAt) < at) return false;
-  if (permit.schedule && permit.schedule.trim()) {
-    if (!matchesCron(permit.schedule, at, permit.timezone ?? undefined)) {
+  const schedule = permit.schedule;
+  if (typeof schedule === "string" && schedule.trim().length > 0) {
+    if (!matchesCron(schedule, at, permit.timezone ?? undefined)) {
       return false;
     }
   }
   return true;
 }
 
-export async function evaluatePermit(
+function privilegedResult(
   options: EvaluatePermitOptions,
-  container: { 
-    db: { permits: { getPermitChain: (guildId: string, userId: string, chain: Array<{ targetType: PermitTargetType; targetId: string }>) => Promise<PermitChainResult> } };
-    client?: any;
-  },
-): Promise<EvaluatedPermit> {
-  const { guildId, userId, roleIds = [], channelId, permitNode, guildOwnerId } = options;
-  const at = options.at ?? new Date();
-  
-  // Tier 1: Bot Owner
+  client: any,
+): EvaluatedPermit | null {
+  const { guildId, userId, guildOwnerId } = options;
+
   if (OwnerIds.has(userId)) {
     return {
       rows: [{ tier: "owner", verdict: "allow", detail: "bot owner" }],
       allowed: true,
     };
   }
-  
-  // Tier 2: Guild Owner
+
   if (guildOwnerId && guildOwnerId === userId) {
     return {
       rows: [{ tier: "owner", verdict: "allow", detail: "server owner" }],
       allowed: true,
     };
   }
-  
-  const rows: PermitTierExplanation[] = [{ tier: "owner", verdict: "pass" }];
-  
-  // Tier 3: Discord Manager (Administrator / ManageGuild)
-  let manager = false;
-  if (container.client?.guilds?.cache) {
-    const member = container.client.guilds.cache
-      .get(guildId)
-      ?.members?.cache?.get(userId);
-    manager = Boolean(
-      member?.permissions?.has(PermissionFlagsBits.Administrator) ||
-        member?.permissions?.has(PermissionFlagsBits.ManageGuild),
-    );
-  }
-  rows.push(
-    manager
-      ? { tier: "manager", verdict: "allow", detail: "Administrator or ManageGuild" }
-      : { tier: "manager", verdict: "pass" },
-  );
-  if (manager) return { rows, allowed: true };
 
-  // Custom permits only (user -> channel -> roles in position order)
-  const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
-    { targetType: "USER", targetId: userId },
-    ...(channelId ? [{ targetType: "CHANNEL" as const, targetId: channelId }] : []),
-    ...roleIds.map((roleId) => ({ targetType: "ROLE" as const, targetId: roleId })),
-  ];
-  
-  const { tiers, isQuarantined } = await container.db.permits.getPermitChain(
-    guildId,
-    userId,
-    chain,
+  const member = client?.guilds?.cache
+    ?.get(guildId)
+    ?.members?.cache?.get(userId);
+  const manager = Boolean(
+    member?.permissions?.has(PermissionFlagsBits.Administrator) ||
+      member?.permissions?.has(PermissionFlagsBits.ManageGuild),
   );
+
+  if (!manager) return null;
+
+  return {
+    rows: [
+      { tier: "owner", verdict: "pass" },
+      {
+        tier: "manager",
+        verdict: "allow",
+        detail: "Administrator or ManageGuild",
+      },
+    ],
+    allowed: true,
+  };
+}
+
+export function evaluatePermitWithChain(
+  options: EvaluatePermitOptions,
+  chainResult: PermitChainResult,
+  client?: any,
+): EvaluatedPermit {
+  const { userId, roleIds = [], channelId, permitNode } = options;
+
+  const privileged = privilegedResult(options, client);
+  if (privileged) return privileged;
+
+  const rows: PermitTierExplanation[] = [
+    { tier: "owner", verdict: "pass" },
+    { tier: "manager", verdict: "pass" },
+  ];
 
   let allowed = false;
   let decided = false;
@@ -176,22 +176,17 @@ export async function evaluatePermit(
     }
   };
 
-  // All tiers are custom permits evaluated in position order
   const labels = [
     "user",
     ...(channelId ? ["channel"] : []),
     ...roleIds.map((roleId) => `role:${roleId}`),
   ];
-  
-  tiers.forEach((tier, index) => {
+
+  chainResult.tiers.forEach((tier, index) => {
     const label = labels[index] ?? `tier:${index}`;
-    const row = verdictForBucket(
-      `custom:${label}`,
-      tier.custom,
-      permitNode,
-    );
-    
-    if (isQuarantined) {
+    const row = verdictForBucket(`custom:${label}`, tier.custom, permitNode);
+
+    if (chainResult.isQuarantined) {
       row.detail = row.detail
         ? `${row.detail}, ignored while quarantined`
         : "ignored while quarantined";
@@ -202,6 +197,46 @@ export async function evaluatePermit(
   });
 
   return { rows, allowed };
+}
+
+export async function evaluatePermit(
+  options: EvaluatePermitOptions,
+  container: {
+    db: {
+      permits: {
+        getPermitChain: (
+          guildId: string,
+          userId: string,
+          chain: Array<{ targetType: PermitTargetType; targetId: string }>,
+        ) => Promise<PermitChainResult>;
+      };
+    };
+    client?: any;
+  },
+): Promise<EvaluatedPermit> {
+  const { guildId, userId, roleIds = [], channelId } = options;
+
+  const privileged = privilegedResult(options, container.client);
+  if (privileged) return privileged;
+
+  const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
+    { targetType: "USER", targetId: userId },
+    ...(channelId
+      ? [{ targetType: "CHANNEL" as const, targetId: channelId }]
+      : []),
+    ...roleIds.map((roleId) => ({
+      targetType: "ROLE" as const,
+      targetId: roleId,
+    })),
+  ];
+
+  const chainResult = await container.db.permits.getPermitChain(
+    guildId,
+    userId,
+    chain,
+  );
+
+  return evaluatePermitWithChain(options, chainResult, container.client);
 }
 
 export function isBotOwner(userId: string): boolean {

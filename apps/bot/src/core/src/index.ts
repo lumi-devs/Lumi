@@ -27,8 +27,9 @@ export {
   type BootOptions 
 } from "./lifecycle";
 
-export { 
-  pingCommand, 
-  handlePingButton, 
-  handlePingClose 
+export {
+  pingCommand,
+  handlePingButton,
 } from "./commands";
+
+export { aboutCommand } from "./about";

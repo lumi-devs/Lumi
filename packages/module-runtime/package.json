@@ -17,7 +17,6 @@
     "@lumi/module-kit": "workspace:*",
     "@lumi/cache": "workspace:*",
     "@lumi/db": "workspace:*",
-    "@lumi/rpc": "workspace:*",
     "@lumi/observability": "workspace:*",
     "semver": "^7.6.0"
   },

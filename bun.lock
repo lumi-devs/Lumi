@@ -14,8 +14,6 @@
         "zod": "^3.22.0",
       },
       "devDependencies": {
-        "@bufbuild/buf": "^1.28.0",
-        "@connectrpc/connect": "^1.4.0",
         "@types/bun": "^1.0.0",
         "@vitest/coverage-v8": "^1.3.0",
         "eslint": "^8.57.0",
@@ -33,7 +31,6 @@
         "@lumi/db": "workspace:*",
         "@lumi/module-runtime": "workspace:*",
         "@lumi/permits": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@lumi/ui": "workspace:*",
         "@prisma/client": "^7.10.0",
         "discord.js": "^14.14.0",
@@ -48,33 +45,12 @@
       "version": "2.0.0",
       "dependencies": {
         "@lumi/cache": "workspace:*",
-        "@lumi/config": "workspace:*",
         "@lumi/db": "workspace:*",
-        "@lumi/discord": "workspace:*",
         "@lumi/observability": "workspace:*",
         "@lumi/permits": "workspace:*",
         "@lumi/redis": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@lumi/scheduler": "workspace:*",
         "discord.js": "^14.14.0",
-      },
-      "devDependencies": {
-        "@types/node": "^20.0.0",
-      },
-    },
-    "apps/bot/src/security": {
-      "name": "@lumi/security",
-      "version": "2.0.0",
-      "dependencies": {
-        "@lumi/cache": "workspace:*",
-        "@lumi/core": "workspace:*",
-        "@lumi/db": "workspace:*",
-        "@lumi/permits": "workspace:*",
-        "@lumi/rpc": "workspace:*",
-        "@lumi/ui": "workspace:*",
-        "@prisma/client": "^7.10.0",
-        "discord.js": "^14.14.0",
-        "zod": "^3.22.0",
       },
       "devDependencies": {
         "@types/node": "^20.0.0",
@@ -87,7 +63,6 @@
         "@lumi/cache": "workspace:*",
         "@lumi/db": "workspace:*",
         "@lumi/module-kit": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@lumi/ui": "workspace:*",
         "discord.js": "^14.14.0",
         "zod": "^3.22.0",
@@ -103,7 +78,6 @@
         "@lumi/cache": "workspace:*",
         "@lumi/db": "workspace:*",
         "@lumi/module-kit": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@lumi/ui": "workspace:*",
         "discord.js": "^14.14.0",
         "zod": "^3.22.0",
@@ -119,7 +93,6 @@
         "@lumi/cache": "workspace:*",
         "@lumi/db": "workspace:*",
         "@lumi/module-kit": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@lumi/ui": "workspace:*",
         "discord.js": "^14.14.0",
         "zod": "^3.22.0",
@@ -139,21 +112,6 @@
         "@types/node": "^20.0.0",
       },
     },
-    "packages/config": {
-      "name": "@lumi/config",
-      "version": "2.0.0",
-      "dependencies": {
-        "dotenv": "^16.4.0",
-        "zod": "^3.22.0",
-      },
-      "devDependencies": {
-        "@types/node": "^20.0.0",
-      },
-    },
-    "packages/contracts": {
-      "name": "@lumi/contracts",
-      "version": "0.1.0",
-    },
     "packages/db": {
       "name": "@lumi/db",
       "version": "2.0.0",
@@ -167,16 +125,6 @@
         "@types/node": "^20.0.0",
         "@types/pg": "^8.11.0",
         "prisma": "^7.10.0",
-      },
-    },
-    "packages/discord": {
-      "name": "@lumi/discord",
-      "version": "2.0.0",
-      "dependencies": {
-        "discord.js": "^14.14.0",
-      },
-      "devDependencies": {
-        "@types/node": "^20.0.0",
       },
     },
     "packages/downloader": {
@@ -217,6 +165,9 @@
     "packages/foundation": {
       "name": "@lumi/foundation",
       "version": "2.0.0",
+      "dependencies": {
+        "pino": "^8.19.0",
+      },
       "devDependencies": {
         "@types/node": "^20.0.0",
       },
@@ -240,7 +191,6 @@
         "@lumi/db": "workspace:*",
         "@lumi/module-kit": "workspace:*",
         "@lumi/observability": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "semver": "^7.6.0",
       },
       "devDependencies": {
@@ -269,7 +219,6 @@
       "dependencies": {
         "@lumi/cache": "workspace:*",
         "@lumi/db": "workspace:*",
-        "@lumi/rpc": "workspace:*",
         "@prisma/client": "^7.10.0",
         "discord.js": "^14.14.0",
         "zod": "^3.22.0",
@@ -285,19 +234,6 @@
         "ioredis": "^5.3.0",
       },
       "devDependencies": {
-        "@types/node": "^20.0.0",
-      },
-    },
-    "packages/rpc": {
-      "name": "@lumi/rpc",
-      "version": "2.0.0",
-      "dependencies": {
-        "@bufbuild/protobuf": "^2.1.0",
-        "@connectrpc/connect": "^1.4.0",
-        "zod": "^3.22.0",
-      },
-      "devDependencies": {
-        "@bufbuild/buf": "^1.28.0",
         "@types/node": "^20.0.0",
       },
     },
@@ -337,26 +273,6 @@
     "@babel/types": ["@babel/types@7.29.11", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.11", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ=="],
 
     "@bcoe/v8-coverage": ["@bcoe/v8-coverage@0.2.3", "", {}, "sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw=="],
-
-    "@bufbuild/buf": ["@bufbuild/buf@1.75.0", "", { "optionalDependencies": { "@bufbuild/buf-darwin-arm64": "1.75.0", "@bufbuild/buf-darwin-x64": "1.75.0", "@bufbuild/buf-linux-aarch64": "1.75.0", "@bufbuild/buf-linux-armv7": "1.75.0", "@bufbuild/buf-linux-x64": "1.75.0", "@bufbuild/buf-win32-arm64": "1.75.0", "@bufbuild/buf-win32-x64": "1.75.0" }, "bin": { "buf": "bin/buf", "protoc-gen-buf-lint": "bin/protoc-gen-buf-lint", "protoc-gen-buf-breaking": "bin/protoc-gen-buf-breaking" } }, "sha512-uMuBCULLDax9/3d5Lo9mea38vuPDv4mrRVE4XfSq3qPcD5UUxlg0RJ9hm84lYCzI3A3lIvLeChxrw9c1RUiD2w=="],
-
-    "@bufbuild/buf-darwin-arm64": ["@bufbuild/buf-darwin-arm64@1.75.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-QiQYSmtVUcKy9DK/d+zJ3+D4iUQmmiDQ3i8/yBr8cf7Nr28lqKMAIKznJE/uGRsjr90fHaUQO+Xsedec0ArN5g=="],
-
-    "@bufbuild/buf-darwin-x64": ["@bufbuild/buf-darwin-x64@1.75.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-U2W+MRE9jJ7Am7x02ZWt87U5lfPrjKMdB1aZDslsuyOHo+fEUvZolupmhoW30v6syNAWBOfkoi0k5TLc2FNGqQ=="],
-
-    "@bufbuild/buf-linux-aarch64": ["@bufbuild/buf-linux-aarch64@1.75.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-eX+XyokzJDqsNIFo8b1O3DBvbnksOozPJX4QVsNn61JqSUtWspyTNeYqwg8lRDancML+bDqZEDFPABjAsVCQGQ=="],
-
-    "@bufbuild/buf-linux-armv7": ["@bufbuild/buf-linux-armv7@1.75.0", "", { "os": "linux", "cpu": "arm" }, "sha512-2RVhmr3vJ145DazYTk9dWAzeQPtcJ0SiSzY02v1Su/JIfgzhv9lgOm+y3nGuLjyZFF8UfTtmuHfHso5zDBgsCQ=="],
-
-    "@bufbuild/buf-linux-x64": ["@bufbuild/buf-linux-x64@1.75.0", "", { "os": "linux", "cpu": "x64" }, "sha512-YGGJAx0lpMCE7aMWjNOJcfoEaG/e+iYHnTC4SZ0P5eS4IffMryA9Z4/bb1m1wNXAEJ8ATFMEZOAk/5x9VE47ig=="],
-
-    "@bufbuild/buf-win32-arm64": ["@bufbuild/buf-win32-arm64@1.75.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-iRge6Ntta41gt0i7P8/EZFDWe3uLNnCEN86r1tKTWctumWxPET3UJcSzzYPyL4gxvzu1/1VTu+AB3+MYAqHy6Q=="],
-
-    "@bufbuild/buf-win32-x64": ["@bufbuild/buf-win32-x64@1.75.0", "", { "os": "win32", "cpu": "x64" }, "sha512-/BgLt3VWndocuG4lbMdlBc1i41I+Bap4zm8R1Cnmov6DtoAQp4dy/leRrvT4aDArIUQ1o7W/Y92xTRITedU4ww=="],
-
-    "@bufbuild/protobuf": ["@bufbuild/protobuf@2.16.0", "", {}, "sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q=="],
-
-    "@connectrpc/connect": ["@connectrpc/connect@1.7.0", "", { "peerDependencies": { "@bufbuild/protobuf": "^1.10.0" } }, "sha512-iNKdJRi69YP3mq6AePRT8F/HrxWCewrhxnLMNm0vpqXAR8biwzRtO6Hjx80C6UvtKJ5sFmffQT7I4Baecz389w=="],
 
     "@discordjs/builders": ["@discordjs/builders@1.14.1", "", { "dependencies": { "@discordjs/formatters": "^0.6.2", "@discordjs/util": "^1.2.0", "@sapphire/shapeshift": "^4.0.0", "discord-api-types": "^0.38.40", "fast-deep-equal": "^3.1.3", "ts-mixer": "^6.0.4", "tslib": "^2.6.3" } }, "sha512-gSKkhXLqs96TCzk66VZuHHl8z2bQMJFGwrXC0f33ngK+FLNau4hU1PYny3DNJfNdSH+gVMzE85/d5FQ2BpcNwQ=="],
 
@@ -486,15 +402,9 @@
 
     "@lumi/cache": ["@lumi/cache@workspace:packages/cache"],
 
-    "@lumi/config": ["@lumi/config@workspace:packages/config"],
-
-    "@lumi/contracts": ["@lumi/contracts@workspace:packages/contracts"],
-
     "@lumi/core": ["@lumi/core@workspace:apps/bot/src/core"],
 
     "@lumi/db": ["@lumi/db@workspace:packages/db"],
-
-    "@lumi/discord": ["@lumi/discord@workspace:packages/discord"],
 
     "@lumi/downloader": ["@lumi/downloader@workspace:packages/downloader"],
 
@@ -516,11 +426,7 @@
 
     "@lumi/redis": ["@lumi/redis@workspace:packages/redis"],
 
-    "@lumi/rpc": ["@lumi/rpc@workspace:packages/rpc"],
-
     "@lumi/scheduler": ["@lumi/scheduler@workspace:packages/scheduler"],
-
-    "@lumi/security": ["@lumi/security@workspace:apps/bot/src/security"],
 
     "@lumi/ui": ["@lumi/ui@workspace:packages/ui"],
 
@@ -1074,7 +980,7 @@
 
     "doctrine": ["doctrine@3.0.0", "", { "dependencies": { "esutils": "^2.0.2" } }, "sha512-yS+Q5i3hBf7GBkd4KG8a7eBNNWNGLTaEwwYWUijIYM7zrlYDM0BFXHjjPWlWZ1Rg7UaddZeIDmi9jF3HmqiQ2w=="],
 
-    "dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
+    "dotenv": ["dotenv@17.4.2", "", {}, "sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw=="],
 
     "effect": ["effect@3.20.0", "", { "dependencies": { "@standard-schema/spec": "^1.0.0", "fast-check": "^3.23.1" } }, "sha512-qMLfDJscrNG8p/aw+IkT9W7fgj50Z4wG5bLBy0Txsxz8iUHjDIkOgO3SV0WZfnQbNG2VJYb0b+rDLMrhM4+Krw=="],
 
@@ -1835,8 +1741,6 @@
     "bun-types/@types/node": ["@types/node@26.6.5", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg=="],
 
     "bun-types/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
-
-    "c12/dotenv": ["dotenv@17.4.2", "", {}, "sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw=="],
 
     "c12/pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 

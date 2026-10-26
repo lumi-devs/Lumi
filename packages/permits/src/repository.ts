@@ -1,14 +1,22 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import Redis from "ioredis";
-import { evaluatePermit } from "./evaluator.js";
+import {
+  evaluateNodeMatch,
+  evaluatePermit,
+  evaluatePermitWithChain,
+  isPermitValid,
+  matchesConditions,
+} from "./evaluator.js";
 import type { 
   Permit, 
   PermitAssignment, 
   PermitChainResult,
   PermitTargetType,
+  Polarity,
   EvaluatePermitOptions,
   PermitTierExplanation,
-  EvaluatedPermit
+  EvaluatedPermit,
+  PermitConditions
 } from "./types.js";
 
 export interface PermitAuditLogEntry {
@@ -28,6 +36,15 @@ export interface PermitExportData {
   version: number;
   exportedAt: string;
   guildId: string;
+}
+
+function isPermitNumberConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const candidate = error as { code?: unknown; meta?: { target?: unknown } };
+  if (candidate.code !== "P2002") return false;
+  const target = candidate.meta?.target;
+  if (Array.isArray(target)) return target.includes("number");
+  return typeof target === "string" && target.includes("number");
 }
 
 export class PermitRepository {
@@ -54,30 +71,66 @@ export class PermitRepository {
   async createPermit(data: {
     guildId: string;
     name: string;
-    node: string;
-    polarity: "GRANT" | "DENY";
+    nodes: string[];
+    polarity: Polarity;
     position: number;
+    number?: number;
     builtin?: boolean;
     expiresAt?: Date | null;
     schedule?: Prisma.InputJsonValue | null;
     timezone?: string | null;
     conditions?: Prisma.InputJsonValue | null;
   }): Promise<Permit> {
-    return this.prisma.permit.create({
-      data: {
-        guildId: data.guildId,
-        name: data.name,
-        node: data.node,
-        polarity: data.polarity,
-        position: data.position,
-        builtin: data.builtin ?? false,
-        expiresAt: data.expiresAt ?? null,
-        schedule: data.schedule ?? Prisma.DbNull,
-        timezone: data.timezone ?? null,
-        conditions: data.conditions ?? Prisma.DbNull,
-      },
-      include: { assignments: true },
+    const nodes = Array.from(
+      new Set(data.nodes.map((node) => node.trim()).filter(Boolean)),
+    );
+    if (nodes.length === 0) {
+      throw new Error("A permit needs at least one node.");
+    }
+    const payload = {
+      guildId: data.guildId,
+      name: data.name,
+      nodes,
+      polarity: data.polarity,
+      position: data.position,
+      builtin: data.builtin ?? false,
+      expiresAt: data.expiresAt ?? null,
+      schedule: data.schedule ?? Prisma.DbNull,
+      timezone: data.timezone ?? null,
+      conditions: data.conditions ?? Prisma.DbNull,
+    };
+    if (data.number !== undefined) {
+      return this.prisma.permit.create({
+        data: { ...payload, number: data.number },
+        include: { assignments: true },
+      });
+    }
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const number = await this.nextPermitNumber(data.guildId);
+      try {
+        return await this.prisma.permit.create({
+          data: { ...payload, number },
+          include: { assignments: true },
+        });
+      } catch (error) {
+        if (!isPermitNumberConflict(error)) throw error;
+      }
+    }
+    throw new Error("Could not allocate a permit number.");
+  }
+
+  private async nextPermitNumber(guildId: string): Promise<number> {
+    const permits = await this.prisma.permit.findMany({
+      where: { guildId },
+      select: { number: true },
+      orderBy: { number: "asc" },
     });
+    let number = 1;
+    for (const permit of permits) {
+      if (permit.number === number) number += 1;
+      else if (permit.number > number) break;
+    }
+    return number;
   }
 
   async updatePermit(permitId: number, data: Prisma.PermitUpdateInput): Promise<Permit | null> {
@@ -99,11 +152,12 @@ export class PermitRepository {
     const permit = await this.prisma.permit.findFirst({
       where: { id: permitId, guildId },
     });
-    if (!permit) return false;
+    if (!permit || permit.builtin) return false;
 
     const adjacent = await this.prisma.permit.findFirst({
       where: {
         guildId,
+        builtin: false,
         position: direction === "up" ? { lt: permit.position } : { gt: permit.position },
       },
       orderBy: { position: direction === "up" ? "desc" : "asc" },
@@ -187,96 +241,163 @@ export class PermitRepository {
     const quarantineValue = await this.redis.get(quarantineKey);
     const isQuarantined = quarantineValue !== null && quarantineValue !== "0";
 
-    const tiers = permits.map((permit: any) => {
+    const at = new Date();
+    let channelId: string | undefined;
+    for (const target of chain) {
+      if (target.targetType === "CHANNEL") channelId = target.targetId;
+    }
+    const roleIds = chain
+      .filter((target) => target.targetType === "ROLE")
+      .map((target) => target.targetId);
+    const conditionContext: EvaluatePermitOptions = {
+      guildId,
+      userId,
+      roleIds,
+      channelId,
+      permitNode: "",
+      at,
+    };
+    const validPermits = permits.filter((permit) => {
+      if (!isPermitValid(permit, at)) return false;
+      if (permit.conditions === null) return true;
+      return matchesConditions(
+        permit.conditions as PermitConditions,
+        conditionContext,
+      );
+    });
+
+    const tiers = chain.map(({ targetType, targetId }) => {
       const grant: string[] = [];
       const deny: string[] = [];
-
-      for (const assignment of permit.assignments) {
-        if (permit.polarity === "GRANT") {
-          grant.push(permit.node);
+      for (const permit of validPermits) {
+        const assigned = permit.assignments.some(
+          (assignment) =>
+            assignment.targetType === targetType &&
+            assignment.targetId === targetId &&
+            (assignment.expiresAt === null || assignment.expiresAt >= at),
+        );
+        if (!assigned) continue;
+        if (permit.polarity === "Grant") {
+          grant.push(...permit.nodes);
         } else {
-          deny.push(permit.node);
+          deny.push(...permit.nodes);
         }
       }
-
       return { custom: { grant, deny } };
     });
 
     return { tiers, isQuarantined };
   }
 
-  async getValidPermits(guildId: string, options: {
-    userId: string;
-    roleIds?: string[];
-    channelId?: string;
-    at: Date;
-  }): Promise<Permit[]> {
-    return this.prisma.permit.findMany({
-      where: {
-        guildId,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gte: options.at } },
-        ],
-      },
-      include: { assignments: true },
-      orderBy: { position: "asc" },
-    });
+  async hasGrantNode(options: EvaluatePermitOptions): Promise<boolean> {
+    const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
+      { targetType: "USER", targetId: options.userId },
+      ...(options.channelId
+        ? [{ targetType: "CHANNEL" as const, targetId: options.channelId }]
+        : []),
+      ...(options.roleIds ?? []).map((roleId) => ({
+        targetType: "ROLE" as const,
+        targetId: roleId,
+      })),
+    ];
+    const chainResult = await this.getPermitChain(
+      options.guildId,
+      options.userId,
+      chain,
+    );
+    if (chainResult.isQuarantined) return false;
+    for (const tier of chainResult.tiers) {
+      if (
+        tier.custom.deny.some((node) =>
+          evaluateNodeMatch(node, options.permitNode),
+        )
+      ) {
+        return false;
+      }
+      if (
+        tier.custom.grant.some((node) =>
+          evaluateNodeMatch(node, options.permitNode),
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  async explainPermit(options: EvaluatePermitOptions): Promise<EvaluatedPermit> {
-    const { evaluatePermit } = await import("./evaluator.js");
-    
-    const permits = await this.getValidPermits(options.guildId, {
-      userId: options.userId,
-      roleIds: options.roleIds,
-      channelId: options.channelId,
-      at: options.at ?? new Date(),
-    });
-
-    const assignments = await this.prisma.permitAssignment.findMany({
-      where: {
-        permit: { guildId: options.guildId },
-      },
-    });
-
-    // Get user's role IDs if not provided
-    let roleIds = options.roleIds;
-    if (!roleIds && options.guildId && options.userId) {
-      // This would need guild member fetch - for now use provided roleIds
-    }
-
-    // Use evaluatePermit with a container that provides getPermitChain
+  async explainPermit(
+    options: EvaluatePermitOptions,
+    client: any,
+  ): Promise<EvaluatedPermit> {
     const container = {
       db: {
         permits: {
           getPermitChain: this.getPermitChain.bind(this),
         },
       },
-      client: null,
+      client,
     };
-
     return evaluatePermit(options, container);
+  }
+
+  async explainPermitNodes(
+    options: Omit<EvaluatePermitOptions, "permitNode">,
+    nodes: string[],
+    client: any,
+  ): Promise<Map<string, EvaluatedPermit>> {
+    const results = new Map<string, EvaluatedPermit>();
+    if (nodes.length === 0) return results;
+
+    const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
+      { targetType: "USER", targetId: options.userId },
+      ...(options.channelId
+        ? [{ targetType: "CHANNEL" as const, targetId: options.channelId }]
+        : []),
+      ...(options.roleIds ?? []).map((roleId) => ({
+        targetType: "ROLE" as const,
+        targetId: roleId,
+      })),
+    ];
+
+    const chainResult = await this.getPermitChain(
+      options.guildId,
+      options.userId,
+      chain,
+    );
+
+    for (const node of nodes) {
+      results.set(
+        node,
+        evaluatePermitWithChain(
+          { ...options, permitNode: node },
+          chainResult,
+          client,
+        ),
+      );
+    }
+
+    return results;
   }
 
   async seedBuiltinPermits(guildId: string): Promise<void> {
     const builtins = [
-      { name: "Extra Owner", node: "*", position: 0 },
-      { name: "Trusted Admin", node: "admin.*", position: 1 },
+      { name: "Extra Owner", nodes: ["*"], position: 0 },
+      { name: "Trusted Admin", nodes: ["admin.*"], position: 1 },
     ];
 
     for (const builtin of builtins) {
-      await this.prisma.permit.upsert({
+      const existing = await this.prisma.permit.findUnique({
         where: { guildId_name: { guildId, name: builtin.name } },
-        update: {},
-        create: {
-          guildId,
-          name: builtin.name,
-          node: builtin.node,
-          polarity: "GRANT",
-          position: builtin.position,
-          builtin: true,
-        },
+        select: { id: true },
+      });
+      if (existing) continue;
+      await this.createPermit({
+        guildId,
+        name: builtin.name,
+        nodes: builtin.nodes,
+        polarity: "Grant",
+        position: builtin.position,
+        builtin: true,
       });
     }
   }
@@ -367,7 +488,7 @@ export class PermitRepository {
       return result;
     }
 
-    // Check version compatibility
+    // Reject unsupported export versions
     if (data.version > 1) {
       result.errors.push(`Unsupported export version: ${data.version}`);
       return result;
@@ -401,7 +522,11 @@ export class PermitRepository {
           data: {
             guildId,
             name: permitData.name,
-            node: permitData.node,
+            number:
+              typeof permitData.number === "number"
+                ? permitData.number
+                : await this.nextPermitNumber(guildId),
+            nodes: permitData.nodes,
             polarity: permitData.polarity,
             position: permitData.position,
             builtin: permitData.builtin,
@@ -437,7 +562,7 @@ export class PermitRepository {
           action: "PERMIT_IMPORT",
           targetId: permit.id.toString(),
           targetType: "PERMIT",
-          changes: { name: permit.name, node: permit.node, polarity: permit.polarity },
+          changes: { name: permit.name, nodes: permit.nodes, polarity: permit.polarity },
         });
 
         result.imported++;

@@ -11,7 +11,7 @@ import {
   type ModuleDefinition,
 } from "@lumi/module-kit";
 import {
-  BrandColors,
+  AccentColors,
   ephemeralCard,
   makeCard,
   makeErrorCard,
@@ -132,7 +132,7 @@ const loggingConfigDef: CommandDefinition = {
       case "view": {
         const ignored = (config.ignoredChannels ?? []).map((id: string) => `<#${id}>`).join(", ") || "None";
         await interaction.reply(ephemeralCard(makeCard(
-          BrandColors.primary,
+          undefined,
           "📝 Logging Settings",
           [
             `**Message Log**\n${config.messageLogChannel ? `<#${config.messageLogChannel}>` : "None"}`,
@@ -161,7 +161,7 @@ const onMessageCreateListener: ListenerDefinition = {
 
     if (isIgnored(message, config)) return;
 
-    const card = eventCard("📨 Message Sent", BrandColors.success, [
+    const card = eventCard("📨 Message Sent", AccentColors.success, [
       `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
       `**Channel**\n<#${message.channelId}>`,
       `**Content**\n${message.content.slice(0, 1024) || "*No content*"}`,
@@ -183,7 +183,7 @@ const onMessageUpdateListener: ListenerDefinition = {
 
     if (isIgnored(newMessage, config)) return;
 
-    const card = eventCard("✏️ Message Edited", BrandColors.warning, [
+    const card = eventCard("✏️ Message Edited", AccentColors.warning, [
       `**Author**\n${newMessage.author.tag} (\`${newMessage.author.id}\`)`,
       `**Channel**\n<#${newMessage.channelId}>`,
       `**Before**\n${(oldMessage.content ?? "").slice(0, 512) || "*No content*"}`,
@@ -205,7 +205,7 @@ const onMessageDeleteListener: ListenerDefinition = {
 
     if (isIgnored(message, config)) return;
 
-    const card = eventCard("🗑️ Message Deleted", BrandColors.error, [
+    const card = eventCard("🗑️ Message Deleted", AccentColors.error, [
       `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
       `**Channel**\n<#${message.channelId}>`,
       `**Content**\n${(message.content ?? "").slice(0, 1024) || "*No content*"}`,
@@ -229,17 +229,17 @@ const onVoiceStateListener: ListenerDefinition = {
     if (!member) return;
 
     if (!oldState.channelId && newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔊 Voice Join", BrandColors.success, [
+      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔊 Voice Join", AccentColors.success, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**Channel**\n<#${newState.channelId}>`,
       ], `User ID: ${member.id}`));
     } else if (oldState.channelId && !newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔇 Voice Leave", BrandColors.error, [
+      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔇 Voice Leave", AccentColors.error, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**Channel**\n<#${oldState.channelId}>`,
       ], `User ID: ${member.id}`));
     } else if (oldState.channelId !== newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔄 Voice Move", BrandColors.cyan, [
+      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔄 Voice Move", AccentColors.cyan, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**From**\n<#${oldState.channelId}>`,
         `**To**\n<#${newState.channelId}>`,

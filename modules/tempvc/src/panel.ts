@@ -16,6 +16,7 @@ import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
+  makeWarningCard,
   type CardReply,
 } from "@lumi/ui";
 import { z } from "zod";
@@ -47,6 +48,7 @@ export const TempVcConfigSchema = z.object({
   maxChannels: z.number().int().min(1).max(200).default(50),
   maxPerUser: z.number().int().min(1).max(10).default(1),
   emptyTimeoutMs: z.number().int().min(1000).default(300000),
+  createCooldownMs: z.number().int().min(0).max(300000).default(10000),
   ownerLeaveDelete: z.boolean().default(true),
   generators: z.array(TempVcGeneratorSchema).default([]),
 });
@@ -78,6 +80,69 @@ const isModuleEnabled = (services: any, guildId: string): boolean =>
 
 const prisma = (services: any): any => services?.db?.prisma;
 
+const localCreateCooldowns = new Map<string, number>();
+
+type CreateCooldown =
+  | { acquired: true; key: string }
+  | { acquired: false; waitMs: number };
+
+async function acquireCreateCooldown(
+  services: any,
+  guildId: string,
+  userId: string,
+  cooldownMs: number,
+): Promise<CreateCooldown> {
+  if (cooldownMs <= 0) return { acquired: true, key: "" };
+  const key = `lumi:tempvc:create:${guildId}:${userId}`;
+  const now = Date.now();
+  const localUntil = localCreateCooldowns.get(key) ?? 0;
+  if (localUntil > now) {
+    return { acquired: false, waitMs: localUntil - now };
+  }
+  if (localCreateCooldowns.size > 1000) {
+    for (const [entry, until] of localCreateCooldowns) {
+      if (until <= now) localCreateCooldowns.delete(entry);
+    }
+  }
+  localCreateCooldowns.set(key, now + cooldownMs);
+  const redis = services?.redis;
+  if (!redis || typeof redis.set !== "function") {
+    return { acquired: true, key };
+  }
+  try {
+    const result = await redis.set(key, "1", "PX", cooldownMs, "NX");
+    if (result !== "OK") {
+      localCreateCooldowns.delete(key);
+      let waitMs = cooldownMs;
+      if (typeof redis.pttl === "function") {
+        try {
+          const ttl = await redis.pttl(key);
+          if (typeof ttl === "number" && ttl > 0) waitMs = ttl;
+        } catch {
+          waitMs = cooldownMs;
+        }
+      }
+      return { acquired: false, waitMs };
+    }
+    return { acquired: true, key };
+  } catch {
+    return { acquired: true, key };
+  }
+}
+
+async function notifyCreateCooldown(
+  member: GuildMember,
+  waitMs: number,
+): Promise<void> {
+  const seconds = Math.max(1, Math.ceil(waitMs / 1000));
+  await member.voice
+    .disconnect("Temporary channel creation cooldown")
+    .catch(() => undefined);
+  await member
+    .send(makeWarningCard("Slow Down", `Try again in ${seconds}s.`))
+    .catch(() => undefined);
+}
+
 async function findTempChannel(
   services: any,
   channelId: string,
@@ -95,6 +160,31 @@ async function findTempChannel(
     return null;
   }
   return null;
+}
+
+async function listOwnedTempChannels(
+  services: any,
+  guildId: string,
+  ownerId: string,
+): Promise<TempVcRecord[]> {
+  const model = prisma(services)?.tempVcChannel;
+  if (!model) return [];
+  try {
+    if (typeof model.findMany === "function") {
+      const rows = await model.findMany({
+        where: { guildId, ownerId },
+        orderBy: { createdAt: "desc" },
+      });
+      return Array.isArray(rows) ? rows : [];
+    }
+    if (typeof model.findFirst === "function") {
+      const row = await model.findFirst({ where: { guildId, ownerId } });
+      return row ? [row] : [];
+    }
+  } catch {
+    return [];
+  }
+  return [];
 }
 
 async function createTempRecord(
@@ -413,6 +503,43 @@ export async function createTempVoiceChannel(
   const guild: Guild | undefined = services?.client?.guilds?.cache?.get(guildId);
   if (!guild || member.user.bot) return null;
 
+  const ownedChannels = await listOwnedTempChannels(
+    services,
+    guildId,
+    member.id,
+  );
+  for (const owned of ownedChannels) {
+    const existing = await resolveGuildVoiceChannel(
+      services,
+      guildId,
+      owned.channelId,
+    );
+    if (!existing) {
+      await deleteTempRecord(services, owned.channelId);
+      continue;
+    }
+    const moved = await member.voice
+      .setChannel(existing)
+      .then(() => true)
+      .catch(() => false);
+    await updateTempRecord(services, owned.channelId, {
+      expiresAt: moved
+        ? null
+        : new Date(Date.now() + config.emptyTimeoutMs),
+    });
+    return moved ? existing : null;
+  }
+
+  const cooldown = await acquireCreateCooldown(
+    services,
+    guildId,
+    member.id,
+    config.createCooldownMs,
+  );
+  if (!cooldown.acquired) {
+    await notifyCreateCooldown(member, cooldown.waitMs);
+    return null;
+  }
   const owned = await countTempChannels(services, {
     guildId,
     ownerId: member.id,
@@ -488,7 +615,16 @@ export async function createTempVoiceChannel(
     return null;
   }
 
-  await member.voice.setChannel(channel).catch(() => undefined);
+  const moved = await member.voice
+    .setChannel(channel)
+    .then(() => true)
+    .catch(() => false);
+  if (!moved) {
+    await channel.delete().catch(() => undefined);
+    await deleteTempRecord(services, channel.id);
+    return null;
+  }
+
   await channel.send(buildControlPanel(channel, record)).catch(() => undefined);
   return channel;
 }

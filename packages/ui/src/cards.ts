@@ -183,7 +183,7 @@ export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => makeCard(resolveCardColor("info"), title, body, opts);
+) => makeCard(undefined, title, body, opts);
 
 export const makeCard = (
   color: number | undefined,
@@ -250,7 +250,7 @@ export function makeEmptyCard(
     ? fitLines([reason, "", `**Try:** ${suggestion}`])
     : reason;
   return makeCard(
-    resolveCardColor("info"),
+    undefined,
     `📭 ${title}`,
     body,
     {

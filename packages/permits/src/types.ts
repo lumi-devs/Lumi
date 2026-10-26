@@ -1,12 +1,13 @@
 export type PermitKind = "CUSTOM";
-export type Polarity = "GRANT" | "DENY";
+export type Polarity = "Grant" | "Deny";
 export type PermitTargetType = "USER" | "ROLE" | "CHANNEL";
 
 export interface Permit {
   id: number;
   guildId: string;
   name: string;
-  node: string;
+  number: number;
+  nodes: string[];
   polarity: Polarity;
   position: number;
   builtin: boolean;

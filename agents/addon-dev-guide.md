@@ -8,7 +8,7 @@ Addons are third-party modules installed at runtime. They follow the same module
 |--------|-----------------|--------|
 | Location | `modules/<name>/` | `data/addons/<name>@<version>/` |
 | Origin | `bundled` | `addon` |
-| Installation | Deployed with bot | Installed via `/lumi addon install` |
+| Installation | Deployed with bot | Installed through `/lumi` → Add-ons by a bot owner or `Extra Owner` |
 | Updates | Bot update | Independent via downloader |
 | NPM deps | In monorepo `package.json` | Declared in manifest `requirements` |
 | Trust level | Full | Untrusted — validated on install |
@@ -83,7 +83,6 @@ interface AddonServices {
   };
   // NOT available:
   // - permits (use Discord permissions instead)
-  // - security services
   // - scheduler (use Discord scheduled events or external cron)
   // - rpc
 }

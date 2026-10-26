@@ -1,13 +1,25 @@
-import { createClient, createCoreServices, createRpcServer, boot, shutdown, pingCommand, handlePingButton, handlePingClose } from "@lumi/core";
+import { createClient, createCoreServices, createRpcServer, boot, shutdown, pingCommand, handlePingButton, aboutCommand } from "@lumi/core";
 import { createModuleLoader } from "@lumi/module-runtime";
 import { createRedisClient, InvalidationBus } from "@lumi/redis";
 import { createCache } from "@lumi/cache";
 import { prisma, connectDatabase, disconnectDatabase } from "@lumi/db";
 import { PermitRepository } from "@lumi/permits";
-import { ModuleManager, moduleCommands, PermitPanel, HubPanel, ConfigService } from "@lumi/admin";
-import { PermissionFlagsBits, ActionRowBuilder, TextInputBuilder, TextInputStyle, ModalBuilder } from "discord.js";
+import {
+  ConfigService,
+  HubPanel,
+  ModuleManager,
+  PermitPanel,
+  hasAdminAccess,
+  moduleCommands,
+  roleIdsFrom,
+} from "@lumi/admin";
+import {
+  DiscordAPIError,
+  HTTPError,
+  PermissionFlagsBits,
+  RESTJSONErrorCodes,
+} from "discord.js";
 import * as ui from "@lumi/ui";
-import { VerificationService, PanicService, AntiNukeService, JoinGateService } from "@lumi/security";
 import { DistributedScheduler } from "@lumi/scheduler";
 import { AddonInstaller } from "@lumi/downloader";
 import {
@@ -31,6 +43,7 @@ interface RegisteredCommand {
   data: any;
   execute: (interaction: ChatInputCommandInteraction, services: any) => Promise<void>;
   autocomplete?: (interaction: AutocompleteInteraction, services: any) => Promise<void>;
+  requiresAdmin?: boolean;
   module: string | null;
 }
 
@@ -42,6 +55,77 @@ const logger = {
     if (process.env.LOG_LEVEL === "debug") console.debug(msg, meta ?? "");
   },
 };
+
+function messageForDiscordCode(code: number): string | null {
+  switch (code) {
+    case RESTJSONErrorCodes.UnknownChannel:
+      return "That channel no longer exists.";
+    case RESTJSONErrorCodes.UnknownGuild:
+      return "This server is no longer available.";
+    case RESTJSONErrorCodes.UnknownMember:
+      return "That member is no longer in the server.";
+    case RESTJSONErrorCodes.UnknownMessage:
+      return "That message no longer exists.";
+    case RESTJSONErrorCodes.UnknownRole:
+      return "That role no longer exists.";
+    case RESTJSONErrorCodes.UnknownUser:
+      return "That user could not be found.";
+    case RESTJSONErrorCodes.MissingAccess:
+      return "I don't have access to do that here.";
+    case RESTJSONErrorCodes.MissingPermissions:
+      return "I'm missing the permissions to do that.";
+    case RESTJSONErrorCodes.CannotSendMessagesToThisUser:
+      return "I can't message that user - their DMs are closed.";
+    default:
+      return null;
+  }
+}
+
+function messageForHttpStatus(status: number): string | null {
+  switch (status) {
+    case 500:
+      return "Discord ran into an internal error. Please try again shortly.";
+    case 502:
+    case 504:
+      return "Discord's gateway is unavailable right now. Please try again shortly.";
+    case 503:
+      return "Discord is temporarily unavailable. Please try again shortly.";
+    default:
+      return null;
+  }
+}
+
+function commandErrorCard(error: unknown): any {
+  if (error instanceof DiscordAPIError) {
+    return ui.ephemeralCard(
+      ui.makeErrorCard(
+        "Action Failed",
+        messageForDiscordCode(Number(error.code)) ??
+          "Discord rejected that action.",
+      ),
+    );
+  }
+  if (error instanceof HTTPError) {
+    return ui.ephemeralCard(
+      ui.makeErrorCard(
+        "Discord Unavailable",
+        messageForHttpStatus(error.status) ??
+          "Discord is having issues. Please try again shortly.",
+      ),
+    );
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return ui.ephemeralCard(
+      ui.makeErrorCard(
+        "Timed Out",
+        "That took too long and was cancelled. Please try again.",
+      ),
+    );
+  }
+  return ui.ephemeralCard(
+    ui.makeErrorCard("Unexpected Error", "An unexpected error occurred."),
+  );
+}
 
 async function main() {
   console.log("Starting Lumi v2...");
@@ -79,10 +163,6 @@ async function main() {
   const addonInstaller = new AddonInstaller("data/addons", moduleLoader);
 
   const configService = new ConfigService(prisma);
-  const verification = new VerificationService(prisma, redis);
-  const panic = new PanicService(prisma, redis);
-  const antinuke = new AntiNukeService(prisma);
-  const joingate = new JoinGateService(prisma);
   const scheduler = new DistributedScheduler(redis);
   const healthMonitor = createHealthMonitor();
   const moduleManager = new ModuleManager(moduleLoader, prisma, configService);
@@ -171,7 +251,6 @@ async function main() {
     },
     moduleLoader,
     addonInstaller,
-    security: { verification, panic, antinuke, joingate },
     scheduler,
     config: {
       get: (guildId: string, key: string) => configService.get(guildId, key),
@@ -211,8 +290,10 @@ async function main() {
   }
 
   const commandRegistry = new Map<string, RegisteredCommand>();
+  const prefixAliases = new Map<string, RegisteredCommand>();
 
   commandRegistry.set("ping", { ...pingCommand, module: null });
+  commandRegistry.set("about", { ...aboutCommand, module: null });
 
   for (const cmd of moduleCommands) {
     commandRegistry.set(cmd.data.name, { ...cmd, module: null });
@@ -229,7 +310,24 @@ async function main() {
     }
   }
 
-  console.log(`Registered ${commandRegistry.size} commands`);
+  for (const module of loaded) {
+    for (const cmd of module.definition.commands ?? []) {
+      const registered = commandRegistry.get(cmd.data.name);
+      if (!registered || registered.module !== module.manifest.name) continue;
+      for (const alias of cmd.aliases ?? []) {
+        const key = alias.toLowerCase();
+        if (commandRegistry.has(key) || prefixAliases.has(key)) {
+          logger.warn(`Command alias collision: ${key} already registered`);
+          continue;
+        }
+        prefixAliases.set(key, registered);
+      }
+    }
+  }
+
+  console.log(
+    `Registered ${commandRegistry.size} commands and ${prefixAliases.size} prefix aliases`,
+  );
 
   const syncGuildModules = async (guildId: string) => {
     let rows: any[] = [];
@@ -248,8 +346,8 @@ async function main() {
 
   const syncGuildRecord = async (guild: any) => {
     if (!guild?.id) return;
-    await prisma.guild
-      .upsert({
+    try {
+      await prisma.guild.upsert({
         where: { id: guild.id },
         update: {
           name: guild.name ?? "",
@@ -263,8 +361,11 @@ async function main() {
           icon: guild.iconURL?.({ size: 128 }) ?? null,
           ownerId: guild.ownerId ?? "",
         },
-      })
-      .catch((err: unknown) => logger.warn(`Could not sync guild ${guild.id}:`, err));
+      });
+      await permitRepo.seedBuiltinPermits(guild.id);
+    } catch (err) {
+      logger.warn(`Could not sync guild ${guild.id}:`, err);
+    }
   };
 
   const registerGuildCommands = async (guild: any) => {
@@ -277,7 +378,7 @@ async function main() {
     }
   };
 
-  client.once("ready", async () => {
+  client.once("clientReady", async () => {
     guildsTotal.set(client.guilds.cache.size);
     usersTotal.set(client.users.cache.size);
     shardsOnline.set(client.ws.shards.size);
@@ -326,40 +427,85 @@ async function main() {
     const [name, ...args] = withoutPrefix.split(/ +/g);
     if (!name) return;
 
-    const command = commandRegistry.get(name.toLowerCase());
+    const command =
+      commandRegistry.get(name.toLowerCase()) ??
+      prefixAliases.get(name.toLowerCase());
     if (!command) return;
     if (command.module && !moduleLoader.isEnabled(message.guild.id, command.module)) return;
+
+    if (command.requiresAdmin) {
+      const allowed = await hasAdminAccess({
+        guildId: message.guild.id,
+        userId: message.author.id,
+        roleIds: roleIdsFrom(message.member, message.guild.id),
+        guildOwnerId: message.guild.ownerId,
+        memberPermissions: message.member?.permissions,
+        client,
+        permits: services.permits,
+      });
+      if (!allowed) {
+        await message
+          .reply(
+            ui.ephemeralCard(
+              ui.makeErrorCard(
+                "Missing Permissions",
+                "You need **Manage Server** or an admin permit to use that command.",
+              ),
+            ),
+          )
+          .catch(() => undefined);
+        return;
+      }
+    }
+
+    const defaultPermissions = command.data.default_member_permissions;
+    if (
+      defaultPermissions !== null &&
+      defaultPermissions !== undefined &&
+      !message.member?.permissions.has(BigInt(defaultPermissions))
+    ) {
+      await message
+        .reply(
+          ui.ephemeralCard(
+            ui.makeErrorCard(
+              "Missing Permissions",
+              "You do not have permission to use that command.",
+            ),
+          ),
+        )
+        .catch(() => undefined);
+      return;
+    }
 
     const syntheticInteraction = createSyntheticInteraction(message, command, args, prefix, services);
     try {
       await command.execute(syntheticInteraction as any, services);
     } catch (err) {
       logger.error(`Prefix command ${name} failed:`, err);
-      await message.reply(
-        ui.ephemeralCard(
-          ui.makeErrorCard("Command Failed", "Something went wrong while running that command."),
-        ),
-      ).catch(() => undefined);
+      await message
+        .reply(commandErrorCard(err))
+        .catch(() => undefined);
     }
   });
-
-  const activePanels = new Map<string, PermitPanel>();
 
   async function resolvePrefix(services: any, client: any, message: any): Promise<string | null> {
     const content = message.content;
     const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(content);
     if (mention) return mention[0];
     if (!message.guild) return null;
-    const settings = await services.config.get(message.guild.id, "prefix");
-    const prefixes = [
-      settings,
-      ",",
-    ].filter((p): p is string => typeof p === "string" && p.length > 0);
-    for (const p of prefixes) {
-      if (content.startsWith(p)) return p;
-    }
-    return null;
+    const stored = await services.config.get(message.guild.id, "prefix");
+    const prefix = typeof stored === "string" && stored.length > 0 ? stored : ",";
+    return content.startsWith(prefix) ? prefix : null;
   }
+
+  const getPanel = (guildId: string, interaction: any) =>
+    new PermitPanel({
+      prisma,
+      redis,
+      guildId,
+      interaction,
+      moduleLoader,
+    });
 
   function createSyntheticInteraction(
     message: any,
@@ -529,15 +675,6 @@ async function main() {
     };
   }
 
-  const getPanel = (guildId: string, interaction: any) => {
-    let panel = activePanels.get(guildId);
-    if (!panel) {
-      panel = new PermitPanel({ prisma, redis, guildId, interaction });
-      activePanels.set(guildId, panel);
-    }
-    return panel;
-  };
-
   client.on("interactionCreate", async (interaction) => {
     try {
       if (interaction.isAutocomplete()) {
@@ -574,6 +711,44 @@ async function main() {
           }
         }
 
+        if (command.requiresAdmin) {
+          if (!interaction.guildId) {
+            await interaction
+              .reply(
+                ui.ephemeralCard(
+                  ui.makeErrorCard(
+                    "Server Only",
+                    "That command can only be used in a server.",
+                  ),
+                ),
+              )
+              .catch(() => undefined);
+            return;
+          }
+          const allowed = await hasAdminAccess({
+            guildId: interaction.guildId,
+            userId: interaction.user.id,
+            roleIds: roleIdsFrom(interaction.member, interaction.guildId),
+            guildOwnerId: interaction.guild?.ownerId,
+            memberPermissions: interaction.memberPermissions,
+            client,
+            permits: services.permits,
+          });
+          if (!allowed) {
+            await interaction
+              .reply(
+                ui.ephemeralCard(
+                  ui.makeErrorCard(
+                    "Missing Permissions",
+                    "You need **Manage Server** or an admin permit to use that command.",
+                  ),
+                ),
+              )
+              .catch(() => undefined);
+            return;
+          }
+        }
+
         try {
           await command.execute(interaction, services);
           commandsExecuted.inc({
@@ -588,12 +763,7 @@ async function main() {
             module: command.module ?? "builtin",
             status: "error",
           });
-          const card = ui.ephemeralCard(
-            ui.makeErrorCard(
-              "Command Failed",
-              "Something went wrong while running that command. Try again in a moment.",
-            ),
-          );
+          const card = commandErrorCard(err);
           if (interaction.deferred || interaction.replied) {
             await interaction.followUp(card).catch(() => undefined);
           } else {
@@ -605,34 +775,42 @@ async function main() {
 
       if (interaction.isButton()) {
         if (await handlePingButton(interaction, services)) return;
-        if (await handlePingClose(interaction)) return;
       }
 
       if (
         interaction.isButton() ||
-        interaction.isStringSelectMenu() ||
+        interaction.isAnySelectMenu() ||
         interaction.isModalSubmit()
       ) {
         if (await HubPanel.handleInteraction(interaction, services)) return;
       }
 
-      if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+      if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
         if (!interaction.customId.startsWith("permit_")) return;
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+        const guildId = interaction.guildId;
+        if (!guildId) return;
+        const allowed = await hasAdminAccess({
+          guildId,
+          userId: interaction.user.id,
+          roleIds: roleIdsFrom(interaction.member, guildId),
+          guildOwnerId: interaction.guild?.ownerId,
+          memberPermissions: interaction.memberPermissions,
+          client,
+          permits: services.permits,
+        });
+        if (!allowed) {
           await interaction
             .reply(
               ui.ephemeralCard(
                 ui.makeErrorCard(
                   "Missing Permissions",
-                  "You need **Manage Server** to manage permits.",
+                  "You need **Manage Server** or an admin permit to manage permits.",
                 ),
               ),
             )
             .catch(() => undefined);
           return;
         }
-        const guildId = interaction.guildId;
-        if (!guildId) return;
         const panel = getPanel(guildId, interaction);
 
         if (interaction.isModalSubmit()) {

@@ -311,7 +311,6 @@ export const myTask: TaskDefinition = {
 
 ```ts
 interface ModuleServices {
-  client: Client;                    // Discord.js Client
   redis: Redis;                      // ioredis instance
   cache: Cache;                      // L1/L2 cache with invalidation
   db: {                              // Database access
@@ -321,21 +320,14 @@ interface ModuleServices {
   modules: {                         // Module state
     isEnabled: (guildId: string, module: string) => boolean;
   };
-  moduleLoader: ModuleLoader;        // Module management
   permits: PermitRepository;         // Permit evaluation
-  security: {                        // Built-in security services
-    verification: VerificationService;
-    panic: PanicService;
-    antinuke: AntiNukeService;
-    joingate: JoinGateService;
-  };
   scheduler: DistributedScheduler;   // Cron jobs
   config: {                          // Guild config
     get: (guildId: string, key: string) => Promise<any>;
     set: (guildId: string, key: string, value: any) => Promise<void>;
   };
-  ui: any;                           // Deprecated; import @lumi/ui directly
-  rpc: RpcClient | null;             // RPC to dashboard/other processes
+  ui: any;                           // Import @lumi/ui directly
+  rpc: RpcServer;                    // Internal HTTP control server
   discord: { PermissionFlagsBits };  // Discord.js constants
   observability: { healthMonitor };  // Health checks
 }

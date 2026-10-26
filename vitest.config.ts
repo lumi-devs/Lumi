@@ -25,10 +25,6 @@ export default defineConfig({
         find: "@lumi/admin",
         replacement: resolve(root, "apps/bot/src/admin/src"),
       },
-      {
-        find: "@lumi/security",
-        replacement: resolve(root, "apps/bot/src/security/src"),
-      },
       ...workspaceAliases,
     ],
   },

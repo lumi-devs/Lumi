@@ -1,13 +1,16 @@
 # Commands and dispatch
 
-Slash commands come from two sources:
+Commands come from two sources:
 
-- Built-ins: `pingCommand` in `apps/bot/src/core/src/commands.ts` and the
-  `moduleCommands` registry (`/lumi`) in `apps/bot/src/admin/src/commands/index.ts`.
+- Built-ins: `pingCommand` and `aboutCommand` in `apps/bot/src/core/src/`, and
+  the `moduleCommands` registry (`/lumi`, `/permit`) in
+  `apps/bot/src/admin/src/commands/index.ts`.
 - Module commands: the `commands` array returned by `defineModule` in each module.
 
-There is no prefix-command parser. Administrative actions live inside the `/lumi`
-panel and module panels, not in one slash command per action.
+Slash and prefix commands share the same definitions. The default prefix is `,`
+and each guild can override it in `/lumi` → Settings. Mentioning the bot also
+works as a prefix. Administrative actions still live inside panels rather than
+one command per action; `/permit` exists for scripted create/explain flows.
 
 ## Built-in vs module
 
@@ -16,15 +19,27 @@ panel and module panels, not in one slash command per action.
 - Module command: `module: "<name>"`. Registered while the module is loaded and
   gated per guild at dispatch time.
 
-`/ping` renders a Components V2 card with shard pagination (`◀️` / `Close` / `▶️`),
+`/ping` renders a Components V2 card with shard pagination (`◀️` / `▶️`),
 per-shard latency and uptime, CPU/RAM, guild and member counts, cache hit ratio,
 and live database latency.
 
-`/lumi` opens the guild control hub with Overview, Modules, Settings, and
-Permissions tabs. Its `lumi:` components are routed through
-`HubPanel.handleInteraction`; the Modules tab also opens the advanced
-`module_` panel and the Settings tab opens the `settings_` panel. Permit actions
-use the `permit_` panel routed in the same dispatcher.
+`/about` describes the bot, links the source, and shows live instance statistics
+and core architecture versions. It is available as both `/about` and `,about`.
+
+`/lumi` opens the guild control hub with Overview, Modules, Settings,
+Permissions, and Add-ons tabs. It replies ephemerally and has no close button.
+Its `lumi:` components are routed through `HubPanel.handleInteraction`; the
+Modules tab also opens the advanced `module_` panel and the Settings tab opens
+the `settings_` panel. Permit actions use the `permit_` panel routed in the same
+dispatcher. `/lumi` requires **Manage Server** or an `admin.*`/`*` permit for
+slash and prefix use. The slash command is visible to everyone so permit
+holders without Discord administrative roles can open it.
+
+`/permit create` and `/permit explain` provide direct permit workflows without
+opening the hub. Create accepts a comma-separated node list and stores all nodes
+on one permit; its node option autocompletes from built-in, module, and existing
+custom nodes. `/permit explain` checks every node when its node option is
+omitted. `/permit` requires **Manage Server** or an `admin.*`/`*` permit.
 
 `/tempvc` opens the control panel for the caller's temporary voice channel. Staff
 generator management and module defaults are reachable through the `panel`
@@ -58,6 +73,13 @@ Interaction dispatch is in `apps/bot/src/index.ts`:
 4. Run `execute`, then record command metrics.
 5. On failure, reply with an ephemeral error card.
 
+Prefix dispatch runs from `messageCreate`. It resolves the guild prefix (or a
+bot mention), looks up the same command registry, checks the module switch and
+the command's `default_member_permissions`, then builds a synthetic chat-input
+interaction for the existing command body. This keeps one implementation per
+command. Prefix option parsing supports `--name value` and positional values
+for the subcommand's options.
+
 Component dispatch runs module `interactionCreate` listeners first, then the
 built-in `ping:` handlers, the `lumi:` hub, the `module_` / `settings_` panels,
 and finally the `permit_` panel. Each handler ignores custom IDs it does not own.
@@ -66,5 +88,5 @@ and finally the `permit_` panel. Each handler ignores custom IDs it does not own
 
 `services` is assembled in `apps/bot/src/index.ts` and passed to every command and
 listener. It includes `client`, `redis`, `cache`, `prisma`, `permits`,
-`moduleLoader`, `moduleManager`, `modules.isEnabled`, `security`, `scheduler`,
-`config`, `configService`, `rpc`, `ui`, `discord`, and `observability`.
+`moduleLoader`, `moduleManager`, `modules.isEnabled`, `scheduler`, `config`,
+`configService`, `rpc`, `ui`, `discord`, and `observability`.

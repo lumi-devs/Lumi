@@ -1,0 +1,2 @@
+ALTER TYPE "Polarity" RENAME VALUE 'GRANT' TO 'Grant';
+ALTER TYPE "Polarity" RENAME VALUE 'DENY' TO 'Deny';

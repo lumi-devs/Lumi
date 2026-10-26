@@ -12,7 +12,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 | **Config** | Guild settings JSON | Zod-validated per-module config |
 | **Database** | Custom migrations, idempotent DDL | Prisma with versioned migrations |
 | **Cache** | In-memory only | L1 LRU + Redis L2 with invalidation bus |
-| **RPC** | None | ConnectRPC (dashboard ↔ bot, inter-process) |
+| **RPC** | None | Token-guarded HTTP control server |
 | **Images** | Sharp/SVG rank cards | Canvas (rank + balance + shop cards) |
 | **Addons** | Basic git installer | Validated, sandboxed, versioned installer |
 | **Boot** | Global container, import-time DI | Explicit composition root, no global state |
@@ -26,9 +26,8 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 **v1:** `core` module was essential/undeletable, contained base commands, config, etc.
 
 **v2:** Built-in services in `apps/bot/src/`:
-- `core/` — Gateway, sharding, RPC, scheduler, lifecycle
+- `core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
 - `admin/` — Module management, `/lumi` panel, owner commands
-- `security/` — Verification, panic, antinuke, joingate
 
 **Migration:**
 - Remove `core` from module list
@@ -41,7 +40,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 
 **v2:** Permit system:
 - Node-based: `mod.ban`, `economy.shop`, `*`
-- Polarity: `GRANT` / `DENY`
+- Polarity: `Grant` / `Deny`
 - Priority: position in chain
 - Conditions: channels, roles, time windows, cron schedules
 - Expiry: time-based with auto-cleanup
@@ -275,8 +274,10 @@ config: z.object({
 
 | v1 Tier | v2 Equivalent |
 |---------|---------------|
-| Bot Owner | Built-in `Extra Owner` permit (`*`) |
+| Bot Owner | `OWNER_IDS` environment variable (global) |
 | Server Owner | Implicit (guild owner bypass) |
+| Extra Owner | Built-in `Extra Owner` permit (`*`, guild) |
+| Trusted Admin | Built-in `Trusted Admin` permit (`admin.*`, guild) |
 | Admin Role | `admin.*` permit assigned to role |
 | Mod Role | `mod.*` permit assigned to role |
 | DJ Role | `music.*` permit assigned to role |
@@ -288,20 +289,20 @@ config: z.object({
 // scripts/migrate-permits.ts
 async function migratePermits(guildId: string) {
   // 1. Create built-in permits
-  await permitRepo.createPermit({ guildId, name: "Extra Owner", node: "*", polarity: "GRANT", position: 0, builtin: true });
-  await permitRepo.createPermit({ guildId, name: "Trusted Admin", node: "admin.*", polarity: "GRANT", position: 1, builtin: true });
+  await permitRepo.createPermit({ guildId, name: "Extra Owner", nodes: ["*"], polarity: "Grant", position: 0, builtin: true });
+  await permitRepo.createPermit({ guildId, name: "Trusted Admin", nodes: ["admin.*"], polarity: "Grant", position: 1, builtin: true });
   
   // 2. Migrate admin role
   const adminRole = await getOldAdminRole(guildId);
   if (adminRole) {
-    const adminPermit = await permitRepo.createPermit({ guildId, name: "Admin Role", node: "admin.*", polarity: "GRANT", position: 10 });
+    const adminPermit = await permitRepo.createPermit({ guildId, name: "Admin Role", nodes: ["admin.*"], polarity: "Grant", position: 10 });
     await permitRepo.assignPermit(adminPermit.id, "ROLE", adminRole, "migration");
   }
   
   // 3. Migrate mod role
   const modRole = await getOldModRole(guildId);
   if (modRole) {
-    const modPermit = await permitRepo.createPermit({ guildId, name: "Mod Role", node: "mod.*", polarity: "GRANT", position: 20 });
+    const modPermit = await permitRepo.createPermit({ guildId, name: "Mod Role", nodes: ["mod.*"], polarity: "Grant", position: 20 });
     await permitRepo.assignPermit(modPermit.id, "ROLE", modRole, "migration");
   }
 }
@@ -359,7 +360,7 @@ async function migratePermits(guildId: string) {
 - [ ] Filter auto-mod works
 - [ ] TempVC creates channels
 - [ ] Logging captures events
-- [ ] Dashboard RPC responds
+- [ ] Control server status responds
 - [ ] Metrics at `/metrics`
 - [ ] Health at `/healthz`
 

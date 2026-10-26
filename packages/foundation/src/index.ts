@@ -1,32 +1,36 @@
-// Mock foundation package - provides basic types and utilities
+import { pino } from "pino";
+
 export interface Logger {
-  info: (msg: string, meta?: any) => void;
-  warn: (msg: string, meta?: any) => void;
-  error: (msg: string, meta?: any) => void;
-  debug: (msg: string, meta?: any) => void;
+  info: (message: string, meta?: unknown) => void;
+  warn: (message: string, meta?: unknown) => void;
+  error: (message: string, meta?: unknown) => void;
+  debug: (message: string, meta?: unknown) => void;
 }
 
-export const logger: Logger = {
-  info: console.log,
-  warn: console.warn,
-  error: console.error,
-  debug: console.debug,
-};
-
-export function createLogger(_name: string): Logger {
-  return logger;
+function write(
+  instance: pino.Logger,
+  level: "info" | "warn" | "error" | "debug",
+  message: string,
+  meta?: unknown,
+): void {
+  if (meta === undefined) {
+    instance[level](message);
+    return;
+  }
+  instance[level](typeof meta === "object" && meta !== null ? meta : { meta }, message);
 }
 
-export type InvalidationPort = {
-  subscribe: (channel: string, listener: (keys: string[]) => void) => () => void;
-  publish: (channel: string, message: string) => Promise<void>;
-};
+export function createLogger(name: string): Logger {
+  const instance = pino({
+    name,
+    level: process.env.LOG_LEVEL ?? "info",
+  });
+  return {
+    info: (message, meta) => write(instance, "info", message, meta),
+    warn: (message, meta) => write(instance, "warn", message, meta),
+    error: (message, meta) => write(instance, "error", message, meta),
+    debug: (message, meta) => write(instance, "debug", message, meta),
+  };
+}
 
-export type RedisClient = any;
-export type RedisKeys = any;
-export type TTL = any;
-
-export const InvalidationPort = null;
-export const RedisClient = null;
-export const RedisKeys = null;
-export const TTL = null;
+export const logger = createLogger("lumi");

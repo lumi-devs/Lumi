@@ -1,15 +1,23 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
+  ButtonStyle,
+  type ButtonInteraction,
 } from "discord.js";
-import { defineModule, type CommandDefinition, type ModuleDefinition } from "@lumi/module-kit";
 import {
-  BrandColors,
+  defineModule,
+  type CommandDefinition,
+  type ListenerDefinition,
+  type ModuleDefinition,
+} from "@lumi/module-kit";
+import {
+  createActionButton,
   ephemeralCard,
   makeCard,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
+  row,
 } from "@lumi/ui";
 import { z } from "zod";
 
@@ -18,24 +26,67 @@ const UtilityConfigSchema = z.object({
   nickMaxLength: z.number().int().min(1).max(32).default(32),
 });
 
+interface AvatarCardOptions {
+  displayName: string;
+  userId: string;
+  avatarUrl: string | null;
+  reveal: boolean;
+}
+
+const buildAvatarCard = ({
+  displayName,
+  userId,
+  avatarUrl,
+  reveal,
+}: AvatarCardOptions) => {
+  const actionRows = avatarUrl
+    ? [
+        row(
+          reveal
+            ? createActionButton({
+                label: "Avatar Link",
+                url: avatarUrl,
+              })
+            : createActionButton({
+                customId: `utility:avatar:view:${userId}`,
+                label: "View Avatar",
+                style: ButtonStyle.Primary,
+              }),
+        ),
+      ]
+    : [];
+
+  return makeCard(
+    undefined,
+    `${displayName}'s Avatar`,
+    "",
+    {
+      headerImages: reveal && avatarUrl ? [avatarUrl] : undefined,
+      actionRows,
+    },
+  );
+};
+
 const avatarDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("avatar")
     .setDescription("Get a user's avatar")
     .addUserOption(o => o.setName("user").setDescription("User to get avatar for").setRequired(false)),
+  aliases: ["av"],
   async execute(interaction) {
     const target = interaction.options.getUser("user") ?? interaction.user;
-    const avatar = target.displayAvatarURL({ size: 512, extension: "png" });
+    const isSelf = target.id === interaction.user.id;
+    const avatarUrl = target.avatar
+      ? target.displayAvatarURL({ size: 4096, extension: "png" })
+      : null;
+    const card = buildAvatarCard({
+      displayName: target.displayName,
+      userId: target.id,
+      avatarUrl,
+      reveal: isSelf,
+    });
 
-    await interaction.reply(makeCard(
-      BrandColors.primary,
-      `🖼️ ${target.tag}'s Avatar`,
-      [
-        `**User**\n${target.tag} (\`${target.id}\`)`,
-        `**Download**\n[PNG](${avatar})`,
-      ],
-      { headerImages: [avatar] },
-    ));
+    await interaction.reply(isSelf ? card : ephemeralCard(card));
   },
 };
 
@@ -44,6 +95,7 @@ const bannerDef: CommandDefinition = {
     .setName("banner")
     .setDescription("Get a user's banner")
     .addUserOption(o => o.setName("user").setDescription("User to get banner for").setRequired(false)),
+  aliases: ["b"],
   async execute(interaction) {
     const target = interaction.options.getUser("user") ?? interaction.user;
     const user = await interaction.client.users.fetch(target.id, { force: true });
@@ -58,7 +110,7 @@ const bannerDef: CommandDefinition = {
     }
 
     await interaction.reply(makeCard(
-      BrandColors.primary,
+      undefined,
       `🖼️ ${target.tag}'s Banner`,
       [
         `**User**\n${target.tag} (\`${target.id}\`)`,
@@ -96,7 +148,7 @@ const whoisDef: CommandDefinition = {
     }
 
     await interaction.reply(makeCard(
-      BrandColors.primary,
+      undefined,
       "👤 User Info",
       lines,
       { thumbnailUrl: target.displayAvatarURL() },
@@ -113,7 +165,7 @@ const serverinfoDef: CommandDefinition = {
     const banner = guild.bannerURL({ size: 512 });
 
     await interaction.reply(makeCard(
-      BrandColors.primary,
+      undefined,
       `🏰 ${guild.name}`,
       [
         `**ID**\n\`${guild.id}\``,
@@ -178,7 +230,7 @@ const roleinfoDef: CommandDefinition = {
     }
 
     const color = role.hexColor === "#000000"
-      ? BrandColors.primary
+      ? undefined
       : parseInt(role.hexColor.slice(1), 16);
 
     await interaction.reply(makeCard(
@@ -231,7 +283,7 @@ const channelinfoDef: CommandDefinition = {
     }
 
     await interaction.reply(makeCard(
-      BrandColors.primary,
+      undefined,
       "📺 Channel Info",
       lines,
     ));
@@ -259,7 +311,7 @@ const emojiinfoDef: CommandDefinition = {
     }
 
     await interaction.reply(makeCard(
-      BrandColors.primary,
+      undefined,
       `😀 Emoji Info: ${emoji.name}`,
       [
         `**ID**\n\`${emoji.id}\``,
@@ -271,6 +323,45 @@ const emojiinfoDef: CommandDefinition = {
       ],
       { thumbnailUrl: emoji.url },
     ));
+  },
+};
+
+const avatarViewListener: ListenerDefinition = {
+  event: "interactionCreate",
+  async handler(interaction: ButtonInteraction) {
+    if (!interaction.isButton()) return;
+    if (!interaction.customId.startsWith("utility:avatar:view:")) return;
+
+    const userId = interaction.customId.split(":")[3];
+    if (!userId) return;
+
+    const user = await interaction.client.users
+      .fetch(userId, { force: true })
+      .catch(() => null);
+
+    if (!user) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Avatar Unavailable",
+            "That user's avatar could not be loaded.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    const avatarUrl = user.avatar
+      ? user.displayAvatarURL({ size: 4096, extension: "png" })
+      : null;
+    const card = buildAvatarCard({
+      displayName: user.displayName,
+      userId: user.id,
+      avatarUrl,
+      reveal: true,
+    });
+
+    await interaction.reply(ephemeralCard(card));
   },
 };
 
@@ -286,7 +377,7 @@ const utilityModule: ModuleDefinition = defineModule({
     { key: "nickMaxLength", label: "Max Nickname Length", type: "number", description: "Maximum nickname length" },
   ],
   commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, nickDef, roleinfoDef, channelinfoDef, emojiinfoDef],
-  listeners: [],
+  listeners: [avatarViewListener],
   tasks: [],
   async onLoad(services) {
     console.log("[utility] Module loaded");

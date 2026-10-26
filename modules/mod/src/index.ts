@@ -14,7 +14,6 @@ import {
   type ModuleDefinition,
 } from "@lumi/module-kit";
 import {
-  BrandColors,
   createPaginationRow,
   ephemeralCard,
   formatPageFooter,
@@ -739,7 +738,7 @@ async function buildCasesCard(
     return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}`;
   });
 
-  return makeCard(BrandColors.primary, `📋 Cases for ${targetTag}`, lines, {
+  return makeCard(undefined, `📋 Cases for ${targetTag}`, lines, {
     footer: formatPageFooter(page - 1, totalPages, total),
     actionRows: [
       createPaginationRow({

@@ -197,6 +197,12 @@ const tempvcModule: ModuleDefinition = defineModule({
       description: "Delete after empty for this long",
     },
     {
+      key: "createCooldownMs",
+      label: "Create Cooldown (ms)",
+      type: "number",
+      description: "Wait before creating another channel (default 10000)",
+    },
+    {
       key: "ownerLeaveDelete",
       label: "Delete on Owner Leave",
       type: "boolean",

@@ -32,8 +32,6 @@ name, and logger. Nothing connects at import time.
   evaluation cache. Reordering invalidates every assignment cache in the guild.
 - `moderation` — cases, per-guild case counters, expiring cases, and notes.
   Undo actions call `deactivateActiveCases()` before recording the lifting case.
-- `security` — panic snapshots (`panic_states`) and the persisted verification
-  panel (`verification_panels`).
 - `downloader` — repo and installed-module records.
 
 Rules:

@@ -19,11 +19,8 @@
     "@lumi/cache": "workspace:*",
     "@lumi/redis": "workspace:*",
     "@lumi/db": "workspace:*",
-    "@lumi/rpc": "workspace:*",
     "@lumi/observability": "workspace:*",
     "@lumi/scheduler": "workspace:*",
-    "@lumi/discord": "workspace:*",
-    "@lumi/config": "workspace:*",
     "@lumi/permits": "workspace:*",
     "discord.js": "^14.14.0"
   },

@@ -14,7 +14,6 @@
 | [testing.md](./testing.md) | You are writing tests or running integration checks. |
 | [conventions.md](./conventions.md) | You need style, naming, error handling, or logging rules. |
 | [operations.md](./operations.md) | You are changing env vars, nix, Docker, boot, or metrics. |
-| [api-reference.md](./api-reference.md) | You need ConnectRPC endpoint definitions, request/response shapes, enums. |
 | [module-dev-guide.md](./module-dev-guide.md) | You are creating a first-party module (structure, commands, listeners, tasks). |
 | [addon-dev-guide.md](./addon-dev-guide.md) | You are creating a third-party addon (security model, publishing, validation). |
 | [migration-guide.md](./migration-guide.md) | You are migrating from Lumi v1 to v2 (breaking changes, data migration). |

@@ -1,6 +1,5 @@
 import { ButtonStyle, ChannelType, type Guild } from "discord.js";
 import {
-  BrandColors,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
@@ -167,7 +166,7 @@ export function controlPanelCard(
   ];
   if (notice) body.unshift(notice);
 
-  return makeCard(BrandColors.primary, `🔊 ${state.channelName}`, body, {
+  return makeCard(undefined, `🔊 ${state.channelName}`, body, {
     subtitle: "Temporary voice control",
     footer: "Channel owners and members with Manage Channels can use these controls",
     separatorAboveActionRows: true,
@@ -283,7 +282,7 @@ export function memberActionCard(
     `Channel: <#${state.channelId}>`,
   ].filter(Boolean);
 
-  return makeCard(BrandColors.primary, `${meta.emoji} ${meta.title}`, body, {
+  return makeCard(undefined, `${meta.emoji} ${meta.title}`, body, {
     breadcrumbs: ["Temp VC", state.channelName, meta.title],
     footer: meta.footer,
     separatorAboveActionRows: true,
@@ -427,7 +426,7 @@ export function adminPanelCard(
   );
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     "🔊 Temp VC Generators",
     body,
     {
@@ -457,7 +456,7 @@ export function generatorManageCard(
     `**Category** ${config.categoryId ? `<#${config.categoryId}>` : "Not set"}`,
   ].filter(Boolean);
 
-  return makeCard(BrandColors.primary, `🔊 ${clip(name, 80)}`, body, {
+  return makeCard(undefined, `🔊 ${clip(name, 80)}`, body, {
     subtitle: "Generator settings",
     breadcrumbs: ["Temp VC", "Admin", clip(name, 60)],
     footer: "Settings apply to channels created from this generator",
@@ -586,7 +585,7 @@ export function configPanelCard(
     `**Delete On Owner Leave** ${config.ownerLeaveDelete ? "Enabled" : "Disabled"}`,
   ].filter(Boolean);
 
-  return makeCard(BrandColors.primary, "⚙️ Temp VC Settings", body, {
+  return makeCard(undefined, "⚙️ Temp VC Settings", body, {
     subtitle: "Module defaults",
     breadcrumbs: ["Temp VC", "Admin", "Settings"],
     footer: "Per-generator templates and limits override these defaults",

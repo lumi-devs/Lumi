@@ -52,7 +52,7 @@ and never pass `ephemeral: true` directly. Use `ephemeralCard`.
 - `buildSafeActionRows` enforces five rows and five components per row
 - `pageFooter`, `formatStatusBadge`, `formatSubtitle`, `formatBreadcrumbs`,
   `formatPageFooter`, `componentEmoji`
-- `BrandColors`, `resolveCardColor`
+- `AccentColors`, `resolveCardColor`
 
 ## Rules
 
@@ -61,4 +61,5 @@ and never pass `ephemeral: true` directly. Use `ephemeralCard`.
 - Ephemeral is for errors and private data, not a default.
 - Keep action rows at five or fewer and components per row at five or fewer.
 - Section accessories hold one button each; use a row for multiple actions.
+- Containers have no accent color unless a semantic status color is passed.
 - New code has no comments.

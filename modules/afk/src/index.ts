@@ -4,12 +4,31 @@ import {
   GuildMember,
   APIInteractionGuildMember,
 } from "discord.js";
-import { defineModule, type CommandDefinition, type ModuleDefinition, type ListenerDefinition } from "@lumi/module-kit";
-import { makeErrorCard, makeInfoCard, makeSuccessCard, ephemeralCard } from "@lumi/ui";
+import {
+  defineModule,
+  type CommandDefinition,
+  type ModuleDefinition,
+  type ListenerDefinition,
+} from "@lumi/module-kit";
+import { ephemeralCard } from "@lumi/ui";
 import { z } from "zod";
+import {
+  buildAfkMentionCard,
+  buildAfkRemovalCard,
+  buildAfkStatusCard,
+  formatAfkDuration,
+  sanitizeAfkReason,
+} from "./ui.js";
 
-function isGuildMember(member: GuildMember | APIInteractionGuildMember | null | undefined): member is GuildMember {
-  return member !== null && member !== undefined && "displayName" in member && "setNickname" in member;
+function isGuildMember(
+  member: GuildMember | APIInteractionGuildMember | null | undefined,
+): member is GuildMember {
+  return (
+    member !== null &&
+    member !== undefined &&
+    "displayName" in member &&
+    "setNickname" in member
+  );
 }
 
 const AfkConfigSchema = z.object({
@@ -19,78 +38,105 @@ const AfkConfigSchema = z.object({
   maxReasonLength: z.number().int().min(1).max(500).default(200),
 });
 
+const getAfkConfig = async (services: any, guildId: string) =>
+  AfkConfigSchema.parse((await services.config.get(guildId, "afk")) ?? {});
+
+const RemovalCooldownMs = 2000;
+
+const removalCooldownKey = (guildId: string, userId: string): string =>
+  `lumi:afk:cd:removal:${guildId}:${userId}`;
+
+const markRemovalCooldown = async (
+  services: any,
+  guildId: string,
+  userId: string,
+): Promise<void> => {
+  const redis = services?.redis;
+  if (!redis || typeof redis.set !== "function") return;
+  await redis
+    .set(removalCooldownKey(guildId, userId), "1", "PX", RemovalCooldownMs)
+    .catch(() => undefined);
+};
+
+const isRemovalCooldown = async (
+  services: any,
+  guildId: string,
+  userId: string,
+): Promise<boolean> => {
+  const redis = services?.redis;
+  if (!redis || typeof redis.get !== "function") return false;
+  const value = await redis
+    .get(removalCooldownKey(guildId, userId))
+    .catch(() => null);
+  return value !== null && value !== undefined;
+};
+
+const stripPrefix = (name: string, prefix: string): string =>
+  prefix.length > 0 && name.startsWith(prefix)
+    ? name.slice(prefix.length)
+    : name;
+
 const afkDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("afk")
-    .setDescription("Set yourself as AFK")
-    .addStringOption(o => o.setName("reason").setDescription("AFK reason").setRequired(false).setMaxLength(200)),
-  async execute(interaction, services) {
-    const reason = interaction.options.getString("reason") ?? "No reason provided";
-    const guildId = interaction.guildId!;
-    const config = await services.config.get(guildId, "afk") as any ?? {};
-    const limit = config.maxReasonLength ?? 200;
-
-    if (reason.length > limit) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Reason too long", [
-        `**Limit** — ${limit} characters`,
-        `**Your reason** — ${reason.length} characters`,
-      ])));
-      return;
-    }
-
-    await services.db.prisma.afkEntry.upsert({
-      where: { guildId_userId: { guildId, userId: interaction.user.id } },
-      update: { reason, createdAt: new Date() },
-      create: { guildId, userId: interaction.user.id, reason },
-    });
-
-    const member = interaction.member;
-    if (isGuildMember(member) && config.nickPrefixEnabled && !member.displayName.startsWith(config.nickPrefix ?? "[AFK] ")) {
-      try {
-        await member.setNickname(`${config.nickPrefix ?? "[AFK] "}${member.displayName}`, "AFK");
-      } catch {}
-    }
-
-    const body = [
-      `**Reason** — ${reason}`,
-      "You are marked AFK. Your status clears when you send a message or use `/unafk`.",
-    ];
-    if (isGuildMember(member) && config.nickPrefixEnabled) {
-      body.push(`**Nickname prefix** — ${config.nickPrefix ?? "[AFK] "}`);
-    }
-
-    await interaction.reply(ephemeralCard(makeSuccessCard("AFK enabled", body, {
-      subtitle: interaction.guild?.name,
-      footer: "AFK status",
-    })));
-  },
-};
-
-const unafkDef: CommandDefinition = {
-  data: new SlashCommandBuilder()
-    .setName("unafk")
-    .setDescription("Remove your AFK status"),
+    .setDescription("Set yourself AFK with an optional reason")
+    .addStringOption((option) =>
+      option
+        .setName("reason")
+        .setDescription("The reason for being AFK")
+        .setRequired(false)
+        .setMaxLength(500),
+    ),
   async execute(interaction, services) {
     const guildId = interaction.guildId!;
-    const config = await services.config.get(guildId, "afk") as any ?? {};
+    const config = await getAfkConfig(services, guildId);
+    const rawReason = interaction.options.getString("reason") ?? "AFK";
+    const reason = sanitizeAfkReason(rawReason, config.maxReasonLength);
 
-    const deleted = await services.db.prisma.afkEntry.delete({
-      where: { guildId_userId: { guildId, userId: interaction.user.id } },
-    }).catch(() => null);
+    await markRemovalCooldown(services, guildId, interaction.user.id);
 
-    if (!deleted) {
-      await interaction.reply(ephemeralCard(makeInfoCard("Not AFK", "You do not have an active AFK status.")));
-      return;
+    const existing = await services.db.prisma.afkEntry
+      .findUnique({
+        where: {
+          guildId_userId: { guildId, userId: interaction.user.id },
+        },
+      })
+      .catch(() => null);
+
+    const status = existing
+      ? existing.reason === reason
+        ? "already"
+        : "updated"
+      : "set";
+
+    if (status !== "already") {
+      await services.db.prisma.afkEntry.upsert({
+        where: {
+          guildId_userId: { guildId, userId: interaction.user.id },
+        },
+        update: { reason, createdAt: new Date() },
+        create: { guildId, userId: interaction.user.id, reason },
+      });
     }
 
     const member = interaction.member;
-    if (isGuildMember(member) && config.nickPrefixEnabled && member.displayName.startsWith(config.nickPrefix ?? "[AFK] ")) {
+    if (
+      status === "set" &&
+      isGuildMember(member) &&
+      config.nickPrefixEnabled &&
+      !member.displayName.startsWith(config.nickPrefix)
+    ) {
       try {
-        await member.setNickname(member.displayName.slice((config.nickPrefix ?? "[AFK] ").length), "No longer AFK");
+        await member.setNickname(
+          `${config.nickPrefix}${member.displayName}`.slice(0, 32),
+          "AFK",
+        );
       } catch {}
     }
 
-    await interaction.reply(ephemeralCard(makeSuccessCard("Welcome back", "Your AFK status has been removed.")));
+    await interaction.reply(
+      ephemeralCard(buildAfkStatusCard(status, reason)),
+    );
   },
 };
 
@@ -100,47 +146,73 @@ const onMessageListener: ListenerDefinition = {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId;
-    const config = await services.config.get(guildId, "afk") as any ?? {};
+    const config = await getAfkConfig(services, guildId);
 
     if (!services.db.prisma.afkEntry) return;
     const authorAfk = await services.db.prisma.afkEntry.findUnique({
-      where: { guildId_userId: { guildId, userId: message.author.id } },
+      where: {
+        guildId_userId: { guildId, userId: message.author.id },
+      },
     });
 
-    if (authorAfk) {
-      await services.db.prisma.afkEntry.delete({
-        where: { guildId_userId: { guildId, userId: message.author.id } },
-      }).catch(() => {});
+    if (
+      authorAfk &&
+      !(await isRemovalCooldown(services, guildId, message.author.id))
+    ) {
+      await services.db.prisma.afkEntry
+        .delete({
+          where: {
+            guildId_userId: { guildId, userId: message.author.id },
+          },
+        })
+        .catch(() => {});
 
       const member = message.member;
-      if (isGuildMember(member) && config.nickPrefixEnabled && member.displayName.startsWith(config.nickPrefix ?? "[AFK] ")) {
+      if (
+        isGuildMember(member) &&
+        config.nickPrefixEnabled &&
+        member.displayName.startsWith(config.nickPrefix)
+      ) {
         try {
-          await member.setNickname(member.displayName.slice((config.nickPrefix ?? "[AFK] ").length), "No longer AFK");
+          await member.setNickname(
+            stripPrefix(member.displayName, config.nickPrefix) || null,
+            "No longer AFK",
+          );
         } catch {}
       }
 
-      await message.reply(makeSuccessCard("Welcome back", "Your AFK status has been removed automatically.")).catch(() => {});
+      const duration = formatAfkDuration(
+        Date.now() - new Date(authorAfk.createdAt).getTime(),
+      );
+      await message
+        .reply(buildAfkRemovalCard(duration))
+        .catch(() => {});
     }
 
     if (!config.mentionReply) return;
 
     for (const user of message.mentions.users.values()) {
-      if (user.bot) continue;
+      if (user.bot || user.id === message.author.id) continue;
 
       const afk = await services.db.prisma.afkEntry.findUnique({
-        where: { guildId_userId: { guildId, userId: user.id } },
+        where: {
+          guildId_userId: { guildId, userId: user.id },
+        },
       });
 
       if (afk) {
         const target = message.guild?.members.cache.get(user.id);
-        const displayName = target?.displayName ?? user.tag;
-        await message.reply(makeInfoCard("User is AFK", [
-          `**${displayName}** is currently AFK.`,
-          `**Reason** — ${afk.reason}`,
-        ], {
-          subtitle: message.guild?.name,
-          footer: "They will see your message when they return.",
-        })).catch(() => {});
+        const displayName = stripPrefix(
+          target?.displayName ?? user.username,
+          config.nickPrefix,
+        );
+        const reason = sanitizeAfkReason(afk.reason, config.maxReasonLength);
+        const duration = formatAfkDuration(
+          Date.now() - new Date(afk.createdAt).getTime(),
+        );
+        await message
+          .reply(buildAfkMentionCard(displayName, reason, duration))
+          .catch(() => {});
         break;
       }
     }
@@ -155,12 +227,32 @@ const afkModule: ModuleDefinition = defineModule({
   version: "2.0.0",
   config: AfkConfigSchema,
   configFields: [
-    { key: "nickPrefixEnabled", label: "Nickname Prefix", type: "boolean", description: "Prefix nickname when AFK" },
-    { key: "nickPrefix", label: "Prefix Text", type: "string", description: "Text to prepend to nickname" },
-    { key: "mentionReply", label: "Mention Reply", type: "boolean", description: "Reply when mentioned while AFK" },
-    { key: "maxReasonLength", label: "Max Reason Length", type: "number", description: "Maximum AFK reason length" },
+    {
+      key: "nickPrefixEnabled",
+      label: "Nickname Prefix",
+      type: "boolean",
+      description: "Prefix nickname when AFK",
+    },
+    {
+      key: "nickPrefix",
+      label: "Prefix Text",
+      type: "string",
+      description: "Text to prepend to nickname",
+    },
+    {
+      key: "mentionReply",
+      label: "Mention Reply",
+      type: "boolean",
+      description: "Reply when mentioned while AFK",
+    },
+    {
+      key: "maxReasonLength",
+      label: "Max Reason Length",
+      type: "number",
+      description: "Maximum AFK reason length",
+    },
   ],
-  commands: [afkDef, unafkDef],
+  commands: [afkDef],
   listeners: [onMessageListener],
   tasks: [],
   async onLoad(services) {

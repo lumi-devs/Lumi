@@ -11,7 +11,6 @@ import {
   ephemeralCard,
   makeCard,
   makeErrorCard,
-  makeInfoCard,
   row,
   type CardReply,
 } from "@lumi/ui";
@@ -146,11 +145,6 @@ function buildPingComponents(
         disabled: safePage === 0,
       }),
       createActionButton({
-        customId: `ping:close:${userId}`,
-        label: "Close",
-        style: ButtonStyle.Danger,
-      }),
-      createActionButton({
         customId: `ping:p:1:${userId}`,
         emoji: "▶️",
         style: ButtonStyle.Secondary,
@@ -213,21 +207,5 @@ export async function handlePingButton(
   pingSessions.set(userId, newPage);
 
   await interaction.update(buildPingComponents(services.client, dbLatency, newPage, userId));
-  return true;
-}
-
-export async function handlePingClose(interaction: ButtonInteraction): Promise<boolean> {
-  const [, action, userId] = interaction.customId.split(":");
-  if (action !== "close" || !userId) return false;
-  if (interaction.user.id !== userId) {
-    await interaction.reply(ownershipDenied());
-    return true;
-  }
-  pingSessions.delete(userId);
-  await interaction.update(
-    makeInfoCard("Ping", "Latency panel closed.", {
-      footer: "Run `/ping` to reopen",
-    }),
-  );
   return true;
 }

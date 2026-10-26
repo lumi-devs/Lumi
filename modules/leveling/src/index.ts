@@ -14,14 +14,13 @@ import {
   ephemeralCard,
   createPaginationRow,
   formatPageFooter,
-  BrandColors,
+  AccentColors,
   type CardReply,
 } from "@lumi/ui";
 import { z } from "zod";
 
 const LevelingConfigSchema = z.object({
   xpPerMessage: z.number().int().min(1).max(1000).default(15),
-  xpPerMinuteVc: z.number().int().min(1).max(1000).default(10),
   cooldownSeconds: z.number().int().min(1).max(3600).default(60),
   xpCurve: z.record(z.number()).default({}),
   roleRewards: z.array(z.object({
@@ -161,7 +160,7 @@ const rankDef: CommandDefinition = {
       `**To next level** — ${xpForNext.toLocaleString()} XP`,
     ];
 
-    await interaction.reply(ephemeralCard(makeCard(BrandColors.purple, `📊 ${target.username}`, body, {
+    await interaction.reply(ephemeralCard(makeCard(AccentColors.purple, `📊 ${target.username}`, body, {
       subtitle: "Rank card",
       thumbnailUrl: target.displayAvatarURL({ size: 256, extension: "png" }),
       footer: `${xpPerMessage} XP per message`,
@@ -202,7 +201,7 @@ async function renderLeaderboard(
     return `**#${(page - 1) * perPage + i + 1}** ${name} — Level ${u.level} · ${u.xp.toLocaleString()} XP`;
   });
 
-  return makeCard(BrandColors.gold, "🏆 XP Leaderboard", lines, {
+  return makeCard(AccentColors.gold, "🏆 XP Leaderboard", lines, {
     subtitle: guild?.name,
     footer: formatPageFooter(page - 1, totalPages, total),
     actionRows: [createPaginationRow({
@@ -249,7 +248,6 @@ const levelSetDef: CommandDefinition = {
     .setDescription("Configure leveling settings")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand(s => s.setName("xp-per-message").setDescription("Set base XP per message").addIntegerOption(o => o.setName("amount").setDescription("XP per message").setMinValue(1).setMaxValue(1000).setRequired(true)))
-    .addSubcommand(s => s.setName("xp-per-minute-vc").setDescription("Set VC XP per minute").addIntegerOption(o => o.setName("amount").setDescription("XP per minute").setMinValue(1).setMaxValue(1000).setRequired(true)))
     .addSubcommand(s => s.setName("cooldown").setDescription("Set XP cooldown in seconds").addIntegerOption(o => o.setName("seconds").setDescription("Cooldown seconds").setMinValue(1).setMaxValue(3600).setRequired(true)))
     .addSubcommand(s => s.setName("add-role-reward").setDescription("Add a level role reward").addRoleOption(o => o.setName("role").setDescription("Role to give").setRequired(true)).addIntegerOption(o => o.setName("level").setDescription("Level required").setMinValue(1).setRequired(true)).addBooleanOption(o => o.setName("remove-previous").setDescription("Remove previous level roles").setRequired(false)))
     .addSubcommand(s => s.setName("remove-role-reward").setDescription("Remove a level role reward").addRoleOption(o => o.setName("role").setDescription("Role to remove").setRequired(true)))
@@ -273,15 +271,6 @@ const levelSetDef: CommandDefinition = {
         await services.config.set(guildId, "leveling", config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**XP per message** — ${amount}`,
-        ], { footer: "Leveling configuration" })));
-        break;
-      }
-      case "xp-per-minute-vc": {
-        const amount = interaction.options.getInteger("amount", true);
-        config.xpPerMinuteVc = amount;
-        await services.config.set(guildId, "leveling", config);
-        await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
-          `**XP per minute (VC)** — ${amount}`,
         ], { footer: "Leveling configuration" })));
         break;
       }
@@ -395,14 +384,14 @@ const levelSetDef: CommandDefinition = {
         );
 
         const body = [
-          `**XP per message** — ${config.xpPerMessage ?? 15}\n**XP per minute (VC)** — ${config.xpPerMinuteVc ?? 10}\n**Cooldown** — ${config.cooldownSeconds ?? 60}s`,
+          `**XP per message** — ${config.xpPerMessage ?? 15}\n**Cooldown** — ${config.cooldownSeconds ?? 60}s`,
           `**Role rewards**\n${roleRewards}`,
           `**Multipliers**\n${multipliers}`,
           `**Ignored channels**\n${ignoredChannels}`,
           `**Ignored roles**\n${ignoredRoles}`,
         ];
 
-        await interaction.reply(ephemeralCard(makeCard(BrandColors.primary, "⚙️ Leveling Settings", body, {
+        await interaction.reply(ephemeralCard(makeCard(undefined, "⚙️ Leveling Settings", body, {
           subtitle: interaction.guild?.name,
           footer: "Use /levelset to change these values",
         })));
@@ -444,11 +433,6 @@ const onMessageListener: ListenerDefinition = {
   },
 };
 
-const onVoiceStateListener: ListenerDefinition = {
-  event: "voiceStateUpdate",
-  async handler(oldState, newState, services: any) {},
-};
-
 const levelingModule: ModuleDefinition = defineModule({
   name: "leveling",
   displayName: "Leveling",
@@ -458,7 +442,6 @@ const levelingModule: ModuleDefinition = defineModule({
   config: LevelingConfigSchema,
   configFields: [
     { key: "xpPerMessage", label: "XP per Message", type: "number", description: "Base XP per message" },
-    { key: "xpPerMinuteVc", label: "XP per Minute in VC", type: "number", description: "Voice chat XP rate" },
     { key: "cooldownSeconds", label: "XP Cooldown", type: "number", description: "Seconds between XP gains" },
     { key: "roleRewards", label: "Role Rewards", type: "json", description: "JSON array: [{level, roleId, removePrevious}]" },
     { key: "multiplierRoles", label: "XP Multiplier Roles", type: "json", description: "JSON array: [{roleId, multiplier}]" },
@@ -466,7 +449,7 @@ const levelingModule: ModuleDefinition = defineModule({
     { key: "ignoredRoles", label: "Ignored Roles", type: "multi-role", description: "Roles that don't gain XP" },
   ],
   commands: [rankDef, leaderboardDef, levelSetDef],
-  listeners: [onMessageListener, onVoiceStateListener, leaderboardListener],
+  listeners: [onMessageListener, leaderboardListener],
   tasks: [],
   async onLoad(services) {
     console.log("[leveling] Module loaded");

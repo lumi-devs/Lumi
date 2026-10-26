@@ -3,11 +3,10 @@
 ## ✅ Completed
 
 - [x] Project structure: apps/bot, modules/, packages/
-- [x] Built-in services: core, admin, security (non-disableable)
+- [x] Built-in services: core, admin (non-disableable)
 - [x] Toggleable modules: mod, leveling, economy, filter, utility, tempvc, logging, afk
 - [x] Module system: module-kit contracts, module-runtime loader, downloader
 - [x] Permit system: time-based expiry, conditions (channel/role/time), no enforced tier
-- [x] RPC layer: ConnectRPC with protobuf definitions (permits, leveling, economy, fleet, module)
 - [x] Cache: L1 LRU + L2 Redis with invalidation bus
 - [x] Database: Prisma schema with all models
 - [x] Architecture docs updated (AGENTS.md, modules.md, architecture.md)
@@ -50,7 +49,6 @@
 - [x] CI/CD pipeline
 
 ### Documentation
-- [x] API reference (generated from protobuf)
 - [x] Module development guide
 - [x] Addon development guide
 - [x] Migration guide from v1

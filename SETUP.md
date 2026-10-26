@@ -42,7 +42,8 @@ bun run dev:bot
 | `REDIS_PORT` | | Redis port (default: 6379) |
 | `REDIS_PASSWORD` | | Redis password if needed |
 | `OWNER_IDS` | | Comma-separated Discord user IDs for bot owner commands |
-| `RPC_PORT` | | RPC server port (default: 8080) |
+| `RPC_HTTP_PORT` | | Control server port (default: 8091) |
+| `RPC_INTERNAL_TOKEN` | | Bearer token for control server endpoints |
 | `METRICS_PORT` | | Prometheus metrics port (default: 9090) |
 
 ---
@@ -227,7 +228,6 @@ bun run downloader uninstall --name addon-name
 ```json
 {
   "xpPerMessage": 15,
-  "xpPerMinuteVc": 10,
   "cooldownSeconds": 60,
   "roleRewards": [
     {"level": 5, "roleId": "123...", "removePrevious": false},

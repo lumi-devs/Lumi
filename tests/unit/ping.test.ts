@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   pingCommand,
   handlePingButton,
-  handlePingClose,
 } from "../../apps/bot/src/core/src/commands.js";
 
 const makeServices = (
@@ -119,7 +118,6 @@ describe("ping panel", () => {
     const buttons = buttonsOf(cards[0]);
     expect(buttons.map((button: any) => button.custom_id)).toEqual([
       "ping:p:-1:u1",
-      "ping:close:u1",
       "ping:p:1:u1",
     ]);
     expect(buttons[0]).toMatchObject({
@@ -127,8 +125,7 @@ describe("ping panel", () => {
       disabled: true,
       emoji: { name: "◀️" },
     });
-    expect(buttons[1]).toMatchObject({ style: 4, label: "Close" });
-    expect(buttons[2]).toMatchObject({
+    expect(buttons[1]).toMatchObject({
       style: 2,
       disabled: true,
       emoji: { name: "▶️" },
@@ -146,7 +143,7 @@ describe("ping panel", () => {
     expect(shardHeaders(cards[0]!)[0]).toBe("__🟢 **Shard [0]:** __");
     expect(shardHeaders(cards[0]!)[9]).toBe("__🟢 **Shard [9]:** __");
     expect(buttonsOf(cards[0]!)[0]!.disabled).toBe(true);
-    expect(buttonsOf(cards[0]!)[2]!.disabled).toBe(false);
+    expect(buttonsOf(cards[0]!)[1]!.disabled).toBe(false);
 
     const forward = await handlePingButton(
       { ...interaction, customId: "ping:p:1:u2" } as any,
@@ -157,7 +154,7 @@ describe("ping panel", () => {
     expect(shardHeaders(cards[1]!)[0]).toBe("__🟢 **Shard [10]:** __");
     expect(shardHeaders(cards[1]!)[4]).toBe("__🟢 **Shard [14]:** __");
     expect(buttonsOf(cards[1]!)[0]!.disabled).toBe(false);
-    expect(buttonsOf(cards[1]!)[2]!.disabled).toBe(true);
+    expect(buttonsOf(cards[1]!)[1]!.disabled).toBe(true);
 
     const back = await handlePingButton(
       { ...interaction, customId: "ping:p:-1:u2" } as any,
@@ -186,17 +183,4 @@ describe("ping panel", () => {
     expect(JSON.stringify(cards[1])).toContain("belongs to another user");
   });
 
-  it("closes the panel", async () => {
-    const { interaction, cards } = makeInteraction("closer");
-    await pingCommand.execute(interaction as any, makeServices() as any);
-    const closed = await handlePingClose({
-      ...interaction,
-      customId: "ping:close:closer",
-    } as any);
-
-    expect(closed).toBe(true);
-    expect(cards).toHaveLength(2);
-    expect(cards[1]).not.toHaveProperty("embeds");
-    expect(JSON.stringify(cards[1])).toContain("Latency panel closed.");
-  });
 });

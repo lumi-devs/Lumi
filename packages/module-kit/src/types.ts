@@ -11,7 +11,9 @@ export interface CommandDefinition {
   data: any; // SlashCommandBuilder
   execute: (interaction: ChatInputCommandInteraction, services: any) => Promise<void>;
   autocomplete?: (interaction: AutocompleteInteraction, services: any) => Promise<void>;
+  aliases?: string[];
   requiredPermit?: string;
+  requiresAdmin?: boolean;
   dmPermission?: boolean;
   defaultMemberPermissions?: bigint | null;
 }

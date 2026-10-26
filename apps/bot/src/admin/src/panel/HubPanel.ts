@@ -1,19 +1,18 @@
 import {
   ButtonStyle,
   ChannelType,
-  PermissionFlagsBits,
   ActionRowBuilder,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type MessageActionRowComponentBuilder,
   type ModalSubmitInteraction,
-  type StringSelectMenuInteraction,
+  type AnySelectMenuInteraction,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
 import {
-  BrandColors,
+  AccentColors,
   createActionButton,
   createChannelSelectMenu,
   createRoleSelectMenu,
@@ -33,6 +32,13 @@ import type { ModuleLoader, ConfigField } from "@lumi/module-runtime";
 import type { ModuleManager } from "../services/ModuleManager.js";
 import type { ConfigService } from "../services/ConfigService.js";
 import { AddonInstaller, type AddonSource } from "@lumi/downloader";
+import type { PermitRepository } from "@lumi/permits";
+import {
+  hasAdminAccess,
+  hasExtraOwnerAccess,
+  roleIdsFrom,
+} from "../access.js";
+import { formatPermitNodes } from "../permits/nodes.js";
 import { PermitPanel } from "./PermitPanel.js";
 
 export type HubView = "home" | "modules" | "settings" | "permits" | "addons";
@@ -40,7 +46,7 @@ export type HubView = "home" | "modules" | "settings" | "permits" | "addons";
 type HubInteraction =
   | ChatInputCommandInteraction
   | ButtonInteraction
-  | StringSelectMenuInteraction
+  | AnySelectMenuInteraction
   | ModalSubmitInteraction;
 
 type MessageModalSubmit = ModalSubmitInteraction & {
@@ -53,11 +59,7 @@ export interface HubServices {
   moduleManager: ModuleManager;
   moduleLoader: ModuleLoader;
   configService: ConfigService;
-  permits: {
-    listPermits(guildId: string): Promise<any[]>;
-    getPermit(guildId: string, id: number): Promise<any>;
-    deletePermit(id: number): Promise<any>;
-  };
+  permits: PermitRepository;
   addonInstaller: AddonInstaller;
 }
 
@@ -151,21 +153,6 @@ function navigationRow(active: HubView): ActionRowBuilder<MessageActionRowCompon
   return tabRow("lumi", TABS, active);
 }
 
-function closeButton() {
-  return createActionButton({
-    customId: "lumi:close",
-    label: "Close",
-    style: ButtonStyle.Danger,
-    emoji: "✖️",
-  });
-}
-
-function closeCard(): CardReply {
-  return makeCard(BrandColors.info, "Lumi", "Control panel closed.", {
-    footer: "Run `/lumi` to reopen",
-  });
-}
-
 function panelOptions(
   interaction: HubInteraction,
   active: HubView,
@@ -181,7 +168,6 @@ function panelOptions(
     actionRows: [
       ...(showTabs ? [navigationRow(active)] : []),
       ...extraRows,
-      row(closeButton()),
     ],
     separatorAboveActionRows: true,
   };
@@ -305,7 +291,7 @@ async function renderModules(
     .join(" · ");
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     "⚙️ Feature Modules",
     notice ? `**${notice}**` : [],
     {
@@ -410,7 +396,7 @@ async function renderModuleDetail(
   if (pages.length > 1) body.push(`-# Settings page ${safeSection + 1} of ${total}`);
 
   return makeCard(
-    enabled ? BrandColors.primary : BrandColors.warning,
+    enabled ? undefined : AccentColors.warning,
     `${meta.emoji} ${meta.displayName}`,
     body,
     {
@@ -531,7 +517,7 @@ async function renderFieldEditor(
   );
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     `${loaded.manifest.emoji} ${loaded.manifest.displayName} · ${field.label}`,
     [
       ...(field.description ? [`-# ${field.description}`] : []),
@@ -681,7 +667,7 @@ async function renderHome(
     client.guilds.cache.reduce((total, guild) => total + (guild.memberCount ?? 0), 0);
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     `🤖 ${client.user?.username ?? "Lumi"} Control Panel`,
     [
       "Manage this server from one place — modules, permissions, and settings.",
@@ -743,7 +729,7 @@ async function renderSettings(
   ];
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     "🏰 Server Settings",
     otherKeys.length
       ? [
@@ -769,7 +755,7 @@ async function renderPermits(
   const shown = permits.slice(0, 10);
   const lines = shown.map(
     (permit) =>
-      `${permit.polarity === "DENY" ? "⛔" : "✅"} **${permit.name}**${permit.builtin ? " 🔒" : ""} — \`${permit.node}\``,
+      `${permit.polarity === "Deny" ? "⛔" : "✅"} **#${permit.number} ${permit.name}**${permit.builtin ? " 🔒" : ""} — ${formatPermitNodes(permit.nodes, 2)}`,
   );
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [
@@ -780,17 +766,12 @@ async function renderPermits(
         emoji: "🛡️",
         style: ButtonStyle.Primary,
       }),
-      createActionButton({
-        customId: "lumi:permitrefresh",
-        label: "Refresh",
-        emoji: "🔄",
-        style: ButtonStyle.Secondary,
-      }),
     ),
+    navigationRow("permits"),
   ];
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     "🛡️ Permissions",
     [
       permits.length === 0
@@ -810,9 +791,26 @@ async function renderPermits(
         ["Hub", "Permissions"],
         rows,
         `${permits.length} permit(s)`,
+        false,
       ),
     },
   );
+}
+
+async function canInstallAddons(
+  interaction: HubInteraction,
+  services: HubServices,
+  guildId: string,
+): Promise<boolean> {
+  return hasExtraOwnerAccess({
+    guildId,
+    userId: interaction.user.id,
+    roleIds: roleIdsFrom(interaction.member, guildId),
+    guildOwnerId: interaction.guild?.ownerId,
+    memberPermissions: interaction.memberPermissions,
+    client: interaction.client,
+    permits: services.permits,
+  });
 }
 
 async function renderAddons(
@@ -820,6 +818,7 @@ async function renderAddons(
   services: HubServices,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
+  const canInstall = await canInstallAddons(interaction, services, guildId);
   const installed = await services.addonInstaller.listInstalled();
   const addonModules = services.moduleLoader
     .listAll()
@@ -843,29 +842,28 @@ async function renderAddons(
     ),
   );
 
-  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [
-    row(
-      createActionButton({
-        customId: "lumi:addoninstall",
-        label: "Install Add-on",
-        emoji: "📦",
-        style: ButtonStyle.Success,
-      }),
-      createActionButton({
-        customId: "lumi:addonsrefresh",
-        label: "Refresh",
-        emoji: "🔄",
-        style: ButtonStyle.Secondary,
-      }),
-    ),
-  ];
+  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = canInstall
+    ? [
+        row(
+          createActionButton({
+            customId: "lumi:addoninstall",
+            label: "Install Add-on",
+            emoji: "📦",
+            style: ButtonStyle.Success,
+          }),
+        ),
+      ]
+    : [];
 
   return makeCard(
-    BrandColors.primary,
+    undefined,
     "📦 Add-ons",
     [
       `**Tracked add-ons:** ${installed.length}`,
       `**Add-on modules:** ${addonModules.length} (${addonModules.filter((item) => item.enabled).length} enabled)`,
+      ...(canInstall
+        ? []
+        : ["-# Only bot owners and Extra Owners can install add-ons."]),
     ],
     {
       sections,
@@ -905,7 +903,7 @@ export class HubPanel {
   }
 
   static async handleInteraction(
-    interaction: ButtonInteraction | StringSelectMenuInteraction | ModalSubmitInteraction,
+    interaction: ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
     services: HubServices,
   ): Promise<boolean> {
     if (!interaction.customId.startsWith("lumi:")) return false;
@@ -918,12 +916,21 @@ export class HubPanel {
       return true;
     }
 
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    const allowed = await hasAdminAccess({
+      guildId,
+      userId: interaction.user.id,
+      roleIds: roleIdsFrom(interaction.member, guildId),
+      guildOwnerId: interaction.guild?.ownerId,
+      memberPermissions: interaction.memberPermissions,
+      client: interaction.client,
+      permits: services.permits,
+    });
+    if (!allowed) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard(
             "Missing Permissions",
-            "You need **Manage Server** to use the Lumi control panel.",
+            "You need **Manage Server** or an admin permit to use the Lumi control panel.",
           ),
         ),
       );
@@ -943,9 +950,8 @@ export class HubPanel {
       return true;
     }
 
-    const ownerId =
-      message.interactionMetadata?.user.id ?? message.interaction?.user.id;
-    if (ownerId && ownerId !== interaction.user.id) {
+    const ownerId = message.interactionMetadata?.user.id;
+    if (ownerId !== undefined && ownerId !== interaction.user.id) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard("Lumi", "This panel belongs to another user.", {
@@ -959,10 +965,6 @@ export class HubPanel {
     const [, action, target, extra, extra2] = interaction.customId.split(":");
 
     switch (action) {
-      case "close": {
-        await interaction.update(closeCard());
-        return true;
-      }
       case "home":
       case "modules":
       case "settings":
@@ -980,6 +982,7 @@ export class HubPanel {
           redis: services.redis,
           guildId,
           interaction,
+          moduleLoader: services.moduleLoader,
         });
         await panel.render();
         return true;
@@ -1145,17 +1148,18 @@ export class HubPanel {
         return true;
       }
       case "addoninstall": {
+        if (!(await canInstallAddons(interaction, services, guildId))) {
+          await interaction.reply(
+            ephemeralCard(
+              makeErrorCard(
+                "Missing Permissions",
+                "Only bot owners and Extra Owners can install add-ons.",
+              ),
+            ),
+          );
+          return true;
+        }
         await interaction.showModal(addonModal());
-        return true;
-      }
-      case "addonsrefresh": {
-        await interaction.deferUpdate();
-        await interaction.editReply(await renderAddons(interaction, services));
-        return true;
-      }
-      case "permitrefresh": {
-        await interaction.deferUpdate();
-        await interaction.editReply(await renderPermits(interaction, services));
         return true;
       }
       default: {
@@ -1232,6 +1236,17 @@ export class HubPanel {
     }
 
     if (action === "addoninstallmodal") {
+      if (!(await canInstallAddons(interaction, services, guildId))) {
+        await interaction.reply(
+          ephemeralCard(
+            makeErrorCard(
+              "Missing Permissions",
+              "Only bot owners and Extra Owners can install add-ons.",
+            ),
+          ),
+        );
+        return;
+      }
       const source = interaction.fields.getTextInputValue("source").trim().toLowerCase();
       const url = interaction.fields.getTextInputValue("url").trim();
       const ref = interaction.fields.getTextInputValue("ref").trim() || undefined;
@@ -1269,7 +1284,7 @@ export class HubPanel {
       } else {
         await interaction.editReply(
           makeCard(
-            BrandColors.success,
+            AccentColors.success,
             "Add-on Installed",
             `Installed **${result.name}** v${result.version}.`,
             { footer: result.path },

@@ -16,7 +16,6 @@
     "@lumi/ui": "workspace:*",
     "@lumi/db": "workspace:*",
     "@lumi/cache": "workspace:*",
-    "@lumi/rpc": "workspace:*",
     "discord.js": "^14.14.0",
     "zod": "^3.22.0"
   },

@@ -42,7 +42,7 @@ export interface BootOptions {
 export async function boot(options: BootOptions): Promise<void> {
   const { token, client, onReady } = options;
 
-  client.once("ready", async () => {
+  client.once("clientReady", async () => {
     console.log(`Logged in as ${client.user?.tag}`);
     if (onReady) await onReady();
   });

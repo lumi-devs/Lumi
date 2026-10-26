@@ -1,17 +1,17 @@
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
 } from "discord.js";
 import { HubPanel, type HubServices } from "../panel/HubPanel.js";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import { permitCommand } from "./permit.js";
 
 export const moduleCommands = [
   {
+    requiresAdmin: true,
     data: new SlashCommandBuilder()
       .setName("lumi")
-      .setDescription("Open the Lumi control panel")
-      .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+      .setDescription("Open the Lumi control panel"),
     async execute(interaction: ChatInputCommandInteraction, services: HubServices) {
       if (!interaction.guildId) {
         await interaction.reply(
@@ -21,7 +21,8 @@ export const moduleCommands = [
         );
         return;
       }
-      await interaction.reply(await HubPanel.render("home", interaction, services));
+      await interaction.reply(ephemeralCard(await HubPanel.render("home", interaction, services)));
     },
   },
+  permitCommand,
 ];

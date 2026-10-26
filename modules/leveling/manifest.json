@@ -20,13 +20,6 @@
       "default": 15
     },
     {
-      "key": "xpPerMinuteVc",
-      "label": "XP per Minute in VC",
-      "type": "number",
-      "description": "Voice chat XP rate",
-      "default": 10
-    },
-    {
       "key": "cooldownSeconds",
       "label": "XP Cooldown",
       "type": "number",

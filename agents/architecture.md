@@ -5,26 +5,20 @@
 ```
 apps/bot/                 deployable process: entry, composition root, dispatch,
                           built-in commands, Lumi control panel
-apps/bot/src/core/        Built-in: gateway, sharding, RPC server, scheduler
+apps/bot/src/core/        Built-in: gateway, sharding, HTTP control server, scheduler
 apps/bot/src/admin/       Built-in: module management, config, /lumi panel
-apps/bot/src/security/    Built-in: verification, panic, antinuke, joingate
 modules/                  bundled feature modules (toggleable)
-packages/core/            Built-in: core services (gateway, RPC, scheduler)
-packages/admin/           Built-in: admin services (module mgmt, panel)
-packages/security/        Built-in: security services (verification, panic, etc)
 packages/permits/         Built-in: permit evaluation, time-based, conditions
 packages/cache/           L1 LRU + Redis L2 cache, codec, single-flight
 packages/redis/           ioredis client, keys, TTLs, invalidation bus, locks
 packages/db/              Prisma schema, client, repositories
-packages/permits/         Built-in: permit evaluation, time-based, conditions
+packages/foundation/      shared pino logger
 packages/module-kit/      module/command/listener/context/service contracts
 packages/module-runtime/  discovery, manifest validation, loader, lifecycle
 packages/downloader/      git addon installer, validation, versioned installs
 packages/ui/              card builders, palette, layout helpers
 packages/observability/   Prometheus registry, metrics, /metrics + /healthz
 packages/scheduler/       distributed cron with Redis locks
-packages/discord/         Discord.js helpers, extensions
-packages/config/          env validation, config schema, hot-reload
 ```
 
 ## Three workspace roots, three responsibilities
@@ -39,9 +33,8 @@ packages/config/          env validation, config schema, hot-reload
 ## Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
-- `apps/bot/src/core/` — Gateway, sharding, RPC server, scheduler, lifecycle
+- `apps/bot/src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
 - `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
-- `apps/bot/src/security/` — Verification, panic, anti-nuke, join gate
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules):
 All modules under `modules/` are toggleable:
@@ -61,18 +54,17 @@ All modules under `modules/` are toggleable:
 ## Dependency direction
 
 ```
-contracts <- foundation <- observability
-                        <- redis <- cache
-                                  <- db <- module-kit <- module-runtime <- downloader
-                                                                       <- apps/bot
-ui (foundation + discord.js builders) <- module-kit
-built-in services (core, admin, security) <- apps/bot
+foundation (pino)
+redis <- cache
+      <- db <- module-kit <- module-runtime <- downloader
+                                          <- apps/bot
+ui (discord.js builders) <- module-kit
+built-in services (core, admin) <- apps/bot
 toggleable modules (module-kit + db + redis + ui) <- apps/bot
 ```
 
 Rules:
 
-- `contracts` imports nothing from this repo.
 - `foundation` imports no other Lumi package.
 - `cache` and `db` never import `apps/bot` or `modules`.
 - `module-runtime` and `downloader` never import `apps/bot` or `modules`.
@@ -87,12 +79,12 @@ Rules:
 2. `createCoreServices()` connects Redis, starts the invalidation bus, builds the
    cache namespaces, the Prisma handle, and repositories.
 3. The app builds `ModuleLoader`, `AddonInstaller`, then composes services.
-6. Built-in services (core, admin, security) are wired directly.
-7. `loader.load()` discovers roots, resolves semver dependencies, imports
+4. Built-in services (core, admin) are wired directly.
+5. `loader.load()` discovers roots, resolves semver dependencies, imports
    entries, wires listeners, and registers module commands.
-8. The metrics server starts (`/metrics`, `/healthz`).
-9. `client.login()`.
-10. On ready: register global slash commands (built-ins + loaded modules). Any
+6. The metrics server starts (`/metrics`, `/healthz`).
+7. `client.login()`.
+8. On ready: register global slash commands (built-ins + loaded modules). Any
     later module change re-registers them through the loader's `onChange` hook.
 
 ## Process model
@@ -106,7 +98,7 @@ in-flight loads stale. No process-local assumption is required for correctness.
 - Manager process: shard allocation, health monitoring, rolling deployments
 - Worker processes: handle assigned shards, connect to Discord gateway
 - Shared state: Redis (cache, pub/sub, locks), PostgreSQL (source of truth)
-- Inter-process RPC: gRPC/ConnectRPC for manager↔worker, dashboard↔manager
+- Internal control server: token-guarded HTTP health and status endpoints
 
 ## What was removed from v1
 

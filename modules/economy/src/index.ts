@@ -11,7 +11,7 @@ import {
   makeEmptyCard,
   ephemeralCard,
   formatPageFooter,
-  BrandColors,
+  AccentColors,
 } from "@lumi/ui";
 import { z } from "zod";
 import type { BalanceCardData } from "./balanceCard.js";
@@ -126,7 +126,7 @@ const balanceDef: CommandDefinition = {
 
     if (attachment) {
       await interaction.reply({
-        ...ephemeralCard(makeCard(BrandColors.gold, title, body, {
+        ...ephemeralCard(makeCard(AccentColors.gold, title, body, {
           ...options,
           headerImages: ["attachment://balance.png"],
         })),
@@ -135,7 +135,7 @@ const balanceDef: CommandDefinition = {
       return;
     }
 
-    await interaction.reply(ephemeralCard(makeCard(BrandColors.gold, title, body, options)));
+    await interaction.reply(ephemeralCard(makeCard(AccentColors.gold, title, body, options)));
   },
 };
 
@@ -420,7 +420,7 @@ const leaderboardDef: CommandDefinition = {
       return `**#${(page - 1) * perPage + i + 1}** ${name} — ${symbol} ${u.balance.toLocaleString()}`;
     });
 
-    await interaction.reply(ephemeralCard(makeCard(BrandColors.gold, "🏆 Richest Users", lines, {
+    await interaction.reply(ephemeralCard(makeCard(AccentColors.gold, "🏆 Richest Users", lines, {
       subtitle: interaction.guild?.name,
       footer: formatPageFooter(page - 1, totalPages, total),
     })));

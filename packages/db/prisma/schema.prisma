@@ -9,8 +9,8 @@ datasource db {
 }
 
 enum Polarity {
-  GRANT
-  DENY
+  Grant
+  Deny
 }
 
 enum PermitTargetType {
@@ -36,7 +36,6 @@ model Guild {
   levelingConfig LevelingConfig?
   economyConfig EconomyConfig?
   tempVcConfig  TempVcConfig?
-  securityConfig SecurityConfig?
   sheets        Sheet[]
 
   @@map("guilds")
@@ -47,7 +46,8 @@ model Permit {
   guildId     String        @map("guild_id")
   guild       Guild         @relation(fields: [guildId], references: [id], onDelete: Cascade)
   name        String
-  node        String
+  number      Int
+  nodes       String[]
   polarity    Polarity
   position    Int
   builtin     Boolean       @default(false)
@@ -61,6 +61,7 @@ model Permit {
   assignments PermitAssignment[]
 
   @@unique([guildId, name])
+  @@unique([guildId, number])
   @@index([guildId])
   @@map("permits")
 }
@@ -104,7 +105,6 @@ model LevelingConfig {
   guildId         String   @unique @map("guild_id")
   guild           Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
   xpPerMessage    Int      @default(15) @map("xp_per_message")
-  xpPerMinuteVc   Int      @default(10) @map("xp_per_minute_vc")
   cooldownSeconds Int      @default(60) @map("cooldown_seconds")
   xpCurve         Json     @default("{}") @map("xp_curve")
   roleRewards     Json     @default("[]") @map("role_rewards")
@@ -236,39 +236,17 @@ model TempVcChannel {
   @@map("tempvc_channels")
 }
 
-// Security
-model SecurityConfig {
-  id                String   @id @default(cuid())
-  guildId           String   @unique @map("guild_id")
-  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  verificationMode  String   @default("none") @map("verification_mode") // none, emoji, button, captcha, question
-  verificationRole  String?  @map("verification_role")
-  verificationChannel String? @map("verification_channel")
-  captchaProvider   String?  @map("captcha_provider")
-  captchaSecret     String?  @map("captcha_secret")
-  antinukeEnabled   Boolean  @default(true) @map("antinuke_enabled")
-  antinukeThresholds Json     @default("{}") @map("antinuke_thresholds")
-  antinukePunishment String   @default("ban") @map("antinuke_punishment")
-  joinGateEnabled   Boolean  @default(false) @map("join_gate_enabled")
-  joinGateHeuristics Json     @default("{}") @map("join_gate_heuristics")
-  panicEnabled      Boolean  @default(false) @map("panic_enabled")
-  panicPreviousPerms Json?   @map("panic_previous_perms")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+// AFK
+model AfkEntry {
+  id        String   @id @default(cuid())
+  guildId   String   @map("guild_id")
+  userId    String   @map("user_id")
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("security_configs")
-}
-
-model VerificationPending {
-  id           String   @id @default(cuid())
-  guildId      String   @map("guild_id")
-  userId       String   @map("user_id")
-  method       String   // emoji, button, captcha, question
-  attempts     Int      @default(0)
-  expiresAt    DateTime @map("expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  @@index([guildId, userId])
-  @@map("verification_pending")
+  @@unique([guildId, userId])
+  @@index([guildId])
+  @@map("afk_entries")
 }
 
 // Sheets
