@@ -3,64 +3,39 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
     "allowImportingTsExtensions": true,
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
+    "types": ["bun"],
+
     "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+
     "isolatedModules": true,
-    "noEmit": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "baseUrl": ".",
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
     "paths": {
-      "@lumi/core": [
-        "src/core"
-      ],
-      "@lumi/admin": [
-        "src/admin"
-      ],
-      "@lumi/permits": [
-        "packages/permits/src"
-      ],
-      "@lumi/cache": [
-        "packages/cache/src"
-      ],
-      "@lumi/redis": [
-        "packages/redis/src"
-      ],
-      "@lumi/db": [
-        "packages/db/src"
-      ],
-      "@lumi/ui": [
-        "packages/ui/src"
-      ],
-      "@lumi/observability": [
-        "packages/observability/src"
-      ],
-      "@lumi/scheduler": [
-        "packages/scheduler/src"
-      ],
-      "@lumi/module-kit": [
-        "packages/module-kit/src"
-      ],
-      "@lumi/module-runtime": [
-        "packages/module-runtime/src"
-      ],
-      "@lumi/downloader": [
-        "packages/downloader/src"
-      ]
+      "@lumi/core": ["./src/core"],
+      "@lumi/admin": ["./src/admin"],
+      "@lumi/permits": ["./packages/permits/src"],
+      "@lumi/cache": ["./packages/cache/src"],
+      "@lumi/redis": ["./packages/redis/src"],
+      "@lumi/db": ["./packages/db/src"],
+      "@lumi/ui": ["./packages/ui/src"],
+      "@lumi/observability": ["./packages/observability/src"],
+      "@lumi/scheduler": ["./packages/scheduler/src"],
+      "@lumi/module-kit": ["./packages/module-kit/src"],
+      "@lumi/module-runtime": ["./packages/module-runtime/src"],
+      "@lumi/downloader": ["./packages/downloader/src"]
     }
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ]
+  "exclude": ["node_modules", "dist", "build"]
 }

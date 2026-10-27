@@ -6,9 +6,6 @@
   "description": "Set AFK status with mention replies and nickname prefix",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "utility"
-  ],
   "configFields": [
     {
       "key": "nickPrefixEnabled",
@@ -38,5 +35,8 @@
       "description": "Maximum AFK reason length",
       "default": 200
     }
-  ]
+  ],
+  "dependencies": {
+    "utility": "^2.0.0"
+  }
 }

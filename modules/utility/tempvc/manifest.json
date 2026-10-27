@@ -6,9 +6,6 @@
   "description": "Join-to-create temporary voice channels with ownership controls",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "utility"
-  ],
   "configFields": [
     {
       "key": "categoryId",
@@ -69,5 +66,8 @@
       "description": "Delete channel when owner leaves",
       "default": true
     }
-  ]
+  ],
+  "dependencies": {
+    "utility": "^2.0.0"
+  }
 }

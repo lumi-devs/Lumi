@@ -1,9 +1,7 @@
 export { 
   createClient, 
-  createCoreServices, 
-  ShardManager,
+  createCoreServices,
   type CoreServices,
-  type ShardManagerOptions 
 } from "./gateway";
 
 export { 

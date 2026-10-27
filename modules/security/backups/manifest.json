@@ -6,9 +6,6 @@
   "description": "Periodic server structure snapshots for auto-recovery and manual restore",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -35,5 +32,8 @@
       "min": 1,
       "max": 50
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

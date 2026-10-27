@@ -1,7 +1,5 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { 
-  PermitKind, 
-  Polarity, 
   PermitTargetType,
   EvaluatePermitOptions, 
   PermitTierExplanation, 
@@ -28,7 +26,7 @@ export function evaluateNodeMatch(
   }
   if (grantedNode.endsWith(".*")) {
     const namespace = grantedNode.slice(0, -2);
-    return requiredNode === namespace || requiredNode.startsWith(namespace + ".");
+    return requiredNode === namespace || requiredNode.startsWith(`${namespace}.`);
   }
   return false;
 }
@@ -156,7 +154,7 @@ export function evaluatePermitWithChain(
   chainResult: PermitChainResult,
   client?: any,
 ): EvaluatedPermit {
-  const { userId, roleIds = [], channelId, permitNode } = options;
+  const { roleIds = [], channelId, permitNode } = options;
 
   const privileged = privilegedResult(options, client);
   if (privileged) return privileged;

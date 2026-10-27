@@ -1,5 +1,5 @@
 import { PermissionFlagsBits } from "discord.js";
-import { isBotOwner, type PermitRepository } from "@lumi/permits";
+import type { PermitRepository } from "@lumi/permits";
 
 export interface AdminAccessOptions {
   guildId: string;
@@ -41,16 +41,4 @@ export async function hasAdminAccess(
   );
 
   return result.allowed;
-}
-
-export async function hasExtraOwnerAccess(
-  options: AdminAccessOptions,
-): Promise<boolean> {
-  if (isBotOwner(options.userId)) return true;
-  return options.permits.hasGrantNode({
-    guildId: options.guildId,
-    userId: options.userId,
-    roleIds: options.roleIds,
-    permitNode: "*",
-  });
 }

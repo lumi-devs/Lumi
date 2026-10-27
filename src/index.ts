@@ -6,7 +6,7 @@ import { prisma, connectDatabase, disconnectDatabase } from "@lumi/db";
 import { PermitRepository } from "@lumi/permits";
 import {
   ConfigService,
-  HubPanel,
+  handleHubInteraction,
   ModuleManager,
   PermitPanel,
   hasAdminAccess,
@@ -16,12 +16,12 @@ import {
 import {
   DiscordAPIError,
   HTTPError,
-  PermissionFlagsBits,
   RESTJSONErrorCodes,
 } from "discord.js";
 import * as ui from "@lumi/ui";
+import { CommandRegistry, ModuleHost } from "./core/modules.js";
 import { DistributedScheduler } from "@lumi/scheduler";
-import { AddonInstaller } from "@lumi/downloader";
+import { AddonManager } from "@lumi/downloader";
 import {
   activeModules,
   commandsExecuted,
@@ -29,23 +29,10 @@ import {
   guildsTotal,
   httpRequestDuration,
   httpRequests,
-  registry,
   shardsOnline,
   startMetricsServer,
   usersTotal,
 } from "@lumi/observability";
-import type {
-  AutocompleteInteraction,
-  ChatInputCommandInteraction,
-} from "discord.js";
-
-interface RegisteredCommand {
-  data: any;
-  execute: (interaction: ChatInputCommandInteraction, services: any) => Promise<void>;
-  autocomplete?: (interaction: AutocompleteInteraction, services: any) => Promise<void>;
-  requiresAdmin?: boolean;
-  module: string | null;
-}
 
 const logger = {
   info: (msg: string, meta?: any) => console.log(msg, meta ?? ""),
@@ -160,7 +147,6 @@ async function main() {
   moduleLoader.addRoot("modules", "bundled");
   moduleLoader.addRoot("data/addons", "addon");
 
-  const addonInstaller = new AddonInstaller("data/addons", moduleLoader);
 
   const configService = new ConfigService(prisma);
   const scheduler = new DistributedScheduler(redis);
@@ -176,7 +162,7 @@ async function main() {
     check: async () => ({ healthy: client.isReady(), details: client.user?.tag ?? "not ready" }),
   });
 
-  const rpcPort = parseInt(process.env.RPC_HTTP_PORT ?? "8091");
+  const rpcPort = parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
   const rpcToken = process.env.RPC_INTERNAL_TOKEN;
   const rpc = createRpcServer({
     port: rpcPort,
@@ -229,7 +215,7 @@ async function main() {
 
   let metricsServer: { stop(): void } | undefined;
   if (process.env.METRICS_ENABLED !== "false") {
-    const metricsPort = parseInt(process.env.METRICS_PORT ?? "9090");
+    const metricsPort = parseInt(process.env.METRICS_PORT ?? "9090", 10);
     metricsServer = startMetricsServer(metricsPort, () => client.isReady(), logger);
     console.log(`Metrics server started on :${metricsPort}`);
   }
@@ -250,8 +236,8 @@ async function main() {
       isEnabled: (guildId: string, moduleName: string) => moduleLoader.isEnabled(guildId, moduleName),
     },
     moduleLoader,
-    addonInstaller,
     scheduler,
+    addons: undefined as unknown as AddonManager,
     config: {
       get: (guildId: string, key: string) => configService.get(guildId, key),
       set: (guildId: string, key: string, value: any) =>
@@ -267,67 +253,69 @@ async function main() {
     observability: { healthMonitor },
   };
 
-  addonInstaller.bindServices(services);
+  const registry = new CommandRegistry();
+  const host = new ModuleHost({
+    client,
+    loader: moduleLoader,
+    registry,
+    services,
+    logger,
+    syncCommands: async () => {
+      for (const guild of client.guilds.cache.values()) {
+        await guild.commands
+          .set(registry.payload() as any)
+          .catch((error) => logger.error(`Failed to sync commands in ${guild.id}:`, error));
+      }
+    },
+  });
+
+  const addons = new AddonManager({
+    prisma,
+    redis,
+    runtime: host,
+    logger,
+    notify: async (report) => {
+      const ownerIds = (process.env.OWNER_IDS ?? "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+      if (ownerIds.length === 0) return;
+
+      const lines = [
+        "**Add-on auto-update**",
+        ...report.updated.map((name) => `✅ Updated ${name}`),
+        ...report.failures.map((failure) => `❌ ${failure.module}: ${failure.error}`),
+      ];
+      for (const ownerId of ownerIds) {
+        const user = await client.users.fetch(ownerId).catch(() => null);
+        await user?.send(lines.join("\n")).catch(() => undefined);
+      }
+    },
+  });
+  services.addons = addons;
+
+  host.addStatic([pingCommand, aboutCommand, ...moduleCommands]);
 
   const discovered = await moduleLoader.discover();
   console.log(`Discovered ${discovered.length} modules`);
 
-  const loaded = await moduleLoader.loadAll(discovered, services);
+  const loaded = await host.load(discovered);
   console.log(`Loaded ${loaded.length} modules: ${loaded.map((m) => m.manifest.name).join(", ") || "(none)"}`);
+  console.log(`Registered ${registry.size} commands and ${registry.aliasCount} prefix aliases`);
 
   activeModules.set(loaded.length);
 
-  for (const module of loaded) {
-    for (const listener of module.definition.listeners ?? []) {
-      const handler = listener.handler;
-      const register = listener.once ? client.once.bind(client) : client.on.bind(client);
-      register(listener.event as any, (...args: any[]) => {
-        void handler(...args, services).catch((err) =>
-          logger.error(`[${module.manifest.name}] listener ${listener.event} failed:`, err)
-        );
-      });
-    }
-  }
-
-  const commandRegistry = new Map<string, RegisteredCommand>();
-  const prefixAliases = new Map<string, RegisteredCommand>();
-
-  commandRegistry.set("ping", { ...pingCommand, module: null });
-  commandRegistry.set("about", { ...aboutCommand, module: null });
-
-  for (const cmd of moduleCommands) {
-    commandRegistry.set(cmd.data.name, { ...cmd, module: null });
-  }
-
-  for (const module of loaded) {
-    for (const cmd of module.definition.commands ?? []) {
-      const name = cmd.data.name;
-      if (commandRegistry.has(name)) {
-        logger.warn(`Command collision: /${name} already registered, skipping from module ${module.manifest.name}`);
-        continue;
+  scheduler.register({
+    name: "addons-autoupdate",
+    cron: "*/1 * * * *",
+    handler: async () => {
+      const report = await addons.autoUpdate();
+      if (report?.failures.length) {
+        logger.warn(`Auto-update failed for ${report.failures.length} add-on(s)`);
       }
-      commandRegistry.set(name, { ...cmd, module: module.manifest.name });
-    }
-  }
-
-  for (const module of loaded) {
-    for (const cmd of module.definition.commands ?? []) {
-      const registered = commandRegistry.get(cmd.data.name);
-      if (!registered || registered.module !== module.manifest.name) continue;
-      for (const alias of cmd.aliases ?? []) {
-        const key = alias.toLowerCase();
-        if (commandRegistry.has(key) || prefixAliases.has(key)) {
-          logger.warn(`Command alias collision: ${key} already registered`);
-          continue;
-        }
-        prefixAliases.set(key, registered);
-      }
-    }
-  }
-
-  console.log(
-    `Registered ${commandRegistry.size} commands and ${prefixAliases.size} prefix aliases`,
-  );
+    },
+  });
+  await scheduler.start();
 
   const syncGuildModules = async (guildId: string) => {
     let rows: any[] = [];
@@ -336,7 +324,7 @@ async function main() {
     } catch (err) {
       logger.warn("Could not load guild module state, defaulting to enabled:", err);
     }
-    for (const module of loaded) {
+    for (const module of moduleLoader.listAll()) {
       const row = (rows ?? []).find((r: any) => r.module === module.manifest.name);
       const defaultEnabled = (module.manifest as any).defaultEnabled !== false;
       const enabled = row ? Boolean(row.enabled) : defaultEnabled;
@@ -369,7 +357,7 @@ async function main() {
   };
 
   const registerGuildCommands = async (guild: any) => {
-    const payload = Array.from(commandRegistry.values()).map((c) => c.data.toJSON());
+    const payload = registry.payload();
     try {
       await guild.commands.set(payload);
       logger.info(`Registered ${payload.length} commands in guild ${guild.name} (${guild.id})`);
@@ -382,7 +370,7 @@ async function main() {
     guildsTotal.set(client.guilds.cache.size);
     usersTotal.set(client.users.cache.size);
     shardsOnline.set(client.ws.shards.size);
-    activeModules.set(loaded.length);
+    activeModules.set(moduleLoader.listAll().length);
 
     for (const guild of client.guilds.cache.values()) {
       await syncGuildRecord(guild);
@@ -427,9 +415,7 @@ async function main() {
     const [name, ...args] = withoutPrefix.split(/ +/g);
     if (!name) return;
 
-    const command =
-      commandRegistry.get(name.toLowerCase()) ??
-      prefixAliases.get(name.toLowerCase());
+    const command = registry.get(name);
     if (!command) return;
     if (command.module && !moduleLoader.isEnabled(message.guild.id, command.module)) return;
 
@@ -678,7 +664,7 @@ async function main() {
   client.on("interactionCreate", async (interaction) => {
     try {
       if (interaction.isAutocomplete()) {
-        const command = commandRegistry.get(interaction.commandName);
+        const command = registry.get(interaction.commandName);
         if (command?.autocomplete) {
           await command.autocomplete(interaction, services);
         } else {
@@ -688,7 +674,7 @@ async function main() {
       }
 
       if (interaction.isChatInputCommand()) {
-        const command = commandRegistry.get(interaction.commandName);
+        const command = registry.get(interaction.commandName);
         if (!command) {
           await interaction.reply(ui.ephemeralCard(ui.makeErrorCard("Unknown Command", "That command is not registered."))).catch(() => undefined);
           return;
@@ -782,7 +768,7 @@ async function main() {
         interaction.isAnySelectMenu() ||
         interaction.isModalSubmit()
       ) {
-        if (await HubPanel.handleInteraction(interaction, services)) return;
+        if (await handleHubInteraction(interaction, services)) return;
       }
 
       if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
@@ -840,7 +826,7 @@ async function main() {
     shuttingDown = true;
     console.log(`Received ${signal}, shutting down...`);
 
-    for (const module of loaded) {
+    for (const module of moduleLoader.listAll()) {
       try {
         await module.definition.onUnload(services);
       } catch (err) {

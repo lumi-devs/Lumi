@@ -6,9 +6,6 @@
   "description": "On-join security filters: no avatar, min age, unverified bots, advertising names, suspicious accounts, username patterns, and raid detection",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -188,5 +185,8 @@
         "quarantine"
       ]
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

@@ -27,7 +27,9 @@ const createMockInvalidationBus = () => {
     }),
     invalidate: vi.fn(async (namespace: string, keys: string[]) => {
       const ls = listeners.get(namespace) || listeners.get("");
-      ls?.forEach(fn => fn(keys));
+      ls?.forEach((fn) => {
+        fn(keys);
+      });
     }),
     onResync: vi.fn().mockResolvedValue(undefined),
   };

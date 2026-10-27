@@ -33,7 +33,7 @@ export function isAudible(state: VoiceState): boolean {
   const member = state.member;
   if (!member || member.user.bot) return false;
   const channel = state.channel;
-  if (!channel || !channel.isVoiceBased()) return false;
+  if (!channel?.isVoiceBased()) return false;
   let humans = 0;
   for (const other of channel.members.values()) {
     if (!other.user.bot && ++humans > 1) return true;

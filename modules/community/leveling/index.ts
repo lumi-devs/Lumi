@@ -1,11 +1,11 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
-  Message,
-  GuildMember,
-  Interaction,
+  type Message,
+  type GuildMember,
+  type Interaction,
   type Guild,
-  VoiceState,
+  type VoiceState,
   Events,
 } from "discord.js";
 import { defineModule, type CommandDefinition, type ModuleDefinition, type ListenerDefinition } from "@lumi/module-kit";
@@ -23,12 +23,10 @@ import { z } from "zod";
 import {
   LevelFormulas,
   xpForLevel,
-  totalXpForLevel,
   levelForTotalXp,
 } from "./formulas.js";
 import {
   getLevelingConfig,
-  applyMultipliers,
   AnnounceMessageDefault,
 } from "./config.js";
 import { voiceSessionStart, voiceSessionEnd, isAudible } from "./voice-sessions.js";
@@ -154,7 +152,6 @@ const rankDef: CommandDefinition = {
     }
 
     const config = await services.config.get(guildId, "leveling") as any ?? {};
-    const xpPerMessage = config.xpPerMessage ?? 15;
 
     const rank = await services.db.prisma.levelingUser.count({
       where: { guildId, xp: { gt: user.xp } },
@@ -225,7 +222,6 @@ async function renderLeaderboard(
       return `**#${(page - 1) * 10 + i + 1}** ${name} — ${u.voiceMinutes.toLocaleString()} voice minutes`;
     }
     const xp = Number(u.xp);
-    const currentLevelXp = xpForLevel(config.levelFormula, u.level);
     const nextLevelXp = xpForLevel(config.levelFormula, u.level + 1);
     const xpForNext = Math.max(0, nextLevelXp - xp);
     return `**#${(page - 1) * 10 + i + 1}** ${name} — Level ${u.level} · ${xp.toLocaleString()} XP (${xpForNext.toLocaleString()} to next)`;
@@ -583,7 +579,7 @@ const onMessageListener: ListenerDefinition = {
       where: { guildId_userId: { guildId, userId: message.author.id } },
     });
 
-    if (user && user.lastXpAt && now - new Date(user.lastXpAt).getTime() < (config.cooldownSeconds ?? 60) * 1000) {
+    if (user?.lastXpAt && now - new Date(user.lastXpAt).getTime() < (config.cooldownSeconds ?? 60) * 1000) {
       return;
     }
 
@@ -659,11 +655,11 @@ const levelingModule: ModuleDefinition = defineModule({
   commands: [rankDef, leaderboardDef, levelSetDef],
   listeners: [onMessageListener, leaderboardListener, onVoiceStateListener],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[leveling] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[leveling] Module unloaded");
   },
 });

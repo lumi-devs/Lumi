@@ -3,7 +3,6 @@ import {
   ChannelType,
   ActionRowBuilder,
   type ButtonInteraction,
-  type ChatInputCommandInteraction,
   type MessageActionRowComponentBuilder,
   type ModalSubmitInteraction,
   type AnySelectMenuInteraction,
@@ -23,35 +22,28 @@ import {
   makeErrorCard,
   row,
   settingRow,
-  tabRow,
-  type CardOptions,
   type CardReply,
-  type Tab,
 } from "@lumi/ui";
 import type { ModuleLoader, ConfigField } from "@lumi/module-runtime";
 import type { ModuleManager } from "../services/ModuleManager.js";
 import type { ConfigService } from "../services/ConfigService.js";
-import { AddonInstaller, type AddonSource } from "@lumi/downloader";
+import type { AddonManager } from "@lumi/downloader";
 import type { PermitRepository } from "@lumi/permits";
-import {
-  hasAdminAccess,
-  hasExtraOwnerAccess,
-  roleIdsFrom,
-} from "../access.js";
+import { hasAdminAccess, roleIdsFrom } from "../access.js";
 import { formatPermitNodes } from "../permits/nodes.js";
 import { PermitPanel } from "./PermitPanel.js";
+import { handleAddonInteraction, renderAddonPanel } from "./addons.js";
+import {
+  cut,
+  navigationRow,
+  pageRow,
+  panelOptions,
+  type HubInteraction,
+  type HubView,
+  type MessageModalSubmit,
+} from "./common.js";
 
-export type HubView = "home" | "modules" | "settings" | "permits" | "addons";
-
-type HubInteraction =
-  | ChatInputCommandInteraction
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | ModalSubmitInteraction;
-
-type MessageModalSubmit = ModalSubmitInteraction & {
-  update(reply: CardReply): Promise<unknown>;
-};
+export type { HubView } from "./common.js";
 
 export interface HubServices {
   prisma: any;
@@ -60,16 +52,8 @@ export interface HubServices {
   moduleLoader: ModuleLoader;
   configService: ConfigService;
   permits: PermitRepository;
-  addonInstaller: AddonInstaller;
+  addons: AddonManager;
 }
-
-const TABS: Tab[] = [
-  { id: "home", label: "Overview", emoji: "🏠" },
-  { id: "modules", label: "Modules", emoji: "⚙️" },
-  { id: "permits", label: "Permissions", emoji: "🛡️" },
-  { id: "settings", label: "Settings", emoji: "🏰" },
-  { id: "addons", label: "Add-ons", emoji: "📦" },
-];
 
 const ModulesPerPage = 4;
 const FieldsPerPage = 4;
@@ -78,11 +62,7 @@ const DefaultPrefix = ",";
 
 type FieldValue = unknown;
 
-function cut(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
-}
-
-function valueOf(field: ConfigField, config: Record<string, unknown>): FieldValue {
+function fieldValue(field: ConfigField, config: Record<string, unknown>): FieldValue {
   const stored = config[field.key];
   return stored === undefined || stored === null || stored === ""
     ? field.default
@@ -147,49 +127,6 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 function fieldPages(fields: ConfigField[]): ConfigField[][] {
   return chunk(fields, FieldsPerPage);
-}
-
-function navigationRow(active: HubView): ActionRowBuilder<MessageActionRowComponentBuilder> {
-  return tabRow("lumi", TABS, active);
-}
-
-function panelOptions(
-  interaction: HubInteraction,
-  active: HubView,
-  breadcrumbs: string[],
-  extraRows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [],
-  footer?: string,
-  showTabs = true,
-): CardOptions {
-  return {
-    breadcrumbs,
-    thumbnailUrl: interaction.guild?.iconURL({ size: 128 }) ?? undefined,
-    footer: footer ?? `Requested by ${interaction.user.tag}`,
-    actionRows: [
-      ...(showTabs ? [navigationRow(active)] : []),
-      ...extraRows,
-    ],
-    separatorAboveActionRows: true,
-  };
-}
-
-function pageRow(prefix: string, page: number, totalPages: number) {
-  return row(
-    createActionButton({
-      customId: `${prefix}:${page - 1}`,
-      label: "Previous",
-      emoji: "◀️",
-      style: ButtonStyle.Secondary,
-      disabled: page <= 0,
-    }),
-    createActionButton({
-      customId: `${prefix}:${page + 1}`,
-      label: "Next",
-      emoji: "▶️",
-      style: ButtonStyle.Secondary,
-      disabled: page >= totalPages - 1,
-    }),
-  );
 }
 
 async function readModuleConfig(
@@ -274,7 +211,7 @@ async function renderModuleDetail(
   const enabled = services.moduleLoader.isEnabled(guildId, moduleName);
 
   const sections = current.map((field) => {
-    const value = valueOf(field, config);
+    const value = fieldValue(field, config);
     const lines = fieldLine(field, value);
     if (isBoolean(field)) {
       const on = Boolean(value);
@@ -391,7 +328,7 @@ async function renderFieldEditor(
   }
 
   const config = await readModuleConfig(services, guildId, moduleName);
-  const value = valueOf(field, config);
+  const value = fieldValue(field, config);
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
 
   if (isSelectField(field)) {
@@ -560,38 +497,6 @@ function fieldModal(moduleName: string, field: ConfigField, section: number, val
     );
 }
 
-function addonModal(): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId("lumi:addoninstallmodal")
-    .setTitle("Install Add-on")
-    .addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("source")
-          .setLabel("Source (github / npm / local)")
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(10)
-          .setPlaceholder("github"),
-      ),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("url")
-          .setLabel("Repository, package, or path")
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(200),
-      ),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("ref")
-          .setLabel("Branch, tag, or version (optional)")
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(100),
-      ),
-    );
-}
 async function renderModules(
   interaction: HubInteraction,
   services: HubServices,
@@ -852,12 +757,46 @@ async function renderPermits(
   );
 }
 
-async function canInstallAddons(
+export function renderHubPanel(
+  view: HubView,
   interaction: HubInteraction,
   services: HubServices,
-  guildId: string,
+  notice?: string,
+): Promise<CardReply> {
+  switch (view) {
+    case "modules":
+      return renderModules(interaction, services, 0, notice);
+    case "settings":
+      return renderSettings(interaction, services);
+    case "permits":
+      return renderPermits(interaction, services);
+    case "addons":
+      return renderAddonPanel(interaction, services, { kind: "home" });
+    default:
+      return renderHome(interaction, services);
+  }
+}
+
+export async function handleHubInteraction(
+  interaction: ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
+  services: HubServices,
 ): Promise<boolean> {
-  return hasExtraOwnerAccess({
+  if (!interaction.customId.startsWith("lumi:")) return false;
+
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.reply(
+      ephemeralCard(makeErrorCard("Lumi", "This panel only works in a server.")),
+    );
+    return true;
+  }
+
+  if (interaction.customId.startsWith("lumi:addon:")) {
+    await handleAddonInteraction(interaction, services);
+    return true;
+  }
+
+  const allowed = await hasAdminAccess({
     guildId,
     userId: interaction.user.id,
     roleIds: roleIdsFrom(interaction.member, guildId),
@@ -866,494 +805,306 @@ async function canInstallAddons(
     client: interaction.client,
     permits: services.permits,
   });
-}
-
-async function renderAddons(
-  interaction: HubInteraction,
-  services: HubServices,
-): Promise<CardReply> {
-  const guildId = interaction.guildId!;
-  const canInstall = await canInstallAddons(interaction, services, guildId);
-  const installed = await services.addonInstaller.listInstalled();
-  const addonModules = services.moduleLoader
-    .listAll()
-    .filter((module) => module.path.includes("data/addons"))
-    .map((module) => ({
-      module,
-      enabled: services.moduleLoader.isEnabled(guildId, module.manifest.name),
-    }));
-
-  const sections = addonModules.slice(0, 5).map(({ module, enabled }) =>
-    settingRow(
-      [
-        `${enabled ? "✅" : "⛔"} **${module.manifest.displayName || module.manifest.name}** \`${module.manifest.name}\``,
-        `-# v${module.manifest.version} · ${cut(module.manifest.description || "No description", 90)}`,
-      ],
-      {
-        customId: `lumi:modopen:${module.manifest.name}`,
-        label: "Open",
-        style: ButtonStyle.Primary,
-      },
-    ),
-  );
-
-  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = canInstall
-    ? [
-        row(
-          createActionButton({
-            customId: "lumi:addoninstall",
-            label: "Install Add-on",
-            emoji: "📦",
-            style: ButtonStyle.Success,
-          }),
+  if (!allowed) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Missing Permissions",
+          "You need **Manage Server** or an admin permit to use the Lumi control panel.",
         ),
-      ]
-    : [];
-
-  return makeCard(
-    undefined,
-    "📦 Add-ons",
-    [
-      `**Tracked add-ons:** ${installed.length}`,
-      `**Add-on modules:** ${addonModules.length} (${addonModules.filter((item) => item.enabled).length} enabled)`,
-      ...(canInstall
-        ? []
-        : ["-# Only bot owners and Extra Owners can install add-ons."]),
-    ],
-    {
-      sections,
-      ...panelOptions(
-        interaction,
-        "addons",
-        ["Hub", "Add-ons"],
-        rows,
-        addonModules.length === 0
-          ? "No add-on modules installed. Use Install Add-on to get started."
-          : "Open an add-on module to enable or configure it.",
       ),
-    },
-  );
-}
-
-export class HubPanel {
-  static render(
-    view: HubView,
-    interaction: HubInteraction,
-    services: HubServices,
-    notice?: string,
-  ): Promise<CardReply> {
-    switch (view) {
-      case "modules":
-        return renderModules(interaction, services, 0, notice);
-      case "settings":
-        return renderSettings(interaction, services);
-      case "permits":
-        return renderPermits(interaction, services);
-      case "addons":
-        return renderAddons(interaction, services);
-      case "home":
-      default:
-        return renderHome(interaction, services);
-    }
+    );
+    return true;
   }
 
-  static async handleInteraction(
-    interaction: ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
-    services: HubServices,
-  ): Promise<boolean> {
-    if (!interaction.customId.startsWith("lumi:")) return false;
+  if (interaction.isModalSubmit()) {
+    await handleHubModal(interaction, services, guildId);
+    return true;
+  }
 
-    const guildId = interaction.guildId;
-    if (!guildId) {
-      await interaction.reply(
-        ephemeralCard(makeErrorCard("Lumi", "This panel only works in a server.")),
+  const message = interaction.message;
+  if (!message) {
+    await interaction.reply(
+      ephemeralCard(makeErrorCard("Lumi", "This panel has expired. Run `/lumi` again.")),
+    );
+    return true;
+  }
+
+  const ownerId = message.interactionMetadata?.user.id;
+  if (ownerId !== undefined && ownerId !== interaction.user.id) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Lumi", "This panel belongs to another user.", {
+          footer: "Run `/lumi` to open your own panel",
+        }),
+      ),
+    );
+    return true;
+  }
+
+  const [, action, target, extra, extra2] = interaction.customId.split(":");
+
+  switch (action) {
+    case "home":
+    case "modules":
+    case "settings":
+    case "permits":
+    case "addons": {
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderHubPanel(action, interaction, services),
       );
       return true;
     }
+    case "permitpanel": {
+      const panel = new PermitPanel({
+        prisma: services.prisma,
+        redis: services.redis,
+        guildId,
+        interaction,
+        moduleLoader: services.moduleLoader,
+      });
+      await panel.render();
+      return true;
+    }
+    case "mods": {
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModules(interaction, services, Number(target) || 0),
+      );
+      return true;
+    }
+    case "modopen": {
+      if (interaction.isStringSelectMenu()) return true;
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModuleDetail(
+          interaction,
+          services,
+          target,
+          Number(extra) || 0,
+        ),
+      );
+      return true;
+    }
+    case "modexpand": {
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModules(interaction, services, 0),
+      );
+      return true;
+    }
+    case "modtoggle": {
+      const enabled = services.moduleLoader.isEnabled(guildId, target);
+      if (enabled) {
+        await services.moduleManager.disable(guildId, target);
+      } else {
+        await services.moduleManager.enable(guildId, target);
+      }
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModuleDetail(
+          interaction,
+          services,
+          target,
+          Number(extra) || 0,
+          `Module ${enabled ? "disabled" : "enabled"}.`,
+        ),
+      );
+      return true;
+    }
+    case "modreset": {
+      await writeModuleConfig(services, guildId, target, {});
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModuleDetail(
+          interaction,
+          services,
+          target,
+          Number(extra) || 0,
+          "Settings reset to defaults.",
+        ),
+      );
+      return true;
+    }
+    case "modsec": {
+      if (!interaction.isStringSelectMenu()) return true;
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModuleDetail(
+          interaction,
+          services,
+          target,
+          Number(interaction.values[0]) || 0,
+        ),
+      );
+      return true;
+    }
+    case "modbool": {
+      const field = findField(services, target, extra);
+      if (!field) return true;
+      const config = await readModuleConfig(services, guildId, target);
+      config[field.key] = !fieldValue(field, config);
+      await writeModuleConfig(services, guildId, target, config);
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderModuleDetail(
+          interaction,
+          services,
+          target,
+          Number(extra2) || 0,
+        ),
+      );
+      return true;
+    }
+    case "modfield": {
+      const field = findField(services, target, extra);
+      if (!field) return true;
+      const section = Number(extra2) || 0;
+      if (isPickerField(field) || isSelectField(field)) {
+        await interaction.deferUpdate();
+        await interaction.editReply(
+          await renderFieldEditor(interaction, services, target, extra, section),
+        );
+      } else {
+        const config = await readModuleConfig(services, guildId, target);
+        await interaction.showModal(
+          fieldModal(target, field, section, fieldValue(field, config)),
+        );
+      }
+      return true;
+    }
+    case "modinput": {
+      const field = findField(services, target, extra);
+      if (!field) return true;
+      const config = await readModuleConfig(services, guildId, target);
+      await interaction.showModal(
+        fieldModal(target, field, Number(extra2) || 0, fieldValue(field, config)),
+      );
+      return true;
+    }
+    case "modpick": {
+      if (!interaction.isAnySelectMenu()) return true;
+      const field = findField(services, target, extra);
+      if (!field) return true;
+      const config = await readModuleConfig(services, guildId, target);
+      const chosen = interaction.values;
+      const fieldValue = isMulti(field) ? chosen : chosen[0];
+      if (fieldValue === undefined || (Array.isArray(fieldValue) && fieldValue.length === 0)) {
+        delete config[field.key];
+      } else {
+        config[field.key] = fieldValue;
+      }
+      await writeModuleConfig(services, guildId, target, config);
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderFieldEditor(
+          interaction,
+          services,
+          target,
+          extra,
+          Number(extra2) || 0,
+        ),
+      );
+      return true;
+    }
+    case "modclear": {
+      const config = await readModuleConfig(services, guildId, target);
+      delete config[extra];
+      await writeModuleConfig(services, guildId, target, config);
+      await interaction.deferUpdate();
+      await interaction.editReply(
+        await renderFieldEditor(
+          interaction,
+          services,
+          target,
+          extra,
+          Number(extra2) || 0,
+        ),
+      );
+      return true;
+    }
+    case "setprefix": {
+      await interaction.showModal(prefixModal());
+      return true;
+    }
+    case "setreset": {
+      await services.configService.reset(guildId, "prefix");
+      await interaction.deferUpdate();
+      await interaction.editReply(await renderSettings(interaction, services));
+      return true;
+    }
+    default: {
+      await interaction.reply(
+        ephemeralCard(makeErrorCard("Lumi", "Unknown panel action.")),
+      );
+      return true;
+    }
+  }
+}
 
-    const allowed = await hasAdminAccess({
-      guildId,
-      userId: interaction.user.id,
-      roleIds: roleIdsFrom(interaction.member, guildId),
-      guildOwnerId: interaction.guild?.ownerId,
-      memberPermissions: interaction.memberPermissions,
-      client: interaction.client,
-      permits: services.permits,
-    });
-    if (!allowed) {
+async function handleHubModal(
+  interaction: ModalSubmitInteraction,
+  services: HubServices,
+  guildId: string,
+): Promise<void> {
+  const parts = interaction.customId.split(":");
+  const action = parts[1];
+
+  if (action === "setprefixmodal") {
+    const prefix = interaction.fields.getTextInputValue("prefix").trim();
+    if (!prefix || /\s/.test(prefix)) {
+      await interaction.reply(
+        ephemeralCard(makeErrorCard("Invalid Prefix", "The prefix cannot be empty or contain spaces.")),
+      );
+      return;
+    }
+    await services.configService.set(guildId, "prefix", prefix);
+    const card = await renderSettings(interaction, services);
+    if (interaction.isFromMessage()) {
+      await (interaction as MessageModalSubmit).update(card);
+    } else {
+      await interaction.reply(ephemeralCard(card));
+    }
+    return;
+  }
+
+  if (action === "modinput") {
+    const [, , moduleName, fieldKey, sectionRaw] = parts;
+    const field = findField(services, moduleName, fieldKey);
+    if (!field) {
+      await interaction.reply(
+        ephemeralCard(makeErrorCard("Unknown Setting", "That setting no longer exists.")),
+      );
+      return;
+    }
+    const raw = interaction.fields.getTextInputValue("value");
+    const config = await readModuleConfig(services, guildId, moduleName);
+    try {
+      if (raw.trim().length === 0) delete config[field.key];
+      else config[field.key] = parseFieldInput(field, raw);
+    } catch (error) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard(
-            "Missing Permissions",
-            "You need **Manage Server** or an admin permit to use the Lumi control panel.",
+            "Invalid Value",
+            error instanceof Error ? error.message : "Enter a valid value.",
           ),
         ),
       );
-      return true;
+      return;
     }
-
-    if (interaction.isModalSubmit()) {
-      await this.handleModal(interaction, services, guildId);
-      return true;
-    }
-
-    const message = interaction.message;
-    if (!message) {
-      await interaction.reply(
-        ephemeralCard(makeErrorCard("Lumi", "This panel has expired. Run `/lumi` again.")),
-      );
-      return true;
-    }
-
-    const ownerId = message.interactionMetadata?.user.id;
-    if (ownerId !== undefined && ownerId !== interaction.user.id) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Lumi", "This panel belongs to another user.", {
-            footer: "Run `/lumi` to open your own panel",
-          }),
-        ),
-      );
-      return true;
-    }
-
-    const [, action, target, extra, extra2] = interaction.customId.split(":");
-
-    switch (action) {
-      case "home":
-      case "modules":
-      case "settings":
-      case "permits":
-      case "addons": {
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await HubPanel.render(action, interaction, services),
-        );
-        return true;
-      }
-      case "permitpanel": {
-        const panel = new PermitPanel({
-          prisma: services.prisma,
-          redis: services.redis,
-          guildId,
-          interaction,
-          moduleLoader: services.moduleLoader,
-        });
-        await panel.render();
-        return true;
-      }
-      case "mods": {
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModules(interaction, services, Number(target) || 0),
-        );
-        return true;
-      }
-      case "modopen": {
-        if (interaction.isStringSelectMenu()) return true;
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModuleDetail(
-            interaction,
-            services,
-            target,
-            Number(extra) || 0,
-          ),
-        );
-        return true;
-      }
-      case "modexpand": {
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModules(interaction, services, 0),
-        );
-        return true;
-      }
-      case "modtoggle": {
-        const enabled = services.moduleLoader.isEnabled(guildId, target);
-        if (enabled) {
-          await services.moduleManager.disable(guildId, target);
-        } else {
-          await services.moduleManager.enable(guildId, target);
-        }
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModuleDetail(
-            interaction,
-            services,
-            target,
-            Number(extra) || 0,
-            `Module ${enabled ? "disabled" : "enabled"}.`,
-          ),
-        );
-        return true;
-      }
-      case "modreset": {
-        await writeModuleConfig(services, guildId, target, {});
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModuleDetail(
-            interaction,
-            services,
-            target,
-            Number(extra) || 0,
-            "Settings reset to defaults.",
-          ),
-        );
-        return true;
-      }
-      case "modsec": {
-        if (!interaction.isStringSelectMenu()) return true;
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModuleDetail(
-            interaction,
-            services,
-            target,
-            Number(interaction.values[0]) || 0,
-          ),
-        );
-        return true;
-      }
-      case "modbool": {
-        const field = findField(services, target, extra);
-        if (!field) return true;
-        const config = await readModuleConfig(services, guildId, target);
-        config[field.key] = !Boolean(valueOf(field, config));
-        await writeModuleConfig(services, guildId, target, config);
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderModuleDetail(
-            interaction,
-            services,
-            target,
-            Number(extra2) || 0,
-          ),
-        );
-        return true;
-      }
-      case "modfield": {
-        const field = findField(services, target, extra);
-        if (!field) return true;
-        const section = Number(extra2) || 0;
-        if (isPickerField(field) || isSelectField(field)) {
-          await interaction.deferUpdate();
-          await interaction.editReply(
-            await renderFieldEditor(interaction, services, target, extra, section),
-          );
-        } else {
-          const config = await readModuleConfig(services, guildId, target);
-          await interaction.showModal(
-            fieldModal(target, field, section, valueOf(field, config)),
-          );
-        }
-        return true;
-      }
-      case "modinput": {
-        const field = findField(services, target, extra);
-        if (!field) return true;
-        const config = await readModuleConfig(services, guildId, target);
-        await interaction.showModal(
-          fieldModal(target, field, Number(extra2) || 0, valueOf(field, config)),
-        );
-        return true;
-      }
-      case "modpick": {
-        if (!interaction.isAnySelectMenu()) return true;
-        const field = findField(services, target, extra);
-        if (!field) return true;
-        const config = await readModuleConfig(services, guildId, target);
-        const chosen = interaction.values;
-        const fieldValue = isMulti(field) ? chosen : chosen[0];
-        if (fieldValue === undefined || (Array.isArray(fieldValue) && fieldValue.length === 0)) {
-          delete config[field.key];
-        } else {
-          config[field.key] = fieldValue;
-        }
-        await writeModuleConfig(services, guildId, target, config);
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderFieldEditor(
-            interaction,
-            services,
-            target,
-            extra,
-            Number(extra2) || 0,
-          ),
-        );
-        return true;
-      }
-      case "modclear": {
-        const config = await readModuleConfig(services, guildId, target);
-        delete config[extra];
-        await writeModuleConfig(services, guildId, target, config);
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderFieldEditor(
-            interaction,
-            services,
-            target,
-            extra,
-            Number(extra2) || 0,
-          ),
-        );
-        return true;
-      }
-      case "setprefix": {
-        await interaction.showModal(prefixModal());
-        return true;
-      }
-      case "setreset": {
-        await services.configService.reset(guildId, "prefix");
-        await interaction.deferUpdate();
-        await interaction.editReply(await renderSettings(interaction, services));
-        return true;
-      }
-      case "addoninstall": {
-        if (!(await canInstallAddons(interaction, services, guildId))) {
-          await interaction.reply(
-            ephemeralCard(
-              makeErrorCard(
-                "Missing Permissions",
-                "Only bot owners and Extra Owners can install add-ons.",
-              ),
-            ),
-          );
-          return true;
-        }
-        await interaction.showModal(addonModal());
-        return true;
-      }
-      default: {
-        await interaction.reply(
-          ephemeralCard(makeErrorCard("Lumi", "Unknown panel action.")),
-        );
-        return true;
-      }
-    }
+    await writeModuleConfig(services, guildId, moduleName, config);
+    const card = await renderModuleDetail(
+      interaction,
+      services,
+      moduleName,
+      Number(sectionRaw) || 0,
+      `${field.label} updated.`,
+    );
+    if (interaction.isFromMessage()) await (interaction as MessageModalSubmit).update(card);
+    else await interaction.reply(card);
+    return;
   }
 
-  private static async handleModal(
-    interaction: ModalSubmitInteraction,
-    services: HubServices,
-    guildId: string,
-  ): Promise<void> {
-    const parts = interaction.customId.split(":");
-    const action = parts[1];
-
-    if (action === "setprefixmodal") {
-      const prefix = interaction.fields.getTextInputValue("prefix").trim();
-      if (!prefix || /\s/.test(prefix)) {
-        await interaction.reply(
-          ephemeralCard(makeErrorCard("Invalid Prefix", "The prefix cannot be empty or contain spaces.")),
-        );
-        return;
-      }
-      await services.configService.set(guildId, "prefix", prefix);
-      const card = await renderSettings(interaction, services);
-      if (interaction.isFromMessage()) {
-        await (interaction as MessageModalSubmit).update(card);
-      } else {
-        await interaction.reply(ephemeralCard(card));
-      }
-      return;
-    }
-
-    if (action === "modinput") {
-      const [, , moduleName, fieldKey, sectionRaw] = parts;
-      const field = findField(services, moduleName, fieldKey);
-      if (!field) {
-        await interaction.reply(
-          ephemeralCard(makeErrorCard("Unknown Setting", "That setting no longer exists.")),
-        );
-        return;
-      }
-      const raw = interaction.fields.getTextInputValue("value");
-      const config = await readModuleConfig(services, guildId, moduleName);
-      try {
-        if (raw.trim().length === 0) delete config[field.key];
-        else config[field.key] = parseFieldInput(field, raw);
-      } catch (error) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Invalid Value",
-              error instanceof Error ? error.message : "Enter a valid value.",
-            ),
-          ),
-        );
-        return;
-      }
-      await writeModuleConfig(services, guildId, moduleName, config);
-      const card = await renderModuleDetail(
-        interaction,
-        services,
-        moduleName,
-        Number(sectionRaw) || 0,
-        `${field.label} updated.`,
-      );
-      if (interaction.isFromMessage()) await (interaction as MessageModalSubmit).update(card);
-      else await interaction.reply(card);
-      return;
-    }
-
-    if (action === "addoninstallmodal") {
-      if (!(await canInstallAddons(interaction, services, guildId))) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Missing Permissions",
-              "Only bot owners and Extra Owners can install add-ons.",
-            ),
-          ),
-        );
-        return;
-      }
-      const source = interaction.fields.getTextInputValue("source").trim().toLowerCase();
-      const url = interaction.fields.getTextInputValue("url").trim();
-      const ref = interaction.fields.getTextInputValue("ref").trim() || undefined;
-      if (!["github", "npm", "local"].includes(source)) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard("Invalid Source", "Source must be `github`, `npm`, or `local`."),
-          ),
-        );
-        return;
-      }
-      const fromMessage = interaction.isFromMessage();
-      if (fromMessage) {
-        await interaction.deferUpdate();
-      } else {
-        await interaction.deferReply({ ephemeral: true });
-      }
-      const result = await services.addonInstaller.install({
-        type: source as AddonSource["type"],
-        url,
-        ref,
-      });
-      if (!result.success) {
-        const failure = makeErrorCard("Install Failed", result.error ?? "Unknown error.");
-        if (fromMessage) {
-          await interaction.followUp(ephemeralCard(failure));
-        } else {
-          await interaction.editReply(failure);
-        }
-        return;
-      }
-      const card = await renderAddons(interaction, services);
-      if (fromMessage) {
-        await interaction.editReply(card);
-      } else {
-        await interaction.editReply(
-          makeCard(
-            AccentColors.success,
-            "Add-on Installed",
-            `Installed **${result.name}** v${result.version}.`,
-            { footer: result.path },
-          ),
-        );
-      }
-      return;
-    }
-  }
 }

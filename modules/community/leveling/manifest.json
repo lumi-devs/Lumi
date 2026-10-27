@@ -6,9 +6,6 @@
   "description": "XP, levels, role rewards, and leaderboards with voice XP support",
   "version": "2.1.0",
   "entry": "index.ts",
-  "requirements": [
-    "community"
-  ],
   "configFields": [
     {
       "key": "levelFormula",
@@ -139,5 +136,8 @@
       "description": "Roles that don't gain XP",
       "default": []
     }
-  ]
+  ],
+  "dependencies": {
+    "community": "^2.0.0"
+  }
 }

@@ -6,7 +6,7 @@
   "description": "Case-backed moderation with bans, kicks, timeouts, warns, purge, notes, lockdown, softban, quarantine, voice mute",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "moderation"
-  ]
+  "dependencies": {
+    "moderation": "^2.0.0"
+  }
 }

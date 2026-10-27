@@ -1,367 +1,127 @@
-# Addon Development Guide
+# Add-on development guide
 
-Addons are third-party modules installed at runtime. They follow the same module contract as first-party modules but have stricter security boundaries.
+Add-ons are third-party supermodules. They follow the same module contract as
+bundled modules, are installed from git repositories, and run in-process.
 
-## Key Differences from Bundled Modules
+## Differences from bundled modules
 
-| Aspect | Bundled Modules | Addons |
-|--------|-----------------|--------|
-| Location | `modules/<name>/` | `data/addons/<name>@<version>/` |
+| Aspect | Bundled | Add-on |
+|--------|---------|--------|
+| Location | `modules/<supermodule>/` | `data/addons/<supermodule>/` |
 | Origin | `bundled` | `addon` |
-| Installation | Deployed with bot | Installed through `/lumi` → Add-ons by a bot owner or `Extra Owner` |
-| Updates | Bot update | Independent via downloader |
-| NPM deps | In monorepo `package.json` | Declared in manifest `requirements` |
-| Trust level | Full | Untrusted — validated on install |
+| Install | Deployed with the bot | `/lumi` → Add-ons, bot owners only |
+| Update | Deploy the bot | Repo update or auto-update |
+| npm dependencies | Root `package.json` | `manifest.requirements` |
+| Trust | Full | Static validation on install |
 
----
+## Structure
 
-## Addon Manifest
+Every add-on is a supermodule: a directory with a root `manifest.json`, an
+entry file, and one or more submodule directories.
 
-Same as bundled modules, but `requirements` are mandatory for npm deps.
+```
+my-addon/
+├── manifest.json          # supermodule
+├── index.ts               # supermodule definition (defineModule)
+├── commands/
+│   └── status.ts          # submodule: my-addon-status
+│   └── manifest.json
+└── README.md
+```
+
+The root module and each submodule use the same `defineModule` shape as bundled
+modules. Submodule manifests use prefixed names (for example `my-addon-status`)
+and declare `dependencies: { "my-addon": "^1.0.0" }`.
+
+## Manifest
 
 ```json
 {
   "apiVersion": 2,
   "name": "my-addon",
-  "displayName": "My Addon",
+  "displayName": "My Add-on",
   "emoji": "🔌",
-  "description": "Addon description",
+  "description": "What the add-on does",
   "version": "1.0.0",
-  "entry": "./index.js",
-  "dependencies": { "leveling": "^2.0.0" },
-  "requirements": ["lodash@^4.17.21", "date-fns@^3.0.0"],
-  "conflicts": [],
-  "capabilities": [],
-  "minBotVersion": "2.0.0",
-  "maxBotVersion": "2.9.9"
-}
-```
-
-### Requirements Rules
-
-- **Must be registry semver specs**: `"pkg@^1.2.3"`, `"@scope/pkg@~2.0.0"`
-- **No `package.json`** — only manifest `requirements` are read
-- **Installed with**: `bun install --production --ignore-scripts --no-save`
-- **No lifecycle scripts** — `--ignore-scripts` prevents install-time execution
-- **Pinned to version** — each addon version gets its own `node_modules`
-
----
-
-## Security Model
-
-### What Addons CANNOT Do
-
-| Restricted | Reason |
-|------------|--------|
-| Import `@lumi/db` | Database access |
-| Import `@lumi/redis` | Direct Redis access |
-| Import `@lumi/cache` | Cache manipulation |
-| Import `@lumi/module-runtime` | Module lifecycle control |
-| Import `@lumi/downloader` | Addon installation |
-| Import `src/**` | App internals |
-| Import other addons | Isolation |
-| `require('fs')`, `require('child_process')` | Filesystem/process access |
-| `eval`, `Function` constructor | Code execution |
-| `globalThis`, `process` access | Environment access |
-
-### What Addons CAN Do
-
-- Use `@lumi/module-kit` types (interfaces only)
-- Use `@lumi/ui` card builders
-- Use `discord.js` for commands/listeners
-- Use allowed npm packages (declared in `requirements`)
-- Access `services` passed to `onLoad`, commands, listeners
-- Store data via `services.db` (Prisma) — **scoped to their own tables**
-
-### Services Available to Addons
-
-```ts
-interface AddonServices {
-  // Same as ModuleServices EXCEPT:
-  db: {
-    prisma: PrismaClient;  // Full Prisma, but addon tables are prefixed
-  };
-  // NOT available:
-  // - permits (use Discord permissions instead)
-  // - scheduler (use Discord scheduled events or external cron)
-  // - rpc
-}
-```
-
-### Database Isolation
-
-Addons get their own table prefix: `addon_<name>_<table>`.
-
-```ts
-// In addon code:
-await services.db.prisma.addon_myaddon_mytable.create({ ... });
-
-// Prisma schema for addons is generated at install time
-// from the addon's own prisma/ directory (optional)
-```
-
----
-
-## Addon Structure
-
-```
-my-addon/
-├── manifest.json
-├── index.js              # Compiled JS (TypeScript compiled to JS)
-├── package.json          # Optional: for local dev only (not used at runtime)
-├── prisma/               # Optional: addon-specific schema
-│   └── schema.prisma
-├── commands/
-│   └── my-command.js
-├── listeners/
-│   └── my-listener.js
-└── README.md
-```
-
----
-
-## Publishing an Addon
-
-### 1. Repository Setup
-
-```bash
-# Initialize as git repo
-git init
-npm init -y  # For local dev only
-npm install -D typescript @lumi/module-kit discord.js
-```
-
-### 2. Write Addon Code
-
-Use TypeScript, compile to `index.js`:
-```bash
-npx tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --outDir .
-```
-
-### 3. Tag Release
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-### 4. Installation by Users
-
-Users install via the dashboard or CLI:
-```
-/lumi addon install github:owner/repo@v1.0.0
-/lumi addon install npm:@scope/my-addon@1.0.0
-/lumi addon install local:/path/to/addon
-```
-
----
-
-## Addon Validation (On Install)
-
-The downloader validates:
-
-1. **Manifest schema** — matches `ModuleManifest` type
-2. **Name collision** — not conflicting with bundled module
-3. **Entry point exists** — file at `entry` path
-4. **Dependencies resolvable** — module deps exist, npm deps installable
-5. **No prohibited imports** — static analysis of entry file
-6. **Semver compatibility** — `minBotVersion`/`maxBotVersion` match
-
-### Prohibited Import Detection
-
-```ts
-// These patterns trigger validation failure:
-import "@lumi/db";
-import { PrismaClient } from "@lumi/db";
-require("@lumi/redis");
-import * as fs from "fs";
-eval("code");
-new Function("code");
-process.env.SECRET;
-```
-
----
-
-## Addon Development Workflow
-
-### Local Development
-
-```bash
-# 1. Link addon to local bot for testing
-cd /path/to/lumi-v2
-ln -s /path/to/my-addon data/addons/my-addon@dev
-
-# 2. Install npm deps (bot handles this, but for dev:)
-cd data/addons/my-addon@dev
-bun install --production --ignore-scripts --no-save
-
-# 3. Reload addon in bot
-/lumi addon reload my-addon
-```
-
-### Testing Checklist
-
-- [ ] Manifest validates
-- [ ] No prohibited imports
-- [ ] Commands work with `isEnabled` check
-- [ ] Listeners check `isEnabled`
-- [ ] Config schema works
-- [ ] Database operations use correct table prefix
-- [ ] NPM deps install cleanly
-- [ ] Works on bot reload
-
----
-
-## Best Practices
-
-1. **Minimal permissions** — only request npm deps you actually need
-2. **No global state** — use `services.db` or `services.cache`
-3. **Graceful degradation** — handle missing config, disabled guilds
-4. **Version your schema** — if you change DB, bump version and migrate
-5. **Document config** — `configFields` renders in `/lumi` panel
-6. **Handle errors** — wrap in try/catch, log via `console.error`
-
----
-
-## Example: Simple Addon
-
-### manifest.json
-```json
-{
-  "apiVersion": 2,
-  "name": "quote",
-  "displayName": "Quotes",
-  "emoji": "💬",
-  "description": "Save and recall quotes",
-  "version": "1.0.0",
-  "entry": "./index.js",
+  "entry": "index.ts",
   "dependencies": {},
-  "requirements": ["uuid@^9.0.0"],
+  "requirements": ["lodash@^4.17.21"],
   "conflicts": [],
-  "capabilities": []
+  "configFields": []
 }
 ```
 
-### index.ts (compile to index.js)
-```ts
-import { defineModule } from "@lumi/module-kit";
-import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
+- `entry` is loaded directly by Bun; ship TypeScript, not compiled JS.
+- `requirements` are npm registry specs installed with
+  `bun add --production --ignore-scripts --no-save`.
+- `dependencies` are module names and semver ranges.
+- `conflicts` lists module names that cannot be installed alongside this one.
 
-export default defineModule({
-  name: "quote",
-  displayName: "Quotes",
-  emoji: "💬",
-  description: "Save and recall quotes",
-  version: "1.0.0",
-  config: z.object({
-    maxQuotes: z.number().int().min(1).max(1000).default(100),
-  }),
-  configFields: [
-    { key: "maxQuotes", label: "Max Quotes", type: "number", description: "Max quotes per guild" },
-  ],
-  commands: [
-    {
-      data: new SlashCommandBuilder()
-        .setName("quote")
-        .setDescription("Quote management")
-        .addSubcommand(s => s
-          .setName("add")
-          .setDescription("Add a quote")
-          .addStringOption(o => o.setName("text").setDescription("Quote text").setRequired(true))
-          .addUserOption(o => o.setName("author").setDescription("Quote author").setRequired(true))
-        )
-        .addSubcommand(s => s
-          .setName("get")
-          .setDescription("Get a random quote")
-        )
-        .addSubcommand(s => s
-          .setName("list")
-          .setDescription("List all quotes")
-        ),
-      requiredPermit: "quote.manage",
-      async execute(interaction, services) {
-        const sub = interaction.options.getSubcommand();
-        const guildId = interaction.guildId!;
-        
-        if (!services.modules.isEnabled(guildId, "quote")) {
-          return interaction.reply(ephemeralCard(makeErrorCard("Disabled", "Quote module not enabled")));
-        }
-        
-        const config = await services.config.get(guildId, "quote");
-        
-        if (sub === "add") {
-          const text = interaction.options.getString("text", true);
-          const author = interaction.options.getUser("author", true);
-          
-          // Use addon-prefixed table
-          await services.db.prisma.addon_quote_quote.create({
-            data: { id: uuidv4(), guildId, text, authorId: author.id, authorTag: author.tag }
-          });
-          
-          return interaction.reply(ephemeralCard(makeSuccessCard("Quote Added", `"${text}" — ${author.tag}`)));
-        }
-        
-        if (sub === "get") {
-          const quotes = await services.db.prisma.addon_quote_quote.findMany({ where: { guildId } });
-          if (!quotes.length) return interaction.reply(ephemeralCard(makeInfoCard("No Quotes", "Add one with /quote add")));
-          
-          const quote = quotes[Math.floor(Math.random() * quotes.length)];
-          return interaction.reply(makeInfoCard("💬 Quote", `"${quote.text}"\n— ${quote.authorTag}`));
-        }
-        
-        if (sub === "list") {
-          const quotes = await services.db.prisma.addon_quote_quote.findMany({ where: { guildId }, take: 20 });
-          const lines = quotes.map((q, i) => `\`${i+1}.\` "${q.text}" — ${q.authorTag}`);
-          return interaction.reply(ephemeralCard(makeInfoCard("💬 Quotes", lines.join("\n") || "None")));
-        }
-      },
-    },
-  ],
-  listeners: [],
-  tasks: [],
-  async onLoad(services) { console.log("[quote] Addon loaded"); },
-  async onUnload(services) { console.log("[quote] Addon unloaded"); },
-});
+## Security model
+
+Validation is static; add-ons are **not sandboxed** and run with the bot's
+permissions.
+
+Rejected by validation:
+
+- Imports of internal packages: `@lumi/db`, `@lumi/cache`, `@lumi/redis`,
+  `@lumi/module-runtime`, `@lumi/downloader`, `@lumi/permits`,
+  `@lumi/observability`, `@lumi/scheduler`, `@lumi/admin`, `@lumi/core`
+- Relative imports that escape the add-on directory
+- Bare imports that are neither a host runtime package nor declared in
+  `requirements`
+- Vendored `node_modules`, `.npmrc`, or `bunfig.toml`
+- A manifest name that does not match the directory name
+- A missing entry file or invalid requirement spec
+
+Allowed runtime imports:
+
+- `discord.js`, `@discordjs/builders`, `@discordjs/formatters`, `zod`
+- `@lumi/module-kit`, `@lumi/ui`, `@lumi/foundation`
+- `node:*`, `bun`, `bun:*`
+- Anything declared in `requirements`
+
+## Services
+
+Add-ons receive the same `services` object as bundled modules, including
+`client`, `prisma`, `redis`, `cache`, `config`, `modules`, `moduleLoader`,
+`scheduler`, `rpc`, and `ui`. Treat the database as shared: prefix tables with
+your add-on name.
+
+## Local development
+
+```bash
+# 1. Link the add-on into the loader root
+ln -s /path/to/my-addon data/addons/my-addon
+
+# 2. Install npm requirements for local testing
+cd data/addons/my-addon
+bun add --production --ignore-scripts --no-save <requirements>
+
+# 3. Restart the bot (or run an add-on update from the panel to reload)
+bun run dev:bot
 ```
 
-### Prisma Schema (optional, for type safety)
+A linked directory has no `DownloaderModule` row, so it appears in the Modules
+tab but not under Add-ons → Installed.
 
-```prisma
-// prisma/schema.prisma
-generator client {
-  provider = "prisma-client-js"
-}
+## Publishing
 
-model AddonQuoteQuote {
-  id        String   @id @default(cuid())
-  guildId   String   @map("guild_id")
-  text      String
-  authorId  String   @map("author_id")
-  authorTag String   @map("author_tag")
-  createdAt DateTime @default(now()) @map("created_at")
+1. Put the supermodule at the repository root (or in a top-level directory).
+2. Push the repository over HTTPS.
+3. In Discord: `/lumi` → Add-ons → Repositories → Add Repository.
+4. Open the repository, browse modules, and install.
 
-  @@index([guildId])
-  @@map("addon_quote_quote")
-}
-```
+Each installed module records the repository commit. `Pin` excludes it from
+updates; `Update` fetches the branch and reloads changed modules. A failed
+validation or reload rolls the update back and reports the error to bot owners.
 
----
+## Checklist
 
-## Troubleshooting
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `Prohibited import: @lumi/db` | Addon imports internal package | Remove import, use `services.db` |
-| `Dependency not found: leveling` | Module dep not loaded | Ensure dependency is installed/enabled |
-| `NPM install failed: lodash` | Network/registry issue | Check `requirements` semver, try again |
-| `Entry point not found` | `entry` path wrong | Fix `manifest.json` entry path |
-| `Module name collision` | Name matches bundled module | Rename addon |
-
----
-
-## Resources
-
-- [Module Development Guide](./module-dev-guide.md) — shared patterns
-- [Module Kit API](../packages/module-kit/src/index.ts) — TypeScript contracts
-- [Downloader Source](../packages/downloader/src/index.ts) — install logic
+- [ ] `manifest.json` matches the directory name
+- [ ] Entry file exists and default-exports `defineModule(...)`
+- [ ] Submodule names are prefixed and unique
+- [ ] No internal `@lumi/*` imports
+- [ ] npm dependencies are declared in `requirements`
+- [ ] Commands and listeners check `services.modules.isEnabled(guildId, name)`
+- [ ] Config fields are declared in `configFields`

@@ -125,7 +125,7 @@ describe("Load Tests", () => {
       
       const operation = async () => {
         const key = Math.floor(Math.random() * 10000);
-        const _ = db.get(key);
+        db.get(key);
         await Promise.resolve();
       };
       

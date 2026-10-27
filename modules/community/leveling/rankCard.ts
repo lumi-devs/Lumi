@@ -1,6 +1,4 @@
-import { createCanvas, loadImage, registerFont, CanvasRenderingContext2D } from "canvas";
-import { AttachmentBuilder } from "discord.js";
-import path from "path";
+import { createCanvas, loadImage, } from "canvas";
 import { roundRect } from "@lumi/ui";
 
 const CARD_WIDTH = 934;

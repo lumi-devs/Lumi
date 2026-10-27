@@ -1,11 +1,11 @@
 import {
   SlashCommandBuilder,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
   PermissionFlagsBits,
-  User,
-  GuildTextBasedChannel,
-  ButtonInteraction,
-  Client,
+  type User,
+  type GuildTextBasedChannel,
+  type ButtonInteraction,
+  type Client,
 } from "discord.js";
 import {
   defineModule,
@@ -271,15 +271,6 @@ const warnDef: CommandDefinition = {
       data: { guildId: guild.id, type: "WARN", targetId: target.id, moderatorId: interaction.user.id, reason },
     });
 
-    const config = await services.config.get(guild.id, "warnThresholds");
-    if (config) {
-      const thresholds = config as Record<string, { action: string; duration?: number }>;
-      const warnCount = await services.db.prisma.moderationCase.count({
-        where: { guildId: guild.id, type: "WARN", targetId: target.id },
-      });
-
-    }
-
     await interaction.reply(ephemeralCard(makeSuccessCard("Warned", [
       `**User**\n${target.tag} (\`${target.id}\`)`,
       `**Reason**\n${reason}`,
@@ -453,7 +444,7 @@ const softbanDef: CommandDefinition = {
 
     try {
       await guild.members.ban(target, { reason, deleteMessageSeconds: 86400 });
-      await guild.bans.remove(target.id, "Softban: " + reason);
+      await guild.bans.remove(target.id, `Softban: ${reason}`);
 
       await services.db.prisma.moderationCase.create({
         data: { guildId: guild.id, type: "SOFTBAN", targetId: target.id, moderatorId: interaction.user.id, reason },
@@ -830,11 +821,11 @@ const modModule: ModuleDefinition = defineModule({
   commands: [banAdd, banRemove, kickDef, timeoutDef, warnDef, purgeDef, noteDef, lockDef, unlockDef, lockdownDef, softbanDef, quarantineDef, unquarantineDef, vcmuteDef, vcmuteRemoveDef, caseDef, casesDef],
   listeners: [casesPaginationListener],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[mod] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[mod] Module unloaded");
   },
 });

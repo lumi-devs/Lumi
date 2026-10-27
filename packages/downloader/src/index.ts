@@ -1,2 +1,15 @@
-export { AddonInstaller, type AddonSource, type InstallResult } from "./installer.js";
-export { AddonValidator, type ValidationResult } from "./validator.js";
+export { AddonManager, type AddonManagerOptions } from "./manager.js";
+export { validateAddon } from "./validate.js";
+export type {
+  AddonLogger,
+  AddonNotifier,
+  AddonRuntime,
+  AutoUpdateReport,
+  AutoUpdateState,
+  InstalledAddon,
+  ModuleInfo,
+  RepoRecord,
+  RepoUpdateResult,
+  UpdateFailure,
+  ValidationResult,
+} from "./types.js";

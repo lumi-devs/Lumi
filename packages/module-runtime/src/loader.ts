@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { ModuleDefinition } from "@lumi/module-kit";
-import { ModuleManifest, validateManifest } from "./manifest.js";
+import type { ModuleDefinition } from "@lumi/module-kit";
+import { type ModuleManifest, validateManifest } from "./manifest.js";
 
 export interface LoadedModule {
   manifest: ModuleManifest;
@@ -10,20 +10,13 @@ export interface LoadedModule {
   origin: "bundled" | "addon";
   supermodule?: string;
   isSubmodule: boolean;
-  enabled: boolean;
-  guildsEnabled: Set<string>;
-}
-
-interface SupermoduleContext {
-  name: string;
-  submodules: Map<string, LoadedModule>;
+  guildsDisabled: Set<string>;
 }
 
 export class ModuleLoader {
   private modules = new Map<string, LoadedModule>();
-  private loadOrder: string[] = [];
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
-  private supermodules = new Map<string, SupermoduleContext>();
+  private services: any = {};
 
   addRoot(path: string, origin: "bundled" | "addon"): void {
     this.roots.push({ path: resolve(path), origin });
@@ -73,7 +66,7 @@ export class ModuleLoader {
     let superDefinition: ModuleDefinition;
     try {
       const entryPath = join(modulePath, manifest.entry);
-      const mod = await import(entryPath);
+      const mod = await import(`${entryPath}?t=${Date.now()}`);
       superDefinition = mod.default;
     } catch (e) {
       console.error(`Failed to load supermodule ${manifest.name}:`, e);
@@ -91,13 +84,10 @@ export class ModuleLoader {
       path: modulePath,
       origin,
       isSubmodule: false,
-      enabled: true,
-      guildsEnabled: new Set(),
+      guildsDisabled: new Set(),
     };
 
     discovered.push(supermodule);
-
-    const submoduleMap = new Map<string, LoadedModule>();
 
     try {
       const subEntries = await readdir(modulePath, { withFileTypes: true });
@@ -124,7 +114,7 @@ export class ModuleLoader {
         const entryPath = join(subPath, subManifest.entry);
         let subDefinition: ModuleDefinition;
         try {
-          const mod = await import(entryPath);
+          const mod = await import(`${entryPath}?t=${Date.now()}`);
           subDefinition = mod.default;
         } catch (e) {
           console.error(`Failed to load submodule ${subManifest.name}:`, e);
@@ -143,27 +133,22 @@ export class ModuleLoader {
           origin,
           supermodule: manifest.name,
           isSubmodule: true,
-          enabled: true,
-          guildsEnabled: new Set(),
+          guildsDisabled: new Set(),
         };
 
         discovered.push(submodule);
-        submoduleMap.set(subManifest.name, submodule);
       }
     } catch {
       // No submodules directory or empty
     }
-
-    this.supermodules.set(manifest.name, {
-      name: manifest.name,
-      submodules: submoduleMap,
-    });
   }
 
   async loadAll(discovered: LoadedModule[], services: any): Promise<LoadedModule[]> {
+    this.services = services;
     const sorted = this.topologicalSort(discovered);
 
     for (const module of sorted) {
+      if (this.modules.has(module.manifest.name)) continue;
       try {
         const conflict = sorted.find(m => module.manifest.conflicts.includes(m.manifest.name));
         if (conflict) {
@@ -171,7 +156,7 @@ export class ModuleLoader {
           continue;
         }
 
-        for (const [depName, depRange] of Object.entries(module.manifest.dependencies)) {
+        for (const [depName, _depRange] of Object.entries(module.manifest.dependencies)) {
           const dep = sorted.find(m => m.manifest.name === depName);
           if (!dep) {
             console.warn(`Module ${module.manifest.name} depends on missing module ${depName}`);
@@ -179,7 +164,6 @@ export class ModuleLoader {
         }
 
         this.modules.set(module.manifest.name, module);
-        this.loadOrder.push(module.manifest.name);
 
         try {
           await module.definition.onLoad({ ...services, __moduleName: module.manifest.name });
@@ -243,30 +227,47 @@ export class ModuleLoader {
     if (!module) return;
 
     if (enabled) {
-      module.guildsEnabled.add(guildId);
+      module.guildsDisabled.delete(guildId);
     } else {
-      module.guildsEnabled.delete(guildId);
+      module.guildsDisabled.add(guildId);
     }
   }
 
   isEnabled(guildId: string, moduleName: string): boolean {
     const module = this.modules.get(moduleName);
     if (!module) return false;
-    return module.guildsEnabled.has(guildId);
+    return !module.guildsDisabled.has(guildId);
   }
 
   async reload(moduleName: string): Promise<void> {
     const module = this.modules.get(moduleName);
     if (!module) return;
 
-    await module.definition.onUnload({} as any);
+    await module.definition.onUnload(this.services);
 
     const entryPath = join(module.path, module.manifest.entry);
     delete require.cache[require.resolve(entryPath)];
-    const mod = await import(entryPath + "?t=" + Date.now());
+    const mod = await import(`${entryPath}?t=${Date.now()}`);
 
     module.definition = mod.default;
-    await module.definition.onLoad({} as any);
+    await module.definition.onLoad(this.services);
+  }
+
+  async unload(name: string): Promise<LoadedModule[]> {
+    const removed = this.listAll().filter(
+      (module) => module.manifest.name === name || module.supermodule === name,
+    );
+
+    for (const module of removed) {
+      try {
+        await module.definition.onUnload(this.services);
+      } catch (error) {
+        console.error(`Failed to unload module ${module.manifest.name}:`, error);
+      }
+      this.modules.delete(module.manifest.name);
+    }
+
+    return removed;
   }
 
   getModule(name: string): LoadedModule | undefined {

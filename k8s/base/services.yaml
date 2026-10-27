@@ -23,38 +23,6 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: lumi-manager
-  namespace: lumi
-  labels:
-    app: lumi-manager
-spec:
-  selector:
-    app: lumi-manager
-  ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: lumi-worker
-  namespace: lumi
-  labels:
-    app: lumi-worker
-spec:
-  selector:
-    app: lumi-worker
-  ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
   name: lumi-redis
   namespace: lumi
   labels:

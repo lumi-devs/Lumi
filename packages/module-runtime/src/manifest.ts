@@ -13,11 +13,11 @@ const ConfigFieldSchema = z.object({
 
 export const ModuleManifestSchema = z.object({
   apiVersion: z.literal(2),
-  name: z.string().regex(/^[a-z][a-z0-9-]*$/),
+  name: z.string().max(64).regex(/^[a-z][a-z0-9-]*$/),
   displayName: z.string().min(1).max(50),
   emoji: z.string().min(1).max(10),
   description: z.string().min(1).max(200),
-  version: z.string().regex(/^\d+\.\d+\.\d+/),
+  version: z.string().max(32).regex(/^\d+\.\d+\.\d+/),
   entry: z.string().min(1),
   dependencies: z.record(z.string(), z.string()).default({}),
   requirements: z.array(z.string()).default([]),

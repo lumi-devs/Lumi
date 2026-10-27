@@ -347,7 +347,7 @@ function generatorName(
 }
 
 function generatorLines(
-  guild: Guild | null,
+  _guild: Guild | null,
   generators: TempVcGenerator[],
   config: TempVcConfig,
 ): string[] {

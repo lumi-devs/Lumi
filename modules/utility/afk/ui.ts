@@ -1,7 +1,5 @@
 import {
   ContainerBuilder,
-  SeparatorBuilder,
-  TextDisplayBuilder,
 } from "@discordjs/builders";
 import { MessageFlags } from "discord.js";
 import { makeCard, type CardReply } from "@lumi/ui";

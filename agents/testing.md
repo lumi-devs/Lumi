@@ -48,10 +48,8 @@ Build fixture roots with `mkdtemp`, write `manifest.json` + entry files, and dri
 
 ## Downloader tests
 
-- Validation: path escapes, forbidden imports, unknown bare imports, manifest
-  name mismatch, non-registry requirement specs, vendored `node_modules`.
-- Installer: use a local `isomorphic-git` fixture repo in a temp root with a fake
-  store and fake Redis; never reach the network in unit tests.
-- Requirements: parsing/filtering is unit-tested; a live `bun install` check is
-  manual or gated.
-- Atomicity: a failed staging validation must leave the previous symlink intact.
+- Installer: use a local directory source in a temp root with a fake module
+  loader; never reach the network in unit tests.
+- Manifest handling: missing file, invalid JSON, and conflict detection.
+- Requirement filtering: non-registry specs are skipped; a live `bun add` check
+  is manual or gated.

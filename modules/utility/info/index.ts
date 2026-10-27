@@ -379,11 +379,11 @@ const utilityModule: ModuleDefinition = defineModule({
   commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, nickDef, roleinfoDef, channelinfoDef, emojiinfoDef],
   listeners: [avatarViewListener],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[utility] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[utility] Module unloaded");
   },
 });

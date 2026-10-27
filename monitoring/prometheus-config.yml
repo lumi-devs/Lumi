@@ -52,52 +52,6 @@ data:
             regex: (.+)
             replacement: ${1}:8082
 
-      # Lumi Fleet Manager
-      - job_name: 'lumi-manager'
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - lumi
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: lumi-manager
-          - source_labels: [__meta_kubernetes_pod_name]
-            action: replace
-            target_label: pod
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_ip]
-            action: replace
-            target_label: __address__
-            regex: (.+)
-            replacement: ${1}:8082
-
-      # Lumi Workers
-      - job_name: 'lumi-worker'
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - lumi
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: lumi-worker
-          - source_labels: [__meta_kubernetes_pod_name]
-            action: replace
-            target_label: pod
-          - source_labels: [__meta_kubernetes_namespace]
-            action: replace
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_ip]
-            action: replace
-            target_label: __address__
-            regex: (.+)
-            replacement: ${1}:8082
-
       # PostgreSQL
       - job_name: 'postgresql'
         kubernetes_sd_configs:

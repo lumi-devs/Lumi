@@ -6,9 +6,6 @@
   "description": "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -158,5 +155,8 @@
       "min": 1,
       "max": 10
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

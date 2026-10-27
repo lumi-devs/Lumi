@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { defineModule, type ModuleDefinition, type CommandDefinition, type ListenerDefinition } from "../src/index.js";
+import { defineModule, type CommandDefinition, type ListenerDefinition } from "../src/index.js";
 import { z } from "zod";
 
 describe("Module Kit", () => {
@@ -22,8 +22,8 @@ describe("Module Kit", () => {
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(services) { return []; },
-        async onUnload(services) {},
+        async onLoad(_services) { return []; },
+        async onUnload(_services) {},
       });
       
       expect(mod.name).toBe("test-module");
@@ -53,8 +53,8 @@ describe("Module Kit", () => {
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(services) { return []; },
-        async onUnload(services) {},
+        async onLoad(_services) { return []; },
+        async onUnload(_services) {},
       });
       
       // Type inference test - if this compiles, types are correct
@@ -88,8 +88,8 @@ describe("Module Kit", () => {
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(services) { return []; },
-        async onUnload(services) {},
+        async onLoad(_services) { return []; },
+        async onUnload(_services) {},
       });
       
       const config = mod.config.parse({});
@@ -103,7 +103,7 @@ describe("Module Kit", () => {
       const cmd: CommandDefinition = {
         data: { name: "test" } as any,
         requiredPermit: "test.cmd",
-        async execute(interaction, services) {},
+        async execute(_interaction, _services) {},
       };
       
       expect(cmd.data.name).toBe("test");
@@ -115,7 +115,7 @@ describe("Module Kit", () => {
     it("should accept valid listener definition", () => {
       const listener: ListenerDefinition = {
         event: "MessageCreate",
-        handler: async (message, services) => {},
+        handler: async (_message, _services) => {},
       };
       
       expect(listener.event).toBe("MessageCreate");

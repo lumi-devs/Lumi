@@ -6,9 +6,6 @@
   "description": "Heat-based automod with 13 filters, escalating punishments, and permit-based immunity",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -315,5 +312,8 @@
         0
       ]
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

@@ -12,9 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pino": "^8.19.0"
+    "pino": "^10.4.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0"
+    "@types/node": "^26.6.5"
   }
 }

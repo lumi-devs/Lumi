@@ -71,6 +71,8 @@ DISCORD_TOKEN=your_bot_token
 OWNER_IDS=123456789012345678
 DATABASE_URL="postgresql://lumi:lumi@localhost:5432/lumi"
 REDIS_URL="redis://localhost:6379"
+# Optional: token for private add-on repositories
+GIT_TOKEN=
 ```
 
 ### 3. Set up the database
@@ -84,8 +86,8 @@ bunx prisma generate
 
 ```bash
 bun run typecheck
-bun test
-bun run dev        # or: docker compose up -d
+bun run test
+bun run dev:bot    # or: docker compose up -d
 ```
 
 The bot will log in and you can invite it using the OAuth2 URL printed on startup.
@@ -97,7 +99,7 @@ Run `/lumi` in your server to open the module management panel. From there you c
 - Enable/disable supermodules and submodules per guild
 - Configure module settings (voice XP, anti-nuke thresholds, etc.)
 - Manage permits (Extra Owner, Trusted Admin, custom permits)
-- Install add-ons (bot owners and Extra Owners only)
+- Track add-on git repositories and install modules (bot owners only)
 
 ## Commands
 
@@ -131,7 +133,7 @@ modules/utility/
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # vitest
+bun run test        # vitest
 ```
 
 ## License

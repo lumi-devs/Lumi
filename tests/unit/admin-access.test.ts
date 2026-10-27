@@ -1,10 +1,6 @@
 import { PermissionFlagsBits } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import {
-  hasAdminAccess,
-  hasExtraOwnerAccess,
-  roleIdsFrom,
-} from "../../src/admin/access.ts";
+import { hasAdminAccess, roleIdsFrom } from "../../src/admin/access.ts";
 
 function permits(allowed: boolean) {
   return {
@@ -65,44 +61,6 @@ describe("hasAdminAccess", () => {
         userId: "user",
         roleIds: [],
         memberPermissions: { has: () => false },
-        permits: repo,
-      }),
-    ).resolves.toBe(false);
-  });
-});
-
-describe("hasExtraOwnerAccess", () => {
-  it("allows an Extra Owner permit holder", async () => {
-    const repo = {
-      hasGrantNode: vi.fn(async () => true),
-    } as any;
-
-    await expect(
-      hasExtraOwnerAccess({
-        guildId: "guild",
-        userId: "user",
-        roleIds: ["role"],
-        permits: repo,
-      }),
-    ).resolves.toBe(true);
-    expect(repo.hasGrantNode).toHaveBeenCalledWith({
-      guildId: "guild",
-      userId: "user",
-      roleIds: ["role"],
-      permitNode: "*",
-    });
-  });
-
-  it("denies a Trusted Admin without an Extra Owner grant", async () => {
-    const repo = {
-      hasGrantNode: vi.fn(async () => false),
-    } as any;
-
-    await expect(
-      hasExtraOwnerAccess({
-        guildId: "guild",
-        userId: "user",
-        roleIds: [],
         permits: repo,
       }),
     ).resolves.toBe(false);

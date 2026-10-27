@@ -92,7 +92,7 @@ describe("ping panel", () => {
       "__🟢 **Shard [0]:** __",
       "⠀📡 41ms · ⏱️ 2m 38s",
       expect.stringMatching(
-        /^⠀\*\*CPU\*\*: \d+% \. 📊 \*\*RAM:\*\* \d+\.\d MB \. \*\*\(\d+\.\d{2}%\)\*\*  $/,
+        /^⠀\*\*CPU\*\*: \d+% \. 📊 \*\*RAM:\*\* \d+\.\d MB \. \*\*\(\d+\.\d{2}%\)\*\* {2}$/,
       ),
       "⠀📈 **Servers:** 1· 👥 **Members:** 5",
     ]);
@@ -101,7 +101,7 @@ describe("ping panel", () => {
       "__🟢 **Shard [1]:** __",
       "⠀📡 55ms · ⏱️ 2m 38s",
       expect.stringMatching(
-        /^⠀\*\*CPU\*\*: \d+% \. 📊 \*\*RAM:\*\* \d+\.\d MB \. \*\*\(\d+\.\d{2}%\)\*\*  $/,
+        /^⠀\*\*CPU\*\*: \d+% \. 📊 \*\*RAM:\*\* \d+\.\d MB \. \*\*\(\d+\.\d{2}%\)\*\* {2}$/,
       ),
       "⠀📈 **Servers:** 0· 👥 **Members:** 0",
     ]);

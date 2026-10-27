@@ -1,8 +1,8 @@
 import {
   SlashCommandBuilder,
-  ChatInputCommandInteraction,
+  type ChatInputCommandInteraction,
 } from "discord.js";
-import { HubPanel, type HubServices } from "../panel/HubPanel.js";
+import { renderHubPanel, type HubServices } from "../panel/HubPanel.js";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { permitCommand } from "./permit.js";
 
@@ -21,7 +21,7 @@ export const moduleCommands = [
         );
         return;
       }
-      await interaction.reply(ephemeralCard(await HubPanel.render("home", interaction, services)));
+      await interaction.reply(ephemeralCard(await renderHubPanel("home", interaction, services)));
     },
   },
   permitCommand,

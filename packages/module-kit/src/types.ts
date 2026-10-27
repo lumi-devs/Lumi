@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, AutocompleteInteraction, ButtonInteraction, SelectMenuInteraction, ModalSubmitInteraction } from "discord.js";
+import type { ChatInputCommandInteraction, AutocompleteInteraction, } from "discord.js";
 
 export interface ConfigField {
   key: string;

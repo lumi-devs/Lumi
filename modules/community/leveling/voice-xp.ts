@@ -4,7 +4,7 @@ import { levelForTotalXp } from "./formulas.js";
 
 async function applyRoleRewards(
   services: any,
-  guild: Guild,
+  _guild: Guild,
   member: GuildMember,
   rewards: LevelReward[],
   newLevel: number,

@@ -602,11 +602,11 @@ const economyModule: ModuleDefinition = defineModule({
   commands: [balanceDef, dailyDef, weeklyDef, workDef, transferDef, depositDef, withdrawDef, leaderboardDef, shopDef, buyDef],
   listeners: [],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[economy] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[economy] Module unloaded");
   },
 });

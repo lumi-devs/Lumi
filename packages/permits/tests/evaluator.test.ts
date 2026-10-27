@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, } from "vitest";
 import { evaluateNodeMatch, isBotOwner, isGuildOwner, PermitResolver } from "../src/evaluator.js";
 import { parseCron } from "../src/cron.js";
-import type { EvaluatePermitOptions, Permit, PermitAssignment } from "../src/types.js";
 
 describe("Permit Evaluator", () => {
   describe("evaluateNodeMatch", () => {

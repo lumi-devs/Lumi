@@ -1,4 +1,4 @@
-import { CanvasRenderingContext2D } from "canvas";
+import type { CanvasRenderingContext2D } from "canvas";
 
 export function roundRect(
   ctx: CanvasRenderingContext2D,

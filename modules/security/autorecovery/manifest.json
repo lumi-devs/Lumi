@@ -6,10 +6,6 @@
   "description": "Automatic server restore from latest backup when panic mode triggers or nuke detected",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security",
-    "security-backups"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -32,5 +28,9 @@
       "description": "Auto-restore when anti-nuke threshold exceeded",
       "default": false
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0",
+    "security-backups": "^2.0.0"
+  }
 }

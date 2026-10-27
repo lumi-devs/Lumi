@@ -1,4 +1,4 @@
-import Redis from "ioredis";
+import type Redis from "ioredis";
 
 export interface InvalidationMessage {
   namespace: string;
@@ -7,7 +7,6 @@ export interface InvalidationMessage {
 }
 
 export class InvalidationBus {
-  private readonly redis: Redis;
   private readonly subscriber: Redis;
   private readonly publisher: Redis;
   private readonly localListeners = new Map<string, Set<(keys: string[]) => void>>();
@@ -15,7 +14,6 @@ export class InvalidationBus {
   private resyncCallbacks: (() => void)[] = [];
 
   constructor(redis: Redis) {
-    this.redis = redis;
     this.subscriber = redis.duplicate();
     this.publisher = redis.duplicate();
     this.setupSubscriber();
@@ -28,7 +26,7 @@ export class InvalidationBus {
       try {
         const msg: InvalidationMessage = JSON.parse(message);
         this.handleInvalidation(msg);
-      } catch (e) {
+      } catch (_e) {
         // Ignore malformed messages
       }
     });

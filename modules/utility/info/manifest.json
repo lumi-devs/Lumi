@@ -6,9 +6,6 @@
   "description": "Avatar, banner, whois, serverinfo, nick, and info commands",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "utility"
-  ],
   "configFields": [
     {
       "key": "purgeMaxMessages",
@@ -24,5 +21,8 @@
       "description": "Maximum nickname length",
       "default": 32
     }
-  ]
+  ],
+  "dependencies": {
+    "utility": "^2.0.0"
+  }
 }

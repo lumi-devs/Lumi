@@ -1,4 +1,4 @@
-import { z } from "zod";
+
 import type { CommandDefinition, ListenerDefinition, TaskDefinition, ConfigField, ModuleCapability, ModuleServices } from "./types.js";
 
 export interface ModuleDefinition {

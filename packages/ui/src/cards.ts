@@ -1,12 +1,11 @@
 import {
-  ActionRowBuilder,
+  type ActionRowBuilder,
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   SectionBuilder,
   TextDisplayBuilder,
   ThumbnailBuilder,
-  type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";

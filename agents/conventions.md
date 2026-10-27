@@ -33,7 +33,7 @@ Message strings are constant; data goes in the object.
 - Use `@sapphire/utilities` for `cutText`, `chunk`, `filterNullish`, `isNullish`,
   `tryParse`, `sleep`, `retry`, `partition`.
 - Use `devalue` for cache serialization.
-- Use `isomorphic-git` for git. Never spawn `git`.
+- Add-on installs use the system `git` CLI (`execFileSync`); do not vendor a git implementation.
 - Do not add a dependency for a few lines.
 
 ## Security

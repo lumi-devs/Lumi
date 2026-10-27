@@ -1,8 +1,8 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
-  Message,
-  VoiceState,
+  type Message,
+  type VoiceState,
 } from "discord.js";
 import {
   defineModule,
@@ -266,11 +266,11 @@ const loggingModule: ModuleDefinition = defineModule({
   commands: [loggingConfigDef],
   listeners: [onMessageCreateListener, onMessageUpdateListener, onMessageDeleteListener, onVoiceStateListener],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[logging] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[logging] Module unloaded");
   },
 });

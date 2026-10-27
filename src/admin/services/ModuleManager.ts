@@ -1,6 +1,6 @@
-import { ModuleLoader } from "@lumi/module-runtime";
+import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PrismaClient } from "@lumi/db";
-import { ConfigService } from "./ConfigService.js";
+import type { ConfigService } from "./ConfigService.js";
 
 export class ModuleManager {
   constructor(

@@ -1,5 +1,5 @@
-import { DistributedLock, withLock } from "@lumi/redis";
-import { Redis } from "ioredis";
+import { DistributedLock, } from "@lumi/redis";
+import type { Redis } from "ioredis";
 
 export interface ScheduledJob {
   name: string;

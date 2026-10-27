@@ -1,8 +1,8 @@
 import {
   SlashCommandBuilder,
-  Message,
-  GuildMember,
-  APIInteractionGuildMember,
+  type Message,
+  type GuildMember,
+  type APIInteractionGuildMember,
 } from "discord.js";
 import {
   defineModule,
@@ -255,11 +255,11 @@ const afkModule: ModuleDefinition = defineModule({
   commands: [afkDef],
   listeners: [onMessageListener],
   tasks: [],
-  async onLoad(services) {
+  async onLoad(_services) {
     console.log("[afk] Module loaded");
     return [];
   },
-  async onUnload(services) {
+  async onUnload(_services) {
     console.log("[afk] Module unloaded");
   },
 });

@@ -17,7 +17,7 @@ packages/db/              Prisma schema, client, repositories
 packages/foundation/      shared pino logger
 packages/module-kit/      module/command/listener/context/service contracts
 packages/module-runtime/  discovery, manifest validation, loader, lifecycle
-packages/downloader/      git addon installer, validation, versioned installs
+packages/downloader/      git repository manager, addon validation, installs
 packages/ui/              card builders, palette, layout helpers
 packages/observability/   Prometheus registry, metrics, /metrics + /healthz
 packages/scheduler/       distributed cron with Redis locks
@@ -79,10 +79,11 @@ Rules:
 1. `src/index.ts` creates the Discord client and logger.
 2. `createCoreServices()` connects Redis, starts the invalidation bus, builds the
    cache namespaces, the Prisma handle, and repositories.
-3. The app builds `ModuleLoader`, `AddonInstaller`, then composes services.
-4. Built-in services (core, admin) are wired directly.
-5. `loader.load()` discovers roots, resolves semver dependencies, imports
-   entries, wires listeners, and registers module commands.
+3. The app builds a `ModuleLoader` with the bundled and add-on roots, a
+   `CommandRegistry`, and a `ModuleHost`, then an `AddonManager` bound to it.
+4. Services are composed and shared with modules and the admin panel.
+5. `host.load()` discovers roots, resolves dependencies, imports entries,
+   attaches listeners, and registers commands.
 6. The metrics server starts (`/metrics`, `/healthz`).
 7. `client.login()`.
 8. On ready: register global slash commands (built-ins + loaded modules). Any

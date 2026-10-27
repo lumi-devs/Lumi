@@ -270,18 +270,30 @@ model Sheet {
 }
 
 // Module addons
-model InstalledAddon {
-  id          String   @id @default(cuid())
-  name        String
-  version     String
-  source      String   // github, npm, local
-  sourceUrl   String?  @map("source_url")
-  installedAt DateTime @default(now()) @map("installed_at")
-  enabled     Boolean  @default(true)
-  manifest    Json
+model DownloaderRepo {
+  id        Int                @id @default(autoincrement())
+  name      String             @unique @db.VarChar(64)
+  url       String             @db.VarChar(200)
+  branch    String?            @db.VarChar(64)
+  commit    String?            @db.VarChar(40)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  modules   DownloaderModule[]
 
-  @@unique([name, version])
-  @@map("installed_addons")
+  @@map("downloader_repos")
+}
+
+model DownloaderModule {
+  name        String         @id @db.VarChar(64)
+  repoId      Int            @map("repo_id")
+  repo        DownloaderRepo @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  version     String?        @db.VarChar(32)
+  commit      String?        @db.VarChar(40)
+  pinned      Boolean        @default(false)
+  installedAt DateTime       @default(now()) @map("installed_at")
+
+  @@index([repoId])
+  @@map("downloader_modules")
 }
 
 // Audit log

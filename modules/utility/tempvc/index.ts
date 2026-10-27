@@ -1,5 +1,4 @@
 import {
-  PermissionFlagsBits,
   SlashCommandBuilder,
   type GuildMember,
 } from "discord.js";
@@ -20,7 +19,7 @@ import {
   isModuleEnabled,
   sweepExpiredTempChannels,
 } from "./panel.js";
-import { adminPanelCard, configPanelCard } from "./ui.js";
+import { adminPanelCard, } from "./ui.js";
 
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 

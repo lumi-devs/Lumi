@@ -1,7 +1,7 @@
 import {
   SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type ButtonInteraction,
   ButtonStyle,
 } from "discord.js";
 import { totalmem } from "node:os";

@@ -198,25 +198,25 @@ curl http://localhost:9090/metrics
 curl http://localhost:8080/status
 ```
 
-### Addon Management
+### Add-on Management
 
-#### Install Addon from GitHub
-```bash
-# Via CLI
-bun run downloader install --source github --url https://github.com/user/addon --ref main
+Add-ons are managed from the panel by bot owners (`OWNER_IDS`).
 
-# Or via panel: /lumi → Addons → Install
+1. `/lumi` → **Add-ons** → **Repositories** → **Add Repository**
+2. Enter a lowercase repository name, an HTTPS git URL, and an optional branch
+3. Open the repository and **Browse** its modules
+4. **Install** a module, then enable and configure it from the Modules tab
+
+Private repositories use a token:
+
+```env
+GIT_TOKEN=ghp_xxx
+GIT_USERNAME=x-access-token   # optional
 ```
 
-#### List Installed Addons
-```bash
-bun run downloader list
-```
-
-#### Remove Addon
-```bash
-bun run downloader uninstall --name addon-name
-```
+**Update** fetches the branch and reloads changed add-ons; a failed update rolls
+back. **Auto-update** can be enabled with an interval between one hour and one
+week. **Pin** excludes an add-on from updates.
 
 ---
 

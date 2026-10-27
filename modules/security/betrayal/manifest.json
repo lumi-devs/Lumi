@@ -6,9 +6,6 @@
   "description": "Velocity monitoring of whitelisted users with per-action minute/hour limits and automatic immunity revocation",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -42,5 +39,8 @@
       "description": "Per-action minute/hour limits override defaults",
       "default": {}
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

@@ -1,5 +1,4 @@
-import { createCanvas, loadImage, CanvasRenderingContext2D } from "canvas";
-import { AttachmentBuilder } from "discord.js";
+import { createCanvas, loadImage, type CanvasRenderingContext2D } from "canvas";
 import { roundRect } from "@lumi/ui";
 
 const CARD_WIDTH = 900;
@@ -146,7 +145,7 @@ function drawShopItem(
   };
   const typeColor = typeColors[item.type] || "#ffd43b";
 
-  ctx.strokeStyle = typeColor + "80";
+  ctx.strokeStyle = `${typeColor}80`;
   ctx.lineWidth = 1.5;
   roundRect(ctx, x, y, width, height, 12);
   ctx.stroke();
@@ -157,7 +156,7 @@ function drawShopItem(
   const badgeX = x + 20;
   const badgeY = y + 20;
 
-  ctx.fillStyle = typeColor + "30";
+  ctx.fillStyle = `${typeColor}30`;
   roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 8);
   ctx.fill();
 
@@ -191,7 +190,7 @@ function drawShopItem(
     desc = desc.slice(0, -1);
   }
   if (desc !== item.description) {
-    desc = desc.slice(0, -3) + "...";
+    desc = `${desc.slice(0, -3)}...`;
   }
   ctx.fillText(desc, badgeX + badgeWidth + 20, badgeY + 50);
 

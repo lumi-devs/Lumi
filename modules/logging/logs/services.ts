@@ -1,4 +1,4 @@
-import { Message } from "discord.js";
+import type { Message } from "discord.js";
 import type { CardReply } from "@lumi/ui";
 
 export interface LoggingConfig {
@@ -10,11 +10,11 @@ export interface LoggingConfig {
   ignoredChannels?: string[] | null;
 }
 
-export async function sendLog(services: any, guildId: string, channelId: string | null | undefined, card: CardReply) {
+export async function sendLog(services: any, _guildId: string, channelId: string | null | undefined, card: CardReply) {
   if (!channelId) return;
 
   const channel = services.client.channels.cache.get(channelId);
-  if (channel && channel.isTextBased()) {
+  if (channel?.isTextBased()) {
     try {
       await channel.send(card);
     } catch (e) {

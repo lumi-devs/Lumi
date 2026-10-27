@@ -1,6 +1,5 @@
 import {
   ActionRowBuilder,
-  ButtonStyle,
   ChannelType,
   ModalBuilder,
   PermissionFlagsBits,
@@ -31,7 +30,6 @@ import {
   generatorRemoveCard,
   memberActionCard,
   type ControlPanelState,
-  type MemberAction,
 } from "./ui.js";
 
 export const TempVcGeneratorSchema = z.object({

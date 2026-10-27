@@ -14,7 +14,7 @@ import {
 } from "@discordjs/builders";
 import {
   ButtonStyle,
-  ChannelType,
+  type ChannelType,
   parseEmoji,
   type APIMessageComponentEmoji,
 } from "discord.js";

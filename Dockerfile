@@ -1,4 +1,4 @@
-FROM docker.io/oven/bun:1-alpine AS base
+FROM docker.io/oven/bun:1.4.2-alpine AS base
 WORKDIR /app
 ENV TMPDIR=/tmp
 
@@ -17,7 +17,7 @@ COPY . .
 RUN bun install --production
 RUN bun build src/index.ts --target=bun --external canvas --outdir=dist
 
-FROM docker.io/oven/bun:1-alpine AS runtime
+FROM docker.io/oven/bun:1.4.2-alpine AS runtime
 WORKDIR /app
 
 RUN apk add --no-cache \

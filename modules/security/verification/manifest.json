@@ -6,9 +6,6 @@
   "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -68,5 +65,8 @@
         "suspicious"
       ]
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }

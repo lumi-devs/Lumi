@@ -1,4 +1,4 @@
-import { Guild, User } from "discord.js";
+
 
 export interface EconomyUserRecord {
   userId: string;

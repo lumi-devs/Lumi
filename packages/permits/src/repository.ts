@@ -1,5 +1,5 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import Redis from "ioredis";
+import { type PrismaClient, Prisma } from "@prisma/client";
+import type Redis from "ioredis";
 import {
   evaluateNodeMatch,
   evaluatePermit,
@@ -14,7 +14,6 @@ import type {
   PermitTargetType,
   Polarity,
   EvaluatePermitOptions,
-  PermitTierExplanation,
   EvaluatedPermit,
   PermitConditions
 } from "./types.js";

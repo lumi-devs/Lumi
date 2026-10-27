@@ -15,9 +15,9 @@
   "dependencies": {
     "@lumi/redis": "workspace:*",
     "@lumi/observability": "workspace:*",
-    "cron-parser": "^4.9.0"
+    "cron-parser": "^5.10.2"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0"
+    "@types/node": "^26.6.5"
   }
 }

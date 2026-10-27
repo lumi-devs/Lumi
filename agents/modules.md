@@ -57,7 +57,8 @@ a submodule, so the filesystem is the single source of truth.
 - Every module under `modules/` is a **supermodule**. No regular modules exist.
 - A supermodule is a directory with `manifest.json` and an entry file; its
   submodules are sibling directories, each with their own `manifest.json` and entry.
-- Submodules declare `requirements: ["supermodule-name"]` to depend on their parent.
+- Submodules declare `dependencies: { "supermodule-name": "^2.0.0" }` to
+  depend on their parent.
 - Supermodules are always enabled globally; submodules are enabled/disabled per guild.
 - The `/lumi` panel shows supermodules with expandable submodule lists.
 - Always-on behaviour lives in `src/` as built-in services, not in a module.
@@ -95,8 +96,8 @@ a submodule, so the filesystem is the single source of truth.
   "description": "Set AFK status with mention replies and nickname prefix",
   "version": "2.0.0",
   "entry": "index.ts",
-  "dependencies": {},
-  "requirements": ["utility"],
+  "dependencies": { "utility": "^2.0.0" },
+  "requirements": [],
   "conflicts": [],
   "capabilities": [],
   "configFields": [...]

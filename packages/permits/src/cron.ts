@@ -51,7 +51,7 @@ function parseCronField(field: string, min: number, max: number): number[] {
       }
     } else {
       const val = parseInt(part, 10);
-      if (!isNaN(val) && val >= min && val <= max) result.push(val);
+      if (!Number.isNaN(val) && val >= min && val <= max) result.push(val);
     }
   }
   
@@ -146,7 +146,6 @@ function getTimezoneOffset(timezone: string, date: Date): number {
  * Get the next execution time for a cron expression after a given date
  */
 export function nextCronExecution(cron: string, after: Date, timezone?: string): Date | null {
-  const parsed = parseCron(cron);
   const maxIterations = 366 * 24 * 60; // Max 1 year of minutes
   
   let current = new Date(after.getTime() + 60000); // Start from next minute

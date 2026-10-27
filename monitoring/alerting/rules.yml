@@ -17,26 +17,6 @@ groups:
           description: "Bot has been down for more than 1 minute. Check pod logs and Discord gateway connection."
           runbook_url: "https://docs.lumi.bot/runbooks/bot-down"
 
-      - alert: LumiManagerDown
-        expr: up{job="lumi-manager"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          component: fleet-manager
-        annotations:
-          summary: "Lumi fleet manager {{ $labels.instance }} is down"
-          description: "Fleet manager is down. Workers may not receive shard assignments or deployments."
-
-      - alert: LumiWorkerDown
-        expr: up{job="lumi-worker"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          component: fleet-worker
-        annotations:
-          summary: "Lumi worker {{ $labels.instance }} is down"
-          description: "Worker is down. Shards assigned to this worker are offline."
-
       # Shard Health
       - alert: LumiShardOffline
         expr: lumi_shards_online < lumi_shards_total
@@ -202,27 +182,6 @@ groups:
         annotations:
           summary: "Cache hit rate below 50%"
           description: "Cache hit rate is low. Check invalidation patterns and TTL settings."
-
-      # Fleet
-      - alert: LumiFleetRebalanceNeeded
-        expr: lumi_fleet_rebalance_pending > 0
-        for: 1m
-        labels:
-          severity: info
-          component: fleet
-        annotations:
-          summary: "Fleet rebalance pending"
-          description: "Shards need to be rebalanced across workers. Triggered by {{ $labels.reason }}."
-
-      - alert: LumiRollingRestartStuck
-        expr: lumi_rolling_restart_in_progress == 1 and time() - lumi_rolling_restart_start_timestamp > 600
-        for: 1m
-        labels:
-          severity: warning
-          component: fleet
-        annotations:
-          summary: "Rolling restart stuck"
-          description: "Rolling restart has been in progress for more than 10 minutes. Check worker health."
 
   - name: lumi-slo-alerts
     interval: 1m

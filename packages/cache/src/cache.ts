@@ -1,6 +1,6 @@
 import { createCodec, type Codec } from "./codec.js";
 
-export interface CacheOptions<T> {
+export interface CacheOptions<_T> {
   redis: any;
   invalidation: InvalidationBus;
   metrics?: CacheMetrics;
@@ -59,7 +59,6 @@ export class Cache<T = any> implements NamespacedCache<T> {
   
   private l1 = new Map<string, L1Entry<T>>();
   private flights = new Map<string, LoadFlight<T>>();
-  private namespaceListeners = new Map<string, Set<(keys: string[]) => void>>();
 
   constructor(options: CacheOptions<T>) {
     this.redis = options.redis;
@@ -202,12 +201,7 @@ export class Cache<T = any> implements NamespacedCache<T> {
     })();
 
     this.flights.set(fullKey, { promise: flightPromise, discarded: false });
-    
-    try {
       return await flightPromise;
-    } catch (error) {
-      throw error;
-    }
   }
 
   async getMany(keys: string[]): Promise<Map<string, T | null>> {

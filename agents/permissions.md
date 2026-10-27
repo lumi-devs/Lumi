@@ -58,9 +58,9 @@ quarantine suspends custom grants.
   on guild join and ready backfill. Never seed them from a read path.
 - Only bot owners (`OWNER_IDS`) can create, edit, assign, or delete a permit
   containing `*`. Guild `Extra Owner` holders cannot create another Extra Owner.
-- Add-on installation is separate from admin-panel access: it requires a bot
-  owner or an `Extra Owner` (`*`) permit. `Trusted Admin` (`admin.*`) can open
-  the hub but cannot install add-ons.
+- Add-on management is separate from admin-panel access: it requires a bot owner
+  (`OWNER_IDS`). `Extra Owner` (`*`) and `Trusted Admin` (`admin.*`) can open the
+  hub but cannot add repositories, install modules, or change updates.
 - Expired permits and expired assignments are ignored, as are permits whose
   schedule, timezone, or conditions do not match the evaluation time and context.
 ## Panel

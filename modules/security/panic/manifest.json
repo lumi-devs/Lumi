@@ -6,9 +6,6 @@
   "description": "Automated server lockdown on threat velocity spikes, channel locking, invite disabling, and permission snapshots",
   "version": "2.0.0",
   "entry": "index.ts",
-  "requirements": [
-    "security"
-  ],
   "configFields": [
     {
       "key": "enabled",
@@ -58,5 +55,8 @@
       "description": "Restrict moderation commands to owner/actor during panic",
       "default": false
     }
-  ]
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  }
 }
