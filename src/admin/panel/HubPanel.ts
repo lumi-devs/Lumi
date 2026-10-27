@@ -941,13 +941,13 @@ export async function handleHubInteraction(
       return true;
     }
     case "modtoggle": {
+      await interaction.deferUpdate();
       const enabled = services.moduleLoader.isEnabled(guildId, target);
       if (enabled) {
         await services.moduleManager.disable(guildId, target);
       } else {
         await services.moduleManager.enable(guildId, target);
       }
-      await interaction.deferUpdate();
       await interaction.editReply(
         await renderModuleDetail(
           interaction,
