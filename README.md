@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/banner.png" alt="Lumi" width="800">
 
-  <h3>Modular, self-hosted Discord bot platform for communities that want full control.</h3>
+  <h3>Modular, self-hosted Discord bot for communities that want full control.</h3>
 
   <p>
     <a href="https://github.com/lumi-devs/Lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/Lumi/ci.yml?branch=v2%2Fdevelop&style=flat-square&label=CI&logo=github" alt="CI"></a>
@@ -23,192 +23,160 @@
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Redis. It runs as a single process: one Discord gateway client, an embedded RPC bridge, and in-process BullMQ scheduling.
+**Lumi** is a modular Discord bot built with **Bun**, **TypeScript**, **PostgreSQL**, and **Redis**. One process runs the gateway, an embedded RPC bridge, and a job scheduler. Everything loads as toggleable **supermodules** — no hardcoded core, no privileged modules.
 
-**Documentation:** [lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs) · **Default branch:** `v2/develop`
-
----
-
-## Architecture
-
-Lumi is a Bun-workspace monorepo. The product's centrepiece is the **module loader and addon downloader**; caching and database access exist to keep that hot path fast and correct.
-
-| Path | Purpose |
-| :--- | :--- |
-| `src/` | Built-in services (always on): gateway, sharding, RPC, scheduler, lifecycle, admin panel, permits |
-| `modules/` | Toggleable supermodules (community, moderation, logging, security, utility) |
-| `packages/` | Shared libraries (`module-kit`, `module-runtime`, `permits`, `db`, `redis`, `ui`, `observability`, `cache`, `scheduler`, `downloader`) |
-| `agents/` | Agent operating specs for AI-assisted development |
-| `config/` | Prisma schema and migrations |
-
-**Non-negotiables:**
-- Every module is toggleable. No privileged "core" module and no `essential`/`disableable` escape hatch.
-- Modules are discovered from `manifest.json` and loaded from an explicit entry file. No hidden global registries.
-- Built-in commands have `module: null` and always run. Module commands only run when that module is enabled for the guild.
-- Addons are untrusted. Install with validation, path checks, and atomic switches.
-- Database is Postgres via Prisma with versioned migrations.
-- Redis is a single endpoint. No Cluster/Sentinel code paths.
-- UI is the card system in `@lumi/ui`. **Never use Discord embeds.** All user-facing output is a Components V2 card.
+> **Default branch:** `v2/develop` · **Docs:** [lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)
 
 ---
 
-## Features
+## Why Lumi?
+
+| Problem | Lumi's Answer |
+|---------|---------------|
+| "I only need moderation, not 50 cogs" | **Enable exactly what you need** — per guild, per submodule |
+| "Config is a nightmare" | **Visual panel** (`/lumi`) with category-grouped settings, not "Settings 1/2" |
+| "Perms are all-or-nothing" | **Grant/Deny hierarchy** with node-based permits, time-based expiry, built-in Extra Owner & Trusted Admin |
+| "Embeds break on mobile" | **Components V2 only** — clean, accessible cards that render everywhere |
+| "Voice XP is buggy" | **Audible-only tracking** — mute/deaf/server-mute = no XP, auto-resume on unmute |
+| "I want to self-host without Docker" | **Nix flakes, systemd, Windows, bare metal** — [see SETUP.md](SETUP.md) |
+
+---
+
+## Features at a Glance
 
 ### 🏗️ Supermodules
-Every module is a supermodule with independently-toggleable submodules. Expand/collapse in `/lumi` → Modules. Enable/disable per guild — other guilds keep the module.
+Toggle entire feature families or individual submodules per server. Other servers keep their config.
 
-### 🔐 Permit-based Access
-Hierarchical Grant/Deny system with per-server numbering. Built-in permits (Extra Owner, Trusted Admin) locked from reordering.
+| Supermodule | Submodules |
+|-------------|------------|
+| **Community** | Leveling (XP, ranks, rewards, voice), Economy (wallet, bank, slots, payday) |
+| **Moderation** | Cases, bans, kicks, timeouts, quarantine, warns, modlog |
+| **Logging** | Message/edit/delete, voice, mod actions, joins/leaves |
+| **Security** | Anti-nuke, join gate, verification, panic mode, backups, automod, betrayal detection, autorecovery |
+| **Utility** | AFK, temporary voice channels, avatar/banner/whois |
 
-### 🎴 Components V2 Only
-All user output uses Components V2 cards via `@lumi/ui` — no embeds, no ad-hoc payloads.
+### 🔐 Permissions That Make Sense
+- **Polarity**: Grant (allow) / Deny (block) — deny wins
+- **Nodes**: `mod.ban`, `admin.config`, `economy.*`, `*` wildcards
+- **Time-based**: "Trusted Admin for 30 days"
+- **Conditions**: "Only in #mod-channel", "Only for roles X/Y"
+- **Locked permits**: Extra Owner, Trusted Admin — can't be reordered or deleted
 
-### 📈 Leveling
-Message and voice XP with 7 selectable formulas (Disgaea, Fibonacci, Linear, MEE6, Atlas, Arcane, Lurkr), image rank cards, role rewards, announcements, and Overall/Voice leaderboards.
+### 🎴 Beautiful Output
+All responses use **Discord Components V2** — no embeds, no broken mobile layouts. Rank cards are generated server-side as PNGs with level, XP, rank, and progress bar.
 
-### 💰 Economy
-Wallet + bank balances with payday, taxed transfers, slots, and audited transaction ledger.
+### 📈 Leveling Done Right
+- 7 formulas: Disgaea, Fibonacci, Linear, MEE6, Atlas, Arcane, Lurkr
+- Role rewards at levels (with optional stacking)
+- Voice XP: **only while audible** (mute/deaf = paused, auto-resume)
+- Ignore/whitelist channels & roles — whitelist overrides ignore
+- Image leaderboards (Overall + Voice) with pagination
 
-### 🛡️ Moderation & Security
-- **Anti-nuke:** Sliding-window detection with quarantine/ban responses
-- **Join gate:** Filters for no-avatar, min age, unverified bots, advertising, raid detection
-- **Verification:** Emoji captcha, pending/verified roles, timeout sweep
-- **Panic mode:** Channel lockdown, invite disabling, permission snapshots, revert
-- **Backups:** Periodic structure snapshots with auto-recovery
-- **Automod:** Heat-based filtering with 13 filters and escalating punishments
+### 🛡️ Security Suite
+- **Anti-nuke**: Sliding-window action detection → quarantine/ban
+- **Join gate**: No avatar, min age, unverified bots, invite links, raid detection
+- **Verification**: Emoji captcha, pending/verified roles, timeout sweep
+- **Panic mode**: Instant lockdown, disable invites, snapshot perms, one-click revert
+- **Backups**: Periodic structure snapshots with auto-recovery
+- **Automod**: 13 heat-based filters with escalating punishments
 
-### 📊 Observability Built-in
-OpenTelemetry tracing and Prometheus metrics on port 9090.
+### 📊 Observability Built-In
+- **Prometheus metrics** on `:9090/metrics` — gateway latency, DB latency, cache hit ratio, command counts, XP granted
+- **OpenTelemetry tracing** — every command, listener, and RPC call
+- **Health endpoint** on `:8091/health` — for load balancers / uptime monitors
 
 ---
 
-## Quickstart
+## Get Started in 2 Minutes
 
-### Prerequisites
-
-- [Nix](https://nixos.org/download) (with flakes enabled) — or Docker
-- PostgreSQL 18+ (included in Nix shell / Docker compose)
-- Redis 8+ (included in Nix shell / Docker compose)
-- Discord Bot Application & Bot Token ([developer portal](https://discord.com/developers/applications))
-  — enable **Server Members**, **Message Content**, and **Presence** intents under Bot
-
-### Option A: Docker (Recommended)
-
+### Docker (Production)
 ```bash
-# 1. Generate .env + compose.yml into ./lumi
 mkdir lumi && cd lumi
 docker run --rm -it -v .:/setup ghcr.io/lumi-devs/lumi:latest lumi-setup init /setup
-
-# 2. Start everything (Postgres, Redis, bot; migrations run automatically)
 docker compose up -d
-docker logs -f lumi-bot
 ```
+→ Bot runs, Postgres + Redis included, migrations auto-apply.
 
-Invite the bot via the URL printed in the boot banner (OAuth2 `bot` + `applications.commands` scopes), then run `/about` in your server. Updating: `docker compose pull && docker compose up -d`.
-
-### Option B: Local Development (Nix)
-
+### Nix (Development)
 ```bash
 git clone git@github.com:lumi-devs/Lumi.git
 cd Lumi
-nix develop          # enters dev shell with Bun, Node, Postgres, Redis, canvas deps
-cp .env.example .env # fill in DISCORD_TOKEN, OWNER_IDS, DATABASE_URL, REDIS_URL
+nix develop           # Bun, Postgres, Redis, canvas deps all ready
+cp .env.example .env  # Add your token
 bunx prisma migrate deploy
-bunx prisma generate
-
-bun run typecheck    # tsc --noEmit
-bun run test         # vitest
-bun run dev:bot      # or: docker compose up -d
+bun run dev:bot
 ```
 
----
-
-## Configuration via `/lumi`
-
-Run `/lumi` in your server to open the module management panel. From there you can:
-
-- Enable/disable **supermodules** and **submodules** per guild
-- Configure module settings (voice XP, anti-nuke thresholds, join gate filters, etc.)
-- Manage **permits** (Extra Owner, Trusted Admin, custom permits)
-- Track add-on git repositories and install modules (bot owners only)
-
-All settings are category-grouped, not "Settings 1/2". Module disable removes that guild's slash commands and stops its listeners while other guilds keep the module.
+👉 **Full platform guide**: [SETUP.md](SETUP.md) — Docker, NixOS, Ubuntu, Debian, Arch, Windows, systemd, PM2, NSSM.
 
 ---
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
+| Command | What it does |
+|---------|--------------|
 | `/lumi` | Open the module management panel |
-| `/permit` | Manage permits and nodes |
-| `/rank` | Check your or another user's level (image card) |
-| `/leaderboard` | View XP or voice leaderboard (paginated) |
-| `/panic` / `/panic revert` | Enter/exit panic mode (Security) |
-| `/ping` | Bot latency & gateway heartbeat |
+| `/permit` | Manage permits & nodes |
+| `/rank` | Your level card (image) |
+| `/leaderboard` | XP or voice leaderboard |
+| `/panic` / `/panic revert` | Security lockdown |
+| `/ping` | Latency & gateway heartbeat |
 | `/about` | Bot info & status |
 
-Prefix commands also work: `,` (default), custom guild prefix, or bot mention.
+Prefix: `,` (default), custom guild prefix, or `@bot mention`.
 
 ---
 
-## Module Development
-
-Each supermodule lives in `modules/<name>/`; its submodules are sibling directories, each with its own manifest and entry:
+## Architecture (TL;DR)
 
 ```
-modules/utility/
-├── manifest.json          # supermodule: no submodule list, filesystem is truth
-├── index.ts               # defineModule entry
-├── afk/
-│   ├── manifest.json
-│   └── index.ts           # defineModule for utility-afk
-└── tempvc/
-    ├── manifest.json
-    └── index.ts
+src/                    # Built-in (always on)
+  core/                 # Gateway, sharding, RPC, scheduler
+  admin/                # Module manager, /lumi panel, permits
+modules/                # Toggleable supermodules
+  community/            # leveling, economy
+  moderation/           # mod
+  logging/              # logs
+  security/             # antinuke, join-gate, verification, panic, backups, automod, betrayal, autorecovery
+  utility/              # afk, tempvc, info
+packages/               # Shared libs
+  module-kit            # defineModule() contracts
+  module-runtime        # Discovery, loader, per-guild toggles
+  permits               # Grant/Deny evaluation
+  db                    # Prisma + repositories
+  redis                 # Client, pub/sub, locks, invalidation
+  ui                    # Components V2 cards
+  observability         # Metrics, tracing, health
+  scheduler             # Cron, distributed locks
+  downloader            # Addon install/update
 ```
 
-**Manifest contract:**
-```json
-{
-  "apiVersion": 2,
-  "name": "community-leveling",
-  "displayName": "Leveling",
-  "emoji": "📈",
-  "description": "XP, levels, role rewards, and leaderboards with voice XP support",
-  "version": "2.1.0",
-  "entry": "index.ts",
-  "configKey": "leveling",
-  "configFields": [
-    { "key": "xpPerMessage", "label": "XP per Message", "type": "number", "category": "XP & Cooldown" }
-  ],
-  "dependencies": { "community": "^2.0.0" }
-}
-```
-
-See `agents/module-dev-guide.md` for the full spec.
-
----
-
-## Testing
-
-```bash
-bun run typecheck   # tsc --noEmit
-bun run lint        # biome
-bun run test        # vitest (141+ tests)
-bun run build       # bun build src/index.ts --target=bun --external canvas --outdir=dist
-```
+**Non-negotiables:**
+- Every module is toggleable — no "core" escape hatch
+- Modules discovered from `manifest.json` + explicit entry file
+- Built-in commands (`module: null`) always run; module commands gate on `isActive(guild, module)`
+- Addons are untrusted — validated, path-checked, atomically switched
+- Postgres via Prisma (versioned migrations), Redis single endpoint
+- **UI = `@lumi/ui` cards only** — never `EmbedBuilder`
 
 ---
 
 ## License
 
-GNU Affero General Public License v3.0 (AGPL-3.0)
+**AGPL-3.0** — see [LICENSE](LICENSE).
 
-See `LICENSE` for details.
+Free to use, modify, and self-host. If you expose Lumi as a network service, you must offer source.
 
 ---
 
 ## Inspiration
 
-Lumi's module system draws inspiration from [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot)'s cog-based modularity.
+Lumi's module system draws inspiration from [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot)'s cog-based modularity and YAGPDB's fleet architecture.
+
+---
+
+## Links
+
+- 📖 **Documentation** → https://lumi-devs.github.io/Lumi-docs
+- 🐛 **Issues** → https://github.com/lumi-devs/Lumi/issues
+- 📦 **Setup Guide** → [SETUP.md](SETUP.md)
