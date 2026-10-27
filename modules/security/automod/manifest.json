@@ -12,7 +12,8 @@
       "label": "Automod Enabled",
       "type": "boolean",
       "description": "Enable automod system",
-      "default": false
+      "default": false,
+      "category": "Heat"
     },
     {
       "key": "perMessage",
@@ -21,7 +22,8 @@
       "description": "Heat added for every message",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perMention",
@@ -30,7 +32,8 @@
       "description": "Heat added per user/role mention",
       "default": 3,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perDuplicate",
@@ -39,7 +42,8 @@
       "description": "Heat added when message repeats previous",
       "default": 5,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perSimilar",
@@ -48,7 +52,8 @@
       "description": "Heat added for near-duplicate messages",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "similarityThreshold",
@@ -57,7 +62,8 @@
       "description": "How similar (0-1) counts as near-duplicate",
       "default": 0.85,
       "min": 0,
-      "max": 1
+      "max": 1,
+      "category": "Heat"
     },
     {
       "key": "perZalgo",
@@ -66,7 +72,8 @@
       "description": "Heat for zalgo/corrupted text",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perFilterHit",
@@ -75,7 +82,8 @@
       "description": "Heat when hard filter triggers",
       "default": 10,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perAttachment",
@@ -84,7 +92,8 @@
       "description": "Heat per attachment/image",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perEmoji",
@@ -93,7 +102,8 @@
       "description": "Heat per custom/unicode emoji",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "perLink",
@@ -102,7 +112,8 @@
       "description": "Heat when message contains URL",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "webhookMultiplier",
@@ -111,7 +122,8 @@
       "description": "Heat multiplier for webhook messages",
       "default": 1,
       "min": 1,
-      "max": 20
+      "max": 20,
+      "category": "Heat"
     },
     {
       "key": "decayPerMinute",
@@ -120,7 +132,8 @@
       "description": "Heat points bled off per minute",
       "default": 10,
       "min": 1,
-      "max": 100
+      "max": 100,
+      "category": "Heat"
     },
     {
       "key": "warnThreshold",
@@ -129,7 +142,8 @@
       "description": "Heat at which member gets warning",
       "default": 15,
       "min": 0,
-      "max": 1000
+      "max": 1000,
+      "category": "Escalation"
     },
     {
       "key": "timeoutThreshold",
@@ -138,7 +152,8 @@
       "description": "Heat at which member is timed out",
       "default": 30,
       "min": 0,
-      "max": 1000
+      "max": 1000,
+      "category": "Escalation"
     },
     {
       "key": "quarantineThreshold",
@@ -147,7 +162,8 @@
       "description": "Heat at which member is quarantined",
       "default": 0,
       "min": 0,
-      "max": 1000
+      "max": 1000,
+      "category": "Escalation"
     },
     {
       "key": "timeoutMinutes",
@@ -156,14 +172,16 @@
       "description": "Timeout duration at timeout threshold",
       "default": 10,
       "min": 1,
-      "max": 40320
+      "max": 40320,
+      "category": "Escalation"
     },
     {
       "key": "multiplierEnabled",
       "label": "Escalating Timeouts",
       "type": "boolean",
       "description": "Increase timeout duration on repeat offenses",
-      "default": false
+      "default": false,
+      "category": "Escalation"
     },
     {
       "key": "multiplierBase",
@@ -172,7 +190,8 @@
       "description": "Each repeat multiplies duration by this",
       "default": 2,
       "min": 2,
-      "max": 10
+      "max": 10,
+      "category": "Escalation"
     },
     {
       "key": "panicRaiderCount",
@@ -181,7 +200,8 @@
       "description": "Distinct raiders to trigger heat panic mode",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Escalation"
     },
     {
       "key": "panicWindowSeconds",
@@ -190,7 +210,8 @@
       "description": "Window for counting raiders",
       "default": 30,
       "min": 5,
-      "max": 600
+      "max": 600,
+      "category": "Escalation"
     },
     {
       "key": "lockdownMentionThreshold",
@@ -199,7 +220,8 @@
       "description": "Total mentions to trigger auto-lockdown",
       "default": 0,
       "min": 0,
-      "max": 10000
+      "max": 10000,
+      "category": "Escalation"
     },
     {
       "key": "lockdownWindowSeconds",
@@ -208,7 +230,8 @@
       "description": "Window for counting mentions",
       "default": 30,
       "min": 5,
-      "max": 600
+      "max": 600,
+      "category": "Escalation"
     },
     {
       "key": "lockdownDurationMinutes",
@@ -217,49 +240,56 @@
       "description": "How long lockdown lasts",
       "default": 10,
       "min": 1,
-      "max": 1440
+      "max": 1440,
+      "category": "Escalation"
     },
     {
       "key": "terms",
       "label": "Filtered Terms",
       "type": "multi-string",
       "description": "Words/phrases to block (one per line)",
-      "default": []
+      "default": [],
+      "category": "Filters"
     },
     {
       "key": "regexRules",
       "label": "Regex Rules",
       "type": "multi-string",
       "description": "Regex patterns to block (one per line)",
-      "default": []
+      "default": [],
+      "category": "Filters"
     },
     {
       "key": "blockInvites",
       "label": "Block Invites",
       "type": "boolean",
       "description": "Delete messages with Discord invites",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "inviteAllowlist",
       "label": "Allowed Invite Codes",
       "type": "multi-string",
       "description": "Invite codes always allowed",
-      "default": []
+      "default": [],
+      "category": "Filters"
     },
     {
       "key": "blockLinks",
       "label": "Block Links",
       "type": "boolean",
       "description": "Delete messages with links",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "linkAllowlist",
       "label": "Allowed Link Domains",
       "type": "multi-string",
       "description": "Domains exempt from link blocking",
-      "default": []
+      "default": [],
+      "category": "Filters"
     },
     {
       "key": "maxMentions",
@@ -268,7 +298,8 @@
       "description": "Max user+role mentions per message",
       "default": 0,
       "min": 0,
-      "max": 50
+      "max": 50,
+      "category": "Filters"
     },
     {
       "key": "maxCapsPercent",
@@ -277,7 +308,8 @@
       "description": "Max % uppercase letters (0 disables)",
       "default": 0,
       "min": 0,
-      "max": 100
+      "max": 100,
+      "category": "Filters"
     },
     {
       "key": "capsMinLength",
@@ -286,13 +318,15 @@
       "description": "Min message length for caps check",
       "default": 12,
       "min": 1,
-      "max": 500
+      "max": 500,
+      "category": "Filters"
     },
     {
       "key": "exemptRoles",
       "label": "Exempt Roles (legacy)",
       "type": "multi-role",
-      "description": "Role IDs bypassing all filters (use automod.bypass permits instead)"
+      "description": "Role IDs bypassing all filters (use automod.bypass permits instead)",
+      "category": "Filters"
     },
     {
       "key": "filterTimeoutMinutes",
@@ -301,7 +335,8 @@
       "description": "Timeout duration on filter hit",
       "default": 0,
       "min": 0,
-      "max": 40320
+      "max": 40320,
+      "category": "Filters"
     },
     {
       "key": "logChannelId",
@@ -310,7 +345,8 @@
       "description": "Channel for filter hit logs",
       "channelTypes": [
         0
-      ]
+      ],
+      "category": "Logging"
     }
   ],
   "dependencies": {

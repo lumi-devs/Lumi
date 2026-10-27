@@ -7,6 +7,20 @@ export interface RegisteredCommand extends CommandDefinition {
   module: string | null;
 }
 
+export function commandPayloadForGuild(
+  registry: CommandRegistry,
+  loader: Pick<ModuleLoader, "isActive">,
+  guildId: string,
+): unknown[] {
+  return registry
+    .all()
+    .filter(
+      (command) =>
+        !command.module || loader.isActive(guildId, command.module),
+    )
+    .map((command) => command.data.toJSON());
+}
+
 export interface ModuleHostLogger {
   info(message: string, meta?: unknown): void;
   warn(message: string, meta?: unknown): void;
@@ -68,6 +82,18 @@ export interface ModuleHostOptions {
   services: Record<string, any>;
   logger: ModuleHostLogger;
   syncCommands: () => Promise<void>;
+}
+
+function guildIdFrom(args: unknown[]): string | null {
+  for (const arg of args) {
+    const value = arg as {
+      guildId?: unknown;
+      guild?: { id?: unknown };
+    };
+    if (typeof value?.guildId === "string") return value.guildId;
+    if (typeof value?.guild?.id === "string") return value.guild.id;
+  }
+  return null;
 }
 
 export class ModuleHost implements AddonRuntime {
@@ -144,6 +170,13 @@ export class ModuleHost implements AddonRuntime {
       const handler = listener.handler;
       const event = listener.event;
       const wrapped = (...args: unknown[]) => {
+        const guildId = guildIdFrom(args);
+        if (
+          guildId &&
+          !this.options.loader.isActive(guildId, module.manifest.name)
+        ) {
+          return;
+        }
         void handler(...args, this.options.services).catch((error) =>
           this.options.logger.error(`[${module.manifest.name}] listener ${event} failed:`, error),
         );

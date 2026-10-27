@@ -146,11 +146,16 @@ export default defineModule({
 Zod remains the validator; the metadata only chooses the control (`boolean`,
 `number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`, `select`, `multi-string`)
 and supplies labels. Multi-select fields store `string[]` values and render a role or
-channel menu with `minValues: 0`; all other fields open a text modal. The detail
-panel renders the first eight metadata rows and up to three select menus
-(Discord's action-row and component budget); put the most important settings
-first. Modules without metadata still open in the panel but show no editable
-settings.
+channel menu with `minValues: 0`; all other fields open a text modal. Fields may
+declare a `category`; the panel groups settings by category and labels each page
+with it instead of using numbered settings pages. The detail panel renders up to
+four settings per page. Modules without metadata still open in the panel but show
+no editable settings.
+
+A manifest may set `configKey` when its stored settings key differs from its
+module name. The panel reads and writes that key, so module code and the panel
+must use the same key. For example, `community-leveling` stores its settings
+under `leveling`, and `utility-afk` stores them under `afk`.
 
 The loader verifies the definition name matches the manifest and that commands and
 listeners declare the same module name. It also checks command names,
@@ -165,25 +170,13 @@ subcommand names, and autocomplete handlers for uniqueness within the supermodul
 
 In `/lumi` → Modules tab:
 ```
-🔧 Utility [▼]
-  ├── 💤 AFK          [ON]  [Open]
-  ├── 🔊 TempVC       [ON]  [Open]
-  └── 🔧 Info Cmds    [ON]  [Open]
-
-👥 Community [▼]
-  ├── 📈 Leveling     [ON]  [Open]
-  └── 💰 Economy      [ON]  [Open]
-
-🛡️ Moderation [▼]
-  └── 🛡️ Mod          [ON]  [Open]
-
-📝 Logging [▼]
-  └── 📝 Logs         [ON]  [Open]
-
-🛡️ Security [▼]
-  ├── ☢️ Anti-Nuke    [ON]  [Open]
-  ├── 🚪 Join Gate    [OFF] [Open]
-  └── ...
+🔧 Utility                         Enabled   [Submodules]
+👥 Community                       Enabled   [Submodules]
+🛡️ Security                        Enabled   [Submodules]
 ```
 
-Clicking ▶/▼ expands/collapses submodules. Clicking "Open" opens the submodule's config panel.
+Opening a supermodule lists its submodules as rows with `Enabled`/`Disabled`
+status, a settings button, and a toggle. Settings pages are grouped and labelled
+by `category`; pagination stays inside a category when it has too many fields.
+Disabling a module immediately resyncs that guild's slash commands and stops its
+listeners from running in that guild.

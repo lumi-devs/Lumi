@@ -53,7 +53,7 @@ export async function grantVoiceXp(
     },
   });
 
-  const { level } = levelForTotalXp(config.formula, Number(user.totalXp));
+  const { level } = levelForTotalXp(config.levelFormula, Number(user.totalXp));
   if (level <= user.level) return;
 
   await services.db.prisma.levelingUser.update({
@@ -61,7 +61,7 @@ export async function grantVoiceXp(
     data: { level },
   });
 
-  const rewards = config.levelRewards;
+  const rewards = config.roleRewards;
   const highest = rewards.reduce(
     (best, reward) => (reward.level > best.level ? reward : best),
     { level: 0, roleId: "" } as LevelReward,
@@ -81,7 +81,7 @@ export async function grantVoiceXp(
   }
 
   if (config.announceEnabled) {
-    const channelId = config.announceChannelId ?? member.voice.channelId;
+    const channelId = config.announceChannel ?? member.voice.channelId;
     const channel = channelId
       ? guild.channels.cache.get(channelId) ?? (await guild.channels.fetch(channelId).catch(() => null))
       : guild.systemChannel;
@@ -91,7 +91,7 @@ export async function grantVoiceXp(
           .replace("{user}", `<@${member.id}>`)
           .replace("{level}", String(level))
           .replace("{xp}", Number(user.xp).toLocaleString())
-          .replace("{xpNeeded}", String(levelForTotalXp(config.formula, Number(user.totalXp)).xp)),
+          .replace("{xpNeeded}", String(levelForTotalXp(config.levelFormula, Number(user.totalXp)).xp)),
       }).catch(() => undefined);
     }
   }

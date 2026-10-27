@@ -5,35 +5,5 @@
   "emoji": "🛡️",
   "description": "Moderation tools: cases, bans, kicks, timeouts, warns, quarantine, lockdown",
   "version": "2.0.0",
-  "entry": "index.ts",
-  "configFields": [
-    {
-      "key": "quarantineRoleId",
-      "label": "Quarantine Role",
-      "type": "role",
-      "description": "Role assigned when quarantined",
-      "default": null
-    },
-    {
-      "key": "maxTargets",
-      "label": "Max Targets",
-      "type": "number",
-      "description": "Max members per command",
-      "default": 10
-    },
-    {
-      "key": "immuneRoleIds",
-      "label": "Immune Roles",
-      "type": "multi-role",
-      "description": "Roles exempt from auto-actions",
-      "default": []
-    },
-    {
-      "key": "warnThresholds",
-      "label": "Warn Thresholds",
-      "type": "json",
-      "description": "JSON object: warn count -> {action, duration}",
-      "default": {}
-    }
-  ]
+  "entry": "index.ts"
 }

@@ -12,7 +12,8 @@
       "label": "Join Gate Enabled",
       "type": "boolean",
       "description": "Enable join gate screening",
-      "default": false
+      "default": false,
+      "category": "Joins"
     },
     {
       "key": "minAccountAgeHours",
@@ -21,7 +22,8 @@
       "description": "Accounts younger than this are gated. 0 disables.",
       "default": 0,
       "min": 0,
-      "max": 8760
+      "max": 8760,
+      "category": "Joins"
     },
     {
       "key": "raidJoinCount",
@@ -30,7 +32,8 @@
       "description": "Joins within raid window that activate raid mode",
       "default": 10,
       "min": 3,
-      "max": 100
+      "max": 100,
+      "category": "Joins"
     },
     {
       "key": "raidWindowSeconds",
@@ -39,7 +42,8 @@
       "description": "Window for counting joins toward raid detection",
       "default": 30,
       "min": 5,
-      "max": 300
+      "max": 300,
+      "category": "Joins"
     },
     {
       "key": "raidAction",
@@ -51,7 +55,8 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Joins"
     },
     {
       "key": "raidAccountType",
@@ -62,20 +67,23 @@
       "choices": [
         "all",
         "suspicious"
-      ]
+      ],
+      "category": "Joins"
     },
     {
       "key": "raidWarnRoleIds",
       "label": "Raid Warn Roles",
       "type": "multi-role",
-      "description": "Role IDs mentioned in log when raid mode activates"
+      "description": "Role IDs mentioned in log when raid mode activates",
+      "category": "Joins"
     },
     {
       "key": "filterNoAvatarEnabled",
       "label": "Filter: No Avatar",
       "type": "boolean",
       "description": "Flag members who have never set a custom avatar",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "filterNoAvatarAction",
@@ -88,14 +96,16 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Filters"
     },
     {
       "key": "filterMinAgeEnabled",
       "label": "Filter: Min Account Age",
       "type": "boolean",
       "description": "Flag accounts younger than configured age",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "filterMinAgeHours",
@@ -104,7 +114,8 @@
       "description": "Accounts younger than this trip the filter",
       "default": 0,
       "min": 0,
-      "max": 8760
+      "max": 8760,
+      "category": "Filters"
     },
     {
       "key": "filterMinAgeAction",
@@ -117,14 +128,16 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Filters"
     },
     {
       "key": "filterUnverifiedBotEnabled",
       "label": "Filter: Unverified Bots",
       "type": "boolean",
       "description": "Flag bot accounts that aren't Discord-verified",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "filterUnverifiedBotAction",
@@ -137,20 +150,23 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Filters"
     },
     {
       "key": "filterUsernamePatternEnabled",
       "label": "Filter: Username Pattern",
       "type": "boolean",
       "description": "Flag members whose username contains configured substring",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "filterUsernamePatterns",
       "label": "Username Patterns",
       "type": "multi-string",
-      "description": "Substrings matched against usernames (one per line)"
+      "description": "Substrings matched against usernames (one per line)",
+      "category": "Filters"
     },
     {
       "key": "filterUsernamePatternAction",
@@ -163,14 +179,16 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Filters"
     },
     {
       "key": "filterAdvertisingEnabled",
       "label": "Filter: Advertising Account",
       "type": "boolean",
       "description": "Flag members whose display name is a link/invite",
-      "default": false
+      "default": false,
+      "category": "Filters"
     },
     {
       "key": "filterAdvertisingAction",
@@ -183,7 +201,8 @@
         "kick",
         "timeout",
         "quarantine"
-      ]
+      ],
+      "category": "Filters"
     }
   ],
   "dependencies": {

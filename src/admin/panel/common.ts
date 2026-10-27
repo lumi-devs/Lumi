@@ -57,7 +57,7 @@ export function panelOptions(
   return {
     breadcrumbs,
     thumbnailUrl: interaction.guild?.iconURL({ size: 128 }) ?? undefined,
-    footer: footer ?? `Requested by ${interaction.user.tag}`,
+    footer,
     actionRows: [
       ...(showTabs ? [navigationRow(active)] : []),
       ...extraRows,

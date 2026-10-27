@@ -1,56 +1,62 @@
 import { isLevelFormula, type LevelFormula } from "./formulas.js";
-import { LevelingModuleName } from "./constants.js";
+import { LevelingConfigKey } from "./constants.js";
 
 export interface LevelReward {
   level: number;
   roleId: string;
+  removePrevious: boolean;
 }
 
-export interface XpMultiplier {
-  id: string;
-  mult: number;
+export interface RoleMultiplier {
+  roleId: string;
+  multiplier: number;
+}
+
+export interface ChannelMultiplier {
+  channelId: string;
+  multiplier: number;
 }
 
 export interface LevelingConfig {
-  formula: LevelFormula;
-  messageXp: number;
-  messageCooldownMs: number;
-  minMessageLength: number;
+  levelFormula: LevelFormula;
+  xpPerMessage: number;
+  cooldownSeconds: number;
   voiceEnabled: boolean;
   voiceXpPerMinute: number;
   announceEnabled: boolean;
-  announceChannelId: string | null;
+  announceChannel: string | null;
   announceMessage: string;
-  ignoredChannels: string[];
-  ignoredRoles: string[];
-  levelRewards: LevelReward[];
+  minMessageLength: number;
+  roleRewards: LevelReward[];
   roleStack: boolean;
   keepXpOnLeave: boolean;
   globalMultiplier: number;
-  roleMultipliers: XpMultiplier[];
-  channelMultipliers: XpMultiplier[];
+  multiplierRoles: RoleMultiplier[];
+  channelMultipliers: ChannelMultiplier[];
+  ignoredChannels: string[];
+  ignoredRoles: string[];
 }
 
 export const AnnounceMessageDefault = "{user} reached level {level}!";
 
-const LevelingDefaults: LevelingConfig = {
-  formula: "disgaea",
-  messageXp: 15,
-  messageCooldownMs: 60 * 1000,
-  minMessageLength: 4,
+export const LevelingDefaults: LevelingConfig = {
+  levelFormula: "disgaea",
+  xpPerMessage: 15,
+  cooldownSeconds: 60,
   voiceEnabled: false,
   voiceXpPerMinute: 4,
   announceEnabled: true,
-  announceChannelId: null,
+  announceChannel: null,
   announceMessage: AnnounceMessageDefault,
-  ignoredChannels: [],
-  ignoredRoles: [],
-  levelRewards: [],
+  minMessageLength: 4,
+  roleRewards: [],
   roleStack: true,
   keepXpOnLeave: true,
   globalMultiplier: 1,
-  roleMultipliers: [],
+  multiplierRoles: [],
   channelMultipliers: [],
+  ignoredChannels: [],
+  ignoredRoles: [],
 };
 
 function asNumber(value: unknown, fallback: number): number {
@@ -65,148 +71,154 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function isSnowflake(value: unknown): value is string {
+  return typeof value === "string" && /^\d{17,20}$/.test(value);
+}
+
 function asIdList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value.filter(
-    (entry): entry is string =>
-      typeof entry === "string" && /^\d{17,20}$/.test(entry),
-  );
-}
-
-function asMultiplierEntry(value: unknown): XpMultiplier | null {
-  if (typeof value !== "object" || value === null) return null;
-  const { id, multiplier } = value as { id?: unknown; multiplier?: unknown };
-  if (typeof id !== "string" || !/^\d{17,20}$/.test(id)) return null;
-  if (
-    typeof multiplier !== "number" ||
-    !Number.isFinite(multiplier) ||
-    multiplier <= 0 ||
-    multiplier > 100
-  )
-    return null;
-  return { id, mult: multiplier };
-}
-
-function asMultiplierList(value: unknown): XpMultiplier[] {
-  if (!Array.isArray(value)) return [];
-  const out: XpMultiplier[] = [];
-  for (const entry of value) {
-    const parsed = asMultiplierEntry(entry);
-    if (parsed && !out.some((existing) => existing.id === parsed.id)) {
-      out.push(parsed);
-    }
-  }
-  return out;
+  return value.filter(isSnowflake);
 }
 
 function asRewards(value: unknown): LevelReward[] {
   if (!Array.isArray(value)) return [];
-  const out: LevelReward[] = [];
+  const rewards: LevelReward[] = [];
   for (const entry of value) {
     if (typeof entry !== "object" || entry === null) continue;
-    const { level, roleId } = entry as { level?: unknown; roleId?: unknown };
-    if (typeof level !== "number" || !Number.isInteger(level) || level < 2)
+    const { level, roleId, removePrevious } = entry as {
+      level?: unknown;
+      roleId?: unknown;
+      removePrevious?: unknown;
+    };
+    if (typeof level !== "number" || !Number.isInteger(level) || level < 1) {
       continue;
-    if (typeof roleId !== "string" || !/^\d{17,20}$/.test(roleId)) continue;
-    if (out.some((r) => r.level === level)) continue;
-    out.push({ level, roleId });
+    }
+    if (!isSnowflake(roleId)) continue;
+    if (rewards.some((reward) => reward.level === level)) continue;
+    rewards.push({
+      level,
+      roleId,
+      removePrevious: removePrevious === true,
+    });
   }
-  return out.sort((a, b) => a.level - b.level);
+  return rewards.sort((a, b) => a.level - b.level);
+}
+
+function asRoleMultipliers(value: unknown): RoleMultiplier[] {
+  if (!Array.isArray(value)) return [];
+  const multipliers: RoleMultiplier[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { roleId, multiplier } = entry as {
+      roleId?: unknown;
+      multiplier?: unknown;
+    };
+    if (!isSnowflake(roleId) || !isMultiplier(multiplier)) continue;
+    if (multipliers.some((existing) => existing.roleId === roleId)) continue;
+    multipliers.push({ roleId, multiplier });
+  }
+  return multipliers;
+}
+
+function asChannelMultipliers(value: unknown): ChannelMultiplier[] {
+  if (!Array.isArray(value)) return [];
+  const multipliers: ChannelMultiplier[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { channelId, multiplier } = entry as {
+      channelId?: unknown;
+      multiplier?: unknown;
+    };
+    if (!isSnowflake(channelId) || !isMultiplier(multiplier)) continue;
+    if (multipliers.some((existing) => existing.channelId === channelId)) {
+      continue;
+    }
+    multipliers.push({ channelId, multiplier });
+  }
+  return multipliers;
+}
+
+function isMultiplier(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 100
+  );
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 export async function getLevelingConfig(
-  services: any,
+  services: { config: { get(guildId: string, name: string): Promise<unknown> } },
   guildId: string,
 ): Promise<LevelingConfig> {
-  const stored = (await services.config.get(guildId, LevelingModuleName)) ?? {};
+  const stored =
+    ((await services.config.get(guildId, LevelingConfigKey)) ??
+      {}) as Record<string, unknown>;
+
+  const announceChannel = stored.announceChannel;
   return {
-    formula: isLevelFormula(stored.formula)
-      ? stored.formula
-      : LevelingDefaults.formula,
-    messageXp: Math.min(
-      1000,
-      Math.max(1, Math.floor(asNumber(stored.messageXp, LevelingDefaults.messageXp))),
+    levelFormula: isLevelFormula(stored.levelFormula)
+      ? stored.levelFormula
+      : LevelingDefaults.levelFormula,
+    xpPerMessage: Math.floor(
+      clamp(
+        asNumber(stored.xpPerMessage, LevelingDefaults.xpPerMessage),
+        1,
+        1000,
+      ),
     ),
-    messageCooldownMs: Math.min(
-      3600 * 1000,
-      Math.max(1000, asNumber(
-        stored.messageCooldownMs,
-        LevelingDefaults.messageCooldownMs,
-      )),
-    ),
-    minMessageLength: Math.min(
-      500,
-      Math.max(
-        0,
-        Math.floor(asNumber(
-          stored.minMessageLength,
-          LevelingDefaults.minMessageLength,
-        )),
+    cooldownSeconds: Math.floor(
+      clamp(
+        asNumber(stored.cooldownSeconds, LevelingDefaults.cooldownSeconds),
+        1,
+        3600,
       ),
     ),
     voiceEnabled: asBoolean(
       stored.voiceEnabled,
       LevelingDefaults.voiceEnabled,
     ),
-    voiceXpPerMinute: Math.min(
-      1000,
-      Math.max(
+    voiceXpPerMinute: Math.floor(
+      clamp(
+        asNumber(stored.voiceXpPerMinute, LevelingDefaults.voiceXpPerMinute),
         1,
-        Math.floor(asNumber(
-          stored.voiceXpPerMinute,
-          LevelingDefaults.voiceXpPerMinute,
-        )),
+        1000,
       ),
     ),
     announceEnabled: asBoolean(
       stored.announceEnabled,
       LevelingDefaults.announceEnabled,
     ),
-    announceChannelId:
-      typeof stored.announceChannelId === "string" &&
-      /^\d{17,20}$/.test(stored.announceChannelId)
-        ? stored.announceChannelId
-        : null,
+    announceChannel: isSnowflake(announceChannel) ? announceChannel : null,
     announceMessage: asString(
       stored.announceMessage,
       LevelingDefaults.announceMessage,
     ).slice(0, 500),
-    ignoredChannels: asIdList(stored.ignoredChannels),
-    ignoredRoles: asIdList(stored.ignoredRoles),
-    levelRewards: asRewards(stored.levelRewards),
+    minMessageLength: Math.floor(
+      clamp(
+        asNumber(stored.minMessageLength, LevelingDefaults.minMessageLength),
+        0,
+        500,
+      ),
+    ),
+    roleRewards: asRewards(stored.roleRewards),
     roleStack: asBoolean(stored.roleStack, LevelingDefaults.roleStack),
     keepXpOnLeave: asBoolean(
       stored.keepXpOnLeave,
       LevelingDefaults.keepXpOnLeave,
     ),
-    globalMultiplier: Math.min(
+    globalMultiplier: clamp(
+      asNumber(stored.globalMultiplier, LevelingDefaults.globalMultiplier),
+      0,
       100,
-      Math.max(0, asNumber(stored.globalMultiplier, LevelingDefaults.globalMultiplier)),
     ),
-    roleMultipliers: asMultiplierList(stored.roleMultipliers),
-    channelMultipliers: asMultiplierList(stored.channelMultipliers),
+    multiplierRoles: asRoleMultipliers(stored.multiplierRoles),
+    channelMultipliers: asChannelMultipliers(stored.channelMultipliers),
+    ignoredChannels: asIdList(stored.ignoredChannels),
+    ignoredRoles: asIdList(stored.ignoredRoles),
   };
-}
-
-export function applyMultipliers(
-  base: number,
-  config: LevelingConfig,
-  roleIds: string[],
-  channelId: string | null,
-): number {
-  let roleMult = 1;
-  for (const entry of config.roleMultipliers) {
-    if (roleIds.includes(entry.id) && entry.mult > roleMult) roleMult = entry.mult;
-  }
-  let channelMult = 1;
-  if (channelId) {
-    for (const entry of config.channelMultipliers) {
-      if (entry.id === channelId && entry.mult > channelMult)
-        channelMult = entry.mult;
-    }
-  }
-  return Math.max(
-    1,
-    Math.floor(base * config.globalMultiplier * roleMult * channelMult),
-  );
 }

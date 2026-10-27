@@ -19,7 +19,7 @@ import {
   RESTJSONErrorCodes,
 } from "discord.js";
 import * as ui from "@lumi/ui";
-import { CommandRegistry, ModuleHost } from "./core/modules.js";
+import { CommandRegistry, ModuleHost, commandPayloadForGuild } from "./core/modules.js";
 import { DistributedScheduler } from "@lumi/scheduler";
 import { AddonManager } from "@lumi/downloader";
 import {
@@ -151,7 +151,6 @@ async function main() {
   const configService = new ConfigService(prisma);
   const scheduler = new DistributedScheduler(redis);
   const healthMonitor = createHealthMonitor();
-  const moduleManager = new ModuleManager(moduleLoader, prisma, configService);
 
   healthMonitor.register({
     name: "redis",
@@ -220,6 +219,26 @@ async function main() {
     console.log(`Metrics server started on :${metricsPort}`);
   }
 
+  const registry = new CommandRegistry();
+  const commandPayload = (guildId: string) =>
+    commandPayloadForGuild(registry, moduleLoader, guildId);
+
+  const syncGuildCommands = async (guildId: string) => {
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) return;
+    await guild.commands
+      .set(commandPayload(guildId) as any)
+      .catch((error) => logger.error(`Failed to sync commands in ${guildId}:`, error));
+  };
+
+  const syncAllGuildCommands = async () => {
+    for (const guild of client.guilds.cache.values()) {
+      await syncGuildCommands(guild.id);
+    }
+  };
+
+  const moduleManager = new ModuleManager(moduleLoader, prisma, syncGuildCommands);
+
   const services = {
     client,
     configService,
@@ -253,20 +272,13 @@ async function main() {
     observability: { healthMonitor },
   };
 
-  const registry = new CommandRegistry();
   const host = new ModuleHost({
     client,
     loader: moduleLoader,
     registry,
     services,
     logger,
-    syncCommands: async () => {
-      for (const guild of client.guilds.cache.values()) {
-        await guild.commands
-          .set(registry.payload() as any)
-          .catch((error) => logger.error(`Failed to sync commands in ${guild.id}:`, error));
-      }
-    },
+    syncCommands: syncAllGuildCommands,
   });
 
   const addons = new AddonManager({
@@ -357,7 +369,7 @@ async function main() {
   };
 
   const registerGuildCommands = async (guild: any) => {
-    const payload = registry.payload();
+    const payload = commandPayload(guild.id);
     try {
       await guild.commands.set(payload);
       logger.info(`Registered ${payload.length} commands in guild ${guild.name} (${guild.id})`);
@@ -417,7 +429,7 @@ async function main() {
 
     const command = registry.get(name);
     if (!command) return;
-    if (command.module && !moduleLoader.isEnabled(message.guild.id, command.module)) return;
+    if (command.module && !moduleLoader.isActive(message.guild.id, command.module)) return;
 
     if (command.requiresAdmin) {
       const allowed = await hasAdminAccess({
@@ -665,7 +677,12 @@ async function main() {
     try {
       if (interaction.isAutocomplete()) {
         const command = registry.get(interaction.commandName);
-        if (command?.autocomplete) {
+        if (
+          command?.autocomplete &&
+          (!command.module ||
+            !interaction.guildId ||
+            moduleLoader.isActive(interaction.guildId, command.module))
+        ) {
           await command.autocomplete(interaction, services);
         } else {
           await interaction.respond([]).catch(() => undefined);
@@ -681,7 +698,7 @@ async function main() {
         }
 
         if (command.module && interaction.guildId) {
-          const enabled = moduleLoader.isEnabled(interaction.guildId, command.module);
+          const enabled = moduleLoader.isActive(interaction.guildId, command.module);
           if (!enabled) {
             await interaction
               .reply(

@@ -31,7 +31,7 @@ function fib(n: number): number {
 }
 
 export function xpForLevel(formula: LevelFormula, level: number): number {
-  const lv = Math.max(1, Math.floor(level));
+  const lv = Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
   switch (formula) {
     case "disgaea": {
       const t = lv - 1;
@@ -80,4 +80,40 @@ export function levelForTotalXp(
     level++;
   }
   return { level, xp: remaining };
+}
+
+export interface LevelProgress {
+  level: number;
+  xpIntoLevel: number;
+  xpForNext: number;
+  progress: number;
+}
+
+export function levelProgress(
+  formula: LevelFormula,
+  totalXp: number,
+  level: number,
+): LevelProgress {
+  const safeLevel = Math.max(
+    1,
+    Math.min(MaxLevel, Math.floor(Number.isFinite(level) ? level : 1)),
+  );
+  if (safeLevel >= MaxLevel) {
+    return { level: safeLevel, xpIntoLevel: 0, xpForNext: 0, progress: 1 };
+  }
+
+  const total = Math.max(
+    0,
+    Math.floor(Number.isFinite(totalXp) ? totalXp : 0),
+  );
+  const previousLevels = totalXpForLevel(formula, safeLevel);
+  const required = xpForLevel(formula, safeLevel);
+  const xpIntoLevel = Math.max(0, Math.min(required, total - previousLevels));
+
+  return {
+    level: safeLevel,
+    xpIntoLevel,
+    xpForNext: Math.max(0, required - xpIntoLevel),
+    progress: required > 0 ? xpIntoLevel / required : 0,
+  };
 }

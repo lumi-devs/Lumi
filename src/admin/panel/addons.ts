@@ -23,6 +23,8 @@ import { isBotOwner } from "@lumi/permits";
 import type { InstalledAddon } from "@lumi/downloader";
 import type { HubServices } from "./HubPanel.js";
 import { cut, pageRow, panelOptions, type HubInteraction } from "./common.js";
+import { ModulesPerPage } from "./modules.js";
+import { paginate } from "./pages.js";
 
 type AddonInteraction =
   | ButtonInteraction
@@ -38,7 +40,6 @@ type AddonView =
   | { kind: "manage"; name: string }
   | { kind: "auto" };
 
-const ModulesPerPage = 4;
 const ReposPerPage = 25;
 const IntervalChoices = [
   { label: "Every hour", value: "60" },
@@ -47,14 +48,6 @@ const IntervalChoices = [
   { label: "Every day", value: "1440" },
   { label: "Every week", value: "10080" },
 ];
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const pages: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    pages.push(items.slice(index, index + size));
-  }
-  return pages;
-}
 
 function short(commit: string | null): string {
   return commit ? `\`${commit.slice(0, 7)}\`` : "*unknown*";
@@ -312,16 +305,18 @@ async function renderBrowse(
   notice?: string,
 ): Promise<CardReply> {
   const modules = await services.addons.listRepoModules(name).catch(() => []);
-  const pages = chunk(modules, ModulesPerPage);
-  const current = Math.min(Math.max(page, 0), Math.max(pages.length - 1, 0));
-  const items = pages[current] ?? [];
+  const { items, page: current, totalPages } = paginate(
+    modules,
+    page,
+    ModulesPerPage,
+  );
 
   const options = panelOptions(
     interaction,
     "addons",
     ["Hub", "Add-ons", "Repositories", name],
     [
-      pageRow(`lumi:addon:browse:${name}`, current, Math.max(pages.length, 1)),
+      pageRow(`lumi:addon:browse:${name}`, current, totalPages),
       row(
         createActionButton({
           customId: `lumi:addon:view:${name}`,
@@ -353,7 +348,7 @@ async function renderBrowse(
     `📚 ${name}`,
     [
       ...(notice ? [`✅ ${notice}`, ""] : []),
-      `**Modules:** ${modules.length} · page ${current + 1}/${pages.length}`,
+      `**Modules:** ${modules.length} · page ${current + 1}/${totalPages}`,
     ],
     {
       sections: items.map((module) =>

@@ -9,6 +9,7 @@ export interface ConfigField {
   default?: unknown;
   choices?: string[];
   channelTypes?: number[];
+  category?: string;
   min?: number;
   max?: number;
 }

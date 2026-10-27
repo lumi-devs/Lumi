@@ -3,6 +3,7 @@ import {
   type ChatInputCommandInteraction,
   PermissionFlagsBits,
   type User,
+  type GuildMember,
   type GuildTextBasedChannel,
   type ButtonInteraction,
   type Client,
@@ -24,7 +25,8 @@ import {
   makeWarningCard,
   type CardReply,
 } from "@lumi/ui";
-import { z } from "zod";
+import { getModerationConfig, type ModerationConfig } from "./config.js";
+import { ModerationModuleName } from "./constants.js";
 
 function isTextGuildChannel(channel: any): channel is GuildTextBasedChannel & { permissionOverwrites: any } {
   return channel?.isTextBased?.() && "permissionOverwrites" in channel && !channel.isThread?.();
@@ -34,7 +36,10 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function getTargets(interaction: ChatInputCommandInteraction): Promise<User[]> {
+async function getTargets(
+  interaction: ChatInputCommandInteraction,
+  maxTargets: number,
+): Promise<User[]> {
   const single = interaction.options.getUser("user");
   const extra = interaction.options.getString("users");
   const ids = new Set(extra ? extra.split(/\s+/).filter(s => /^\d{17,19}$/.test(s)) : []);
@@ -47,7 +52,17 @@ async function getTargets(interaction: ChatInputCommandInteraction): Promise<Use
       targets.push(user);
     } catch {}
   }
-  return targets;
+  return targets.slice(0, maxTargets);
+}
+
+function isImmune(
+  member: GuildMember | null,
+  config: ModerationConfig,
+): boolean {
+  return Boolean(
+    member &&
+      config.immuneRoleIds.some((roleId) => member.roles.cache.has(roleId)),
+  );
 }
 
 function getReason(interaction: ChatInputCommandInteraction): string {
@@ -79,7 +94,9 @@ const banAdd: CommandDefinition = {
     .addIntegerOption(o => o.setName("delete_days").setDescription("Days of messages to delete (0-7)").setMinValue(0).setMaxValue(7).setRequired(false)),
   requiredPermit: "mod.ban",
   async execute(interaction, services) {
-    const targets = await getTargets(interaction);
+    const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
+    const targets = await getTargets(interaction, config.maxTargets);
     if (targets.length === 0) {
       await replyError(interaction, "No targets", "Specify at least one user to ban");
       return;
@@ -87,7 +104,6 @@ const banAdd: CommandDefinition = {
 
     const reason = getReason(interaction);
     const deleteDays = getDeleteDays(interaction);
-    const guild = interaction.guild!;
     const moderator = interaction.user;
 
     const lines: string[] = [];
@@ -95,6 +111,12 @@ const banAdd: CommandDefinition = {
 
     for (const target of targets) {
       try {
+        const member = await guild.members.fetch(target.id).catch(() => null);
+        if (isImmune(member, config)) {
+          failures++;
+          lines.push(`❌ ${target.tag} — immune role`);
+          continue;
+        }
         await guild.members.ban(target, { deleteMessageSeconds: deleteDays * 86400, reason });
 
         await services.db.prisma.moderationCase.create({
@@ -170,14 +192,15 @@ const kickDef: CommandDefinition = {
     .addStringOption(o => o.setName("reason").setDescription("Reason for kick").setRequired(false).setAutocomplete(true)),
   requiredPermit: "mod.kick",
   async execute(interaction, services) {
-    const targets = await getTargets(interaction);
+    const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
+    const targets = await getTargets(interaction, config.maxTargets);
     if (targets.length === 0) {
       await replyError(interaction, "No targets", "Specify at least one user to kick");
       return;
     }
 
     const reason = getReason(interaction);
-    const guild = interaction.guild!;
 
     const lines: string[] = [];
     let failures = 0;
@@ -188,6 +211,11 @@ const kickDef: CommandDefinition = {
         if (!member) {
           failures++;
           lines.push(`❌ ${target.tag} — not in this server`);
+          continue;
+        }
+        if (isImmune(member, config)) {
+          failures++;
+          lines.push(`❌ ${target.tag} — immune role`);
           continue;
         }
         if (!member.kickable) {
@@ -226,11 +254,16 @@ const timeoutDef: CommandDefinition = {
     const duration = interaction.options.getInteger("duration", true);
     const reason = getReason(interaction);
     const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
 
     try {
       const member = await guild.members.fetch(target.id).catch(() => null);
       if (!member) {
         await replyError(interaction, "Not in guild", "User is not in this server");
+        return;
+      }
+      if (isImmune(member, config)) {
+        await replyError(interaction, "Immune", "This member has an immune role");
         return;
       }
       if (!member.moderatable) {
@@ -266,14 +299,60 @@ const warnDef: CommandDefinition = {
     const target = interaction.options.getUser("user", true);
     const reason = getReason(interaction);
     const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
+    const member = await guild.members.fetch(target.id).catch(() => null);
+
+    if (isImmune(member, config)) {
+      await replyError(interaction, "Immune", "This member has an immune role");
+      return;
+    }
 
     await services.db.prisma.moderationCase.create({
       data: { guildId: guild.id, type: "WARN", targetId: target.id, moderatorId: interaction.user.id, reason },
     });
 
+    const warnCount = await services.db.prisma.moderationCase.count({
+      where: { guildId: guild.id, targetId: target.id, type: "WARN", active: true },
+    });
+    const threshold = config.warnThresholds[String(warnCount)];
+    let autoAction: string | null = null;
+
+    if (member && threshold) {
+      try {
+        if (threshold.action === "timeout") {
+          await member.timeout(
+            (threshold.duration ?? 60) * 1000,
+            `Warn threshold (${warnCount} warnings)`,
+          );
+        } else if (threshold.action === "kick") {
+          await member.kick(`Warn threshold (${warnCount} warnings)`);
+        } else {
+          await guild.members.ban(member, {
+            reason: `Warn threshold (${warnCount} warnings)`,
+          });
+        }
+
+        await services.db.prisma.moderationCase.create({
+          data: {
+            guildId: guild.id,
+            type: threshold.action.toUpperCase(),
+            targetId: target.id,
+            moderatorId: interaction.client.user!.id,
+            reason: `Automatic action after ${warnCount} warnings`,
+            metadata: { automatic: true, warnCount },
+          },
+        });
+        autoAction = threshold.action;
+      } catch (error) {
+        autoAction = `failed: ${describeError(error)}`;
+      }
+    }
+
     await interaction.reply(ephemeralCard(makeSuccessCard("Warned", [
       `**User**\n${target.tag} (\`${target.id}\`)`,
+      `**Warnings**\n${warnCount}`,
       `**Reason**\n${reason}`,
+      ...(autoAction ? [`**Automatic action**\n${autoAction}`] : []),
     ])));
   },
 };
@@ -441,6 +520,13 @@ const softbanDef: CommandDefinition = {
     const target = interaction.options.getUser("user", true);
     const reason = getReason(interaction);
     const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
+    const member = await guild.members.fetch(target.id).catch(() => null);
+
+    if (isImmune(member, config)) {
+      await replyError(interaction, "Immune", "This member has an immune role");
+      return;
+    }
 
     try {
       await guild.members.ban(target, { reason, deleteMessageSeconds: 86400 });
@@ -472,7 +558,7 @@ const quarantineDef: CommandDefinition = {
     const target = interaction.options.getUser("user", true);
     const reason = getReason(interaction);
     const guild = interaction.guild!;
-    const config = await services.config.get(guild.id, "mod") as any ?? {};
+    const config = await getModerationConfig(services, guild.id);
 
     if (!config.quarantineRoleId) {
       await replyError(interaction, "Not configured", "Quarantine role not set");
@@ -482,6 +568,10 @@ const quarantineDef: CommandDefinition = {
     const member = await guild.members.fetch(target.id).catch(() => null);
     if (!member) {
       await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+    if (isImmune(member, config)) {
+      await replyError(interaction, "Immune", "This member has an immune role");
       return;
     }
 
@@ -580,6 +670,12 @@ const vcmuteDef: CommandDefinition = {
     const member = await guild.members.fetch(target.id).catch(() => null);
     if (!member) {
       await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+
+    const config = await getModerationConfig(services, guild.id);
+    if (isImmune(member, config)) {
+      await replyError(interaction, "Immune", "This member has an immune role");
       return;
     }
 
@@ -771,8 +867,8 @@ const casesPaginationListener: ListenerDefinition = {
 
     const guildId = interaction.guildId;
     if (!guildId) return;
-    if (!(services.modules?.isEnabled(guildId, "mod") ?? true)) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Module disabled", "The mod module is disabled on this server.")));
+    if (!(services.modules?.isEnabled(guildId, ModerationModuleName) ?? true)) {
+      await interaction.reply(ephemeralCard(makeErrorCard("Module disabled", "The moderation module is disabled on this server.")));
       return;
     }
 
@@ -798,25 +894,22 @@ const casesPaginationListener: ListenerDefinition = {
 };
 
 const modModule: ModuleDefinition = defineModule({
-  name: "moderation-mod",
+  name: ModerationModuleName,
   displayName: "Moderation",
   emoji: "🛡️",
   description: "Case-backed moderation with bans, kicks, timeouts, warns, purge, notes, lockdown, softban, quarantine, voice mute",
   version: "2.0.0",
-  config: z.object({
-    quarantineRoleId: z.string().nullable().optional(),
-    maxTargets: z.number().int().min(1).max(100).default(10),
-    immuneRoleIds: z.array(z.string(), {}).default([]),
-    warnThresholds: z.record(z.string(), z.object({
-      action: z.enum(["timeout", "ban"]),
-      duration: z.number().int().min(60).optional(),
-    })).default({}),
-  }, {}),
+  config: {
+    quarantineRoleId: null,
+    maxTargets: 10,
+    immuneRoleIds: [],
+    warnThresholds: {},
+  },
   configFields: [
-    { key: "quarantineRoleId", label: "Quarantine Role", type: "role", description: "Role assigned when quarantined" },
-    { key: "maxTargets", label: "Max Targets", type: "number", description: "Max members per command" },
-    { key: "immuneRoleIds", label: "Immune Roles", type: "multi-role", description: "Roles exempt from auto-actions" },
-    { key: "warnThresholds", label: "Warn Thresholds", type: "json", description: "JSON object: warn count -> {action, duration}" },
+    { key: "quarantineRoleId", label: "Quarantine Role", type: "role", description: "Role assigned when quarantined", default: null, category: "Quarantine" },
+    { key: "maxTargets", label: "Max Targets", type: "number", description: "Max members per command", default: 10, category: "Limits" },
+    { key: "immuneRoleIds", label: "Immune Roles", type: "multi-role", description: "Roles exempt from auto-actions", default: [], category: "Exemptions" },
+    { key: "warnThresholds", label: "Warn Thresholds", type: "json", description: "JSON object: warn count -> {action, duration}", default: {}, category: "Warn Escalation" },
   ],
   commands: [banAdd, banRemove, kickDef, timeoutDef, warnDef, purgeDef, noteDef, lockDef, unlockDef, lockdownDef, softbanDef, quarantineDef, unquarantineDef, vcmuteDef, vcmuteRemoveDef, caseDef, casesDef],
   listeners: [casesPaginationListener],

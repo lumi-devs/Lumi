@@ -3,6 +3,14 @@ import { join, resolve } from "node:path";
 import type { ModuleDefinition } from "@lumi/module-kit";
 import { type ModuleManifest, validateManifest } from "./manifest.js";
 
+export type ModuleSummary = Pick<
+  ModuleManifest,
+  "name" | "displayName" | "emoji" | "description" | "version" | "configFields"
+> & {
+  isSubmodule: boolean;
+  supermodule?: string;
+};
+
 export interface LoadedModule {
   manifest: ModuleManifest;
   definition: ModuleDefinition;
@@ -239,6 +247,15 @@ export class ModuleLoader {
     return !module.guildsDisabled.has(guildId);
   }
 
+  isActive(guildId: string, moduleName: string): boolean {
+    const module = this.modules.get(moduleName);
+    if (!module) return false;
+    if (module.guildsDisabled.has(guildId)) return false;
+    return module.supermodule
+      ? this.isEnabled(guildId, module.supermodule)
+      : true;
+  }
+
   async reload(moduleName: string): Promise<void> {
     const module = this.modules.get(moduleName);
     if (!module) return;
@@ -278,7 +295,7 @@ export class ModuleLoader {
     return Array.from(this.modules.values());
   }
 
-  listGlobal(): Array<{ name: string; displayName: string; emoji: string; description: string; version: string; configFields: any[]; isSubmodule: boolean; supermodule?: string }> {
+  listGlobal(): ModuleSummary[] {
     return Array.from(this.modules.values()).map(m => ({
       name: m.manifest.name,
       displayName: m.manifest.displayName,

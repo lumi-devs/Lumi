@@ -12,7 +12,8 @@
       "label": "Panic Mode Enabled",
       "type": "boolean",
       "description": "Enable panic mode system",
-      "default": false
+      "default": false,
+      "category": "Detection"
     },
     {
       "key": "burstLimit",
@@ -21,7 +22,8 @@
       "description": "Number of anti-nuke punishments to trigger panic mode",
       "default": 3,
       "min": 1,
-      "max": 20
+      "max": 20,
+      "category": "Detection"
     },
     {
       "key": "burstWindowSeconds",
@@ -30,7 +32,8 @@
       "description": "Timeframe for burst limit",
       "default": 2,
       "min": 1,
-      "max": 10
+      "max": 10,
+      "category": "Detection"
     },
     {
       "key": "durationMinutes",
@@ -39,21 +42,24 @@
       "description": "How long the server remains locked down",
       "default": 30,
       "min": 1,
-      "max": 1440
+      "max": 1440,
+      "category": "Response"
     },
     {
       "key": "notifyOwners",
       "label": "Notify Owners",
       "type": "boolean",
       "description": "DM server owners when panic mode activates",
-      "default": true
+      "default": true,
+      "category": "Response"
     },
     {
       "key": "lockModCommands",
       "label": "Lock Mod Commands",
       "type": "boolean",
       "description": "Restrict moderation commands to owner/actor during panic",
-      "default": false
+      "default": false,
+      "category": "Response"
     }
   ],
   "dependencies": {

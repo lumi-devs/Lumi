@@ -15,56 +15,64 @@
       "channelTypes": [
         4
       ],
-      "default": null
+      "default": null,
+      "category": "Channels"
     },
     {
       "key": "templateName",
       "label": "Channel Name Template",
       "type": "string",
       "description": "Use {user} for username",
-      "default": "➕ {user}'s Channel"
+      "default": "➕ {user}'s Channel",
+      "category": "Channels"
     },
     {
       "key": "defaultBitrate",
       "label": "Default Bitrate",
       "type": "number",
       "description": "Bitrate in bps (8000-384000)",
-      "default": 64000
+      "default": 64000,
+      "category": "Channels"
     },
     {
       "key": "defaultUserLimit",
       "label": "Default User Limit",
       "type": "number",
       "description": "0 = unlimited",
-      "default": 0
+      "default": 0,
+      "category": "Channels"
     },
     {
       "key": "maxChannels",
       "label": "Max Channels",
       "type": "number",
       "description": "Guild-wide limit",
-      "default": 50
+      "default": 50,
+      "category": "Limits"
     },
     {
       "key": "maxPerUser",
       "label": "Max Per User",
       "type": "number",
       "description": "How many channels one user can own",
-      "default": 1
+      "default": 1,
+      "category": "Limits"
     },
     {
       "key": "emptyTimeoutMs",
       "label": "Empty Timeout (ms)",
       "type": "number",
       "description": "Delete after empty for this long",
-      "default": 300000
+      "default": 300000,
+      "category": "Limits"
     },
     {
       "key": "ownerLeaveDelete",
       "label": "Delete on Owner Leave",
       "type": "boolean",
       "description": "Delete channel when owner leaves",
-      "default": true
+      "default": true,
+      "category": "Limits"
     }
   ],
   "dependencies": {

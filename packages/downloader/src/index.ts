@@ -11,5 +11,4 @@ export type {
   RepoRecord,
   RepoUpdateResult,
   UpdateFailure,
-  ValidationResult,
 } from "./types.js";

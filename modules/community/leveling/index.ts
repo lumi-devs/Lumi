@@ -1,6 +1,7 @@
 import {
   SlashCommandBuilder,
   PermissionFlagsBits,
+  AttachmentBuilder,
   type Message,
   type GuildMember,
   type Interaction,
@@ -11,6 +12,7 @@ import {
 import { defineModule, type CommandDefinition, type ModuleDefinition, type ListenerDefinition } from "@lumi/module-kit";
 import {
   makeCard,
+  makeErrorCard,
   makeSuccessCard,
   makeEmptyCard,
   ephemeralCard,
@@ -19,51 +21,20 @@ import {
   AccentColors,
   type CardReply,
 } from "@lumi/ui";
-import { z } from "zod";
 import {
   LevelFormulas,
-  xpForLevel,
+  isLevelFormula,
+  levelProgress,
   levelForTotalXp,
 } from "./formulas.js";
 import {
   getLevelingConfig,
   AnnounceMessageDefault,
+  type LevelingConfig,
 } from "./config.js";
 import { voiceSessionStart, voiceSessionEnd, isAudible } from "./voice-sessions.js";
 import { grantVoiceXp } from "./voice-xp.js";
-
-const LevelingConfigSchema = z.object({
-  levelFormula: z.enum(LevelFormulas).default("disgaea"),
-  xpPerMessage: z.number().int().min(1).max(1000).default(15),
-  cooldownSeconds: z.number().int().min(1).max(3600).default(60),
-  xpCurve: z.record(z.string(), z.number()).default({}),
-  voiceEnabled: z.boolean().default(false),
-  voiceXpPerMinute: z.number().int().min(1).max(1000).default(4),
-  announceEnabled: z.boolean().default(true),
-  announceChannel: z.string().nullable().default(null),
-  announceMessage: z.string().default(AnnounceMessageDefault),
-  minMessageLength: z.number().int().min(0).max(500).default(4),
-  roleRewards: z.array(z.object({
-    level: z.number().int().min(1),
-    roleId: z.string(),
-    removePrevious: z.boolean().default(false),
-  })).default([]),
-  roleStack: z.boolean().default(true),
-  keepXpOnLeave: z.boolean().default(true),
-  globalMultiplier: z.number().min(0).max(100).default(1),
-  multiplierRoles: z.array(z.object({
-    roleId: z.string(),
-    multiplier: z.number().positive().default(1.5),
-  })).default([]),
-  channelMultipliers: z.array(z.object({
-    channelId: z.string(),
-    multiplier: z.number().positive().default(1.5),
-  })).default([]),
-  ignoredChannels: z.array(z.string(), {}).default([]),
-  ignoredRoles: z.array(z.string(), {}).default([]),
-}, {});
-
-type LevelingConfig = z.infer<typeof LevelingConfigSchema>;
+import { LevelingConfigKey, LevelingModuleName } from "./constants.js";
 
 function formatList(lines: string[], empty: string, limit = 15): string {
   if (lines.length === 0) return empty;
@@ -91,7 +62,7 @@ async function addXp(services: any, guildId: string, userId: string, xp: number,
 
   if (!user) return { leveledUp: false, newLevel: 0, oldLevel: 0 };
   
-  const totalXp = Number(user.totalXp) + xp;
+  const totalXp = Number(user.totalXp);
   const { level: newLevel } = levelForTotalXp(config.levelFormula, totalXp);
   
   if (newLevel > user.level) {
@@ -151,33 +122,69 @@ const rankDef: CommandDefinition = {
       return;
     }
 
-    const config = await services.config.get(guildId, "leveling") as any ?? {};
+    const config = await getLevelingConfig(services, guildId);
 
-    const rank = await services.db.prisma.levelingUser.count({
-      where: { guildId, xp: { gt: user.xp } },
-    }) + 1;
+    const [rank, totalUsers] = await Promise.all([
+      services.db.prisma.levelingUser.count({
+        where: { guildId, totalXp: { gt: user.totalXp } },
+      }),
+      services.db.prisma.levelingUser.count({ where: { guildId } }),
+    ]);
 
-    const xp = Number(user.xp);
-    const currentLevelXp = xpForLevel(config.levelFormula, user.level);
-    const nextLevelXp = xpForLevel(config.levelFormula, user.level + 1);
-    const xpForNext = Math.max(0, nextLevelXp - xp);
-    const progress = nextLevelXp > currentLevelXp
-      ? Math.min(1, Math.max(0, (xp - currentLevelXp) / (nextLevelXp - currentLevelXp)))
-      : 0;
-    const filled = Math.round(progress * 10);
+    const totalXp = Number(user.totalXp);
+    const { level } = levelForTotalXp(config.levelFormula, totalXp);
+    const progress = levelProgress(config.levelFormula, totalXp, level);
+    const filled = Math.round(progress.progress * 10);
     const bar = `${"█".repeat(filled)}${"░".repeat(10 - filled)}`;
 
     const body = [
-      `**Level** — ${user.level}\n**Rank** — #${rank}\n**XP** — ${xp.toLocaleString()}`,
-      `${bar} ${Math.round(progress * 100)}%`,
-      `**To next level** — ${xpForNext.toLocaleString()} XP`,
+      `**Level** — ${progress.level}\n**Rank** — #${rank} / ${totalUsers}\n**XP** — ${totalXp.toLocaleString()}`,
+      `${bar} ${Math.round(progress.progress * 100)}%`,
+      progress.xpForNext === 0
+        ? "**Max level reached**"
+        : `**To next level** — ${progress.xpForNext.toLocaleString()} XP`,
     ];
 
-    await interaction.reply(ephemeralCard(makeCard(AccentColors.purple, `📊 ${target.username}`, body, {
+    const options = {
       subtitle: "Rank card",
       thumbnailUrl: target.displayAvatarURL({ size: 256, extension: "png" }),
-      footer: `${config.xpPerMessage ?? 15} XP per message · ${config.voiceXpPerMinute ?? 4} XP/min voice`,
-    })));
+      footer: `${config.xpPerMessage} XP per message · ${config.voiceXpPerMinute} XP/min voice`,
+    };
+
+    let attachment: AttachmentBuilder | null = null;
+    try {
+      const { generateRankCard } = await import("./rankCard.js");
+      attachment = new AttachmentBuilder(
+        await generateRankCard({
+          username: target.username,
+          avatarUrl: target.displayAvatarURL({ size: 256, extension: "png" }),
+          level: progress.level,
+          xp: progress.xpIntoLevel,
+          xpToNext: progress.xpForNext,
+          rank,
+          totalUsers,
+          guildName: interaction.guild?.name,
+        }),
+        { name: "rank.png" },
+      );
+    } catch (error) {
+      services.observability?.logger?.warn?.(
+        `[leveling] rank card generation failed: ${String(error)}`,
+      );
+    }
+
+    if (attachment) {
+      await interaction.reply({
+        ...ephemeralCard(makeCard(AccentColors.purple, `📊 ${target.username}`, body, {
+          ...options,
+          headerImages: ["attachment://rank.png"],
+        })),
+        files: [attachment],
+      });
+      return;
+    }
+
+    await interaction.reply(ephemeralCard(makeCard(AccentColors.purple, `📊 ${target.username}`, body, options)));
   },
 };
 
@@ -191,7 +198,7 @@ async function renderLeaderboard(
 ): Promise<CardReply> {
   const perPage = 10;
 
-  let orderBy: any = { xp: "desc" };
+  let orderBy: any = { totalXp: "desc" };
   if (boardType === "voice") {
     orderBy = { voiceMinutes: "desc" };
   }
@@ -221,10 +228,10 @@ async function renderLeaderboard(
     if (boardType === "voice") {
       return `**#${(page - 1) * 10 + i + 1}** ${name} — ${u.voiceMinutes.toLocaleString()} voice minutes`;
     }
-    const xp = Number(u.xp);
-    const nextLevelXp = xpForLevel(config.levelFormula, u.level + 1);
-    const xpForNext = Math.max(0, nextLevelXp - xp);
-    return `**#${(page - 1) * 10 + i + 1}** ${name} — Level ${u.level} · ${xp.toLocaleString()} XP (${xpForNext.toLocaleString()} to next)`;
+    const totalXp = Number(u.totalXp);
+    const { level } = levelForTotalXp(config.levelFormula, totalXp);
+    const progress = levelProgress(config.levelFormula, totalXp, level);
+    return `**#${(page - 1) * 10 + i + 1}** ${name} — Level ${progress.level} · ${totalXp.toLocaleString()} XP (${progress.xpForNext.toLocaleString()} to next)`;
   });
 
   const title = boardType === "voice" ? "🎙️ Voice Leaderboard" : "🏆 XP Leaderboard";
@@ -315,13 +322,13 @@ const levelSetDef: CommandDefinition = {
   async execute(interaction, services) {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
-    const config = await services.config.get(guildId, "leveling") as any ?? {};
+    const config = await getLevelingConfig(services, guildId);
 
     switch (sub) {
       case "xp-per-message": {
         const amount = interaction.options.getInteger("amount", true);
         config.xpPerMessage = amount;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**XP per message** — ${amount}`,
         ], { footer: "Leveling configuration" })));
@@ -330,7 +337,7 @@ const levelSetDef: CommandDefinition = {
       case "cooldown": {
         const seconds = interaction.options.getInteger("seconds", true);
         config.cooldownSeconds = seconds;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**XP cooldown** — ${seconds}s`,
         ], { footer: "Leveling configuration" })));
@@ -339,7 +346,7 @@ const levelSetDef: CommandDefinition = {
       case "voice-toggle": {
         const enabled = interaction.options.getBoolean("enabled", true);
         config.voiceEnabled = enabled;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Voice XP** — ${enabled ? "Enabled" : "Disabled"}`,
         ], { footer: "Leveling configuration" })));
@@ -348,7 +355,7 @@ const levelSetDef: CommandDefinition = {
       case "voice-xp": {
         const amount = interaction.options.getInteger("amount", true);
         config.voiceXpPerMinute = amount;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Voice XP per minute** — ${amount}`,
         ], { footer: "Leveling configuration" })));
@@ -356,8 +363,15 @@ const levelSetDef: CommandDefinition = {
       }
       case "formula": {
         const formula = interaction.options.getString("formula", true);
+        if (!isLevelFormula(formula)) {
+          await interaction.reply(ephemeralCard(makeErrorCard(
+            "Invalid formula",
+            "Choose one of the supported level formulas.",
+          )));
+          break;
+        }
         config.levelFormula = formula;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Level formula** — ${formula}`,
         ], { footer: "Leveling configuration" })));
@@ -372,7 +386,7 @@ const levelSetDef: CommandDefinition = {
         if (interaction.options.getString("message")) {
           config.announceMessage = interaction.options.getString("message")!;
         }
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Announcement settings updated", [
           `**Enabled** — ${enabled ? "Yes" : "No"}`,
           config.announceChannel ? `**Channel** — <#${config.announceChannel}>` : "",
@@ -383,7 +397,7 @@ const levelSetDef: CommandDefinition = {
       case "min-length": {
         const length = interaction.options.getInteger("length", true);
         config.minMessageLength = length;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Min message length** — ${length}`,
         ], { footer: "Leveling configuration" })));
@@ -392,7 +406,7 @@ const levelSetDef: CommandDefinition = {
       case "keep-xp": {
         const enabled = interaction.options.getBoolean("enabled", true);
         config.keepXpOnLeave = enabled;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Keep XP on leave** — ${enabled ? "Yes" : "No"}`,
         ], { footer: "Leveling configuration" })));
@@ -401,7 +415,7 @@ const levelSetDef: CommandDefinition = {
       case "multiplier": {
         const mult = interaction.options.getNumber("multiplier", true);
         config.globalMultiplier = mult;
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Setting updated", [
           `**Global multiplier** — ${mult}x`,
         ], { footer: "Leveling configuration" })));
@@ -411,9 +425,8 @@ const levelSetDef: CommandDefinition = {
         const role = interaction.options.getRole("role", true);
         const level = interaction.options.getInteger("level", true);
         const removePrevious = interaction.options.getBoolean("remove-previous") ?? false;
-        config.roleRewards = config.roleRewards ?? [];
         config.roleRewards.push({ level, roleId: role.id, removePrevious });
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Role reward added", [
           `**Role** — ${role.name}`,
           `**Level** — ${level}`,
@@ -423,8 +436,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "remove-role-reward": {
         const role = interaction.options.getRole("role", true);
-        config.roleRewards = (config.roleRewards ?? []).filter((r: any) => r.roleId !== role.id);
-        await services.config.set(guildId, "leveling", config);
+        config.roleRewards = config.roleRewards.filter((r) => r.roleId !== role.id);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Role reward removed", [
           `**Role** — ${role.name}`,
         ], { footer: "Leveling configuration" })));
@@ -433,9 +446,8 @@ const levelSetDef: CommandDefinition = {
       case "add-multiplier": {
         const role = interaction.options.getRole("role", true);
         const multiplier = interaction.options.getNumber("multiplier", true);
-        config.multiplierRoles = config.multiplierRoles ?? [];
         config.multiplierRoles.push({ roleId: role.id, multiplier });
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Multiplier added", [
           `**Role** — ${role.name}`,
           `**Multiplier** — ${multiplier}x`,
@@ -444,8 +456,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "remove-multiplier": {
         const role = interaction.options.getRole("role", true);
-        config.multiplierRoles = (config.multiplierRoles ?? []).filter((r: any) => r.roleId !== role.id);
-        await services.config.set(guildId, "leveling", config);
+        config.multiplierRoles = config.multiplierRoles.filter((r) => r.roleId !== role.id);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Multiplier removed", [
           `**Role** — ${role.name}`,
         ], { footer: "Leveling configuration" })));
@@ -454,9 +466,8 @@ const levelSetDef: CommandDefinition = {
       case "add-channel-multiplier": {
         const channel = interaction.options.getChannel("channel", true);
         const multiplier = interaction.options.getNumber("multiplier", true);
-        config.channelMultipliers = config.channelMultipliers ?? [];
         config.channelMultipliers.push({ channelId: channel.id, multiplier });
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel multiplier added", [
           `**Channel** — ${channel.name}`,
           `**Multiplier** — ${multiplier}x`,
@@ -465,8 +476,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "remove-channel-multiplier": {
         const channel = interaction.options.getChannel("channel", true);
-        config.channelMultipliers = (config.channelMultipliers ?? []).filter((c: any) => c.channelId !== channel.id);
-        await services.config.set(guildId, "leveling", config);
+        config.channelMultipliers = config.channelMultipliers.filter((c) => c.channelId !== channel.id);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel multiplier removed", [
           `**Channel** — ${channel.name}`,
         ], { footer: "Leveling configuration" })));
@@ -474,9 +485,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "ignore-channel": {
         const channel = interaction.options.getChannel("channel", true);
-        config.ignoredChannels = config.ignoredChannels ?? [];
         if (!config.ignoredChannels.includes(channel.id)) config.ignoredChannels.push(channel.id);
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel ignored", [
           `**Channel** — ${channel.name}`,
         ], { footer: "Leveling configuration" })));
@@ -484,8 +494,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "unignore-channel": {
         const channel = interaction.options.getChannel("channel", true);
-        config.ignoredChannels = (config.ignoredChannels ?? []).filter((id: string) => id !== channel.id);
-        await services.config.set(guildId, "leveling", config);
+        config.ignoredChannels = config.ignoredChannels.filter((id) => id !== channel.id);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel unignored", [
           `**Channel** — ${channel.name}`,
         ], { footer: "Leveling configuration" })));
@@ -493,9 +503,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "ignore-role": {
         const role = interaction.options.getRole("role", true);
-        config.ignoredRoles = config.ignoredRoles ?? [];
         if (!config.ignoredRoles.includes(role.id)) config.ignoredRoles.push(role.id);
-        await services.config.set(guildId, "leveling", config);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Role ignored", [
           `**Role** — ${role.name}`,
         ], { footer: "Leveling configuration" })));
@@ -503,8 +512,8 @@ const levelSetDef: CommandDefinition = {
       }
       case "unignore-role": {
         const role = interaction.options.getRole("role", true);
-        config.ignoredRoles = (config.ignoredRoles ?? []).filter((id: string) => id !== role.id);
-        await services.config.set(guildId, "leveling", config);
+        config.ignoredRoles = config.ignoredRoles.filter((id) => id !== role.id);
+        await services.config.set(guildId, LevelingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Role unignored", [
           `**Role** — ${role.name}`,
         ], { footer: "Leveling configuration" })));
@@ -512,35 +521,35 @@ const levelSetDef: CommandDefinition = {
       }
       case "view": {
         const roleRewards = formatList(
-          (config.roleRewards ?? []).map((r: any) => `**Level ${r.level}** → <@&${r.roleId}>${r.removePrevious ? " · replaces previous" : ""}`),
+          config.roleRewards.map((r) => `**Level ${r.level}** → <@&${r.roleId}>${r.removePrevious ? " · replaces previous" : ""}`),
           "*None configured*",
         );
         const multipliers = formatList(
-          (config.multiplierRoles ?? []).map((r: any) => `<@&${r.roleId}> — **${r.multiplier}x**`),
+          config.multiplierRoles.map((r) => `<@&${r.roleId}> — **${r.multiplier}x**`),
           "*None configured*",
         );
         const channelMultipliers = formatList(
-          (config.channelMultipliers ?? []).map((c: any) => `<#${c.channelId}> — **${c.multiplier}x**`),
+          config.channelMultipliers.map((c) => `<#${c.channelId}> — **${c.multiplier}x**`),
           "*None configured*",
         );
         const ignoredChannels = formatList(
-          (config.ignoredChannels ?? []).map((id: string) => `<#${id}>`),
+          config.ignoredChannels.map((id) => `<#${id}>`),
           "*None configured*",
         );
         const ignoredRoles = formatList(
-          (config.ignoredRoles ?? []).map((id: string) => `<@&${id}>`),
+          config.ignoredRoles.map((id) => `<@&${id}>`),
           "*None configured*",
         );
 
         const body = [
-          `**XP per message** — ${config.xpPerMessage ?? 15}\n**Cooldown** — ${config.cooldownSeconds ?? 60}s`,
-          `**Voice XP** — ${config.voiceEnabled ? "Enabled" : "Disabled"} (${config.voiceXpPerMinute ?? 4} XP/min)\n**Formula** — ${config.levelFormula ?? "disgaea"}`,
+          `**XP per message** — ${config.xpPerMessage}\n**Cooldown** — ${config.cooldownSeconds}s`,
+          `**Voice XP** — ${config.voiceEnabled ? "Enabled" : "Disabled"} (${config.voiceXpPerMinute} XP/min)\n**Formula** — ${config.levelFormula}`,
           `**Role rewards**\n${roleRewards}`,
           `**Role multipliers**\n${multipliers}`,
           `**Channel multipliers**\n${channelMultipliers}`,
           `**Ignored channels**\n${ignoredChannels}`,
           `**Ignored roles**\n${ignoredRoles}`,
-          `**Announcements** — ${config.announceEnabled ? "Enabled" : "Disabled"}\n**Min message length** — ${config.minMessageLength ?? 4}\n**Keep XP on leave** — ${config.keepXpOnLeave ? "Yes" : "No"}\n**Global multiplier** — ${config.globalMultiplier ?? 1}x`,
+          `**Announcements** — ${config.announceEnabled ? "Enabled" : "Disabled"}\n**Min message length** — ${config.minMessageLength}\n**Keep XP on leave** — ${config.keepXpOnLeave ? "Yes" : "No"}\n**Global multiplier** — ${config.globalMultiplier}x`,
         ];
 
         await interaction.reply(ephemeralCard(makeCard(undefined, "⚙️ Leveling Settings", body, {
@@ -553,14 +562,26 @@ const levelSetDef: CommandDefinition = {
   },
 };
 
-function getXpMultiplier(member: GuildMember, config: LevelingConfig): number {
-  let multiplier = 1;
-  for (const mr of config.multiplierRoles ?? []) {
-    if (member.roles.cache.has(mr.roleId)) {
-      multiplier = Math.max(multiplier, mr.multiplier);
+function getXpMultiplier(
+  member: GuildMember,
+  config: LevelingConfig,
+  channelId: string,
+): number {
+  let roleMultiplier = 1;
+  for (const entry of config.multiplierRoles) {
+    if (member.roles.cache.has(entry.roleId)) {
+      roleMultiplier = Math.max(roleMultiplier, entry.multiplier);
     }
   }
-  return multiplier;
+
+  let channelMultiplier = 1;
+  for (const entry of config.channelMultipliers) {
+    if (entry.channelId === channelId) {
+      channelMultiplier = Math.max(channelMultiplier, entry.multiplier);
+    }
+  }
+
+  return config.globalMultiplier * roleMultiplier * channelMultiplier;
 }
 
 const onMessageListener: ListenerDefinition = {
@@ -569,22 +590,34 @@ const onMessageListener: ListenerDefinition = {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId;
-    const config = await services.config.get(guildId, "leveling") as any ?? {};
+    const config = await getLevelingConfig(services, guildId);
 
-    if (config.ignoredChannels?.includes(message.channelId)) return;
-    if (message.member && config.ignoredRoles?.some((id: string) => message.member!.roles.cache.has(id))) return;
+    if (message.content.length < config.minMessageLength) return;
+    if (config.ignoredChannels.includes(message.channelId)) return;
+    if (
+      message.member &&
+      config.ignoredRoles.some((id) => message.member!.roles.cache.has(id))
+    ) {
+      return;
+    }
 
     const now = Date.now();
     const user = await services.db.prisma.levelingUser.findUnique({
       where: { guildId_userId: { guildId, userId: message.author.id } },
     });
 
-    if (user?.lastXpAt && now - new Date(user.lastXpAt).getTime() < (config.cooldownSeconds ?? 60) * 1000) {
+    if (
+      user?.lastXpAt &&
+      now - new Date(user.lastXpAt).getTime() < config.cooldownSeconds * 1000
+    ) {
       return;
     }
 
-    const multiplier = message.member ? getXpMultiplier(message.member, config) : 1;
-    const xp = Math.floor((config.xpPerMessage ?? 15) * multiplier);
+    const multiplier = message.member
+      ? getXpMultiplier(message.member, config, message.channelId)
+      : config.globalMultiplier;
+    const xp = Math.floor(config.xpPerMessage * multiplier);
+    if (xp <= 0) return;
 
     await addXp(services, guildId, message.author.id, xp, config);
 
@@ -602,7 +635,6 @@ const onVoiceStateListener: ListenerDefinition = {
     if (!member || member.user.bot) return;
     const guild = newState.guild ?? oldState.guild;
     const guildId = guild.id;
-    if (!(await services.modules.isEnabled(guildId, "leveling"))) return;
     const config = await getLevelingConfig(services, guildId);
     if (!config.voiceEnabled) return;
     
@@ -627,12 +659,12 @@ const onVoiceStateListener: ListenerDefinition = {
 };
 
 const levelingModule: ModuleDefinition = defineModule({
-  name: "community-leveling",
+  name: LevelingModuleName,
   displayName: "Leveling",
   emoji: "📈",
   description: "XP, levels, role rewards, and leaderboards with voice XP support",
   version: "2.1.0",
-  config: LevelingConfigSchema,
+  config: {},
   configFields: [
     { key: "levelFormula", label: "Level Formula", type: "select", choices: [...LevelFormulas], description: "Curve for XP required per level", default: "disgaea" },
     { key: "xpPerMessage", label: "XP per Message", type: "number", description: "Base XP per message" },

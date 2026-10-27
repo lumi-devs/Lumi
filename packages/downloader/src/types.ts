@@ -25,11 +25,6 @@ export interface InstalledAddon {
   repoName: string;
 }
 
-export interface ValidationResult {
-  errors: string[];
-  warnings: string[];
-}
-
 export interface UpdateFailure {
   module: string;
   error: string;

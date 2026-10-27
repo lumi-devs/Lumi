@@ -12,19 +12,22 @@
       "label": "Verification Enabled",
       "type": "boolean",
       "description": "Require members to verify via panel",
-      "default": false
+      "default": false,
+      "category": "Setup"
     },
     {
       "key": "verifiedRoleId",
       "label": "Verified Role",
       "type": "role",
-      "description": "Role granted after passing verification"
+      "description": "Role granted after passing verification",
+      "category": "Setup"
     },
     {
       "key": "pendingRoleId",
       "label": "Pending Role",
       "type": "role",
-      "description": "Role assigned on join and removed once verified (optional)"
+      "description": "Role assigned on join and removed once verified (optional)",
+      "category": "Setup"
     },
     {
       "key": "timeoutMinutes",
@@ -33,14 +36,16 @@
       "description": "How long a member has to pass the captcha",
       "default": 10,
       "min": 1,
-      "max": 1440
+      "max": 1440,
+      "category": "Timeouts"
     },
     {
       "key": "kickOnTimeout",
       "label": "Kick on Timeout",
       "type": "boolean",
       "description": "Kick members who don't verify before timeout",
-      "default": false
+      "default": false,
+      "category": "Timeouts"
     },
     {
       "key": "mode",
@@ -52,7 +57,8 @@
         "emoji",
         "none",
         "web"
-      ]
+      ],
+      "category": "Setup"
     },
     {
       "key": "target",
@@ -63,7 +69,8 @@
       "choices": [
         "everyone",
         "suspicious"
-      ]
+      ],
+      "category": "Setup"
     }
   ],
   "dependencies": {

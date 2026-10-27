@@ -34,6 +34,15 @@ import { formatPermitNodes } from "../permits/nodes.js";
 import { PermitPanel } from "./PermitPanel.js";
 import { handleAddonInteraction, renderAddonPanel } from "./addons.js";
 import {
+  ModulesPerPage,
+  moduleListRowId,
+  submoduleItems,
+  submodulePagePrefix,
+  supermoduleItems,
+} from "./modules.js";
+import { paginate } from "./pages.js";
+import { fieldPages } from "./configFields.js";
+import {
   cut,
   navigationRow,
   pageRow,
@@ -55,7 +64,6 @@ export interface HubServices {
   addons: AddonManager;
 }
 
-const ModulesPerPage = 4;
 const FieldsPerPage = 4;
 const MaxOptions = 25;
 const DefaultPrefix = ",";
@@ -116,17 +124,8 @@ function isMulti(field: ConfigField): boolean {
   return field.type === "multi-channel" || field.type === "multi-role";
 }
 
-function chunk<T>(items: T[], size: number): T[][] {
-  if (items.length === 0) return [];
-  const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    result.push(items.slice(index, index + size));
-  }
-  return result;
-}
-
-function fieldPages(fields: ConfigField[]): ConfigField[][] {
-  return chunk(fields, FieldsPerPage);
+function configKeyFor(services: HubServices, moduleName: string): string {
+  return moduleByName(services, moduleName)?.manifest.configKey ?? moduleName;
 }
 
 async function readModuleConfig(
@@ -134,7 +133,7 @@ async function readModuleConfig(
   guildId: string,
   moduleName: string,
 ): Promise<Record<string, unknown>> {
-  const value = await services.configService.get(guildId, moduleName);
+  const value = await services.configService.get(guildId, configKeyFor(services, moduleName));
   return value && typeof value === "object" && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : {};
@@ -146,7 +145,7 @@ async function writeModuleConfig(
   moduleName: string,
   config: Record<string, unknown>,
 ): Promise<void> {
-  await services.configService.set(guildId, moduleName, config);
+  await services.configService.set(guildId, configKeyFor(services, moduleName), config);
 }
 
 function moduleByName(services: HubServices, name: string) {
@@ -165,23 +164,6 @@ function fieldLine(field: ConfigField, value: FieldValue): string[] {
     `**${field.label}**${required} — ${formatValue(field, value)}`,
     ...(field.description ? [`-# ${cut(field.description, 100)}`] : []),
   ];
-}
-
-
-function getModuleState(interaction: HubInteraction): { expandedSupermodules?: string[] } {
-  if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
-    const msg = interaction.message;
-    if (!msg) return {};
-    const footer = msg.embeds[0]?.footer?.text;
-    if (!footer) return {};
-    try {
-      const data = JSON.parse(footer.split("|")[1] ?? "{}");
-      return data;
-    } catch {
-      return {};
-    }
-  }
-  return {};
 }
 
 async function renderModuleDetail(
@@ -203,10 +185,11 @@ async function renderModuleDetail(
 
   const meta = loaded.manifest;
   const fields = meta.configFields ?? [];
-  const pages = fieldPages(fields);
+  const pages = fieldPages(fields, FieldsPerPage);
   const total = Math.max(1, pages.length);
   const safeSection = Math.max(0, Math.min(section, total - 1));
-  const current = pages[safeSection] ?? [];
+  const page = pages[safeSection] ?? { label: "General", fields: [] };
+  const current = page.fields;
   const config = await readModuleConfig(services, guildId, moduleName);
   const enabled = services.moduleLoader.isEnabled(guildId, moduleName);
 
@@ -235,11 +218,11 @@ async function renderModuleDetail(
       row(
         createStringSelectMenu({
           customId: `lumi:modsec:${moduleName}`,
-          placeholder: "Jump to a settings page…",
-          options: pages.map((pageFields, index) => ({
-            label: `Settings ${index + 1}`,
+          placeholder: "Jump to a settings category…",
+          options: pages.map((page, index) => ({
+            label: page.label,
             value: String(index),
-            description: `${pageFields.length} setting(s)`,
+            description: `${page.fields.length} setting(s)`,
             default: index === safeSection,
           })),
         }),
@@ -276,7 +259,7 @@ async function renderModuleDetail(
     `**Status:** ${enabled ? "✅ Enabled" : "⛔ Disabled"}`,
     meta.description || "No description provided.",
   );
-  if (pages.length > 1) body.push(`-# Settings page ${safeSection + 1} of ${total}`);
+  if (pages.length > 1) body.push(`-# ${page.label}`);
 
   return makeCard(
     enabled ? undefined : AccentColors.warning,
@@ -504,95 +487,47 @@ async function renderModules(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const allModules = services.moduleLoader.listGlobal();
-  
-  const supermodules = allModules.filter(m => !m.isSubmodule);
-  const submodules = allModules.filter(m => m.isSubmodule);
-
-  if (supermodules.length === 0) {
-    return makeEmptyCard(
-      "Modules",
-      "No modules are installed on this bot.",
-      "Add a module under `modules/` and restart the bot.",
-      panelOptions(interaction, "modules", ["Hub", "Modules"]),
-    );
-  }
-
-  const showSubmodules = new Set<string>();
-  const state = getModuleState(interaction);
-  if (state.expandedSupermodules) {
-    for (const name of state.expandedSupermodules) {
-      showSubmodules.add(name);
-    }
-  }
-
-  const displayItems: Array<{
-    name: string;
-    displayName: string;
-    emoji: string;
-    description: string;
-    enabled: boolean;
-    isSubmodule: boolean;
-    supermodule?: string;
-  }> = [];
-
-  for (const mod of supermodules) {
-    const enabled = services.moduleLoader.isEnabled(guildId, mod.name);
-    displayItems.push({ ...mod, enabled });
-    if (showSubmodules.has(mod.name)) {
-      const children = submodules.filter(s => s.supermodule === mod.name);
-      for (const child of children) {
-        const enabled = services.moduleLoader.isEnabled(guildId, child.name);
-        displayItems.push({ ...child, enabled });
-      }
-    }
-  }
-
-  if (displayItems.length === 0) {
-    return makeEmptyCard(
-      "Modules",
-      "No modules are installed on this bot.",
-      "Add a module under `modules/` and restart the bot.",
-      panelOptions(interaction, "modules", ["Hub", "Modules"]),
-    );
-  }
-
-  const totalPages = Math.max(1, Math.ceil(displayItems.length / ModulesPerPage));
-  const safePage = Math.max(0, Math.min(page, totalPages - 1));
-  const shown = displayItems.slice(
-    safePage * ModulesPerPage,
-    safePage * ModulesPerPage + ModulesPerPage,
+  const modules = supermoduleItems(
+    services.moduleLoader.listGlobal(),
+    (name) => services.moduleLoader.isEnabled(guildId, name),
   );
 
-  const sections = shown.map((module): any => {
-    const indent = module.isSubmodule ? "    " : "";
-    const toggle = !module.isSubmodule
-      ? (showSubmodules.has(module.name) ? "▼" : "▶")
-      : "";
-    const status = module.enabled ? "✅" : "⛔";
-    return settingRow(
+  if (modules.length === 0) {
+    return makeEmptyCard(
+      "Modules",
+      "No modules are installed on this bot.",
+      "Add a module under `modules/` and restart the bot.",
+      panelOptions(interaction, "modules", ["Hub", "Modules"]),
+    );
+  }
+
+  const { items: shown, page: currentPage, totalPages } = paginate(
+    modules,
+    page,
+    ModulesPerPage,
+  );
+
+  const sections = shown.map((module) =>
+    settingRow(
       [
-        `${status} ${indent}${toggle} ${module.emoji} **${module.displayName}**`,
-        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
+        `${module.emoji} **${module.displayName}**`,
+        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${module.submoduleCount} submodules · ${cut(module.description || "No description", 80)}`,
       ],
       {
-        customId: !module.isSubmodule
-          ? `lumi:modexpand:${module.name}`
-          : `lumi:modopen:${module.name}`,
-        label: !module.isSubmodule ? "Toggle" : "Open",
+        customId: moduleListRowId(module.name, currentPage),
+        label: "Submodules",
         style: ButtonStyle.Primary,
       },
-    );
-  });
+    ),
+  );
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  if (totalPages > 1) rows.push(pageRow("lumi:mods", safePage, totalPages));
+  if (totalPages > 1) rows.push(pageRow("lumi:mods", currentPage, totalPages));
 
-  const enabledCount = displayItems.filter((module) => module.enabled).length;
+  const enabledCount = modules.filter((module) => module.enabled).length;
   const footer = [
-    `${enabledCount} of ${displayItems.length} enabled`,
-    totalPages > 1 ? `page ${safePage + 1}/${totalPages}` : null,
-    "Open a module to configure it. ▶ = expand submodules.",
+    `${enabledCount} of ${modules.length} enabled`,
+    totalPages > 1 ? `page ${currentPage + 1}/${totalPages}` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -607,6 +542,111 @@ async function renderModules(
     },
   );
 }
+
+async function renderSubmodules(
+  interaction: HubInteraction,
+  services: HubServices,
+  supermoduleName: string,
+  originPage = 0,
+  page = 0,
+): Promise<CardReply> {
+  const guildId = interaction.guildId!;
+  const modules = services.moduleLoader.listGlobal();
+  const parent = modules.find(
+    (module) => module.name === supermoduleName && !module.isSubmodule,
+  );
+  const backButton = createActionButton({
+    customId: `lumi:mods:${originPage}`,
+    label: "Back",
+    style: ButtonStyle.Secondary,
+  });
+  const backRow = row(backButton);
+
+  if (!parent) {
+    return makeErrorCard(
+      "Unknown Module",
+      `No supermodule named \`${supermoduleName}\` is loaded.`,
+      panelOptions(interaction, "modules", ["Hub", "Modules"], [backRow]),
+    );
+  }
+
+  const breadcrumbs = ["Hub", "Modules", parent.displayName];
+  const children = submoduleItems(
+    modules,
+    supermoduleName,
+    (name) => services.moduleLoader.isEnabled(guildId, name),
+  );
+  const { items: shown, page: currentPage, totalPages } = paginate(
+    children,
+    page,
+    ModulesPerPage,
+  );
+
+  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  if (totalPages > 1) {
+    rows.push(
+      pageRow(submodulePagePrefix(supermoduleName, originPage), currentPage, totalPages),
+    );
+  }
+  rows.push(
+    row(
+      ...(parent.configFields.length > 0
+        ? [
+            createActionButton({
+              customId: `lumi:modopen:${supermoduleName}:0`,
+              label: "Module Settings",
+              style: ButtonStyle.Primary,
+            }),
+          ]
+        : []),
+      backButton,
+    ),
+  );
+
+  if (children.length === 0) {
+    return makeEmptyCard(
+      "No submodules",
+      `**${parent.displayName}** has no submodules.`,
+      undefined,
+      panelOptions(interaction, "modules", breadcrumbs, rows),
+    );
+  }
+
+  const enabledCount = children.filter((module) => module.enabled).length;
+  const sections = shown.map((module) =>
+    settingRow(
+      [
+        `${module.emoji} **${module.displayName}**`,
+        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
+      ],
+      {
+        customId: `lumi:modopen:${module.name}:0`,
+        label: "Open",
+        style: ButtonStyle.Primary,
+      },
+    ),
+  );
+
+  return makeCard(
+    undefined,
+    `${parent.emoji} ${parent.displayName}`,
+    [
+      parent.description || "No description provided.",
+      `**Submodules:** ${children.length} · ${enabledCount} enabled`,
+    ],
+    {
+      sections,
+      ...panelOptions(
+        interaction,
+        "modules",
+        breadcrumbs,
+        rows,
+        totalPages > 1 ? `page ${currentPage + 1}/${totalPages}` : undefined,
+      ),
+    },
+  );
+}
+
 async function renderHome(
   interaction: HubInteraction,
   services: HubServices,
@@ -887,10 +927,16 @@ export async function handleHubInteraction(
       );
       return true;
     }
-    case "modexpand": {
+    case "modsubs": {
       await interaction.deferUpdate();
       await interaction.editReply(
-        await renderModules(interaction, services, 0),
+        await renderSubmodules(
+          interaction,
+          services,
+          target,
+          Number(extra) || 0,
+          Number(extra2) || 0,
+        ),
       );
       return true;
     }

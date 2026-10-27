@@ -2,7 +2,6 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { validateManifest } from "@lumi/module-runtime";
 import type { ModuleManifest } from "@lumi/module-runtime";
-import type { ValidationResult } from "./types.js";
 
 const RuntimePackages = new Set([
   "discord.js",
@@ -93,9 +92,8 @@ function checkImport(
   );
 }
 
-export async function validateAddon(dir: string): Promise<ValidationResult> {
+export async function validateAddon(dir: string): Promise<string[]> {
   const errors: string[] = [];
-  const warnings: string[] = [];
   const root = resolve(dir);
   const manifestPath = join(root, "manifest.json");
 
@@ -103,10 +101,9 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
   try {
     manifest = validateManifest(JSON.parse(await readFile(manifestPath, "utf-8")));
   } catch (error) {
-    return {
-      errors: [`manifest.json: ${error instanceof Error ? error.message : String(error)}`],
-      warnings,
-    };
+    return [
+      `manifest.json: ${error instanceof Error ? error.message : String(error)}`,
+    ];
   }
 
   if (manifest.name !== basename(root)) {
@@ -138,5 +135,5 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     }
   }
 
-  return { errors, warnings };
+  return errors;
 }

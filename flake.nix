@@ -20,6 +20,7 @@
             gh
             jq
             openssl
+            util-linux
             postgresql
             redis
             prisma-engines
@@ -32,7 +33,7 @@
           };
 
           shellHook = ''
-            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.util-linux.lib}/lib:$LD_LIBRARY_PATH"
             echo "lumi v2 · bun $(bun --version) · node $(node --version) · pg $(postgres --version | cut -d' ' -f3) · redis $(redis-server --version | cut -d' ' -f3 | cut -d= -f2)"
           '';
         };

@@ -274,9 +274,9 @@ export class AddonManager {
         throw new Error(`Module "${moduleName}" was not found in "${repoName}".`);
       }
 
-      const validation = await validateAddon(source);
-      if (validation.errors.length > 0) {
-        throw new Error(`Validation failed:\n${validation.errors.map((error) => `• ${error}`).join("\n")}`);
+      const errors = await validateAddon(source);
+      if (errors.length > 0) {
+        throw new Error(`Validation failed:\n${errors.map((error) => `• ${error}`).join("\n")}`);
       }
 
       const manifest = await this.readManifest(source);
@@ -401,12 +401,11 @@ export class AddonManager {
       await checkout(dir, newCommit);
 
       for (const module of tracked) {
-        const validation = await validateAddon(join(dir, module.name)).catch((error) => ({
-          errors: [message(error)],
-          warnings: [],
-        }));
-        if (validation.errors.length > 0) {
-          failures.push({ module: module.name, error: validation.errors.join("; ") });
+        const errors = await validateAddon(join(dir, module.name)).catch((error) => [
+          message(error),
+        ]);
+        if (errors.length > 0) {
+          failures.push({ module: module.name, error: errors.join("; ") });
         }
       }
 

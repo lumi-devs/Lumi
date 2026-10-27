@@ -8,5 +8,41 @@
   "entry": "index.ts",
   "dependencies": {
     "moderation": "^2.0.0"
-  }
+  },
+  "configFields": [
+    {
+      "key": "quarantineRoleId",
+      "label": "Quarantine Role",
+      "type": "role",
+      "description": "Role assigned when a member is quarantined",
+      "default": null,
+      "category": "Quarantine"
+    },
+    {
+      "key": "maxTargets",
+      "label": "Max Targets",
+      "type": "number",
+      "description": "Maximum members handled by one ban or kick command",
+      "default": 10,
+      "min": 1,
+      "max": 100,
+      "category": "Limits"
+    },
+    {
+      "key": "immuneRoleIds",
+      "label": "Immune Roles",
+      "type": "multi-role",
+      "description": "Members with these roles cannot be moderated",
+      "default": [],
+      "category": "Exemptions"
+    },
+    {
+      "key": "warnThresholds",
+      "label": "Warn Thresholds",
+      "type": "json",
+      "description": "JSON object: warn count -> {action: timeout|kick|ban, duration}",
+      "default": {},
+      "category": "Warn Escalation"
+    }
+  ]
 }

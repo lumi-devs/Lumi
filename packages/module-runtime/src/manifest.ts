@@ -9,6 +9,9 @@ const ConfigFieldSchema = z.object({
   default: z.unknown().optional(),
   choices: z.array(z.string()).optional(),
   channelTypes: z.array(z.number()).optional(),
+  category: z.string().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
 });
 
 export const ModuleManifestSchema = z.object({
@@ -19,6 +22,7 @@ export const ModuleManifestSchema = z.object({
   description: z.string().min(1).max(200),
   version: z.string().max(32).regex(/^\d+\.\d+\.\d+/),
   entry: z.string().min(1),
+  configKey: z.string().min(1).optional(),
   dependencies: z.record(z.string(), z.string()).default({}),
   requirements: z.array(z.string()).default([]),
   conflicts: z.array(z.string()).default([]),

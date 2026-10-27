@@ -6,83 +6,95 @@
   "description": "Currency, banking, shop, jobs, and gambling",
   "version": "2.0.0",
   "entry": "index.ts",
+  "configKey": "economy",
   "configFields": [
     {
       "key": "currencyName",
       "label": "Currency Name",
       "type": "string",
       "description": "Name of the currency",
-      "default": "Credits"
+      "default": "Credits",
+      "category": "Currency"
     },
     {
       "key": "currencySymbol",
       "label": "Currency Symbol",
       "type": "string",
       "description": "Emoji or symbol",
-      "default": "💰"
+      "default": "💰",
+      "category": "Currency"
     },
     {
       "key": "startingBalance",
       "label": "Starting Balance",
       "type": "number",
       "description": "Initial balance for new users",
-      "default": 0
+      "default": 0,
+      "category": "Currency"
     },
     {
       "key": "dailyAmount",
       "label": "Daily Reward",
       "type": "number",
       "description": "Amount for /daily",
-      "default": 100
+      "default": 100,
+      "category": "Rewards"
     },
     {
       "key": "weeklyAmount",
       "label": "Weekly Reward",
       "type": "number",
       "description": "Amount for /weekly",
-      "default": 500
+      "default": 500,
+      "category": "Rewards"
     },
     {
       "key": "monthlyAmount",
       "label": "Monthly Reward",
       "type": "number",
       "description": "Amount for /monthly",
-      "default": 2000
+      "default": 2000,
+      "category": "Rewards"
     },
     {
       "key": "interestRate",
       "label": "Bank Interest Rate",
       "type": "number",
       "description": "Daily interest (0.01 = 1%)",
-      "default": 0.01
+      "default": 0.01,
+      "category": "Bank"
     },
     {
       "key": "taxRate",
       "label": "Transaction Tax",
       "type": "number",
       "description": "Tax on transfers (0.05 = 5%)",
-      "default": 0
+      "default": 0,
+      "category": "Bank"
     },
     {
       "key": "workCooldown",
       "label": "Work Cooldown (seconds)",
       "type": "number",
       "description": "Seconds between /work",
-      "default": 3600
+      "default": 3600,
+      "category": "Work"
     },
     {
       "key": "workMinPay",
       "label": "Work Min Pay",
       "type": "number",
       "description": "Minimum /work payout",
-      "default": 50
+      "default": 50,
+      "category": "Work"
     },
     {
       "key": "workMaxPay",
       "label": "Work Max Pay",
       "type": "number",
       "description": "Maximum /work payout",
-      "default": 200
+      "default": 200,
+      "category": "Work"
     }
   ],
   "dependencies": {
