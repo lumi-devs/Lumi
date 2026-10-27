@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { ModuleSummary } from "@lumi/module-runtime";
 import {
   moduleListRowId,
+  parseSubmoduleTogglePages,
   submoduleItems,
   submodulePagePrefix,
+  submoduleToggleId,
   supermoduleItems,
 } from "../../src/admin/panel/modules.ts";
 
@@ -73,5 +75,25 @@ describe("module panel ids", () => {
     expect(submodulePagePrefix("security", 3)).toBe(
       "lumi:modsubs:security:3",
     );
+  });
+
+  it("encodes the module and both pages in a submodule toggle id", () => {
+    expect(submoduleToggleId("utility-afk", 2, 1)).toBe(
+      "lumi:modsubtoggle:utility-afk:2.1",
+    );
+  });
+
+  it("round-trips the pages from a submodule toggle payload", () => {
+    expect(parseSubmoduleTogglePages("2.1")).toEqual({
+      originPage: 2,
+      childPage: 1,
+    });
+  });
+
+  it("defaults invalid submodule toggle pages to zero", () => {
+    expect(parseSubmoduleTogglePages("nope")).toEqual({
+      originPage: 0,
+      childPage: 0,
+    });
   });
 });

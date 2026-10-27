@@ -46,3 +46,22 @@ export function moduleListRowId(name: string, page: number): string {
 export function submodulePagePrefix(name: string, originPage: number): string {
   return `lumi:modsubs:${name}:${originPage}`;
 }
+
+export function submoduleToggleId(
+  moduleName: string,
+  originPage: number,
+  childPage: number,
+): string {
+  return `lumi:modsubtoggle:${moduleName}:${originPage}.${childPage}`;
+}
+
+export function parseSubmoduleTogglePages(value: string): {
+  originPage: number;
+  childPage: number;
+} {
+  const [origin, child] = value.split(".");
+  return {
+    originPage: Number(origin) || 0,
+    childPage: Number(child) || 0,
+  };
+}

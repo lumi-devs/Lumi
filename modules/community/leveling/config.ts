@@ -34,7 +34,9 @@ export interface LevelingConfig {
   multiplierRoles: RoleMultiplier[];
   channelMultipliers: ChannelMultiplier[];
   ignoredChannels: string[];
+  whitelistedChannels: string[];
   ignoredRoles: string[];
+  whitelistedRoles: string[];
 }
 
 export const AnnounceMessageDefault = "{user} reached level {level}!";
@@ -56,7 +58,9 @@ export const LevelingDefaults: LevelingConfig = {
   multiplierRoles: [],
   channelMultipliers: [],
   ignoredChannels: [],
+  whitelistedChannels: [],
   ignoredRoles: [],
+  whitelistedRoles: [],
 };
 
 function asNumber(value: unknown, fallback: number): number {
@@ -219,6 +223,29 @@ export async function getLevelingConfig(
     multiplierRoles: asRoleMultipliers(stored.multiplierRoles),
     channelMultipliers: asChannelMultipliers(stored.channelMultipliers),
     ignoredChannels: asIdList(stored.ignoredChannels),
+    whitelistedChannels: asIdList(stored.whitelistedChannels),
     ignoredRoles: asIdList(stored.ignoredRoles),
+    whitelistedRoles: asIdList(stored.whitelistedRoles),
   };
+}
+
+export function channelEarnsXp(
+  config: Pick<LevelingConfig, "ignoredChannels" | "whitelistedChannels">,
+  channelId: string,
+): boolean {
+  if (config.whitelistedChannels.length > 0) {
+    return config.whitelistedChannels.includes(channelId);
+  }
+  return !config.ignoredChannels.includes(channelId);
+}
+
+export function rolesEarnXp(
+  config: Pick<LevelingConfig, "ignoredRoles" | "whitelistedRoles">,
+  roleIds: Iterable<string>,
+): boolean {
+  const roles = new Set(roleIds);
+  if (config.whitelistedRoles.length > 0) {
+    return config.whitelistedRoles.some((roleId) => roles.has(roleId));
+  }
+  return !config.ignoredRoles.some((roleId) => roles.has(roleId));
 }

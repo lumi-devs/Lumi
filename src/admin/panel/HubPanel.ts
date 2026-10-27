@@ -36,8 +36,10 @@ import { handleAddonInteraction, renderAddonPanel } from "./addons.js";
 import {
   ModulesPerPage,
   moduleListRowId,
+  parseSubmoduleTogglePages,
   submoduleItems,
   submodulePagePrefix,
+  submoduleToggleId,
   supermoduleItems,
 } from "./modules.js";
 import { paginate } from "./pages.js";
@@ -65,6 +67,7 @@ export interface HubServices {
 }
 
 const FieldsPerPage = 4;
+const SubmodulesPerPage = 3;
 const MaxOptions = 25;
 const DefaultPrefix = ",";
 
@@ -549,6 +552,7 @@ async function renderSubmodules(
   supermoduleName: string,
   originPage = 0,
   page = 0,
+  notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const modules = services.moduleLoader.listGlobal();
@@ -579,10 +583,32 @@ async function renderSubmodules(
   const { items: shown, page: currentPage, totalPages } = paginate(
     children,
     page,
-    ModulesPerPage,
+    SubmodulesPerPage,
   );
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
+  for (const module of shown) {
+    rows.push(
+      row(
+        createActionButton({
+          customId: `lumi:modopen:${module.name}:0`,
+          label: `Open ${module.displayName}`,
+          style: ButtonStyle.Primary,
+        }),
+        createActionButton({
+          customId: submoduleToggleId(
+            module.name,
+            originPage,
+            currentPage,
+          ),
+          label: `${module.enabled ? "Disable" : "Enable"} ${module.displayName}`,
+          style: module.enabled
+            ? ButtonStyle.Danger
+            : ButtonStyle.Success,
+        }),
+      ),
+    );
+  }
   if (totalPages > 1) {
     rows.push(
       pageRow(submodulePagePrefix(supermoduleName, originPage), currentPage, totalPages),
@@ -613,29 +639,23 @@ async function renderSubmodules(
   }
 
   const enabledCount = children.filter((module) => module.enabled).length;
-  const sections = shown.map((module) =>
-    settingRow(
-      [
-        `${module.emoji} **${module.displayName}**`,
-        `-# ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
-      ],
-      {
-        customId: `lumi:modopen:${module.name}:0`,
-        label: "Open",
-        style: ButtonStyle.Primary,
-      },
-    ),
+  const modulesList = shown.map(
+    (module) =>
+      `${module.emoji} **${module.displayName}** — ${module.enabled ? "Enabled" : "Disabled"} · ${cut(module.description || "No description", 90)}`,
   );
+
+  const body = [
+    parent.description || "No description provided.",
+    `**Submodules:** ${children.length} · ${enabledCount} enabled`,
+    ...modulesList,
+  ];
+  if (notice) body.unshift(`**${notice}**`);
 
   return makeCard(
     undefined,
     `${parent.emoji} ${parent.displayName}`,
-    [
-      parent.description || "No description provided.",
-      `**Submodules:** ${children.length} · ${enabledCount} enabled`,
-    ],
+    body,
     {
-      sections,
       ...panelOptions(
         interaction,
         "modules",
@@ -936,6 +956,30 @@ export async function handleHubInteraction(
           target,
           Number(extra) || 0,
           Number(extra2) || 0,
+        ),
+      );
+      return true;
+    }
+    case "modsubtoggle": {
+      await interaction.deferUpdate();
+      const loaded = services.moduleLoader.getModule(target);
+      if (!loaded?.supermodule) return true;
+
+      const { originPage, childPage } = parseSubmoduleTogglePages(extra ?? "");
+      const enabled = services.moduleLoader.isEnabled(guildId, target);
+      if (enabled) {
+        await services.moduleManager.disable(guildId, target);
+      } else {
+        await services.moduleManager.enable(guildId, target);
+      }
+      await interaction.editReply(
+        await renderSubmodules(
+          interaction,
+          services,
+          loaded.supermodule,
+          originPage,
+          childPage,
+          `${loaded.manifest.displayName} ${enabled ? "disabled" : "enabled"}.`,
         ),
       );
       return true;

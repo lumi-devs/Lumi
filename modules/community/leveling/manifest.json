@@ -142,7 +142,15 @@
       "key": "ignoredChannels",
       "label": "Ignored Channels",
       "type": "multi-channel",
-      "description": "Channels where XP is disabled",
+      "description": "Text channels where message XP is disabled. Inactive while a channel whitelist is set.",
+      "default": [],
+      "category": "Filters"
+    },
+    {
+      "key": "whitelistedChannels",
+      "label": "Whitelisted Channels",
+      "type": "multi-channel",
+      "description": "Only these text channels earn message XP. Overrides the ignored channel list.",
       "default": [],
       "category": "Filters"
     },
@@ -150,7 +158,15 @@
       "key": "ignoredRoles",
       "label": "Ignored Roles",
       "type": "multi-role",
-      "description": "Roles that don't gain XP",
+      "description": "Members with any of these roles earn no XP. Inactive while a role whitelist is set.",
+      "default": [],
+      "category": "Filters"
+    },
+    {
+      "key": "whitelistedRoles",
+      "label": "Whitelisted Roles",
+      "type": "multi-role",
+      "description": "Only members with one of these roles earn XP. Overrides the ignored role list.",
       "default": [],
       "category": "Filters"
     }

@@ -26,6 +26,21 @@ export function voiceSessionEnd(
   return Math.max(0, nowMs - started);
 }
 
+export function voiceAudibleTransition(
+  guildId: string,
+  userId: string,
+  wasAudible: boolean,
+  isAudibleNow: boolean,
+  nowMs: number,
+): number | null {
+  if (wasAudible === isAudibleNow) return null;
+  if (isAudibleNow) {
+    voiceSessionStart(guildId, userId, nowMs);
+    return null;
+  }
+  return voiceSessionEnd(guildId, userId, nowMs);
+}
+
 export function isAudible(state: VoiceState): boolean {
   if (!state.channelId) return false;
   if (state.mute || state.deaf || state.selfMute || state.selfDeaf) return false;

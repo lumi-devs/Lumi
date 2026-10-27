@@ -1,5 +1,5 @@
 import type { Guild, GuildMember } from "discord.js";
-import type { LevelingConfig, LevelReward } from "./config.js";
+import { rolesEarnXp, type LevelingConfig, type LevelReward } from "./config.js";
 import { levelForTotalXp } from "./formulas.js";
 
 async function applyRoleRewards(
@@ -29,6 +29,8 @@ export async function grantVoiceXp(
   minutes: number,
   config: LevelingConfig,
 ): Promise<void> {
+  if (!rolesEarnXp(config, member.roles.cache.keys())) return;
+
   const amount = Math.max(
     1,
     Math.round(
