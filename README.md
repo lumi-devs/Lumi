@@ -8,8 +8,7 @@ Lumi v2 is a self-hosted Discord bot for communities that want full control over
 
 It runs as a single process with a Discord gateway, embedded RPC bridge, and an in-process scheduler. Every feature family is a toggleable module. There is no hardcoded core and no privileged module you cannot turn off.
 
-**Default branch:** `v2/develop`  
-**Docs:** https://lumi-devs.github.io/Lumi-docs
+**For agents:** check `AGENTS.md` and the `agents/` directory, and [SETUP.md](SETUP.md) for platform instructions.
 
 ---
 
