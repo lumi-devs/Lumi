@@ -85,8 +85,8 @@ Allowed runtime imports:
 
 Add-ons receive the same `services` object as bundled modules, including
 `client`, `prisma`, `redis`, `cache`, `config`, `modules`, `moduleLoader`,
-`scheduler`, `rpc`, and `ui`. Treat the database as shared: prefix tables with
-your add-on name.
+`moduleManager`, `scheduler`, `rpc`, `ui`, `permits`, and `addons`. Treat the
+database as shared: prefix tables with your add-on name.
 
 ## Local development
 

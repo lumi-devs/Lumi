@@ -14,7 +14,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 | **Cache** | In-memory only | L1 LRU + Redis L2 with invalidation bus |
 | **RPC** | None | Token-guarded HTTP control server |
 | **Images** | Sharp/SVG rank cards | Canvas (rank + balance + shop cards) |
-| **Addons** | Basic git installer | Validated, sandboxed, versioned installer |
+| **Addons** | Basic git installer | Validated git repo manager: installs, updates, pins, rollback |
 | **Boot** | Global container, import-time DI | Explicit composition root, no global state |
 
 ---
