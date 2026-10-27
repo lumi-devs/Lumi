@@ -1,4 +1,4 @@
-# Lumi v2 — Setup
+# Lumi v2 Setup
 
 Lumi is a single-process Discord bot (gateway + RPC + scheduler) on Bun, PostgreSQL 18+, and Redis 8+.
 
@@ -25,7 +25,7 @@ This creates `.env` and `compose.yml`, then starts Postgres, Redis, and the bot.
 ## Nix / local
 
 ```bash
-git clone git@github.com:lumi-devs/Lumi.git
+git clone https://github.com/lumi-devs/Lumi.git
 cd Lumi
 nix develop
 cp .env.example .env
@@ -49,7 +49,7 @@ CREATE DATABASE lumi OWNER lumi;
 GRANT ALL PRIVILEGES ON DATABASE lumi TO lumi;
 SQL
 
-git clone git@github.com:lumi-devs/Lumi.git
+git clone https://github.com/lumi-devs/Lumi.git
 cd Lumi
 cp .env.example .env
 # edit .env

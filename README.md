@@ -6,7 +6,7 @@
 
 Lumi v2 is a self-hosted Discord bot built with Bun, TypeScript, PostgreSQL, and Redis.
 
-It runs as a single process: one Discord gateway client, an embedded RPC bridge, and an in-process scheduler. Everything loads as toggleable modules — there's no hardcoded core and no privileged modules you can't turn off.
+It runs as a single process: one Discord gateway client, an embedded RPC bridge, and an in-process scheduler. Everything loads as toggleable modules: there's no hardcoded core and no privileged modules you can't turn off.
 
 **Default branch:** `v2/develop`  
 **Docs:** https://lumi-devs.github.io/Lumi-docs
@@ -15,12 +15,12 @@ It runs as a single process: one Discord gateway client, an embedded RPC bridge,
 
 ## What's inside
 
-- **Supermodules** — Community (leveling, economy), moderation, logging, security, and utility. Each can be enabled or disabled per server from `/lumi`.
-- **Permit system** — Grant/Deny polarity with node-based permissions (e.g. `mod.ban`, `admin.config`). Built-in permits (Extra Owner, Trusted Admin) are locked from reordering.
-- **Components V2 only** — No Discord embeds. All output is card-based, including server-generated rank card PNGs.
-- **Voice XP** — Only grants XP while a member is audible. Mute, deaf, server-mute, suppress, bots, and single-occupant channels earn nothing.
-- **Channel/role filters** — Ignore lists for channels and roles, with optional whitelists that override ignores.
-- **Metrics** — Prometheus on `:9090`, health on `:8091`.
+- **Supermodules**: Community (leveling, economy), moderation, logging, security, and utility. Each can be enabled or disabled per server from `/lumi`.
+- **Permit system**: Grant/Deny polarity with node-based permissions (e.g. `mod.ban`, `admin.config`). Built-in permits (Extra Owner, Trusted Admin) are locked from reordering.
+- **Components V2 only**: No Discord embeds. All output is card-based, including server-generated rank card PNGs.
+- **Voice XP**: Only grants XP while a member is audible. Mute, deaf, server-mute, suppress, bots, and single-occupant channels earn nothing.
+- **Channel/role filters**: Ignore lists for channels and roles, with optional whitelists that override ignores.
+- **Metrics**: Prometheus on `:9090`, health on `:8091`.
 
 ---
 
@@ -37,7 +37,7 @@ docker compose up -d
 **Nix / local**
 
 ```bash
-git clone git@github.com:lumi-devs/Lumi.git
+git clone https://github.com/lumi-devs/Lumi.git
 cd Lumi
 nix develop
 cp .env.example .env
@@ -51,7 +51,7 @@ Full platform instructions (Docker, NixOS, Ubuntu, Debian, Arch, Windows, system
 
 ---
 
-Run `/lumi` in your server to open the module management panel — that's your total view of what's enabled, what's configurable, and what needs attention.
+Run `/lumi` in your server to open the module management panel: that's your total view of what's enabled, what's configurable, and what needs attention.
 
 ---
 

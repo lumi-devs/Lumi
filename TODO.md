@@ -1,4 +1,4 @@
-# Lumi v2 — TODO
+# Lumi v2 TODO
 
 ## ✅ Completed
 
