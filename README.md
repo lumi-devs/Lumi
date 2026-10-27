@@ -51,19 +51,7 @@ Full platform instructions (Docker, NixOS, Ubuntu, Debian, Arch, Windows, system
 
 ---
 
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/lumi` | Module management panel |
-| `/permit` | Permit management |
-| `/rank` | Level card (image) |
-| `/leaderboard` | XP or voice leaderboard |
-| `/panic` / `/panic revert` | Security lockdown |
-| `/ping` | Latency and gateway status |
-| `/about` | Bot info |
-
-Prefix commands work too — default is `,`, customizable per guild, or mention the bot.
+Run `/lumi` in your server to open the module management panel — that's your total view of what's enabled, what's configurable, and what needs attention.
 
 ---
 
