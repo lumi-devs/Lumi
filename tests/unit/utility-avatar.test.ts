@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MessageFlags } from "discord.js";
-import utilityModule from "@lumi/utility";
+import utilityModule from "../../modules/utility/info/index.ts";
 
 const makeUser = (id: string, displayName: string) => ({
   id,

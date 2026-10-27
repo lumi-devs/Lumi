@@ -2,9 +2,9 @@
 
 Commands come from two sources:
 
-- Built-ins: `pingCommand` and `aboutCommand` in `apps/bot/src/core/src/`, and
+- Built-ins: `pingCommand` and `aboutCommand` in `src/core/`, and
   the `moduleCommands` registry (`/lumi`, `/permit`) in
-  `apps/bot/src/admin/src/commands/index.ts`.
+  `src/admin/commands/index.ts`.
 - Module commands: the `commands` array returned by `defineModule` in each module.
 
 Slash and prefix commands share the same definitions. The default prefix is `,`
@@ -65,7 +65,7 @@ Every user-facing reply must be a card from `@lumi/ui`. Do not use embeds,
 
 ## Dispatch order
 
-Interaction dispatch is in `apps/bot/src/index.ts`:
+Interaction dispatch is in `src/index.ts`:
 
 1. Look up the slash command.
 2. Reject unknown commands with an ephemeral error card.
@@ -86,7 +86,7 @@ and finally the `permit_` panel. Each handler ignores custom IDs it does not own
 
 ## Module services
 
-`services` is assembled in `apps/bot/src/index.ts` and passed to every command and
+`services` is assembled in `src/index.ts` and passed to every command and
 listener. It includes `client`, `redis`, `cache`, `prisma`, `permits`,
 `moduleLoader`, `moduleManager`, `modules.isEnabled`, `scheduler`, `config`,
 `configService`, `rpc`, `ui`, `discord`, and `observability`.

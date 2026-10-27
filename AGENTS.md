@@ -21,7 +21,7 @@ entry.
 
 - Every module is toggleable. There is no privileged "core" module and no
   `essential`/`disableable` escape hatch. Always-on behaviour lives in
-  `apps/bot/src/` as built-in listeners/commands, not as a module.
+  `src/` as built-in listeners/commands, not as a module.
 - Modules are discovered from `manifest.json` and loaded from an explicit entry
   file. No hidden global registries, no side-effect imports.
 - Built-in commands have `module: null` and always run. Module commands only run

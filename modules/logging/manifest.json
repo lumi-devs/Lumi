@@ -5,21 +5,7 @@
   "emoji": "📝",
   "description": "Message, edit, delete, voice, and moderation logging",
   "version": "2.0.0",
-  "isSupermodule": true,
   "entry": "index.ts",
-  "submodules": {
-    "logs": {
-      "name": "logging-logs",
-      "displayName": "Logging",
-      "emoji": "📝",
-      "description": "Message, edit, delete, voice, and moderation logging",
-      "version": "2.0.0",
-      "entry": "submodules/logging/src/index.ts",
-      "requirements": [
-        "logging"
-      ]
-    }
-  },
   "configFields": [
     {
       "key": "messageLogChannel",

@@ -112,22 +112,20 @@ Run `/lumi` in your server to open the module management panel. From there you c
 
 ## Module Development
 
-Each supermodule lives in `modules/<name>/` with submodules in `submodules/`:
+Each supermodule lives in `modules/<name>/`; its submodules are sibling
+directories, each with its own manifest and entry:
 
 ```
 modules/utility/
-├── manifest.json          # isSupermodule: true, defines submodules
-├── index.ts               # defineModule entry + sharedServices
-└── submodules/
-    ├── afk/
-    │   ├── manifest.json
-    │   └── src/index.ts   # defineModule for utility-afk
-    └── tempvc/
-        ├── manifest.json
-        └── src/index.ts
+├── manifest.json          # supermodule: no submodule list, filesystem is truth
+├── index.ts               # defineModule entry
+├── afk/
+│   ├── manifest.json
+│   └── index.ts           # defineModule for utility-afk
+└── tempvc/
+    ├── manifest.json
+    └── index.ts
 ```
-
-Submodules receive `services.supermoduleServices` from their parent.
 
 ## Testing
 

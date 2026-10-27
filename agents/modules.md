@@ -5,11 +5,11 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 ## Architecture: Built-in Services vs Toggleable Supermodules
 
 **Built-in Services** (always running, non-disableable):
-- `apps/bot/src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
-- `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
+- `src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
+- `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
-**Toggleable Supermodules** (enable/disable per guild via `/lumi` → Modules):
-All modules under `modules/` are **supermodules** that contain independently-toggleable **submodules**:
+**Toggleable Supermodules** (enable/disable per guild via `/lumi` → Modules).
+Every module under `modules/` is a **supermodule** that contains independently-toggleable **submodules**:
 
 ### Utility
 - `utility-afk` — AFK status with mention replies and nickname prefix
@@ -36,16 +36,31 @@ All modules under `modules/` are **supermodules** that contain independently-tog
 - `security-autorecovery` — Automatic server restore from latest backup when panic triggers
 - `security-automod` — Heat-based automod with 13 filters, escalating punishments, permit-based immunity
 
+## Layout
+
+```
+modules/<supermodule>/
+├── manifest.json
+├── index.ts
+└── <submodule>/
+    ├── manifest.json
+    ├── index.ts
+    └── <feature files>
+```
+
+There is no `submodules/` container and no `src/` level inside a module. The
+loader treats every subdirectory of a supermodule that owns a `manifest.json` as
+a submodule, so the filesystem is the single source of truth.
+
 ## Rules
 
-- Every module under `modules/` is a **supermodule** with submodules in `submodules/`. No regular modules exist.
-- Supermodule manifests use `apiVersion: 2` with a `submodules` object.
-- Submodules are defined in `submodules/` directories with their own manifest and entry point.
+- Every module under `modules/` is a **supermodule**. No regular modules exist.
+- A supermodule is a directory with `manifest.json` and an entry file; its
+  submodules are sibling directories, each with their own `manifest.json` and entry.
 - Submodules declare `requirements: ["supermodule-name"]` to depend on their parent.
 - Supermodules are always enabled globally; submodules are enabled/disabled per guild.
 - The `/lumi` panel shows supermodules with expandable submodule lists.
-- Always-on behaviour lives in `apps/bot/src/` as built-in services, not in a module.
-- A module is a directory with `manifest.json` and an entry file.
+- Always-on behaviour lives in `src/` as built-in services, not in a module.
 - Modules may depend on other modules with semver ranges. A dependency cycle
   marks the involved modules broken and skips them; other modules still load.
 - Modules never import another module. Shared code goes into a package.
@@ -60,23 +75,7 @@ All modules under `modules/` are **supermodules** that contain independently-tog
   "emoji": "🔧",
   "description": "Utility tools: AFK, temporary voice, and info commands",
   "version": "2.0.0",
-  "entry": "./index.ts",
-  "submodules": {
-    "afk": {
-      "name": "utility-afk",
-      "displayName": "AFK",
-      "emoji": "💤",
-      "description": "Set AFK status with mention replies and nickname prefix",
-      "version": "2.0.0",
-      "entry": "submodules/afk/index.ts",
-      "dependencies": {},
-      "requirements": ["utility"],
-      "configFields": [],
-      "enabledByDefault": true
-    },
-    "tempvc": { ... },
-    "utility": { ... }
-  },
+  "entry": "index.ts",
   "dependencies": {},
   "requirements": [],
   "conflicts": [],
@@ -105,16 +104,12 @@ All modules under `modules/` are **supermodules** that contain independently-tog
 ```
 
 - `name` must match the submodule directory name and `^[a-z][a-z0-9-]*$`.
-- `entry` is relative to the submodule directory (usually `index.ts`).
-- `requirements` must include the parent supermodule name.
-- Submodules receive `services.supermoduleServices` containing the parent's `sharedServices`.
+- `entry` is relative to the module directory (usually `index.ts`).
 
 ## Definition
 
 ```ts
 // Supermodule index.ts
-export const UtilitySharedServices = { /* shared internal services */ };
-
 export default defineModule({
   name: "utility",
   displayName: "Utility",
@@ -122,16 +117,15 @@ export default defineModule({
   description: "Utility tools: AFK, temporary voice, and info commands",
   version: "2.0.0",
   config: z.object({}),
-  configFields: [...], // Supermodule-level config
+  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],
-  sharedServices: UtilitySharedServices,
   async onLoad(services) {},
   async onUnload(services) {},
 });
 
-// Submodule index.ts (e.g., submodules/afk/index.ts)
+// Submodule index.ts
 export default defineModule({
   name: "utility-afk",
   displayName: "AFK",
@@ -142,10 +136,8 @@ export default defineModule({
   configFields: [...],
   commands: [afkCommand],
   listeners: [afkMessageListener],
-  async onLoad(services) {
-    const { someSharedService } = services.supermoduleServices; // from parent
-    ...
-  },
+  async onLoad(services) {},
+  async onUnload(services) {},
 });
 ```
 
@@ -166,9 +158,7 @@ subcommand names, and autocomplete handlers for uniqueness within the supermodul
 ## Loading Order
 
 1. Supermodules load first (topologically sorted by `dependencies`)
-2. Supermodule `onLoad` runs, populating `sharedServices`
-3. Submodules load (topologically sorted including cross-supermodule deps)
-4. Submodules receive `services.supermoduleServices` from their parent
+2. Submodules load (topologically sorted including cross-supermodule deps)
 
 ## Panel UI
 
@@ -184,10 +174,10 @@ In `/lumi` → Modules tab:
   └── 💰 Economy      [ON]  [Open]
 
 🛡️ Moderation [▼]
-  └── 🛡️ Moderation   [ON]  [Open]
+  └── 🛡️ Mod          [ON]  [Open]
 
 📝 Logging [▼]
-  └── 📝 Logging      [ON]  [Open]
+  └── 📝 Logs         [ON]  [Open]
 
 🛡️ Security [▼]
   ├── ☢️ Anti-Nuke    [ON]  [Open]

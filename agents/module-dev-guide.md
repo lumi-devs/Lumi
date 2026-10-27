@@ -381,7 +381,7 @@ bun test modules/my-module/tests/
 - [ ] All commands have `requiredPermit` or check `isEnabled`
 - [ ] All listeners check `isEnabled` at start
 - [ ] No `EmbedBuilder` usage — use `@lumi/ui` cards
-- [ ] No direct imports of `apps/bot`, `modules/*`, or internal packages
+- [ ] No direct imports of `src`, `modules/*`, or internal packages
 - [ ] Dependencies declared in manifest (both modules + npm)
 - [ ] No dependency cycles
 - [ ] Tests pass (`bun test`)

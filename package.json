@@ -3,10 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "modules/*",
-    "apps/*",
-    "apps/bot/src/*"
+    "packages/*"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -18,8 +15,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "build": "tsc -b",
-    "dev:bot": "bun --watch apps/bot/src/index.ts"
+    "build": "bun build src/index.ts --target=bun --external canvas --outdir=dist",
+    "dev:bot": "bun --watch src/index.ts"
   },
   "dependencies": {
     "canvas": "^3.2.3",

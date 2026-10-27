@@ -337,7 +337,7 @@ RUN bun install --production
 COPY . .
 RUN bun run db:generate
 
-CMD ["bun", "apps/bot/src/index.ts"]
+CMD ["bun", "src/index.ts"]
 ```
 
 ```bash
@@ -365,7 +365,7 @@ After=network.target postgresql.service redis.service
 Type=simple
 User=lumi
 WorkingDirectory=/opt/lumi-v2
-ExecStart=/usr/local/bin/bun apps/bot/src/index.ts
+ExecStart=/usr/local/bin/bun src/index.ts
 Restart=on-failure
 RestartSec=10
 EnvironmentFile=/opt/lumi-v2/.env
@@ -382,7 +382,7 @@ sudo systemctl enable --now lumi-bot
 ### PM2
 
 ```bash
-pm2 start apps/bot/src/index.ts --name lumi-bot --interpreter bun
+pm2 start src/index.ts --name lumi-bot --interpreter bun
 pm2 save
 pm2 startup
 ```

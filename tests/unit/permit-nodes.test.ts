@@ -4,7 +4,7 @@ import {
   formatPermitNodes,
   parseNodeList,
   suggestPermitName,
-} from "../../apps/bot/src/admin/src/permits/nodes.ts";
+} from "../../src/admin/permits/nodes.ts";
 
 describe("permit node helpers", () => {
   it("parses comma and whitespace separated node lists", () => {

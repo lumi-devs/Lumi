@@ -21,10 +21,10 @@
     "baseUrl": ".",
     "paths": {
       "@lumi/core": [
-        "apps/bot/src/core/src"
+        "src/core"
       ],
       "@lumi/admin": [
-        "apps/bot/src/admin/src"
+        "src/admin"
       ],
       "@lumi/permits": [
         "packages/permits/src"
@@ -55,54 +55,6 @@
       ],
       "@lumi/downloader": [
         "packages/downloader/src"
-      ],
-      "@lumi/utility": [
-        "modules/utility/submodules/utility"
-      ],
-      "@lumi/tempvc": [
-        "modules/utility/submodules/tempvc"
-      ],
-      "@lumi/logging": [
-        "modules/logging/submodules/logging"
-      ],
-      "@lumi/afk": [
-        "modules/utility/submodules/afk"
-      ],
-      "@lumi/community-leveling": [
-        "modules/community/submodules/leveling"
-      ],
-      "@lumi/community-economy": [
-        "modules/community/submodules/economy"
-      ],
-      "@lumi/moderation-mod": [
-        "modules/moderation/submodules/mod"
-      ],
-      "@lumi/security": [
-        "modules/security"
-      ],
-      "@lumi/security-antinuke": [
-        "modules/security/submodules/antinuke"
-      ],
-      "@lumi/security-join-gate": [
-        "modules/security/submodules/join-gate"
-      ],
-      "@lumi/security-verification": [
-        "modules/security/submodules/verification"
-      ],
-      "@lumi/security-panic": [
-        "modules/security/submodules/panic"
-      ],
-      "@lumi/security-backups": [
-        "modules/security/submodules/backups"
-      ],
-      "@lumi/security-betrayal": [
-        "modules/security/submodules/betrayal"
-      ],
-      "@lumi/security-autorecovery": [
-        "modules/security/submodules/autorecovery"
-      ],
-      "@lumi/security-automod": [
-        "modules/security/submodules/automod"
       ]
     }
   },

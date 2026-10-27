@@ -58,7 +58,7 @@ Same as bundled modules, but `requirements` are mandatory for npm deps.
 | Import `@lumi/cache` | Cache manipulation |
 | Import `@lumi/module-runtime` | Module lifecycle control |
 | Import `@lumi/downloader` | Addon installation |
-| Import `apps/bot/src/**` | App internals |
+| Import `src/**` | App internals |
 | Import other addons | Isolation |
 | `require('fs')`, `require('child_process')` | Filesystem/process access |
 | `eval`, `Function` constructor | Code execution |

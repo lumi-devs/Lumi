@@ -6,7 +6,7 @@ import {
   buildAfkStatusCard,
   formatAfkDuration,
   sanitizeAfkReason,
-} from "../../modules/utility/submodules/afk/src/ui.ts";
+} from "../../modules/utility/afk/ui.ts";
 
 const containerOf = (card: any) =>
   JSON.parse(JSON.stringify(card.components[0]));

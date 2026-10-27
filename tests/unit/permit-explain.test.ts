@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { allExplanationCard } from "../../apps/bot/src/admin/src/permits/explain.ts";
+import { allExplanationCard } from "../../src/admin/permits/explain.ts";
 import { PermitRepository } from "../../packages/permits/src/repository.ts";
 
 function cardText(card: any): string {

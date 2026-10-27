@@ -1,7 +1,7 @@
 # Permits and access control
 
 Code: `packages/permits/src/`.
-Panel: `apps/bot/src/admin/src/panel/PermitPanel.ts` (`/lumi` → Permissions → Open
+Panel: `src/admin/panel/PermitPanel.ts` (`/lumi` → Permissions → Open
 Permit Panel). Commands: `/permit create`, `/permit explain`.
 `/lumi` and `/permit` require **Manage Server** or an `admin.*`/`*` permit for
 both slash and prefix use. Permit-only holders can see and run the slash

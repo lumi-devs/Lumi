@@ -91,9 +91,8 @@ jobs:
         with:
           name: dist
           path: |
-            apps/bot/dist
-            packages/*/dist
-            modules/*/dist
+            dist
+            modules
           retention-days: 7
 
   # ===========================================

@@ -25,7 +25,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 
 **v1:** `core` module was essential/undeletable, contained base commands, config, etc.
 
-**v2:** Built-in services in `apps/bot/src/`:
+**v2:** Built-in services in `src/`:
 - `core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
 - `admin/` — Module management, `/lumi` panel, owner commands
 
@@ -233,7 +233,7 @@ docker run -d --env-file .env lumi:v2
 
 # Or bare metal
 bun run build
-bun apps/bot/src/index.ts
+bun src/index.ts
 ```
 
 ---

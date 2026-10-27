@@ -23,4 +23,4 @@ export async function disconnectDatabase(): Promise<void> {
   await pool.end().catch(() => undefined);
 }
 
-export type { PrismaClient };
+export type { PrismaClient, Prisma } from "@prisma/client";

@@ -23,39 +23,6 @@
         "vitest": "^3.2.6",
       },
     },
-    "apps/bot/src/admin": {
-      "name": "@lumi/admin",
-      "version": "2.0.0",
-      "dependencies": {
-        "@lumi/core": "workspace:*",
-        "@lumi/db": "workspace:*",
-        "@lumi/module-runtime": "workspace:*",
-        "@lumi/permits": "workspace:*",
-        "@lumi/ui": "workspace:*",
-        "@prisma/client": "^7.10.0",
-        "discord.js": "^14.14.0",
-        "zod": "^4.6.6",
-      },
-      "devDependencies": {
-        "@types/node": "^20.0.0",
-      },
-    },
-    "apps/bot/src/core": {
-      "name": "@lumi/core",
-      "version": "2.0.0",
-      "dependencies": {
-        "@lumi/cache": "workspace:*",
-        "@lumi/db": "workspace:*",
-        "@lumi/observability": "workspace:*",
-        "@lumi/permits": "workspace:*",
-        "@lumi/redis": "workspace:*",
-        "@lumi/scheduler": "workspace:*",
-        "discord.js": "^14.14.0",
-      },
-      "devDependencies": {
-        "@types/node": "^20.0.0",
-      },
-    },
     "packages/cache": {
       "name": "@lumi/cache",
       "version": "2.0.0",
@@ -352,11 +319,7 @@
 
     "@js-sdsl/ordered-map": ["@js-sdsl/ordered-map@4.4.2", "", {}, "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw=="],
 
-    "@lumi/admin": ["@lumi/admin@workspace:apps/bot/src/admin"],
-
     "@lumi/cache": ["@lumi/cache@workspace:packages/cache"],
-
-    "@lumi/core": ["@lumi/core@workspace:apps/bot/src/core"],
 
     "@lumi/db": ["@lumi/db@workspace:packages/db"],
 

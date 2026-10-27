@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { ModuleDefinition } from "@lumi/module-kit";
-import { ModuleManifest, SubmoduleDef, validateManifest } from "./manifest.js";
+import { ModuleManifest, validateManifest } from "./manifest.js";
 
 export interface LoadedModule {
   manifest: ModuleManifest;
@@ -97,16 +97,16 @@ export class ModuleLoader {
 
     discovered.push(supermodule);
 
-    const submodulesDir = join(modulePath, "submodules");
     const submoduleMap = new Map<string, LoadedModule>();
 
     try {
-      const subEntries = await readdir(submodulesDir, { withFileTypes: true });
+      const subEntries = await readdir(modulePath, { withFileTypes: true });
 
       for (const subEntry of subEntries) {
         if (!subEntry.isDirectory()) continue;
+        if (subEntry.name === "node_modules") continue;
 
-        const subPath = join(submodulesDir, subEntry.name);
+        const subPath = join(modulePath, subEntry.name);
         const subManifestPath = join(subPath, "manifest.json");
 
         let subManifest: ModuleManifest;

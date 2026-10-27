@@ -1,0 +1,73 @@
+{
+  "apiVersion": 2,
+  "name": "utility-tempvc",
+  "displayName": "Temporary Voice",
+  "emoji": "🔊",
+  "description": "Join-to-create temporary voice channels with ownership controls",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "requirements": [
+    "utility"
+  ],
+  "configFields": [
+    {
+      "key": "categoryId",
+      "label": "Category",
+      "type": "channel",
+      "description": "Category to create channels in",
+      "channelTypes": [
+        4
+      ],
+      "default": null
+    },
+    {
+      "key": "templateName",
+      "label": "Channel Name Template",
+      "type": "string",
+      "description": "Use {user} for username",
+      "default": "➕ {user}'s Channel"
+    },
+    {
+      "key": "defaultBitrate",
+      "label": "Default Bitrate",
+      "type": "number",
+      "description": "Bitrate in bps (8000-384000)",
+      "default": 64000
+    },
+    {
+      "key": "defaultUserLimit",
+      "label": "Default User Limit",
+      "type": "number",
+      "description": "0 = unlimited",
+      "default": 0
+    },
+    {
+      "key": "maxChannels",
+      "label": "Max Channels",
+      "type": "number",
+      "description": "Guild-wide limit",
+      "default": 50
+    },
+    {
+      "key": "maxPerUser",
+      "label": "Max Per User",
+      "type": "number",
+      "description": "How many channels one user can own",
+      "default": 1
+    },
+    {
+      "key": "emptyTimeoutMs",
+      "label": "Empty Timeout (ms)",
+      "type": "number",
+      "description": "Delete after empty for this long",
+      "default": 300000
+    },
+    {
+      "key": "ownerLeaveDelete",
+      "label": "Delete on Owner Leave",
+      "type": "boolean",
+      "description": "Delete channel when owner leaves",
+      "default": true
+    }
+  ]
+}

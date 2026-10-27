@@ -3,11 +3,13 @@
 ## Layout
 
 ```
-apps/bot/                 deployable process: entry, composition root, dispatch,
+src/                      deployable process: entry, composition root, dispatch,
                           built-in commands, Lumi control panel
-apps/bot/src/core/        Built-in: gateway, sharding, HTTP control server, scheduler
-apps/bot/src/admin/       Built-in: module management, config, /lumi panel
+  core/                   gateway, sharding, HTTP control server, scheduler
+  admin/                  module management, config, /lumi panel
 modules/                  bundled feature modules (toggleable)
+  <supermodule>/          manifest.json + index.ts
+    <submodule>/          manifest.json + entry + feature files
 packages/permits/         Built-in: permit evaluation, time-based, conditions
 packages/cache/           L1 LRU + Redis L2 cache, codec, single-flight
 packages/redis/           ioredis client, keys, TTLs, invalidation bus, locks
@@ -23,33 +25,32 @@ packages/scheduler/       distributed cron with Redis locks
 
 ## Three workspace roots, three responsibilities
 
-- `apps/*` — processes you run. They wire dependencies, own the process
-  lifecycle, and are never imported by anything else.
-- `modules/*` — first-party product features (toggleable). They are ordinary modules
-  loaded by the module runtime at boot, exactly like addons, and may not import the app.
+- `src/` — the process. It wires dependencies, owns the lifecycle, and is never
+  imported by anything else.
+- `modules/*` — first-party product features (toggleable). They are ordinary
+  modules loaded by the module runtime at boot, exactly like addons, and may not
+  import the app.
 - `packages/*` — reusable libraries with narrow, declared dependencies. They
   never import the app or bundled modules.
 
 ## Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
-- `apps/bot/src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
-- `apps/bot/src/admin/` — Module management, config, `/lumi` panel, owner commands
+- `src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
+- `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
-**Toggleable Modules** (enable/disable per guild via `/lumi` → Modules):
-All modules under `modules/` are toggleable:
-- `mod` — case-backed moderation (ban, kick, timeout, warn, purge, notes)
-- `leveling` — XP, ranks, role rewards, leaderboards, rank cards
-- `economy` — Currency, banking, shop, jobs, gambling, balance cards
-- `utility` — avatar, banner, whois, serverinfo, nick, purge
-- `tempvc` — Join-to-create voice channels with ownership
-- `logging` — Message/edit/delete/voice/mod logging
-- `welcome` — Join/leave messages, DM on join, auto-roles
-- `reactionroles` — Button/reaction role menus
-- `afk` — AFK status with mention replies
-- `onboarding` — Rules screening, channel hints
-- `sticky` — Sticky messages
-- `sheets` — Spreadsheet automation (auto-responses, FAQs)
+**Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
+Every module under `modules/` is a supermodule; its submodules toggle
+independently:
+- `community` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
+  `economy` (currency, banking, shop, jobs, gambling)
+- `moderation` — `mod` (case-backed ban, kick, timeout, warn, purge, notes,
+  lockdown, quarantine)
+- `logging` — `logs` (message, edit, delete, voice, moderation logging)
+- `security` — `antinuke`, `join-gate`, `verification`, `panic`, `backups`,
+  `betrayal`, `autorecovery`, `automod`
+- `utility` — `afk` (AFK status + mention replies), `tempvc` (join-to-create
+  voice channels), `info` (avatar, banner, whois, serverinfo, nick, purge)
 
 ## Dependency direction
 
@@ -57,25 +58,25 @@ All modules under `modules/` are toggleable:
 foundation (pino)
 redis <- cache
       <- db <- module-kit <- module-runtime <- downloader
-                                          <- apps/bot
+                                          <- src
 ui (discord.js builders) <- module-kit
-built-in services (core, admin) <- apps/bot
-toggleable modules (module-kit + db + redis + ui) <- apps/bot
+built-in services (core, admin) <- src
+toggleable modules (module-kit + db + redis + ui) <- src
 ```
 
 Rules:
 
 - `foundation` imports no other Lumi package.
-- `cache` and `db` never import `apps/bot` or `modules`.
-- `module-runtime` and `downloader` never import `apps/bot` or `modules`.
-- Only `apps/bot` constructs services and owns the process lifecycle.
-- Built-in services live in `apps/bot/src/` and are non-disableable.
-- Toggleable modules live in `modules/<name>/` and are ordinary modules:
-  discovered, validated, toggleable, reloadable.
+- `cache` and `db` never import `src` or `modules`.
+- `module-runtime` and `downloader` never import `src` or `modules`.
+- Only `src` constructs services and owns the process lifecycle.
+- Built-in services live in `src/` and are non-disableable.
+- Toggleable modules live in `modules/<supermodule>/<submodule>/` and are
+  ordinary modules: discovered, validated, toggleable, reloadable.
 
 ## Boot order
 
-1. `apps/bot/src/index.ts` creates the Discord client and logger.
+1. `src/index.ts` creates the Discord client and logger.
 2. `createCoreServices()` connects Redis, starts the invalidation bus, builds the
    cache namespaces, the Prisma handle, and repositories.
 3. The app builds `ModuleLoader`, `AddonInstaller`, then composes services.

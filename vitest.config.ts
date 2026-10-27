@@ -5,27 +5,17 @@ import { defineConfig } from "vitest/config";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 
-const workspaceAliases = ["packages", "modules"].flatMap((parent) =>
-  readdirSync(resolve(root, parent))
-    .map((name) => ({
-      find: `@lumi/${name}`,
-      replacement: resolve(root, parent, name, "src"),
-    }))
-    .filter((alias) => existsSync(alias.replacement)),
-);
+const packageAliases = readdirSync(resolve(root, "packages")).map((name) => ({
+  find: `@lumi/${name}`,
+  replacement: resolve(root, "packages", name, "src"),
+}));
 
 export default defineConfig({
   resolve: {
     alias: [
-      {
-        find: "@lumi/core",
-        replacement: resolve(root, "apps/bot/src/core/src"),
-      },
-      {
-        find: "@lumi/admin",
-        replacement: resolve(root, "apps/bot/src/admin/src"),
-      },
-      ...workspaceAliases,
+      { find: "@lumi/core", replacement: resolve(root, "src/core") },
+      { find: "@lumi/admin", replacement: resolve(root, "src/admin") },
+      ...packageAliases,
     ],
   },
 });

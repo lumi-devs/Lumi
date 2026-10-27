@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 
 COPY . .
 RUN bun install --production
-RUN bun build apps/bot/src/index.ts --target=bun --external canvas --outdir=dist
+RUN bun build src/index.ts --target=bun --external canvas --outdir=dist
 
 FROM docker.io/oven/bun:1-alpine AS runtime
 WORKDIR /app
