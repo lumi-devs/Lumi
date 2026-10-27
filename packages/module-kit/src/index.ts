@@ -7,7 +7,7 @@ export interface ModuleDefinition {
   emoji: string;
   description: string;
   version: string;
-  config: z.ZodObject<any>;
+  config: any;
   configFields: ConfigField[];
   commands: CommandDefinition[];
   listeners: ListenerDefinition[];

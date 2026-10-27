@@ -4,12 +4,12 @@ import { z } from "zod";
 const ModerationConfigSchema = z.object({
   quarantineRoleId: z.string().nullable().default(null),
   maxTargets: z.number().int().min(1).max(100).default(10),
-  immuneRoleIds: z.array(z.string()).default([]),
-  warnThresholds: z.record(z.object({
+  immuneRoleIds: z.array(z.string(), {}).default([]),
+  warnThresholds: z.record(z.string(), z.object({
     action: z.enum(["timeout", "kick", "ban"]),
     duration: z.number().int().optional(),
   })).default({}),
-});
+}, {});
 
 const ModerationSupermodule = defineModule({
   name: "moderation",

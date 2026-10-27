@@ -7,8 +7,8 @@ const LoggingConfigSchema = z.object({
   deleteLogChannel: z.string().nullable().default(null),
   voiceLogChannel: z.string().nullable().default(null),
   modLogChannel: z.string().nullable().default(null),
-  ignoredChannels: z.array(z.string()).default([]),
-});
+  ignoredChannels: z.array(z.string(), {}).default([]),
+}, {});
 
 const LoggingSupermodule = defineModule({
   name: "logging",

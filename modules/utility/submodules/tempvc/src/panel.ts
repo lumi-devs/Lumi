@@ -38,7 +38,7 @@ export const TempVcGeneratorSchema = z.object({
   channelId: z.string(),
   templateName: z.string().optional(),
   userLimit: z.number().int().min(0).max(99).optional(),
-});
+}, {});
 
 export const TempVcConfigSchema = z.object({
   categoryId: z.string().nullable().optional(),
@@ -51,7 +51,7 @@ export const TempVcConfigSchema = z.object({
   createCooldownMs: z.number().int().min(0).max(300000).default(10000),
   ownerLeaveDelete: z.boolean().default(true),
   generators: z.array(TempVcGeneratorSchema).default([]),
-});
+}, {});
 
 export type TempVcConfig = z.infer<typeof TempVcConfigSchema>;
 export type TempVcGenerator = z.infer<typeof TempVcGeneratorSchema>;

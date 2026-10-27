@@ -17,7 +17,7 @@ const AntiNukeConfigSchema = z.object({
   maxVanityChanges: z.number().int().min(1).max(10).default(1),
   maxPermissionGrants: z.number().int().min(1).max(10).default(1),
   maxQuarantineBypass: z.number().int().min(1).max(10).default(1),
-});
+}, {});
 
 export default defineModule({
   name: "security-antinuke",

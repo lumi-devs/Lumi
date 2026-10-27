@@ -14,7 +14,7 @@ describe("Module Kit", () => {
         config: z.object({
           setting1: z.string().default("default"),
           setting2: z.number().int().min(0).default(10),
-        }),
+        }, {}),
         configFields: [
           { key: "setting1", label: "Setting 1", type: "string", description: "A string setting" },
           { key: "setting2", label: "Setting 2", type: "number", description: "A number setting" },
@@ -46,9 +46,9 @@ describe("Module Kit", () => {
           stringSetting: z.string().default("value"),
           numberSetting: z.number().int().min(0).max(100).default(50),
           booleanSetting: z.boolean().default(true),
-          arraySetting: z.array(z.string()).default([]),
+          arraySetting: z.array(z.string(), {}).default([]),
           objectSetting: z.object({ key: z.string() }).optional(),
-        }),
+        }, {}),
         configFields: [],
         commands: [],
         listeners: [],
@@ -83,7 +83,7 @@ describe("Module Kit", () => {
         config: z.object({
           withDefault: z.string().default("default-value"),
           withoutDefault: z.string().optional(),
-        }),
+        }, {}),
         configFields: [],
         commands: [],
         listeners: [],

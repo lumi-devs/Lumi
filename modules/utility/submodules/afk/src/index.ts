@@ -36,7 +36,7 @@ const AfkConfigSchema = z.object({
   nickPrefix: z.string().default("[AFK] "),
   mentionReply: z.boolean().default(true),
   maxReasonLength: z.number().int().min(1).max(500).default(200),
-});
+}, {});
 
 const getAfkConfig = async (services: any, guildId: string) =>
   AfkConfigSchema.parse((await services.config.get(guildId, "afk")) ?? {});

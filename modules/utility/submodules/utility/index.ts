@@ -24,7 +24,7 @@ import { z } from "zod";
 const UtilityConfigSchema = z.object({
   purgeMaxMessages: z.number().int().min(1).max(100).default(100),
   nickMaxLength: z.number().int().min(1).max(32).default(32),
-});
+}, {});
 
 interface AvatarCardOptions {
   displayName: string;

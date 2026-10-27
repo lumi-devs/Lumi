@@ -815,12 +815,12 @@ const modModule: ModuleDefinition = defineModule({
   config: z.object({
     quarantineRoleId: z.string().nullable().optional(),
     maxTargets: z.number().int().min(1).max(100).default(10),
-    immuneRoleIds: z.array(z.string()).default([]),
-    warnThresholds: z.record(z.object({
+    immuneRoleIds: z.array(z.string(), {}).default([]),
+    warnThresholds: z.record(z.string(), z.object({
       action: z.enum(["timeout", "ban"]),
       duration: z.number().int().min(60).optional(),
     })).default({}),
-  }),
+  }, {}),
   configFields: [
     { key: "quarantineRoleId", label: "Quarantine Role", type: "role", description: "Role assigned when quarantined" },
     { key: "maxTargets", label: "Max Targets", type: "number", description: "Max members per command" },

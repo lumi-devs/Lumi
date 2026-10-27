@@ -36,9 +36,9 @@ const EconomyConfigSchema = z.object({
     price: z.number().int().min(1),
     type: z.enum(["role", "item", "custom"]),
     roleId: z.string().optional(),
-    customData: z.record(z.any()).optional(),
+    customData: z.record(z.string(), z.any()).optional(),
   })).default([]),
-});
+}, {});
 
 type EconomyConfig = z.infer<typeof EconomyConfigSchema>;
 

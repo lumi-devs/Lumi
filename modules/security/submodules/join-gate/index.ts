@@ -8,7 +8,7 @@ const JoinGateConfigSchema = z.object({
   raidWindowSeconds: z.number().int().min(5).max(300).default(30),
   raidAction: z.enum(["kick", "timeout", "quarantine"]).default("kick"),
   raidAccountType: z.enum(["all", "suspicious"]).default("all"),
-  raidWarnRoleIds: z.array(z.string()).default([]),
+  raidWarnRoleIds: z.array(z.string(), {}).default([]),
   filterNoAvatarEnabled: z.boolean().default(false),
   filterNoAvatarAction: z.enum(["log", "kick", "timeout", "quarantine"]).default("log"),
   filterMinAgeEnabled: z.boolean().default(false),
@@ -17,11 +17,11 @@ const JoinGateConfigSchema = z.object({
   filterUnverifiedBotEnabled: z.boolean().default(false),
   filterUnverifiedBotAction: z.enum(["log", "kick", "timeout", "quarantine"]).default("kick"),
   filterUsernamePatternEnabled: z.boolean().default(false),
-  filterUsernamePatterns: z.array(z.string()).default([]),
+  filterUsernamePatterns: z.array(z.string(), {}).default([]),
   filterUsernamePatternAction: z.enum(["log", "kick", "timeout", "quarantine"]).default("log"),
   filterAdvertisingEnabled: z.boolean().default(false),
   filterAdvertisingAction: z.enum(["log", "kick", "timeout", "quarantine"]).default("kick"),
-});
+}, {});
 
 export default defineModule({
   name: "security-join-gate",

@@ -38,7 +38,7 @@ const LevelingConfigSchema = z.object({
   levelFormula: z.enum(LevelFormulas).default("disgaea"),
   xpPerMessage: z.number().int().min(1).max(1000).default(15),
   cooldownSeconds: z.number().int().min(1).max(3600).default(60),
-  xpCurve: z.record(z.number()).default({}),
+  xpCurve: z.record(z.string(), z.number()).default({}),
   voiceEnabled: z.boolean().default(false),
   voiceXpPerMinute: z.number().int().min(1).max(1000).default(4),
   announceEnabled: z.boolean().default(true),
@@ -61,9 +61,9 @@ const LevelingConfigSchema = z.object({
     channelId: z.string(),
     multiplier: z.number().positive().default(1.5),
   })).default([]),
-  ignoredChannels: z.array(z.string()).default([]),
-  ignoredRoles: z.array(z.string()).default([]),
-});
+  ignoredChannels: z.array(z.string(), {}).default([]),
+  ignoredRoles: z.array(z.string(), {}).default([]),
+}, {});
 
 type LevelingConfig = z.infer<typeof LevelingConfigSchema>;
 

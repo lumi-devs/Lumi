@@ -26,19 +26,19 @@ const AutomodConfigSchema = z.object({
   lockdownMentionThreshold: z.number().int().min(0).max(10000).default(0),
   lockdownWindowSeconds: z.number().int().min(5).max(600).default(30),
   lockdownDurationMinutes: z.number().int().min(1).max(1440).default(10),
-  terms: z.array(z.string()).default([]),
-  regexRules: z.array(z.string()).default([]),
+  terms: z.array(z.string(), {}).default([]),
+  regexRules: z.array(z.string(), {}).default([]),
   blockInvites: z.boolean().default(false),
-  inviteAllowlist: z.array(z.string()).default([]),
+  inviteAllowlist: z.array(z.string(), {}).default([]),
   blockLinks: z.boolean().default(false),
-  linkAllowlist: z.array(z.string()).default([]),
+  linkAllowlist: z.array(z.string(), {}).default([]),
   maxMentions: z.number().int().min(0).max(50).default(0),
   maxCapsPercent: z.number().int().min(0).max(100).default(0),
   capsMinLength: z.number().int().min(1).max(500).default(12),
-  exemptRoles: z.array(z.string()).default([]),
+  exemptRoles: z.array(z.string(), {}).default([]),
   filterTimeoutMinutes: z.number().int().min(0).max(40320).default(0),
   logChannelId: z.string().nullable().default(null),
-});
+}, {});
 
 export default defineModule({
   name: "security-automod",

@@ -5,11 +5,11 @@ const BetrayalConfigSchema = z.object({
   enabled: z.boolean().default(false),
   defaultMinuteLimit: z.number().int().min(1).max(100).default(8),
   defaultHourLimit: z.number().int().min(1).max(1000).default(40),
-  actions: z.record(z.object({
+  actions: z.record(z.string(), z.object({
     minuteLimit: z.number().int().min(1).max(100).optional(),
     hourLimit: z.number().int().min(1).max(1000).optional(),
   })).default({}),
-});
+}, {});
 
 export default defineModule({
   name: "security-betrayal",

@@ -28,9 +28,9 @@ const LoggingConfigSchema = z.object({
   deleteLogChannel: z.string().nullable().optional(),
   voiceLogChannel: z.string().nullable().optional(),
   modLogChannel: z.string().nullable().optional(),
-  ignoredChannels: z.array(z.string()).default([]),
+  ignoredChannels: z.array(z.string(), {}).default([]),
   webhookUrl: z.string().nullable().optional(),
-});
+}, {});
 
 type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
 

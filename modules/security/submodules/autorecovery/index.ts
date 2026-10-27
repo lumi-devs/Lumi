@@ -5,7 +5,7 @@ const AutoRecoveryConfigSchema = z.object({
   enabled: z.boolean().default(false),
   triggerOnPanic: z.boolean().default(true),
   triggerOnNuke: z.boolean().default(false),
-});
+}, {});
 
 export default defineModule({
   name: "security-autorecovery",

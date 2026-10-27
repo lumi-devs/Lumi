@@ -17,7 +17,7 @@
     "@lumi/db": "workspace:*",
     "@lumi/cache": "workspace:*",
     "discord.js": "^14.14.0",
-    "zod": "^3.22.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0"
