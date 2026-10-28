@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  PermissionFlagsBits,
   ButtonStyle,
   type ButtonInteraction,
 } from "discord.js";
@@ -16,14 +15,12 @@ import {
   makeCard,
   makeErrorCard,
   makeInfoCard,
-  makeSuccessCard,
   row,
 } from "@lumi/ui";
 import { z } from "zod";
 
 const UtilityConfigSchema = z.object({
   purgeMaxMessages: z.number().int().min(1).max(100).default(100),
-  nickMaxLength: z.number().int().min(1).max(32).default(32),
 }, {});
 
 interface AvatarCardOptions {
@@ -185,37 +182,6 @@ const serverinfoDef: CommandDefinition = {
   },
 };
 
-const nickDef: CommandDefinition = {
-  data: new SlashCommandBuilder()
-    .setName("nick")
-    .setDescription("Change a user's nickname")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames)
-    .addUserOption(o => o.setName("user").setDescription("User to rename").setRequired(true))
-    .addStringOption(o => o.setName("nickname").setDescription("New nickname (leave empty to reset)").setRequired(false).setMaxLength(32)),
-  requiredPermit: "mod.nick",
-  async execute(interaction) {
-    const target = interaction.options.getUser("user", true);
-    const nickname = interaction.options.getString("nickname");
-    const guild = interaction.guild!;
-
-    const member = await guild.members.fetch(target.id).catch(() => null);
-    if (!member) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Not found", "User is not in this server")));
-      return;
-    }
-    if (!member.manageable) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Cannot change", "Cannot change this user's nickname (higher role)")));
-      return;
-    }
-
-    await member.setNickname(nickname ?? null, `Changed by ${interaction.user.tag}`);
-    await interaction.reply(ephemeralCard(makeSuccessCard("Nickname changed", [
-      `**User**\n${target.tag} (\`${target.id}\`)`,
-      `**Nickname**\n${nickname ? `\`${nickname}\`` : "*Reset*"}`,
-    ])));
-  },
-};
-
 const roleinfoDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("roleinfo")
@@ -369,14 +335,13 @@ const utilityModule: ModuleDefinition = defineModule({
   name: "utility-info",
   displayName: "Utility",
   emoji: "🔧",
-  description: "Avatar, banner, whois, serverinfo, nick, and info commands",
+  description: "Avatar, banner, whois, serverinfo, and info commands",
   version: "2.0.0",
   config: UtilityConfigSchema,
   configFields: [
     { key: "purgeMaxMessages", label: "Max Purge Messages", type: "number", description: "Maximum messages per purge (1-100)" },
-    { key: "nickMaxLength", label: "Max Nickname Length", type: "number", description: "Maximum nickname length" },
   ],
-  commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, nickDef, roleinfoDef, channelinfoDef, emojiinfoDef],
+  commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, roleinfoDef, channelinfoDef, emojiinfoDef],
   listeners: [avatarViewListener],
   tasks: [],
   async onLoad(_services) {

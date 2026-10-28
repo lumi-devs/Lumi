@@ -1,0 +1,29 @@
+{
+  "apiVersion": 2,
+  "name": "utility-nick",
+  "displayName": "Nicknames",
+  "emoji": "📛",
+  "description": "Nickname changes with hierarchy checks and optional self-service",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "nick",
+  "configFields": [
+    {
+      "key": "allowSelfNick",
+      "label": "Allow Self Changes",
+      "type": "boolean",
+      "description": "Let members with the mod.nick permit change their own nickname",
+      "default": false
+    },
+    {
+      "key": "maxLength",
+      "label": "Max Nickname Length",
+      "type": "number",
+      "description": "Maximum nickname length",
+      "default": 32
+    }
+  ],
+  "dependencies": {
+    "utility": "^2.0.0"
+  }
+}

@@ -5,7 +5,7 @@ const UtilitySupermodule = defineModule({
   name: "utility",
   displayName: "Utility",
   emoji: "🔧",
-  description: "Utility tools: AFK, temporary voice, and info commands",
+  description: "Utility tools: AFK, temporary voice, nicknames, and info commands",
   version: "2.0.0",
   config: z.object({}, {}),
   configFields: [],

@@ -13,8 +13,9 @@ Every module under `modules/` is a **supermodule** that contains independently-t
 
 ### Utility
 - `utility-afk` — AFK status with mention replies and nickname prefix
+- `utility-nick` — Nickname changes with role hierarchy checks and optional self-service
 - `utility-tempvc` — Join-to-create temporary voice channels with ownership controls
-- `utility-info` — Avatar, banner, whois, serverinfo, nick, purge
+- `utility-info` — Avatar, banner, whois, serverinfo, and info commands
 
 ### Community
 - `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
