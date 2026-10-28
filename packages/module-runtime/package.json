@@ -14,14 +14,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lumi/module-kit": "workspace:*",
-    "@lumi/cache": "workspace:*",
-    "@lumi/db": "workspace:*",
-    "@lumi/observability": "workspace:*",
-    "semver": "^7.8.5"
+    "@lumi/module-kit": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "@types/semver": "^7.8.0"
+    "@types/node": "^26.6.5"
   }
 }

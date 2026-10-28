@@ -54,8 +54,6 @@ import {
   type MessageModalSubmit,
 } from "./common.js";
 
-export type { HubView } from "./common.js";
-
 export interface HubServices {
   prisma: any;
   redis: any;

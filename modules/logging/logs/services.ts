@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
 import type { CardReply } from "@lumi/ui";
 
-export interface LoggingConfig {
+interface LoggingConfig {
   messageLogChannel?: string | null;
   editLogChannel?: string | null;
   deleteLogChannel?: string | null;

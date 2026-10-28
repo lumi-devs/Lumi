@@ -4,9 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./repositories": "./dist/repositories/index.js",
-    "./prisma": "./dist/prisma.js"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -17,7 +15,6 @@
   },
   "dependencies": {
     "@prisma/client": "^7.10.1",
-    "zod": "^4.6.7",
     "@prisma/adapter-pg": "^7.10.1",
     "pg": "^8.23.1"
   },

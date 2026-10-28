@@ -6,7 +6,7 @@ export function pagesOf<T>(items: readonly T[], perPage: number): T[][] {
   return pages;
 }
 
-export interface PageSlice<T> {
+interface PageSlice<T> {
   items: T[];
   page: number;
   totalPages: number;

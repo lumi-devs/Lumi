@@ -4,7 +4,7 @@ import {
 import { MessageFlags } from "discord.js";
 import { makeCard, type CardReply } from "@lumi/ui";
 
-export type AfkStatus = "set" | "updated" | "already";
+type AfkStatus = "set" | "updated" | "already";
 
 const StatusTitles: Record<AfkStatus, string> = {
   set: "**💤 AFK Set**",

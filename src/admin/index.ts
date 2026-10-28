@@ -3,9 +3,4 @@ export { moduleCommands } from "./commands/index.js";
 export { ModuleManager } from "./services/ModuleManager.js";
 export { ConfigService } from "./services/ConfigService.js";
 export { PermitPanel } from "./panel/PermitPanel.js";
-export {
-  renderHubPanel,
-  handleHubInteraction,
-  type HubView,
-  type HubServices,
-} from "./panel/HubPanel.js";
+export { handleHubInteraction } from "./panel/HubPanel.js";

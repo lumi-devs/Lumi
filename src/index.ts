@@ -475,7 +475,7 @@ async function main() {
       return;
     }
 
-    const syntheticInteraction = createSyntheticInteraction(message, command, args, prefix, services);
+    const syntheticInteraction = createSyntheticInteraction(message, command, args);
     try {
       await command.execute(syntheticInteraction as any, services);
     } catch (err) {
@@ -509,8 +509,6 @@ async function main() {
     message: any,
     command: any,
     args: string[],
-    _prefix: string,
-    _services: any,
   ) {
     const guild = message.guild;
     const member = message.member;

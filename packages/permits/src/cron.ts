@@ -141,21 +141,3 @@ function getTimezoneOffset(timezone: string, date: Date): number {
     return 0;
   }
 }
-
-/**
- * Get the next execution time for a cron expression after a given date
- */
-export function nextCronExecution(cron: string, after: Date, timezone?: string): Date | null {
-  const maxIterations = 366 * 24 * 60; // Max 1 year of minutes
-  
-  let current = new Date(after.getTime() + 60000); // Start from next minute
-  
-  for (let i = 0; i < maxIterations; i++) {
-    if (matchesCron(cron, current, timezone)) {
-      return current;
-    }
-    current = new Date(current.getTime() + 60000);
-  }
-  
-  return null;
-}

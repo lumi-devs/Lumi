@@ -28,7 +28,7 @@ export type MessageModalSubmit = ModalSubmitInteraction & {
   update(reply: CardReply): Promise<unknown>;
 };
 
-export const HubTabs: Tab[] = [
+const HubTabs: Tab[] = [
   { id: "home", label: "Overview", emoji: "🏠" },
   { id: "modules", label: "Modules", emoji: "⚙️" },
   { id: "permits", label: "Permissions", emoji: "🛡️" },

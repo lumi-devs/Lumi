@@ -2,12 +2,12 @@ import type { ModuleSummary } from "@lumi/module-runtime";
 
 export const ModulesPerPage = 4;
 
-export interface SupermoduleItem extends ModuleSummary {
+interface SupermoduleItem extends ModuleSummary {
   enabled: boolean;
   submoduleCount: number;
 }
 
-export interface SubmoduleItem extends ModuleSummary {
+interface SubmoduleItem extends ModuleSummary {
   enabled: boolean;
 }
 

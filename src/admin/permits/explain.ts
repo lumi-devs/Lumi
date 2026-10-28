@@ -1,13 +1,13 @@
 import type { EvaluatedPermit, PermitTierExplanation } from "@lumi/permits";
 import { AccentColors, makeCard, type CardReply } from "@lumi/ui";
 
-export function verdictIcon(verdict: PermitTierExplanation["verdict"]): string {
+function verdictIcon(verdict: PermitTierExplanation["verdict"]): string {
   if (verdict === "allow") return "✅";
   if (verdict === "deny") return "❌";
   return "➡️";
 }
 
-export function verdictLabel(
+function verdictLabel(
   verdict: PermitTierExplanation["verdict"],
 ): string {
   if (verdict === "allow") return "Allowed";
@@ -15,14 +15,14 @@ export function verdictLabel(
   return "Passed";
 }
 
-export interface ExplanationCardOptions {
+interface ExplanationCardOptions {
   userId: string;
   node: string;
   channelId: string | undefined;
   actionRows: any[];
 }
 
-export interface AllExplanationCardOptions {
+interface AllExplanationCardOptions {
   userId: string;
   actionRows: any[];
 }

@@ -4,7 +4,7 @@ import { roundRect } from "@lumi/ui";
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;
 
-export interface RankCardData {
+interface RankCardData {
   username: string;
   discriminator?: string;
   avatarUrl: string;

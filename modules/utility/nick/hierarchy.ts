@@ -1,11 +1,11 @@
-export interface NickHierarchyInput {
+interface NickHierarchyInput {
   actorTopRolePosition: number;
   targetTopRolePosition: number;
   actorIsGuildOwner?: boolean;
   targetIsGuildOwner?: boolean;
 }
 
-export type NickHierarchyDecision =
+type NickHierarchyDecision =
   | { allowed: true }
   | { allowed: false; reason: string };
 

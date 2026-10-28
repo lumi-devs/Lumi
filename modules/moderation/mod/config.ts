@@ -1,8 +1,8 @@
 import { ModerationConfigKey } from "./constants.js";
 
-export type WarnAction = "timeout" | "kick" | "ban";
+type WarnAction = "timeout" | "kick" | "ban";
 
-export interface WarnThreshold {
+interface WarnThreshold {
   action: WarnAction;
   duration: number | null;
 }
@@ -14,7 +14,7 @@ export interface ModerationConfig {
   warnThresholds: Record<string, WarnThreshold>;
 }
 
-export const ModerationDefaults: ModerationConfig = {
+const ModerationDefaults: ModerationConfig = {
   quarantineRoleId: null,
   maxTargets: 10,
   immuneRoleIds: [],

@@ -12,7 +12,7 @@ import {
 } from "@lumi/ui";
 import type { TempVcConfig, TempVcGenerator } from "./panel.js";
 
-export type MemberAction =
+type MemberAction =
   | "kick"
   | "trust"
   | "untrust"

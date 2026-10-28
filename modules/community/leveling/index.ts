@@ -37,7 +37,7 @@ import {
 import { grantVoiceXp } from "./voice-xp.js";
 import { LevelingModuleName } from "./constants.js";
 
-async function addXp(services: any, guildId: string, userId: string, xp: number, config: LevelingConfig) {
+async function addXp(services: any, guildId: string, userId: string, xp: number, config: LevelingConfig): Promise<void> {
   const user = await services.db.prisma.levelingUser.upsert({
     where: { guildId_userId: { guildId, userId } },
     update: { 
@@ -55,8 +55,8 @@ async function addXp(services: any, guildId: string, userId: string, xp: number,
     },
   });
 
-  if (!user) return { leveledUp: false, newLevel: 0, oldLevel: 0 };
-  
+  if (!user) return;
+
   const totalXp = Number(user.totalXp);
   const { level: newLevel } = levelForTotalXp(config.levelFormula, totalXp);
   
@@ -88,11 +88,7 @@ async function addXp(services: any, guildId: string, userId: string, xp: number,
         }
       }
     }
-
-    return { leveledUp: newLevel > user.level, newLevel, oldLevel: user.level };
   }
-
-  return { leveledUp: false, newLevel: user.level, oldLevel: user.level };
 }
 
 const rankDef: CommandDefinition = {

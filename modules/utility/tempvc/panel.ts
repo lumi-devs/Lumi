@@ -293,7 +293,7 @@ async function saveTempVcConfig(
   }
 }
 
-export async function resolveGuildVoiceChannel(
+async function resolveGuildVoiceChannel(
   services: any,
   guildId: string,
   channelId: string,
@@ -324,7 +324,7 @@ function controlState(
   };
 }
 
-export function buildControlPanel(
+function buildControlPanel(
   channel: VoiceChannel,
   record: TempVcRecord,
   notice?: string,
@@ -627,7 +627,7 @@ export async function createTempVoiceChannel(
   return channel;
 }
 
-export async function deleteTempVoiceChannel(
+async function deleteTempVoiceChannel(
   services: any,
   guildId: string,
   channelId: string,

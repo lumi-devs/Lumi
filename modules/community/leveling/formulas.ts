@@ -82,7 +82,7 @@ export function levelForTotalXp(
   return { level, xp: remaining };
 }
 
-export interface LevelProgress {
+interface LevelProgress {
   level: number;
   xpIntoLevel: number;
   xpForNext: number;

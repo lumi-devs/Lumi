@@ -8,7 +8,7 @@ export {
 
 export { PermitRepository } from "./repository.js";
 
-export { parseCron, matchesCron, nextCronExecution } from "./cron.js";
+export { parseCron, matchesCron } from "./cron.js";
 
 export type { 
   Permit, 

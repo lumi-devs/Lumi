@@ -6,7 +6,7 @@ function sessionKey(guildId: string, userId: string): string {
   return `${guildId}:${userId}`;
 }
 
-export function voiceSessionStart(
+function voiceSessionStart(
   guildId: string,
   userId: string,
   nowMs: number,
@@ -14,7 +14,7 @@ export function voiceSessionStart(
   voiceSessions.set(sessionKey(guildId, userId), nowMs);
 }
 
-export function voiceSessionEnd(
+function voiceSessionEnd(
   guildId: string,
   userId: string,
   nowMs: number,

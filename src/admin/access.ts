@@ -1,7 +1,7 @@
 import { PermissionFlagsBits } from "discord.js";
 import type { PermitRepository } from "@lumi/permits";
 
-export interface AdminAccessOptions {
+interface AdminAccessOptions {
   guildId: string;
   userId: string;
   roleIds: string[];

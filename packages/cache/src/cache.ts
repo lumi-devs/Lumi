@@ -43,7 +43,6 @@ interface L1Entry<T> {
 
 interface LoadFlight<T> {
   promise: Promise<T | null>;
-  discarded: boolean;
 }
 
 export class Cache<T = any> implements NamespacedCache<T> {
@@ -78,8 +77,6 @@ export class Cache<T = any> implements NamespacedCache<T> {
     this.invalidation.subscribe("", (keys) => {
       for (const key of keys) {
         this.l1.delete(key);
-        const flight = this.flights.get(key);
-        if (flight) flight.discarded = true;
       }
     });
     
@@ -191,16 +188,12 @@ export class Cache<T = any> implements NamespacedCache<T> {
         
         this.metrics?.recordFillDuration(this.namespacePrefix.slice(0, -1) || "default", Date.now() - startTime);
         return value;
-      } catch (error) {
-        const flight = this.flights.get(fullKey);
-        if (flight) flight.discarded = true;
-        throw error;
       } finally {
         this.flights.delete(fullKey);
       }
     })();
 
-    this.flights.set(fullKey, { promise: flightPromise, discarded: false });
+    this.flights.set(fullKey, { promise: flightPromise });
       return await flightPromise;
   }
 

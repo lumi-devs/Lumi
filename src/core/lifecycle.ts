@@ -1,50 +1,15 @@
 import type { Client } from "discord.js";
 
-export interface HealthCheck {
-  name: string;
-  check: () => Promise<{ healthy: boolean; details?: any }>;
-}
-
-export class HealthMonitor {
-  private checks: HealthCheck[] = [];
-
-  register(check: HealthCheck): void {
-    this.checks.push(check);
-  }
-
-  async runChecks(): Promise<{ healthy: boolean; results: Array<{ name: string; healthy: boolean; details?: any }> }> {
-    const results = await Promise.all(
-      this.checks.map(async (check) => {
-        try {
-          const result = await check.check();
-          return { name: check.name, ...result };
-        } catch (error) {
-          return { name: check.name, healthy: false, details: String(error) };
-        }
-      })
-    );
-
-    const healthy = results.every((r) => r.healthy);
-    return { healthy, results };
-  }
-}
-
-export function createHealthMonitor(): HealthMonitor {
-  return new HealthMonitor();
-}
-
-export interface BootOptions {
+interface BootOptions {
   token: string;
   client: Client;
-  onReady?: () => Promise<void>;
 }
 
 export async function boot(options: BootOptions): Promise<void> {
-  const { token, client, onReady } = options;
+  const { token, client } = options;
 
-  client.once("clientReady", async () => {
+  client.once("clientReady", () => {
     console.log(`Logged in as ${client.user?.tag}`);
-    if (onReady) await onReady();
   });
 
   client.on("error", (error) => {

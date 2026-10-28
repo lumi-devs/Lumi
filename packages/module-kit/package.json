@@ -4,9 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./contracts": "./dist/contracts.js",
-    "./define": "./dist/define.js"
+    ".": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -14,10 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^4.6.7",
     "discord.js": "^14.27.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.5",
+    "zod": "^4.6.7"
   }
 }

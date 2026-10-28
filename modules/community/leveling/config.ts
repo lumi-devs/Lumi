@@ -7,12 +7,12 @@ export interface LevelReward {
   removePrevious: boolean;
 }
 
-export interface RoleMultiplier {
+interface RoleMultiplier {
   roleId: string;
   multiplier: number;
 }
 
-export interface ChannelMultiplier {
+interface ChannelMultiplier {
   channelId: string;
   multiplier: number;
 }
@@ -41,7 +41,7 @@ export interface LevelingConfig {
 
 export const AnnounceMessageDefault = "{user} reached level {level}!";
 
-export const LevelingDefaults: LevelingConfig = {
+const LevelingDefaults: LevelingConfig = {
   levelFormula: "disgaea",
   xpPerMessage: 15,
   cooldownSeconds: 60,

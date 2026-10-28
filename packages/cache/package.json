@@ -13,8 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "devalue": "^6.0.3",
-    "ioredis": "^6.0.0"
+    "devalue": "^6.0.3"
   },
   "devDependencies": {
     "@types/node": "^26.6.5"
