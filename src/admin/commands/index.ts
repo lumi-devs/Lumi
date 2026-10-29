@@ -1,10 +1,10 @@
+import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import {
-  SlashCommandBuilder,
   type ChatInputCommandInteraction,
+  SlashCommandBuilder,
 } from "discord.js";
 import { renderHubPanel } from "../panel/hubViews.js";
 import type { HubServices } from "../panel/services.js";
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { permitCommand } from "./permit.js";
 
 export const moduleCommands = [

@@ -1,5 +1,5 @@
-import { createCanvas, loadImage, type CanvasRenderingContext2D } from "canvas";
 import { roundRect } from "@lumi/ui";
+import { type CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
 
 const CARD_WIDTH = 900;
 const CARD_HEIGHT = 600;

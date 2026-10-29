@@ -1,14 +1,7 @@
-import {
-  ActionRowBuilder,
-  ButtonStyle,
-  ChannelType,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  type MessageActionRowComponentBuilder,
-} from "discord.js";
+import type { ConfigField } from "@lumi/module-runtime";
 import {
   AccentColors,
+  type CardReply,
   createActionButton,
   createChannelSelectMenu,
   createRoleSelectMenu,
@@ -17,12 +10,19 @@ import {
   makeErrorCard,
   row,
   settingRow,
-  type CardReply,
 } from "@lumi/ui";
-import type { ConfigField } from "@lumi/module-runtime";
-import { cut, panelOptions, type HubInteraction } from "./common.js";
-import type { HubServices } from "./services.js";
+import {
+  ActionRowBuilder,
+  ButtonStyle,
+  ChannelType,
+  type MessageActionRowComponentBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
+import { backButton, cut, type HubInteraction, panelOptions } from "./common.js";
 import { fieldPages } from "./configFields.js";
+import type { HubServices } from "./services.js";
 
 const FieldsPerPage = 4;
 const MaxOptions = 25;
@@ -61,10 +61,6 @@ function formatValue(field: ConfigField, value: FieldValue): string {
     default:
       return `\`${cut(String(value), 120)}\``;
   }
-}
-
-function isBoolean(field: ConfigField): boolean {
-  return field.type === "boolean";
 }
 
 export function isSelectField(field: ConfigField): boolean {
@@ -156,7 +152,7 @@ export async function renderModuleDetail(
   const sections = current.map((field) => {
     const value = fieldValue(field, config);
     const lines = fieldLine(field, value);
-    if (isBoolean(field)) {
+    if (field.type === "boolean") {
       const on = Boolean(value);
       return settingRow(lines, {
         customId: `lumi:modbool:${moduleName}:${field.key}:${safeSection}`,
@@ -204,12 +200,7 @@ export async function renderModuleDetail(
         emoji: "↩️",
         style: ButtonStyle.Secondary,
       }),
-      createActionButton({
-        customId: "lumi:mods:0",
-        label: "Back",
-        emoji: "⬅️",
-        style: ButtonStyle.Secondary,
-      }),
+      backButton("lumi:mods:0"),
     ),
   );
 
@@ -335,12 +326,7 @@ export async function renderFieldEditor(
         style: ButtonStyle.Secondary,
         disabled: value === undefined || value === null || value === "",
       }),
-      createActionButton({
-        customId: `lumi:modopen:${moduleName}:${section}`,
-        label: "Back",
-        emoji: "⬅️",
-        style: ButtonStyle.Secondary,
-      }),
+      backButton(`lumi:modopen:${moduleName}:${section}`),
     ),
   );
 
@@ -352,17 +338,14 @@ export async function renderFieldEditor(
       `**Current value:** ${formatValue(field, value)}`,
       `-# Pick a value below, or clear it to reset.`,
     ],
-    {
-      breadcrumbs: ["Hub", "Modules", loaded.manifest.displayName, field.label],
-      ...panelOptions(
-        interaction,
-        "modules",
-        ["Hub", "Modules", loaded.manifest.displayName, field.label],
-        rows,
-        undefined,
-        false,
-      ),
-    },
+    panelOptions(
+      interaction,
+      "modules",
+      ["Hub", "Modules", loaded.manifest.displayName, field.label],
+      rows,
+      undefined,
+      false,
+    ),
   );
 }
 

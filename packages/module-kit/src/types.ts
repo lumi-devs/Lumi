@@ -1,18 +1,4 @@
-import type { ChatInputCommandInteraction, AutocompleteInteraction, } from "discord.js";
-
-export interface ConfigField {
-  key: string;
-  label: string;
-  type: "boolean" | "number" | "string" | "channel" | "role" | "multi-channel" | "multi-role" | "json" | "select" | "multi-string";
-  description?: string;
-  required?: boolean;
-  default?: unknown;
-  choices?: string[];
-  channelTypes?: number[];
-  category?: string;
-  min?: number;
-  max?: number;
-}
+import type { AutocompleteInteraction, ChatInputCommandInteraction, } from "discord.js";
 
 export interface ModuleServices {
   db: any;

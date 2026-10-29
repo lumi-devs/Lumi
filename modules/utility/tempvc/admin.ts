@@ -1,29 +1,30 @@
+import { isSnowflake } from "@lumi/foundation";
 import {
   ActionRowBuilder,
+  type ModalActionRowComponentBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  type ModalActionRowComponentBuilder,
 } from "discord.js";
+import { canUseTempVcAdmin } from "./access.js";
+import { getTempVcConfig, saveTempVcConfig } from "./config.js";
+import {
+  stripPrefix,
+  TempVcIds,
+  TempVcPrefixes,
+} from "./ids.js";
+import {
+  type TempVcConfig,
+  TempVcConfigSchema,
+  type TempVcGenerator,
+} from "./panel.js";
+import { replyError, showCard } from "./reply.js";
 import {
   adminPanelCard,
   configPanelCard,
   generatorManageCard,
   generatorRemoveCard,
 } from "./ui-admin.js";
-import { isSnowflake } from "@lumi/foundation";
-import {
-  TempVcIds,
-  TempVcPrefixes,
-  stripPrefix,
-} from "./ids.js";
-import {
-  TempVcConfigSchema,
-  type TempVcConfig,
-} from "./panel.js";
-import { getTempVcConfig, saveTempVcConfig } from "./config.js";
-import { canUseTempVcAdmin } from "./access.js";
-import { replyError, showCard } from "./reply.js";
 
 async function showAdminPanel(
   interaction: any,
@@ -37,26 +38,40 @@ async function showAdminPanel(
   );
 }
 
+async function loadGenerator(
+  interaction: any,
+  services: any,
+  generatorId: string,
+): Promise<{ config: TempVcConfig; generator: TempVcGenerator } | null> {
+  const config = await getTempVcConfig(services, interaction.guildId);
+  const generator = config.generators.find(
+    (item) => item.channelId === generatorId,
+  );
+  if (!generator) {
+    await replyError(
+      interaction,
+      "Generator Missing",
+      "That generator is no longer configured.",
+    );
+    return null;
+  }
+  return { config, generator };
+}
+
 async function showGeneratorPanel(
   interaction: any,
   services: any,
   generatorId: string,
   notice?: string,
 ): Promise<void> {
-  const config = await getTempVcConfig(services, interaction.guildId);
-  const generator = config.generators.find(
-    (item) => item.channelId === generatorId,
-  );
-  if (!generator) {
-    await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
-    return;
-  }
+  const loaded = await loadGenerator(interaction, services, generatorId);
+  if (!loaded) return;
   await showCard(
     interaction,
     generatorManageCard(
       interaction.guild ?? null,
-      generator,
-      config,
+      loaded.generator,
+      loaded.config,
       notice,
     ),
   );
@@ -263,14 +278,9 @@ export async function handleAdminInteraction(
 
   const adminRename = stripPrefix(customId, TempVcPrefixes.adminModalRename);
   if (adminRename) {
-    const config = await getTempVcConfig(services, interaction.guildId);
-    const generator = config.generators.find(
-      (item) => item.channelId === adminRename,
-    );
-    if (!generator) {
-      await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
-      return;
-    }
+    const loaded = await loadGenerator(interaction, services, adminRename);
+    if (!loaded) return;
+    const { config, generator } = loaded;
     const value = String(
       interaction.fields.getTextInputValue("value") ?? "",
     ).trim();
@@ -295,14 +305,9 @@ export async function handleAdminInteraction(
 
   const adminLimit = stripPrefix(customId, TempVcPrefixes.adminModalLimit);
   if (adminLimit) {
-    const config = await getTempVcConfig(services, interaction.guildId);
-    const generator = config.generators.find(
-      (item) => item.channelId === adminLimit,
-    );
-    if (!generator) {
-      await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
-      return;
-    }
+    const loaded = await loadGenerator(interaction, services, adminLimit);
+    if (!loaded) return;
+    const { config, generator } = loaded;
     const raw = String(interaction.fields.getTextInputValue("value") ?? "").trim();
     const limit = Number.parseInt(raw, 10);
     if (!Number.isInteger(limit) || limit < 0 || limit > 99) {
@@ -364,17 +369,11 @@ export async function handleAdminInteraction(
 
   const adminRemove = stripPrefix(customId, TempVcPrefixes.adminRemove);
   if (adminRemove) {
-    const config = await getTempVcConfig(services, interaction.guildId);
-    const generator = config.generators.find(
-      (item) => item.channelId === adminRemove,
-    );
-    if (!generator) {
-      await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
-      return;
-    }
+    const loaded = await loadGenerator(interaction, services, adminRemove);
+    if (!loaded) return;
     await showCard(
       interaction,
-      generatorRemoveCard(interaction.guild ?? null, generator),
+      generatorRemoveCard(interaction.guild ?? null, loaded.generator),
     );
     return;
   }

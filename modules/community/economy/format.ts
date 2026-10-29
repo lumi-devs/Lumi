@@ -1,5 +1,5 @@
-import type { ChatInputCommandInteraction, Guild } from "discord.js";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import type { ChatInputCommandInteraction, Guild } from "discord.js";
 
 export function formatMoney(symbol: string, amount: bigint | number): string {
   return `${symbol} **${amount.toLocaleString()}**`;

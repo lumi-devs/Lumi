@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 
 const connectionString =
@@ -32,4 +32,4 @@ export async function disconnectDatabase(): Promise<void> {
   }
 }
 
-export type { PrismaClient, Prisma } from "@prisma/client";
+export type { Prisma, PrismaClient } from "@prisma/client";

@@ -1,3 +1,13 @@
+import { isBotOwner } from "@lumi/permits";
+import {
+  type CardReply,
+  createActionButton,
+  createStringSelectMenu,
+  makeCard,
+  makeEmptyCard,
+  row,
+  settingRow,
+} from "@lumi/ui";
 import {
   ActionRowBuilder,
   ButtonStyle,
@@ -5,20 +15,10 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  createActionButton,
-  createStringSelectMenu,
-  makeCard,
-  makeEmptyCard,
-  row,
-  settingRow,
-  type CardReply,
-} from "@lumi/ui";
-import { isBotOwner } from "@lumi/permits";
-import type { HubServices } from "./services.js";
-import { cut, pageRow, panelOptions, type HubInteraction } from "./common.js";
+import { backButton, cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
 import { ModulesPerPage } from "./modules.js";
 import { paginate } from "./pages.js";
+import type { HubServices } from "./services.js";
 
 export type AddonView =
   | { kind: "home" }
@@ -86,14 +86,7 @@ export function addRepoModal(): ModalBuilder {
 }
 
 function backRow(): ReturnType<typeof row> {
-  return row(
-    createActionButton({
-      customId: "lumi:addon:home",
-      label: "Back",
-      emoji: "◀️",
-      style: ButtonStyle.Secondary,
-    }),
-  );
+  return row(backButton("lumi:addon:home", "Back", "◀️"));
 }
 
 function notOwnerCard(interaction: HubInteraction): CardReply {
@@ -181,12 +174,7 @@ async function renderRepos(
         emoji: "➕",
         style: ButtonStyle.Success,
       }),
-      createActionButton({
-        customId: "lumi:addon:home",
-        label: "Back",
-        emoji: "◀️",
-        style: ButtonStyle.Secondary,
-      }),
+      backButton("lumi:addon:home", "Back", "◀️"),
     ),
   ]);
 
@@ -274,12 +262,7 @@ async function renderRepo(
             style: ButtonStyle.Danger,
             disabled: repo.installed > 0,
           }),
-          createActionButton({
-            customId: "lumi:addon:repos",
-            label: "Back",
-            emoji: "◀️",
-            style: ButtonStyle.Secondary,
-          }),
+          backButton("lumi:addon:repos", "Back", "◀️"),
         ),
       ]),
     },
@@ -313,12 +296,7 @@ async function renderBrowse(
           emoji: "🔗",
           style: ButtonStyle.Secondary,
         }),
-        createActionButton({
-          customId: "lumi:addon:repos",
-          label: "All Repositories",
-          emoji: "◀️",
-          style: ButtonStyle.Secondary,
-        }),
+        backButton("lumi:addon:repos", "All Repositories", "◀️"),
       ),
     ],
   );
@@ -377,12 +355,7 @@ async function renderInstalled(
         label: "Repositories",
         emoji: "🔗",
       }),
-      createActionButton({
-        customId: "lumi:addon:home",
-        label: "Back",
-        emoji: "◀️",
-        style: ButtonStyle.Secondary,
-      }),
+      backButton("lumi:addon:home", "Back", "◀️"),
     ),
   ]);
 
@@ -477,14 +450,7 @@ async function renderManage(
             style: ButtonStyle.Danger,
           }),
         ),
-        row(
-          createActionButton({
-            customId: "lumi:addon:installed",
-            label: "Back",
-            emoji: "◀️",
-            style: ButtonStyle.Secondary,
-          }),
-        ),
+        row(backButton("lumi:addon:installed", "Back", "◀️")),
       ]),
     },
   );
@@ -516,12 +482,7 @@ async function renderAutoUpdate(
             emoji: auto.enabled ? "⏸️" : "▶️",
             style: auto.enabled ? ButtonStyle.Danger : ButtonStyle.Success,
           }),
-          createActionButton({
-            customId: "lumi:addon:home",
-            label: "Back",
-            emoji: "◀️",
-            style: ButtonStyle.Secondary,
-          }),
+          backButton("lumi:addon:home", "Back", "◀️"),
         ),
         row(
           createStringSelectMenu({

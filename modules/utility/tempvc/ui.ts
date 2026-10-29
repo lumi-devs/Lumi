@@ -1,5 +1,5 @@
-import { ButtonStyle } from "discord.js";
 import {
+  type CardReply,
   createActionButton,
   createStringSelectMenu,
   createUserSelectMenu,
@@ -7,9 +7,9 @@ import {
   makeCard,
   makeWarningCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
-import { TempVcIds, type MemberAction } from "./ids.js";
+import { ButtonStyle } from "discord.js";
+import { type MemberAction, TempVcIds } from "./ids.js";
 
 export interface ControlPanelState {
   channelId: string;
@@ -22,7 +22,7 @@ export interface ControlPanelState {
   ownerPresent: boolean;
 }
 
-const limitLabel = (limit: number): string =>
+export const limitLabel = (limit: number): string =>
   limit === 0 ? "Unlimited" : String(limit);
 
 const memberActionMeta: Record<

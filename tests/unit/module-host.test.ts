@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { LoadedModule } from "@lumi/module-runtime";
+import { describe, expect, it, vi } from "vitest";
 import { CommandRegistry, ModuleHost } from "../../src/core/modules.ts";
 
 function definition(

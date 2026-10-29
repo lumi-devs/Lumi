@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { ModuleSummary } from "@lumi/module-runtime";
+import { describe, expect, it } from "vitest";
 import {
   moduleListRowId,
   parseSubmoduleTogglePages,

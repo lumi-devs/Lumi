@@ -1,16 +1,17 @@
+import { isSnowflake } from "@lumi/foundation";
+import {
+  type CardReply,
+  ephemeralCard,
+  makeErrorCard,
+  makeSuccessCard,
+  makeWarningCard,
+} from "@lumi/ui";
 import type {
   ChatInputCommandInteraction,
   GuildMember,
   GuildTextBasedChannel,
   User,
 } from "discord.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-  makeWarningCard,
-  type CardReply,
-} from "@lumi/ui";
 import type { ModerationConfig } from "./config.js";
 
 export function isTextGuildChannel(
@@ -35,7 +36,7 @@ export async function getTargets(
   const extra = interaction.options.getString("users");
   const ids = new Set(
     extra
-      ? extra.split(/\s+/).filter((s) => /^\d{17,19}$/.test(s))
+      ? extra.split(/\s+/).filter((s) => isSnowflake(s))
       : [],
   );
   if (single) ids.add(single.id);

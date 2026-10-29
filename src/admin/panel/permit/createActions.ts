@@ -1,23 +1,35 @@
+import { isBotOwner } from "@lumi/permits";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  makeSuccessCard,
+} from "@lumi/ui";
 import {
   ActionRowBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "@lumi/ui";
-import { isBotOwner } from "@lumi/permits";
 import { errorMessage } from "../../../core/errors.js";
-import { defaultNamespace } from "../../permits/format.js";
 import type { CreateFlow } from "../../permits/flows.js";
-import { suggestPermitName, isValidNode, namespaceForNode } from "../../permits/nodes.js";
-import { uniquePermitName } from "../../permits/names.js";
+import { defaultNamespace } from "../../permits/format.js";
+import {
+  isValidNode,
+  namespaceForNode,
+  suggestPermitName,
+  uniquePermitName,
+} from "../../permits/nodes.js";
 import type { PermitHost } from "./host.js";
 
 const SelectOptionLimit = 25;
+
+/** Active create flow, or the permit list after resetting a stale one. */
+async function activeCreateFlow(host: PermitHost): Promise<CreateFlow | null> {
+  const flow = host.getFlow();
+  if (flow?.kind === "create") return flow;
+  await host.interaction.update(await host.mainCard(0));
+  return null;
+}
 
 export function showCreateNameModal(host: PermitHost, flow: CreateFlow): Promise<void> {
   const interaction = host.interaction;
@@ -60,11 +72,8 @@ export async function handleCreateAction(
   }
 
   if (customId === "permit_create_clear") {
-    const flow = host.getFlow();
-    if (flow?.kind !== "create") {
-      await interaction.update(await host.mainCard(0));
-      return true;
-    }
+    const flow = await activeCreateFlow(host);
+    if (!flow) return true;
     flow.nodes = [];
     flow.name = undefined;
     host.setFlow(flow);
@@ -155,11 +164,8 @@ export async function handleCreateSelect(
   if (!interaction.isStringSelectMenu()) return false;
 
   if (customId === "permit_create_namespace") {
-    const flow = host.getFlow();
-    if (flow?.kind !== "create") {
-      await interaction.update(await host.mainCard(0));
-      return true;
-    }
+    const flow = await activeCreateFlow(host);
+    if (!flow) return true;
     const value = interaction.values[0];
     if (value === undefined) return true;
     flow.namespace = value;
@@ -169,11 +175,8 @@ export async function handleCreateSelect(
   }
 
   if (customId === "permit_create_node") {
-    const flow = host.getFlow();
-    if (flow?.kind !== "create") {
-      await interaction.update(await host.mainCard(0));
-      return true;
-    }
+    const flow = await activeCreateFlow(host);
+    if (!flow) return true;
     const selected = interaction.values.filter(isValidNode);
     const otherNamespaces = flow.nodes.filter(
       (node) => namespaceForNode(node) !== flow.namespace,
@@ -188,11 +191,8 @@ export async function handleCreateSelect(
   }
 
   if (customId === "permit_create_node_remove") {
-    const flow = host.getFlow();
-    if (flow?.kind !== "create") {
-      await interaction.update(await host.mainCard(0));
-      return true;
-    }
+    const flow = await activeCreateFlow(host);
+    if (!flow) return true;
     const removed = new Set(interaction.values);
     flow.nodes = flow.nodes.filter((node) => !removed.has(node));
     host.setFlow(flow);
@@ -201,11 +201,8 @@ export async function handleCreateSelect(
   }
 
   if (customId === "permit_create_polarity") {
-    const flow = host.getFlow();
-    if (flow?.kind !== "create") {
-      await interaction.update(await host.mainCard(0));
-      return true;
-    }
+    const flow = await activeCreateFlow(host);
+    if (!flow) return true;
     const value = interaction.values[0];
     if (value !== "Grant" && value !== "Deny") return true;
     flow.polarity = value;

@@ -1,6 +1,6 @@
-import { describe, it, expect, } from "vitest";
-import { evaluateNodeMatch, isBotOwner, isGuildOwner, PermitResolver } from "../src/evaluator.js";
+import { describe, expect, it, } from "vitest";
 import { parseCron } from "../src/cron.js";
+import { evaluateNodeMatch, isBotOwner, isGuildOwner, PermitResolver } from "../src/evaluator.js";
 
 describe("Permit Evaluator", () => {
   describe("evaluateNodeMatch", () => {

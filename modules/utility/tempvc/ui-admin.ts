@@ -1,23 +1,21 @@
-import { ButtonStyle, ChannelType, type Guild } from "discord.js";
 import {
+  type CardReply,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
   makeCard,
   makeWarningCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
-import type { TempVcConfig, TempVcGenerator } from "./panel.js";
+import { ButtonStyle, ChannelType, type Guild } from "discord.js";
 import { TempVcIds } from "./ids.js";
+import type { TempVcConfig, TempVcGenerator } from "./panel.js";
+import { limitLabel } from "./ui.js";
 
 const clip = (text: string, max: number): string =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 const code = (text: string): string => `\`${text.replace(/`/g, "'")}\``;
-
-const limitLabel = (limit: number): string =>
-  limit === 0 ? "Unlimited" : String(limit);
 
 function generatorName(
   guild: Guild | null,

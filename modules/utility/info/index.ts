@@ -1,11 +1,6 @@
 import {
-  SlashCommandBuilder,
-  ButtonStyle,
-  type ButtonInteraction,
-} from "discord.js";
-import {
-  defineModule,
   type CommandDefinition,
+  defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
 } from "@lumi/module-kit";
@@ -17,6 +12,11 @@ import {
   makeInfoCard,
   row,
 } from "@lumi/ui";
+import {
+  type ButtonInteraction,
+  ButtonStyle,
+  SlashCommandBuilder,
+} from "discord.js";
 import { z } from "zod";
 
 const UtilityConfigSchema = z.object({}, {});
@@ -336,7 +336,6 @@ const utilityModule: ModuleDefinition = defineModule({
   description: "Avatar, banner, whois, serverinfo, and info commands",
   version: "2.0.0",
   config: UtilityConfigSchema,
-  configFields: [],
   commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, roleinfoDef, channelinfoDef, emojiinfoDef],
   listeners: [avatarViewListener],
   tasks: [],

@@ -1,6 +1,6 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getReason, isTextGuildChannel, replyError } from "../helpers.js";
 
 export const lockDef: CommandDefinition = {

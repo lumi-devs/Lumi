@@ -1,13 +1,13 @@
-import type { Client, Message } from "discord.js";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import type { Client, Message } from "discord.js";
 import { hasAdminAccess, roleIdsFrom } from "../admin/access.js";
 import { commandErrorCard } from "./errors.js";
 import {
-  servicesForModule,
   type CommandRegistry,
   type RegisteredCommand,
+  servicesForModule,
 } from "./modules.js";
 
 const DefaultPrefix = process.env.DEFAULT_PREFIX ?? ",";
@@ -38,6 +38,16 @@ export interface PrefixContext {
 function idFromValue(value: string | null, pattern: RegExp): string | null {
   if (!value) return null;
   return pattern.exec(value)?.[1] ?? (Snowflake.test(value) ? value : null);
+}
+
+async function replyError(
+  message: Message,
+  title: string,
+  body: string,
+): Promise<void> {
+  await message
+    .reply(ephemeralCard(makeErrorCard(title, body)) as never)
+    .catch(() => undefined);
 }
 
 async function resolvePrefix(
@@ -245,16 +255,11 @@ export async function handlePrefixMessage(
         permits: context.services.permits,
       });
       if (!allowed) {
-        await message
-          .reply(
-            ephemeralCard(
-              makeErrorCard(
-                "Missing Permissions",
-                "You need **Manage Server** or an admin permit to use that command.",
-              ),
-            ) as never,
-          )
-          .catch(() => undefined);
+        await replyError(
+          message,
+          "Missing Permissions",
+          "You need **Manage Server** or an admin permit to use that command.",
+        );
         return;
       }
     }
@@ -265,16 +270,11 @@ export async function handlePrefixMessage(
       defaultPermissions !== undefined &&
       !message.member?.permissions.has(BigInt(defaultPermissions))
     ) {
-      await message
-        .reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Missing Permissions",
-              "You do not have permission to use that command.",
-            ),
-          ) as never,
-        )
-        .catch(() => undefined);
+      await replyError(
+        message,
+        "Missing Permissions",
+        "You do not have permission to use that command.",
+      );
       return;
     }
 

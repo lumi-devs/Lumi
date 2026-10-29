@@ -1,10 +1,10 @@
+import type { PermitTargetType } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import { errorMessage } from "../../../core/errors.js";
-import { expiryFromValue, targetMention, targetTypeLabel } from "../../permits/format.js";
 import type { AssignFlow } from "../../permits/flows.js";
-import type { PermitTargetType } from "@lumi/permits";
-import { missingPermitCard } from "./listViews.js";
+import { expiryFromValue, targetMention, targetTypeLabel } from "../../permits/format.js";
 import type { PermitHost } from "./host.js";
+import { missingPermitCard } from "./listViews.js";
 
 export async function handleAssignAction(
   host: PermitHost,

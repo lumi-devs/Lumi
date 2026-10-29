@@ -1,21 +1,21 @@
-import {
-  ButtonStyle,
-  OAuth2Scopes,
-  PermissionFlagsBits,
-  SlashCommandBuilder,
-  version as discordVersion,
-  type ChatInputCommandInteraction,
-  type Client,
-} from "discord.js";
 import { uptime } from "node:os";
 import type { PrismaClient } from "@lumi/db";
-import type { Redis } from "ioredis";
 import {
   buildSafeActionRows,
   createActionButton,
   makeCard,
   row,
 } from "@lumi/ui";
+import {
+  ButtonStyle,
+  type ChatInputCommandInteraction,
+  type Client,
+  version as discordVersion,
+  OAuth2Scopes,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from "discord.js";
+import type { Redis } from "ioredis";
 
 interface AboutServices {
   client: Client;

@@ -1,6 +1,6 @@
 import {
-  TempVcConfigSchema,
   type TempVcConfig,
+  TempVcConfigSchema,
 } from "./panel.js";
 
 export const TempVcModuleName = "utility-tempvc";

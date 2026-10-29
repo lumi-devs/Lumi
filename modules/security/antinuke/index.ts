@@ -26,7 +26,6 @@ export default defineModule({
   description: "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
   version: "2.0.0",
   config: AntiNukeConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

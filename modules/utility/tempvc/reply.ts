@@ -1,16 +1,11 @@
 import {
+  type CardReply,
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-  type CardReply,
 } from "@lumi/ui";
 
-export async function replyError(
-  interaction: any,
-  title: string,
-  body: string,
-): Promise<void> {
-  const card = ephemeralCard(makeErrorCard(title, body));
+async function replyCard(interaction: any, card: CardReply): Promise<void> {
   if (interaction.deferred || interaction.replied) {
     await interaction.followUp(card).catch(() => undefined);
     return;
@@ -18,17 +13,20 @@ export async function replyError(
   await interaction.reply(card).catch(() => undefined);
 }
 
+export async function replyError(
+  interaction: any,
+  title: string,
+  body: string,
+): Promise<void> {
+  await replyCard(interaction, ephemeralCard(makeErrorCard(title, body)));
+}
+
 export async function replySuccess(
   interaction: any,
   title: string,
   body: string,
 ): Promise<void> {
-  const card = ephemeralCard(makeSuccessCard(title, body));
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(card).catch(() => undefined);
-    return;
-  }
-  await interaction.reply(card).catch(() => undefined);
+  await replyCard(interaction, ephemeralCard(makeSuccessCard(title, body)));
 }
 
 export async function showCard(

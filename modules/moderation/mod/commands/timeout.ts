@@ -1,7 +1,7 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
-import { getModerationConfig } from "../config.js";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { getModerationConfig } from "../config.js";
 import { describeError, getReason, isImmune, replyError } from "../helpers.js";
 
 export const timeoutDef: CommandDefinition = {

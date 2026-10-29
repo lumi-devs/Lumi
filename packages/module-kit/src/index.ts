@@ -1,5 +1,5 @@
 
-import type { CommandDefinition, ListenerDefinition, TaskDefinition, ConfigField, ModuleCapability, ModuleServices } from "./types.js";
+import type { CommandDefinition, ListenerDefinition, ModuleCapability, ModuleServices, TaskDefinition } from "./types.js";
 
 export interface ModuleDefinition {
   name: string;
@@ -8,7 +8,6 @@ export interface ModuleDefinition {
   description: string;
   version: string;
   config: any;
-  configFields: ConfigField[];
   commands: CommandDefinition[];
   listeners: ListenerDefinition[];
   tasks: TaskDefinition[];

@@ -1,33 +1,33 @@
 import {
+  requireGuildId as guildIdOf,
+  isSnowflake,
+} from "@lumi/foundation";
+import {
   ActionRowBuilder,
+  type GuildMember,
+  type ModalActionRowComponentBuilder,
   ModalBuilder,
   PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
-  type GuildMember,
-  type ModalActionRowComponentBuilder,
 } from "discord.js";
+import { handleAdminInteraction } from "./admin.js";
+import { isModuleEnabled } from "./config.js";
 import {
-  isSnowflake,
-  requireGuildId as guildIdOf,
-} from "@lumi/foundation";
-import { deleteConfirmCard, memberActionCard } from "./ui.js";
-import {
-  TempVcPrefixes,
   stripPrefix,
+  TempVcPrefixes,
 } from "./ids.js";
 import {
   buildControlPanel,
   controlState,
+  deleteTempVoiceChannel,
   findTempChannel,
+  type ManagedChannel,
   resolveGuildVoiceChannel,
   updateTempRecord,
-  deleteTempVoiceChannel,
-  type ManagedChannel,
 } from "./panel.js";
-import { isModuleEnabled } from "./config.js";
 import { replyError, replySuccess, showCard } from "./reply.js";
-import { handleAdminInteraction } from "./admin.js";
+import { deleteConfirmCard, memberActionCard } from "./ui.js";
 
 
 async function loadManaged(

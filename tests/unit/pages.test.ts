@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { paginate, pagesOf } from "../../src/admin/panel/pages.ts";
+import { pagesOf, paginate } from "../../src/admin/panel/pages.ts";
 
 describe("pagesOf", () => {
   it("splits items into fixed-size pages", () => {

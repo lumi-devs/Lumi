@@ -1,8 +1,8 @@
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import { errorMessage } from "../../../core/errors.js";
 import { showEditModal } from "./editDialog.js";
-import { missingPermitCard } from "./listViews.js";
 import type { PermitHost } from "./host.js";
+import { missingPermitCard } from "./listViews.js";
 
 export async function handleListAction(
   host: PermitHost,

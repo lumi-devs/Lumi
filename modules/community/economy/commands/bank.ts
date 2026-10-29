@@ -1,6 +1,6 @@
-import { SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
+import { SlashCommandBuilder } from "discord.js";
 import { getEconomyConfig } from "../config.js";
 import { formatMoney, requireGuild } from "../format.js";
 import {

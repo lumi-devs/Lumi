@@ -1,6 +1,6 @@
 import { asIdList, isSnowflake } from "@lumi/foundation";
-import { isLevelFormula, type LevelFormula } from "./formulas.js";
 import { LevelingConfigKey } from "./constants.js";
+import { isLevelFormula, type LevelFormula } from "./formulas.js";
 
 export interface LevelReward {
   level: number;

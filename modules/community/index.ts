@@ -8,7 +8,6 @@ const CommunitySupermodule = defineModule({
   description: "Community features: leveling and economy",
   version: "2.0.0",
   config: z.object({}, {}),
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

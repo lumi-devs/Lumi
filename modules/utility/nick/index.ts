@@ -1,15 +1,15 @@
 import {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  type GuildMember,
-  type APIInteractionGuildMember,
-} from "discord.js";
-import {
-  defineModule,
   type CommandDefinition,
+  defineModule,
   type ModuleDefinition,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
+import {
+  type APIInteractionGuildMember,
+  type GuildMember,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+} from "discord.js";
 import { z } from "zod";
 import { canChangeNickname } from "./hierarchy.js";
 
@@ -119,6 +119,8 @@ const nickDef: CommandDefinition = {
       return;
     }
 
+    const nextNickname = nickname && nickname.length > 0 ? nickname : null;
+
     if (isSelf) {
       if (!config.allowSelfNick) {
         await interaction.reply(
@@ -146,7 +148,7 @@ const nickDef: CommandDefinition = {
 
       try {
         await self.setNickname(
-          nickname && nickname.length > 0 ? nickname : null,
+          nextNickname,
           "Self nickname change",
         );
       } catch {
@@ -233,7 +235,7 @@ const nickDef: CommandDefinition = {
 
     try {
       await target.setNickname(
-        nickname && nickname.length > 0 ? nickname : null,
+        nextNickname,
         `Changed by ${interaction.user.tag}`,
       );
     } catch {
@@ -266,20 +268,6 @@ const nickModule: ModuleDefinition = defineModule({
   description: "Nickname changes with hierarchy checks and optional self-service",
   version: "2.0.0",
   config: NickConfigSchema,
-  configFields: [
-    {
-      key: "allowSelfNick",
-      label: "Allow Self Changes",
-      type: "boolean",
-      description: "Let members with the mod.nick permit change their own nickname",
-    },
-    {
-      key: "maxLength",
-      label: "Max Nickname Length",
-      type: "number",
-      description: "Maximum nickname length",
-    },
-  ],
   commands: [nickDef],
   listeners: [],
   tasks: [],

@@ -1,18 +1,18 @@
 import {
-  type ActionRowBuilder,
-  ButtonStyle,
-  type MessageActionRowComponentBuilder,
-} from "discord.js";
-import {
+  type CardReply,
   createActionButton,
   makeCard,
   row,
   settingRow,
-  type CardReply,
 } from "@lumi/ui";
+import {
+  type ActionRowBuilder,
+  ButtonStyle,
+  type MessageActionRowComponentBuilder,
+} from "discord.js";
 import { formatPermitNodes } from "../permits/nodes.js";
 import { renderAddonPanel } from "./addonViews.js";
-import { navigationRow, panelOptions, type HubInteraction, type HubView } from "./common.js";
+import { type HubInteraction, type HubView, navigationRow, panelOptions } from "./common.js";
 import { renderModules } from "./moduleList.js";
 import type { HubServices } from "./services.js";
 
@@ -64,7 +64,7 @@ async function renderHome(
   );
 }
 
-async function renderSettings(
+export async function renderSettings(
   interaction: HubInteraction,
   services: HubServices,
 ): Promise<CardReply> {
@@ -156,16 +156,14 @@ async function renderPermits(
     ]
       .filter((line): line is string => Boolean(line))
       .join("\n"),
-    {
-      ...panelOptions(
-        interaction,
-        "permits",
-        ["Hub", "Permissions"],
-        rows,
-        `${permits.length} permit(s)`,
-        false,
-      ),
-    },
+    panelOptions(
+      interaction,
+      "permits",
+      ["Hub", "Permissions"],
+      rows,
+      `${permits.length} permit(s)`,
+      false,
+    ),
   );
 }
 
@@ -188,5 +186,3 @@ export function renderHubPanel(
       return renderHome(interaction, services);
   }
 }
-
-export { renderSettings };

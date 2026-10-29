@@ -1,8 +1,3 @@
-import {
-  AttachmentBuilder,
-  SlashCommandBuilder,
-  type GuildMember,
-} from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import {
   ephemeralCard,
@@ -12,9 +7,14 @@ import {
   makeListCard,
   makeSuccessCard,
 } from "@lumi/ui";
-import type { ShopCardData, ShopItemData } from "../shopCard.js";
+import {
+  AttachmentBuilder,
+  type GuildMember,
+  SlashCommandBuilder,
+} from "discord.js";
 import { getEconomyConfig } from "../config.js";
 import { formatMoney, requireGuild } from "../format.js";
+import type { ShopCardData, ShopItemData } from "../shopCard.js";
 import {
   debitWallet,
   getOrCreateUser,
@@ -218,22 +218,12 @@ export const buyDef: CommandDefinition = {
       roleId = role.id;
     }
 
-    if (user.balance < price) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Insufficient funds", [
-            `**Wallet** — ${formatMoney(symbol, user.balance)}`,
-            `**Price** — ${formatMoney(symbol, price)}`,
-          ]),
-        ),
-      );
-      return;
-    }
-
-    const debited = await debitWallet(services, guildId, userId, price, {
-      trackSpent: true,
-    });
-    if (!debited) {
+    if (
+      user.balance < price ||
+      !(await debitWallet(services, guildId, userId, price, {
+        trackSpent: true,
+      }))
+    ) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard("Insufficient funds", [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  pingCommand,
   handlePingButton,
+  pingCommand,
 } from "../../src/core/commands.ts";
 
 const makeServices = (

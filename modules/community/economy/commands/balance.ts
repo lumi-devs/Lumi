@@ -1,10 +1,10 @@
-import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import {
   AccentColors,
   ephemeralCard,
   makeCard,
 } from "@lumi/ui";
+import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
 import type { BalanceCardData } from "../balanceCard.js";
 import { getEconomyConfig } from "../config.js";
 import { requireGuild } from "../format.js";

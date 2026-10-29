@@ -1,11 +1,11 @@
-import Redis from "ioredis";
 import type { RedisOptions } from "ioredis";
+import Redis from "ioredis";
 
 export { Redis } from "ioredis";
 
 export { InvalidationBus, type InvalidationMessage } from "./invalidation.js";
-export { DistributedLock, createLock, withLock, type LockOptions } from "./locks.js";
-export { createKeys, TTL, type RedisKeys } from "./keys.js";
+export { createKeys, type RedisKeys, TTL } from "./keys.js";
+export { createLock, DistributedLock, type LockOptions, withLock } from "./locks.js";
 
 export function createRedisClient(options?: RedisOptions): Redis {
   return new Redis({

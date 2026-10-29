@@ -1,3 +1,3 @@
-export { ModuleLoader, createModuleLoader, type LoadedModule, type ModuleSummary } from "./loader.js";
-export type { ModuleManifest, ConfigField } from "./manifest.js";
-export { validateManifest, ModuleManifestSchema } from "./manifest.js";
+export { createModuleLoader, type LoadedModule, ModuleLoader, type ModuleSummary } from "./loader.js";
+export type { ConfigField, ModuleManifest } from "./manifest.js";
+export { ModuleManifestSchema, validateManifest } from "./manifest.js";

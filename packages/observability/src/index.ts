@@ -1,5 +1,6 @@
 export {
   activeModules,
+  type CacheMetrics,
   cacheEvictions,
   cacheFillDuration,
   cacheHits,
@@ -15,8 +16,6 @@ export {
   guildsTotal,
   httpRequestDuration,
   httpRequests,
-  shardsOnline,
-  usersTotal,
   noopCacheMetrics,
   pgPoolSize,
   pgPoolUsed,
@@ -24,9 +23,10 @@ export {
   prometheusCacheMetrics,
   redisCommandDuration,
   registry,
-  type CacheMetrics,
+  shardsOnline,
+  usersTotal,
 } from "./metrics.js";
-export { startMetricsServer, type MetricsServer } from "./server.js";
+export { type MetricsServer, startMetricsServer } from "./server.js";
 
 export interface HealthCheck {
   name: string;

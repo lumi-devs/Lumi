@@ -16,12 +16,7 @@ function applySelectMenuOptions(
     | ChannelSelectMenuBuilder
     | MentionableSelectMenuBuilder
     | StringSelectMenuBuilder,
-  opts: {
-    placeholder?: string;
-    minValues?: number;
-    maxValues?: number;
-    disabled?: boolean;
-  },
+  opts: SelectMenuOptions,
 ): void {
   if (opts.placeholder) menu.setPlaceholder(opts.placeholder);
   if (opts.minValues !== undefined) menu.setMinValues(opts.minValues);
@@ -29,7 +24,7 @@ function applySelectMenuOptions(
   if (opts.disabled !== undefined) menu.setDisabled(opts.disabled);
 }
 
-export interface CreateUserSelectMenuOptions {
+export interface SelectMenuOptions {
   customId: string;
   placeholder?: string;
   minValues?: number;
@@ -37,29 +32,12 @@ export interface CreateUserSelectMenuOptions {
   disabled?: boolean;
 }
 
-export interface CreateRoleSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
+export type CreateUserSelectMenuOptions = SelectMenuOptions;
+export type CreateRoleSelectMenuOptions = SelectMenuOptions;
+export type CreateMentionableSelectMenuOptions = SelectMenuOptions;
 
-export interface CreateChannelSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
+export interface CreateChannelSelectMenuOptions extends SelectMenuOptions {
   channelTypes?: ChannelType[];
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export interface CreateMentionableSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
 }
 
 export interface StringSelectOptionInput {
@@ -70,13 +48,8 @@ export interface StringSelectOptionInput {
   default?: boolean;
 }
 
-export interface CreateStringSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
+export interface CreateStringSelectMenuOptions extends SelectMenuOptions {
   options?: (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
 }
 
 export function createUserSelectMenu(

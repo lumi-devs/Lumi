@@ -1,4 +1,4 @@
-import { makeCard, type CardReply } from "@lumi/ui";
+import { type CardReply, makeCard } from "@lumi/ui";
 
 type AfkStatus = "set" | "updated" | "already";
 

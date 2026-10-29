@@ -1,24 +1,23 @@
-import {
-  SlashCommandBuilder,
-  type ButtonInteraction,
-  type Client,
-} from "discord.js";
 import type {
   CommandDefinition,
   ListenerDefinition,
 } from "@lumi/module-kit";
 import {
+  type CardReply,
   createPaginationRow,
   ephemeralCard,
   formatPageFooter,
   makeCard,
   makeErrorCard,
   makeInfoCard,
-  type CardReply,
 } from "@lumi/ui";
+import {
+  type ButtonInteraction,
+  type Client,
+  SlashCommandBuilder,
+} from "discord.js";
 import { ModerationModuleName } from "../constants.js";
-import { describeError } from "../helpers.js";
-import { replyError } from "../helpers.js";
+import { describeError, replyError } from "../helpers.js";
 
 export const caseDef: CommandDefinition = {
   data: new SlashCommandBuilder()

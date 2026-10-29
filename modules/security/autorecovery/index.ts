@@ -14,7 +14,6 @@ export default defineModule({
   description: "Automatic server restore from latest backup on panic/nuke",
   version: "2.0.0",
   config: AutoRecoveryConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

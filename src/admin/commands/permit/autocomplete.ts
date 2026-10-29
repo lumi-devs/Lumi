@@ -1,7 +1,7 @@
 import { isBotOwner } from "@lumi/permits";
 import type { AutocompleteInteraction } from "discord.js";
-import type { HubServices } from "../../panel/services.js";
 import { hasAdminAccess, roleIdsFrom } from "../../access.js";
+import type { HubServices } from "../../panel/services.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 
 export async function autocompleteNode(

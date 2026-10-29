@@ -1,6 +1,6 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeInfoCard, makeSuccessCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { replyError } from "../helpers.js";
 
 export const purgeDef: CommandDefinition = {

@@ -1,7 +1,7 @@
-import type { Client, RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
+import type { AddonRuntime } from "@lumi/downloader";
 import type { CommandDefinition } from "@lumi/module-kit";
 import type { LoadedModule, ModuleLoader } from "@lumi/module-runtime";
-import type { AddonRuntime } from "@lumi/downloader";
+import type { Client, RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 
 export interface RegisteredCommand extends CommandDefinition {
   module: string | null;

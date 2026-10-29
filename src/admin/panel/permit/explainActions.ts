@@ -1,14 +1,15 @@
-import { ButtonStyle } from "discord.js";
 import {
   buildSafeActionRows,
   createActionButton,
   makeErrorCard,
   row,
 } from "@lumi/ui";
-import { roleIdsFrom } from "../../access.js";
+import { ButtonStyle } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
+import { roleIdsFrom } from "../../access.js";
 import { allExplanationCard } from "../../permits/explain.js";
 import type { ExplainFlow } from "../../permits/flows.js";
+import { backButton } from "../common.js";
 import type { PermitHost } from "./host.js";
 
 export async function handleExplainAction(
@@ -64,12 +65,7 @@ export async function handleExplainAction(
             style: ButtonStyle.Primary,
             emoji: "🔍",
           }),
-          createActionButton({
-            customId: "permit_back_main",
-            label: "Back to Permits",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
+          backButton("permit_back_main", "Back to Permits"),
         ),
       ]),
     });

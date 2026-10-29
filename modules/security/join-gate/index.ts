@@ -30,7 +30,6 @@ export default defineModule({
   description: "On-join security filters and raid detection",
   version: "2.0.0",
   config: JoinGateConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

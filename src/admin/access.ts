@@ -1,5 +1,5 @@
-import { PermissionFlagsBits, type Client } from "discord.js";
 import type { PermitRepository } from "@lumi/permits";
+import { type Client, PermissionFlagsBits } from "discord.js";
 
 interface AdminAccessOptions {
   guildId: string;

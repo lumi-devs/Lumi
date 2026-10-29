@@ -1,13 +1,13 @@
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
-import type { HubServices } from "../../panel/services.js";
-import { roleIdsFrom } from "../../access.js";
 import { errorMessage } from "../../../core/errors.js";
-import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
+import { roleIdsFrom } from "../../access.js";
+import type { HubServices } from "../../panel/services.js";
 import {
   allExplanationCard,
   explanationCard,
 } from "../../permits/explain.js";
+import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 import { openPermitsRow } from "./shared.js";
 
 export async function explainPermit(

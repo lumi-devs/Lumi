@@ -1,20 +1,21 @@
 import {
-  ButtonStyle,
+  type CardOptions,
+  type CardReply,
+  createActionButton,
+  row,
+  type Tab,
+  tabRow,
+} from "@lumi/ui";
+import {
   type ActionRowBuilder,
   type AnySelectMenuInteraction,
+  type ButtonBuilder,
   type ButtonInteraction,
+  ButtonStyle,
   type ChatInputCommandInteraction,
   type MessageActionRowComponentBuilder,
   type ModalSubmitInteraction,
 } from "discord.js";
-import {
-  createActionButton,
-  row,
-  tabRow,
-  type CardOptions,
-  type CardReply,
-  type Tab,
-} from "@lumi/ui";
 
 export type HubView = "home" | "modules" | "settings" | "permits" | "addons";
 
@@ -44,6 +45,20 @@ export function navigationRow(
   active: HubView,
 ): ActionRowBuilder<MessageActionRowComponentBuilder> {
   return tabRow("lumi", HubTabs, active);
+}
+
+/** Secondary "back" button every sub-panel uses on its last action row. */
+export function backButton(
+  customId: string,
+  label = "Back",
+  emoji: string | null = "⬅️",
+): ButtonBuilder {
+  return createActionButton({
+    customId,
+    label,
+    ...(emoji === null ? {} : { emoji }),
+    style: ButtonStyle.Secondary,
+  });
 }
 
 export function panelOptions(

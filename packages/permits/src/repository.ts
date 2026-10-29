@@ -1,7 +1,13 @@
-import { type PrismaClient, Prisma } from "@prisma/client";
 import { createKeys } from "@lumi/redis";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { Client } from "discord.js";
 import type Redis from "ioredis";
+import type {
+  PermitAuditLogEntry,
+  PermitAuditLogInput,
+  PermitAuditLogQuery,
+} from "./audit.js";
+import { createAuditLog, getAuditLogs } from "./audit.js";
 import {
   buildPermitChain,
   evaluateNodeMatch,
@@ -10,6 +16,13 @@ import {
   isPermitValid,
   matchesConditions,
 } from "./evaluator.js";
+import { isPermitNumberConflict, isRecordNotFoundError, isUniqueConstraintError, nextPermitNumber } from "./numbering.js";
+import type {
+  PermitExportData,
+  PermitImportOptions,
+  PermitImportResult,
+} from "./transfer.js";
+import { exportPermits, importPermits } from "./transfer.js";
 import type {
   EvaluatedPermit,
   EvaluatePermitOptions,
@@ -17,24 +30,10 @@ import type {
   PermitChainResult,
   PermitChainTarget,
   PermitConditions,
-  PermitContainer,
   PermitTargetType,
   PermitWithAssignments,
   Polarity,
 } from "./types.js";
-import { createAuditLog, getAuditLogs } from "./audit.js";
-import type {
-  PermitAuditLogEntry,
-  PermitAuditLogInput,
-  PermitAuditLogQuery,
-} from "./audit.js";
-import { isPermitNumberConflict, isRecordNotFoundError, isUniqueConstraintError, nextPermitNumber } from "./numbering.js";
-import { exportPermits, importPermits } from "./transfer.js";
-import type {
-  PermitExportData,
-  PermitImportOptions,
-  PermitImportResult,
-} from "./transfer.js";
 
 export type { PermitAuditLogEntry } from "./audit.js";
 export type { PermitExportData } from "./transfer.js";
@@ -227,6 +226,12 @@ export class PermitRepository {
       targetType,
       targetId,
     }));
+    const activeAssignment = {
+      AND: [
+        { OR: assignmentFilter },
+        { OR: [{ expiresAt: null }, { expiresAt: { gte: at } }] },
+      ],
+    };
 
     // The permit rows and the quarantine marker are independent reads.
     const [permits, quarantineValue] = await Promise.all([
@@ -236,14 +241,7 @@ export class PermitRepository {
         where: {
           guildId,
           OR: [{ expiresAt: null }, { expiresAt: { gte: at } }],
-          assignments: {
-            some: {
-              AND: [
-                { OR: assignmentFilter },
-                { OR: [{ expiresAt: null }, { expiresAt: { gte: at } }] },
-              ],
-            },
-          },
+          assignments: { some: activeAssignment },
         },
         select: {
           nodes: true,
@@ -253,12 +251,7 @@ export class PermitRepository {
           timezone: true,
           conditions: true,
           assignments: {
-            where: {
-              AND: [
-                { OR: assignmentFilter },
-                { OR: [{ expiresAt: null }, { expiresAt: { gte: at } }] },
-              ],
-            },
+            where: activeAssignment,
             select: { targetType: true, targetId: true },
           },
         },
@@ -355,16 +348,7 @@ export class PermitRepository {
     options: EvaluatePermitOptions,
     client?: Client,
   ): Promise<EvaluatedPermit> {
-    const container: PermitContainer = {
-      db: {
-        permits: {
-          getPermitChain: (guildId, userId, chain) =>
-            this.getPermitChain(guildId, userId, chain),
-        },
-      },
-      client,
-    };
-    return evaluatePermit(options, container);
+    return evaluatePermit(options, { db: { permits: this }, client });
   }
 
   async explainPermitNodes(

@@ -1,16 +1,13 @@
+import { type CardReply, ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { hasAdminAccess, roleIdsFrom } from "../access.js";
-import { PermitPanel } from "./PermitPanel.js";
 import { handleAddonInteraction } from "./addons.js";
-import { parseSubmoduleTogglePages } from "./modules.js";
 import type { MessageModalSubmit } from "./common.js";
 import { renderHubPanel, renderSettings } from "./hubViews.js";
-import type { HubServices } from "./services.js";
 import { renderModules, renderSubmodules } from "./moduleList.js";
 import {
   fieldModal,
@@ -26,9 +23,38 @@ import {
   renderModuleDetail,
   writeModuleConfig,
 } from "./moduleSettings.js";
+import { parseSubmoduleTogglePages } from "./modules.js";
+import { PermitPanel } from "./PermitPanel.js";
+import type { HubServices } from "./services.js";
+
+type PanelInteraction =
+  | ButtonInteraction
+  | AnySelectMenuInteraction
+  | ModalSubmitInteraction;
+
+/** Swap the panel message in place after acknowledging the interaction. */
+async function show(
+  interaction: PanelInteraction,
+  render: () => Promise<CardReply>,
+): Promise<void> {
+  await interaction.deferUpdate();
+  await interaction.editReply(await render());
+}
+
+/** Persist a module toggle and return its previous state for the notice. */
+async function toggleModule(
+  services: HubServices,
+  guildId: string,
+  moduleName: string,
+): Promise<boolean> {
+  const wasEnabled = services.moduleLoader.isEnabled(guildId, moduleName);
+  if (wasEnabled) await services.moduleManager.disable(guildId, moduleName);
+  else await services.moduleManager.enable(guildId, moduleName);
+  return wasEnabled;
+}
 
 export async function handleHubInteraction(
-  interaction: ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
+  interaction: PanelInteraction,
   services: HubServices,
 ): Promise<boolean> {
   if (!interaction.customId.startsWith("lumi:")) return false;
@@ -100,10 +126,7 @@ export async function handleHubInteraction(
     case "settings":
     case "permits":
     case "addons": {
-      await interaction.deferUpdate();
-      await interaction.editReply(
-        await renderHubPanel(action, interaction, services),
-      );
+      await show(interaction, () => renderHubPanel(action, interaction, services));
       return true;
     }
     case "permitpanel": {
@@ -117,29 +140,21 @@ export async function handleHubInteraction(
       return true;
     }
     case "mods": {
-      await interaction.deferUpdate();
-      await interaction.editReply(
-        await renderModules(interaction, services, Number(target) || 0),
+      await show(interaction, () =>
+        renderModules(interaction, services, Number(target) || 0),
       );
       return true;
     }
     case "modopen": {
       if (interaction.isStringSelectMenu()) return true;
-      await interaction.deferUpdate();
-      await interaction.editReply(
-        await renderModuleDetail(
-          interaction,
-          services,
-          target,
-          Number(extra) || 0,
-        ),
+      await show(interaction, () =>
+        renderModuleDetail(interaction, services, target, Number(extra) || 0),
       );
       return true;
     }
     case "modsubs": {
-      await interaction.deferUpdate();
-      await interaction.editReply(
-        await renderSubmodules(
+      await show(interaction, () =>
+        renderSubmodules(
           interaction,
           services,
           target,
@@ -155,12 +170,7 @@ export async function handleHubInteraction(
       if (!loaded?.supermodule) return true;
 
       const { originPage, childPage } = parseSubmoduleTogglePages(extra ?? "");
-      const enabled = services.moduleLoader.isEnabled(guildId, target);
-      if (enabled) {
-        await services.moduleManager.disable(guildId, target);
-      } else {
-        await services.moduleManager.enable(guildId, target);
-      }
+      const enabled = await toggleModule(services, guildId, target);
       await interaction.editReply(
         await renderSubmodules(
           interaction,
@@ -175,12 +185,7 @@ export async function handleHubInteraction(
     }
     case "modtoggle": {
       await interaction.deferUpdate();
-      const enabled = services.moduleLoader.isEnabled(guildId, target);
-      if (enabled) {
-        await services.moduleManager.disable(guildId, target);
-      } else {
-        await services.moduleManager.enable(guildId, target);
-      }
+      const enabled = await toggleModule(services, guildId, target);
       await interaction.editReply(
         await renderModuleDetail(
           interaction,
@@ -193,24 +198,22 @@ export async function handleHubInteraction(
       return true;
     }
     case "modreset": {
-      await interaction.deferUpdate();
-      await writeModuleConfig(services, guildId, target, {});
-      await interaction.editReply(
-        await renderModuleDetail(
+      await show(interaction, async () => {
+        await writeModuleConfig(services, guildId, target, {});
+        return renderModuleDetail(
           interaction,
           services,
           target,
           Number(extra) || 0,
           "Settings reset to defaults.",
-        ),
-      );
+        );
+      });
       return true;
     }
     case "modsec": {
       if (!interaction.isStringSelectMenu()) return true;
-      await interaction.deferUpdate();
-      await interaction.editReply(
-        await renderModuleDetail(
+      await show(interaction, () =>
+        renderModuleDetail(
           interaction,
           services,
           target,
@@ -222,18 +225,17 @@ export async function handleHubInteraction(
     case "modbool": {
       const field = findField(services, target, extra);
       if (!field) return true;
-      await interaction.deferUpdate();
-      const config = await readModuleConfig(services, guildId, target);
-      config[field.key] = !fieldValue(field, config);
-      await writeModuleConfig(services, guildId, target, config);
-      await interaction.editReply(
-        await renderModuleDetail(
+      await show(interaction, async () => {
+        const config = await readModuleConfig(services, guildId, target);
+        config[field.key] = !fieldValue(field, config);
+        await writeModuleConfig(services, guildId, target, config);
+        return renderModuleDetail(
           interaction,
           services,
           target,
           Number(extra2) || 0,
-        ),
-      );
+        );
+      });
       return true;
     }
     case "modfield": {
@@ -241,9 +243,8 @@ export async function handleHubInteraction(
       if (!field) return true;
       const section = Number(extra2) || 0;
       if (isPickerField(field) || isSelectField(field)) {
-        await interaction.deferUpdate();
-        await interaction.editReply(
-          await renderFieldEditor(interaction, services, target, extra, section),
+        await show(interaction, () =>
+          renderFieldEditor(interaction, services, target, extra, section),
         );
       } else {
         const config = await readModuleConfig(services, guildId, target);
@@ -266,44 +267,42 @@ export async function handleHubInteraction(
       if (!interaction.isAnySelectMenu()) return true;
       const field = findField(services, target, extra);
       if (!field) return true;
-      await interaction.deferUpdate();
-      const config = await readModuleConfig(services, guildId, target);
       const chosen = interaction.values;
       const selectedValue = isMulti(field) ? chosen : chosen[0];
-      if (
-        selectedValue === undefined ||
-        (Array.isArray(selectedValue) && selectedValue.length === 0)
-      ) {
-        delete config[field.key];
-      } else {
-        config[field.key] = selectedValue;
-      }
-      await writeModuleConfig(services, guildId, target, config);
-      await interaction.editReply(
-        await renderFieldEditor(
+      await show(interaction, async () => {
+        const config = await readModuleConfig(services, guildId, target);
+        if (
+          selectedValue === undefined ||
+          (Array.isArray(selectedValue) && selectedValue.length === 0)
+        ) {
+          delete config[field.key];
+        } else {
+          config[field.key] = selectedValue;
+        }
+        await writeModuleConfig(services, guildId, target, config);
+        return renderFieldEditor(
           interaction,
           services,
           target,
           extra,
           Number(extra2) || 0,
-        ),
-      );
+        );
+      });
       return true;
     }
     case "modclear": {
-      await interaction.deferUpdate();
-      const config = await readModuleConfig(services, guildId, target);
-      delete config[extra];
-      await writeModuleConfig(services, guildId, target, config);
-      await interaction.editReply(
-        await renderFieldEditor(
+      await show(interaction, async () => {
+        const config = await readModuleConfig(services, guildId, target);
+        delete config[extra];
+        await writeModuleConfig(services, guildId, target, config);
+        return renderFieldEditor(
           interaction,
           services,
           target,
           extra,
           Number(extra2) || 0,
-        ),
-      );
+        );
+      });
       return true;
     }
     case "setprefix": {
@@ -311,9 +310,10 @@ export async function handleHubInteraction(
       return true;
     }
     case "setreset": {
-      await interaction.deferUpdate();
-      await services.configService.reset(guildId, "prefix");
-      await interaction.editReply(await renderSettings(interaction, services));
+      await show(interaction, async () => {
+        await services.configService.reset(guildId, "prefix");
+        return renderSettings(interaction, services);
+      });
       return true;
     }
     default: {

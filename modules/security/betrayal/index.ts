@@ -18,7 +18,6 @@ export default defineModule({
   description: "Velocity monitoring of whitelisted users with automatic immunity revocation",
   version: "2.0.0",
   config: BetrayalConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

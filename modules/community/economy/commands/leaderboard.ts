@@ -1,4 +1,3 @@
-import { SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import {
   AccentColors,
@@ -7,6 +6,7 @@ import {
   makeCard,
   makeEmptyCard,
 } from "@lumi/ui";
+import { SlashCommandBuilder } from "discord.js";
 import { getEconomyConfig } from "../config.js";
 import { requireGuild } from "../format.js";
 

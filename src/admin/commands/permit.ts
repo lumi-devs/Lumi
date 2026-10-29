@@ -1,7 +1,7 @@
 import {
-  SlashCommandBuilder,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  SlashCommandBuilder,
 } from "discord.js";
 import type { HubServices } from "../panel/services.js";
 import { autocompleteNode } from "./permit/autocomplete.js";

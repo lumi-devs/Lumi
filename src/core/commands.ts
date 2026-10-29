@@ -1,21 +1,21 @@
-import {
-  SlashCommandBuilder,
-  type ChatInputCommandInteraction,
-  type ButtonInteraction,
-  type Client,
-  ButtonStyle,
-} from "discord.js";
 import { totalmem } from "node:os";
 import type { PrismaClient } from "@lumi/db";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import {
+  type CardReply,
   createActionButton,
   ephemeralCard,
   makeCard,
   makeErrorCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
+import {
+  type ButtonInteraction,
+  ButtonStyle,
+  type ChatInputCommandInteraction,
+  type Client,
+  SlashCommandBuilder,
+} from "discord.js";
 
 interface PingSession {
   page: number;

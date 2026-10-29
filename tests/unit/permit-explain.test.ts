@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { allExplanationCard } from "../../src/admin/permits/explain.ts";
 import { PermitRepository } from "../../packages/permits/src/repository.ts";
+import { allExplanationCard } from "../../src/admin/permits/explain.ts";
 
 function cardText(card: any): string {
   const container = JSON.parse(JSON.stringify(card.components[0]));

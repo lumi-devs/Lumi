@@ -1,21 +1,21 @@
+import type { InstalledAddon } from "@lumi/downloader";
+import { isBotOwner } from "@lumi/permits";
+import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import { isBotOwner } from "@lumi/permits";
-import type { InstalledAddon } from "@lumi/downloader";
-import type { HubServices } from "./services.js";
 import { errorMessage } from "../../core/errors.js";
-import { cut } from "./common.js";
 import {
+  type AddonView,
   addRepoModal,
   intervalLabel,
   renderAddonPanel,
   short,
-  type AddonView,
 } from "./addonViews.js";
+import { cut } from "./common.js";
+import type { HubServices } from "./services.js";
 
 type AddonInteraction =
   | ButtonInteraction
@@ -45,10 +45,6 @@ async function fail(
   } else {
     await interaction.reply(card);
   }
-}
-
-function errorText(error: unknown): string {
-  return errorMessage(error);
 }
 
 export async function handleAddonInteraction(
@@ -122,7 +118,7 @@ export async function handleAddonInteraction(
           await services.addons.addRepo(name, url, branch || undefined);
           await show(interaction, services, { kind: "repo", name }, `Repository ${name} added.`);
         } catch (error) {
-          await fail(interaction, "Could Not Add Repository", errorText(error));
+          await fail(interaction, "Could Not Add Repository", errorMessage(error));
         }
         return true;
       }
@@ -214,7 +210,7 @@ export async function handleAddonInteraction(
         return false;
     }
   } catch (error) {
-    await fail(interaction, "Add-on Action Failed", errorText(error));
+    await fail(interaction, "Add-on Action Failed", errorMessage(error));
     return true;
   }
 }

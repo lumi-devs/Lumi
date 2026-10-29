@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { defineModule, type CommandDefinition, type ListenerDefinition } from "../src/index.js";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { type CommandDefinition, defineModule, type ListenerDefinition } from "../src/index.js";
 
 describe("Module Kit", () => {
   describe("defineModule", () => {
@@ -15,10 +15,6 @@ describe("Module Kit", () => {
           setting1: z.string().default("default"),
           setting2: z.number().int().min(0).default(10),
         }, {}),
-        configFields: [
-          { key: "setting1", label: "Setting 1", type: "string", description: "A string setting" },
-          { key: "setting2", label: "Setting 2", type: "number", description: "A number setting" },
-        ],
         commands: [],
         listeners: [],
         tasks: [],
@@ -49,7 +45,6 @@ describe("Module Kit", () => {
           arraySetting: z.array(z.string(), {}).default([]),
           objectSetting: z.object({ key: z.string() }).optional(),
         }, {}),
-        configFields: [],
         commands: [],
         listeners: [],
         tasks: [],
@@ -84,7 +79,6 @@ describe("Module Kit", () => {
           withDefault: z.string().default("default-value"),
           withoutDefault: z.string().optional(),
         }, {}),
-        configFields: [],
         commands: [],
         listeners: [],
         tasks: [],

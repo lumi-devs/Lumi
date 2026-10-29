@@ -5,15 +5,15 @@ import {
   makeSuccessCard,
 } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
-import type { HubServices } from "../../panel/services.js";
 import { errorMessage } from "../../../core/errors.js";
+import type { HubServices } from "../../panel/services.js";
 import {
   formatPermitNodeLines,
   isValidNode,
   parseNodeList,
   suggestPermitName,
+  uniquePermitName,
 } from "../../permits/nodes.js";
-import { uniquePermitName } from "../../permits/names.js";
 import { openPermitsRow } from "./shared.js";
 
 export async function createPermit(

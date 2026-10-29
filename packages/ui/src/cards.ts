@@ -9,8 +9,8 @@ import {
 } from "@discordjs/builders";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "./palette.js";
 import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
+import { resolveCardColor } from "./palette.js";
 import { buildSafeActionRows } from "./panels.js";
 
 export interface CardReply {
@@ -190,7 +190,7 @@ export const makeCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, color ?? undefined));
+) => wrap(buildContainer(title, body, opts, color));
 
 const cutText = (text: string, limit: number): string =>
   text.length > limit ? `${text.slice(0, Math.max(0, limit - 1))}…` : text;

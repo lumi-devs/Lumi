@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, type GuildMember } from "discord.js";
+import { type GuildMember, PermissionFlagsBits } from "discord.js";
 
 function nodeMatches(granted: string, required: string): boolean {
   if (!granted || !required) return false;

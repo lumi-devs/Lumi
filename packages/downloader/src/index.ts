@@ -1,5 +1,4 @@
 export { AddonManager, type AddonManagerOptions } from "./manager.js";
-export { validateAddon } from "./validate.js";
 export type {
   AddonLogger,
   AddonNotifier,
@@ -12,3 +11,4 @@ export type {
   RepoUpdateResult,
   UpdateFailure,
 } from "./types.js";
+export { validateAddon } from "./validate.js";

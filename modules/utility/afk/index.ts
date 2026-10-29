@@ -1,17 +1,17 @@
+import { requireGuildId as guildIdOf } from "@lumi/foundation";
 import {
-  SlashCommandBuilder,
-  type Message,
-  type GuildMember,
-  type APIInteractionGuildMember,
-} from "discord.js";
-import {
-  defineModule,
   type CommandDefinition,
-  type ModuleDefinition,
+  defineModule,
   type ListenerDefinition,
+  type ModuleDefinition,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import {
+  type APIInteractionGuildMember,
+  type GuildMember,
+  type Message,
+  SlashCommandBuilder,
+} from "discord.js";
 import { z } from "zod";
 import {
   buildAfkMentionCard,
@@ -264,32 +264,6 @@ const afkModule: ModuleDefinition = defineModule({
   description: "Set AFK status with mention replies and nickname prefix",
   version: "2.0.0",
   config: AfkConfigSchema,
-  configFields: [
-    {
-      key: "nickPrefixEnabled",
-      label: "Nickname Prefix",
-      type: "boolean",
-      description: "Prefix nickname when AFK",
-    },
-    {
-      key: "nickPrefix",
-      label: "Prefix Text",
-      type: "string",
-      description: "Text to prepend to nickname",
-    },
-    {
-      key: "mentionReply",
-      label: "Mention Reply",
-      type: "boolean",
-      description: "Reply when mentioned while AFK",
-    },
-    {
-      key: "maxReasonLength",
-      label: "Max Reason Length",
-      type: "number",
-      description: "Maximum AFK reason length",
-    },
-  ],
   commands: [afkDef],
   listeners: [onMessageListener],
   tasks: [],

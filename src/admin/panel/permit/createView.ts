@@ -1,13 +1,14 @@
-import { ButtonStyle } from "discord.js";
 import {
   buildSafeActionRows,
+  type CardReply,
   createActionButton,
   createStringSelectMenu,
   makeCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
+import { ButtonStyle } from "discord.js";
 import type { CreateFlow } from "../../permits/flows.js";
+import { polarityIcon } from "../../permits/format.js";
 import {
   formatPermitNodeLines,
   namespaceLabel,
@@ -16,7 +17,7 @@ import {
   permitNamespaces,
   suggestPermitName,
 } from "../../permits/nodes.js";
-import { polarityIcon } from "../../permits/format.js";
+import { backButton } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 
 const SelectOptionLimit = 25;
@@ -120,12 +121,7 @@ export async function createCard(
         emoji: "🧹",
         disabled: flow.nodes.length === 0,
       }),
-      createActionButton({
-        customId: "permit_back_main",
-        label: "Back to List",
-        style: ButtonStyle.Secondary,
-        emoji: "⬅️",
-      }),
+      backButton("permit_back_main", "Back to List"),
     ),
   ]);
 

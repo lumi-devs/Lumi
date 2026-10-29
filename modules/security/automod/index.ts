@@ -47,7 +47,6 @@ export default defineModule({
   description: "Heat-based automod with 13 filters, escalating punishments, and permit-based immunity",
   version: "2.0.0",
   config: AutomodConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { ConfigField } from "@lumi/module-runtime";
+import { describe, expect, it } from "vitest";
 import { fieldPages } from "../../src/admin/panel/configFields.ts";
 
 function field(key: string, category?: string): ConfigField {

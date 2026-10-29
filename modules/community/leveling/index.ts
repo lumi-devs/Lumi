@@ -1,43 +1,59 @@
+import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { type CommandDefinition, defineModule, type ListenerDefinition, type ModuleDefinition } from "@lumi/module-kit";
 import {
-  SlashCommandBuilder,
-  AttachmentBuilder,
-  type Message,
-  type GuildMember,
-  type Interaction,
-  type Guild,
-  type VoiceState,
-  Events,
-} from "discord.js";
-import { defineModule, type CommandDefinition, type ModuleDefinition, type ListenerDefinition } from "@lumi/module-kit";
-import {
-  makeCard,
-  makeEmptyCard,
-  ephemeralCard,
-  createPaginationRow,
-  formatPageFooter,
   AccentColors,
   type CardReply,
+  createPaginationRow,
+  ephemeralCard,
+  formatPageFooter,
+  makeCard,
+  makeEmptyCard,
+  makeErrorCard,
 } from "@lumi/ui";
 import {
-  LevelFormulas,
-  levelProgress,
-  levelForTotalXp,
-} from "./formulas.js";
+  AttachmentBuilder,
+  type ChatInputCommandInteraction,
+  Events,
+  type Guild,
+  type GuildMember,
+  type Interaction,
+  type Message,
+  SlashCommandBuilder,
+  type VoiceState,
+} from "discord.js";
 import {
-  getLevelingConfig,
-  AnnounceMessageDefault,
   channelEarnsXp,
-  rolesEarnXp,
+  getLevelingConfig,
   type LevelingConfig,
+  rolesEarnXp,
 } from "./config.js";
-import {
-  voiceAudibleTransition,
-  isAudible,
-} from "./voice-sessions.js";
-import { grantVoiceXp } from "./voice-xp.js";
-import { applyRewardRoles, grantXp } from "./level-up.js";
-import { requireGuildId } from "./guards.js";
 import { LevelingModuleName } from "./constants.js";
+import {
+  levelForTotalXp,
+  levelProgress,
+} from "./formulas.js";
+import { applyRewardRoles, grantVoiceXp, grantXp } from "./level-up.js";
+import {
+  isAudible,
+  voiceAudibleTransition,
+} from "./voice-sessions.js";
+
+async function requireGuildId(
+  interaction: ChatInputCommandInteraction,
+): Promise<string | null> {
+  const guildId = guildIdOf(interaction.guildId);
+  if (guildId) return guildId;
+
+  await interaction.reply(
+    ephemeralCard(
+      makeErrorCard(
+        "Server Only",
+        "Leveling commands can only be used inside a server.",
+      ),
+    ),
+  );
+  return null;
+}
 
 const rankDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -169,12 +185,12 @@ async function renderLeaderboard(
     const member = guild?.members.cache.get(u.userId);
     const name = member?.user.tag ?? `Unknown (${u.userId})`;
     if (boardType === "voice") {
-      return `**#${(page - 1) * 10 + i + 1}** ${name} — ${u.voiceMinutes.toLocaleString()} voice minutes`;
+      return `**#${(page - 1) * perPage + i + 1}** ${name} — ${u.voiceMinutes.toLocaleString()} voice minutes`;
     }
     const totalXp = Number(u.totalXp);
     const { level } = levelForTotalXp(config.levelFormula, totalXp);
     const progress = levelProgress(config.levelFormula, totalXp, level);
-    return `**#${(page - 1) * 10 + i + 1}** ${name} — Level ${progress.level} · ${totalXp.toLocaleString()} XP (${progress.xpForNext.toLocaleString()} to next)`;
+    return `**#${(page - 1) * perPage + i + 1}** ${name} — Level ${progress.level} · ${totalXp.toLocaleString()} XP (${progress.xpForNext.toLocaleString()} to next)`;
   });
 
   const title = boardType === "voice" ? "🎙️ Voice Leaderboard" : "🏆 XP Leaderboard";
@@ -385,27 +401,6 @@ const levelingModule: ModuleDefinition = defineModule({
   description: "XP, levels, role rewards, and leaderboards with voice XP support",
   version: "2.1.0",
   config: {},
-  configFields: [
-    { key: "levelFormula", label: "Level Formula", type: "select", choices: [...LevelFormulas], description: "Curve for XP required per level", default: "disgaea" },
-    { key: "xpPerMessage", label: "XP per Message", type: "number", description: "Base XP per message" },
-    { key: "cooldownSeconds", label: "XP Cooldown", type: "number", description: "Seconds between XP gains" },
-    { key: "voiceEnabled", label: "Voice XP Enabled", type: "boolean", description: "Track voice minutes and grant XP for time in voice channels", default: false },
-    { key: "voiceXpPerMinute", label: "Voice XP Per Minute", type: "number", description: "XP granted per audible minute in voice", default: 4 },
-    { key: "announceEnabled", label: "Level-Up Announcements", type: "boolean", description: "Post a message when a member levels up", default: true },
-    { key: "announceChannel", label: "Announcement Channel", type: "channel", description: "Channel for level-up messages" },
-    { key: "announceMessage", label: "Announcement Message", type: "string", description: "Level-up message template. Supports {user}, {level}, {xp}, {xpNeeded}", default: AnnounceMessageDefault },
-    { key: "minMessageLength", label: "Minimum Message Length", type: "number", description: "Messages shorter than this earn no XP", default: 4 },
-    { key: "roleRewards", label: "Role Rewards", type: "json", description: "JSON array: [{level, roleId, removePrevious}]" },
-    { key: "roleStack", label: "Stack Reward Roles", type: "boolean", description: "Keep every earned reward role", default: true },
-    { key: "keepXpOnLeave", label: "Keep XP On Leave", type: "boolean", description: "Keep progress and restore reward roles on rejoin", default: true },
-    { key: "globalMultiplier", label: "Global XP Multiplier", type: "number", description: "Multiplies all XP gains on this server", default: 1, min: 0, max: 100 },
-    { key: "multiplierRoles", label: "XP Multiplier Roles", type: "json", description: "JSON array: [{roleId, multiplier}]" },
-    { key: "channelMultipliers", label: "Channel XP Multipliers", type: "json", description: "JSON array: [{channelId, multiplier}]" },
-    { key: "ignoredChannels", label: "Ignored Channels", type: "multi-channel", description: "Text channels where message XP is disabled. Inactive while a channel whitelist is set.", category: "Filters" },
-    { key: "whitelistedChannels", label: "Whitelisted Channels", type: "multi-channel", description: "Only these text channels earn message XP. Overrides the ignored channel list.", category: "Filters" },
-    { key: "ignoredRoles", label: "Ignored Roles", type: "multi-role", description: "Members with any of these roles earn no XP. Inactive while a role whitelist is set.", category: "Filters" },
-    { key: "whitelistedRoles", label: "Whitelisted Roles", type: "multi-role", description: "Only members with one of these roles earn XP. Overrides the ignored role list.", category: "Filters" },
-  ],
   commands: [rankDef, leaderboardDef],
   listeners: [
     onMessageListener,

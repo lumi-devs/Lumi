@@ -1,5 +1,5 @@
-import type { PermitRepository, Polarity } from "@lumi/permits";
 import type { ModuleLoader } from "@lumi/module-runtime";
+import type { PermitRepository, Polarity } from "@lumi/permits";
 
 const BuiltinNodes = [
   "*",
@@ -163,4 +163,17 @@ export function suggestPermitName(
   if (nodes.length === 1) return readablePermitName(nodes[0]!, polarity);
   const base = readablePermitName(nodes[0]!, polarity).slice(0, 56);
   return `${base} +${nodes.length - 1}`.slice(0, 64);
+}
+
+/** Append a numeric suffix so generated names never collide with an existing permit. */
+export function uniquePermitName(
+  existingNames: Iterable<string>,
+  base: string,
+): string {
+  const names = new Set(existingNames);
+  const trimmed = base.slice(0, 60);
+  if (!names.has(trimmed)) return trimmed;
+  let suffix = 2;
+  while (names.has(`${trimmed} ${suffix}`)) suffix += 1;
+  return `${trimmed} ${suffix}`;
 }

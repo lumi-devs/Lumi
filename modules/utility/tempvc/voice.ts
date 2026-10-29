@@ -1,11 +1,11 @@
 import { ChannelType, type VoiceChannel, type VoiceState } from "discord.js";
+import { getTempVcConfig, isModuleEnabled } from "./config.js";
 import {
   createTempVoiceChannel,
   deleteTempVoiceChannel,
   findTempChannel,
   updateTempRecord,
 } from "./panel.js";
-import { getTempVcConfig, isModuleEnabled } from "./config.js";
 
 export async function handleVoiceStateChange(
   oldState: VoiceState,

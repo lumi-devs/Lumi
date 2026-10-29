@@ -1,6 +1,6 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 export const noteDef: CommandDefinition = {
   data: new SlashCommandBuilder()

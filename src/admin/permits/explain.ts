@@ -1,9 +1,9 @@
 import type { EvaluatedPermit, PermitTierExplanation } from "@lumi/permits";
+import { AccentColors, type CardReply, makeCard } from "@lumi/ui";
 import type {
   ActionRowBuilder,
   MessageActionRowComponentBuilder,
 } from "discord.js";
-import { AccentColors, makeCard, type CardReply } from "@lumi/ui";
 
 function verdictIcon(verdict: PermitTierExplanation["verdict"]): string {
   if (verdict === "allow") return "✅";

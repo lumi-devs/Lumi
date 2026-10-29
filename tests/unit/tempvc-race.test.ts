@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
 import { ChannelType } from "discord.js";
+import { describe, expect, it, vi } from "vitest";
 import {
-  TempVcConfigSchema,
   createTempVoiceChannel,
+  TempVcConfigSchema,
 } from "../../modules/utility/tempvc/panel.ts";
 
 const makeChannel = (

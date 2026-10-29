@@ -18,7 +18,6 @@ export default defineModule({
   description: "Member verification with emoji captcha, pending/verified roles, and timeout sweep",
   version: "2.0.0",
   config: VerificationConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

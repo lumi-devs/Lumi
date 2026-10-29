@@ -43,9 +43,8 @@ export function moduleListRowId(name: string, page: number): string {
   return `lumi:modsubs:${name}:${page}`;
 }
 
-export function submodulePagePrefix(name: string, originPage: number): string {
-  return `lumi:modsubs:${name}:${originPage}`;
-}
+/** Supermodule rows and submodule pages share the `lumi:modsubs` id scheme. */
+export const submodulePagePrefix = moduleListRowId;
 
 export function submoduleToggleId(
   moduleName: string,

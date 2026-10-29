@@ -1,19 +1,18 @@
 import {
-  type ActionRowBuilder,
-  ButtonStyle,
-  type MessageActionRowComponentBuilder,
-} from "discord.js";
-import {
+  type CardReply,
   createActionButton,
   makeCard,
   makeEmptyCard,
   makeErrorCard,
   row,
   settingRow,
-  type CardReply,
 } from "@lumi/ui";
-import { cut, pageRow, panelOptions, type HubInteraction } from "./common.js";
-import type { HubServices } from "./services.js";
+import {
+  type ActionRowBuilder,
+  ButtonStyle,
+  type MessageActionRowComponentBuilder,
+} from "discord.js";
+import { backButton, cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
 import {
   ModulesPerPage,
   moduleListRowId,
@@ -23,6 +22,7 @@ import {
   supermoduleItems,
 } from "./modules.js";
 import { paginate } from "./pages.js";
+import type { HubServices } from "./services.js";
 
 const SubmodulesPerPage = 3;
 
@@ -102,12 +102,8 @@ export async function renderSubmodules(
   const parent = modules.find(
     (module) => module.name === supermoduleName && !module.isSubmodule,
   );
-  const backButton = createActionButton({
-    customId: `lumi:mods:${originPage}`,
-    label: "Back",
-    style: ButtonStyle.Secondary,
-  });
-  const backRow = row(backButton);
+  const back = backButton(`lumi:mods:${originPage}`, "Back", null);
+  const backRow = row(back);
 
   if (!parent) {
     return makeErrorCard(
@@ -168,7 +164,7 @@ export async function renderSubmodules(
             }),
           ]
         : []),
-      backButton,
+      back,
     ),
   );
 
@@ -198,14 +194,12 @@ export async function renderSubmodules(
     undefined,
     `${parent.emoji} ${parent.displayName}`,
     body,
-    {
-      ...panelOptions(
-        interaction,
-        "modules",
-        breadcrumbs,
-        rows,
-        totalPages > 1 ? `page ${currentPage + 1}/${totalPages}` : undefined,
-      ),
-    },
+    panelOptions(
+      interaction,
+      "modules",
+      breadcrumbs,
+      rows,
+      totalPages > 1 ? `page ${currentPage + 1}/${totalPages}` : undefined,
+    ),
   );
 }

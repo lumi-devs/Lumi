@@ -1,11 +1,11 @@
 import { defineModule, type ModuleDefinition } from "@lumi/module-kit";
 import { banAdd, banRemove } from "./commands/ban.js";
 import {
+  caseDef,
   casesDef,
   casesPaginationListener,
-  caseDef,
 } from "./commands/case.js";
-import { lockdownDef, lockDef, unlockDef } from "./commands/channel.js";
+import { lockDef, lockdownDef, unlockDef } from "./commands/channel.js";
 import { kickDef } from "./commands/kick.js";
 import { noteDef } from "./commands/note.js";
 import { purgeDef } from "./commands/purge.js";
@@ -32,40 +32,6 @@ const modModule: ModuleDefinition = defineModule({
     immuneRoleIds: [],
     warnThresholds: {},
   },
-  configFields: [
-    {
-      key: "quarantineRoleId",
-      label: "Quarantine Role",
-      type: "role",
-      description: "Role assigned when quarantined",
-      default: null,
-      category: "Quarantine",
-    },
-    {
-      key: "maxTargets",
-      label: "Max Targets",
-      type: "number",
-      description: "Max members per command",
-      default: 10,
-      category: "Limits",
-    },
-    {
-      key: "immuneRoleIds",
-      label: "Immune Roles",
-      type: "multi-role",
-      description: "Roles exempt from auto-actions",
-      default: [],
-      category: "Exemptions",
-    },
-    {
-      key: "warnThresholds",
-      label: "Warn Thresholds",
-      type: "json",
-      description: "JSON object: warn count -> {action, duration}",
-      default: {},
-      category: "Warn Escalation",
-    },
-  ],
   commands: [
     banAdd,
     banRemove,

@@ -1,5 +1,20 @@
-import { createCodec, type Codec } from "./codec.js";
-import type { CacheRedis } from "./redis-port.js";
+import { type Codec, createCodec } from "./codec.js";
+
+/**
+ * Minimal Redis surface used by the cache. Kept structural so tests can use a
+ * plain mock and ioredis clients satisfy it without adapters.
+ */
+export interface CacheRedis {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, unit: "PX", ttlMs: number): Promise<unknown>;
+  del(...keys: string[]): Promise<unknown>;
+  mget(...keys: string[]): Promise<(string | null)[]>;
+  /**
+   * Only needed for the stale-write cleanup. Optional so test doubles do not
+   * have to emulate Lua; a production ioredis client always provides it.
+   */
+  eval?(script: string, numKeys: number, key: string, value: string): Promise<unknown>;
+}
 
 export interface CacheOptions<_T> {
   redis: CacheRedis;
@@ -151,8 +166,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
    */
   private discard(keys: readonly string[]): void {
     for (const fullKey of keys) {
-      this.l1.delete(fullKey);
-      this.markDiscarded(fullKey);
+      this.discardKey(fullKey);
     }
   }
 
@@ -185,6 +199,11 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     return entry;
   }
 
+  private recordL1Hit(value: T | null): void {
+    if (value === null) this.metrics?.recordNegativeHit(this.label);
+    else this.metrics?.recordHit(this.label);
+  }
+
   private setL1(fullKey: string, value: T | null, ttlMs: number): void {
     if (this.l1.has(fullKey)) this.l1.delete(fullKey);
     while (this.l1.size >= this.l1MaxSize) {
@@ -204,8 +223,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
 
     const cached = this.getL1(fullKey);
     if (cached) {
-      if (cached.value === null) this.metrics?.recordNegativeHit(this.label);
-      else this.metrics?.recordHit(this.label);
+      this.recordL1Hit(cached.value);
       return cached.value;
     }
 
@@ -218,8 +236,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     try {
       const decoded = this.codec.decode(redisValue);
       this.setL1(fullKey, decoded, this.defaultTtlMs);
-      if (decoded === null) this.metrics?.recordNegativeHit(this.label);
-      else this.metrics?.recordHit(this.label);
+      this.recordL1Hit(decoded);
       return decoded;
     } catch {
       // A value that cannot be decoded is a miss; the next load rewrites it.
@@ -238,8 +255,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
 
     const cached = this.getL1(fullKey);
     if (cached) {
-      if (cached.value === null) this.metrics?.recordNegativeHit(this.label);
-      else this.metrics?.recordHit(this.label);
+      this.recordL1Hit(cached.value);
       return cached.value;
     }
 
@@ -338,8 +354,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       const cached = this.getL1(fullKeys[i]!);
       if (cached) {
         result.set(key, cached.value);
-        if (cached.value === null) this.metrics?.recordNegativeHit(this.label);
-        else this.metrics?.recordHit(this.label);
+        this.recordL1Hit(cached.value);
       } else {
         missingIndexes.push(i);
         result.set(key, null);
@@ -365,8 +380,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
         const decoded = this.codec.decode(redisValue);
         this.setL1(fullKeys[keyIndex]!, decoded, this.defaultTtlMs);
         result.set(key, decoded);
-        if (decoded === null) this.metrics?.recordNegativeHit(this.label);
-        else this.metrics?.recordHit(this.label);
+        this.recordL1Hit(decoded);
       } catch {
         this.metrics?.recordMiss(this.label);
         result.set(key, null);

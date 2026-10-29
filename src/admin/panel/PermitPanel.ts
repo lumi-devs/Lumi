@@ -19,20 +19,9 @@ import {
 } from "../permits/flows.js";
 import { permitNodeCatalog } from "../permits/nodes.js";
 import {
-  canManageExtraOwnerPermit,
-  isExtraOwnerPermit,
-  type AnyPermitInteraction,
-  type PermitHost,
-  type PermitInteraction,
-} from "./permit/host.js";
-import {
-  extraOwnerError,
-  mainCard,
-  missingPermitCard,
-  reorderCard,
-} from "./permit/listViews.js";
-import { deleteCard, detailCard, unassignCard } from "./permit/detailViews.js";
-import { createCard } from "./permit/createView.js";
+  handleAssignAction,
+  handleAssignSelect,
+} from "./permit/assignActions.js";
 import {
   assignCard,
   assignExpiryCard,
@@ -43,16 +32,26 @@ import {
   handleCreateNameSubmit,
   handleCreateSelect,
 } from "./permit/createActions.js";
+import { createCard } from "./permit/createView.js";
+import { deleteCard, detailCard, unassignCard } from "./permit/detailViews.js";
+import { handleEditSubmit } from "./permit/editDialog.js";
 import {
   handleExplainAction,
   handleExplainSelect,
 } from "./permit/explainActions.js";
 import {
-  handleAssignAction,
-  handleAssignSelect,
-} from "./permit/assignActions.js";
-import { handleEditSubmit } from "./permit/editDialog.js";
+  type AnyPermitInteraction,
+  canManageExtraOwnerPermit,
+  type PermitHost,
+  type PermitInteraction,
+} from "./permit/host.js";
 import { handleListAction, handleListSelect } from "./permit/listActions.js";
+import {
+  extraOwnerError,
+  mainCard,
+  missingPermitCard,
+  reorderCard,
+} from "./permit/listViews.js";
 
 interface PermitPanelOptions {
   permitRepo: PermitRepository;
@@ -83,10 +82,6 @@ export class PermitPanel implements PermitHost {
 
   canManageExtraOwnerPermit(permit: Pick<Permit, "nodes">): boolean {
     return canManageExtraOwnerPermit(this, permit);
-  }
-
-  isExtraOwnerPermit(permit: Pick<Permit, "nodes">): boolean {
-    return isExtraOwnerPermit(permit);
   }
 
   extraOwnerError(): CardReply {

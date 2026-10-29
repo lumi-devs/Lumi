@@ -1,5 +1,5 @@
+import { logger } from "@lumi/foundation";
 import type { Client } from "discord.js";
-import { logger } from "./logger.js";
 
 interface BootOptions {
   token: string;

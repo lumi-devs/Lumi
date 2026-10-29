@@ -1,6 +1,6 @@
-import { ButtonStyle } from "discord.js";
 import {
   buildSafeActionRows,
+  type CardReply,
   createActionButton,
   createChannelSelectMenu,
   createRoleSelectMenu,
@@ -8,15 +8,16 @@ import {
   createUserSelectMenu,
   makeCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
+import { ButtonStyle } from "discord.js";
 import type { AssignFlow, ExplainFlow } from "../../permits/flows.js";
-import { formatPermitNodeLines } from "../../permits/nodes.js";
 import {
   polarityIcon,
   targetMention,
   targetTypeLabel,
 } from "../../permits/format.js";
+import { formatPermitNodeLines } from "../../permits/nodes.js";
+import { backButton } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 
 export function explainCard(flow: ExplainFlow): CardReply {
@@ -37,12 +38,7 @@ export function explainCard(flow: ExplainFlow): CardReply {
         emoji: "🔍",
         disabled: flow.userId === undefined,
       }),
-      createActionButton({
-        customId: "permit_back_main",
-        label: "Back to List",
-        style: ButtonStyle.Secondary,
-        emoji: "⬅️",
-      }),
+      backButton("permit_back_main", "Back to List"),
     ),
   ]);
 
@@ -147,14 +143,7 @@ export async function assignCard(
               ),
             ]),
         targetRow,
-        row(
-          createActionButton({
-            customId: `permit_view:${permit.id}`,
-            label: "Back to Permit",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
+        row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
       ]),
     },
   );
@@ -214,14 +203,7 @@ export async function assignExpiryCard(
             ],
           }),
         ),
-        row(
-          createActionButton({
-            customId: `permit_view:${permit.id}`,
-            label: "Back to Permit",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
+        row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
       ]),
     },
   );

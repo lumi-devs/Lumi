@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags } from "discord.js";
+import { describe, expect, it } from "vitest";
 import {
   AccentColors,
   buildSafeActionRows,

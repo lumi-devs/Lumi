@@ -1,7 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { isSnowflake } from "@lumi/foundation";
 import type { CommandDefinition } from "@lumi/module-kit";
-import { getModerationConfig } from "../config.js";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { getModerationConfig } from "../config.js";
 import {
   actionCard,
   describeError,
@@ -88,7 +89,7 @@ export const banRemove: CommandDefinition = {
     const reason = getReason(interaction);
     const guild = interaction.guild!;
 
-    if (!/^\d{17,19}$/.test(userId)) {
+    if (!isSnowflake(userId)) {
       await replyError(interaction, "Invalid ID", "User ID must be a valid snowflake");
       return;
     }

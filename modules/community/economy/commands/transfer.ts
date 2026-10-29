@@ -1,6 +1,6 @@
-import { SlashCommandBuilder } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
+import { SlashCommandBuilder } from "discord.js";
 import { getEconomyConfig } from "../config.js";
 import { formatMoney, requireGuild } from "../format.js";
 import {
@@ -57,25 +57,15 @@ export const transferDef: CommandDefinition = {
     }
 
     const user = await getOrCreateUser(services, guildId, userId, config);
-    if (user.balance < amount) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Insufficient funds", [
-            `**Wallet** — ${formatMoney(symbol, user.balance)}`,
-            `**Needed** — ${formatMoney(symbol, amount)}`,
-          ]),
-        ),
-      );
-      return;
-    }
-
     const tax = (amount * BigInt(Math.floor(config.taxRate * 10_000))) / 10_000n;
     const netAmount = amount - tax;
 
-    const debited = await debitWallet(services, guildId, userId, amount, {
-      trackSpent: true,
-    });
-    if (!debited) {
+    if (
+      user.balance < amount ||
+      !(await debitWallet(services, guildId, userId, amount, {
+        trackSpent: true,
+      }))
+    ) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard("Insufficient funds", [

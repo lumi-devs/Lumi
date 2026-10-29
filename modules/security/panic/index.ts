@@ -17,7 +17,6 @@ export default defineModule({
   description: "Automated server lockdown on threat velocity spikes",
   version: "2.0.0",
   config: PanicConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

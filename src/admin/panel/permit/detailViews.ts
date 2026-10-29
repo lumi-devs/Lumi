@@ -1,7 +1,8 @@
-import { ButtonStyle } from "discord.js";
+import type { PermitAssignment } from "@lumi/permits";
 import {
   AccentColors,
   buildSafeActionRows,
+  type CardReply,
   confirmRow,
   createActionButton,
   createStringSelectMenu,
@@ -11,19 +12,18 @@ import {
   makeInfoCard,
   makeWarningCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
-import type { PermitAssignment } from "@lumi/permits";
-import {
-  formatPermitNodeLines,
-} from "../../permits/nodes.js";
+import { ButtonStyle } from "discord.js";
 import {
   formatTimestamp,
   polarityIcon,
   targetMention,
   targetTypeLabel,
 } from "../../permits/format.js";
-import { cut } from "../common.js";
+import {
+  formatPermitNodeLines,
+} from "../../permits/nodes.js";
+import { backButton, cut } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 
 const AssignmentPreviewLimit = 10;
@@ -116,14 +116,7 @@ export async function detailCard(
         disabled: permit.builtin || !canManageExtraOwner,
       }),
     ),
-    row(
-      createActionButton({
-        customId: "permit_back_main",
-        label: "Back to List",
-        style: ButtonStyle.Secondary,
-        emoji: "⬅️",
-      }),
-    ),
+    row(backButton("permit_back_main", "Back to List")),
   ]);
 
   return makeCard(
@@ -159,14 +152,7 @@ export async function unassignCard(
       {
         breadcrumbs: ["Admin", "Permits", permit.name],
         actionRows: buildSafeActionRows([
-          row(
-            createActionButton({
-              customId: `permit_view:${permit.id}`,
-              label: "Back to Permit",
-              style: ButtonStyle.Secondary,
-              emoji: "⬅️",
-            }),
-          ),
+          row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
         ]),
       },
     );
@@ -213,14 +199,7 @@ export async function unassignCard(
             options,
           }),
         ),
-        row(
-          createActionButton({
-            customId: `permit_view:${permit.id}`,
-            label: "Back to Permit",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
+        row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
       ]),
       footer: `${assignments.length} assignment${assignments.length === 1 ? "" : "s"}`,
     },
@@ -241,14 +220,7 @@ export async function deleteCard(
     return makeErrorCard("Built-in Permit", "Built-in permits cannot be deleted.", {
       breadcrumbs: ["Admin", "Permits", permit.name],
       actionRows: buildSafeActionRows([
-        row(
-          createActionButton({
-            customId: `permit_view:${permit.id}`,
-            label: "Back to Permit",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
+        row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
       ]),
     });
   }

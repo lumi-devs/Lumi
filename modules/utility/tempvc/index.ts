@@ -1,25 +1,26 @@
+import { requireGuildId as guildIdOf } from "@lumi/foundation";
 import {
-  SlashCommandBuilder,
-  type GuildMember,
-} from "discord.js";
-import {
-  defineModule,
   type CommandDefinition,
+  defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
 } from "@lumi/module-kit";
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { ephemeralCard } from "@lumi/ui";
 import {
-  TempVcConfigSchema,
+  type GuildMember,
+  SlashCommandBuilder,
+} from "discord.js";
+import { canUseTempVcAdmin } from "./access.js";
+import { getTempVcConfig, isModuleEnabled } from "./config.js";
+import { handleTempVcInteraction } from "./interactions.js";
+import {
   buildControlPanelForChannel,
   sweepExpiredTempChannels,
+  TempVcConfigSchema,
 } from "./panel.js";
-import { getTempVcConfig, isModuleEnabled } from "./config.js";
-import { handleVoiceStateChange } from "./voice.js";
-import { handleTempVcInteraction } from "./interactions.js";
-import { canUseTempVcAdmin } from "./access.js";
+import { replyError } from "./reply.js";
 import { adminPanelCard } from "./ui-admin.js";
+import { handleVoiceStateChange } from "./voice.js";
 
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -43,25 +44,19 @@ const tempvcCommand: CommandDefinition = {
   async execute(interaction, services) {
     const guildId = guildIdOf(interaction.guildId);
     if (!guildId) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Server Only",
-            "Temporary voice controls only work inside a server.",
-          ),
-        ),
+      await replyError(
+        interaction,
+        "Server Only",
+        "Temporary voice controls only work inside a server.",
       );
       return;
     }
 
     if (!isModuleEnabled(services, guildId)) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Module Disabled",
-            "The tempvc module is disabled on this server.",
-          ),
-        ),
+      await replyError(
+        interaction,
+        "Module Disabled",
+        "The tempvc module is disabled on this server.",
       );
       return;
     }
@@ -70,13 +65,10 @@ const tempvcCommand: CommandDefinition = {
 
     if (subcommand === "admin") {
       if (!(await canUseTempVcAdmin(interaction, services))) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Staff Only",
-              "You need the **tempvc.admin** permit or **Manage Server** to use generator management.",
-            ),
-          ),
+        await replyError(
+          interaction,
+          "Staff Only",
+          "You need the **tempvc.admin** permit or **Manage Server** to use generator management.",
         );
         return;
       }
@@ -89,13 +81,10 @@ const tempvcCommand: CommandDefinition = {
     const member = interaction.member as GuildMember | null;
     const channelId = member?.voice?.channelId;
     if (!channelId) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Connected",
-            "Join your temporary voice channel first, then run `/tempvc panel` again.",
-          ),
-        ),
+      await replyError(
+        interaction,
+        "Not Connected",
+        "Join your temporary voice channel first, then run `/tempvc panel` again.",
       );
       return;
     }
@@ -106,13 +95,10 @@ const tempvcCommand: CommandDefinition = {
       channelId,
     );
     if (!card) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Managed",
-            "This voice channel is not a managed temporary channel.",
-          ),
-        ),
+      await replyError(
+        interaction,
+        "Not Managed",
+        "This voice channel is not a managed temporary channel.",
       );
       return;
     }
@@ -149,62 +135,6 @@ const tempvcModule: ModuleDefinition = defineModule({
   description: "Join-to-create temporary voice channels with ownership controls",
   version: "2.0.0",
   config: TempVcConfigSchema,
-  configFields: [
-    {
-      key: "categoryId",
-      label: "Category",
-      type: "channel",
-      description: "Category to create channels in",
-    },
-    {
-      key: "templateName",
-      label: "Channel Name Template",
-      type: "string",
-      description: "Use {user} for username",
-    },
-    {
-      key: "defaultBitrate",
-      label: "Default Bitrate",
-      type: "number",
-      description: "Bitrate in bps (8000-384000)",
-    },
-    {
-      key: "defaultUserLimit",
-      label: "Default User Limit",
-      type: "number",
-      description: "0 = unlimited",
-    },
-    {
-      key: "maxChannels",
-      label: "Max Channels",
-      type: "number",
-      description: "Guild-wide limit",
-    },
-    {
-      key: "maxPerUser",
-      label: "Max Per User",
-      type: "number",
-      description: "How many channels one user can own",
-    },
-    {
-      key: "emptyTimeoutMs",
-      label: "Empty Timeout (ms)",
-      type: "number",
-      description: "Delete after empty for this long",
-    },
-    {
-      key: "createCooldownMs",
-      label: "Create Cooldown (ms)",
-      type: "number",
-      description: "Wait before creating another channel (default 10000)",
-    },
-    {
-      key: "ownerLeaveDelete",
-      label: "Delete on Owner Leave",
-      type: "boolean",
-      description: "Delete channel when owner leaves",
-    },
-  ],
   commands: [tempvcCommand],
   listeners: [onVoiceStateListener, onInteractionListener],
   tasks: [],

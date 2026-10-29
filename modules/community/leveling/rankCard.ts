@@ -1,5 +1,5 @@
-import { createCanvas, loadImage } from "canvas";
 import { roundRect } from "@lumi/ui";
+import { createCanvas, loadImage } from "canvas";
 
 const CARD_WIDTH = 934;
 const CARD_HEIGHT = 282;

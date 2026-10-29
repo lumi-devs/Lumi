@@ -1,15 +1,15 @@
-import type { Client } from "discord.js";
-import type { Redis } from "ioredis";
 import { createCache, type NamespacedCache } from "@lumi/cache";
 import { prisma as defaultPrisma, type PrismaClient } from "@lumi/db";
 import {
   createHealthMonitor,
-  prometheusCacheMetrics,
   type HealthMonitor,
+  prometheusCacheMetrics,
 } from "@lumi/observability";
 import { PermitRepository } from "@lumi/permits";
 import { InvalidationBus } from "@lumi/redis";
 import { DistributedScheduler } from "@lumi/scheduler";
+import type { Client } from "discord.js";
+import type { Redis } from "ioredis";
 import {
   ConfigService,
   type GuildSettings,

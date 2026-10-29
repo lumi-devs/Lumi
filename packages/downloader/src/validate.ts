@@ -1,9 +1,10 @@
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { validateManifest } from "@lumi/module-runtime";
 import type { ModuleManifest } from "@lumi/module-runtime";
-import { RequirementRe } from "./constants.js";
+import { validateManifest } from "@lumi/module-runtime";
 import { pathExists } from "./fs.js";
+
+export const RequirementRe = /^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/\-^~>=<*]*$/;
 
 const RuntimePackages = new Set([
   "discord.js",

@@ -22,11 +22,6 @@ export interface LoadedModule {
   guildsDisabled: Set<string>;
 }
 
-interface DiscoveryContext {
-  origin: "bundled" | "addon";
-  discovered: LoadedModule[];
-}
-
 function isMissingPath(error: unknown): boolean {
   const code = (error as NodeJS.ErrnoException).code;
   return code === "ENOENT" || code === "ENOTDIR";
@@ -188,10 +183,7 @@ export class ModuleLoader {
           continue;
         }
 
-        await this.discoverSupermodule(modulePath, manifest, {
-          origin: root.origin,
-          discovered,
-        });
+        await this.discoverSupermodule(modulePath, manifest, root.origin, discovered);
       }
     }
 
@@ -271,16 +263,17 @@ export class ModuleLoader {
   private async discoverSupermodule(
     modulePath: string,
     manifest: ModuleManifest,
-    context: DiscoveryContext,
+    origin: "bundled" | "addon",
+    discovered: LoadedModule[],
   ): Promise<void> {
     const definition = await this.loadDefinition(modulePath, manifest);
     if (!definition) return;
 
-    context.discovered.push({
+    discovered.push({
       manifest,
       definition,
       path: modulePath,
-      origin: context.origin,
+      origin,
       isSubmodule: false,
       guildsDisabled: new Set(),
     });
@@ -312,11 +305,11 @@ export class ModuleLoader {
       const subDefinition = await this.loadDefinition(subPath, subManifest);
       if (!subDefinition) continue;
 
-      context.discovered.push({
+      discovered.push({
         manifest: subManifest,
         definition: subDefinition,
         path: subPath,
-        origin: context.origin,
+        origin,
         supermodule: manifest.name,
         isSubmodule: true,
         guildsDisabled: new Set(),

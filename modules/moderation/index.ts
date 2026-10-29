@@ -7,7 +7,6 @@ const ModerationSupermodule = defineModule({
   description: "Moderation tools: cases, bans, kicks, timeouts, warns, quarantine, lockdown",
   version: "2.0.0",
   config: {},
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

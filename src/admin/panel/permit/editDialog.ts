@@ -1,15 +1,15 @@
 import type { Prisma } from "@lumi/db";
+import { isBotOwner } from "@lumi/permits";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
   ActionRowBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
-import { isBotOwner } from "@lumi/permits";
 import { errorMessage } from "../../../core/errors.js";
-import { cut } from "../common.js";
 import { isValidNode, parseNodeList } from "../../permits/nodes.js";
+import { cut } from "../common.js";
 import type { PermitHost } from "./host.js";
 
 export async function showEditModal(

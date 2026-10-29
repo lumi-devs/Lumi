@@ -14,7 +14,6 @@ export default defineModule({
   description: "Periodic server structure snapshots for auto-recovery",
   version: "2.0.0",
   config: BackupsConfigSchema,
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],

@@ -1,19 +1,19 @@
+import type { ModuleLoader } from "@lumi/module-runtime";
+import type { Permit, PermitRepository } from "@lumi/permits";
+import { isBotOwner } from "@lumi/permits";
+import type { CardReply } from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
-import type { ModuleLoader } from "@lumi/module-runtime";
-import type { Permit, PermitRepository } from "@lumi/permits";
-import type { CardReply } from "@lumi/ui";
-import { isBotOwner } from "@lumi/permits";
-import type { MessageModalSubmit } from "../common.js";
 import type {
   AssignFlow,
   CreateFlow,
   ExplainFlow,
   PermitFlow,
 } from "../../permits/flows.js";
+import type { MessageModalSubmit } from "../common.js";
 
 /** Interactions whose message can be edited in place. */
 export type PermitInteraction =

@@ -1,20 +1,7 @@
-import { PermissionFlagsBits, type Guild } from "discord.js";
-import { createRedisClient } from "@lumi/redis";
-import { connectDatabase, disconnectDatabase, prisma } from "@lumi/db";
-import { createModuleLoader } from "@lumi/module-runtime";
-import { AddonManager } from "@lumi/downloader";
-import {
-  activeModules,
-  guildsTotal,
-  httpRequestDuration,
-  httpRequests,
-  shardsOnline,
-  startMetricsServer,
-  usersTotal,
-} from "@lumi/observability";
-import * as ui from "@lumi/ui";
+import { ModuleManager, moduleCommands, PermitPanel } from "@lumi/admin";
 import {
   aboutCommand,
+  type BotInteraction,
   boot,
   createClient,
   createCoreServices,
@@ -25,13 +12,26 @@ import {
   pingCommand,
   redisOptionsFromEnv,
   shutdown,
-  type BotInteraction,
 } from "@lumi/core";
-import { ModuleManager, PermitPanel, moduleCommands } from "@lumi/admin";
+import { connectDatabase, disconnectDatabase, prisma } from "@lumi/db";
+import { AddonManager } from "@lumi/downloader";
+import { createModuleLoader } from "@lumi/module-runtime";
+import {
+  activeModules,
+  guildsTotal,
+  httpRequestDuration,
+  httpRequests,
+  shardsOnline,
+  startMetricsServer,
+  usersTotal,
+} from "@lumi/observability";
+import { createRedisClient } from "@lumi/redis";
+import * as ui from "@lumi/ui";
+import { type Guild, PermissionFlagsBits } from "discord.js";
 import {
   CommandRegistry,
-  ModuleHost,
   commandPayloadForGuild,
+  ModuleHost,
 } from "./core/modules.js";
 
 async function main() {

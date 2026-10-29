@@ -1,6 +1,6 @@
-import { ButtonStyle } from "discord.js";
 import {
   buildSafeActionRows,
+  type CardReply,
   createActionButton,
   createPaginationRow,
   createStringSelectMenu,
@@ -9,57 +9,41 @@ import {
   makeEmptyCard,
   makeErrorCard,
   row,
-  type CardReply,
 } from "@lumi/ui";
-import { formatPermitNodes } from "../../permits/nodes.js";
+import { ButtonStyle } from "discord.js";
 import {
   formatTimestamp,
   polarityIcon,
 } from "../../permits/format.js";
-import { cut } from "../common.js";
+import { formatPermitNodes } from "../../permits/nodes.js";
+import { backButton, cut } from "../common.js";
+import { paginate } from "../pages.js";
 import type { PermitCardContext } from "./host.js";
 
 const PermitPageSize = 6;
 const ReorderPageSize = 3;
 const SelectOptionLimit = 25;
 
+function listErrorCard(title: string, body: string): CardReply {
+  return makeErrorCard(title, body, {
+    breadcrumbs: ["Admin", "Permits"],
+    actionRows: buildSafeActionRows([
+      row(backButton("permit_back_main", "Back to List")),
+    ]),
+  });
+}
+
 export function extraOwnerError(): CardReply {
-  return makeErrorCard(
+  return listErrorCard(
     "Extra Owner",
     "Only bot owners can create, edit, assign, or delete a permit with `*`.",
-    {
-      breadcrumbs: ["Admin", "Permits"],
-      actionRows: buildSafeActionRows([
-        row(
-          createActionButton({
-            customId: "permit_back_main",
-            label: "Back to List",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
-      ]),
-    },
   );
 }
 
 export function missingPermitCard(): CardReply {
-  return makeErrorCard(
+  return listErrorCard(
     "Permit Not Found",
     "That permit no longer exists in this server.",
-    {
-      breadcrumbs: ["Admin", "Permits"],
-      actionRows: buildSafeActionRows([
-        row(
-          createActionButton({
-            customId: "permit_back_main",
-            label: "Back to List",
-            style: ButtonStyle.Secondary,
-            emoji: "⬅️",
-          }),
-        ),
-      ]),
-    },
   );
 }
 
@@ -98,10 +82,11 @@ export async function mainCard(
   }
 
   const builtinCount = permits.filter((permit) => permit.builtin).length;
-  const totalPages = Math.max(1, Math.ceil(permits.length / PermitPageSize));
-  const currentPage = Math.min(Math.max(page, 0), totalPages - 1);
-  const start = currentPage * PermitPageSize;
-  const visible = permits.slice(start, start + PermitPageSize);
+  const {
+    items: visible,
+    page: currentPage,
+    totalPages,
+  } = paginate(permits, page, PermitPageSize);
 
   const lines = visible.map((permit) => {
     const assigned = permit.assignments?.length ?? 0;
@@ -181,10 +166,12 @@ export async function reorderCard(
   const permits = await context.permitRepo.listPermits(context.guildId);
   if (permits.length === 0) return mainCard(context, 0);
 
-  const totalPages = Math.max(1, Math.ceil(permits.length / ReorderPageSize));
-  const currentPage = Math.min(Math.max(page, 0), totalPages - 1);
+  const {
+    items: visible,
+    page: currentPage,
+    totalPages,
+  } = paginate(permits, page, ReorderPageSize);
   const start = currentPage * ReorderPageSize;
-  const visible = permits.slice(start, start + ReorderPageSize);
   const reorderable = permits.filter((permit) => !permit.builtin);
 
   const lines = visible.map((permit, index) => {
@@ -222,14 +209,7 @@ export async function reorderCard(
 
   const actionRows = buildSafeActionRows([
     ...permitRows,
-    row(
-      createActionButton({
-        customId: "permit_back_main",
-        label: "Back to Permits",
-        style: ButtonStyle.Secondary,
-        emoji: "⬅️",
-      }),
-    ),
+    row(backButton("permit_back_main", "Back to Permits")),
     ...(totalPages > 1
       ? [
           createPaginationRow({

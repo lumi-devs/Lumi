@@ -1,5 +1,5 @@
 import type { NamespacedCache } from "@lumi/cache";
-import type { PrismaClient, Prisma } from "@lumi/db";
+import type { Prisma, PrismaClient } from "@lumi/db";
 
 export type GuildSettings = Record<string, unknown>;
 
@@ -44,6 +44,10 @@ export class ConfigService {
     await this.cache?.delete(guildId);
   }
 
+  async getAll(guildId: string): Promise<GuildSettings> {
+    return this.read(guildId);
+  }
+
   async get(guildId: string, key: string): Promise<unknown> {
     const settings = await this.read(guildId);
     return settings[key];
@@ -58,14 +62,6 @@ export class ConfigService {
   async reset(guildId: string, key: string): Promise<void> {
     const settings = await this.read(guildId);
     delete settings[key];
-    await this.write(guildId, settings);
-  }
-
-  async getAll(guildId: string): Promise<GuildSettings> {
-    return this.read(guildId);
-  }
-
-  async setAll(guildId: string, settings: GuildSettings): Promise<void> {
     await this.write(guildId, settings);
   }
 }

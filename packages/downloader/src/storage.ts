@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { validateManifest, type ModuleManifest } from "@lumi/module-runtime";
-import { RequirementRe } from "./constants.js";
+import { type ModuleManifest, validateManifest } from "@lumi/module-runtime";
 import { pathExists } from "./fs.js";
+import { RequirementRe } from "./validate.js";
 
 export class AddonStorage {
   readonly reposDir: string;

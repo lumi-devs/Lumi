@@ -1,5 +1,5 @@
+import { type CardReply, ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
-import { ephemeralCard, makeErrorCard, type CardReply } from "@lumi/ui";
 
 function messageForDiscordCode(code: number): string | null {
   switch (code) {

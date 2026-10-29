@@ -1,6 +1,6 @@
-import type { Guild, GuildMember } from "discord.js";
 import { makeSuccessCard } from "@lumi/ui";
-import type { LevelingConfig, LevelReward } from "./config.js";
+import type { Guild, GuildMember } from "discord.js";
+import { type LevelingConfig, type LevelReward, rolesEarnXp } from "./config.js";
 import { levelForTotalXp, levelProgress } from "./formulas.js";
 
 interface GrantXpInput {
@@ -192,4 +192,29 @@ export async function grantXp(
   if (guild) {
     await announceLevelUp(services, config, guild, input, level, totalXp);
   }
+}
+
+export async function grantVoiceXp(
+  services: any,
+  guild: Guild,
+  member: GuildMember,
+  minutes: number,
+  config: LevelingConfig,
+): Promise<void> {
+  if (!rolesEarnXp(config, member.roles.cache.keys())) return;
+
+  const amount = Math.max(
+    1,
+    Math.round(config.voiceXpPerMinute * minutes * config.globalMultiplier),
+  );
+
+  await grantXp(services, config, {
+    guildId: guild.id,
+    userId: member.id,
+    amount,
+    member,
+    guild,
+    voiceMinutes: minutes,
+    fallbackChannelId: member.voice.channelId,
+  });
 }

@@ -1,13 +1,13 @@
 import {
   ActionRowBuilder,
+  type AnyComponentBuilder,
   ButtonBuilder,
+  type MessageActionRowComponentBuilder,
   SectionBuilder,
   type StringSelectMenuBuilder,
   TextDisplayBuilder,
-  type AnyComponentBuilder,
-  type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { ButtonStyle, type APIMessageComponentEmoji } from "discord.js";
+import { type APIMessageComponentEmoji, ButtonStyle } from "discord.js";
 import { componentEmoji, setEmojiIfPresent } from "./emoji.js";
 import { createStringSelectMenu } from "./selects.js";
 
@@ -155,15 +155,14 @@ export const SectionLineLimit = 3;
 const clipLines = (lines: string | string[]): string[] =>
   (Array.isArray(lines) ? lines : [lines]).slice(0, SectionLineLimit);
 
-const toButton = (b: AccessoryButton): ButtonBuilder => {
-  const button = new ButtonBuilder()
-    .setCustomId(b.customId)
-    .setStyle(b.style ?? ButtonStyle.Secondary);
-  if (b.label) button.setLabel(clipLabel(b.label));
-  setEmojiIfPresent(button, b.emoji);
-  if (b.disabled !== undefined) button.setDisabled(b.disabled);
-  return button;
-};
+const toButton = (b: AccessoryButton): ButtonBuilder =>
+  createActionButton({
+    customId: b.customId,
+    label: b.label,
+    style: b.style ?? ButtonStyle.Secondary,
+    emoji: b.emoji,
+    disabled: b.disabled,
+  });
 
 export function settingRow(
   lines: string | string[],

@@ -1,26 +1,26 @@
 import {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  type Message,
-  type VoiceState,
-} from "discord.js";
-import {
-  defineModule,
   type CommandDefinition,
+  defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
 } from "@lumi/module-kit";
 import {
   AccentColors,
+  type CardReply,
   ephemeralCard,
   makeCard,
   makeErrorCard,
   makeSuccessCard,
-  type CardReply,
 } from "@lumi/ui";
+import {
+  type Message,
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  type VoiceState,
+} from "discord.js";
 import { z } from "zod";
 
-import { sendLog, isIgnored } from "./services.js";
+import { isIgnored, sendLog } from "./services.js";
 
 const LoggingConfigSchema = z.object({
   messageLogChannel: z.string().nullable().optional(),
@@ -32,12 +32,18 @@ const LoggingConfigSchema = z.object({
 
 type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
 
+const LoggingConfigKey = "logging";
+
 function eventCard(title: string, color: number, lines: string[], footer?: string): CardReply {
   return makeCard(color, title, lines, footer ? { footer } : undefined);
 }
 
 function isLoggingEnabled(services: any, guildId: string): boolean {
-  return services.modules?.isEnabled(guildId, "logging") ?? true;
+  return services.modules?.isEnabled(guildId, LoggingConfigKey) ?? true;
+}
+
+async function getLoggingConfig(services: any, guildId: string): Promise<LoggingConfig> {
+  return ((await services.config.get(guildId, LoggingConfigKey)) ?? {}) as LoggingConfig;
 }
 
 const loggingConfigDef: CommandDefinition = {
@@ -69,7 +75,7 @@ const loggingConfigDef: CommandDefinition = {
   async execute(interaction, services) {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
-    const config = await services.config.get(guildId, "logging") as any ?? {};
+    const config = (await getLoggingConfig(services, guildId)) as any;
 
     switch (sub) {
       case "set": {
@@ -81,7 +87,7 @@ const loggingConfigDef: CommandDefinition = {
         }
         const key = `${type}LogChannel`;
         config[key] = channel.id;
-        await services.config.set(guildId, "logging", config);
+        await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Log channel set", [
           `**Type**\n${type}`,
           `**Channel**\n${channel}`,
@@ -92,7 +98,7 @@ const loggingConfigDef: CommandDefinition = {
         const type = interaction.options.getString("type", true);
         const key = `${type}LogChannel`;
         delete config[key];
-        await services.config.set(guildId, "logging", config);
+        await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Log channel removed", [
           `**Type**\n${type}`,
         ])));
@@ -106,7 +112,7 @@ const loggingConfigDef: CommandDefinition = {
         }
         config.ignoredChannels = config.ignoredChannels ?? [];
         if (!config.ignoredChannels.includes(channel.id)) config.ignoredChannels.push(channel.id);
-        await services.config.set(guildId, "logging", config);
+        await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel ignored", [
           `**Channel**\n${channel}`,
         ])));
@@ -119,7 +125,7 @@ const loggingConfigDef: CommandDefinition = {
           return;
         }
         config.ignoredChannels = (config.ignoredChannels ?? []).filter((id: string) => id !== channel.id);
-        await services.config.set(guildId, "logging", config);
+        await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel unignored", [
           `**Channel**\n${channel}`,
         ])));
@@ -152,7 +158,7 @@ const onMessageCreateListener: ListenerDefinition = {
 
     const guildId = message.guildId;
     if (!isLoggingEnabled(services, guildId)) return;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
+    const config = await getLoggingConfig(services, guildId);
 
     if (isIgnored(message, config)) return;
 
@@ -162,7 +168,7 @@ const onMessageCreateListener: ListenerDefinition = {
       `**Content**\n${message.content.slice(0, 1024) || "*No content*"}`,
     ], `Message ID: ${message.id}`);
 
-    await sendLog(services, guildId, config.messageLogChannel, card);
+    await sendLog(services, config.messageLogChannel, card);
   },
 };
 
@@ -174,7 +180,7 @@ const onMessageUpdateListener: ListenerDefinition = {
 
     const guildId = newMessage.guildId;
     if (!isLoggingEnabled(services, guildId)) return;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
+    const config = await getLoggingConfig(services, guildId);
 
     if (isIgnored(newMessage, config)) return;
 
@@ -185,7 +191,7 @@ const onMessageUpdateListener: ListenerDefinition = {
       `**After**\n${(newMessage.content ?? "").slice(0, 512) || "*No content*"}`,
     ], `Message ID: ${newMessage.id}`);
 
-    await sendLog(services, guildId, config.editLogChannel, card);
+    await sendLog(services, config.editLogChannel, card);
   },
 };
 
@@ -196,7 +202,7 @@ const onMessageDeleteListener: ListenerDefinition = {
 
     const guildId = message.guildId!;
     if (!isLoggingEnabled(services, guildId)) return;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
+    const config = await getLoggingConfig(services, guildId);
 
     if (isIgnored(message, config)) return;
 
@@ -206,7 +212,7 @@ const onMessageDeleteListener: ListenerDefinition = {
       `**Content**\n${(message.content ?? "").slice(0, 1024) || "*No content*"}`,
     ], `Message ID: ${message.id}`);
 
-    await sendLog(services, guildId, config.deleteLogChannel, card);
+    await sendLog(services, config.deleteLogChannel, card);
   },
 };
 
@@ -217,24 +223,24 @@ const onVoiceStateListener: ListenerDefinition = {
     if (!guildId) return;
 
     if (!isLoggingEnabled(services, guildId)) return;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
+    const config = await getLoggingConfig(services, guildId);
     if (!config.voiceLogChannel) return;
 
     const member = newState.member ?? oldState.member;
     if (!member) return;
 
     if (!oldState.channelId && newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔊 Voice Join", AccentColors.success, [
+      await sendLog(services, config.voiceLogChannel, eventCard("🔊 Voice Join", AccentColors.success, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**Channel**\n<#${newState.channelId}>`,
       ], `User ID: ${member.id}`));
     } else if (oldState.channelId && !newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔇 Voice Leave", AccentColors.error, [
+      await sendLog(services, config.voiceLogChannel, eventCard("🔇 Voice Leave", AccentColors.error, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**Channel**\n<#${oldState.channelId}>`,
       ], `User ID: ${member.id}`));
     } else if (oldState.channelId !== newState.channelId) {
-      await sendLog(services, guildId, config.voiceLogChannel, eventCard("🔄 Voice Move", AccentColors.cyan, [
+      await sendLog(services, config.voiceLogChannel, eventCard("🔄 Voice Move", AccentColors.cyan, [
         `**User**\n${member.user.tag} (\`${member.id}\`)`,
         `**From**\n<#${oldState.channelId}>`,
         `**To**\n<#${newState.channelId}>`,
@@ -250,13 +256,6 @@ const loggingModule: ModuleDefinition = defineModule({
   description: "Message, edit, delete, voice, and moderation logging",
   version: "2.0.0",
   config: LoggingConfigSchema,
-  configFields: [
-    { key: "messageLogChannel", label: "Message Log Channel", type: "channel", description: "Log message edits/deletes" },
-    { key: "editLogChannel", label: "Edit Log Channel", type: "channel", description: "Log message edits" },
-    { key: "deleteLogChannel", label: "Delete Log Channel", type: "channel", description: "Log message deletes" },
-    { key: "voiceLogChannel", label: "Voice Log Channel", type: "channel", description: "Log voice state changes" },
-    { key: "ignoredChannels", label: "Ignored Channels", type: "multi-channel", description: "Channels to exclude from logging" },
-  ],
   commands: [loggingConfigDef],
   listeners: [onMessageCreateListener, onMessageUpdateListener, onMessageDeleteListener, onVoiceStateListener],
   tasks: [],

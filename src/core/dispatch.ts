@@ -1,3 +1,6 @@
+import type { ModuleLoader } from "@lumi/module-runtime";
+import { commandsExecuted } from "@lumi/observability";
+import * as ui from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
@@ -5,16 +8,13 @@ import type {
   Interaction,
   ModalSubmitInteraction,
 } from "discord.js";
-import type { ModuleLoader } from "@lumi/module-runtime";
-import { commandsExecuted } from "@lumi/observability";
-import * as ui from "@lumi/ui";
 import { hasAdminAccess, roleIdsFrom } from "../admin/access.js";
 import { handleHubInteraction } from "../admin/panel/HubPanel.js";
-import type { HubServices } from "../admin/panel/services.js";
 import type { PermitPanel } from "../admin/panel/PermitPanel.js";
+import type { HubServices } from "../admin/panel/services.js";
 import { handlePingButton } from "./commands.js";
 import { commandErrorCard } from "./errors.js";
-import { servicesForModule, type CommandRegistry } from "./modules.js";
+import { type CommandRegistry, servicesForModule } from "./modules.js";
 
 export type BotInteraction =
   | ButtonInteraction
