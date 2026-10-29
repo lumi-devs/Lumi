@@ -1,13 +1,16 @@
 import { PermissionFlagsBits } from "discord.js";
-import type { 
-  PermitTargetType,
-  EvaluatePermitOptions, 
-  PermitTierExplanation, 
-  EvaluatedPermit,
+import type { Client } from "discord.js";
+import type {
+  Permit,
+  PermitChainResult,
+  PermitChainTarget,
+  PermitContainer,
   PermitConditions,
-  PermitChainResult 
+  PermitTierExplanation,
+  EvaluatedPermit,
+  EvaluatePermitOptions,
 } from "./types.js";
-import { matchesCron } from "./cron.js";
+import { matchesCron, zonedTimeParts } from "./cron.js";
 
 const OwnerIds: ReadonlySet<string> = new Set(
   (process.env.OWNER_IDS ?? "")
@@ -31,6 +34,26 @@ export function evaluateNodeMatch(
   return false;
 }
 
+/**
+ * The custom tiers for one user, in evaluation order: user, channel, roles.
+ */
+export function buildPermitChain(
+  userId: string,
+  channelId?: string,
+  roleIds: readonly string[] = [],
+): PermitChainTarget[] {
+  return [
+    { targetType: "USER", targetId: userId },
+    ...(channelId
+      ? [{ targetType: "CHANNEL" as const, targetId: channelId }]
+      : []),
+    ...roleIds.map((roleId) => ({
+      targetType: "ROLE" as const,
+      targetId: roleId,
+    })),
+  ];
+}
+
 function matchDetail(
   nodes: readonly string[],
   permitNode: string,
@@ -51,52 +74,95 @@ function verdictForBucket(
   return { tier, verdict: "pass" };
 }
 
-export function matchesConditions(conditions: PermitConditions | null, options: EvaluatePermitOptions): boolean {
+/** Minutes since midnight for a stored "HH:MM" value. */
+function parseClock(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const [hours, minutes] = value.split(":").map(Number);
+  if (
+    hours === undefined ||
+    minutes === undefined ||
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+  return hours * 60 + minutes;
+}
+
+export function matchesConditions(
+  conditions: PermitConditions | null,
+  options: EvaluatePermitOptions,
+  fallbackTimezone?: string,
+): boolean {
   if (!conditions) return true;
-  
-  if (conditions.channelIds?.length && options.channelId) {
-    if (!conditions.channelIds.includes(options.channelId)) return false;
+
+  // Restrictions fail closed: a channel/role-scoped permit must not apply when
+  // the evaluation has no channel or roles (e.g. a prefix command in DMs).
+  if (conditions.channelIds?.length) {
+    if (!options.channelId || !conditions.channelIds.includes(options.channelId)) {
+      return false;
+    }
   }
-  
-  if (conditions.roleIds?.length && options.roleIds) {
-    if (!options.roleIds.some(r => conditions.roleIds!.includes(r))) return false;
+
+  if (conditions.roleIds?.length) {
+    const requiredRoles = conditions.roleIds;
+    if (
+      !options.roleIds?.length ||
+      !options.roleIds.some((roleId) => requiredRoles.includes(roleId))
+    ) {
+      return false;
+    }
   }
-  
+
   if (conditions.notRoleIds?.length && options.roleIds) {
-    if (options.roleIds.some(r => conditions.notRoleIds!.includes(r))) return false;
+    const deniedRoles = conditions.notRoleIds;
+    if (options.roleIds.some((roleId) => deniedRoles.includes(roleId))) {
+      return false;
+    }
   }
-  
+
   if (conditions.timeWindow) {
     const now = options.at ?? new Date();
-    const currentHour = now.getUTCHours();
-    const currentMinute = now.getUTCMinutes();
-    const currentTime = currentHour * 60 + currentMinute;
-    
-    const [startHour, startMin] = conditions.timeWindow.start.split(":").map(Number);
-    const [endHour, endMin] = conditions.timeWindow.end.split(":").map(Number);
-    const startTime = startHour * 60 + startMin;
-    const endTime = endHour * 60 + endMin;
-    
-    let inWindow = false;
-    if (startTime <= endTime) {
-      inWindow = currentTime >= startTime && currentTime <= endTime;
-    } else {
-      inWindow = currentTime >= startTime || currentTime <= endTime;
+    let local: ReturnType<typeof zonedTimeParts>;
+    try {
+      local = zonedTimeParts(now, conditions.timezone ?? fallbackTimezone);
+    } catch {
+      // An invalid stored timezone must not throw on every evaluation; treat
+      // the condition as unmatched, like an invalid cron schedule.
+      return false;
     }
-    
+    const currentTime = local.hour * 60 + local.minute;
+
+    const startTime = parseClock(conditions.timeWindow.start);
+    const endTime = parseClock(conditions.timeWindow.end);
+    if (startTime === null || endTime === null) return false;
+
+    const inWindow =
+      startTime <= endTime
+        ? currentTime >= startTime && currentTime <= endTime
+        : currentTime >= startTime || currentTime <= endTime;
     if (!inWindow) return false;
-    
-    if (conditions.timeWindow.days?.length) {
-      const day = now.getUTCDay();
-      if (!conditions.timeWindow.days.includes(day)) return false;
+
+    if (
+      conditions.timeWindow.days?.length &&
+      !conditions.timeWindow.days.includes(local.dayOfWeek)
+    ) {
+      return false;
     }
   }
-  
+
   return true;
 }
 
-export function isPermitValid(permit: any, at: Date): boolean {
-  if (permit.expiresAt && new Date(permit.expiresAt) < at) return false;
+export function isPermitValid(
+  permit: Pick<Permit, "expiresAt" | "schedule" | "timezone">,
+  at: Date,
+): boolean {
+  if (permit.expiresAt && permit.expiresAt < at) return false;
   const schedule = permit.schedule;
   if (typeof schedule === "string" && schedule.trim().length > 0) {
     if (!matchesCron(schedule, at, permit.timezone ?? undefined)) {
@@ -108,7 +174,7 @@ export function isPermitValid(permit: any, at: Date): boolean {
 
 function privilegedResult(
   options: EvaluatePermitOptions,
-  client: any,
+  client?: Client,
 ): EvaluatedPermit | null {
   const { guildId, userId, guildOwnerId } = options;
 
@@ -126,12 +192,10 @@ function privilegedResult(
     };
   }
 
-  const member = client?.guilds?.cache
-    ?.get(guildId)
-    ?.members?.cache?.get(userId);
+  const member = client?.guilds.cache.get(guildId)?.members.cache.get(userId);
   const manager = Boolean(
-    member?.permissions?.has(PermissionFlagsBits.Administrator) ||
-      member?.permissions?.has(PermissionFlagsBits.ManageGuild),
+    member?.permissions.has(PermissionFlagsBits.Administrator) ||
+      member?.permissions.has(PermissionFlagsBits.ManageGuild),
   );
 
   if (!manager) return null;
@@ -152,7 +216,7 @@ function privilegedResult(
 export function evaluatePermitWithChain(
   options: EvaluatePermitOptions,
   chainResult: PermitChainResult,
-  client?: any,
+  client?: Client,
 ): EvaluatedPermit {
   const { roleIds = [], channelId, permitNode } = options;
 
@@ -199,50 +263,30 @@ export function evaluatePermitWithChain(
 
 export async function evaluatePermit(
   options: EvaluatePermitOptions,
-  container: {
-    db: {
-      permits: {
-        getPermitChain: (
-          guildId: string,
-          userId: string,
-          chain: Array<{ targetType: PermitTargetType; targetId: string }>,
-        ) => Promise<PermitChainResult>;
-      };
-    };
-    client?: any;
-  },
+  container: PermitContainer,
 ): Promise<EvaluatedPermit> {
-  const { guildId, userId, roleIds = [], channelId } = options;
+  const { guildId, userId, roleIds = [] } = options;
 
   const privileged = privilegedResult(options, container.client);
   if (privileged) return privileged;
 
-  const chain: Array<{ targetType: PermitTargetType; targetId: string }> = [
-    { targetType: "USER", targetId: userId },
-    ...(channelId
-      ? [{ targetType: "CHANNEL" as const, targetId: channelId }]
-      : []),
-    ...roleIds.map((roleId) => ({
-      targetType: "ROLE" as const,
-      targetId: roleId,
-    })),
-  ];
-
   const chainResult = await container.db.permits.getPermitChain(
     guildId,
     userId,
-    chain,
+    buildPermitChain(userId, options.channelId, roleIds),
   );
 
   return evaluatePermitWithChain(options, chainResult, container.client);
 }
 
 export function isBotOwner(userId: string): boolean {
-  if (OwnerIds.has(userId)) return true;
-  return false;
+  return OwnerIds.has(userId);
 }
 
-export function isGuildOwner(guildOwnerId: string | null | undefined, userId: string): boolean {
+export function isGuildOwner(
+  guildOwnerId: string | null | undefined,
+  userId: string,
+): boolean {
   return Boolean(guildOwnerId && guildOwnerId === userId);
 }
 
@@ -253,20 +297,14 @@ export class PermitResolver {
 
   public async hasPermit(
     options: EvaluatePermitOptions,
-    container: { 
-      db: { permits: { getPermitChain: (guildId: string, userId: string, chain: Array<{ targetType: PermitTargetType; targetId: string }>) => Promise<PermitChainResult> } };
-      client?: any;
-    },
+    container: PermitContainer,
   ): Promise<boolean> {
     return (await evaluatePermit(options, container)).allowed;
   }
 
   public async assertPermit(
     options: EvaluatePermitOptions,
-    container: { 
-      db: { permits: { getPermitChain: (guildId: string, userId: string, chain: Array<{ targetType: PermitTargetType; targetId: string }>) => Promise<PermitChainResult> } };
-      client?: any;
-    },
+    container: PermitContainer,
   ): Promise<void> {
     const allowed = await this.hasPermit(options, container);
     if (!allowed) {

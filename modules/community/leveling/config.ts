@@ -1,3 +1,4 @@
+import { asIdList, isSnowflake } from "@lumi/foundation";
 import { isLevelFormula, type LevelFormula } from "./formulas.js";
 import { LevelingConfigKey } from "./constants.js";
 
@@ -73,15 +74,6 @@ function asString(value: unknown, fallback: string): string {
 
 function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
-}
-
-function isSnowflake(value: unknown): value is string {
-  return typeof value === "string" && /^\d{17,20}$/.test(value);
-}
-
-function asIdList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(isSnowflake);
 }
 
 function asRewards(value: unknown): LevelReward[] {

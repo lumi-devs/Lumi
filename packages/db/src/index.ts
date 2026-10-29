@@ -19,8 +19,17 @@ export async function connectDatabase(): Promise<void> {
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  await prisma.$disconnect().catch(() => undefined);
-  await pool.end().catch(() => undefined);
+  // Shutdown must not throw, but a failed disconnect still needs to be visible.
+  try {
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error("prisma disconnect failed", { error });
+  }
+  try {
+    await pool.end();
+  } catch (error) {
+    console.error("postgres pool shutdown failed", { error });
+  }
 }
 
 export type { PrismaClient, Prisma } from "@prisma/client";

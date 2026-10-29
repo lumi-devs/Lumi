@@ -29,6 +29,7 @@
       "@lumi/cache": ["./packages/cache/src"],
       "@lumi/redis": ["./packages/redis/src"],
       "@lumi/db": ["./packages/db/src"],
+      "@lumi/foundation": ["./packages/foundation/src"],
       "@lumi/ui": ["./packages/ui/src"],
       "@lumi/observability": ["./packages/observability/src"],
       "@lumi/scheduler": ["./packages/scheduler/src"],

@@ -1,4 +1,4 @@
-import type { Polarity } from "@lumi/permits";
+import type { PermitRepository, Polarity } from "@lumi/permits";
 import type { ModuleLoader } from "@lumi/module-runtime";
 
 const BuiltinNodes = [
@@ -25,9 +25,6 @@ const BuiltinNodes = [
   "leveling.*",
   "logging.*",
   "logging.claim",
-  "owner.*",
-  "reactionroles.*",
-  "reactionroles.manage",
   "tempvc.*",
   "tempvc.admin",
 ];
@@ -71,6 +68,18 @@ export function collectPermitNodes(
     if (right === "*") return 1;
     return left.localeCompare(right);
   });
+}
+
+export async function permitNodeCatalog(
+  permits: PermitRepository,
+  moduleLoader: ModuleLoader,
+  guildId: string,
+): Promise<string[]> {
+  const existing = await permits.listPermits(guildId);
+  return collectPermitNodes(
+    moduleLoader,
+    existing.flatMap((permit) => permit.nodes),
+  );
 }
 
 export function permitNamespaces(nodes: string[]): string[] {

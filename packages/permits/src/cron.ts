@@ -1,7 +1,6 @@
 /**
- * Simple cron expression parser and matcher
- * Supports standard 5-field cron: minute hour day-of-month month day-of-week
- * Also supports 6-field with seconds (not used here)
+ * Simple cron expression parser and matcher.
+ * Supports standard 5-field cron: minute hour day-of-month month day-of-week.
  */
 
 export interface ParsedCron {
@@ -12,132 +11,178 @@ export interface ParsedCron {
   dayOfWeek: number[];
 }
 
+export interface ZonedTimeParts {
+  readonly minute: number;
+  readonly hour: number;
+  readonly dayOfMonth: number;
+  readonly month: number;
+  readonly dayOfWeek: number;
+}
+
+const MAX_CACHED_PATTERNS = 500;
+const MAX_CACHED_FORMATTERS = 64;
+const parsedCronCache = new Map<string, ParsedCron>();
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+const WEEKDAYS: Readonly<Record<string, number>> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
 /**
- * Parse a cron field (e.g., "*\/5", "1,2,3", "1-5", "*")
+ * Parse a cron field (e.g., "*\/5", "1,2,3", "1-5", "*").
  */
 function parseCronField(field: string, min: number, max: number): number[] {
   const result: number[] = [];
-  
+
   if (field === "*") {
     for (let i = min; i <= max; i++) result.push(i);
     return result;
   }
-  
-  const parts = field.split(",");
-  for (const part of parts) {
+
+  for (const part of field.split(",")) {
     if (part.includes("/")) {
       const [range, step] = part.split("/");
-      const stepNum = parseInt(step, 10);
+      if (range === undefined || range.length === 0) return [];
+      const stepNum = Number(step);
+      // A zero or non-numeric step would hang the loop.
+      if (!Number.isInteger(stepNum) || stepNum <= 0) return [];
+
       let start = min;
       let end = max;
-      
       if (range !== "*") {
-        if (range.includes("-")) {
+        if (range?.includes("-")) {
           const [s, e] = range.split("-").map(Number);
-          start = s;
-          end = e;
+          start = s ?? min;
+          end = e ?? max;
         } else {
-          start = end = parseInt(range, 10);
+          start = Number(range);
+          end = start;
         }
       }
-      
+
       for (let i = start; i <= end; i += stepNum) {
         if (i >= min && i <= max) result.push(i);
       }
     } else if (part.includes("-")) {
       const [start, end] = part.split("-").map(Number);
+      if (start === undefined || end === undefined) return [];
       for (let i = start; i <= end; i++) {
         if (i >= min && i <= max) result.push(i);
       }
     } else {
-      const val = parseInt(part, 10);
-      if (!Number.isNaN(val) && val >= min && val <= max) result.push(val);
+      const val = Number(part);
+      if (Number.isInteger(val) && val >= min && val <= max) result.push(val);
     }
   }
-  
+
   return [...new Set(result)].sort((a, b) => a - b);
 }
 
 /**
- * Parse a cron expression into structured parts
+ * Parse a cron expression into structured parts.
  * Format: minute hour dayOfMonth month dayOfWeek
  */
 export function parseCron(cron: string): ParsedCron {
-  const parts = cron.trim().split(/\s+/);
+  const normalized = cron.trim();
+  const cached = parsedCronCache.get(normalized);
+  if (cached) return cached;
+
+  const parts = normalized.split(/\s+/);
   if (parts.length !== 5) {
     throw new Error(`Invalid cron expression: ${cron} (expected 5 fields)`);
   }
-  
+
+  const parsed: ParsedCron = {
+    minute: parseCronField(parts[0]!, 0, 59),
+    hour: parseCronField(parts[1]!, 0, 23),
+    dayOfMonth: parseCronField(parts[2]!, 1, 31),
+    month: parseCronField(parts[3]!, 1, 12),
+    dayOfWeek: parseCronField(parts[4]!, 0, 6), // 0 = Sunday
+  };
+
+  if (parsedCronCache.size >= MAX_CACHED_PATTERNS) {
+    const oldest = parsedCronCache.keys().next().value;
+    if (oldest !== undefined) parsedCronCache.delete(oldest);
+  }
+  parsedCronCache.set(normalized, parsed);
+  return parsed;
+}
+
+function formatterFor(timezone: string): Intl.DateTimeFormat {
+  let formatter = formatterCache.get(timezone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hourCycle: "h23",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      weekday: "short",
+    });
+    // Timezones come from stored permits; bound the cache so bad input cannot
+    // grow it without limit.
+    if (formatterCache.size >= MAX_CACHED_FORMATTERS) {
+      const oldest = formatterCache.keys().next().value;
+      if (oldest !== undefined) formatterCache.delete(oldest);
+    }
+    formatterCache.set(timezone, formatter);
+  }
+  return formatter;
+}
+
+/**
+ * Calendar parts for `date` in `timezone` (UTC when omitted).
+ */
+export function zonedTimeParts(date: Date, timezone?: string): ZonedTimeParts {
+  if (!timezone) {
+    return {
+      minute: date.getUTCMinutes(),
+      hour: date.getUTCHours(),
+      dayOfMonth: date.getUTCDate(),
+      month: date.getUTCMonth() + 1,
+      dayOfWeek: date.getUTCDay(),
+    };
+  }
+
+  const parts = formatterFor(timezone).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((part) => part.type === type)?.value ?? "0";
+
   return {
-    minute: parseCronField(parts[0], 0, 59),
-    hour: parseCronField(parts[1], 0, 23),
-    dayOfMonth: parseCronField(parts[2], 1, 31),
-    month: parseCronField(parts[3], 1, 12),
-    dayOfWeek: parseCronField(parts[4], 0, 6), // 0 = Sunday
+    // Some ICU versions emit "24" for midnight even with h23.
+    hour: Number(value("hour")) % 24,
+    minute: Number(value("minute")),
+    dayOfMonth: Number(value("day")),
+    month: Number(value("month")),
+    dayOfWeek: WEEKDAYS[value("weekday")] ?? 0,
   };
 }
 
 /**
- * Check if a given date matches a cron schedule
+ * Check if a given date matches a cron schedule.
  */
 export function matchesCron(cron: string, date: Date, timezone?: string): boolean {
   try {
     const parsed = parseCron(cron);
-    
-    // Use UTC or specified timezone
-    let checkDate = date;
-    if (timezone) {
-      // Simple timezone offset handling
-      const tzOffset = getTimezoneOffset(timezone, date);
-      checkDate = new Date(date.getTime() + tzOffset * 60000);
-    }
-    
-    const minute = checkDate.getUTCMinutes();
-    const hour = checkDate.getUTCHours();
-    const dayOfMonth = checkDate.getUTCDate();
-    const month = checkDate.getUTCMonth() + 1; // 1-12
-    const dayOfWeek = checkDate.getUTCDay(); // 0 = Sunday
-    
+    const parts = zonedTimeParts(date, timezone);
+
     return (
-      parsed.minute.includes(minute) &&
-      parsed.hour.includes(hour) &&
-      parsed.dayOfMonth.includes(dayOfMonth) &&
-      parsed.month.includes(month) &&
-      parsed.dayOfWeek.includes(dayOfWeek)
+      parsed.minute.includes(parts.minute) &&
+      parsed.hour.includes(parts.hour) &&
+      parsed.dayOfMonth.includes(parts.dayOfMonth) &&
+      parsed.month.includes(parts.month) &&
+      parsed.dayOfWeek.includes(parts.dayOfWeek)
     );
   } catch {
+    // Invalid stored schedules never match; a bad permit must not throw on
+    // every evaluation.
     return false;
-  }
-}
-
-/**
- * Get timezone offset in minutes for a given timezone at a specific date
- * This is a simplified implementation
- */
-function getTimezoneOffset(timezone: string, date: Date): number {
-  try {
-    // Use Intl.DateTimeFormat to get offset
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone: timezone,
-      hour12: false,
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-    });
-    
-    const parts = fmt.formatToParts(date);
-    const hour = parseInt(parts.find(p => p.type === "hour")?.value || "0", 10);
-    const minute = parseInt(parts.find(p => p.type === "minute")?.value || "0", 10);
-    
-    // Get UTC time for comparison
-    const utcHour = date.getUTCHours();
-    const utcMinute = date.getUTCMinutes();
-    
-    // Calculate offset in minutes
-    const localTotal = hour * 60 + minute;
-    const utcTotal = utcHour * 60 + utcMinute;
-    return localTotal - utcTotal;
-  } catch {
-    return 0;
   }
 }

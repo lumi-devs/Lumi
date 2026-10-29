@@ -6,15 +6,7 @@
   "description": "Avatar, banner, whois, serverinfo, and info commands",
   "version": "2.0.0",
   "entry": "index.ts",
-  "configFields": [
-    {
-      "key": "purgeMaxMessages",
-      "label": "Max Purge Messages",
-      "type": "number",
-      "description": "Maximum messages per purge (1-100)",
-      "default": 100
-    }
-  ],
+  "configFields": [],
   "dependencies": {
     "utility": "^2.0.0"
   }

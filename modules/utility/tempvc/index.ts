@@ -9,17 +9,17 @@ import {
   type ModuleDefinition,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import { requireGuildId as guildIdOf } from "@lumi/foundation";
 import {
   TempVcConfigSchema,
   buildControlPanelForChannel,
-  canUseTempVcAdmin,
-  getTempVcConfig,
-  handleTempVcInteraction,
-  handleVoiceStateChange,
-  isModuleEnabled,
   sweepExpiredTempChannels,
 } from "./panel.js";
-import { adminPanelCard, } from "./ui.js";
+import { getTempVcConfig, isModuleEnabled } from "./config.js";
+import { handleVoiceStateChange } from "./voice.js";
+import { handleTempVcInteraction } from "./interactions.js";
+import { canUseTempVcAdmin } from "./access.js";
+import { adminPanelCard } from "./ui-admin.js";
 
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -41,7 +41,7 @@ const tempvcCommand: CommandDefinition = {
       sub.setName("admin").setDescription("Manage voice generator channels (staff only)"),
     ),
   async execute(interaction, services) {
-    const guildId = interaction.guildId;
+    const guildId = guildIdOf(interaction.guildId);
     if (!guildId) {
       await interaction.reply(
         ephemeralCard(

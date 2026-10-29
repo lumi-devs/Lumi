@@ -27,9 +27,9 @@ be installed only once.
 - `updateRepo(name)` — fetches the branch, checks out the new HEAD, validates
   every installed module, applies the update, and rolls back on failure.
 
-Git access uses `isomorphic-git` over HTTPS. Private repositories authenticate
-with `GIT_TOKEN` (`GIT_USERNAME` defaults to `x-access-token`). Commit
-signatures are not verified.
+Git access uses the system `git` CLI (`execFileSync`) over HTTPS. Private
+repositories authenticate with `GIT_TOKEN` (`GIT_USERNAME` defaults to
+`x-access-token`). Commit signatures are not verified.
 
 ## Install flow
 

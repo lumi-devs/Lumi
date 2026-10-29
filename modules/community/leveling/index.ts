@@ -35,61 +35,9 @@ import {
   isAudible,
 } from "./voice-sessions.js";
 import { grantVoiceXp } from "./voice-xp.js";
+import { applyRewardRoles, grantXp } from "./level-up.js";
+import { requireGuildId } from "./guards.js";
 import { LevelingModuleName } from "./constants.js";
-
-async function addXp(services: any, guildId: string, userId: string, xp: number, config: LevelingConfig): Promise<void> {
-  const user = await services.db.prisma.levelingUser.upsert({
-    where: { guildId_userId: { guildId, userId } },
-    update: { 
-      xp: { increment: xp },
-      totalXp: { increment: xp },
-      messageCount: { increment: 1 },
-    },
-    create: { 
-      guildId, 
-      userId, 
-      xp, 
-      totalXp: xp,
-      level: 1,
-      messageCount: 1,
-    },
-  });
-
-  if (!user) return;
-
-  const totalXp = Number(user.totalXp);
-  const { level: newLevel } = levelForTotalXp(config.levelFormula, totalXp);
-  
-  if (newLevel > user.level) {
-    await services.db.prisma.levelingUser.update({
-      where: { guildId_userId: { guildId, userId } },
-      data: { level: newLevel },
-    });
-
-    for (const reward of config.roleRewards) {
-      if (newLevel >= reward.level) {
-        try {
-          const guild = services.client.guilds.cache.get(guildId);
-          if (guild) {
-            const member = await guild.members.fetch(userId);
-            if (member) {
-              if (reward.removePrevious) {
-                for (const r of config.roleRewards) {
-                  if (r.level < reward.level && member.roles.cache.has(r.roleId)) {
-                    await member.roles.remove(r.roleId);
-                  }
-                }
-              }
-              await member.roles.add(reward.roleId);
-            }
-          }
-        } catch (e) {
-          console.error(`Failed to assign level role ${reward.roleId}:`, e);
-        }
-      }
-    }
-  }
-}
 
 const rankDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -98,7 +46,8 @@ const rankDef: CommandDefinition = {
     .addUserOption(o => o.setName("user").setDescription("User to check").setRequired(false)),
   async execute(interaction, services) {
     const target = interaction.options.getUser("user") ?? interaction.user;
-    const guildId = interaction.guildId!;
+    const guildId = await requireGuildId(interaction);
+    if (!guildId) return;
 
     const user = await services.db.prisma.levelingUser.findUnique({
       where: { guildId_userId: { guildId, userId: target.id } },
@@ -254,8 +203,10 @@ const leaderboardDef: CommandDefinition = {
   async execute(interaction, services) {
     const page = interaction.options.getInteger("page") ?? 1;
     const boardType = interaction.options.getString("type") as "overall" | "voice" ?? "overall";
-    const config = await getLevelingConfig(services, interaction.guildId!);
-    const card = await renderLeaderboard(config, interaction.guild, interaction.guildId!, page, services, boardType);
+    const guildId = await requireGuildId(interaction);
+    if (!guildId) return;
+    const config = await getLevelingConfig(services, guildId);
+    const card = await renderLeaderboard(config, interaction.guild, guildId, page, services, boardType);
     await interaction.reply(ephemeralCard(card));
   },
 };
@@ -311,9 +262,20 @@ const onMessageListener: ListenerDefinition = {
 
     if (message.content.length < config.minMessageLength) return;
     if (!channelEarnsXp(config, message.channelId)) return;
+
+    let member = message.member;
     if (
-      message.member &&
-      !rolesEarnXp(config, message.member.roles.cache.keys())
+      !member &&
+      (config.ignoredRoles.length > 0 || config.whitelistedRoles.length > 0)
+    ) {
+      member = await message.guild.members
+        .fetch(message.author.id)
+        .catch(() => null);
+    }
+    if (member && !rolesEarnXp(config, member.roles.cache.keys())) return;
+    if (
+      !member &&
+      (config.ignoredRoles.length > 0 || config.whitelistedRoles.length > 0)
     ) {
       return;
     }
@@ -330,17 +292,21 @@ const onMessageListener: ListenerDefinition = {
       return;
     }
 
-    const multiplier = message.member
-      ? getXpMultiplier(message.member, config, message.channelId)
+    const multiplier = member
+      ? getXpMultiplier(member, config, message.channelId)
       : config.globalMultiplier;
     const xp = Math.floor(config.xpPerMessage * multiplier);
     if (xp <= 0) return;
 
-    await addXp(services, guildId, message.author.id, xp, config);
-
-    await services.db.prisma.levelingUser.update({
-      where: { guildId_userId: { guildId, userId: message.author.id } },
-      data: { lastXpAt: new Date() },
+    await grantXp(services, config, {
+      guildId,
+      userId: message.author.id,
+      amount: xp,
+      member,
+      guild: message.guild,
+      messageCount: 1,
+      lastXpAt: new Date(),
+      fallbackChannelId: message.channelId,
     });
   },
 };
@@ -375,6 +341,43 @@ const onVoiceStateListener: ListenerDefinition = {
   },
 };
 
+const onMemberRemoveListener: ListenerDefinition = {
+  event: Events.GuildMemberRemove,
+  async handler(member: GuildMember, services: any) {
+    const guildId = member.guild.id;
+    const config = await getLevelingConfig(services, guildId);
+    if (config.keepXpOnLeave) return;
+
+    await services.db.prisma.levelingUser
+      .deleteMany({ where: { guildId, userId: member.id } })
+      .catch((error: unknown) =>
+        services.observability?.logger?.warn?.(
+          "[leveling] failed to clear member XP on leave",
+          { guildId, userId: member.id, error },
+        ),
+      );
+  },
+};
+
+const onMemberAddListener: ListenerDefinition = {
+  event: Events.GuildMemberAdd,
+  async handler(member: GuildMember, services: any) {
+    const guildId = member.guild.id;
+    const config = await getLevelingConfig(services, guildId);
+    if (!config.keepXpOnLeave) return;
+
+    const user = await services.db.prisma.levelingUser.findUnique({
+      where: { guildId_userId: { guildId, userId: member.id } },
+    });
+    if (!user) return;
+
+    const { level } = levelForTotalXp(config.levelFormula, Number(user.totalXp));
+    if (level <= 1) return;
+
+    await applyRewardRoles(services, config, member, level);
+  },
+};
+
 const levelingModule: ModuleDefinition = defineModule({
   name: LevelingModuleName,
   displayName: "Leveling",
@@ -404,7 +407,13 @@ const levelingModule: ModuleDefinition = defineModule({
     { key: "whitelistedRoles", label: "Whitelisted Roles", type: "multi-role", description: "Only members with one of these roles earn XP. Overrides the ignored role list.", category: "Filters" },
   ],
   commands: [rankDef, leaderboardDef],
-  listeners: [onMessageListener, leaderboardListener, onVoiceStateListener],
+  listeners: [
+    onMessageListener,
+    leaderboardListener,
+    onVoiceStateListener,
+    onMemberAddListener,
+    onMemberRemoveListener,
+  ],
   tasks: [],
   async onLoad(_services) {
     console.log("[leveling] Module loaded");

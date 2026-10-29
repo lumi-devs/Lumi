@@ -67,6 +67,14 @@
       "category": "Limits"
     },
     {
+      "key": "createCooldownMs",
+      "label": "Create Cooldown (ms)",
+      "type": "number",
+      "description": "Wait before creating another channel",
+      "default": 10000,
+      "category": "Limits"
+    },
+    {
       "key": "ownerLeaveDelete",
       "label": "Delete on Owner Leave",
       "type": "boolean",

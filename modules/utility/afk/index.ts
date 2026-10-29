@@ -10,7 +10,8 @@ import {
   type ModuleDefinition,
   type ListenerDefinition,
 } from "@lumi/module-kit";
-import { ephemeralCard } from "@lumi/ui";
+import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import { requireGuildId as guildIdOf } from "@lumi/foundation";
 import { z } from "zod";
 import {
   buildAfkMentionCard,
@@ -38,8 +39,18 @@ const AfkConfigSchema = z.object({
   maxReasonLength: z.number().int().min(1).max(500).default(200),
 }, {});
 
-const getAfkConfig = async (services: any, guildId: string) =>
-  AfkConfigSchema.parse((await services.config.get(guildId, "afk")) ?? {});
+const AfkConfigKey = "afk";
+
+const getAfkConfig = async (services: any, guildId: string) => {
+  let stored: unknown = null;
+  try {
+    stored = await services.config.get(guildId, AfkConfigKey);
+  } catch {
+    stored = null;
+  }
+  const parsed = AfkConfigSchema.safeParse(stored ?? {});
+  return parsed.success ? parsed.data : AfkConfigSchema.parse({});
+};
 
 const RemovalCooldownMs = 2000;
 
@@ -88,7 +99,15 @@ const afkDef: CommandDefinition = {
         .setMaxLength(500),
     ),
   async execute(interaction, services) {
-    const guildId = interaction.guildId!;
+    const guildId = guildIdOf(interaction.guildId);
+    if (!guildId) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard("Server Only", "AFK status is tracked per server."),
+        ),
+      );
+      return;
+    }
     const config = await getAfkConfig(services, guildId);
     const rawReason = interaction.options.getString("reason") ?? "AFK";
     const reason = sanitizeAfkReason(rawReason, config.maxReasonLength);
@@ -126,12 +145,18 @@ const afkDef: CommandDefinition = {
       config.nickPrefixEnabled &&
       !member.displayName.startsWith(config.nickPrefix)
     ) {
-      try {
-        await member.setNickname(
+      await member
+        .setNickname(
           `${config.nickPrefix}${member.displayName}`.slice(0, 32),
           "AFK",
+        )
+        .catch((error: unknown) =>
+          services.observability?.logger?.warn?.("failed to prefix AFK nickname", {
+            guildId,
+            userId: interaction.user.id,
+            error,
+          }),
         );
-      } catch {}
     }
 
     await interaction.reply(
@@ -149,11 +174,21 @@ const onMessageListener: ListenerDefinition = {
     const config = await getAfkConfig(services, guildId);
 
     if (!services.db.prisma.afkEntry) return;
-    const authorAfk = await services.db.prisma.afkEntry.findUnique({
-      where: {
-        guildId_userId: { guildId, userId: message.author.id },
-      },
+
+    const mentioned = [...message.mentions.users.values()].filter(
+      (user) => !user.bot && user.id !== message.author.id,
+    );
+    const userIds = [message.author.id, ...mentioned.map((user) => user.id)];
+    const entries = await services.db.prisma.afkEntry.findMany({
+      where: { guildId, userId: { in: userIds } },
     });
+    const byUser = new Map<string, { reason: string; createdAt: Date }>(
+      entries.map((entry: { userId: string; reason: string; createdAt: Date }) => [
+        entry.userId,
+        entry,
+      ]),
+    );
+    const authorAfk = byUser.get(message.author.id);
 
     if (
       authorAfk &&
@@ -165,7 +200,13 @@ const onMessageListener: ListenerDefinition = {
             guildId_userId: { guildId, userId: message.author.id },
           },
         })
-        .catch(() => {});
+        .catch((error: unknown) =>
+          services.observability?.logger?.warn?.("failed to clear AFK entry", {
+            guildId,
+            userId: message.author.id,
+            error,
+          }),
+        );
 
       const member = message.member;
       if (
@@ -173,48 +214,45 @@ const onMessageListener: ListenerDefinition = {
         config.nickPrefixEnabled &&
         member.displayName.startsWith(config.nickPrefix)
       ) {
-        try {
-          await member.setNickname(
+        await member
+          .setNickname(
             stripPrefix(member.displayName, config.nickPrefix) || null,
             "No longer AFK",
+          )
+          .catch((error: unknown) =>
+            services.observability?.logger?.warn?.("failed to strip AFK nickname", {
+              guildId,
+              userId: message.author.id,
+              error,
+            }),
           );
-        } catch {}
       }
 
       const duration = formatAfkDuration(
         Date.now() - new Date(authorAfk.createdAt).getTime(),
       );
-      await message
-        .reply(buildAfkRemovalCard(duration))
-        .catch(() => {});
+      await message.reply(buildAfkRemovalCard(duration)).catch(() => {});
     }
 
     if (!config.mentionReply) return;
 
-    for (const user of message.mentions.users.values()) {
-      if (user.bot || user.id === message.author.id) continue;
+    for (const user of mentioned) {
+      const afk = byUser.get(user.id);
+      if (!afk) continue;
 
-      const afk = await services.db.prisma.afkEntry.findUnique({
-        where: {
-          guildId_userId: { guildId, userId: user.id },
-        },
-      });
-
-      if (afk) {
-        const target = message.guild?.members.cache.get(user.id);
-        const displayName = stripPrefix(
-          target?.displayName ?? user.username,
-          config.nickPrefix,
-        );
-        const reason = sanitizeAfkReason(afk.reason, config.maxReasonLength);
-        const duration = formatAfkDuration(
-          Date.now() - new Date(afk.createdAt).getTime(),
-        );
-        await message
-          .reply(buildAfkMentionCard(displayName, reason, duration))
-          .catch(() => {});
-        break;
-      }
+      const target = message.guild?.members.cache.get(user.id);
+      const displayName = stripPrefix(
+        target?.displayName ?? user.username,
+        config.nickPrefix,
+      );
+      const reason = sanitizeAfkReason(afk.reason, config.maxReasonLength);
+      const duration = formatAfkDuration(
+        Date.now() - new Date(afk.createdAt).getTime(),
+      );
+      await message
+        .reply(buildAfkMentionCard(displayName, reason, duration))
+        .catch(() => {});
+      break;
     }
   },
 };

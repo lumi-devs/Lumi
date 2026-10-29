@@ -1,10 +1,4 @@
 import { Client, GatewayIntentBits, Partials } from "discord.js";
-import type { Redis } from "ioredis";
-
-export interface CoreServices {
-  client: Client;
-  redis: Redis;
-}
 
 export function createClient(): Client {
   return new Client({
@@ -30,11 +24,4 @@ export function createClient(): Client {
       Partials.GuildScheduledEvent,
     ],
   });
-}
-
-export function createCoreServices(
-  client: Client,
-  redis: Redis
-): CoreServices {
-  return { client, redis };
 }

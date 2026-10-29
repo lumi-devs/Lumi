@@ -1,7 +1,3 @@
-import {
-  ContainerBuilder,
-} from "@discordjs/builders";
-import { MessageFlags } from "discord.js";
 import { makeCard, type CardReply } from "@lumi/ui";
 
 type AfkStatus = "set" | "updated" | "already";
@@ -22,21 +18,8 @@ const statusBody = (status: AfkStatus, reason: string): string => {
   return `You are now AFK: **${reason}**`;
 };
 
-const statusCard = (title: string, body: string): CardReply => {
-  const container = new ContainerBuilder()
-    .addTextDisplayComponents((textDisplay) =>
-      textDisplay.setContent(title),
-    )
-    .addSeparatorComponents((separator) => separator.setDivider(true))
-    .addTextDisplayComponents((textDisplay) =>
-      textDisplay.setContent(body),
-    );
-  return {
-    flags: MessageFlags.IsComponentsV2,
-    components: [container],
-    allowedMentions: { parse: [] },
-  };
-};
+const statusCard = (title: string, body: string): CardReply =>
+  makeCard(undefined, "", [title, body], { hideTitle: true });
 
 export const sanitizeAfkReason = (reason: string, max: number): string => {
   const collapsed =

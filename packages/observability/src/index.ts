@@ -25,12 +25,12 @@ export {
   redisCommandDuration,
   registry,
   type CacheMetrics,
-} from "./metrics";
-export { startMetricsServer, type MetricsServer } from "./server";
+} from "./metrics.js";
+export { startMetricsServer, type MetricsServer } from "./server.js";
 
 export interface HealthCheck {
   name: string;
-  check: () => Promise<{ healthy: boolean; details?: any }>;
+  check: () => Promise<{ healthy: boolean; details?: unknown }>;
 }
 
 export class HealthMonitor {
@@ -40,7 +40,7 @@ export class HealthMonitor {
     this.checks.push(check);
   }
 
-  async runChecks(): Promise<{ healthy: boolean; results: Array<{ name: string; healthy: boolean; details?: any }> }> {
+  async runChecks(): Promise<{ healthy: boolean; results: Array<{ name: string; healthy: boolean; details?: unknown }> }> {
     const results = await Promise.all(
       this.checks.map(async (check) => {
         try {

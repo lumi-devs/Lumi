@@ -27,7 +27,6 @@ const LoggingConfigSchema = z.object({
   editLogChannel: z.string().nullable().optional(),
   deleteLogChannel: z.string().nullable().optional(),
   voiceLogChannel: z.string().nullable().optional(),
-  modLogChannel: z.string().nullable().optional(),
   ignoredChannels: z.array(z.string(), {}).default([]),
 }, {});
 
@@ -51,8 +50,7 @@ const loggingConfigDef: CommandDefinition = {
         { name: "Message", value: "message" },
         { name: "Edit", value: "edit" },
         { name: "Delete", value: "delete" },
-        { name: "Voice", value: "voice" },
-        { name: "Mod", value: "mod" }
+        { name: "Voice", value: "voice" }
       ))
       .addChannelOption(o => o.setName("channel").setDescription("Channel to log to").setRequired(true))
     )
@@ -61,8 +59,7 @@ const loggingConfigDef: CommandDefinition = {
         { name: "Message", value: "message" },
         { name: "Edit", value: "edit" },
         { name: "Delete", value: "delete" },
-        { name: "Voice", value: "voice" },
-        { name: "Mod", value: "mod" }
+        { name: "Voice", value: "voice" }
       ))
     )
     .addSubcommand(s => s.setName("ignore").setDescription("Ignore a channel").addChannelOption(o => o.setName("channel").setDescription("Channel").setRequired(true)))
@@ -138,7 +135,6 @@ const loggingConfigDef: CommandDefinition = {
             `**Edit Log**\n${config.editLogChannel ? `<#${config.editLogChannel}>` : "None"}`,
             `**Delete Log**\n${config.deleteLogChannel ? `<#${config.deleteLogChannel}>` : "None"}`,
             `**Voice Log**\n${config.voiceLogChannel ? `<#${config.voiceLogChannel}>` : "None"}`,
-            `**Mod Log**\n${config.modLogChannel ? `<#${config.modLogChannel}>` : "None"}`,
             `**Ignored Channels**\n${ignored}`,
           ],
           { footer: "Use /logging set to configure a channel" },
@@ -155,8 +151,8 @@ const onMessageCreateListener: ListenerDefinition = {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
     if (!isLoggingEnabled(services, guildId)) return;
+    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
 
     if (isIgnored(message, config)) return;
 
@@ -177,8 +173,8 @@ const onMessageUpdateListener: ListenerDefinition = {
     if (oldMessage.content === newMessage.content) return;
 
     const guildId = newMessage.guildId;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
     if (!isLoggingEnabled(services, guildId)) return;
+    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
 
     if (isIgnored(newMessage, config)) return;
 
@@ -199,8 +195,8 @@ const onMessageDeleteListener: ListenerDefinition = {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId!;
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
     if (!isLoggingEnabled(services, guildId)) return;
+    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
 
     if (isIgnored(message, config)) return;
 
@@ -220,8 +216,8 @@ const onVoiceStateListener: ListenerDefinition = {
     const guildId = newState.guild?.id ?? oldState.guild?.id;
     if (!guildId) return;
 
-    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
     if (!isLoggingEnabled(services, guildId)) return;
+    const config = (await services.config.get(guildId, "logging") ?? {}) as LoggingConfig;
     if (!config.voiceLogChannel) return;
 
     const member = newState.member ?? oldState.member;
@@ -259,7 +255,6 @@ const loggingModule: ModuleDefinition = defineModule({
     { key: "editLogChannel", label: "Edit Log Channel", type: "channel", description: "Log message edits" },
     { key: "deleteLogChannel", label: "Delete Log Channel", type: "channel", description: "Log message deletes" },
     { key: "voiceLogChannel", label: "Voice Log Channel", type: "channel", description: "Log voice state changes" },
-    { key: "modLogChannel", label: "Mod Log Channel", type: "channel", description: "Log moderation actions" },
     { key: "ignoredChannels", label: "Ignored Channels", type: "multi-channel", description: "Channels to exclude from logging" },
   ],
   commands: [loggingConfigDef],

@@ -2,63 +2,57 @@
 
 Package: `@lumi/db` (`packages/db`). Postgres + Prisma 7 + `@prisma/adapter-pg`.
 
-## Schema and migrations
+## Layout
 
-- Schema: `packages/db/prisma/schema.prisma`.
-- CLI config: `prisma.config.ts` (datasource URL from `POSTGRES_URL`).
-- Generated client: `packages/db/generated/client` (gitignored).
-- Migrations are versioned SQL under `packages/db/prisma/migrations`. Generate with
-  `bun run db:generate`; apply with `bun run db:migrate` (development) or
-  `bun run db:deploy` (production/CI).
-- Do **not** adopt Redbot-style idempotent DDL executed at boot.
-- Additive changes first. Destructive changes need an explicit migration plan.
+- `packages/db/src/index.ts` — the package's only source file. It builds the
+  `pg.Pool`, the `PrismaPg` adapter, and the `prisma` singleton.
+- `packages/db/prisma/schema.prisma` — models.
+- `packages/db/prisma/migrations/` — versioned SQL migrations.
+- `prisma.config.ts` (repo root) — points the Prisma CLI at the schema and
+  migrations and resolves the URL from `DATABASE_URL`, `DIRECT_POSTGRES_URL`, or
+  `POSTGRES_URL` (local fallback `postgresql://lumi:lumi@127.0.0.1:5432/lumi`).
 
-## Client construction
+There is no `client.ts`, `createDatabase()`, or `DatabaseService`. The generated
+client is the default `@prisma/client` output.
 
-`createDatabase()` (`packages/db/src/client.ts`) is the only place that creates
-pools or `PrismaClient`. It takes the URL, optional replica URL, pool size, app
-name, and logger. Nothing connects at import time.
+## Client
+
+`packages/db/src/index.ts` constructs the pool and client at import time, but
+nothing connects until the first query or `connectDatabase()`. Exports:
+`prisma`, `connectDatabase()`, `disconnectDatabase()`, and the `PrismaClient` /
+`Prisma` types. `disconnectDatabase()` disconnects Prisma, then ends the pool,
+logging (not rethrowing) failures; `src/index.ts` calls both during boot and
+shutdown.
+
+Schema and migration commands: `bun run db:generate` (generate client) and
+`bun run db:migrate` (development). Apply versioned migrations in
+production/CI with `prisma migrate deploy`; never use Redbot-style idempotent
+DDL at boot. Additive changes first; destructive changes need an explicit
+migration.
 
 ## Repositories
 
-`DatabaseService` exposes:
+There is no shared repository container. Persistence lives with its domain:
 
-- `guild` — guild row cache, ensure, prefix, left/rejoin, active/purge.
-- `config` — per-module config maps, scoped values, writes with optional history.
-- `modules` — global/guild enablement, effective `isEnabled`.
-- `moduleData` — namespaced module KV with expiry.
-- `afk` — AFK entries.
-- `permits` — permits, assignments, priority order, and the per-target Redis
-  evaluation cache. Reordering invalidates every assignment cache in the guild.
-- `moderation` — cases, per-guild case counters, expiring cases, and notes.
-  Undo actions call `deactivateActiveCases()` before recording the lifting case.
-- `downloader` — repo and installed-module records.
+- `packages/permits/src/repository.ts` — `PermitRepository`: permits,
+  assignments, the per-target Redis quarantine marker, audit log, export/import.
+- `src/admin/services/ConfigService.ts` — per-guild settings stored as JSON in
+  `Guild.settings`, cached and invalidated through `NamespacedCache`.
+- `src/admin/services/ModuleManager.ts` — per-guild enablement in `GuildModule`,
+  mirrored into the in-process `ModuleLoader`.
+- Modules query their own tables through the `PrismaClient` handed to them as
+  `services.db`; they never construct Prisma.
 
 Rules:
 
-- Modules receive `services.db`; they never construct Prisma.
-- Reads go through the repositories so caching and invalidation stay consistent.
-- Never `upsert` on a read path. Create rows on write. Built-in permits are
-  seeded on guild join, the ready backfill, and permit creation, not from
-  `listPermits()`.
-- Writes invalidate **after** the transaction commits.
-- Use `$transaction` for multi-row invariants. Do not read-modify-write counters.
-- Use `reader` for read-only list/iteration paths when a replica is configured.
+- Writes invalidate cache entries after the transaction commits.
+- Use `$transaction` for multi-row invariants; do not read-modify-write counters.
+- Never `upsert` on a read path; create rows on write.
 - Do not import `@lumi/db` from addons; it is an internal package.
 
-## Config resolution
+## Schema
 
-Effective module enablement = global state AND guild state. There is no config
-key gate; `ModuleStateRepository.isEnabled()` is the single implementation.
-Cached keys:
-
-- `lumi:mod:global:<module>`
-- `lumi:mod:<guild>:<module>`
-
-Any write that can change the result invalidates the matching key(s).
-
-## Module data expiry
-
-`moduleData.get` caches an envelope (`value` + `expiresAt`) and checks the expiry
-on every read, so a row expiring inside the cache TTL is never served stale. A
-miss is negative-cached for 15 seconds.
+`Guild`, `Permit`, `PermitAssignment`, `GuildModule`, `LevelingConfig`/
+`LevelingUser`, `EconomyConfig`/`EconomyUser`/`EconomyTransaction`,
+`TempVcConfig`/`TempVcChannel`, `AfkEntry`, `DownloaderRepo`/`DownloaderModule`,
+and `AuditLog`.

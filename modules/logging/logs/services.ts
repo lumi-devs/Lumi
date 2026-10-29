@@ -6,7 +6,6 @@ interface LoggingConfig {
   editLogChannel?: string | null;
   deleteLogChannel?: string | null;
   voiceLogChannel?: string | null;
-  modLogChannel?: string | null;
   ignoredChannels?: string[] | null;
 }
 

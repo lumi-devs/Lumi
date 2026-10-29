@@ -1,31 +1,10 @@
-import { createClient, createCoreServices, createRpcServer, boot, shutdown, pingCommand, handlePingButton, aboutCommand } from "@lumi/core";
+import { PermissionFlagsBits, type Guild } from "discord.js";
+import { createRedisClient } from "@lumi/redis";
+import { connectDatabase, disconnectDatabase, prisma } from "@lumi/db";
 import { createModuleLoader } from "@lumi/module-runtime";
-import { createRedisClient, InvalidationBus } from "@lumi/redis";
-import { createCache } from "@lumi/cache";
-import { prisma, connectDatabase, disconnectDatabase } from "@lumi/db";
-import { PermitRepository } from "@lumi/permits";
-import {
-  ConfigService,
-  handleHubInteraction,
-  ModuleManager,
-  PermitPanel,
-  hasAdminAccess,
-  moduleCommands,
-  roleIdsFrom,
-} from "@lumi/admin";
-import {
-  DiscordAPIError,
-  HTTPError,
-  RESTJSONErrorCodes,
-} from "discord.js";
-import * as ui from "@lumi/ui";
-import { CommandRegistry, ModuleHost, commandPayloadForGuild } from "./core/modules.js";
-import { DistributedScheduler } from "@lumi/scheduler";
 import { AddonManager } from "@lumi/downloader";
 import {
   activeModules,
-  commandsExecuted,
-  createHealthMonitor,
   guildsTotal,
   httpRequestDuration,
   httpRequests,
@@ -33,124 +12,42 @@ import {
   startMetricsServer,
   usersTotal,
 } from "@lumi/observability";
-
-const logger = {
-  info: (msg: string, meta?: any) => console.log(msg, meta ?? ""),
-  warn: (msg: string, meta?: any) => console.warn(msg, meta ?? ""),
-  error: (msg: string, meta?: any) => console.error(msg, meta ?? ""),
-  debug: (msg: string, meta?: any) => {
-    if (process.env.LOG_LEVEL === "debug") console.debug(msg, meta ?? "");
-  },
-};
-
-function messageForDiscordCode(code: number): string | null {
-  switch (code) {
-    case RESTJSONErrorCodes.UnknownChannel:
-      return "That channel no longer exists.";
-    case RESTJSONErrorCodes.UnknownGuild:
-      return "This server is no longer available.";
-    case RESTJSONErrorCodes.UnknownMember:
-      return "That member is no longer in the server.";
-    case RESTJSONErrorCodes.UnknownMessage:
-      return "That message no longer exists.";
-    case RESTJSONErrorCodes.UnknownRole:
-      return "That role no longer exists.";
-    case RESTJSONErrorCodes.UnknownUser:
-      return "That user could not be found.";
-    case RESTJSONErrorCodes.MissingAccess:
-      return "I don't have access to do that here.";
-    case RESTJSONErrorCodes.MissingPermissions:
-      return "I'm missing the permissions to do that.";
-    case RESTJSONErrorCodes.CannotSendMessagesToThisUser:
-      return "I can't message that user - their DMs are closed.";
-    default:
-      return null;
-  }
-}
-
-function messageForHttpStatus(status: number): string | null {
-  switch (status) {
-    case 500:
-      return "Discord ran into an internal error. Please try again shortly.";
-    case 502:
-    case 504:
-      return "Discord's gateway is unavailable right now. Please try again shortly.";
-    case 503:
-      return "Discord is temporarily unavailable. Please try again shortly.";
-    default:
-      return null;
-  }
-}
-
-function commandErrorCard(error: unknown): any {
-  if (error instanceof DiscordAPIError) {
-    return ui.ephemeralCard(
-      ui.makeErrorCard(
-        "Action Failed",
-        messageForDiscordCode(Number(error.code)) ??
-          "Discord rejected that action.",
-      ),
-    );
-  }
-  if (error instanceof HTTPError) {
-    return ui.ephemeralCard(
-      ui.makeErrorCard(
-        "Discord Unavailable",
-        messageForHttpStatus(error.status) ??
-          "Discord is having issues. Please try again shortly.",
-      ),
-    );
-  }
-  if (error instanceof Error && error.name === "AbortError") {
-    return ui.ephemeralCard(
-      ui.makeErrorCard(
-        "Timed Out",
-        "That took too long and was cancelled. Please try again.",
-      ),
-    );
-  }
-  return ui.ephemeralCard(
-    ui.makeErrorCard("Unexpected Error", "An unexpected error occurred."),
-  );
-}
+import * as ui from "@lumi/ui";
+import {
+  aboutCommand,
+  boot,
+  createClient,
+  createCoreServices,
+  createRpcServer,
+  handleInteraction,
+  handlePrefixMessage,
+  logger,
+  pingCommand,
+  redisOptionsFromEnv,
+  shutdown,
+  type BotInteraction,
+} from "@lumi/core";
+import { ModuleManager, PermitPanel, moduleCommands } from "@lumi/admin";
+import {
+  CommandRegistry,
+  ModuleHost,
+  commandPayloadForGuild,
+} from "./core/modules.js";
 
 async function main() {
-  console.log("Starting Lumi v2...");
+  logger.info("Starting Lumi v2...");
 
-  const redis = createRedisClient({
-    host: process.env.REDIS_HOST ?? "localhost",
-    port: Number(process.env.REDIS_PORT ?? 6379),
-    password: process.env.REDIS_PASSWORD,
-  });
-  redis.on("error", (err) => logger.error("Redis error:", err.message));
-
+  const redis = createRedisClient(redisOptionsFromEnv());
+  redis.on("error", (error) => logger.error("Redis error", { error: error.message }));
   await redis.connect();
-  console.log("Connected to Redis");
+  logger.info("Connected to Redis");
 
   await connectDatabase();
-  console.log("Connected to Database");
-
-  const invalidation = new InvalidationBus(redis);
-  const cache = createCache({
-    redis,
-    invalidation,
-    defaultTtlMs: 60_000,
-    defaultNegativeTtlMs: 15_000,
-  });
+  logger.info("Connected to Database");
 
   const client = createClient();
-  createCoreServices(client, redis);
-
-  const permitRepo = new PermitRepository(prisma, redis);
-
-  const moduleLoader = createModuleLoader();
-  moduleLoader.addRoot("modules", "bundled");
-  moduleLoader.addRoot("data/addons", "addon");
-
-
-  const configService = new ConfigService(prisma);
-  const scheduler = new DistributedScheduler(redis);
-  const healthMonitor = createHealthMonitor();
+  const core = createCoreServices({ client, redis });
+  const { permits: permitRepo, configService, scheduler, healthMonitor } = core;
 
   healthMonitor.register({
     name: "redis",
@@ -158,10 +55,17 @@ async function main() {
   });
   healthMonitor.register({
     name: "discord",
-    check: async () => ({ healthy: client.isReady(), details: client.user?.tag ?? "not ready" }),
+    check: async () => ({
+      healthy: client.isReady(),
+      details: client.user?.tag ?? "not ready",
+    }),
   });
 
-  const rpcPort = parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
+  const moduleLoader = createModuleLoader();
+  moduleLoader.addRoot("modules", "bundled");
+  moduleLoader.addRoot("data/addons", "addon");
+
+  const rpcPort = Number.parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
   const rpcToken = process.env.RPC_INTERNAL_TOKEN;
   const rpc = createRpcServer({
     port: rpcPort,
@@ -181,7 +85,7 @@ async function main() {
         res.end(JSON.stringify(body));
       };
 
-      if (route === "/healthz" || route === "/livez") {
+      if (route === "/healthz") {
         const checks = await healthMonitor.runChecks();
         return finish(checks.healthy ? 200 : 503, {
           ok: checks.healthy,
@@ -190,7 +94,7 @@ async function main() {
         });
       }
 
-      if (route === "/readyz") {
+      if (route === "/ready" || route === "/readyz") {
         return finish(client.isReady() ? 200 : 503, { ready: client.isReady() });
       }
 
@@ -210,40 +114,60 @@ async function main() {
     },
   });
   await rpc.start();
-  console.log(`RPC server listening on :${rpcPort}`);
+  logger.info("RPC server listening", { port: rpcPort });
 
   let metricsServer: { stop(): void } | undefined;
   if (process.env.METRICS_ENABLED !== "false") {
-    const metricsPort = parseInt(process.env.METRICS_PORT ?? "9090", 10);
+    const metricsPort = Number.parseInt(process.env.METRICS_PORT ?? "9090", 10);
     metricsServer = startMetricsServer(metricsPort, () => client.isReady(), logger);
-    console.log(`Metrics server started on :${metricsPort}`);
   }
 
   const registry = new CommandRegistry();
   const commandPayload = (guildId: string) =>
     commandPayloadForGuild(registry, moduleLoader, guildId);
 
+  const registerGuildCommands = async (guild: Guild) => {
+    const payload = commandPayload(guild.id);
+    try {
+      await guild.commands.set(payload);
+      logger.info("Registered commands in guild", {
+        guildId: guild.id,
+        commands: payload.length,
+      });
+    } catch (error) {
+      logger.error("Failed to register commands", { guildId: guild.id, error });
+    }
+  };
+
   const syncGuildCommands = async (guildId: string) => {
     const guild = client.guilds.cache.get(guildId);
-    if (!guild) return;
-    await guild.commands
-      .set(commandPayload(guildId) as any)
-      .catch((error) => logger.error(`Failed to sync commands in ${guildId}:`, error));
+    if (guild) await registerGuildCommands(guild);
   };
 
   const syncAllGuildCommands = async () => {
-    for (const guild of client.guilds.cache.values()) {
-      await syncGuildCommands(guild.id);
+    const guildIds = Array.from(client.guilds.cache.keys());
+    const batchSize = 10;
+    for (let index = 0; index < guildIds.length; index += batchSize) {
+      await Promise.all(
+        guildIds.slice(index, index + batchSize).map((guildId) =>
+          syncGuildCommands(guildId),
+        ),
+      );
     }
   };
 
   const moduleManager = new ModuleManager(moduleLoader, prisma, syncGuildCommands);
 
+  // AddonManager needs the ModuleHost, and the host needs the service bag, so the
+  // manager is attached after construction. Modules resolve it lazily on use.
+  let addonManager: AddonManager | undefined;
+
   const services = {
     client,
     configService,
     redis,
-    cache,
+    // ConfigService owns the cache "config" namespace and invalidates it on
+    // every write; no other namespace has a consumer in the process today.
     db: {
       prisma,
       permits: permitRepo,
@@ -252,24 +176,22 @@ async function main() {
     permits: permitRepo,
     moduleManager,
     modules: {
-      isEnabled: (guildId: string, moduleName: string) => moduleLoader.isEnabled(guildId, moduleName),
+      isEnabled: (guildId: string, moduleName: string) =>
+        moduleLoader.isEnabled(guildId, moduleName),
     },
     moduleLoader,
     scheduler,
-    addons: undefined as unknown as AddonManager,
-    config: {
-      get: (guildId: string, key: string) => configService.get(guildId, key),
-      set: (guildId: string, key: string, value: any) =>
-        configService.set(guildId, key, value),
-      reset: (guildId: string, key: string) => configService.reset(guildId, key),
-      getAll: (guildId: string) => configService.getAll(guildId),
+    get addons(): AddonManager {
+      if (!addonManager) {
+        throw new Error("services.addons used before the addon manager was wired");
+      }
+      return addonManager;
     },
+    config: configService,
     rpc,
     ui,
-    discord: {
-      PermissionFlagsBits: (await import("discord.js")).PermissionFlagsBits,
-    },
-    observability: { healthMonitor },
+    discord: { PermissionFlagsBits },
+    observability: { healthMonitor, logger },
   };
 
   const host = new ModuleHost({
@@ -304,16 +226,22 @@ async function main() {
       }
     },
   });
-  services.addons = addons;
+  addonManager = addons;
 
   host.addStatic([pingCommand, aboutCommand, ...moduleCommands]);
 
   const discovered = await moduleLoader.discover();
-  console.log(`Discovered ${discovered.length} modules`);
+  logger.info("Discovered modules", { count: discovered.length });
 
   const loaded = await host.load(discovered);
-  console.log(`Loaded ${loaded.length} modules: ${loaded.map((m) => m.manifest.name).join(", ") || "(none)"}`);
-  console.log(`Registered ${registry.size} commands and ${registry.aliasCount} prefix aliases`);
+  logger.info("Loaded modules", {
+    count: loaded.length,
+    modules: loaded.map((module) => module.manifest.name),
+  });
+  logger.info("Registered commands", {
+    commands: registry.size,
+    aliases: registry.aliasCount,
+  });
 
   activeModules.set(loaded.length);
 
@@ -323,508 +251,131 @@ async function main() {
     handler: async () => {
       const report = await addons.autoUpdate();
       if (report?.failures.length) {
-        logger.warn(`Auto-update failed for ${report.failures.length} add-on(s)`);
+        logger.warn("Auto-update failed", { failures: report.failures.length });
       }
     },
   });
   await scheduler.start();
 
   const syncGuildModules = async (guildId: string) => {
-    let rows: any[] = [];
+    let rows: Array<{ module: string; enabled: boolean }> = [];
     try {
       rows = await prisma.guildModule.findMany({ where: { guildId } });
-    } catch (err) {
-      logger.warn("Could not load guild module state, defaulting to enabled:", err);
+    } catch (error) {
+      logger.warn("Could not load guild module state, defaulting to enabled", {
+        guildId,
+        error,
+      });
     }
-    for (const module of moduleLoader.listAll()) {
-      const row = (rows ?? []).find((r: any) => r.module === module.manifest.name);
-      const defaultEnabled = (module.manifest as any).defaultEnabled !== false;
-      const enabled = row ? Boolean(row.enabled) : defaultEnabled;
-      await moduleLoader.setEnabled(module.manifest.name, guildId, enabled);
-    }
+    const state = new Map(rows.map((row) => [row.module, row.enabled] as const));
+    await Promise.all(
+      moduleLoader.listAll().map((module) =>
+        moduleLoader.setEnabled(
+          module.manifest.name,
+          guildId,
+          state.get(module.manifest.name) ?? true,
+        ),
+      ),
+    );
   };
 
-  const syncGuildRecord = async (guild: any) => {
-    if (!guild?.id) return;
+  const syncGuildRecord = async (guild: Guild) => {
     try {
       await prisma.guild.upsert({
         where: { id: guild.id },
         update: {
-          name: guild.name ?? "",
-          icon: guild.iconURL?.({ size: 128 }) ?? null,
-          ownerId: guild.ownerId ?? "",
+          name: guild.name,
+          icon: guild.iconURL({ size: 128 }),
+          ownerId: guild.ownerId,
           leftAt: null,
         },
         create: {
           id: guild.id,
-          name: guild.name ?? "",
-          icon: guild.iconURL?.({ size: 128 }) ?? null,
-          ownerId: guild.ownerId ?? "",
+          name: guild.name,
+          icon: guild.iconURL({ size: 128 }),
+          ownerId: guild.ownerId,
         },
       });
       await permitRepo.seedBuiltinPermits(guild.id);
-    } catch (err) {
-      logger.warn(`Could not sync guild ${guild.id}:`, err);
-    }
-  };
-
-  const registerGuildCommands = async (guild: any) => {
-    const payload = commandPayload(guild.id);
-    try {
-      await guild.commands.set(payload);
-      logger.info(`Registered ${payload.length} commands in guild ${guild.name} (${guild.id})`);
-    } catch (err) {
-      logger.error(`Failed to register commands in guild ${guild.id}:`, err);
+    } catch (error) {
+      logger.warn("Could not sync guild", { guildId: guild.id, error });
     }
   };
 
   client.once("clientReady", async () => {
-    guildsTotal.set(client.guilds.cache.size);
-    usersTotal.set(client.users.cache.size);
-    shardsOnline.set(client.ws.shards.size);
-    activeModules.set(moduleLoader.listAll().length);
-
-    for (const guild of client.guilds.cache.values()) {
-      await syncGuildRecord(guild);
-      await syncGuildModules(guild.id);
-      await registerGuildCommands(guild);
-    }
-
     try {
+      guildsTotal.set(client.guilds.cache.size);
+      usersTotal.set(client.users.cache.size);
+      shardsOnline.set(client.ws.shards.size);
+      activeModules.set(moduleLoader.listAll().length);
+
+      // Bound concurrency: each guild performs three DB/API round-trips.
+      const guilds = Array.from(client.guilds.cache.values());
+      const batchSize = 10;
+      for (let index = 0; index < guilds.length; index += batchSize) {
+        await Promise.all(
+          guilds.slice(index, index + batchSize).map(async (guild) => {
+            // Module state must settle before command visibility is computed.
+            await Promise.all([syncGuildRecord(guild), syncGuildModules(guild.id)]);
+            await registerGuildCommands(guild);
+          }),
+        );
+      }
+
       await client.application?.commands.set([]);
-    } catch (err) {
-      logger.debug("Could not clear global commands:", err);
-    }
-
-    console.log(`Lumi online as ${client.user?.tag} in ${client.guilds.cache.size} guild(s)`);
-  });
-
-  client.on("guildCreate", async (guild) => {
-    guildsTotal.set(client.guilds.cache.size);
-    await syncGuildRecord(guild);
-    await syncGuildModules(guild.id);
-    await registerGuildCommands(guild);
-  });
-
-  client.on("guildDelete", () => {
-    guildsTotal.set(client.guilds.cache.size);
-  });
-
-  client.on("messageCreate", async (message) => {
-    if (message.partial) {
-      const full = await message.fetch().catch(() => null);
-      if (!full) return;
-      message = full;
-    }
-    if (message.author.bot || !message.guild) return;
-
-    const prefix = await resolvePrefix(services, client, message);
-    if (!prefix) return;
-
-    const withoutPrefix = message.content.slice(prefix.length).trim();
-    if (!withoutPrefix) return;
-
-    const [name, ...args] = withoutPrefix.split(/ +/g);
-    if (!name) return;
-
-    const command = registry.get(name);
-    if (!command) return;
-    if (command.module && !moduleLoader.isActive(message.guild.id, command.module)) return;
-
-    if (command.requiresAdmin) {
-      const allowed = await hasAdminAccess({
-        guildId: message.guild.id,
-        userId: message.author.id,
-        roleIds: roleIdsFrom(message.member, message.guild.id),
-        guildOwnerId: message.guild.ownerId,
-        memberPermissions: message.member?.permissions,
-        client,
-        permits: services.permits,
+      logger.info("Lumi online", {
+        user: client.user?.tag,
+        guilds: client.guilds.cache.size,
       });
-      if (!allowed) {
-        await message
-          .reply(
-            ui.ephemeralCard(
-              ui.makeErrorCard(
-                "Missing Permissions",
-                "You need **Manage Server** or an admin permit to use that command.",
-              ),
-            ),
-          )
-          .catch(() => undefined);
-        return;
-      }
-    }
-
-    const defaultPermissions = command.data.default_member_permissions;
-    if (
-      defaultPermissions !== null &&
-      defaultPermissions !== undefined &&
-      !message.member?.permissions.has(BigInt(defaultPermissions))
-    ) {
-      await message
-        .reply(
-          ui.ephemeralCard(
-            ui.makeErrorCard(
-              "Missing Permissions",
-              "You do not have permission to use that command.",
-            ),
-          ),
-        )
-        .catch(() => undefined);
-      return;
-    }
-
-    const syntheticInteraction = createSyntheticInteraction(message, command, args);
-    try {
-      await command.execute(syntheticInteraction as any, services);
-    } catch (err) {
-      logger.error(`Prefix command ${name} failed:`, err);
-      await message
-        .reply(commandErrorCard(err))
-        .catch(() => undefined);
+    } catch (error) {
+      logger.error("Ready sync failed", { error });
     }
   });
 
-  async function resolvePrefix(services: any, client: any, message: any): Promise<string | null> {
-    const content = message.content;
-    const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(content);
-    if (mention) return mention[0];
-    if (!message.guild) return null;
-    const stored = await services.config.get(message.guild.id, "prefix");
-    const prefix = typeof stored === "string" && stored.length > 0 ? stored : ",";
-    return content.startsWith(prefix) ? prefix : null;
-  }
-
-  const getPanel = (guildId: string, interaction: any) =>
-    new PermitPanel({
-      prisma,
-      redis,
-      guildId,
-      interaction,
-      moduleLoader,
-    });
-
-  function createSyntheticInteraction(
-    message: any,
-    command: any,
-    args: string[],
-  ) {
-    const guild = message.guild;
-    const member = message.member;
-    const channel = message.channel;
-    const commandName = command.data.name;
-    let replied = false;
-    let deferred = false;
-    let replyMessage: any = null;
-
-    const optionType = (option: any): number | undefined =>
-      option?.type ?? option?.toJSON?.()?.type;
-    const topOptions: any[] = command.data.options ?? [];
-    const subcommand = topOptions.find(
-      (option) => {
-        const type = optionType(option);
-        return (type === 1 || type === 2) && option.name === args[0];
-      },
+  client.on("guildCreate", (guild) => {
+    guildsTotal.set(client.guilds.cache.size);
+    void (async () => {
+      await Promise.all([syncGuildRecord(guild), syncGuildModules(guild.id)]);
+      await registerGuildCommands(guild);
+    })().catch((error) =>
+      logger.error("Guild create sync failed", { guildId: guild.id, error }),
     );
-    const definitions: any[] = subcommand
-      ? (subcommand.options ?? [])
-      : topOptions.filter((option) => {
-          const type = optionType(option);
-          return type !== 1 && type !== 2;
-        });
-    const rest = subcommand ? args.slice(1) : args;
-    const values = new Map<string, string>();
-    const positional: string[] = [];
+  });
 
-    for (let index = 0; index < rest.length; index += 1) {
-      const value = rest[index]!;
-      if (value.startsWith("--")) {
-        const next = rest[index + 1];
-        if (next !== undefined && !next.startsWith("--")) {
-          values.set(value.slice(2), next);
-          index += 1;
-        }
-        continue;
-      }
-      positional.push(value);
-    }
+  client.on("guildDelete", (guild) => {
+    guildsTotal.set(client.guilds.cache.size);
+    void prisma.guild
+      .update({ where: { id: guild.id }, data: { leftAt: new Date() } })
+      .catch((error) =>
+        logger.warn("Could not mark guild as left", { guildId: guild.id, error }),
+      );
+  });
 
-    let position = 0;
-    for (const definition of definitions) {
-      if (values.has(definition.name)) continue;
-      if (position >= positional.length) break;
-      values.set(definition.name, positional[position]!);
-      position += 1;
-    }
+  client.on("messageCreate", (message) => {
+    void handlePrefixMessage(message, {
+      client,
+      registry,
+      moduleLoader,
+      services,
+      logger,
+    }).catch((error) => logger.error("Prefix dispatch failed", { error }));
+  });
 
-    const raw = (name: string): string | null => values.get(name) ?? null;
-    const resolveUser = (value: string | null) => {
-      if (!value) return null;
-      const id =
-        /^<@!?(\d+)>$/.exec(value)?.[1] ??
-        (/^\d{15,20}$/.test(value) ? value : null);
-      return id
-        ? (message.client.users.cache.get(id) ?? message.mentions.users.get(id) ?? null)
-        : null;
-    };
-    const resolveMember = (value: string | null) => {
-      if (!value) return null;
-      const id =
-        /^<@!?(\d+)>$/.exec(value)?.[1] ??
-        (/^\d{15,20}$/.test(value) ? value : null);
-      return id
-        ? (guild.members.cache.get(id) ??
-            message.mentions.members?.get(id) ??
-            null)
-        : null;
-    };
-    const resolveRole = (value: string | null) => {
-      if (!value) return null;
-      const id =
-        /^<@&(\d+)>$/.exec(value)?.[1] ??
-        (/^\d{15,20}$/.test(value) ? value : null);
-      return id
-        ? (guild.roles.cache.get(id) ?? message.mentions.roles.get(id) ?? null)
-        : null;
-    };
-    const resolveChannel = (value: string | null) => {
-      if (!value) return null;
-      const id =
-        /^<#(\d+)>$/.exec(value)?.[1] ??
-        (/^\d{15,20}$/.test(value) ? value : null);
-      return id
-        ? (guild.channels.cache.get(id) ??
-            message.mentions.channels.get(id) ??
-            null)
-        : null;
-    };
-
-    return {
-      commandName,
-      user: message.author,
-      member,
-      guild,
-      guildId: guild.id,
-      channel,
-      channelId: channel.id,
-      client: message.client,
-      createdTimestamp: message.createdTimestamp,
-      isChatInputCommand: () => true,
-      isRepliable: () => true,
-      replied: () => replied,
-      deferred: () => deferred,
-      options: {
-        getSubcommand: () => subcommand?.name ?? null,
-        getSubcommandGroup: () => null,
-        getString: raw,
-        getInteger: (name: string) => {
-          const value = raw(name);
-          if (value === null) return null;
-          const parsed = Number.parseInt(value, 10);
-          return Number.isNaN(parsed) ? null : parsed;
-        },
-        getNumber: (name: string) => {
-          const value = raw(name);
-          if (value === null) return null;
-          const parsed = Number.parseFloat(value);
-          return Number.isNaN(parsed) ? null : parsed;
-        },
-        getBoolean: (name: string) => {
-          const value = raw(name)?.toLowerCase();
-          return value === "true" || value === "yes" || value === "on" || value === "1";
-        },
-        getUser: (name: string) => resolveUser(raw(name)),
-        getMember: (name: string) => resolveMember(raw(name)),
-        getChannel: (name: string) => resolveChannel(raw(name)),
-        getRole: (name: string) => resolveRole(raw(name)),
-        getMentionable: (name: string) => {
-          const value = raw(name);
-          return resolveUser(value) ?? resolveMember(value) ?? resolveRole(value) ?? resolveChannel(value);
-        },
-        getAttachment: () => null,
-        getFocused: () => {
-          throw new Error("Not supported");
-        },
-      },
-      reply: async (card: any) => {
-        const cardToSend = { ...card, flags: (card.flags ?? 32768) & ~64 };
-        replyMessage = await message.reply(cardToSend).catch(() => undefined);
-        replied = true;
-        return replyMessage;
-      },
-      deferReply: async () => {
-        deferred = true;
-      },
-      editReply: async (card: any) => {
-        if (replyMessage) {
-          await replyMessage.edit(card).catch(() => undefined);
-          return;
-        }
-        const cardToSend = { ...card, flags: (card.flags ?? 32768) & ~64 };
-        replyMessage = await message.reply(cardToSend).catch(() => undefined);
-        replied = true;
-      },
-      followUp: async (card: any) => {
-        return await message.reply(card).catch(() => undefined);
-      },
-    };
-  }
-
-  client.on("interactionCreate", async (interaction) => {
-    try {
-      if (interaction.isAutocomplete()) {
-        const command = registry.get(interaction.commandName);
-        if (
-          command?.autocomplete &&
-          (!command.module ||
-            !interaction.guildId ||
-            moduleLoader.isActive(interaction.guildId, command.module))
-        ) {
-          await command.autocomplete(interaction, services);
-        } else {
-          await interaction.respond([]).catch(() => undefined);
-        }
-        return;
-      }
-
-      if (interaction.isChatInputCommand()) {
-        const command = registry.get(interaction.commandName);
-        if (!command) {
-          await interaction.reply(ui.ephemeralCard(ui.makeErrorCard("Unknown Command", "That command is not registered."))).catch(() => undefined);
-          return;
-        }
-
-        if (command.module && interaction.guildId) {
-          const enabled = moduleLoader.isActive(interaction.guildId, command.module);
-          if (!enabled) {
-            await interaction
-              .reply(
-                ui.ephemeralCard(
-                  ui.makeErrorCard(
-                    "Module Disabled",
-                    `The **${command.module}** module is disabled on this server. Open \`/lumi\` to enable it.`,
-                  ),
-                ),
-              )
-              .catch(() => undefined);
-            return;
-          }
-        }
-
-        if (command.requiresAdmin) {
-          if (!interaction.guildId) {
-            await interaction
-              .reply(
-                ui.ephemeralCard(
-                  ui.makeErrorCard(
-                    "Server Only",
-                    "That command can only be used in a server.",
-                  ),
-                ),
-              )
-              .catch(() => undefined);
-            return;
-          }
-          const allowed = await hasAdminAccess({
-            guildId: interaction.guildId,
-            userId: interaction.user.id,
-            roleIds: roleIdsFrom(interaction.member, interaction.guildId),
-            guildOwnerId: interaction.guild?.ownerId,
-            memberPermissions: interaction.memberPermissions,
-            client,
-            permits: services.permits,
-          });
-          if (!allowed) {
-            await interaction
-              .reply(
-                ui.ephemeralCard(
-                  ui.makeErrorCard(
-                    "Missing Permissions",
-                    "You need **Manage Server** or an admin permit to use that command.",
-                  ),
-                ),
-              )
-              .catch(() => undefined);
-            return;
-          }
-        }
-
-        try {
-          await command.execute(interaction, services);
-          commandsExecuted.inc({
-            command: interaction.commandName,
-            module: command.module ?? "builtin",
-            status: "ok",
-          });
-        } catch (err) {
-          logger.error(`Command /${interaction.commandName} failed:`, err);
-          commandsExecuted.inc({
-            command: interaction.commandName,
-            module: command.module ?? "builtin",
-            status: "error",
-          });
-          const card = commandErrorCard(err);
-          if (interaction.deferred || interaction.replied) {
-            await interaction.followUp(card).catch(() => undefined);
-          } else {
-            await interaction.reply(card).catch(() => undefined);
-          }
-        }
-        return;
-      }
-
-      if (interaction.isButton()) {
-        if (await handlePingButton(interaction, services)) return;
-      }
-
-      if (
-        interaction.isButton() ||
-        interaction.isAnySelectMenu() ||
-        interaction.isModalSubmit()
-      ) {
-        if (await handleHubInteraction(interaction, services)) return;
-      }
-
-      if (interaction.isButton() || interaction.isAnySelectMenu() || interaction.isModalSubmit()) {
-        if (!interaction.customId.startsWith("permit_")) return;
-        const guildId = interaction.guildId;
-        if (!guildId) return;
-        const allowed = await hasAdminAccess({
+  client.on("interactionCreate", (interaction) => {
+    void handleInteraction(interaction, {
+      client,
+      registry,
+      moduleLoader,
+      services,
+      logger,
+      createPermitPanel: (guildId: string, panelInteraction: BotInteraction) =>
+        new PermitPanel({
+          permitRepo,
           guildId,
-          userId: interaction.user.id,
-          roleIds: roleIdsFrom(interaction.member, guildId),
-          guildOwnerId: interaction.guild?.ownerId,
-          memberPermissions: interaction.memberPermissions,
-          client,
-          permits: services.permits,
-        });
-        if (!allowed) {
-          await interaction
-            .reply(
-              ui.ephemeralCard(
-                ui.makeErrorCard(
-                  "Missing Permissions",
-                  "You need **Manage Server** or an admin permit to manage permits.",
-                ),
-              ),
-            )
-            .catch(() => undefined);
-          return;
-        }
-        const panel = getPanel(guildId, interaction);
-
-        if (interaction.isModalSubmit()) {
-          await panel.handleModalSubmit(interaction);
-        } else if (interaction.isButton()) {
-          await panel.handleInteraction(interaction);
-        } else {
-          await panel.handleSelectMenu(interaction);
-        }
-      }
-    } catch (err) {
-      logger.error("Unhandled interaction error:", err);
-    }
+          interaction: panelInteraction,
+          moduleLoader,
+        }),
+    }).catch((error) => logger.error("Interaction dispatch failed", { error }));
   });
 
   const token = process.env.BOT_TOKEN;
@@ -833,43 +384,43 @@ async function main() {
     process.exit(1);
   }
 
-  await boot({ token, client });
-
   let shuttingDown = false;
   const shutdownAll = async (signal: string) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log(`Received ${signal}, shutting down...`);
+    logger.info("Shutting down", { signal });
 
-    for (const module of moduleLoader.listAll()) {
+    const steps: Array<[string, () => unknown]> = [
+      ["metrics", () => metricsServer?.stop()],
+      ["rpc", () => rpc.stop()],
+      ["scheduler", () => scheduler.stop()],
+      ["modules", () => host.unloadAll()],
+      ["discord", () => shutdown(client)],
+      ["invalidation", () => core.invalidation.close()],
+      ["database", () => disconnectDatabase()],
+      ["redis", () => redis.quit()],
+    ];
+    for (const [step, run] of steps) {
       try {
-        await module.definition.onUnload(services);
-      } catch (err) {
-        logger.error(`Error unloading module ${module.manifest.name}:`, err);
+        await run();
+      } catch (error) {
+        logger.error("Shutdown step failed", { step, error });
       }
-    }
-
-    try {
-      metricsServer?.stop();
-      await rpc.stop();
-      await shutdown(client);
-      await invalidation.close();
-      await disconnectDatabase();
-      await redis.quit();
-    } catch (err) {
-      logger.error("Error during shutdown:", err);
     }
 
     process.exit(0);
   };
 
+  // Register before login so a signal during boot still drains cleanly.
   process.on("SIGINT", () => void shutdownAll("SIGINT"));
   process.on("SIGTERM", () => void shutdownAll("SIGTERM"));
 
-  console.log("Lumi v2 is ready!");
+  await boot({ token, client });
+
+  logger.info("Lumi v2 is ready!");
 }
 
 main().catch((error) => {
-  console.error("Fatal error:", error);
+  logger.error("Fatal error", { error });
   process.exit(1);
 });

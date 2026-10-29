@@ -9,8 +9,9 @@ import {
 } from "@discordjs/builders";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor } from "./palette";
-import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout";
+import { resolveCardColor } from "./palette.js";
+import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
+import { buildSafeActionRows } from "./panels.js";
 
 export interface CardReply {
   readonly flags?: number;
@@ -139,7 +140,7 @@ function buildContainer(
     );
   }
 
-  const actionRows = opts.actionRows ?? [];
+  const actionRows = buildSafeActionRows(opts.actionRows ?? []);
   if (opts.separatorAboveActionRows && actionRows.length > 0) {
     c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
   }
@@ -189,7 +190,7 @@ export const makeCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, color || undefined));
+) => wrap(buildContainer(title, body, opts, color ?? undefined));
 
 const cutText = (text: string, limit: number): string =>
   text.length > limit ? `${text.slice(0, Math.max(0, limit - 1))}…` : text;
@@ -205,18 +206,24 @@ export function fitLines(
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
-    const notice = `-# ...and ${lines.length - i} more item(s).`;
     const cost = kept.length > 0 ? line.length + 1 : line.length;
 
-    if (used + cost > budget - (notice.length + 1)) {
-      kept.push(notice);
+    if (used + cost > budget) {
+      const remaining = lines.length - i;
+      const notice = `-# ...and ${remaining} more item(s).`;
+      const noticeCost = kept.length > 0 ? notice.length + 1 : notice.length;
+      if (used + noticeCost <= budget) {
+        kept.push(notice);
+      } else if (kept.length === 0) {
+        kept.push(cutText(line, budget));
+      }
       break;
     }
     kept.push(line);
     used += cost;
   }
 
-  return kept.join("\n").slice(0, budget);
+  return kept.join("\n");
 }
 
 export function makeListCard(

@@ -1,4 +1,4 @@
-import { PermissionFlagsBits } from "discord.js";
+import { PermissionFlagsBits, type Client } from "discord.js";
 import type { PermitRepository } from "@lumi/permits";
 
 interface AdminAccessOptions {
@@ -7,19 +7,32 @@ interface AdminAccessOptions {
   roleIds: string[];
   guildOwnerId?: string | null;
   memberPermissions?: { has(permission: bigint): boolean } | null;
-  client?: any;
+  /**
+   * Discord client used by the permit evaluator. Kept structural so callers
+   * (and tests) can supply the subset the evaluator reads.
+   */
+  client?: unknown;
   permits: PermitRepository;
 }
 
-export function roleIdsFrom(member: any, guildId: string): string[] {
-  if (Array.isArray(member?.roles)) {
-    return member.roles.filter((roleId: string) => roleId !== guildId);
-  }
-  const roles = member?.roles?.cache;
+interface MemberRoles {
+  roles?: string[] | { cache?: { values(): IterableIterator<{ id: string }> } };
+}
+
+export function roleIdsFrom(
+  member: MemberRoles | null | undefined,
+  guildId: string,
+): string[] {
+  const roles = member?.roles;
   if (!roles) return [];
-  return Array.from(roles.values())
-    .filter((role: any) => role.id !== guildId)
-    .map((role: any) => role.id);
+  if (Array.isArray(roles)) {
+    return roles.filter((roleId) => roleId !== guildId);
+  }
+  const cached = roles.cache?.values();
+  if (!cached) return [];
+  return Array.from(cached, (role) => role.id).filter(
+    (roleId) => roleId !== guildId,
+  );
 }
 
 export async function hasAdminAccess(
@@ -37,7 +50,7 @@ export async function hasAdminAccess(
       guildOwnerId: options.guildOwnerId ?? undefined,
       permitNode: "admin.*",
     },
-    options.client,
+    options.client as Client | undefined,
   );
 
   return result.allowed;

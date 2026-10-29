@@ -4,8 +4,12 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
   version as discordVersion,
+  type ChatInputCommandInteraction,
+  type Client,
 } from "discord.js";
 import { uptime } from "node:os";
+import type { PrismaClient } from "@lumi/db";
+import type { Redis } from "ioredis";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -13,13 +17,19 @@ import {
   row,
 } from "@lumi/ui";
 
+interface AboutServices {
+  client: Client;
+  prisma: PrismaClient;
+  redis: Redis;
+}
+
 const formatCount = (value: number): string =>
   value >= 1000 ? `${(value / 1000).toFixed(1)}K` : String(value);
 
 const formatMb = (bytes: number): string =>
   `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
-async function postgresVersion(prisma: any): Promise<string> {
+async function postgresVersion(prisma: PrismaClient): Promise<string> {
   try {
     const rows = (await prisma.$queryRaw`SELECT version() AS version`) as Array<{
       version?: string;
@@ -31,7 +41,7 @@ async function postgresVersion(prisma: any): Promise<string> {
   }
 }
 
-async function redisVersion(redis: any): Promise<string> {
+async function redisVersion(redis: Redis): Promise<string> {
   try {
     const info = await redis.info("server");
     const version = String(info).match(/redis_version:([^\r\n]+)/)?.[1];
@@ -41,7 +51,7 @@ async function redisVersion(redis: any): Promise<string> {
   }
 }
 
-function inviteUrl(client: any): string | null {
+function inviteUrl(client: Client): string | null {
   try {
     return client.generateInvite({
       scopes: [OAuth2Scopes.Bot, OAuth2Scopes.ApplicationsCommands],
@@ -77,15 +87,18 @@ export const aboutCommand = {
   data: new SlashCommandBuilder()
     .setName("about")
     .setDescription("Show information, statistics, and architecture for Lumi"),
-  async execute(interaction: any, services: any) {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    services: AboutServices,
+  ) {
     const client = services.client;
-    const guilds = Array.from(client.guilds.cache.values()) as any[];
+    const guilds = Array.from(client.guilds.cache.values());
     const members = guilds.reduce(
       (sum, guild) => sum + (guild.memberCount ?? 0),
       0,
     );
     const channels = guilds.reduce(
-      (sum, guild) => sum + (guild.channels?.cache?.size ?? 0),
+      (sum, guild) => sum + guild.channels.cache.size,
       0,
     );
     const memory = process.memoryUsage();

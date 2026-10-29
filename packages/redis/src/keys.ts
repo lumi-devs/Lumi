@@ -1,3 +1,8 @@
+/**
+ * Canonical Redis key builders and TTLs (seconds).
+ *
+ * Never hand-build a `lumi:*` key outside this module.
+ */
 export function createKeys(namespace = "lumi") {
   const prefix = (parts: string[]): string => [namespace, ...parts].join(":");
 
@@ -14,7 +19,9 @@ export function createKeys(namespace = "lumi") {
     cooldown: (scope: string, id: string) => prefix(["cd", scope, id]),
     permits: (guildId: string, targetType: string, targetId: string) =>
       prefix(["permits", guildId, targetType, targetId]),
-    quarantine: (guildId: string, userId: string) => prefix(["quarantine", guildId, userId]),
+    // Matches the permit repository's quarantine marker: lumi:mod:<guild>:quarantine:<user>.
+    quarantine: (guildId: string, userId: string) =>
+      prefix(["mod", guildId, "quarantine", userId]),
     panelSession: (messageId: string) => prefix(["panel", messageId]),
     lock: (name: string) => prefix(["lock", name]),
     botStats: () => prefix(["stats", "bot"]),

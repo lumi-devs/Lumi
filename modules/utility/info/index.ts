@@ -19,9 +19,7 @@ import {
 } from "@lumi/ui";
 import { z } from "zod";
 
-const UtilityConfigSchema = z.object({
-  purgeMaxMessages: z.number().int().min(1).max(100).default(100),
-}, {});
+const UtilityConfigSchema = z.object({}, {});
 
 interface AvatarCardOptions {
   displayName: string;
@@ -338,9 +336,7 @@ const utilityModule: ModuleDefinition = defineModule({
   description: "Avatar, banner, whois, serverinfo, and info commands",
   version: "2.0.0",
   config: UtilityConfigSchema,
-  configFields: [
-    { key: "purgeMaxMessages", label: "Max Purge Messages", type: "number", description: "Maximum messages per purge (1-100)" },
-  ],
+  configFields: [],
   commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, roleinfoDef, channelinfoDef, emojiinfoDef],
   listeners: [avatarViewListener],
   tasks: [],

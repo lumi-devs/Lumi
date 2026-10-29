@@ -1,7 +1,9 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { validateManifest } from "@lumi/module-runtime";
 import type { ModuleManifest } from "@lumi/module-runtime";
+import { RequirementRe } from "./constants.js";
+import { pathExists } from "./fs.js";
 
 const RuntimePackages = new Set([
   "discord.js",
@@ -27,25 +29,21 @@ const ForbiddenPackages = new Set([
 ]);
 
 const IgnoredDirs = new Set(["node_modules", ".git", "dist", "build"]);
-const RequirementRe = /^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/\-^~>=<*]*$/;
 
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function walk(dir: string): Promise<string[]> {
+async function walk(dir: string, root: string, errors: string[]): Promise<string[]> {
   const files: string[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith(".")) continue;
     const full = join(dir, entry.name);
+    const rel = relative(root, full);
+
+    if (entry.isSymbolicLink()) {
+      errors.push(`${rel}: symbolic links are not allowed in add-ons.`);
+      continue;
+    }
+
     if (entry.isDirectory()) {
-      if (IgnoredDirs.has(entry.name)) continue;
-      files.push(...(await walk(full)));
+      if (entry.name.startsWith(".") || IgnoredDirs.has(entry.name)) continue;
+      files.push(...(await walk(full, root, errors)));
     } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith(".test.ts")) {
       files.push(full);
     }
@@ -110,8 +108,10 @@ export async function validateAddon(dir: string): Promise<string[]> {
     errors.push(`manifest name "${manifest.name}" must match the directory name.`);
   }
 
-  const entryPath = join(root, manifest.entry);
-  if (!(await exists(entryPath))) {
+  const entryPath = resolve(root, manifest.entry);
+  if (entryPath === root || !entryPath.startsWith(root + sep)) {
+    errors.push(`entry "${manifest.entry}" must stay inside the add-on directory.`);
+  } else if (!(await pathExists(entryPath))) {
     errors.push(`entry "${manifest.entry}" does not exist.`);
   }
 
@@ -122,14 +122,17 @@ export async function validateAddon(dir: string): Promise<string[]> {
   }
 
   for (const blocked of ["node_modules", ".npmrc", "bunfig.toml"]) {
-    if (await exists(join(root, blocked))) {
+    if (await pathExists(join(root, blocked))) {
       errors.push(`${blocked} may not be vendored; declare dependencies in manifest requirements.`);
     }
   }
 
+  const files = await walk(root, root, errors);
   const transpiler = new Bun.Transpiler({ loader: "ts" });
-  for (const file of await walk(root)) {
-    const source = await readFile(file, "utf-8");
+  const sources = await Promise.all(
+    files.map(async (file) => ({ file, source: await readFile(file, "utf-8") })),
+  );
+  for (const { file, source } of sources) {
     for (const imported of transpiler.scanImports(source)) {
       checkImport(imported.path, file, root, manifest.requirements, errors);
     }

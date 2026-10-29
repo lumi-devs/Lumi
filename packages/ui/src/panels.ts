@@ -1,176 +1,20 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ChannelSelectMenuBuilder,
-  MentionableSelectMenuBuilder,
-  RoleSelectMenuBuilder,
   SectionBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
+  type StringSelectMenuBuilder,
   TextDisplayBuilder,
-  UserSelectMenuBuilder,
   type AnyComponentBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import {
-  ButtonStyle,
-  type ChannelType,
-  parseEmoji,
-  type APIMessageComponentEmoji,
-} from "discord.js";
+import { ButtonStyle, type APIMessageComponentEmoji } from "discord.js";
+import { componentEmoji, setEmojiIfPresent } from "./emoji.js";
+import { createStringSelectMenu } from "./selects.js";
 
 export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
-export function componentEmoji(text: string): APIMessageComponentEmoji {
-  const parsed = parseEmoji(text);
-  if (!parsed?.name) return { name: text };
-  return {
-    name: parsed.name,
-    ...(parsed.id ? { id: parsed.id } : {}),
-    ...(parsed.animated ? { animated: parsed.animated } : {}),
-  };
-}
-
 export function row(...components: MessageActionRowComponentBuilder[]): Row {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...components);
-}
-
-function setEmojiIfPresent(
-  builder: StringSelectMenuOptionBuilder | ButtonBuilder,
-  emoji?: string | APIMessageComponentEmoji,
-): void {
-  if (emoji) {
-    builder.setEmoji(typeof emoji === "string" ? componentEmoji(emoji) : emoji);
-  }
-}
-
-function applySelectMenuOptions(
-  menu:
-    | UserSelectMenuBuilder
-    | RoleSelectMenuBuilder
-    | ChannelSelectMenuBuilder
-    | MentionableSelectMenuBuilder
-    | StringSelectMenuBuilder,
-  opts: {
-    placeholder?: string;
-    minValues?: number;
-    maxValues?: number;
-    disabled?: boolean;
-  },
-): void {
-  if (opts.placeholder) menu.setPlaceholder(opts.placeholder);
-  if (opts.minValues !== undefined) menu.setMinValues(opts.minValues);
-  if (opts.maxValues !== undefined) menu.setMaxValues(opts.maxValues);
-  if (opts.disabled !== undefined) menu.setDisabled(opts.disabled);
-}
-
-export interface CreateUserSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export interface CreateRoleSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export interface CreateChannelSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  channelTypes?: ChannelType[];
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export interface CreateMentionableSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export interface StringSelectOptionInput {
-  label: string;
-  value: string;
-  description?: string | undefined;
-  emoji?: string | APIMessageComponentEmoji | undefined;
-  default?: boolean;
-}
-
-export interface CreateStringSelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  options?: (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
-}
-
-export function createUserSelectMenu(
-  options: CreateUserSelectMenuOptions,
-): UserSelectMenuBuilder {
-  const menu = new UserSelectMenuBuilder().setCustomId(options.customId);
-  applySelectMenuOptions(menu, options);
-  return menu;
-}
-
-export function createRoleSelectMenu(
-  options: CreateRoleSelectMenuOptions,
-): RoleSelectMenuBuilder {
-  const menu = new RoleSelectMenuBuilder().setCustomId(options.customId);
-  applySelectMenuOptions(menu, options);
-  return menu;
-}
-
-export function createChannelSelectMenu(
-  options: CreateChannelSelectMenuOptions,
-): ChannelSelectMenuBuilder {
-  const menu = new ChannelSelectMenuBuilder().setCustomId(options.customId);
-  if (options.channelTypes && options.channelTypes.length > 0) {
-    menu.setChannelTypes(options.channelTypes);
-  }
-  applySelectMenuOptions(menu, options);
-  return menu;
-}
-
-export function createMentionableSelectMenu(
-  options: CreateMentionableSelectMenuOptions,
-): MentionableSelectMenuBuilder {
-  const menu = new MentionableSelectMenuBuilder().setCustomId(options.customId);
-  applySelectMenuOptions(menu, options);
-  return menu;
-}
-
-export function createStringSelectMenu(
-  options: CreateStringSelectMenuOptions,
-): StringSelectMenuBuilder {
-  const menu = new StringSelectMenuBuilder().setCustomId(options.customId);
-  applySelectMenuOptions(menu, options);
-  if (options.options && options.options.length > 0) {
-    const formattedOptions = options.options.map((opt) => {
-      if (opt instanceof StringSelectMenuOptionBuilder) {
-        return opt;
-      }
-      const optionBuilder = new StringSelectMenuOptionBuilder()
-        .setLabel(opt.label)
-        .setValue(opt.value);
-      if (opt.description) optionBuilder.setDescription(opt.description);
-      setEmojiIfPresent(optionBuilder, opt.emoji);
-      if (opt.default !== undefined) optionBuilder.setDefault(opt.default);
-      return optionBuilder;
-    });
-    menu.addOptions(formattedOptions);
-  }
-
-  return menu;
 }
 
 export interface CreateActionButtonOptions {
@@ -286,15 +130,15 @@ export function tabRow(
   const row = new ActionRowBuilder<ButtonBuilder>();
   for (const tab of tabs.slice(0, 5)) {
     const active = tab.id === activeId;
-    const button = new ButtonBuilder()
-      .setCustomId(`${prefix}:${tab.id}`)
-      .setLabel(clipLabel(tab.label))
-      .setStyle(active ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setDisabled(active);
-    if (tab.emoji) {
-      button.setEmoji(typeof tab.emoji === "string" ? componentEmoji(tab.emoji) : tab.emoji);
-    }
-    row.addComponents(button);
+    row.addComponents(
+      createActionButton({
+        customId: `${prefix}:${tab.id}`,
+        label: tab.label,
+        style: active ? ButtonStyle.Primary : ButtonStyle.Secondary,
+        emoji: tab.emoji,
+        disabled: active,
+      }),
+    );
   }
   return row;
 }
@@ -316,9 +160,7 @@ const toButton = (b: AccessoryButton): ButtonBuilder => {
     .setCustomId(b.customId)
     .setStyle(b.style ?? ButtonStyle.Secondary);
   if (b.label) button.setLabel(clipLabel(b.label));
-  if (b.emoji) {
-    button.setEmoji(typeof b.emoji === "string" ? componentEmoji(b.emoji) : b.emoji);
-  }
+  setEmojiIfPresent(button, b.emoji);
   if (b.disabled !== undefined) button.setDisabled(b.disabled);
   return button;
 };
@@ -338,14 +180,15 @@ export function confirmRow(
   options: ConfirmRowOptions,
 ): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(options.confirmId)
-      .setLabel(clipLabel(options.confirmLabel ?? "Confirm"))
-      .setStyle(options.confirmStyle ?? ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId(options.cancelId)
-      .setLabel(clipLabel(options.cancelLabel ?? "Cancel"))
-      .setStyle(ButtonStyle.Secondary),
+    toButton({
+      customId: options.confirmId,
+      label: options.confirmLabel ?? "Confirm",
+      style: options.confirmStyle ?? ButtonStyle.Danger,
+    }),
+    toButton({
+      customId: options.cancelId,
+      label: options.cancelLabel ?? "Cancel",
+    }),
   );
 }
 
@@ -427,4 +270,3 @@ export function navRow(
     action,
   );
 }
-

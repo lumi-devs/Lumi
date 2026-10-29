@@ -6,7 +6,6 @@ const LoggingConfigSchema = z.object({
   editLogChannel: z.string().nullable().default(null),
   deleteLogChannel: z.string().nullable().default(null),
   voiceLogChannel: z.string().nullable().default(null),
-  modLogChannel: z.string().nullable().default(null),
   ignoredChannels: z.array(z.string(), {}).default([]),
 }, {});
 
@@ -14,7 +13,7 @@ const LoggingSupermodule = defineModule({
   name: "logging",
   displayName: "Logging",
   emoji: "📝",
-  description: "Message, edit, delete, voice, and moderation logging",
+  description: "Message, edit, delete, and voice logging",
   version: "2.0.0",
   config: LoggingConfigSchema,
   configFields: [
@@ -22,7 +21,6 @@ const LoggingSupermodule = defineModule({
     { key: "editLogChannel", label: "Edit Log Channel", type: "channel", description: "Log message edits" },
     { key: "deleteLogChannel", label: "Delete Log Channel", type: "channel", description: "Log message deletes" },
     { key: "voiceLogChannel", label: "Voice Log Channel", type: "channel", description: "Log voice state changes" },
-    { key: "modLogChannel", label: "Mod Log Channel", type: "channel", description: "Log moderation actions" },
     { key: "ignoredChannels", label: "Ignored Channels", type: "multi-channel", description: "Channels to exclude from logging" },
   ],
   commands: [],

@@ -1,3 +1,5 @@
+import type { Client } from "discord.js";
+
 export type PermitKind = "CUSTOM";
 export type Polarity = "Grant" | "Deny";
 export type PermitTargetType = "USER" | "ROLE" | "CHANNEL";
@@ -30,6 +32,10 @@ export interface PermitAssignment {
   expiresAt: Date | null;
 }
 
+export interface PermitWithAssignments extends Permit {
+  assignments: PermitAssignment[];
+}
+
 export interface PermitConditions {
   channelIds?: string[];
   roleIds?: string[];
@@ -52,6 +58,31 @@ export interface EvaluatePermitOptions {
   at?: Date;
 }
 
+export interface PermitChainTarget {
+  readonly targetType: PermitTargetType;
+  readonly targetId: string;
+}
+
+export interface PermitChainResult {
+  tiers: Array<{
+    custom: { grant: string[]; deny: string[] };
+  }>;
+  isQuarantined: boolean;
+}
+
+export interface PermitChainStore {
+  getPermitChain(
+    guildId: string,
+    userId: string,
+    chain: readonly PermitChainTarget[],
+  ): Promise<PermitChainResult>;
+}
+
+export interface PermitContainer {
+  db: { permits: PermitChainStore };
+  client?: Client;
+}
+
 export interface PermitTierExplanation {
   tier: string;
   verdict: "allow" | "deny" | "pass";
@@ -61,11 +92,4 @@ export interface PermitTierExplanation {
 export interface EvaluatedPermit {
   rows: PermitTierExplanation[];
   allowed: boolean;
-}
-
-export interface PermitChainResult {
-  tiers: Array<{
-    custom: { grant: string[]; deny: string[] };
-  }>;
-  isQuarantined: boolean;
 }

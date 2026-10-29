@@ -14,8 +14,7 @@
   "dependencies": {
     "@lumi/db": "workspace:*",
     "@lumi/module-runtime": "workspace:*",
-    "ioredis": "^6.0.0",
-    "isomorphic-git": "^1.44.5"
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.5"

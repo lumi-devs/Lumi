@@ -1,4 +1,8 @@
 import type { EvaluatedPermit, PermitTierExplanation } from "@lumi/permits";
+import type {
+  ActionRowBuilder,
+  MessageActionRowComponentBuilder,
+} from "discord.js";
 import { AccentColors, makeCard, type CardReply } from "@lumi/ui";
 
 function verdictIcon(verdict: PermitTierExplanation["verdict"]): string {
@@ -19,12 +23,12 @@ interface ExplanationCardOptions {
   userId: string;
   node: string;
   channelId: string | undefined;
-  actionRows: any[];
+  actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[];
 }
 
 interface AllExplanationCardOptions {
   userId: string;
-  actionRows: any[];
+  actionRows: ActionRowBuilder<MessageActionRowComponentBuilder>[];
 }
 
 const TextLimit = 3900;

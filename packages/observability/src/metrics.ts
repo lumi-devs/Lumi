@@ -158,35 +158,37 @@ export const dbQueriesTotal = new Counter({
   registers: [registry],
 });
 
+// Mirrors the `CacheMetrics` contract in `@lumi/cache`; keep the two in sync.
 export interface CacheMetrics {
-  hit(cache: string): void;
-  miss(cache: string): void;
-  negative(cache: string): void;
-  write(cache: string): void;
-  evict(cache: string): void;
-  invalidate(cache: string, count: number): void;
-  fill(cache: string, seconds: number): void;
-  stale(cache: string): void;
+  recordHit(namespace: string): void;
+  recordMiss(namespace: string): void;
+  recordNegativeHit(namespace: string): void;
+  recordWrite(namespace: string): void;
+  recordEviction(namespace: string): void;
+  recordInvalidation(namespace: string): void;
+  recordFillDuration(namespace: string, durationMs: number): void;
+  recordStaleWrite(namespace: string): void;
 }
 
 export const prometheusCacheMetrics: CacheMetrics = {
-  hit: (cache) => void cacheHits.inc({ cache }),
-  miss: (cache) => void cacheMisses.inc({ cache }),
-  negative: (cache) => void cacheNegativeHits.inc({ cache }),
-  write: (cache) => void cacheWrites.inc({ cache }),
-  evict: (cache) => void cacheEvictions.inc({ cache }),
-  invalidate: (cache, count) => cacheInvalidations.inc({ cache }, count),
-  fill: (cache, seconds) => cacheFillDuration.observe({ cache }, seconds),
-  stale: (cache) => void cacheStaleWrites.inc({ cache }),
+  recordHit: (namespace) => void cacheHits.inc({ cache: namespace }),
+  recordMiss: (namespace) => void cacheMisses.inc({ cache: namespace }),
+  recordNegativeHit: (namespace) => void cacheNegativeHits.inc({ cache: namespace }),
+  recordWrite: (namespace) => void cacheWrites.inc({ cache: namespace }),
+  recordEviction: (namespace) => void cacheEvictions.inc({ cache: namespace }),
+  recordInvalidation: (namespace) => void cacheInvalidations.inc({ cache: namespace }),
+  recordFillDuration: (namespace, durationMs) =>
+    cacheFillDuration.observe({ cache: namespace }, durationMs / 1000),
+  recordStaleWrite: (namespace) => void cacheStaleWrites.inc({ cache: namespace }),
 };
 
 export const noopCacheMetrics: CacheMetrics = {
-  hit: () => undefined,
-  miss: () => undefined,
-  negative: () => undefined,
-  write: () => undefined,
-  evict: () => undefined,
-  invalidate: () => undefined,
-  fill: () => undefined,
-  stale: () => undefined,
+  recordHit: () => undefined,
+  recordMiss: () => undefined,
+  recordNegativeHit: () => undefined,
+  recordWrite: () => undefined,
+  recordEviction: () => undefined,
+  recordInvalidation: () => undefined,
+  recordFillDuration: () => undefined,
+  recordStaleWrite: () => undefined,
 };

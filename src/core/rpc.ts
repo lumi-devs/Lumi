@@ -1,16 +1,19 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 export interface RpcServerOptions {
   port: number;
   host?: string;
-  handler: (req: any, res: any) => Promise<void>;
+  handler: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 }
 
 export class RpcServer {
   private server: ReturnType<typeof createServer>;
   private readonly port: number;
   private readonly host: string;
-  private readonly handler: (req: any, res: any) => Promise<void>;
+  private readonly handler: (
+    req: IncomingMessage,
+    res: ServerResponse,
+  ) => Promise<void>;
 
   constructor(options: RpcServerOptions) {
     this.port = options.port;

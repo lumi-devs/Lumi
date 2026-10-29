@@ -1,3 +1,4 @@
+import { asIdList, isSnowflake } from "@lumi/foundation";
 import { ModerationConfigKey } from "./constants.js";
 
 type WarnAction = "timeout" | "kick" | "ban";
@@ -20,15 +21,6 @@ const ModerationDefaults: ModerationConfig = {
   immuneRoleIds: [],
   warnThresholds: {},
 };
-
-function isSnowflake(value: unknown): value is string {
-  return typeof value === "string" && /^\d{17,20}$/.test(value);
-}
-
-function asIdList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.filter(isSnowflake))];
-}
 
 function asThresholds(value: unknown): Record<string, WarnThreshold> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -77,7 +69,7 @@ export async function getModerationConfig(
       typeof maxTargets === "number" && Number.isFinite(maxTargets)
         ? Math.min(100, Math.max(1, Math.floor(maxTargets)))
         : ModerationDefaults.maxTargets,
-    immuneRoleIds: asIdList(stored.immuneRoleIds),
+    immuneRoleIds: asIdList(stored.immuneRoleIds, { unique: true }),
     warnThresholds: asThresholds(stored.warnThresholds),
   };
 }

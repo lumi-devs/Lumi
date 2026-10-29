@@ -8,33 +8,30 @@ export class ModuleManager {
     private readonly syncCommands: (guildId: string) => Promise<void>,
   ) {}
 
-  private async ensureGuild(guildId: string): Promise<void> {
+  async enable(guildId: string, moduleName: string): Promise<void> {
+    await this.setEnabled(guildId, moduleName, true);
+  }
+
+  async disable(guildId: string, moduleName: string): Promise<void> {
+    await this.setEnabled(guildId, moduleName, false);
+  }
+
+  private async setEnabled(
+    guildId: string,
+    moduleName: string,
+    enabled: boolean,
+  ): Promise<void> {
     await this.prisma.guild.upsert({
       where: { id: guildId },
       update: {},
       create: { id: guildId },
     });
-  }
-
-  async enable(guildId: string, moduleName: string): Promise<void> {
-    await this.ensureGuild(guildId);
     await this.prisma.guildModule.upsert({
       where: { guildId_module: { guildId, module: moduleName } },
-      update: { enabled: true },
-      create: { guildId, module: moduleName, enabled: true },
+      update: { enabled },
+      create: { guildId, module: moduleName, enabled },
     });
-    await this.moduleLoader.setEnabled(moduleName, guildId, true);
-    await this.syncCommands(guildId);
-  }
-
-  async disable(guildId: string, moduleName: string): Promise<void> {
-    await this.ensureGuild(guildId);
-    await this.prisma.guildModule.upsert({
-      where: { guildId_module: { guildId, module: moduleName } },
-      update: { enabled: false },
-      create: { guildId, module: moduleName, enabled: false },
-    });
-    await this.moduleLoader.setEnabled(moduleName, guildId, false);
+    await this.moduleLoader.setEnabled(moduleName, guildId, enabled);
     await this.syncCommands(guildId);
   }
 }

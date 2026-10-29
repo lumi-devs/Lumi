@@ -2,7 +2,8 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
-import { renderHubPanel, type HubServices } from "../panel/HubPanel.js";
+import { renderHubPanel } from "../panel/hubViews.js";
+import type { HubServices } from "../panel/services.js";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import { permitCommand } from "./permit.js";
 

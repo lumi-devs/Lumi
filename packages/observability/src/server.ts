@@ -1,10 +1,10 @@
-import { registry } from "./metrics";
+import { registry } from "./metrics.js";
 
 export interface Logger {
-  info: (msg: string, meta?: any) => void;
-  warn: (msg: string, meta?: any) => void;
-  error: (msg: string, meta?: any) => void;
-  debug: (msg: string, meta?: any) => void;
+  info: (msg: string, meta?: unknown) => void;
+  warn: (msg: string, meta?: unknown) => void;
+  error: (msg: string, meta?: unknown) => void;
+  debug: (msg: string, meta?: unknown) => void;
 }
 
 export interface MetricsServer {

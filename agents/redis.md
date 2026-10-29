@@ -34,11 +34,13 @@ plain keys, not cached values: the global dispatcher may run on any replica.
 
 ## Invalidation
 
-`InvalidationBus` owns channel `lumi:cache:invalidate`. `invalidate(...keys)`:
+`InvalidationBus` owns channel `lumi:invalidation`. `invalidate(namespace, keys)`:
 
 1. notifies local listeners synchronously,
-2. `DEL`s the keys (500 per chunk),
-3. publishes `{ keys, time }`.
+2. publishes `{ namespace, keys, timestamp }`.
+
+The bus does not delete Redis keys. `Cache.delete(...keys)` performs the `DEL`
+and then calls `invalidate`, so the write path owns both removal and fan-out.
 
 Subscribers drop their L1 entries. On reconnect the bus signals `onResync`; the
 cache clears its local state. Writes must call this after commit.

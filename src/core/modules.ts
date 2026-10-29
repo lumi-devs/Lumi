@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import type { Client, RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import type { LoadedModule, ModuleLoader } from "@lumi/module-runtime";
 import type { AddonRuntime } from "@lumi/downloader";
@@ -11,7 +11,7 @@ export function commandPayloadForGuild(
   registry: CommandRegistry,
   loader: Pick<ModuleLoader, "isActive">,
   guildId: string,
-): unknown[] {
+): RESTPostAPIApplicationCommandsJSONBody[] {
   return registry
     .all()
     .filter(
@@ -25,6 +25,18 @@ export interface ModuleHostLogger {
   info(message: string, meta?: unknown): void;
   warn(message: string, meta?: unknown): void;
   error(message: string, meta?: unknown): void;
+}
+
+/**
+ * The loader hands `onLoad`/`onUnload` a bag containing `__moduleName`, but
+ * command and listener handlers would otherwise receive the raw shared bag.
+ * Build the same shape here so every entry point resolves services identically.
+ */
+export function servicesForModule<T extends object>(
+  services: T,
+  moduleName: string,
+): T & { __moduleName: string } {
+  return { ...services, __moduleName: moduleName };
 }
 
 export class CommandRegistry {
@@ -62,7 +74,7 @@ export class CommandRegistry {
     return Array.from(this.commands.values());
   }
 
-  payload(): unknown[] {
+  payload(): RESTPostAPIApplicationCommandsJSONBody[] {
     return this.all().map((command) => command.data.toJSON());
   }
 
@@ -79,7 +91,7 @@ export interface ModuleHostOptions {
   client: Client;
   loader: ModuleLoader;
   registry: CommandRegistry;
-  services: Record<string, any>;
+  services: Record<string, unknown>;
   logger: ModuleHostLogger;
   syncCommands: () => Promise<void>;
 }
@@ -148,6 +160,29 @@ export class ModuleHost implements AddonRuntime {
     await this.options.syncCommands();
   }
 
+  /**
+   * Detach every listener and run each module's onUnload before the process
+   * tears down its databases. Command re-sync is skipped: Discord is going away.
+   */
+  async unloadAll(): Promise<void> {
+    const names = this.options.loader
+      .listAll()
+      .map((module) => module.manifest.name);
+    for (const name of names) {
+      this.detach(name);
+    }
+    for (const name of names) {
+      try {
+        await this.options.loader.unload(name);
+      } catch (error) {
+        this.options.logger.error("Failed to unload module", {
+          module: name,
+          error,
+        });
+      }
+    }
+  }
+
   async reload(name: string): Promise<void> {
     const targets = this.options.loader
       .listAll()
@@ -165,6 +200,8 @@ export class ModuleHost implements AddonRuntime {
   private attach(module: LoadedModule): void {
     this.detach(module.manifest.name);
 
+    const moduleName = module.manifest.name;
+    const moduleServices = servicesForModule(this.options.services, moduleName);
     const disposers: Array<() => void> = [];
     for (const listener of module.definition.listeners ?? []) {
       const handler = listener.handler;
@@ -177,8 +214,8 @@ export class ModuleHost implements AddonRuntime {
         ) {
           return;
         }
-        void handler(...args, this.options.services).catch((error) =>
-          this.options.logger.error(`[${module.manifest.name}] listener ${event} failed:`, error),
+        void handler(...args, moduleServices).catch((error) =>
+          this.options.logger.error(`[${moduleName}] listener ${event} failed:`, error),
         );
       };
       if (listener.once) {
@@ -188,12 +225,12 @@ export class ModuleHost implements AddonRuntime {
       }
       disposers.push(() => this.options.client.off(event, wrapped));
     }
-    this.disposers.set(module.manifest.name, disposers);
+    this.disposers.set(moduleName, disposers);
 
     for (const command of module.definition.commands ?? []) {
-      if (!this.options.registry.add({ ...command, module: module.manifest.name })) {
+      if (!this.options.registry.add({ ...command, module: moduleName })) {
         this.options.logger.warn(
-          `Command /${command.data.name} from ${module.manifest.name} collides with an existing command.`,
+          `Command /${command.data.name} from ${moduleName} collides with an existing command.`,
         );
       }
     }

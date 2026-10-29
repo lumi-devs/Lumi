@@ -4,7 +4,6 @@ export interface Codec<T> {
   encode(value: T): string;
   decode(value: string): T;
   encodeNull(): string;
-  decodeNull(value: string): boolean;
 }
 
 function createCodec<T>(): Codec<T> {
@@ -17,13 +16,6 @@ function createCodec<T>(): Codec<T> {
     },
     encodeNull(): string {
       return devalue.stringify(null);
-    },
-    decodeNull(value: string): boolean {
-      try {
-        return devalue.parse(value) === null;
-      } catch {
-        return false;
-      }
     },
   };
 }

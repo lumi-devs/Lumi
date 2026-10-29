@@ -1,6 +1,7 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import type { ModuleDefinition } from "@lumi/module-kit";
+import type { Dirent } from "node:fs";
+import { readdir, readFile, realpath } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
+import type { ModuleDefinition, ModuleServices } from "@lumi/module-kit";
 import { type ModuleManifest, validateManifest } from "./manifest.js";
 
 export type ModuleSummary = Pick<
@@ -21,8 +22,138 @@ export interface LoadedModule {
   guildsDisabled: Set<string>;
 }
 
+interface DiscoveryContext {
+  origin: "bundled" | "addon";
+  discovered: LoadedModule[];
+}
+
+function isMissingPath(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+function importKey(entryPath: string): string {
+  importGeneration += 1;
+  return `${entryPath}?v=${importGeneration}`;
+}
+
+let importGeneration = 0;
+
+interface SemverApi {
+  satisfies: (version: string, range: string) => boolean;
+}
+
+function semverApi(): SemverApi | undefined {
+  const runtime = globalThis as { Bun?: { semver?: SemverApi } };
+  return runtime.Bun?.semver;
+}
+
+interface ParsedVersion {
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+function parseVersion(value: string): ParsedVersion | null {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(value.trim());
+  if (!match) return null;
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+  };
+}
+
+function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  return a.patch - b.patch;
+}
+
+/** Fallback for the operators manifests use when `Bun.semver` is unavailable. */
+function matchesComparator(version: ParsedVersion, comparator: string): boolean {
+  const operator = /^(>=|<=|>|<|=|\^|~)/.exec(comparator)?.[1] ?? "";
+  const target = parseVersion(comparator.slice(operator.length));
+  if (!target) return false;
+  const order = compareVersions(version, target);
+  switch (operator) {
+    case "^":
+      if (target.major > 0) return version.major === target.major && order >= 0;
+      if (target.minor > 0) {
+        return version.major === 0 && version.minor === target.minor && order >= 0;
+      }
+      return order === 0;
+    case "~":
+      return version.major === target.major && version.minor === target.minor && order >= 0;
+    case ">=":
+      return order >= 0;
+    case ">":
+      return order > 0;
+    case "<=":
+      return order <= 0;
+    case "<":
+      return order < 0;
+    default:
+      return order === 0;
+  }
+}
+
+function satisfiesRange(version: string, range: string): boolean {
+  const api = semverApi();
+  if (api) return api.satisfies(version, range);
+
+  const parsed = parseVersion(version);
+  if (!parsed) return false;
+  const alternatives = range
+    .split("||")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (alternatives.length === 0) return true;
+  return alternatives.some((alternative) =>
+    alternative.split(/\s+/).every((comparator) =>
+      comparator === "*" || comparator === "x" || comparator === "X"
+        ? true
+        : matchesComparator(parsed, comparator),
+    ),
+  );
+}
+
+export type DependencyIssue =
+  | { module: string; dependency: string; reason: "missing" }
+  | {
+      module: string;
+      dependency: string;
+      reason: "unsatisfied";
+      required: string;
+      found: string;
+    };
+
+export function checkDependencies(
+  moduleName: string,
+  dependencies: Readonly<Record<string, string>>,
+  available: ReadonlyMap<string, string>,
+): DependencyIssue[] {
+  const issues: DependencyIssue[] = [];
+  for (const [dependency, range] of Object.entries(dependencies)) {
+    const found = available.get(dependency);
+    if (found === undefined) {
+      issues.push({ module: moduleName, dependency, reason: "missing" });
+    } else if (!satisfiesRange(found, range)) {
+      issues.push({
+        module: moduleName,
+        dependency,
+        reason: "unsatisfied",
+        required: range,
+        found,
+      });
+    }
+  }
+  return issues;
+}
+
 export class ModuleLoader {
   private modules = new Map<string, LoadedModule>();
+  private moduleServices = new Map<string, ModuleServices>();
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
   private services: any = {};
 
@@ -34,200 +165,269 @@ export class ModuleLoader {
     const discovered: LoadedModule[] = [];
 
     for (const root of this.roots) {
+      let entries: Dirent[];
       try {
-        const entries = await readdir(root.path, { withFileTypes: true });
-
-        for (const entry of entries) {
-          if (!entry.isDirectory()) continue;
-
-          const modulePath = join(root.path, entry.name);
-          const manifestPath = join(modulePath, "manifest.json");
-
-          let manifest: ModuleManifest;
-          try {
-            const manifestContent = await readFile(manifestPath, "utf-8");
-            manifest = validateManifest(JSON.parse(manifestContent));
-          } catch {
-            continue;
-          }
-
-          if (manifest.apiVersion !== 2) continue;
-
-          await this.discoverSupermodule(modulePath, manifest, root.origin, discovered);
+        entries = await readdir(root.path, { withFileTypes: true });
+      } catch (error) {
+        if (!isMissingPath(error)) {
+          console.error(`Error discovering modules in ${root.path}:`, error);
         }
-      } catch (e) {
-        console.error(`Error discovering modules in ${root.path}:`, e);
+        continue;
+      }
+
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+
+        const modulePath = join(root.path, entry.name);
+        const manifest = await this.readManifest(modulePath);
+        if (!manifest) continue;
+        if (entry.name !== manifest.name) {
+          console.error(
+            `Module directory "${entry.name}" does not match manifest name "${manifest.name}".`,
+          );
+          continue;
+        }
+
+        await this.discoverSupermodule(modulePath, manifest, {
+          origin: root.origin,
+          discovered,
+        });
       }
     }
 
     return discovered;
   }
 
+  private async readManifest(dir: string): Promise<ModuleManifest | null> {
+    let content: string;
+    try {
+      content = await readFile(join(dir, "manifest.json"), "utf-8");
+    } catch (error) {
+      if (!isMissingPath(error)) {
+        console.error(`Failed to read manifest in ${dir}:`, error);
+      }
+      return null;
+    }
+
+    try {
+      return validateManifest(JSON.parse(content));
+    } catch (error) {
+      console.error(`Invalid manifest in ${dir}:`, error);
+      return null;
+    }
+  }
+
+  private entryPath(dir: string, entry: string): string | null {
+    const root = resolve(dir);
+    const target = resolve(root, entry);
+    return target.startsWith(root + sep) ? target : null;
+  }
+
+  private async loadDefinition(
+    dir: string,
+    manifest: ModuleManifest,
+  ): Promise<ModuleDefinition | null> {
+    const entryPath = this.entryPath(dir, manifest.entry);
+    if (!entryPath) {
+      console.error(
+        `Module ${manifest.name} has an unsafe entry path "${manifest.entry}".`,
+      );
+      return null;
+    }
+
+    try {
+      const [realRoot, realEntry] = await Promise.all([
+        realpath(resolve(dir)),
+        realpath(entryPath),
+      ]);
+      if (!realEntry.startsWith(realRoot + sep)) {
+        console.error(
+          `Module ${manifest.name} entry "${manifest.entry}" resolves outside the module directory.`,
+        );
+        return null;
+      }
+
+      const mod = (await import(importKey(entryPath))) as {
+        default?: ModuleDefinition;
+      };
+      const definition = mod.default;
+      if (!definition) {
+        console.error(`Module ${manifest.name} has no default export.`);
+        return null;
+      }
+      if (definition.name !== manifest.name) {
+        console.error(
+          `Module name mismatch: ${definition.name} !== ${manifest.name}.`,
+        );
+        return null;
+      }
+      return definition;
+    } catch (error) {
+      console.error(`Failed to load module ${manifest.name}:`, error);
+      return null;
+    }
+  }
+
   private async discoverSupermodule(
     modulePath: string,
     manifest: ModuleManifest,
-    origin: "bundled" | "addon",
-    discovered: LoadedModule[]
+    context: DiscoveryContext,
   ): Promise<void> {
-    if (!manifest.entry) return;
+    const definition = await this.loadDefinition(modulePath, manifest);
+    if (!definition) return;
 
-    let superDefinition: ModuleDefinition;
-    try {
-      const entryPath = join(modulePath, manifest.entry);
-      const mod = await import(`${entryPath}?t=${Date.now()}`);
-      superDefinition = mod.default;
-    } catch (e) {
-      console.error(`Failed to load supermodule ${manifest.name}:`, e);
-      return;
-    }
-
-    if (superDefinition.name !== manifest.name) {
-      console.error(`Supermodule name mismatch: ${superDefinition.name} !== ${manifest.name}`);
-      return;
-    }
-
-    const supermodule: LoadedModule = {
+    context.discovered.push({
       manifest,
-      definition: superDefinition,
+      definition,
       path: modulePath,
-      origin,
+      origin: context.origin,
       isSubmodule: false,
       guildsDisabled: new Set(),
-    };
+    });
 
-    discovered.push(supermodule);
-
+    let entries: Dirent[];
     try {
-      const subEntries = await readdir(modulePath, { withFileTypes: true });
-
-      for (const subEntry of subEntries) {
-        if (!subEntry.isDirectory()) continue;
-        if (subEntry.name === "node_modules") continue;
-
-        const subPath = join(modulePath, subEntry.name);
-        const subManifestPath = join(subPath, "manifest.json");
-
-        let subManifest: ModuleManifest;
-        try {
-          const content = await readFile(subManifestPath, "utf-8");
-          subManifest = validateManifest(JSON.parse(content));
-        } catch {
-          continue;
-        }
-
-        if (subManifest.apiVersion !== 2) continue;
-        if (!subManifest.entry) continue;
-        if (!/^[a-z][a-z0-9-]*$/.test(subManifest.name)) continue;
-
-        const entryPath = join(subPath, subManifest.entry);
-        let subDefinition: ModuleDefinition;
-        try {
-          const mod = await import(`${entryPath}?t=${Date.now()}`);
-          subDefinition = mod.default;
-        } catch (e) {
-          console.error(`Failed to load submodule ${subManifest.name}:`, e);
-          continue;
-        }
-
-        if (subDefinition.name !== subManifest.name) {
-          console.error(`Submodule name mismatch: ${subDefinition.name} !== ${subManifest.name}`);
-          continue;
-        }
-
-        const submodule: LoadedModule = {
-          manifest: subManifest,
-          definition: subDefinition,
-          path: subPath,
-          origin,
-          supermodule: manifest.name,
-          isSubmodule: true,
-          guildsDisabled: new Set(),
-        };
-
-        discovered.push(submodule);
+      entries = await readdir(modulePath, { withFileTypes: true });
+    } catch (error) {
+      if (!isMissingPath(error)) {
+        console.error(`Failed to read submodules of ${manifest.name}:`, error);
       }
-    } catch {
-      // No submodules directory or empty
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      if (entry.name === "node_modules") continue;
+
+      const subPath = join(modulePath, entry.name);
+      const subManifest = await this.readManifest(subPath);
+      if (!subManifest) continue;
+      if (entry.name !== subManifest.name) {
+        console.error(
+          `Submodule directory "${entry.name}" does not match manifest name "${subManifest.name}".`,
+        );
+        continue;
+      }
+
+      const subDefinition = await this.loadDefinition(subPath, subManifest);
+      if (!subDefinition) continue;
+
+      context.discovered.push({
+        manifest: subManifest,
+        definition: subDefinition,
+        path: subPath,
+        origin: context.origin,
+        supermodule: manifest.name,
+        isSubmodule: true,
+        guildsDisabled: new Set(),
+      });
     }
   }
 
   async loadAll(discovered: LoadedModule[], services: any): Promise<LoadedModule[]> {
     this.services = services;
-    const sorted = this.topologicalSort(discovered);
+    const { ordered, cyclic } = this.sortModules(discovered);
+    for (const name of cyclic) {
+      console.error(`Module ${name} is part of a dependency cycle; skipping.`);
+    }
 
-    for (const module of sorted) {
-      if (this.modules.has(module.manifest.name)) continue;
-      try {
-        const conflict = sorted.find(m => module.manifest.conflicts.includes(m.manifest.name));
-        if (conflict) {
-          console.warn(`Module ${module.manifest.name} conflicts with ${conflict.manifest.name}, skipping`);
-          continue;
-        }
+    const available = new Map(
+      ordered.map((module) => [module.manifest.name, module.manifest.version]),
+    );
 
-        for (const [depName, _depRange] of Object.entries(module.manifest.dependencies)) {
-          const dep = sorted.find(m => m.manifest.name === depName);
-          if (!dep) {
-            console.warn(`Module ${module.manifest.name} depends on missing module ${depName}`);
-          }
-        }
+    for (const module of ordered) {
+      const name = module.manifest.name;
+      if (this.modules.has(name)) continue;
 
-        this.modules.set(module.manifest.name, module);
-
-        try {
-          await module.definition.onLoad({ ...services, __moduleName: module.manifest.name });
-        } catch (e) {
-          console.error(`Failed to initialize module ${module.manifest.name}:`, e);
-        }
-      } catch (e) {
-        console.error(`Error loading module ${module.manifest.name}:`, e);
+      const conflict = module.manifest.conflicts.find(
+        (other) => other !== name && available.has(other),
+      );
+      if (conflict) {
+        console.warn(`Module ${name} conflicts with ${conflict}, skipping.`);
+        continue;
       }
+
+      const dependencyIssues = checkDependencies(
+        name,
+        module.manifest.dependencies,
+        available,
+      );
+      for (const issue of dependencyIssues) {
+        if (issue.reason === "missing") {
+          console.warn(`Module ${name} depends on missing module ${issue.dependency}.`);
+        } else {
+          console.warn(
+            `Module ${name} requires ${issue.dependency}@${issue.required} but found ${issue.found}, skipping.`,
+          );
+        }
+      }
+      if (dependencyIssues.some((issue) => issue.reason === "unsatisfied")) {
+        continue;
+      }
+
+      const moduleServices: ModuleServices = { ...services, __moduleName: name };
+      try {
+        await module.definition.onLoad(moduleServices);
+      } catch (error) {
+        console.error(`Failed to initialize module ${name}:`, error);
+        continue;
+      }
+
+      this.moduleServices.set(name, moduleServices);
+      this.modules.set(name, module);
     }
 
     return Array.from(this.modules.values());
   }
 
-  private topologicalSort(modules: LoadedModule[]): LoadedModule[] {
+  private sortModules(modules: LoadedModule[]): {
+    ordered: LoadedModule[];
+    cyclic: string[];
+  } {
     const graph = new Map<string, Set<string>>();
     const inDegree = new Map<string, number>();
+    const moduleMap = new Map<string, LoadedModule>();
 
-    for (const m of modules) {
-      graph.set(m.manifest.name, new Set());
-      inDegree.set(m.manifest.name, 0);
+    for (const module of modules) {
+      const name = module.manifest.name;
+      moduleMap.set(name, module);
+      graph.set(name, new Set());
+      inDegree.set(name, 0);
     }
 
-    for (const m of modules) {
-      for (const dep of Object.keys(m.manifest.dependencies)) {
-        if (graph.has(dep)) {
-          graph.get(dep)!.add(m.manifest.name);
-          inDegree.set(m.manifest.name, (inDegree.get(m.manifest.name) ?? 0) + 1);
-        }
+    for (const module of modules) {
+      const name = module.manifest.name;
+      for (const dep of Object.keys(module.manifest.dependencies)) {
+        const dependents = graph.get(dep);
+        if (!dependents) continue;
+        dependents.add(name);
+        inDegree.set(name, (inDegree.get(name) ?? 0) + 1);
       }
     }
 
     const queue = Array.from(inDegree.entries())
-      .filter(([, deg]) => deg === 0)
+      .filter(([, degree]) => degree === 0)
       .map(([name]) => name);
 
-    const sorted: LoadedModule[] = [];
-    const moduleMap = new Map(modules.map(m => [m.manifest.name, m]));
-
+    const ordered: LoadedModule[] = [];
     while (queue.length > 0) {
       const name = queue.shift()!;
       const module = moduleMap.get(name);
-      if (module) sorted.push(module);
+      if (module) ordered.push(module);
 
       for (const dependent of graph.get(name) ?? []) {
-        const newDeg = (inDegree.get(dependent) ?? 0) - 1;
-        inDegree.set(dependent, newDeg);
-        if (newDeg === 0) queue.push(dependent);
+        const degree = (inDegree.get(dependent) ?? 0) - 1;
+        inDegree.set(dependent, degree);
+        if (degree === 0) queue.push(dependent);
       }
     }
 
-    for (const m of modules) {
-      if (!sorted.includes(m)) sorted.push(m);
-    }
+    const orderedNames = new Set(ordered.map((module) => module.manifest.name));
+    const cyclic = modules
+      .filter((module) => !orderedNames.has(module.manifest.name))
+      .map((module) => module.manifest.name);
 
-    return sorted;
+    return { ordered, cyclic };
   }
 
   async setEnabled(moduleName: string, guildId: string, enabled: boolean): Promise<void> {
@@ -260,14 +460,19 @@ export class ModuleLoader {
     const module = this.modules.get(moduleName);
     if (!module) return;
 
-    await module.definition.onUnload(this.services);
+    const services =
+      this.moduleServices.get(moduleName) ??
+      ({ ...this.services, __moduleName: moduleName } as ModuleServices);
 
-    const entryPath = join(module.path, module.manifest.entry);
-    delete require.cache[require.resolve(entryPath)];
-    const mod = await import(`${entryPath}?t=${Date.now()}`);
+    await module.definition.onUnload(services);
 
-    module.definition = mod.default;
-    await module.definition.onLoad(this.services);
+    const definition = await this.loadDefinition(module.path, module.manifest);
+    if (!definition) {
+      throw new Error(`Failed to reload module "${moduleName}".`);
+    }
+
+    module.definition = definition;
+    await definition.onLoad(services);
   }
 
   async unload(name: string): Promise<LoadedModule[]> {
@@ -276,12 +481,15 @@ export class ModuleLoader {
     );
 
     for (const module of removed) {
+      const moduleName = module.manifest.name;
+      const services = this.moduleServices.get(moduleName) ?? this.services;
       try {
-        await module.definition.onUnload(this.services);
+        await module.definition.onUnload(services);
       } catch (error) {
-        console.error(`Failed to unload module ${module.manifest.name}:`, error);
+        console.error(`Failed to unload module ${moduleName}:`, error);
       }
-      this.modules.delete(module.manifest.name);
+      this.modules.delete(moduleName);
+      this.moduleServices.delete(moduleName);
     }
 
     return removed;
@@ -296,15 +504,15 @@ export class ModuleLoader {
   }
 
   listGlobal(): ModuleSummary[] {
-    return Array.from(this.modules.values()).map(m => ({
-      name: m.manifest.name,
-      displayName: m.manifest.displayName,
-      emoji: m.manifest.emoji,
-      description: m.manifest.description,
-      version: m.manifest.version,
-      configFields: m.manifest.configFields ?? [],
-      isSubmodule: m.isSubmodule,
-      supermodule: m.supermodule,
+    return Array.from(this.modules.values()).map((module) => ({
+      name: module.manifest.name,
+      displayName: module.manifest.displayName,
+      emoji: module.manifest.emoji,
+      description: module.manifest.description,
+      version: module.manifest.version,
+      configFields: module.manifest.configFields,
+      isSubmodule: module.isSubmodule,
+      supermodule: module.supermodule,
     }));
   }
 }

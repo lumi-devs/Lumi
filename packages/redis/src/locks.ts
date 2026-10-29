@@ -1,4 +1,9 @@
 import type Redis from "ioredis";
+import { createKeys, TTL } from "./keys.js";
+
+const keys = createKeys();
+const releaseScript =
+  "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
 
 export interface LockOptions {
   ttlMs?: number;
@@ -13,20 +18,26 @@ export class DistributedLock {
   private readonly retryMs: number;
   private readonly maxRetries: number;
   private acquired = false;
+  private token: string | null = null;
 
   constructor(redis: Redis, key: string, options: LockOptions = {}) {
     this.redis = redis;
-    this.key = `lock:${key}`;
-    this.ttlMs = options.ttlMs ?? 10_000;
+    this.key = keys.lock(key);
+    this.ttlMs = options.ttlMs ?? TTL.lock * 1_000;
     this.retryMs = options.retryMs ?? 100;
     this.maxRetries = options.maxRetries ?? 50;
   }
 
   async acquire(): Promise<boolean> {
+    if (this.acquired) return true;
+    // A per-acquisition token stops a slow owner from deleting a lock that a
+    // later owner acquired after this one's TTL expired.
+    const token = crypto.randomUUID();
     for (let i = 0; i < this.maxRetries; i++) {
-      const result = await this.redis.set(this.key, "1", "PX", this.ttlMs, "NX");
+      const result = await this.redis.set(this.key, token, "PX", this.ttlMs, "NX");
       if (result === "OK") {
         this.acquired = true;
+        this.token = token;
         return true;
       }
       await new Promise((r) => setTimeout(r, this.retryMs));
@@ -35,17 +46,12 @@ export class DistributedLock {
   }
 
   async release(): Promise<void> {
-    if (!this.acquired) return;
-    // Use Lua script to only delete if we own it
-    await this.redis.eval(
-      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
-      1,
-      this.key,
-      "1"
-    );
+    const token = this.token;
+    if (!this.acquired || token === null) return;
     this.acquired = false;
+    this.token = null;
+    await this.redis.eval(releaseScript, 1, this.key, token);
   }
-
 }
 
 export function createLock(redis: Redis, key: string, options?: LockOptions): DistributedLock {
@@ -56,7 +62,7 @@ export async function withLock<T>(
   redis: Redis,
   key: string,
   fn: () => Promise<T>,
-  options?: LockOptions
+  options?: LockOptions,
 ): Promise<T> {
   const lock = createLock(redis, key, options);
   const acquired = await lock.acquire();

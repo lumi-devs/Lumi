@@ -14,14 +14,23 @@ const ConfigFieldSchema = z.object({
   max: z.number().optional(),
 });
 
+const EntryPathSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine(
+    (value) => !value.startsWith("/") && !value.split(/[\\/]/).includes(".."),
+    { message: "entry must be a relative path inside the module directory" },
+  );
+
 export const ModuleManifestSchema = z.object({
   apiVersion: z.literal(2),
   name: z.string().max(64).regex(/^[a-z][a-z0-9-]*$/),
   displayName: z.string().min(1).max(50),
   emoji: z.string().min(1).max(10),
   description: z.string().min(1).max(200),
-  version: z.string().max(32).regex(/^\d+\.\d+\.\d+/),
-  entry: z.string().min(1),
+  version: z.string().max(32).regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/),
+  entry: EntryPathSchema,
   configKey: z.string().min(1).optional(),
   dependencies: z.record(z.string(), z.string()).default({}),
   requirements: z.array(z.string()).default([]),
@@ -32,8 +41,6 @@ export const ModuleManifestSchema = z.object({
     provides: z.array(z.string()),
   })).default([]),
   configFields: z.array(ConfigFieldSchema).default([]),
-  minBotVersion: z.string().optional(),
-  maxBotVersion: z.string().optional(),
 });
 
 export type ModuleManifest = z.infer<typeof ModuleManifestSchema>;

@@ -63,8 +63,11 @@ a submodule, so the filesystem is the single source of truth.
 - Supermodules are always enabled globally; submodules are enabled/disabled per guild.
 - The `/lumi` panel shows supermodules with expandable submodule lists.
 - Always-on behaviour lives in `src/` as built-in services, not in a module.
-- Modules may depend on other modules with semver ranges. A dependency cycle
-  marks the involved modules broken and skips them; other modules still load.
+- Modules may depend on other modules with semver ranges. The loader checks the
+  dependency's version and skips a module when it falls outside the declared
+  range; a missing dependency is logged and the module still loads. A dependency
+  cycle marks the involved modules broken and skips them; other modules still
+  load.
 - Modules never import another module. Shared code goes into a package.
 
 ## Supermodule Manifest
@@ -107,6 +110,8 @@ a submodule, so the filesystem is the single source of truth.
 
 - `name` must match the submodule directory name and `^[a-z][a-z0-9-]*$`.
 - `entry` is relative to the module directory (usually `index.ts`).
+- `capabilities` is descriptive metadata only. The loader validates its shape
+  but does not act on it; loading is gated by `dependencies` and `conflicts`.
 
 ## Definition
 

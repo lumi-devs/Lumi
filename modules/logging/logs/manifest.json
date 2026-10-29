@@ -3,7 +3,7 @@
   "name": "logging-logs",
   "displayName": "Logging",
   "emoji": "📝",
-  "description": "Message, edit, delete, voice, and moderation logging",
+  "description": "Message, edit, delete, and voice logging",
   "version": "2.0.0",
   "entry": "index.ts",
   "dependencies": {

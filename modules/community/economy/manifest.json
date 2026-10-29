@@ -3,7 +3,7 @@
   "name": "community-economy",
   "displayName": "Economy",
   "emoji": "💰",
-  "description": "Currency, banking, shop, jobs, and gambling",
+  "description": "Currency, banking, rewards, and shop",
   "version": "2.0.0",
   "entry": "index.ts",
   "configKey": "economy",
@@ -47,22 +47,6 @@
       "description": "Amount for /weekly",
       "default": 500,
       "category": "Rewards"
-    },
-    {
-      "key": "monthlyAmount",
-      "label": "Monthly Reward",
-      "type": "number",
-      "description": "Amount for /monthly",
-      "default": 2000,
-      "category": "Rewards"
-    },
-    {
-      "key": "interestRate",
-      "label": "Bank Interest Rate",
-      "type": "number",
-      "description": "Daily interest (0.01 = 1%)",
-      "default": 0.01,
-      "category": "Bank"
     },
     {
       "key": "taxRate",

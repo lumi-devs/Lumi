@@ -2,10 +2,12 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type ButtonInteraction,
+  type Client,
   ButtonStyle,
 } from "discord.js";
 import { totalmem } from "node:os";
-import { registry } from "@lumi/observability";
+import type { PrismaClient } from "@lumi/db";
+import { cacheHits, cacheMisses } from "@lumi/observability";
 import {
   createActionButton,
   ephemeralCard,
@@ -15,8 +17,42 @@ import {
   type CardReply,
 } from "@lumi/ui";
 
-const pingSessions = new Map<string, number>();
+interface PingSession {
+  page: number;
+  updatedAt: number;
+}
+
+const pingSessions = new Map<string, PingSession>();
+const PingSessionTtlMs = 60 * 60 * 1000;
+const MaxPingSessions = 10_000;
 const ShardsPerPage = 10;
+
+function prunePingSessions(): void {
+  const now = Date.now();
+  for (const [userId, session] of pingSessions) {
+    if (now - session.updatedAt > PingSessionTtlMs) pingSessions.delete(userId);
+  }
+  while (pingSessions.size >= MaxPingSessions) {
+    const oldest = pingSessions.keys().next().value;
+    if (oldest === undefined) break;
+    pingSessions.delete(oldest);
+  }
+}
+
+function pingPage(userId: string): number {
+  const session = pingSessions.get(userId);
+  if (!session) return 0;
+  if (Date.now() - session.updatedAt > PingSessionTtlMs) {
+    pingSessions.delete(userId);
+    return 0;
+  }
+  return session.page;
+}
+
+function setPingPage(userId: string, page: number): void {
+  prunePingSessions();
+  pingSessions.set(userId, { page, updatedAt: Date.now() });
+}
 
 function formatUptime(ms: number): string {
   const seconds = Math.floor(ms / 1000);
@@ -30,28 +66,22 @@ function formatUptime(ms: number): string {
   return parts.join(" ");
 }
 
-function getCounterValue(name: string): number {
-  try {
-    const metrics = registry.getMetricsAsArray();
-    const m = (metrics as any[]).find((x: any) => x.name === name);
-    if (Array.isArray(m?.values)) {
-      return m.values.reduce(
-        (sum: number, entry: any) => sum + Number(entry?.value ?? 0),
-        0,
-      );
-    }
-  } catch {}
-  return 0;
+interface CounterSnapshot {
+  values: Array<{ value: number }>;
 }
 
-function getCacheHitRatio(): number {
-  const hits = getCounterValue("lumi_cache_hits_total");
-  const misses = getCounterValue("lumi_cache_misses_total");
-  const total = hits + misses;
-  return total > 0 ? (hits / total) * 100 : 0;
+function sumCounter(metric: CounterSnapshot): number {
+  return metric.values.reduce((total, entry) => total + entry.value, 0);
 }
 
-async function getDbLatency(prisma: any): Promise<number> {
+async function getCacheHitRatio(): Promise<number> {
+  const [hits, misses] = await Promise.all([cacheHits.get(), cacheMisses.get()]);
+  const hitCount = sumCounter(hits);
+  const total = hitCount + sumCounter(misses);
+  return total > 0 ? (hitCount / total) * 100 : 0;
+}
+
+async function getDbLatency(prisma: PrismaClient): Promise<number> {
   const t0 = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -83,13 +113,13 @@ function totalPagesFor(shardCount: number): number {
   return Math.max(1, Math.ceil(shardCount / ShardsPerPage));
 }
 
-function buildPingComponents(
-  client: any,
+async function buildPingComponents(
+  client: Client,
   dbLatency: number,
   page: number,
   userId: string,
-): CardReply {
-  const shardIds = Array.from(client.ws.shards.keys()) as number[];
+): Promise<CardReply> {
+  const shardIds = Array.from(client.ws.shards.keys());
   const totalPages = totalPagesFor(shardIds.length);
   const safePage = Math.max(0, Math.min(page, totalPages - 1));
   const pageShardIds =
@@ -108,8 +138,8 @@ function buildPingComponents(
   );
   const ramPercent = (mem.rss / totalmem()) * 100;
   const uptime = client.uptime ?? Math.round(process.uptime() * 1000);
-  const cacheHitRatio = getCacheHitRatio();
-  const guilds = Array.from(client.guilds.cache.values()) as any[];
+  const cacheHitRatio = await getCacheHitRatio();
+  const guilds = Array.from(client.guilds.cache.values());
 
   const shardBlocks = pageShardIds.map((shardId) => {
     const shard = client.ws.shards.get(shardId);
@@ -122,10 +152,7 @@ function buildPingComponents(
       rss: mem.rss,
       ramPercent,
       servers: shardGuilds.length,
-      members: shardGuilds.reduce(
-        (sum: number, g: any) => sum + (g.memberCount ?? 0),
-        0,
-      ),
+      members: shardGuilds.reduce((sum, g) => sum + (g.memberCount ?? 0), 0),
     });
   });
 
@@ -178,18 +205,23 @@ export const pingCommand = {
   data: new SlashCommandBuilder()
     .setName("ping")
     .setDescription("Check bot latency and gateway heartbeat"),
-  async execute(interaction: ChatInputCommandInteraction, services: { prisma: any; client: any }) {
+  async execute(
+    interaction: ChatInputCommandInteraction,
+    services: { prisma: PrismaClient; client: Client },
+  ) {
     const userId = interaction.user.id;
     const dbLatency = await getDbLatency(services.prisma);
 
-    pingSessions.set(userId, 0);
-    await interaction.reply(buildPingComponents(services.client, dbLatency, 0, userId));
+    setPingPage(userId, 0);
+    await interaction.reply(
+      await buildPingComponents(services.client, dbLatency, 0, userId),
+    );
   },
 };
 
 export async function handlePingButton(
   interaction: ButtonInteraction,
-  services: { prisma: any; client: any },
+  services: { prisma: PrismaClient; client: Client },
 ): Promise<boolean> {
   const [, action, deltaStr, userId] = interaction.customId.split(":");
   if (action !== "p" || !deltaStr || !userId) return false;
@@ -199,13 +231,15 @@ export async function handlePingButton(
   }
 
   const delta = parseInt(deltaStr, 10);
-  const currentPage = pingSessions.get(userId) ?? 0;
+  const currentPage = pingPage(userId);
   const maxPage = totalPagesFor(services.client.ws.shards.size) - 1;
   const newPage = Math.min(maxPage, Math.max(0, currentPage + delta));
 
   const dbLatency = await getDbLatency(services.prisma);
-  pingSessions.set(userId, newPage);
+  setPingPage(userId, newPage);
 
-  await interaction.update(buildPingComponents(services.client, dbLatency, newPage, userId));
+  await interaction.update(
+    await buildPingComponents(services.client, dbLatency, newPage, userId),
+  );
   return true;
 }

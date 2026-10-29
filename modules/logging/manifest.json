@@ -3,7 +3,7 @@
   "name": "logging",
   "displayName": "Logging",
   "emoji": "📝",
-  "description": "Message, edit, delete, voice, and moderation logging",
+  "description": "Message, edit, delete, and voice logging",
   "version": "2.0.0",
   "entry": "index.ts",
   "configFields": [
@@ -36,14 +36,6 @@
       "label": "Voice Log Channel",
       "type": "channel",
       "description": "Log voice state changes",
-      "default": null,
-      "category": "Voice & Moderation"
-    },
-    {
-      "key": "modLogChannel",
-      "label": "Mod Log Channel",
-      "type": "channel",
-      "description": "Log moderation actions",
       "default": null,
       "category": "Voice & Moderation"
     },

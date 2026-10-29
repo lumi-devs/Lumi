@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { cp, mkdir, readdir, rename, rm } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import type { PrismaClient } from "@lumi/db";
-import { validateManifest, type ModuleManifest } from "@lumi/module-runtime";
+import type { ModuleManifest } from "@lumi/module-runtime";
 import type { Redis } from "ioredis";
+import { isMissingPath, pathExists } from "./fs.js";
 import { checkout, clone, fetch, head } from "./git.js";
+import { AddonStorage } from "./storage.js";
 import type {
   AddonLogger,
   AddonNotifier,
@@ -23,7 +25,6 @@ const AutoUpdateKey = "lumi:addons:autoupdate";
 const RepoNameRe = /^[a-z][a-z0-9-]*$/;
 const ModuleNameRe = /^[a-z][a-z0-9-]*$/;
 const BranchRe = /^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/;
-const RequirementRe = /^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/\-^~>=<*]*$/;
 const DefaultAutoUpdate: AutoUpdateState = {
   enabled: false,
   intervalMinutes: 360,
@@ -49,12 +50,9 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
+function assertModuleName(name: string): void {
+  if (!ModuleNameRe.test(name)) {
+    throw new Error(`Invalid add-on name "${name}".`);
   }
 }
 
@@ -63,37 +61,20 @@ export class AddonManager {
   private readonly redis: Redis;
   private readonly runtime: AddonRuntime;
   private readonly root: string;
+  private readonly storage: AddonStorage;
   private readonly logger: AddonLogger;
   private readonly notify?: AddonNotifier;
   private queue: Promise<unknown> = Promise.resolve();
+  private autoUpdateRunning = false;
 
   constructor(options: AddonManagerOptions) {
     this.prisma = options.prisma;
     this.redis = options.redis;
     this.runtime = options.runtime;
     this.root = resolve(options.root ?? process.cwd());
+    this.storage = new AddonStorage(this.root);
     this.logger = options.logger ?? NoopLogger;
     this.notify = options.notify;
-  }
-
-  private get reposDir(): string {
-    return join(this.root, "data", "repos");
-  }
-
-  private get addonsDir(): string {
-    return join(this.root, "data", "addons");
-  }
-
-  private get backupsDir(): string {
-    return join(this.root, "data", "addon-backups");
-  }
-
-  private repoDir(name: string): string {
-    return join(this.reposDir, name);
-  }
-
-  private addonDir(name: string): string {
-    return join(this.addonsDir, name);
   }
 
   private run<T>(task: () => Promise<T>): Promise<T> {
@@ -118,46 +99,6 @@ export class AddonManager {
     }
     await rm(dir, { recursive: true, force: true });
     await clone(url, dir, branch);
-  }
-
-  private async readManifest(dir: string): Promise<ModuleManifest> {
-    return validateManifest(JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")));
-  }
-
-  private async copyModule(source: string, target: string): Promise<void> {
-    await rm(target, { recursive: true, force: true });
-    await cp(source, target, {
-      recursive: true,
-      force: true,
-      filter: (path) => !path.includes("node_modules") && !path.includes(".git"),
-    });
-  }
-
-  private async installRequirements(dir: string, requirements: string[]): Promise<void> {
-    const valid = requirements.filter((requirement) => RequirementRe.test(requirement));
-    if (valid.length === 0) return;
-
-    const packagePath = join(dir, "package.json");
-    if (!(await exists(packagePath))) {
-      await writeFile(
-        packagePath,
-        JSON.stringify({ name: `lumi-addon-${basename(dir)}`, version: "1.0.0", private: true }, null, 2),
-      );
-    }
-
-    const proc = Bun.spawn(
-      ["bun", "add", "--production", "--ignore-scripts", "--no-save", ...valid],
-      { cwd: dir, stdout: "ignore", stderr: "pipe" },
-    );
-    const [stderr, exitCode] = await Promise.all([
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    if (exitCode !== 0) {
-      throw new Error(
-        `Dependency install failed: ${stderr.trim() || `exit code ${exitCode}`}`,
-      );
-    }
   }
 
   async listRepos(): Promise<RepoRecord[]> {
@@ -192,10 +133,10 @@ export class AddonManager {
         throw new Error(`Repository "${name}" is already tracked.`);
       }
 
-      await mkdir(this.reposDir, { recursive: true });
-      const dir = this.repoDir(name);
+      await mkdir(this.storage.reposDir, { recursive: true });
+      const dir = this.storage.repoDir(name);
 
-      if (await exists(join(dir, ".git"))) {
+      if (await pathExists(join(dir, ".git"))) {
         const commit = await head(dir);
         const repo = await this.prisma.downloaderRepo.create({
           data: { name, url, branch: ref, commit },
@@ -205,7 +146,7 @@ export class AddonManager {
       }
 
       await rm(dir, { recursive: true, force: true });
-      const staging = join(this.reposDir, `.${name}-${randomUUID()}`);
+      const staging = join(this.storage.reposDir, `.${name}-${randomUUID()}`);
       try {
         await clone(url, staging, ref);
         await rename(staging, dir);
@@ -229,7 +170,7 @@ export class AddonManager {
       if (installed > 0) {
         throw new Error(`Uninstall ${installed} add-on(s) from "${name}" before removing it.`);
       }
-      await rm(this.repoDir(name), { recursive: true, force: true });
+      await rm(this.storage.repoDir(name), { recursive: true, force: true });
       await this.prisma.downloaderRepo.delete({ where: { id: repo.id } });
     });
   }
@@ -240,37 +181,48 @@ export class AddonManager {
       where: { repoId: repo.id },
     });
     const installed = new Set(installedRows.map((row) => row.name));
-    const dir = this.repoDir(name);
-    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    const dir = this.storage.repoDir(name);
+    const entries = await readdir(dir, { withFileTypes: true }).catch((error: unknown) => {
+      if (!isMissingPath(error)) {
+        this.logger.warn(`Could not list ${dir}: ${message(error)}`);
+      }
+      return [];
+    });
 
-    const modules: ModuleInfo[] = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name === "node_modules") continue;
-      const moduleDir = join(dir, entry.name);
-      const manifest = await this.readManifest(moduleDir).catch(() => null);
-      if (!manifest) continue;
-      modules.push({
-        name: manifest.name,
-        displayName: manifest.displayName,
-        emoji: manifest.emoji,
-        description: manifest.description,
-        version: manifest.version,
-        installed: installed.has(manifest.name),
-      });
-    }
-    return modules.sort((a, b) => a.name.localeCompare(b.name));
+    const candidates = entries.filter(
+      (entry) =>
+        entry.isDirectory() &&
+        !entry.name.startsWith(".") &&
+        entry.name !== "node_modules",
+    );
+    const modules = await Promise.all(
+      candidates.map(async (entry): Promise<ModuleInfo | null> => {
+        const manifest = await this.storage.readManifest(join(dir, entry.name)).catch(() => null);
+        if (!manifest) return null;
+        return {
+          name: manifest.name,
+          displayName: manifest.displayName,
+          emoji: manifest.emoji,
+          description: manifest.description,
+          version: manifest.version,
+          installed: installed.has(manifest.name),
+        };
+      }),
+    );
+
+    return modules
+      .filter((module): module is ModuleInfo => module !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async install(repoName: string, moduleName: string): Promise<void> {
-    if (!ModuleNameRe.test(moduleName)) {
-      throw new Error(`Invalid add-on name "${moduleName}".`);
-    }
+    assertModuleName(moduleName);
 
     return this.run(async () => {
       const repo = await this.requireRepo(repoName);
-      const source = join(this.repoDir(repoName), moduleName);
+      const source = join(this.storage.repoDir(repoName), moduleName);
 
-      if (!(await exists(join(source, "manifest.json")))) {
+      if (!(await pathExists(join(source, "manifest.json")))) {
         throw new Error(`Module "${moduleName}" was not found in "${repoName}".`);
       }
 
@@ -279,7 +231,7 @@ export class AddonManager {
         throw new Error(`Validation failed:\n${errors.map((error) => `• ${error}`).join("\n")}`);
       }
 
-      const manifest = await this.readManifest(source);
+      const manifest = await this.storage.readManifest(source);
       const existing = await this.prisma.downloaderModule.findUnique({
         where: { name: manifest.name },
         include: { repo: true },
@@ -293,10 +245,13 @@ export class AddonManager {
 
       await this.assertNoConflicts(manifest);
 
-      const target = this.addonDir(manifest.name);
-      await this.copyModule(source, target);
+      const target = this.storage.addonDir(manifest.name);
+      const staging = await this.storage.stageModule(source);
+      let committed = false;
       try {
-        await this.installRequirements(target, manifest.requirements);
+        await this.storage.installRequirements(staging, manifest.requirements, manifest.name);
+        await this.storage.commitModule(staging, target);
+        committed = true;
         await this.prisma.downloaderModule.create({
           data: {
             name: manifest.name,
@@ -307,7 +262,10 @@ export class AddonManager {
         });
         await this.runtime.mount(manifest.name);
       } catch (error) {
-        await rm(target, { recursive: true, force: true });
+        await rm(staging, { recursive: true, force: true });
+        if (committed) {
+          await rm(target, { recursive: true, force: true });
+        }
         await this.prisma.downloaderModule.delete({ where: { name: manifest.name } }).catch(() => undefined);
         throw error;
       }
@@ -328,25 +286,35 @@ export class AddonManager {
       if (manifest.conflicts.includes(row.name)) {
         throw new Error(`"${manifest.name}" conflicts with installed add-on "${row.name}".`);
       }
-      const other = await this.readManifest(this.addonDir(row.name)).catch(() => null);
-      if (other?.conflicts.includes(manifest.name)) {
-        throw new Error(`Installed add-on "${row.name}" conflicts with "${manifest.name}".`);
+    }
+
+    const manifests = await Promise.all(
+      installed.map(async (row) => ({
+        row,
+        manifest: await this.storage.readManifest(this.storage.addonDir(row.name)).catch(() => null),
+      })),
+    );
+    for (const other of manifests) {
+      if (other.manifest?.conflicts.includes(manifest.name)) {
+        throw new Error(`Installed add-on "${other.row.name}" conflicts with "${manifest.name}".`);
       }
     }
   }
 
   async uninstall(moduleName: string): Promise<void> {
     return this.run(async () => {
+      assertModuleName(moduleName);
       await this.runtime.unmount(moduleName).catch((error) => {
         this.logger.warn(`Could not unmount ${moduleName}: ${message(error)}`);
       });
-      await rm(this.addonDir(moduleName), { recursive: true, force: true });
-      await rm(join(this.backupsDir, moduleName), { recursive: true, force: true });
+      await rm(this.storage.addonDir(moduleName), { recursive: true, force: true });
+      await rm(join(this.storage.backupsDir, moduleName), { recursive: true, force: true });
       await this.prisma.downloaderModule.delete({ where: { name: moduleName } }).catch(() => undefined);
     });
   }
 
   async setPinned(moduleName: string, pinned: boolean): Promise<void> {
+    assertModuleName(moduleName);
     await this.prisma.downloaderModule.update({ where: { name: moduleName }, data: { pinned } });
   }
 
@@ -368,9 +336,9 @@ export class AddonManager {
   async updateRepo(name: string): Promise<RepoUpdateResult> {
     return this.run(async () => {
       const repo = await this.requireRepo(name);
-      const dir = this.repoDir(name);
+      const dir = this.storage.repoDir(name);
 
-      if (!(await exists(join(dir, ".git")))) {
+      if (!(await pathExists(join(dir, ".git")))) {
         await rm(dir, { recursive: true, force: true });
         await clone(repo.url, dir, repo.branch);
       }
@@ -398,7 +366,14 @@ export class AddonManager {
       const pinned = modules.filter((module) => module.pinned).map((module) => module.name);
       const failures: UpdateFailure[] = [];
 
-      await checkout(dir, newCommit);
+      try {
+        await checkout(dir, newCommit);
+      } catch (error) {
+        await this.restoreRepo(dir, oldCommit, repo.url, repo.branch).catch((restoreError) => {
+          this.logger.warn(`Could not restore ${name}: ${message(restoreError)}`);
+        });
+        throw error;
+      }
 
       for (const module of tracked) {
         const errors = await validateAddon(join(dir, module.name)).catch((error) => [
@@ -416,10 +391,10 @@ export class AddonManager {
 
       const applied: Array<{ name: string; version: string | null; commit: string | null }> = [];
       for (const module of tracked) {
-        const target = this.addonDir(module.name);
-        const backup = join(this.backupsDir, module.name);
+        const target = this.storage.addonDir(module.name);
+        const backup = join(this.storage.backupsDir, module.name);
         try {
-          await mkdir(this.backupsDir, { recursive: true });
+          await mkdir(this.storage.backupsDir, { recursive: true });
           await rm(backup, { recursive: true, force: true });
           await cp(target, backup, { recursive: true, force: true });
         } catch (error) {
@@ -428,16 +403,23 @@ export class AddonManager {
         }
 
         applied.push({ name: module.name, version: module.version, commit: module.commit });
+        let staging: string | null = null;
         try {
-          await this.copyModule(join(dir, module.name), target);
-          const manifest = await this.readManifest(target);
-          await this.installRequirements(target, manifest.requirements);
+          const source = join(dir, module.name);
+          const manifest = await this.storage.readManifest(source);
+          staging = await this.storage.stageModule(source);
+          await this.storage.installRequirements(staging, manifest.requirements, manifest.name);
+          await this.storage.commitModule(staging, target);
+          staging = null;
           await this.prisma.downloaderModule.update({
             where: { name: module.name },
             data: { version: manifest.version, commit: newCommit },
           });
           await this.runtime.reload(module.name);
         } catch (error) {
+          if (staging) {
+            await rm(staging, { recursive: true, force: true });
+          }
           failures.push({ module: module.name, error: message(error) });
           break;
         }
@@ -445,9 +427,9 @@ export class AddonManager {
 
       if (failures.length > 0) {
         for (const module of applied) {
-          const target = this.addonDir(module.name);
+          const target = this.storage.addonDir(module.name);
           await rm(target, { recursive: true, force: true });
-          await cp(join(this.backupsDir, module.name), target, { recursive: true, force: true });
+          await cp(join(this.storage.backupsDir, module.name), target, { recursive: true, force: true });
           await this.prisma.downloaderModule.update({
             where: { name: module.name },
             data: { version: module.version, commit: module.commit },
@@ -456,14 +438,14 @@ export class AddonManager {
         }
         await this.restoreRepo(dir, oldCommit, repo.url, repo.branch);
         for (const module of applied) {
-          await rm(join(this.backupsDir, module.name), { recursive: true, force: true });
+          await rm(join(this.storage.backupsDir, module.name), { recursive: true, force: true });
         }
         return { repo: name, oldCommit, newCommit, changed: false, updated: [], pinned, failures };
       }
 
       await this.prisma.downloaderRepo.update({ where: { id: repo.id }, data: { commit: newCommit } });
       for (const module of applied) {
-        await rm(join(this.backupsDir, module.name), { recursive: true, force: true });
+        await rm(join(this.storage.backupsDir, module.name), { recursive: true, force: true });
       }
 
       return {
@@ -482,8 +464,11 @@ export class AddonManager {
     const raw = await this.redis.get(AutoUpdateKey);
     if (!raw) return { ...DefaultAutoUpdate };
     try {
-      return { ...DefaultAutoUpdate, ...(JSON.parse(raw) as Partial<AutoUpdateState>) };
-    } catch {
+      const parsed = JSON.parse(raw) as Partial<AutoUpdateState> | null;
+      if (!parsed || typeof parsed !== "object") return { ...DefaultAutoUpdate };
+      return { ...DefaultAutoUpdate, ...parsed };
+    } catch (error) {
+      this.logger.warn(`Ignoring unreadable auto-update state: ${message(error)}`);
       return { ...DefaultAutoUpdate };
     }
   }
@@ -495,6 +480,16 @@ export class AddonManager {
   }
 
   async autoUpdate(): Promise<AutoUpdateReport | null> {
+    if (this.autoUpdateRunning) return null;
+    this.autoUpdateRunning = true;
+    try {
+      return await this.runAutoUpdate();
+    } finally {
+      this.autoUpdateRunning = false;
+    }
+  }
+
+  private async runAutoUpdate(): Promise<AutoUpdateReport | null> {
     const state = await this.getAutoUpdate();
     if (!state.enabled) return null;
 

@@ -36,7 +36,6 @@ model Guild {
   levelingConfig LevelingConfig?
   economyConfig EconomyConfig?
   tempVcConfig  TempVcConfig?
-  sheets        Sheet[]
 
   @@map("guilds")
 }
@@ -145,8 +144,6 @@ model EconomyConfig {
   startingBalance Int      @default(0) @map("starting_balance")
   dailyAmount     Int      @default(100) @map("daily_amount")
   weeklyAmount    Int      @default(500) @map("weekly_amount")
-  monthlyAmount   Int      @default(2000) @map("monthly_amount")
-  interestRate    Float    @default(0.01) @map("interest_rate")
   taxRate         Float    @default(0.0) @map("tax_rate")
   workCooldown    Int      @default(3600) @map("work_cooldown")
   workMinPay      Int      @default(50) @map("work_min_pay")
@@ -193,21 +190,6 @@ model EconomyTransaction {
   @@map("economy_transactions")
 }
 
-model EconomyInventory {
-  id        String   @id @default(cuid())
-  guildId   String   @map("guild_id")
-  userId    String   @map("user_id")
-  itemId    String   @map("item_id")
-  quantity  Int      @default(1)
-  metadata  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([guildId, userId, itemId])
-  @@index([guildId, userId])
-  @@map("economy_inventory")
-}
-
 // TempVC
 model TempVcConfig {
   id                String   @id @default(cuid())
@@ -250,23 +232,6 @@ model AfkEntry {
   @@unique([guildId, userId])
   @@index([guildId])
   @@map("afk_entries")
-}
-
-// Sheets
-model Sheet {
-  id          String   @id @default(cuid())
-  guildId     String   @map("guild_id")
-  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  rows        Json     @default("[]")
-  triggers    Json     @default("[]")
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@index([guildId])
-  @@map("sheets")
 }
 
 // Module addons
