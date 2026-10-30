@@ -49,6 +49,14 @@ export const permitCommand = {
             .setName("name")
             .setDescription("Optional display name")
             .setMaxLength(64),
+        )
+        .addStringOption((option) =>
+          option
+            .setName("scopes")
+            .setDescription(
+              "Optional security whitelist scopes: security.total, security.antinuke, security.automod",
+            )
+            .setMaxLength(200),
         ),
     )
     .addSubcommand((subcommand) =>
