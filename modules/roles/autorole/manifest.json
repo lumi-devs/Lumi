@@ -1,0 +1,90 @@
+{
+  "apiVersion": 2,
+  "name": "roles-autorole",
+  "displayName": "Autorole",
+  "emoji": "🚪",
+  "description": "Multi-role autorole on join with filters, optional delay, and a durable pending queue",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "dependencies": {
+    "roles": "^2.0.0"
+  },
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Autorole Enabled",
+      "type": "boolean",
+      "description": "Assign configured roles when members join",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "roleIds",
+      "label": "Autoroles",
+      "type": "multi-role",
+      "description": "Roles assigned to eligible members",
+      "category": "General"
+    },
+    {
+      "key": "delaySeconds",
+      "label": "Assignment Delay",
+      "type": "number",
+      "description": "Seconds to wait before assigning roles. 0 assigns immediately.",
+      "default": 0,
+      "min": 0,
+      "max": 604800,
+      "category": "General"
+    },
+    {
+      "key": "minAccountAgeHours",
+      "label": "Minimum Account Age",
+      "type": "number",
+      "description": "Accounts younger than this are skipped. 0 disables.",
+      "default": 0,
+      "min": 0,
+      "max": 8760,
+      "category": "Filters"
+    },
+    {
+      "key": "requiredRoleIds",
+      "label": "Required Roles",
+      "type": "multi-role",
+      "description": "Member must already have at least one of these roles",
+      "category": "Filters"
+    },
+    {
+      "key": "ignoredRoleIds",
+      "label": "Ignored Roles",
+      "type": "multi-role",
+      "description": "Members with any of these roles are skipped",
+      "category": "Filters"
+    },
+    {
+      "key": "ignoreBots",
+      "label": "Ignore Bots",
+      "type": "boolean",
+      "description": "Skip bot accounts",
+      "default": true,
+      "category": "Filters"
+    },
+    {
+      "key": "onlyOnJoin",
+      "label": "Only On Join",
+      "type": "boolean",
+      "description": "Only apply from the join listener, not manual runs",
+      "default": true,
+      "category": "Filters"
+    },
+    {
+      "key": "paused",
+      "label": "Paused",
+      "type": "boolean",
+      "description": "Pause processing of pending autoroles",
+      "default": false,
+      "category": "Queue"
+    }
+  ]
+}
