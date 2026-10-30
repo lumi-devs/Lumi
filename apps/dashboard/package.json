@@ -1,0 +1,31 @@
+{
+  "name": "@lumi/dashboard",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --host 0.0.0.0 --port 4173",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "bun build/index.js",
+    "typecheck": "svelte-kit sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "ioredis": "^6.0.0",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/node": "26.6.5",
+    "@types/pg": "^8.23.1",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.3.4",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.7"
+  }
+}

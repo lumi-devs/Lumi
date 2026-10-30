@@ -38,5 +38,5 @@
       "@lumi/downloader": ["./packages/downloader/src"]
     }
   },
-  "exclude": ["node_modules", "dist", "build"]
+  "exclude": ["node_modules", "dist", "build", "apps/dashboard"]
 }
