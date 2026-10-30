@@ -1,8 +1,6 @@
 import { Limits, type TriggerType } from "./types.js";
 
-export type TriggerValidation =
-  | { ok: true }
-  | { ok: false; error: string };
+export type TriggerValidation = { ok: true } | { ok: false; error: string };
 
 export interface ReactionEmojiLike {
   id?: string | null;
@@ -14,9 +12,7 @@ export function normalizeCommandName(input: string): string {
   return input.trim().toLowerCase();
 }
 
-export function validateCommandName(
-  name: string,
-): TriggerValidation {
+export function validateCommandName(name: string): TriggerValidation {
   if (name.length === 0) return { ok: false, error: "Name is required." };
   if (name.length > Limits.nameMaxLength) {
     return {
@@ -47,7 +43,10 @@ export function compileSafeRegex(
     };
   }
   if (/\\[1-9]/.test(pattern) || /\\k<[^>]+>/.test(pattern)) {
-    return { ok: false, error: "Backreferences are not allowed in regex triggers." };
+    return {
+      ok: false,
+      error: "Backreferences are not allowed in regex triggers.",
+    };
   }
   if (/\(\?<[=!]/.test(pattern)) {
     return { ok: false, error: "Lookbehind is not allowed in regex triggers." };
@@ -103,13 +102,22 @@ export function validateTrigger(
 
   if (type === "button" || type === "select" || type === "modal") {
     if (trigger.length > 100) {
-      return { ok: false, error: "Component custom IDs are limited to 100 characters." };
+      return {
+        ok: false,
+        error: "Component custom IDs are limited to 100 characters.",
+      };
     }
     if (trigger.includes("*") && !trigger.endsWith("*")) {
-      return { ok: false, error: "A component trigger may only use * as a trailing wildcard." };
+      return {
+        ok: false,
+        error: "A component trigger may only use * as a trailing wildcard.",
+      };
     }
     if (trigger.replace(/\*$/, "").length === 0) {
-      return { ok: false, error: "Component trigger cannot be only a wildcard." };
+      return {
+        ok: false,
+        error: "Component trigger cannot be only a wildcard.",
+      };
     }
   }
 
@@ -178,7 +186,10 @@ export function normalizeEmoji(emoji: ReactionEmojiLike): string {
   return emoji.name ?? "";
 }
 
-export function emojiMatches(trigger: string, emoji: ReactionEmojiLike): boolean {
+export function emojiMatches(
+  trigger: string,
+  emoji: ReactionEmojiLike,
+): boolean {
   const normalized = trigger.trim();
   if (normalized.length === 0) return false;
 

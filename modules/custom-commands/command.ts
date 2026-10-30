@@ -40,7 +40,9 @@ import { buildExport, importCommands } from "./transfer.js";
 import { splitArgs } from "./trigger.js";
 import { Limits, TriggerTypes, type TriggerType } from "./types.js";
 
-function memberOf(interaction: ChatInputCommandInteraction): GuildMember | null {
+function memberOf(
+  interaction: ChatInputCommandInteraction,
+): GuildMember | null {
   return interaction.member instanceof GuildMember ? interaction.member : null;
 }
 
@@ -118,7 +120,10 @@ async function runCustomCommand(
   if (!command) {
     await interaction.reply(
       ephemeralCard(
-        makeErrorCard("Unknown Command", `No custom command named **${name}** exists.`),
+        makeErrorCard(
+          "Unknown Command",
+          `No custom command named **${name}** exists.`,
+        ),
       ),
     );
     return;
@@ -177,7 +182,12 @@ async function exportCommands(
   const data = await buildExport(services, guild.id, name ?? undefined);
   const json = JSON.stringify(data, null, 2);
   const buffer = Buffer.from(json, "utf8");
-  const suffix = name ? name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-") : guild.id;
+  const suffix = name
+    ? name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+    : guild.id;
   const card = makeInfoCard("Custom Commands Export", [
     `**Groups**\n${data.groups.length}`,
     `**Commands**\n${data.commands.length}`,
@@ -208,11 +218,15 @@ async function importFromInteraction(
   let json = inline ?? "";
   if (attachment) {
     if (attachment.size > Limits.importBytes) {
-      throw new Error(`Import files are limited to ${Limits.importBytes} bytes.`);
+      throw new Error(
+        `Import files are limited to ${Limits.importBytes} bytes.`,
+      );
     }
     const response = await fetch(attachment.url);
     if (!response.ok) {
-      throw new Error(`Could not download the import file (${response.status}).`);
+      throw new Error(
+        `Could not download the import file (${response.status}).`,
+      );
     }
     json = await response.text();
   }
@@ -325,7 +339,9 @@ async function handleKv(
       ephemeralCard(
         makeSuccessCard(
           "KV Deleted",
-          deleted ? `Deleted **${key}**.` : `No entry named **${key}** existed.`,
+          deleted
+            ? `Deleted **${key}**.`
+            : `No entry named **${key}** existed.`,
         ),
       ),
     );
@@ -359,7 +375,10 @@ export const customCommandCommand: CommandDefinition = {
         .setName("create")
         .setDescription("Create a custom command")
         .addStringOption((option) =>
-          option.setName("name").setDescription("Command name").setRequired(true),
+          option
+            .setName("name")
+            .setDescription("Command name")
+            .setRequired(true),
         )
         .addStringOption((option) =>
           option
@@ -371,7 +390,10 @@ export const customCommandCommand: CommandDefinition = {
             ),
         )
         .addStringOption((option) =>
-          option.setName("trigger").setDescription("Trigger value or pattern").setRequired(false),
+          option
+            .setName("trigger")
+            .setDescription("Trigger value or pattern")
+            .setRequired(false),
         )
         .addStringOption((option) =>
           option
@@ -381,7 +403,10 @@ export const customCommandCommand: CommandDefinition = {
             .setRequired(false),
         )
         .addStringOption((option) =>
-          option.setName("description").setDescription("Description").setMaxLength(200),
+          option
+            .setName("description")
+            .setDescription("Description")
+            .setMaxLength(200),
         )
         .addStringOption((option) =>
           option
@@ -437,7 +462,10 @@ export const customCommandCommand: CommandDefinition = {
             .setMaxLength(4_000),
         )
         .addStringOption((option) =>
-          option.setName("description").setDescription("New description").setMaxLength(200),
+          option
+            .setName("description")
+            .setDescription("New description")
+            .setMaxLength(200),
         )
         .addStringOption((option) =>
           option
@@ -453,7 +481,9 @@ export const customCommandCommand: CommandDefinition = {
             .setMaxValue(Limits.cooldownMaxSeconds),
         )
         .addStringOption((option) =>
-          option.setName("permissions").setDescription("Comma-separated permit nodes"),
+          option
+            .setName("permissions")
+            .setDescription("Comma-separated permit nodes"),
         )
         .addBooleanOption((option) =>
           option.setName("enabled").setDescription("Enable or disable"),
@@ -549,7 +579,10 @@ export const customCommandCommand: CommandDefinition = {
           option.setName("new_name").setDescription("New group name"),
         )
         .addStringOption((option) =>
-          option.setName("description").setDescription("Group description").setMaxLength(200),
+          option
+            .setName("description")
+            .setDescription("Group description")
+            .setMaxLength(200),
         ),
     )
     .addSubcommand((sub) =>
@@ -578,10 +611,14 @@ export const customCommandCommand: CommandDefinition = {
           option.setName("cron").setDescription("Five-field cron expression"),
         )
         .addStringOption((option) =>
-          option.setName("interval").setDescription("Interval such as 30s, 5m, 2h"),
+          option
+            .setName("interval")
+            .setDescription("Interval such as 30s, 5m, 2h"),
         )
         .addStringOption((option) =>
-          option.setName("timezone").setDescription("IANA timezone (default UTC)"),
+          option
+            .setName("timezone")
+            .setDescription("IANA timezone (default UTC)"),
         ),
     )
     .addSubcommand((sub) =>
@@ -638,10 +675,7 @@ export const customCommandCommand: CommandDefinition = {
     const focused = interaction.options.getFocused(true);
     const subcommand = interaction.options.getSubcommand(false);
 
-    const nameOptions = new Set([
-      "name",
-      "new_name",
-    ]);
+    const nameOptions = new Set(["name", "new_name"]);
     if (!nameOptions.has(focused.name)) {
       await interaction.respond([]);
       return;
@@ -677,7 +711,10 @@ export const customCommandCommand: CommandDefinition = {
     if (!interaction.guildId || !interaction.guild) {
       await interaction.reply(
         ephemeralCard(
-          makeErrorCard("Server Only", "Custom commands only run inside a server."),
+          makeErrorCard(
+            "Server Only",
+            "Custom commands only run inside a server.",
+          ),
         ),
       );
       return;
@@ -826,9 +863,7 @@ export const customCommandCommand: CommandDefinition = {
       }
     } catch (error) {
       if (interaction.replied || interaction.deferred) {
-        await interaction
-          .followUp(errorCard(error))
-          .catch(() => undefined);
+        await interaction.followUp(errorCard(error)).catch(() => undefined);
         return;
       }
       await interaction.reply(errorCard(error)).catch(() => undefined);

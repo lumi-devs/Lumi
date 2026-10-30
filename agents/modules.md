@@ -43,6 +43,10 @@ Every module under `modules/` is a **supermodule** that contains independently-t
 
 - `logging-logs` — Message, edit, delete, voice, and moderation logging
 
+### Stats
+
+- `stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
+
 ### Security
 
 - `security-antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses

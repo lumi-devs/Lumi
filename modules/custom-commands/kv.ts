@@ -33,9 +33,7 @@ function validateTtl(ttlSeconds: number | undefined): number | null {
   const ttl = Math.floor(ttlSeconds);
   if (ttl <= 0) return null;
   if (ttl > Limits.kvTtlMaxSeconds) {
-    throw new Error(
-      `KV TTL cannot exceed ${Limits.kvTtlMaxSeconds} seconds.`,
-    );
+    throw new Error(`KV TTL cannot exceed ${Limits.kvTtlMaxSeconds} seconds.`);
   }
   return ttl;
 }
@@ -132,7 +130,8 @@ export async function incrKv(
   const prisma = prismaOf(services);
   const normalizedKey = validateKey(key);
   const normalizedBy = Number(by);
-  if (!Number.isFinite(normalizedBy)) throw new Error("KV increment must be a number.");
+  if (!Number.isFinite(normalizedBy))
+    throw new Error("KV increment must be a number.");
 
   const row = (await prisma.customCommandKv.findUnique({
     where: {

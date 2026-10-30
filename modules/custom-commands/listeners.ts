@@ -30,7 +30,10 @@ async function memberFor(
   userId: string,
 ): Promise<GuildMember | null> {
   if (!guild) return null;
-  return guild.members.cache.get(userId) ?? guild.members.fetch(userId).catch(() => null);
+  return (
+    guild.members.cache.get(userId) ??
+    guild.members.fetch(userId).catch(() => null)
+  );
 }
 
 async function runMatched(
@@ -79,7 +82,11 @@ async function runMatched(
   } else if (result.status === "error") {
     services.observability?.logger?.warn?.(
       "[custom-commands] execution failed",
-      { guildId: options.guild.id, command: command.name, error: result.message },
+      {
+        guildId: options.guild.id,
+        command: command.name,
+        error: result.message,
+      },
     );
   }
 }
@@ -99,7 +106,12 @@ async function handleMessage(
   for (const command of commands) {
     const type = command.triggerType as TriggerType;
     if (!isMessageTrigger(type)) continue;
-    const args = matchMessageTrigger(type, command.trigger, message.content, prefix);
+    const args = matchMessageTrigger(
+      type,
+      command.trigger,
+      message.content,
+      prefix,
+    );
     if (args === null) continue;
 
     await runMatched(
@@ -123,7 +135,9 @@ async function handleMessage(
 async function resolveReaction(
   reaction: MessageReaction | PartialMessageReaction,
 ): Promise<{ reaction: MessageReaction; message: Message } | null> {
-  const full = reaction.partial ? await reaction.fetch().catch(() => null) : reaction;
+  const full = reaction.partial
+    ? await reaction.fetch().catch(() => null)
+    : reaction;
   if (!full) return null;
   const message = full.message.partial
     ? await full.message.fetch().catch(() => null)
@@ -198,8 +212,7 @@ async function handleInteraction(
   const commands = await listEnabledCommands(services, interaction.guild.id);
   const command = commands.find(
     (entry) =>
-      entry.triggerType === type &&
-      matchesCustomId(entry.trigger, customId),
+      entry.triggerType === type && matchesCustomId(entry.trigger, customId),
   );
   if (!command) return;
 
@@ -228,7 +241,9 @@ async function handleInteraction(
       member,
       channel: interaction.channel as GuildBasedChannel | null,
       args: interaction.isAnySelectMenu() ? interaction.values : [],
-      selectValues: interaction.isAnySelectMenu() ? interaction.values : undefined,
+      selectValues: interaction.isAnySelectMenu()
+        ? interaction.values
+        : undefined,
       modalFields,
       reply: { kind: "interaction", interaction },
     },

@@ -61,9 +61,9 @@ describe("custom command duration parsing", () => {
     expect(
       nextRunAt({ cron: "*/10 * * * *", timezone: "UTC", from })?.toISOString(),
     ).toBe("2026-01-01T00:10:00.000Z");
-    expect(
-      nextRunAt({ intervalSeconds: 30, from })?.toISOString(),
-    ).toBe("2026-01-01T00:00:30.000Z");
+    expect(nextRunAt({ intervalSeconds: 30, from })?.toISOString()).toBe(
+      "2026-01-01T00:00:30.000Z",
+    );
     expect(nextRunAt({ from })).toBeNull();
   });
 

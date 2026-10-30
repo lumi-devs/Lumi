@@ -7,7 +7,12 @@ import {
   validateCronExpression,
 } from "./duration.js";
 import { parseResponses, ResponsesSchema } from "./responses.js";
-import { getGroupByName, invalidateGuild, listCommands, listGroups } from "./store.js";
+import {
+  getGroupByName,
+  invalidateGuild,
+  listCommands,
+  listGroups,
+} from "./store.js";
 import {
   normalizeCommandName,
   validateCommandName,
@@ -44,7 +49,10 @@ const ExportScheduleSchema = z
   .refine(
     (value) =>
       (value.cron === undefined) !== (value.intervalSeconds === undefined),
-    { message: "A schedule must contain exactly one of cron or intervalSeconds." },
+    {
+      message:
+        "A schedule must contain exactly one of cron or intervalSeconds.",
+    },
   );
 
 const PermissionNodeSchema = z.string().min(1).max(100);
@@ -57,7 +65,12 @@ const ExportCommandSchema = z
     trigger: z.string().max(Limits.triggerMaxLength),
     responses: ResponsesSchema,
     enabled: z.boolean().optional(),
-    cooldownSeconds: z.number().int().min(0).max(Limits.cooldownMaxSeconds).optional(),
+    cooldownSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(Limits.cooldownMaxSeconds)
+      .optional(),
     permissionNodes: z.array(PermissionNodeSchema).max(50).optional(),
     group: z.string().min(1).max(Limits.nameMaxLength).optional(),
     schedule: ExportScheduleSchema.optional(),
@@ -119,7 +132,9 @@ export async function buildExport(
 
   const groups = await listGroups(services, guildId);
   const groupIds = new Set(
-    selected.map((command) => command.groupId).filter((id): id is string => Boolean(id)),
+    selected
+      .map((command) => command.groupId)
+      .filter((id): id is string => Boolean(id)),
   );
   const selectedGroups = name
     ? groups.filter((group) => groupIds.has(group.id))
@@ -267,7 +282,9 @@ export async function importCommands(
     if (!command.group) continue;
     const groupName = normalizeCommandName(command.group);
     if (!groupNames.has(groupName) && !existingGroupNames.has(groupName)) {
-      throw new Error(`Command "${command.name}" references unknown group "${command.group}".`);
+      throw new Error(
+        `Command "${command.name}" references unknown group "${command.group}".`,
+      );
     }
   }
 
@@ -289,7 +306,9 @@ export async function importCommands(
             where: { id: existing.id },
             data: {
               description: group.description ?? null,
-              ...(group.position !== undefined ? { position: group.position } : {}),
+              ...(group.position !== undefined
+                ? { position: group.position }
+                : {}),
             },
           });
         }
@@ -359,7 +378,8 @@ export async function importCommands(
           intervalSeconds: schedule.intervalSeconds ?? null,
           timezone,
         });
-        if (!next) throw new Error(`Could not compute a schedule for "${name}".`);
+        if (!next)
+          throw new Error(`Could not compute a schedule for "${name}".`);
         await tx.customCommandSchedule.upsert({
           where: { commandId },
           update: {
@@ -411,5 +431,7 @@ export async function groupExists(
   guildId: string,
   name: string,
 ): Promise<boolean> {
-  return Boolean(await getGroupByName(services, guildId, normalizeCommandName(name)));
+  return Boolean(
+    await getGroupByName(services, guildId, normalizeCommandName(name)),
+  );
 }

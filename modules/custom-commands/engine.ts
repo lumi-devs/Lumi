@@ -15,7 +15,10 @@ import type {
 } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
 import { buildContextValues } from "./context.js";
-import { getCustomCommandsConfig, type CustomCommandsConfig } from "./config.js";
+import {
+  getCustomCommandsConfig,
+  type CustomCommandsConfig,
+} from "./config.js";
 import { renderTemplate } from "./interpreter/index.js";
 import { createKvAdapter } from "./kv.js";
 import {
@@ -102,9 +105,7 @@ export async function canManage(
 ): Promise<boolean> {
   if (options.userId === options.guildOwnerId) return true;
   const member = options.member as
-    | { permissions?: { has?: (flag: bigint) => boolean } }
-    | null
-    | undefined;
+    { permissions?: { has?: (flag: bigint) => boolean } } | null | undefined;
   const permissions = member?.permissions;
   if (
     permissions?.has?.(PermissionFlagsBits.ManageGuild) ||
@@ -257,8 +258,7 @@ export async function notifyProblem(
     return;
   }
 
-  const message =
-    reply.kind === "message" ? asRecord(reply.message) : null;
+  const message = reply.kind === "message" ? asRecord(reply.message) : null;
   if (message && typeof message.react === "function") {
     await message.react(emoji).catch(() => undefined);
   }
@@ -303,7 +303,9 @@ async function renderResponses(
 
       const renderedTitle = await renderTemplate(titleTemplate, { values, kv });
       const renderedBodyParts = await Promise.all(
-        bodyTemplates.map((template) => renderTemplate(template, { values, kv })),
+        bodyTemplates.map((template) =>
+          renderTemplate(template, { values, kv }),
+        ),
       );
       const body =
         renderedBodyParts.length === 1
@@ -311,7 +313,12 @@ async function renderResponses(
           : renderedBodyParts;
       const size = renderedResponseSize(renderedTitle, body);
       return {
-        card: buildResponseCard(command.name, response as ResponseSpec, renderedTitle, body),
+        card: buildResponseCard(
+          command.name,
+          response as ResponseSpec,
+          renderedTitle,
+          body,
+        ),
         size,
       };
     };
@@ -339,7 +346,8 @@ export async function executeCustomCommand(
   input: RunCommandInput,
   config?: CustomCommandsConfig,
 ): Promise<ExecutionResult> {
-  if (!command.enabled) return { status: "error", message: "Command is disabled." };
+  if (!command.enabled)
+    return { status: "error", message: "Command is disabled." };
 
   if (!(await authorizedForCommand(services, command, input))) {
     return { status: "forbidden" };
@@ -371,7 +379,8 @@ export async function executeCustomCommand(
     );
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Response rendering failed.",
+      message:
+        error instanceof Error ? error.message : "Response rendering failed.",
     };
   }
 
@@ -400,7 +409,8 @@ export async function executeCustomCommand(
     );
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Response delivery failed.",
+      message:
+        error instanceof Error ? error.message : "Response delivery failed.",
     };
   }
 

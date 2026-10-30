@@ -19,37 +19,40 @@ describe("custom command triggers", () => {
   });
 
   it("matches command triggers after the prefix", () => {
-    expect(matchMessageTrigger("command", "hello", "!hello one two", "!")).toEqual([
-      "one",
-      "two",
-    ]);
+    expect(
+      matchMessageTrigger("command", "hello", "!hello one two", "!"),
+    ).toEqual(["one", "two"]);
     expect(
       matchMessageTrigger("command", "hello", '!hello "one two" three', "!"),
     ).toEqual(["one two", "three"]);
-    expect(matchMessageTrigger("command", "hello", "!Hello world", "!")).toEqual([
-      "world",
-    ]);
+    expect(
+      matchMessageTrigger("command", "hello", "!Hello world", "!"),
+    ).toEqual(["world"]);
     expect(matchMessageTrigger("command", "hello", "!goodbye", "!")).toBeNull();
     expect(matchMessageTrigger("command", "hello", "hello", "!")).toBeNull();
   });
 
   it("matches message text trigger families", () => {
-    expect(matchMessageTrigger("prefix", "?hello", "?hello there", "!")).toEqual([
-      "there",
+    expect(
+      matchMessageTrigger("prefix", "?hello", "?hello there", "!"),
+    ).toEqual(["there"]);
+    expect(matchMessageTrigger("exact", "ping", "  PING ", "!")).toEqual([
+      "PING",
     ]);
-    expect(matchMessageTrigger("exact", "ping", "  PING ", "!")).toEqual(["PING"]);
     expect(
       matchMessageTrigger("startsWith", "say ", "Say hello world", "!"),
     ).toEqual(["hello", "world"]);
-    expect(matchMessageTrigger("contains", "needle", "a needle here", "!")).toEqual(
-      ["a", "needle", "here"],
-    );
-    expect(matchMessageTrigger("regex", "^\\d+$", "12345", "!")).toEqual(["12345"]);
+    expect(
+      matchMessageTrigger("contains", "needle", "a needle here", "!"),
+    ).toEqual(["a", "needle", "here"]);
+    expect(matchMessageTrigger("regex", "^\\d+$", "12345", "!")).toEqual([
+      "12345",
+    ]);
     expect(matchMessageTrigger("regex", "^\\d+$", "abc", "!")).toBeNull();
   });
 
   it("splits quoted arguments", () => {
-    expect(splitArgs('one "two three" \'four five\'')).toEqual([
+    expect(splitArgs("one \"two three\" 'four five'")).toEqual([
       "one",
       "two three",
       "four five",
@@ -67,7 +70,9 @@ describe("custom command triggers", () => {
   it("matches reaction emojis in unicode and custom forms", () => {
     expect(emojiMatches("👍", { id: null, name: "👍" })).toBe(true);
     expect(emojiMatches("party:123", { id: "123", name: "party" })).toBe(true);
-    expect(emojiMatches("<:party:123>", { id: "123", name: "party" })).toBe(true);
+    expect(emojiMatches("<:party:123>", { id: "123", name: "party" })).toBe(
+      true,
+    );
     expect(emojiMatches("👍", { id: "123", name: "party" })).toBe(false);
   });
 

@@ -97,7 +97,8 @@ export function validateCronExpression(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Invalid cron expression.",
+      error:
+        error instanceof Error ? error.message : "Invalid cron expression.",
     };
   }
 }
@@ -212,7 +213,8 @@ export function nextCronDate(
       for (const minute of parsed.minute) {
         const candidate = zonedTimeToUtc(dateParts, hour, minute, timezone);
         if (candidate.getTime() <= from.getTime()) continue;
-        if (!matchesCron(expression, candidate, timezone ?? undefined)) continue;
+        if (!matchesCron(expression, candidate, timezone ?? undefined))
+          continue;
         if (!best || candidate.getTime() < best.getTime()) {
           best = candidate;
         }
@@ -239,7 +241,10 @@ export function nextRunAt(options: {
   if (options.cron) {
     return nextCronDate(options.cron, from, options.timezone);
   }
-  if (options.intervalSeconds !== null && options.intervalSeconds !== undefined) {
+  if (
+    options.intervalSeconds !== null &&
+    options.intervalSeconds !== undefined
+  ) {
     return nextIntervalDate(options.intervalSeconds, from);
   }
   return null;

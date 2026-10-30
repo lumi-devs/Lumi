@@ -19,12 +19,7 @@ export class TemplateError extends Error {
 }
 
 type TokenKind =
-  | "number"
-  | "string"
-  | "identifier"
-  | "operator"
-  | "punct"
-  | "eof";
+  "number" | "string" | "identifier" | "operator" | "punct" | "eof";
 
 interface Token {
   kind: TokenKind;
@@ -32,14 +27,7 @@ interface Token {
   position: number;
 }
 
-const TwoCharacterOperators = new Set([
-  "==",
-  "!=",
-  ">=",
-  "<=",
-  "&&",
-  "||",
-]);
+const TwoCharacterOperators = new Set(["==", "!=", ">=", "<=", "&&", "||"]);
 
 const KnownFilters = new Set([
   "upper",
@@ -119,7 +107,10 @@ function tokenize(input: string): Token[] {
         index += 1;
       }
       if (!closed) {
-        throw new TemplateError("unterminated-string", "Unterminated string literal.");
+        throw new TemplateError(
+          "unterminated-string",
+          "Unterminated string literal.",
+        );
       }
       tokens.push({ kind: "string", value, position: start });
       continue;
@@ -132,7 +123,11 @@ function tokenize(input: string): Token[] {
         index += 1;
         while (index < input.length && /[0-9]/.test(input[index]!)) index += 1;
       }
-      tokens.push({ kind: "number", value: input.slice(start, index), position: start });
+      tokens.push({
+        kind: "number",
+        value: input.slice(start, index),
+        position: start,
+      });
       continue;
     }
 
@@ -257,10 +252,7 @@ class ExpressionParser {
       this.consume();
       const name = this.expectIdentifier();
       if (!KnownFilters.has(name.toLowerCase())) {
-        throw new TemplateError(
-          "unknown-filter",
-          `Unknown filter "${name}".`,
-        );
+        throw new TemplateError("unknown-filter", `Unknown filter "${name}".`);
       }
       const args: Expression[] = [];
       if (this.match(":")) {
@@ -560,7 +552,10 @@ export function parseTemplate(template: string): TemplateNode[] {
     if (raw.startsWith("#")) {
       const match = /^#\s*([A-Za-z]+)\s*([\s\S]*)$/.exec(raw);
       if (!match) {
-        throw new TemplateError("invalid-section", `Invalid section tag {{${raw}}}.`);
+        throw new TemplateError(
+          "invalid-section",
+          `Invalid section tag {{${raw}}}.`,
+        );
       }
       const kind = match[1]!.toLowerCase();
       if (kind !== "if" && kind !== "unless" && kind !== "range") {
@@ -572,14 +567,27 @@ export function parseTemplate(template: string): TemplateNode[] {
       const node = sectionNode(kind, match[2] ?? "");
       countNode(state);
       currentBody().push(node);
-      frames.push({ kind, node, body: node.type === "if" ? node.truthy : node.type === "range" ? node.body : [], inElse: false });
+      frames.push({
+        kind,
+        node,
+        body:
+          node.type === "if"
+            ? node.truthy
+            : node.type === "range"
+              ? node.body
+              : [],
+        inElse: false,
+      });
       continue;
     }
 
     if (raw.startsWith("/")) {
       const match = /^\/\s*([A-Za-z]+)\s*$/.exec(raw);
       if (!match) {
-        throw new TemplateError("invalid-close", `Invalid closing tag {{${raw}}}.`);
+        throw new TemplateError(
+          "invalid-close",
+          `Invalid closing tag {{${raw}}}.`,
+        );
       }
       const name = match[1]!.toLowerCase();
       const frame = frames.pop();
@@ -607,7 +615,10 @@ export function parseTemplate(template: string): TemplateNode[] {
         );
       }
       if (frame.inElse) {
-        throw new TemplateError("duplicate-else", "A section can only have one else.");
+        throw new TemplateError(
+          "duplicate-else",
+          "A section can only have one else.",
+        );
       }
       frame.inElse = true;
       continue;

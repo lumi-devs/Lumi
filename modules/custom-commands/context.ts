@@ -48,9 +48,7 @@ function roleValues(role: Role): Record<string, unknown> {
 }
 
 function memberValues(member: GuildMember): Record<string, unknown> {
-  const roles = member.roles?.cache
-    ? [...member.roles.cache.values()]
-    : [];
+  const roles = member.roles?.cache ? [...member.roles.cache.values()] : [];
   const highest = member.roles?.highest ?? null;
   return {
     id: member.id,
@@ -67,7 +65,9 @@ function memberValues(member: GuildMember): Record<string, unknown> {
   };
 }
 
-function channelValues(channel: GuildBasedChannel | null): Record<string, unknown> {
+function channelValues(
+  channel: GuildBasedChannel | null,
+): Record<string, unknown> {
   if (!channel) return {};
   const value = channel as unknown as {
     id: string;
@@ -86,7 +86,9 @@ function channelValues(channel: GuildBasedChannel | null): Record<string, unknow
   };
 }
 
-export function buildContextValues(input: ContextInput): Record<string, unknown> {
+export function buildContextValues(
+  input: ContextInput,
+): Record<string, unknown> {
   const now = input.now ?? new Date();
   const member = input.member;
   const mentionedRole = input.message?.mentions.roles.first() ?? null;

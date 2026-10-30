@@ -3,7 +3,11 @@ import type { GuildBasedChannel, User } from "discord.js";
 import { getCustomCommandsConfig } from "./config.js";
 import { nextRunAt } from "./duration.js";
 import { executeCustomCommand } from "./engine.js";
-import { ModuleName, type CustomCommandRow, type TriggerType } from "./types.js";
+import {
+  ModuleName,
+  type CustomCommandRow,
+  type TriggerType,
+} from "./types.js";
 
 function prismaOf(services: ModuleServices): any {
   return services.db?.prisma ?? (services as { prisma?: any }).prisma;
@@ -93,7 +97,9 @@ async function runSchedule(
 
   const guild =
     services.client.guilds.cache.get(schedule.command.guildId) ??
-    (await services.client.guilds.fetch(schedule.command.guildId).catch(() => null));
+    (await services.client.guilds
+      .fetch(schedule.command.guildId)
+      .catch(() => null));
   if (!guild) return;
 
   const channel = (await services.client.channels
@@ -129,14 +135,11 @@ async function runSchedule(
     config,
   );
 
-  services.observability?.logger?.info?.(
-    "[custom-commands] schedule ran",
-    {
-      guildId: schedule.command.guildId,
-      command: schedule.command.name,
-      at: now.toISOString(),
-    },
-  );
+  services.observability?.logger?.info?.("[custom-commands] schedule ran", {
+    guildId: schedule.command.guildId,
+    command: schedule.command.name,
+    at: now.toISOString(),
+  });
 }
 
 export const scheduleTask: TaskDefinition = {

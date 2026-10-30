@@ -37,6 +37,8 @@ insights, written in TypeScript and running on Bun.
 ```sh
 nix develop --command bun install
 nix develop --command bun run typecheck
+nix develop --command bun run dashboard:typecheck
 nix develop --command bun run test
 nix develop --command bun run build
+nix develop --command bun run dashboard:build
 ```

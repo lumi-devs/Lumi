@@ -34,7 +34,10 @@ export const InteractionTriggerTypes: readonly TriggerType[] = [
   "modal",
 ];
 
-export const ScheduleTriggerTypes: readonly TriggerType[] = ["interval", "cron"];
+export const ScheduleTriggerTypes: readonly TriggerType[] = [
+  "interval",
+  "cron",
+];
 
 export const AccentKeys = [
   "success",

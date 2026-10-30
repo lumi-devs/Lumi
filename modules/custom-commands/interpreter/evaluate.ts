@@ -158,7 +158,11 @@ function resolvePath(
       if (typeof segment === "string" || typeof segment === "number") {
         key = segment;
       } else {
-        const resolved = await evaluateExpression(segment.expression, context, state);
+        const resolved = await evaluateExpression(
+          segment.expression,
+          context,
+          state,
+        );
         if (typeof resolved === "number") key = resolved;
         else key = stringifyValue(resolved);
       }
@@ -171,10 +175,7 @@ function resolvePath(
           value = value.length;
           continue;
         }
-        if (
-          typeof key === "string" &&
-          Object.hasOwn(value, key)
-        ) {
+        if (typeof key === "string" && Object.hasOwn(value, key)) {
           value = (value as unknown as Record<string, unknown>)[key];
           continue;
         }
@@ -382,12 +383,16 @@ async function evaluateCallExpression(
 
   if (name === "get") return context.kv.get(key);
   if (name === "set") {
-    const ttl = args[2] === undefined ? undefined : toNumber(args[2]) ?? undefined;
+    const ttl =
+      args[2] === undefined ? undefined : (toNumber(args[2]) ?? undefined);
     await context.kv.set(key, args[1] ?? null, ttl);
     return "";
   }
   if (name === "incr") {
-    return context.kv.incr(key, args[1] === undefined ? 1 : toNumber(args[1]) ?? 1);
+    return context.kv.incr(
+      key,
+      args[1] === undefined ? 1 : (toNumber(args[1]) ?? 1),
+    );
   }
   if (name === "del") return context.kv.del(key);
 
@@ -429,12 +434,16 @@ async function evaluateExpression(
       if (expression.operator === "and") {
         const left = await evaluateExpression(expression.left, context, state);
         if (!isTruthy(left)) return false;
-        return isTruthy(await evaluateExpression(expression.right, context, state));
+        return isTruthy(
+          await evaluateExpression(expression.right, context, state),
+        );
       }
       if (expression.operator === "or") {
         const left = await evaluateExpression(expression.left, context, state);
         if (isTruthy(left)) return true;
-        return isTruthy(await evaluateExpression(expression.right, context, state));
+        return isTruthy(
+          await evaluateExpression(expression.right, context, state),
+        );
       }
       const left = await evaluateExpression(expression.left, context, state);
       const right = await evaluateExpression(expression.right, context, state);
@@ -480,10 +489,19 @@ async function renderNodes(
       continue;
     }
 
-    const start = toNumber(await evaluateExpression(node.start, context, state));
+    const start = toNumber(
+      await evaluateExpression(node.start, context, state),
+    );
     const end = toNumber(await evaluateExpression(node.end, context, state));
-    const stepValue = toNumber(await evaluateExpression(node.step, context, state));
-    if (start === null || end === null || stepValue === null || stepValue === 0) {
+    const stepValue = toNumber(
+      await evaluateExpression(node.step, context, state),
+    );
+    if (
+      start === null ||
+      end === null ||
+      stepValue === null ||
+      stepValue === 0
+    ) {
       throw new TemplateError(
         "invalid-range",
         "range start, end and step must be numbers and step cannot be zero.",
@@ -503,7 +521,11 @@ async function renderNodes(
       );
     }
 
-    for (let index = 0, value = start; index < count; index += 1, value += stepValue) {
+    for (
+      let index = 0, value = start;
+      index < count;
+      index += 1, value += stepValue
+    ) {
       step(state);
       const child: InterpretContext = {
         ...context,

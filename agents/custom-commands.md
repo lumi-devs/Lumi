@@ -14,38 +14,38 @@ Authoring and management require **Manage Server**, **Administrator**, guild
 ownership, or the `cc.manage` permit node. `/customcommand run` is available to
 ordinary members and only checks the individual command's permission nodes.
 
-| Command | Purpose |
-| --- | --- |
-| `/customcommand run <name> [args]` | Run a custom command without registering a dynamic slash command |
-| `/customcommand create` | Create a command (`name`, `trigger_type`, `trigger`, `response`, optional group/cooldown/permissions/enabled) |
-| `/customcommand edit <name>` | Change any definition field; use `group:none` to ungroup |
-| `/customcommand delete <name>` | Delete a command and its schedule |
-| `/customcommand list [page]` | List commands, 25 per page |
-| `/customcommand show <name>` | Show definition, responses, permissions, and schedule |
-| `/customcommand export [name]` | Export JSON as a file (one command or the whole guild) |
-| `/customcommand import [data] [file] [overwrite]` | Strict JSON import; `overwrite` updates existing names |
-| `/customcommand group action:create\|delete\|rename\|list` | Manage command groups |
-| `/customcommand schedule action:set\|clear\|list` | Set cron or interval schedules |
-| `/customcommand kv action:get\|set\|incr\|del\|list` | Manage the invoker's own KV data |
-| `/customcommand diagnose [name]` | Report trigger, template, response, and schedule errors |
+| Command                                                    | Purpose                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `/customcommand run <name> [args]`                         | Run a custom command without registering a dynamic slash command                                              |
+| `/customcommand create`                                    | Create a command (`name`, `trigger_type`, `trigger`, `response`, optional group/cooldown/permissions/enabled) |
+| `/customcommand edit <name>`                               | Change any definition field; use `group:none` to ungroup                                                      |
+| `/customcommand delete <name>`                             | Delete a command and its schedule                                                                             |
+| `/customcommand list [page]`                               | List commands, 25 per page                                                                                    |
+| `/customcommand show <name>`                               | Show definition, responses, permissions, and schedule                                                         |
+| `/customcommand export [name]`                             | Export JSON as a file (one command or the whole guild)                                                        |
+| `/customcommand import [data] [file] [overwrite]`          | Strict JSON import; `overwrite` updates existing names                                                        |
+| `/customcommand group action:create\|delete\|rename\|list` | Manage command groups                                                                                         |
+| `/customcommand schedule action:set\|clear\|list`          | Set cron or interval schedules                                                                                |
+| `/customcommand kv action:get\|set\|incr\|del\|list`       | Manage the invoker's own KV data                                                                              |
+| `/customcommand diagnose [name]`                           | Report trigger, template, response, and schedule errors                                                       |
 
 `/customcommand run` is the only slash invocation route for custom commands.
 The module never dynamically registers application commands.
 
 ## Trigger types
 
-| Type | Behaviour |
-| --- | --- |
-| `command` | Message prefix command (`<prefix><trigger>`) or `/customcommand run <name>` |
-| `prefix` | Raw message starts with the trigger, which may include its own prefix |
-| `exact` | Whole trimmed message equals the trigger (case-insensitive) |
-| `startsWith` | Trimmed message starts with the trigger (case-insensitive) |
-| `contains` | Trimmed message contains the trigger (case-insensitive) |
-| `regex` | Safe regex (case-insensitive, Unicode) against the trimmed message |
-| `reactionAdd` / `reactionRemove` | Reaction emoji matches the trigger (`👍`, `name:id`, or `<:name:id>`) |
-| `button` / `select` / `modal` | Component custom ID matches exactly, or a trailing `*` prefix match |
-| `interval` | Run on a persisted interval (`CustomCommandSchedule.intervalSeconds`) |
-| `cron` | Run on a persisted five-field cron expression (`CustomCommandSchedule.cron`) |
+| Type                             | Behaviour                                                                    |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `command`                        | Message prefix command (`<prefix><trigger>`) or `/customcommand run <name>`  |
+| `prefix`                         | Raw message starts with the trigger, which may include its own prefix        |
+| `exact`                          | Whole trimmed message equals the trigger (case-insensitive)                  |
+| `startsWith`                     | Trimmed message starts with the trigger (case-insensitive)                   |
+| `contains`                       | Trimmed message contains the trigger (case-insensitive)                      |
+| `regex`                          | Safe regex (case-insensitive, Unicode) against the trimmed message           |
+| `reactionAdd` / `reactionRemove` | Reaction emoji matches the trigger (`👍`, `name:id`, or `<:name:id>`)        |
+| `button` / `select` / `modal`    | Component custom ID matches exactly, or a trailing `*` prefix match          |
+| `interval`                       | Run on a persisted interval (`CustomCommandSchedule.intervalSeconds`)        |
+| `cron`                           | Run on a persisted five-field cron expression (`CustomCommandSchedule.cron`) |
 
 Only the first matching message command runs per message. Schedules can coexist
 with a command's primary trigger. Scheduled output is sent to the module's
@@ -150,29 +150,29 @@ duplicate runs across replicas.
 
 ## Hard limits
 
-| Limit | Value |
-| --- | --- |
-| Commands per guild | 200 |
-| Groups per guild | 50 |
-| Responses per command | 20 |
-| Rendered output per run | 10 KB |
-| KV operations per run | 100 |
-| Discord API sends per run | 10 |
+| Limit                        | Value                         |
+| ---------------------------- | ----------------------------- |
+| Commands per guild           | 200                           |
+| Groups per guild             | 50                            |
+| Responses per command        | 20                            |
+| Rendered output per run      | 10 KB                         |
+| KV operations per run        | 100                           |
+| Discord API sends per run    | 10                            |
 | Response render/send timeout | 500–15,000 ms (default 5,000) |
-| KV keys per user | 100 |
-| KV key length | 128 characters |
-| KV value size | 8 KB JSON |
-| KV TTL | 365 days |
-| Template length | 20,000 characters |
-| Template AST nodes | 5,000 |
-| Interpreter steps | 50,000 |
-| Template nesting | 32 |
-| Range iterations | 1,000 |
-| Import payload | 100 KB |
-| Import commands / groups | 100 / 50 |
-| Cooldown | 0–86,400 seconds |
-| Name / description | 64 / 200 characters |
-| Trigger / regex | 200 characters |
+| KV keys per user             | 100                           |
+| KV key length                | 128 characters                |
+| KV value size                | 8 KB JSON                     |
+| KV TTL                       | 365 days                      |
+| Template length              | 20,000 characters             |
+| Template AST nodes           | 5,000                         |
+| Interpreter steps            | 50,000                        |
+| Template nesting             | 32                            |
+| Range iterations             | 1,000                         |
+| Import payload               | 100 KB                        |
+| Import commands / groups     | 100 / 50                      |
+| Cooldown                     | 0–86,400 seconds              |
+| Name / description           | 64 / 200 characters           |
+| Trigger / regex              | 200 characters                |
 
 Reaction scripts are not supported. There is no `exec`/`execAdmin` helper: a
 custom command cannot run arbitrary JavaScript, shell commands, bot internals, or
@@ -206,12 +206,12 @@ filesystem/network operations.
 
 ## Database
 
-| Table | Use |
-| --- | --- |
-| `custom_command_groups` (`CustomCommandGroup`) | Guild-local groups, unique by guild and name |
-| `custom_commands` (`CustomCommand`) | Definitions: name, trigger type/value, JSON responses, enabled, cooldown, permission nodes, creator, group |
-| `custom_command_schedules` (`CustomCommandSchedule`) | One schedule per command: cron or interval, timezone, next/last run |
-| `custom_command_kv` (`CustomCommandKv`) | Per-guild, per-user JSON key/value entries with optional expiry, unique by guild/user/key |
+| Table                                                | Use                                                                                                        |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `custom_command_groups` (`CustomCommandGroup`)       | Guild-local groups, unique by guild and name                                                               |
+| `custom_commands` (`CustomCommand`)                  | Definitions: name, trigger type/value, JSON responses, enabled, cooldown, permission nodes, creator, group |
+| `custom_command_schedules` (`CustomCommandSchedule`) | One schedule per command: cron or interval, timezone, next/last run                                        |
+| `custom_command_kv` (`CustomCommandKv`)              | Per-guild, per-user JSON key/value entries with optional expiry, unique by guild/user/key                  |
 
 Settings are stored under `Guild.settings.customCommands` and validated with
 `CustomCommandsConfigSchema`.

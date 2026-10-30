@@ -195,7 +195,10 @@ export async function editCustomCommand(
     data.triggerType = type;
     data.trigger = trigger;
   } else if (options.trigger !== undefined && options.trigger !== null) {
-    const check = validateTrigger(command.triggerType as TriggerType, options.trigger.trim());
+    const check = validateTrigger(
+      command.triggerType as TriggerType,
+      options.trigger.trim(),
+    );
     if (!check.ok) throw new Error(check.error);
     data.trigger = options.trigger.trim();
   }
@@ -211,7 +214,11 @@ export async function editCustomCommand(
     if (value.length === 0 || value.toLowerCase() === "none") {
       data.groupId = null;
     } else {
-      const group = await getGroupByName(services, guildId, normalizeCommandName(value));
+      const group = await getGroupByName(
+        services,
+        guildId,
+        normalizeCommandName(value),
+      );
       if (!group) throw new Error(`Group "${value}" does not exist.`);
       data.groupId = group.id;
     }
@@ -292,14 +299,10 @@ export async function listCustomCommands(
     return `**${command.name}**${group} — ${command.triggerType}:${command.trigger || "scheduled"}${schedule}${status}`;
   });
 
-  return makeListCard(
-    `Custom Commands (${commands.length})`,
-    items,
-    {
-      subtitle: `Page ${currentPage} of ${totalPages}`,
-      footer: formatPageFooter(currentPage - 1, totalPages),
-    },
-  );
+  return makeListCard(`Custom Commands (${commands.length})`, items, {
+    subtitle: `Page ${currentPage} of ${totalPages}`,
+    footer: formatPageFooter(currentPage - 1, totalPages),
+  });
 }
 
 export async function showCustomCommand(
@@ -307,12 +310,20 @@ export async function showCustomCommand(
   guildId: string,
   name: string,
 ): Promise<CardReply> {
-  const command = await getCommandByName(services, guildId, normalizeCommandName(name));
+  const command = await getCommandByName(
+    services,
+    guildId,
+    normalizeCommandName(name),
+  );
   if (!command) throw new Error(`Command "${name}" was not found.`);
 
   let responsePreview: string;
   try {
-    responsePreview = JSON.stringify(parseResponses(command.responses), null, 2);
+    responsePreview = JSON.stringify(
+      parseResponses(command.responses),
+      null,
+      2,
+    );
   } catch {
     responsePreview = "Invalid response JSON";
   }
@@ -399,7 +410,9 @@ export async function manageGroup(
   if (!group) throw new Error(`Group "${normalized}" was not found.`);
 
   if (action === "delete") {
-    await prismaOf(services).customCommandGroup.delete({ where: { id: group.id } });
+    await prismaOf(services).customCommandGroup.delete({
+      where: { id: group.id },
+    });
     invalidateGuild(guildId);
     return makeSuccessCard(
       "Group Deleted",
@@ -468,7 +481,9 @@ export async function manageSchedule(
     return makeListCard(
       "Custom Command Schedules",
       rows.map((row) => {
-        const cadence = row.cron ? `cron ${row.cron}` : `every ${row.intervalSeconds}s`;
+        const cadence = row.cron
+          ? `cron ${row.cron}`
+          : `every ${row.intervalSeconds}s`;
         return `**${row.command.name}** — ${cadence} · next ${row.nextRunAt.toISOString()} · last ${row.lastRunAt?.toISOString() ?? "never"}`;
       }),
     );
@@ -477,7 +492,11 @@ export async function manageSchedule(
   if (!name || name.trim().length === 0) {
     throw new Error("Command name is required.");
   }
-  const command = await getCommandByName(services, guildId, normalizeCommandName(name));
+  const command = await getCommandByName(
+    services,
+    guildId,
+    normalizeCommandName(name),
+  );
   if (!command) throw new Error(`Command "${name}" was not found.`);
 
   if (action === "clear") {
@@ -573,7 +592,9 @@ export async function diagnoseCommands(
 
   for (const command of commands) {
     if (!(TriggerTypes as readonly string[]).includes(command.triggerType)) {
-      issues.push(`**${command.name}** — unknown trigger type "${command.triggerType}".`);
+      issues.push(
+        `**${command.name}** — unknown trigger type "${command.triggerType}".`,
+      );
       continue;
     }
     const type = command.triggerType as TriggerType;
@@ -584,7 +605,9 @@ export async function diagnoseCommands(
 
     if (
       !name &&
-      (triggerCounts.get(`${command.triggerType}:${command.trigger.toLowerCase()}`) ?? 0) > 1
+      (triggerCounts.get(
+        `${command.triggerType}:${command.trigger.toLowerCase()}`,
+      ) ?? 0) > 1
     ) {
       issues.push(
         `**${command.name}** — duplicate ${command.triggerType} trigger "${command.trigger}".`,
@@ -599,7 +622,9 @@ export async function diagnoseCommands(
             ? [response]
             : [
                 ...(response.title ? [response.title] : []),
-                ...(Array.isArray(response.body) ? response.body : [response.body]),
+                ...(Array.isArray(response.body)
+                  ? response.body
+                  : [response.body]),
               ];
         for (const template of templates) {
           const check = validateTemplate(template);
@@ -616,7 +641,9 @@ export async function diagnoseCommands(
       );
     }
 
-    const needsSchedule = (ScheduleTriggerTypes as readonly string[]).includes(type);
+    const needsSchedule = (ScheduleTriggerTypes as readonly string[]).includes(
+      type,
+    );
     if (needsSchedule && !command.schedule) {
       issues.push(`**${command.name}** — ${type} trigger has no schedule.`);
     }
@@ -626,7 +653,10 @@ export async function diagnoseCommands(
         issues.push(`**${command.name}** — ${cron.error}`);
       }
     }
-    if (command.schedule?.timezone && !isValidTimezone(command.schedule.timezone)) {
+    if (
+      command.schedule?.timezone &&
+      !isValidTimezone(command.schedule.timezone)
+    ) {
       issues.push(
         `**${command.name}** — unknown timezone "${command.schedule.timezone}".`,
       );

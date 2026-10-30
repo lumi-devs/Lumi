@@ -64,7 +64,9 @@ describe("custom command interpreter", () => {
   it("supports if, else and comparisons", async () => {
     const template =
       "{{#if user.bot}}bot{{else}}{{#if args.length > 1}}multi{{else}}single{{/if}}{{/if}}";
-    expect(await renderTemplate(template, { values: baseValues })).toBe("multi");
+    expect(await renderTemplate(template, { values: baseValues })).toBe(
+      "multi",
+    );
     expect(
       await renderTemplate(template, {
         values: { ...baseValues, user: { ...baseValues.user, bot: true } },
@@ -100,7 +102,7 @@ describe("custom command interpreter", () => {
     expect(validateTemplate("{{#if user}}missing close").ok).toBe(false);
     expect(validateTemplate("{{#range 1}}x{{/range}}").ok).toBe(false);
     expect(validateTemplate("{{ unknownFilter | nope }}").ok).toBe(false);
-    expect(validateTemplate("{{ fs.read(\"x\") }}").ok).toBe(false);
+    expect(validateTemplate('{{ fs.read("x") }}').ok).toBe(false);
     expect(validateTemplate("{{user.name | upper}}").ok).toBe(true);
   });
 
