@@ -26,6 +26,7 @@ import { z } from "zod";
 import { getSecurityConfig } from "../config.js";
 import {
   deleteStored,
+  describeError,
   fetchMember,
   getStoredJson,
   readModuleConfig,
@@ -35,6 +36,13 @@ import {
   sendSecurityLog,
   setStoredJson,
 } from "../shared.js";
+import {
+  buildVerificationUrl,
+  generateVerificationToken,
+  hashVerificationToken,
+  isHttpUrl,
+  resolveWebBaseUrl,
+} from "./token.js";
 
 const ModuleName = "security-verification";
 
@@ -46,6 +54,18 @@ const VerificationConfigSchema = z.object({
   kickOnTimeout: z.boolean().default(false),
   mode: z.enum(["emoji", "none", "web"]).default("emoji"),
   target: z.enum(["everyone", "suspicious"]).default("everyone"),
+  webBaseUrl: z.preprocess(
+    (value) =>
+      typeof value === "string" && value.trim() === "" ? null : value,
+    z
+      .string()
+      .trim()
+      .refine(isHttpUrl, {
+        message: "webBaseUrl must be an http or https URL",
+      })
+      .nullable()
+      .default(null),
+  ),
 });
 
 type VerificationConfig = z.infer<typeof VerificationConfigSchema>;
@@ -63,6 +83,28 @@ function pendingKey(guildId: string, userId: string): string {
 
 function pendingSetKey(guildId: string): string {
   return securityKey("verification", "pending-set", guildId);
+}
+
+interface VerificationTokenClient {
+  create(args: {
+    data: {
+      guildId: string;
+      userId: string;
+      tokenHash: string;
+      expiresAt: Date;
+    };
+  }): Promise<unknown>;
+  deleteMany(args: {
+    where: { expiresAt: { lt: Date } };
+  }): Promise<{ count: number }>;
+}
+
+function tokenClient(services: ModuleServices): VerificationTokenClient | null {
+  const prisma = services.db?.prisma as
+    { verificationToken?: Partial<VerificationTokenClient> } | undefined;
+  const model = prisma?.verificationToken;
+  if (!model?.create || !model.deleteMany) return null;
+  return model as VerificationTokenClient;
 }
 
 function isSuspicious(member: GuildMember): boolean {
@@ -96,12 +138,43 @@ function verifyCard(member: GuildMember): ReturnType<typeof makeInfoCard> {
   };
 }
 
-async function sendVerification(
+function verifyWebCard(
+  member: GuildMember,
+  verifyUrl: string,
+  timeoutMinutes: number,
+): ReturnType<typeof makeInfoCard> {
+  return {
+    ...makeInfoCard(
+      "✅ Verification",
+      [
+        `Welcome <@${member.id}>!`,
+        "",
+        "Press the button below to verify in your browser and unlock the server.",
+        "",
+        `This link expires in ${timeoutMinutes} minute${timeoutMinutes === 1 ? "" : "s"} or when used.`,
+      ],
+      {
+        actionRows: [
+          row(
+            createActionButton({
+              url: verifyUrl,
+              label: "Verify in Browser",
+              emoji: "🌐",
+            }),
+          ),
+        ],
+      },
+    ),
+    allowedMentions: { users: [member.id] },
+  };
+}
+
+async function deliverVerificationCard(
   services: ModuleServices,
   member: GuildMember,
+  card: ReturnType<typeof makeInfoCard>,
 ): Promise<void> {
   const guild = member.guild;
-  const card = verifyCard(member);
   const security = await getSecurityConfig(services, guild.id);
   if (security.logChannelId) {
     const channel = await services.client.channels
@@ -113,6 +186,80 @@ async function sendVerification(
     }
   }
   await member.send(cardCreateOptions(card)).catch(() => undefined);
+}
+
+async function createWebVerificationUrl(
+  services: ModuleServices,
+  member: GuildMember,
+  config: VerificationConfig,
+  baseUrl: string,
+): Promise<string | null> {
+  const client = tokenClient(services);
+  if (!client) {
+    services.observability?.logger?.warn?.(
+      "web verification database unavailable, falling back to emoji verification",
+      { guildId: member.guild.id, userId: member.id },
+    );
+    return null;
+  }
+
+  const token = generateVerificationToken();
+  const expiresAt = new Date(Date.now() + config.timeoutMinutes * 60_000);
+  try {
+    await client.create({
+      data: {
+        guildId: member.guild.id,
+        userId: member.id,
+        tokenHash: hashVerificationToken(token),
+        expiresAt,
+      },
+    });
+  } catch (error) {
+    services.observability?.logger?.warn?.(
+      "web verification token creation failed, falling back to emoji verification",
+      {
+        guildId: member.guild.id,
+        userId: member.id,
+        error: describeError(error),
+      },
+    );
+    return null;
+  }
+
+  return buildVerificationUrl(baseUrl, token);
+}
+
+async function sendVerification(
+  services: ModuleServices,
+  member: GuildMember,
+  config: VerificationConfig,
+): Promise<void> {
+  if (config.mode === "web") {
+    const baseUrl = resolveWebBaseUrl(config.webBaseUrl);
+    if (!baseUrl) {
+      services.observability?.logger?.warn?.(
+        "web verification requested without a valid webBaseUrl, falling back to emoji verification",
+        { guildId: member.guild.id },
+      );
+    } else {
+      const verifyUrl = await createWebVerificationUrl(
+        services,
+        member,
+        config,
+        baseUrl,
+      );
+      if (verifyUrl) {
+        await deliverVerificationCard(
+          services,
+          member,
+          verifyWebCard(member, verifyUrl, config.timeoutMinutes),
+        );
+        return;
+      }
+    }
+  }
+
+  await deliverVerificationCard(services, member, verifyCard(member));
 }
 
 async function addPending(
@@ -199,7 +346,7 @@ const onMemberAddListener: ListenerDefinition = {
         .catch(() => undefined);
     }
     await addPending(services, member, config);
-    await sendVerification(services, member);
+    await sendVerification(services, member, config);
   },
 };
 
@@ -368,6 +515,32 @@ const verificationSweep: TaskDefinition = {
   },
 };
 
+const verificationTokenCleanup: TaskDefinition = {
+  name: "verification-token-cleanup",
+  cron: "0 * * * *",
+  async handler(services) {
+    const client = tokenClient(services);
+    if (!client) return;
+
+    try {
+      const { count } = await client.deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      });
+      if (count > 0) {
+        services.observability?.logger?.info?.(
+          "expired verification tokens cleaned",
+          { count },
+        );
+      }
+    } catch (error) {
+      services.observability?.logger?.warn?.(
+        "verification token cleanup failed",
+        { error: describeError(error) },
+      );
+    }
+  },
+};
+
 const verificationCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("verification")
@@ -439,7 +612,7 @@ const verificationCommand: CommandDefinition = {
       return;
     }
     await addPending(services, member, config);
-    await sendVerification(services, member);
+    await sendVerification(services, member, config);
     await interaction.reply(
       ephemeralCard(
         makeSuccessCard(
@@ -465,7 +638,7 @@ const verificationModule: ModuleDefinition = defineModule({
     onMemberRemoveListener,
     onInteractionListener,
   ],
-  tasks: [verificationSweep],
+  tasks: [verificationSweep, verificationTokenCleanup],
   async onLoad(_services) {
     console.log(`[${ModuleName}] Module loaded`);
     return [];
