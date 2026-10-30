@@ -16,11 +16,7 @@ import {
   isPermitValid,
   matchesConditions,
 } from "./evaluator.js";
-import {
-  BuiltinPermitNames,
-  BuiltinPermits,
-  matchesWhitelistScope,
-} from "./constants.js";
+import { BuiltinPermits, matchesWhitelistScope } from "./constants.js";
 import {
   isPermitNumberConflict,
   isRecordNotFoundError,
@@ -495,18 +491,46 @@ export class PermitRepository {
   }
 
   async seedBuiltinPermits(guildId: string): Promise<void> {
-    const existing = await this.prisma.permit.findMany({
-      where: { guildId, name: { in: BuiltinPermitNames } },
-      select: { id: true, name: true },
+    const permits = await this.prisma.permit.findMany({
+      where: { guildId },
+      select: { id: true, name: true, number: true },
     });
-    const present = new Map(existing.map((permit) => [permit.name, permit.id]));
+    const byName = new Map(permits.map((permit) => [permit.name, permit]));
+    const desiredByName = new Map(
+      BuiltinPermits.map((permit) => [permit.name, permit]),
+    );
+
+    const moves = permits.flatMap((permit) => {
+      const desired = desiredByName.get(permit.name);
+      if (!desired || desired.number === permit.number) return [];
+      return [{ id: permit.id, number: desired.number }];
+    });
+
+    if (moves.length > 0) {
+      await this.prisma
+        .$transaction(async (tx) => {
+          for (const move of moves) {
+            await tx.permit.update({
+              where: { id: move.id },
+              data: { number: -move.id },
+            });
+          }
+          for (const move of moves) {
+            await tx.permit.update({
+              where: { id: move.id },
+              data: { number: move.number },
+            });
+          }
+        })
+        .catch(() => undefined);
+    }
 
     for (const builtin of BuiltinPermits) {
-      const existingId = present.get(builtin.name);
-      if (existingId !== undefined) {
+      const existing = byName.get(builtin.name);
+      if (existing !== undefined) {
         await this.prisma.permit
           .update({
-            where: { id: existingId },
+            where: { id: existing.id },
             data: {
               builtin: true,
               whitelistScopes: [...builtin.whitelistScopes],
