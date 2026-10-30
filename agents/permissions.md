@@ -106,6 +106,8 @@ Selection state is held in memory per panel message and invoking user. Every
 selection re-renders the card in place. Panels have no close buttons; if one is
 added, it must delete the message rather than edit it. Panels are ephemeral and
 require **Manage Server** or an `admin.*`/`*` permit to interact with.
+`/lumi` → Settings includes the **Enforce Permits** toggle for the
+`enforcePermits` guild setting.
 `/permit create` and `/permit explain` expose the same operations without the
 hub, with node autocomplete from built-ins, modules, and existing custom nodes.
 Create accepts a comma-separated node list for one permit. `/permit explain`
