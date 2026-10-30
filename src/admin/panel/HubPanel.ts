@@ -1,6 +1,10 @@
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type { ModalSubmitInteraction } from "discord.js";
-import { hasAdminAccess, roleIdsFrom } from "../access.js";
+import {
+  hasAdminAccess,
+  permitEnforcementEnabled,
+  roleIdsFrom,
+} from "../access.js";
 import { handleAddonInteraction } from "./addons.js";
 import {
   type MessageModalSubmit,
@@ -40,6 +44,10 @@ export async function handleHubInteraction(
     roleIds: roleIdsFrom(interaction.member, guildId),
     guildOwnerId: interaction.guild?.ownerId,
     memberPermissions: interaction.memberPermissions,
+    enforcePermits: await permitEnforcementEnabled(
+      services.configService,
+      guildId,
+    ),
     client: interaction.client,
     permits: services.permits,
   });
@@ -112,6 +120,21 @@ export async function handleHubInteraction(
     case "setreset": {
       await showPanel(interaction, async () => {
         await services.configService.reset(guildId, "prefix");
+        return renderSettings(interaction, services);
+      });
+      return true;
+    }
+    case "toggleenforce": {
+      await showPanel(interaction, async () => {
+        const current = await services.configService.get(
+          guildId,
+          "enforcePermits",
+        );
+        await services.configService.set(
+          guildId,
+          "enforcePermits",
+          current !== true,
+        );
         return renderSettings(interaction, services);
       });
       return true;

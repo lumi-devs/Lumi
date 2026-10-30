@@ -1,12 +1,15 @@
 import type { PermitRepository } from "@lumi/permits";
 import { type Client, PermissionFlagsBits } from "discord.js";
 
+import type { ConfigService } from "./services/ConfigService.js";
+
 export interface PermitAccessOptions {
   guildId: string;
   userId: string;
   roleIds: string[];
   channelId?: string;
   guildOwnerId?: string | null;
+  enforcePermits?: boolean;
 
   client?: unknown;
   permits: PermitRepository;
@@ -14,6 +17,13 @@ export interface PermitAccessOptions {
 
 interface AdminAccessOptions extends PermitAccessOptions {
   memberPermissions?: { has(permission: bigint): boolean } | null;
+}
+
+export async function permitEnforcementEnabled(
+  config: Pick<ConfigService, "get">,
+  guildId: string,
+): Promise<boolean> {
+  return (await config.get(guildId, "enforcePermits")) === true;
 }
 
 export async function hasPermitAccess(
@@ -28,6 +38,7 @@ export async function hasPermitAccess(
       ...(options.channelId ? { channelId: options.channelId } : {}),
       guildOwnerId: options.guildOwnerId ?? undefined,
       permitNode,
+      ...(options.enforcePermits ? { managerBypass: false } : {}),
     },
     options.client as Client | undefined,
   );
@@ -58,7 +69,10 @@ export function roleIdsFrom(
 export async function hasAdminAccess(
   options: AdminAccessOptions,
 ): Promise<boolean> {
-  if (options.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+  if (
+    !options.enforcePermits &&
+    options.memberPermissions?.has(PermissionFlagsBits.ManageGuild)
+  ) {
     return true;
   }
 

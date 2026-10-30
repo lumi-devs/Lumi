@@ -57,6 +57,13 @@
       "category": "Setup"
     },
     {
+      "key": "webBaseUrl",
+      "label": "Web Verification Base URL",
+      "type": "string",
+      "description": "Public dashboard URL used for web verification links. Falls back to WEB_BASE_URL.",
+      "category": "Setup"
+    },
+    {
       "key": "target",
       "label": "Verification Target",
       "type": "select",

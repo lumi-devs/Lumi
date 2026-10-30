@@ -193,6 +193,8 @@ function privilegedResult(
     };
   }
 
+  if (options.managerBypass === false) return null;
+
   const member = client?.guilds.cache.get(guildId)?.members.cache.get(userId);
   const manager = Boolean(
     member?.permissions.has(PermissionFlagsBits.Administrator) ||

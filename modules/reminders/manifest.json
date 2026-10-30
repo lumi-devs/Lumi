@@ -1,0 +1,67 @@
+{
+  "apiVersion": 2,
+  "name": "reminders",
+  "displayName": "Reminders",
+  "emoji": "⏰",
+  "description": "Create, list, snooze, and cancel personal reminders",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "reminders",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Enabled",
+      "type": "boolean",
+      "description": "Deliver reminders for this server",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "maxPerUser",
+      "label": "Max Reminders Per User",
+      "type": "number",
+      "description": "Maximum active reminders each member can keep",
+      "default": 25,
+      "min": 1,
+      "max": 100,
+      "category": "Limits"
+    },
+    {
+      "key": "dmFallback",
+      "label": "DM Fallback",
+      "type": "boolean",
+      "description": "Post in the original or fallback channel when DMs fail",
+      "default": true,
+      "category": "Delivery"
+    },
+    {
+      "key": "fallbackChannelId",
+      "label": "Fallback Channel",
+      "type": "channel",
+      "description": "Channel used when DMs and the original channel are unavailable",
+      "category": "Delivery"
+    },
+    {
+      "key": "retentionDays",
+      "label": "Retention (days)",
+      "type": "number",
+      "description": "How long delivered or cancelled reminders are kept",
+      "default": 30,
+      "min": 1,
+      "max": 365,
+      "category": "Cleanup"
+    },
+    {
+      "key": "allowRecurring",
+      "label": "Allow Recurring Reminders",
+      "type": "boolean",
+      "description": "Allow cron-based recurring reminders",
+      "default": false,
+      "category": "General"
+    }
+  ]
+}

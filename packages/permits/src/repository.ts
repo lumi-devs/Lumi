@@ -16,11 +16,12 @@ import {
   isPermitValid,
   matchesConditions,
 } from "./evaluator.js";
+import { BuiltinPermits, matchesWhitelistScope } from "./constants.js";
 import {
   isPermitNumberConflict,
   isRecordNotFoundError,
   isUniqueConstraintError,
-  nextPermitNumber,
+  nextCustomPermitNumber,
 } from "./numbering.js";
 import type {
   PermitExportData,
@@ -89,6 +90,7 @@ export class PermitRepository {
     schedule?: Prisma.InputJsonValue | null;
     timezone?: string | null;
     conditions?: Prisma.InputJsonValue | null;
+    whitelistScopes?: readonly string[];
   }): Promise<PermitWithAssignments> {
     const nodes = Array.from(
       new Set(data.nodes.map((node) => node.trim()).filter(Boolean)),
@@ -96,6 +98,13 @@ export class PermitRepository {
     if (nodes.length === 0) {
       throw new Error("A permit needs at least one node.");
     }
+    const whitelistScopes = Array.from(
+      new Set(
+        (data.whitelistScopes ?? [])
+          .map((scope) => scope.trim())
+          .filter(Boolean),
+      ),
+    );
     const payload = {
       guildId: data.guildId,
       name: data.name,
@@ -107,7 +116,11 @@ export class PermitRepository {
       schedule: data.schedule ?? Prisma.DbNull,
       timezone: data.timezone ?? null,
       conditions: data.conditions ?? Prisma.DbNull,
+      whitelistScopes,
     };
+    if (data.builtin && data.number === undefined) {
+      throw new Error("Built-in permits require a fixed number.");
+    }
     if (data.number !== undefined) {
       return this.prisma.permit.create({
         data: { ...payload, number: data.number },
@@ -115,7 +128,7 @@ export class PermitRepository {
       });
     }
     for (let attempt = 0; attempt < 8; attempt += 1) {
-      const number = await nextPermitNumber(this.prisma, data.guildId);
+      const number = await nextCustomPermitNumber(this.prisma, data.guildId);
       try {
         return await this.prisma.permit.create({
           data: { ...payload, number },
@@ -145,6 +158,11 @@ export class PermitRepository {
   }
 
   async deletePermit(permitId: number): Promise<boolean> {
+    const permit = await this.prisma.permit.findUnique({
+      where: { id: permitId },
+      select: { builtin: true },
+    });
+    if (permit?.builtin) return false;
     try {
       await this.prisma.permit.delete({ where: { id: permitId } });
       return true;
@@ -201,9 +219,12 @@ export class PermitRepository {
   ): Promise<PermitAssignment> {
     const permit = await this.prisma.permit.findUnique({
       where: { id: permitId },
-      select: { guildId: true },
+      select: { guildId: true, builtin: true },
     });
     if (!permit) throw new Error("Permit not found");
+    if (permit.builtin && targetType !== "USER") {
+      throw new Error("Built-in permits only accept user assignments.");
+    }
     return this.prisma.permitAssignment.create({
       data: {
         permitId,
@@ -269,6 +290,7 @@ export class PermitRepository {
           schedule: true,
           timezone: true,
           conditions: true,
+          whitelistScopes: true,
           assignments: {
             where: activeAssignment,
             select: { targetType: true, targetId: true },
@@ -297,9 +319,22 @@ export class PermitRepository {
       at,
     };
 
-    const buckets = new Map<string, { grant: string[]; deny: string[] }>();
+    const buckets = new Map<
+      string,
+      {
+        grant: string[];
+        deny: string[];
+        scopes: string[];
+        denyScopes: string[];
+      }
+    >();
     for (const target of chain) {
-      buckets.set(targetKey(target), { grant: [], deny: [] });
+      buckets.set(targetKey(target), {
+        grant: [],
+        deny: [],
+        scopes: [],
+        denyScopes: [],
+      });
     }
 
     for (const permit of permits) {
@@ -330,14 +365,24 @@ export class PermitRepository {
           }),
         );
         if (!bucket) continue;
-        if (permit.polarity === "Grant") bucket.grant.push(...permit.nodes);
-        else bucket.deny.push(...permit.nodes);
+        if (permit.polarity === "Grant") {
+          bucket.grant.push(...permit.nodes);
+          bucket.scopes.push(...(permit.whitelistScopes ?? []));
+        } else {
+          bucket.deny.push(...permit.nodes);
+          bucket.denyScopes.push(...(permit.whitelistScopes ?? []));
+        }
       }
     }
 
     return {
       tiers: chain.map((target) => ({
-        custom: buckets.get(targetKey(target)) ?? { grant: [], deny: [] },
+        custom: buckets.get(targetKey(target)) ?? {
+          grant: [],
+          deny: [],
+          scopes: [],
+          denyScopes: [],
+        },
       })),
       isQuarantined,
     };
@@ -365,6 +410,39 @@ export class PermitRepository {
       if (
         tier.custom.grant.some((node) =>
           evaluateNodeMatch(node, options.permitNode),
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async hasWhitelistScope(
+    options: Omit<EvaluatePermitOptions, "permitNode">,
+    scope: string,
+  ): Promise<boolean> {
+    const chainResult = await this.getPermitChain(
+      options.guildId,
+      options.userId,
+      buildPermitChain(
+        options.userId,
+        options.channelId,
+        options.roleIds ?? [],
+      ),
+    );
+    if (chainResult.isQuarantined) return false;
+    for (const tier of chainResult.tiers) {
+      if (
+        (tier.custom.denyScopes ?? []).some((granted) =>
+          matchesWhitelistScope(granted, scope),
+        )
+      ) {
+        return false;
+      }
+      if (
+        (tier.custom.scopes ?? []).some((granted) =>
+          matchesWhitelistScope(granted, scope),
         )
       ) {
         return true;
@@ -413,19 +491,54 @@ export class PermitRepository {
   }
 
   async seedBuiltinPermits(guildId: string): Promise<void> {
-    const builtins = [
-      { name: "Extra Owner", nodes: ["*"], position: 0 },
-      { name: "Trusted Admin", nodes: ["admin.*"], position: 1 },
-    ] as const;
-
-    const existing = await this.prisma.permit.findMany({
-      where: { guildId, name: { in: builtins.map((builtin) => builtin.name) } },
-      select: { name: true },
+    const permits = await this.prisma.permit.findMany({
+      where: { guildId },
+      select: { id: true, name: true, number: true },
     });
-    const present = new Set(existing.map((permit) => permit.name));
+    const byName = new Map(permits.map((permit) => [permit.name, permit]));
+    const desiredByName = new Map(
+      BuiltinPermits.map((permit) => [permit.name, permit]),
+    );
 
-    for (const builtin of builtins) {
-      if (present.has(builtin.name)) continue;
+    const moves = permits.flatMap((permit) => {
+      const desired = desiredByName.get(permit.name);
+      if (!desired || desired.number === permit.number) return [];
+      return [{ id: permit.id, number: desired.number }];
+    });
+
+    if (moves.length > 0) {
+      await this.prisma
+        .$transaction(async (tx) => {
+          for (const move of moves) {
+            await tx.permit.update({
+              where: { id: move.id },
+              data: { number: -move.id },
+            });
+          }
+          for (const move of moves) {
+            await tx.permit.update({
+              where: { id: move.id },
+              data: { number: move.number },
+            });
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    for (const builtin of BuiltinPermits) {
+      const existing = byName.get(builtin.name);
+      if (existing !== undefined) {
+        await this.prisma.permit
+          .update({
+            where: { id: existing.id },
+            data: {
+              builtin: true,
+              whitelistScopes: [...builtin.whitelistScopes],
+            },
+          })
+          .catch(() => undefined);
+        continue;
+      }
       try {
         await this.createPermit({
           guildId,
@@ -433,10 +546,14 @@ export class PermitRepository {
           nodes: [...builtin.nodes],
           polarity: "Grant",
           position: builtin.position,
+          number: builtin.number,
           builtin: true,
+          whitelistScopes: [...builtin.whitelistScopes],
         });
       } catch (error) {
-        if (!isUniqueConstraintError(error)) throw error;
+        if (!isUniqueConstraintError(error) && !isPermitNumberConflict(error)) {
+          throw error;
+        }
       }
     }
   }

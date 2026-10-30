@@ -297,39 +297,25 @@ config: z.object({
 
 ### v1 Tiers → v2 Permits
 
-| v1 Tier       | v2 Equivalent                                      |
-| ------------- | -------------------------------------------------- |
-| Bot Owner     | `OWNER_IDS` environment variable (global)          |
-| Server Owner  | Implicit (guild owner bypass)                      |
-| Extra Owner   | Built-in `Extra Owner` permit (`*`, guild)         |
-| Trusted Admin | Built-in `Trusted Admin` permit (`admin.*`, guild) |
-| Admin Role    | `admin.*` permit assigned to role                  |
-| Mod Role      | `mod.*` permit assigned to role                    |
-| DJ Role       | `music.*` permit assigned to role                  |
-| Custom        | Custom permits with node patterns                  |
+| v1 Tier       | v2 Equivalent                                   |
+| ------------- | ----------------------------------------------- |
+| Bot Owner     | `OWNER_IDS` environment variable (global)       |
+| Server Owner  | Implicit (guild owner bypass)                   |
+| Regular       | Built-in `Regular` permit (#1, `utility.*`)     |
+| Extra Owner   | Built-in `Extra Owner` permit (#5, `*`)         |
+| Trusted Admin | Built-in `Trusted Admin` permit (#4, `admin.*`) |
+| Admin Role    | `admin.*` permit assigned to role               |
+| Mod Role      | `mod.*` permit assigned to role                 |
+| DJ Role       | `music.*` permit assigned to role               |
+| Custom        | Custom permits with node patterns (number 6+)   |
 
 ### Migration Script
 
 ```ts
 // scripts/migrate-permits.ts
 async function migratePermits(guildId: string) {
-  // 1. Create built-in permits
-  await permitRepo.createPermit({
-    guildId,
-    name: "Extra Owner",
-    nodes: ["*"],
-    polarity: "Grant",
-    position: 0,
-    builtin: true,
-  });
-  await permitRepo.createPermit({
-    guildId,
-    name: "Trusted Admin",
-    nodes: ["admin.*"],
-    polarity: "Grant",
-    position: 1,
-    builtin: true,
-  });
+  // 1. Seed built-in permits (#1 Regular, #4 Trusted Admin, #5 Extra Owner)
+  await permitRepo.seedBuiltinPermits(guildId);
 
   // 2. Migrate admin role
   const adminRole = await getOldAdminRole(guildId);

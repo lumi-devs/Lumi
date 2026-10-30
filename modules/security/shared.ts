@@ -142,10 +142,34 @@ export async function hasPermit(
       },
       services.client,
     );
-    return Boolean(result?.allowed);
+    if (result?.allowed) return true;
+
+    const scope = whitelistScopeForNode(node);
+    if (!scope) return false;
+    return services.permits.hasWhitelistScope(
+      {
+        guildId: guild.id,
+        userId: member.id,
+        roleIds: roleIds(member),
+        ...(channelId ? { channelId } : {}),
+        guildOwnerId: guild.ownerId,
+      },
+      scope,
+    );
   } catch {
     return false;
   }
+}
+
+function whitelistScopeForNode(node: string): string | null {
+  if (node === "security.antinuke.bypass") return "security.antinuke";
+  if (node === "automod.bypass" || node === "security.automod.bypass") {
+    return "security.automod";
+  }
+  if (node === "security.total" || node === "security.bypass") {
+    return "security.total";
+  }
+  return null;
 }
 
 export async function sendSecurityLog(

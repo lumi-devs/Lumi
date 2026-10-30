@@ -30,20 +30,20 @@ describe("PermitRepository.createPermit", () => {
 
     expect(create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        number: 1,
+        number: 6,
         nodes: ["mod.ban", "mod.kick"],
       }),
       include: { assignments: true },
     });
     expect(permit.nodes).toEqual(["mod.ban", "mod.kick"]);
-    expect(permit.number).toBe(1);
+    expect(permit.number).toBe(6);
   });
 
-  it("allocates the smallest free per-guild number", async () => {
+  it("allocates the smallest free custom number", async () => {
     const findMany = vi.fn(async () => [
-      { number: 1 },
-      { number: 2 },
-      { number: 4 },
+      { number: 6 },
+      { number: 7 },
+      { number: 9 },
     ]);
     const create = vi.fn(async ({ data }: any) => ({
       id: 5,
@@ -68,7 +68,7 @@ describe("PermitRepository.createPermit", () => {
       select: { number: true },
       orderBy: { number: "asc" },
     });
-    expect(permit.number).toBe(3);
+    expect(permit.number).toBe(8);
   });
 
   it("keeps an explicit number without allocating", async () => {
@@ -123,7 +123,7 @@ describe("PermitRepository.createPermit", () => {
     });
 
     expect(create).toHaveBeenCalledTimes(2);
-    expect(permit.number).toBe(1);
+    expect(permit.number).toBe(6);
   });
 
   it("rejects a permit without nodes", async () => {
@@ -207,6 +207,59 @@ describe("PermitRepository.movePermit", () => {
   });
 });
 
+describe("PermitRepository.seedBuiltinPermits", () => {
+  it("renumbers existing built-ins before creating missing ones", async () => {
+    const findMany = vi.fn(async () => [
+      { id: 5, name: "Extra Owner", number: 1 },
+      { id: 6, name: "Trusted Admin", number: 2 },
+    ]);
+    const update = vi.fn(async () => ({}));
+    const create = vi.fn(async ({ data }: any) => ({
+      id: 7,
+      ...data,
+      assignments: [],
+    }));
+    const transaction = vi.fn(async (callback: any) =>
+      callback({ permit: { update } }),
+    );
+    const repo = new PermitRepository(
+      {
+        permit: { findMany, update, create },
+        $transaction: transaction,
+      } as any,
+      {} as any,
+    );
+
+    await repo.seedBuiltinPermits("guild");
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenNthCalledWith(1, {
+      where: { id: 5 },
+      data: { number: -5 },
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      where: { id: 6 },
+      data: { number: -6 },
+    });
+    expect(update).toHaveBeenNthCalledWith(3, {
+      where: { id: 5 },
+      data: { number: 5 },
+    });
+    expect(update).toHaveBeenNthCalledWith(4, {
+      where: { id: 6 },
+      data: { number: 4 },
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: "Regular",
+        number: 1,
+        builtin: true,
+      }),
+      include: { assignments: true },
+    });
+  });
+});
+
 describe("PermitRepository.hasGrantNode", () => {
   const makeRepo = () =>
     new PermitRepository({} as any, { get: vi.fn(async () => null) } as any);
@@ -282,6 +335,107 @@ describe("PermitRepository.hasGrantNode", () => {
         userId: "quarantined",
         permitNode: "*",
       }),
+    ).resolves.toBe(false);
+  });
+});
+
+describe("PermitRepository.hasWhitelistScope", () => {
+  const makeRepo = () =>
+    new PermitRepository({} as any, { get: vi.fn(async () => null) } as any);
+
+  it("accepts a matching grant scope", async () => {
+    const repo = makeRepo();
+    vi.spyOn(repo, "getPermitChain").mockResolvedValue({
+      tiers: [
+        {
+          custom: {
+            grant: ["admin.*"],
+            deny: [],
+            scopes: ["security.antinuke"],
+            denyScopes: [],
+          },
+        },
+      ],
+      isQuarantined: false,
+    });
+
+    await expect(
+      repo.hasWhitelistScope(
+        { guildId: "guild", userId: "user" },
+        "security.antinuke",
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it("covers every security scope with security.total", async () => {
+    const repo = makeRepo();
+    vi.spyOn(repo, "getPermitChain").mockResolvedValue({
+      tiers: [
+        {
+          custom: {
+            grant: ["*"],
+            deny: [],
+            scopes: ["security.total"],
+            denyScopes: [],
+          },
+        },
+      ],
+      isQuarantined: false,
+    });
+
+    await expect(
+      repo.hasWhitelistScope(
+        { guildId: "guild", userId: "user" },
+        "security.automod",
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it("lets a deny scope win inside the first tier", async () => {
+    const repo = makeRepo();
+    vi.spyOn(repo, "getPermitChain").mockResolvedValue({
+      tiers: [
+        {
+          custom: {
+            grant: ["*"],
+            deny: [],
+            scopes: ["security.antinuke"],
+            denyScopes: ["security.antinuke"],
+          },
+        },
+      ],
+      isQuarantined: false,
+    });
+
+    await expect(
+      repo.hasWhitelistScope(
+        { guildId: "guild", userId: "user" },
+        "security.antinuke",
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it("ignores whitelist scopes while quarantined", async () => {
+    const repo = makeRepo();
+    vi.spyOn(repo, "getPermitChain").mockResolvedValue({
+      tiers: [
+        {
+          custom: {
+            grant: ["*"],
+            deny: [],
+            scopes: ["security.total"],
+            denyScopes: [],
+          },
+        },
+      ],
+      isQuarantined: true,
+    });
+
+    await expect(
+      repo.hasWhitelistScope(
+        { guildId: "guild", userId: "user" },
+        "security.antinuke",
+      ),
     ).resolves.toBe(false);
   });
 });

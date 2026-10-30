@@ -10,7 +10,8 @@
       "src/**/*.ts",
       "modules/**/*.ts",
       "packages/**/*.ts",
-      "tests/**/*.ts"
+      "tests/**/*.ts",
+      "apps/dashboard/src/**/*.ts"
     ]
   },
   "formatter": {

@@ -1,6 +1,10 @@
 import { isBotOwner } from "@lumi/permits";
 import type { AutocompleteInteraction } from "discord.js";
-import { hasAdminAccess, roleIdsFrom } from "../../access.js";
+import {
+  hasAdminAccess,
+  permitEnforcementEnabled,
+  roleIdsFrom,
+} from "../../access.js";
 import type { HubServices } from "../../panel/services.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 
@@ -24,6 +28,10 @@ export async function autocompleteNode(
     roleIds: roleIdsFrom(interaction.member, interaction.guildId),
     guildOwnerId: interaction.guild?.ownerId,
     memberPermissions: interaction.memberPermissions,
+    enforcePermits: await permitEnforcementEnabled(
+      services.configService,
+      interaction.guildId,
+    ),
     client: interaction.client,
     permits: services.permits,
   });

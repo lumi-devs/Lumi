@@ -1,4 +1,4 @@
-import { isBotOwner, type Polarity } from "@lumi/permits";
+import { isBotOwner, isWhitelistScope, type Polarity } from "@lumi/permits";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
@@ -58,6 +58,25 @@ export async function createPermit(
     return;
   }
   const polarity: Polarity = polarityValue;
+  const whitelistScopes = Array.from(
+    new Set(
+      (interaction.options.getString("scopes") ?? "")
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean),
+    ),
+  );
+  const invalidScope = whitelistScopes.find(
+    (scope) => !isWhitelistScope(scope),
+  );
+  if (invalidScope !== undefined) {
+    await replyPermitError(
+      interaction,
+      "Invalid Whitelist Scope",
+      `\`${invalidScope}\` is not a known security whitelist scope.`,
+    );
+    return;
+  }
   const requestedName = interaction.options.getString("name")?.trim();
   const permits = await services.permits.listPermits(guildId);
   const existingNames = new Set(permits.map((permit) => permit.name));
@@ -83,6 +102,7 @@ export async function createPermit(
       nodes,
       polarity,
       position,
+      whitelistScopes,
     });
     await interaction.reply(
       ephemeralCard(
@@ -94,6 +114,9 @@ export async function createPermit(
             `**Nodes**\n${formatPermitNodeLines(permit.nodes)}`,
             `**Polarity** ${permit.polarity}`,
             `**Priority** ${permit.position}`,
+            ...(permit.whitelistScopes.length > 0
+              ? [`**Whitelist** ${permit.whitelistScopes.join(", ")}`]
+              : []),
           ],
           {
             breadcrumbs: ["Admin", "Permits", "Create"],

@@ -11,6 +11,7 @@ import type { Redis } from "ioredis";
 import {
   hasAdminAccess,
   hasPermitAccess,
+  permitEnforcementEnabled,
   roleIdsFrom,
 } from "../admin/access.js";
 import { commandErrorCard } from "./errors.js";
@@ -300,6 +301,10 @@ export async function handlePrefixMessage(
         roleIds: roleIdsFrom(message.member, message.guild.id),
         guildOwnerId: message.guild.ownerId,
         memberPermissions: message.member?.permissions,
+        enforcePermits: await permitEnforcementEnabled(
+          context.services.config,
+          message.guild.id,
+        ),
         client: context.client,
         permits: context.services.permits,
       });
@@ -322,6 +327,10 @@ export async function handlePrefixMessage(
           roleIds: roleIdsFrom(message.member, message.guild.id),
           channelId: message.channelId,
           guildOwnerId: message.guild.ownerId,
+          enforcePermits: await permitEnforcementEnabled(
+            context.services.config,
+            message.guild.id,
+          ),
           client: context.client,
           permits: context.services.permits,
         },

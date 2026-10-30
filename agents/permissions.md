@@ -6,8 +6,24 @@ Permit Panel). Commands: `/permit create`, `/permit explain`.
 `/lumi` and `/permit` require **Manage Server** or an `admin.*`/`*` permit for
 both slash and prefix use. Permit-only holders can see and run the slash
 commands because no Discord default permission hides them.
-The resolver's manager tier still treats Discord `Administrator` or `ManageGuild`
-as an allow when evaluating nodes.
+By default the resolver's manager tier treats Discord `Administrator` or
+`ManageGuild` as an allow. Setting the guild setting `enforcePermits` to `true`
+disables that bypass, so managers need a real permit like everyone else.
+
+## Built-in permits
+
+Built-in permits are created with fixed guild numbers:
+
+| #   | Name          | Nodes       | Security whitelist                                        |
+| --- | ------------- | ----------- | --------------------------------------------------------- |
+| 1   | Regular       | `utility.*` | none                                                      |
+| 4   | Trusted Admin | `admin.*`   | `security.total`, `security.antinuke`, `security.automod` |
+| 5   | Extra Owner   | `*`         | `security.total`, `security.antinuke`, `security.automod` |
+
+Custom permits always receive number 6 or higher. Only bot owners can create,
+edit, assign, or delete a permit containing `*`; guild Extra Owner holders cannot
+create another Extra Owner. Built-in permits cannot be edited, deleted, moved, or
+assigned to roles/channels (users only).
 
 ## Evaluation
 
@@ -16,7 +32,7 @@ for one user, channel, and member. Tiers run in this order and the first
 decisive tier wins:
 
 1. **owner** — `OWNER_IDS` or the guild owner. Always allows.
-2. **manager** — `Administrator` or `ManageGuild`. Always allows.
+2. **manager** — `Administrator` or `ManageGuild` when `enforcePermits` is off.
 3. **custom:user** — permits assigned to the user.
 4. **custom:channel** — permits assigned to the current channel.
 5. **custom:role:<id>** — permits assigned to each role, in cache order.
@@ -49,13 +65,15 @@ quarantine suspends custom grants.
 
 - `permit` rows hold a guild-local `number`, name, a node list, polarity
   (`Grant` or `Deny`), priority `position`, optional
-  expiry/schedule/conditions, and a `builtin` flag. The global `id` remains the
-  storage key; `number` is the visible per-guild label. New permits take the
-  smallest free number in the guild, so deleting a permit reuses its number.
+  expiry/schedule/conditions, security `whitelistScopes`, and a `builtin` flag.
+  The global `id` remains the storage key; `number` is the visible per-guild
+  label. New custom permits take the smallest free number from 6 upward, so
+  deleting a permit reuses its number. Numbers 1, 4, and 5 are reserved for
+  built-ins.
 - `permitAssignment` rows target user, role, or channel and may carry their own
   expiry. Built-in permits only accept user assignments.
-- Built-in permits (`Extra Owner` = `*`, `Trusted Admin` = `admin.*`) are seeded
-  on guild join and ready backfill. Never seed them from a read path.
+- Built-in permits are seeded on guild join and ready backfill. Never seed them
+  from a read path.
 - Only bot owners (`OWNER_IDS`) can create, edit, assign, or delete a permit
   containing `*`. Guild `Extra Owner` holders cannot create another Extra Owner.
 - Add-on management is separate from admin-panel access: it requires a bot owner
@@ -63,6 +81,16 @@ quarantine suspends custom grants.
   hub but cannot add repositories, install modules, or change updates.
 - Expired permits and expired assignments are ignored, as are permits whose
   schedule, timezone, or conditions do not match the evaluation time and context.
+
+## Security whitelist scopes
+
+`whitelistScopes` lets a permit bypass security systems without granting an
+arbitrary `*` node. `security.total` covers every security scope;
+`security.antinuke` and `security.automod` cover one subsystem. The security
+modules call `PermitRepository.hasWhitelistScope` after normal node checks, so a
+Trusted Admin permit bypasses anti-nuke and automod while still only holding
+`admin.*`. A quarantined member never receives whitelist scopes. Custom permits
+can add scopes through the edit dialog, import/export, or the dashboard.
 
 ## Panel
 
@@ -78,6 +106,8 @@ Selection state is held in memory per panel message and invoking user. Every
 selection re-renders the card in place. Panels have no close buttons; if one is
 added, it must delete the message rather than edit it. Panels are ephemeral and
 require **Manage Server** or an `admin.*`/`*` permit to interact with.
+`/lumi` → Settings includes the **Enforce Permits** toggle for the
+`enforcePermits` guild setting.
 `/permit create` and `/permit explain` expose the same operations without the
 hub, with node autocomplete from built-ins, modules, and existing custom nodes.
 Create accepts a comma-separated node list for one permit. `/permit explain`

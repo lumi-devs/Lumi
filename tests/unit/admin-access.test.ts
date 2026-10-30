@@ -30,6 +30,27 @@ describe("hasAdminAccess", () => {
     expect(repo.explainPermit).not.toHaveBeenCalled();
   });
 
+  it("requires a permit when enforcement is enabled", async () => {
+    const repo = permits(false);
+
+    await expect(
+      hasAdminAccess({
+        guildId: "guild",
+        userId: "user",
+        roleIds: [],
+        enforcePermits: true,
+        memberPermissions: {
+          has: (permission) => permission === PermissionFlagsBits.ManageGuild,
+        },
+        permits: repo,
+      }),
+    ).resolves.toBe(false);
+    expect(repo.explainPermit).toHaveBeenCalledWith(
+      expect.objectContaining({ managerBypass: false }),
+      undefined,
+    );
+  });
+
   it("allows a member with an admin permit", async () => {
     const repo = permits(true);
 
@@ -58,7 +79,6 @@ describe("hasAdminAccess", () => {
 
   it("denies a member without an admin permit", async () => {
     const repo = permits(false);
-
     await expect(
       hasAdminAccess({
         guildId: "guild",
@@ -110,6 +130,25 @@ describe("hasPermitAccess", () => {
         "mod.ban",
       ),
     ).resolves.toBe(false);
+  });
+
+  it("disables the manager bypass when permits are enforced", async () => {
+    const repo = permits(false);
+    await hasPermitAccess(
+      {
+        guildId: "guild",
+        userId: "manager",
+        roleIds: [],
+        enforcePermits: true,
+        permits: repo,
+      },
+      "mod.ban",
+    );
+
+    expect(repo.explainPermit).toHaveBeenCalledWith(
+      expect.objectContaining({ managerBypass: false }),
+      undefined,
+    );
   });
 });
 

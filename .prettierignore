@@ -3,3 +3,6 @@ dist
 coverage
 bun.lock
 packages/db/prisma/migrations
+
+apps/dashboard/.svelte-kit
+apps/dashboard/build

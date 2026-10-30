@@ -1,0 +1,35 @@
+{
+  "apiVersion": 2,
+  "name": "roles-bulkrole",
+  "displayName": "Bulk Role",
+  "emoji": "🧰",
+  "description": "Durable bulk add or remove role jobs with filters, dry-run previews, and resumable progress",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "dependencies": {
+    "roles": "^2.0.0"
+  },
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Bulk Role Enabled",
+      "type": "boolean",
+      "description": "Allow bulk role jobs to run",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "batchSize",
+      "label": "Batch Size",
+      "type": "number",
+      "description": "Members processed per minute tick",
+      "default": 50,
+      "min": 1,
+      "max": 500,
+      "category": "General"
+    }
+  ]
+}

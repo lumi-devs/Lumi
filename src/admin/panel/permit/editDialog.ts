@@ -1,5 +1,5 @@
 import type { Prisma } from "@lumi/db";
-import { isBotOwner } from "@lumi/permits";
+import { isBotOwner, isWhitelistScope } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
   ActionRowBuilder,
@@ -73,6 +73,16 @@ export async function showEditModal(
         .setValue(typeof permit.schedule === "string" ? permit.schedule : "")
         .setRequired(false),
     ),
+    new ActionRowBuilder<TextInputBuilder>().addComponents(
+      new TextInputBuilder()
+        .setCustomId("whitelist")
+        .setLabel("Security Whitelist Scopes (optional)")
+        .setStyle(TextInputStyle.Short)
+        .setValue(permit.whitelistScopes.join(", "))
+        .setPlaceholder("security.total, security.antinuke, security.automod")
+        .setRequired(false)
+        .setMaxLength(200),
+    ),
   );
 
   await interaction.showModal(modal);
@@ -116,6 +126,29 @@ export async function handleEditSubmit(
   const rawPolarity = interaction.fields.getTextInputValue("polarity").trim();
   const schedule =
     interaction.fields.getTextInputValue("schedule").trim() || null;
+  const whitelistScopes = Array.from(
+    new Set(
+      interaction.fields
+        .getTextInputValue("whitelist")
+        .split(",")
+        .map((scope) => scope.trim())
+        .filter(Boolean),
+    ),
+  );
+  const invalidScope = whitelistScopes.find(
+    (scope) => !isWhitelistScope(scope),
+  );
+  if (invalidScope !== undefined) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Invalid Whitelist Scope",
+          `\`${invalidScope}\` is not a known security whitelist scope.`,
+        ),
+      ),
+    );
+    return;
+  }
 
   if (!name || nodes.length === 0) {
     await interaction.reply(
@@ -164,6 +197,7 @@ export async function handleEditSubmit(
       name,
       nodes,
       polarity: rawPolarity,
+      whitelistScopes,
 
       schedule: schedule as unknown as Prisma.PermitUpdateInput["schedule"],
     });

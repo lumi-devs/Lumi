@@ -1,0 +1,40 @@
+{
+  "apiVersion": 2,
+  "name": "stats",
+  "displayName": "Server Stats",
+  "emoji": "📊",
+  "description": "Server statistics with message, voice, member, status, and boost tracking",
+  "version": "1.0.0",
+  "entry": "index.ts",
+  "configKey": "stats",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "public",
+      "label": "Public Stats",
+      "type": "boolean",
+      "description": "Allow everyone to use /stats. Turn off to require the stats.view permit.",
+      "default": true,
+      "category": "Access"
+    },
+    {
+      "key": "ignoredChannels",
+      "label": "Ignored Channels",
+      "type": "multi-channel",
+      "description": "Channels excluded from message and voice tracking",
+      "default": [],
+      "category": "Tracking"
+    },
+    {
+      "key": "ignoredRoles",
+      "label": "Ignored Roles",
+      "type": "multi-role",
+      "description": "Members with any of these roles are excluded from tracking",
+      "default": [],
+      "category": "Tracking"
+    }
+  ]
+}

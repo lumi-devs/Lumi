@@ -1,4 +1,4 @@
-import type { PermitAssignment } from "@lumi/permits";
+import { type PermitAssignment, whitelistScopeLabel } from "@lumi/permits";
 import {
   AccentColors,
   buildSafeActionRows,
@@ -51,6 +51,11 @@ export async function detailCard(
     `**Schedule** ${
       permit.schedule
         ? `\`${permit.schedule}\`${permit.timezone ? ` (${permit.timezone})` : ""}`
+        : "None"
+    }`,
+    `**Whitelist** ${
+      permit.whitelistScopes.length > 0
+        ? permit.whitelistScopes.map(whitelistScopeLabel).join(", ")
         : "None"
     }`,
   ].join("\n");
