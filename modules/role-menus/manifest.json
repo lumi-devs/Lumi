@@ -1,0 +1,67 @@
+{
+  "apiVersion": 2,
+  "name": "role-menus",
+  "displayName": "Role Menus",
+  "emoji": "🎭",
+  "description": "Self-service role menus with buttons, selects, reaction menus, and temporary roles",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "roleMenus",
+  "configFields": [
+    {
+      "key": "defaultMode",
+      "label": "Default Mode",
+      "type": "select",
+      "description": "Selection mode used when a new role menu does not specify one",
+      "default": "multiple",
+      "choices": ["single", "multiple"],
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultRequireOne",
+      "label": "Require One",
+      "type": "boolean",
+      "description": "New menus require members to keep at least one role",
+      "default": false,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultAutoToggle",
+      "label": "Auto Toggle",
+      "type": "boolean",
+      "description": "New menus remove a role when a member selects it again",
+      "default": true,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultMaxSelections",
+      "label": "Default Max Selections",
+      "type": "number",
+      "description": "Maximum roles per member for new menus; 0 means unlimited",
+      "default": 0,
+      "min": 0,
+      "max": 25,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultTempDurationSeconds",
+      "label": "Default Temporary Duration (seconds)",
+      "type": "number",
+      "description": "Default temporary role duration for new menus; 0 means permanent",
+      "default": 0,
+      "min": 0,
+      "max": 2592000,
+      "category": "Defaults"
+    },
+    {
+      "key": "maxOptionsPerGroup",
+      "label": "Maximum Options per Group",
+      "type": "number",
+      "description": "Upper bound for roles in one menu",
+      "default": 25,
+      "min": 1,
+      "max": 25,
+      "category": "Limits"
+    }
+  ]
+}

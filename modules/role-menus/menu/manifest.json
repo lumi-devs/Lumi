@@ -1,0 +1,16 @@
+{
+  "apiVersion": 2,
+  "name": "role-menus-menu",
+  "displayName": "Role Menus",
+  "emoji": "🎭",
+  "description": "Create and post self-service role menus with optional temporary roles",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "dependencies": {
+    "role-menus": "^2.0.0"
+  },
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": []
+}
