@@ -21,7 +21,11 @@ original caller but is never written to L1 or Redis.
 ## Usage
 
 ```ts
-const cache = new Cache({ redis, invalidation, metrics: prometheusCacheMetrics });
+const cache = new Cache({
+  redis,
+  invalidation,
+  metrics: prometheusCacheMetrics,
+});
 const config = cache.namespace("config");
 
 const value = await config.getOrLoad(key, ttlMs, () => loader(), {

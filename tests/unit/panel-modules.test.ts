@@ -71,9 +71,7 @@ describe("module panel ids", () => {
   });
 
   it("keeps the origin page in the submodule pagination prefix", () => {
-    expect(moduleListRowId("security", 3)).toBe(
-      "lumi:modsubs:security:3",
-    );
+    expect(moduleListRowId("security", 3)).toBe("lumi:modsubs:security:3");
   });
 
   it("encodes the module and both pages in a submodule toggle id", () => {

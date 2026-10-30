@@ -1,13 +1,20 @@
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import {
+  type CardReply,
+  cardMessage,
+  ephemeralCard,
+  makeErrorCard,
+} from "@lumi/ui";
 import type { Client, Message } from "discord.js";
+import type { Redis } from "ioredis";
 import {
   hasAdminAccess,
   hasPermitAccess,
   roleIdsFrom,
 } from "../admin/access.js";
 import { commandErrorCard } from "./errors.js";
+import { isModuleLocked } from "./locks.js";
 import {
   type CommandRegistry,
   type RegisteredCommand,
@@ -35,6 +42,7 @@ export interface PrefixServices {
     get(guildId: string, key: string): Promise<unknown>;
   };
   permits: PermitRepository;
+  redis?: Redis;
 }
 
 export interface PrefixContext {
@@ -56,7 +64,7 @@ async function replyError(
   body: string,
 ): Promise<void> {
   await message
-    .reply(ephemeralCard(makeErrorCard(title, body)) as never)
+    .reply(cardMessage(ephemeralCard(makeErrorCard(title, body))))
     .catch(() => undefined);
 }
 
@@ -65,7 +73,9 @@ async function resolvePrefix(
   services: PrefixServices,
   message: Message,
 ): Promise<string | null> {
-  const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(message.content);
+  const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(
+    message.content,
+  );
   if (mention) return mention[0];
   if (!message.guild) return null;
   const stored = await services.config.get(message.guild.id, "prefix");
@@ -86,8 +96,6 @@ function createSyntheticInteraction(
   let replied = false;
   let deferred = false;
   let replyMessage: Message | undefined;
-
-
 
   const topOptions: CommandOption[] = command.data.toJSON().options ?? [];
   const subcommand = topOptions.find(
@@ -126,13 +134,17 @@ function createSyntheticInteraction(
   const resolveUser = (value: string | null) => {
     const id = idFromValue(value, UserMention);
     return id
-      ? (message.client.users.cache.get(id) ?? message.mentions.users.get(id) ?? null)
+      ? (message.client.users.cache.get(id) ??
+          message.mentions.users.get(id) ??
+          null)
       : null;
   };
   const resolveMember = (value: string | null) => {
     const id = idFromValue(value, UserMention);
     return id
-      ? (guild.members.cache.get(id) ?? message.mentions.members?.get(id) ?? null)
+      ? (guild.members.cache.get(id) ??
+          message.mentions.members?.get(id) ??
+          null)
       : null;
   };
   const resolveRole = (value: string | null) => {
@@ -144,7 +156,9 @@ function createSyntheticInteraction(
   const resolveChannel = (value: string | null) => {
     const id = idFromValue(value, ChannelMention);
     return id
-      ? (guild.channels.cache.get(id) ?? message.mentions.channels.get(id) ?? null)
+      ? (guild.channels.cache.get(id) ??
+          message.mentions.channels.get(id) ??
+          null)
       : null;
   };
 
@@ -180,7 +194,9 @@ function createSyntheticInteraction(
       },
       getBoolean: (name: string) => {
         const value = raw(name)?.toLowerCase();
-        return value === "true" || value === "yes" || value === "on" || value === "1";
+        return (
+          value === "true" || value === "yes" || value === "on" || value === "1"
+        );
       },
       getUser: (name: string) => resolveUser(raw(name)),
       getMember: (name: string) => resolveMember(raw(name)),
@@ -200,26 +216,30 @@ function createSyntheticInteraction(
         throw new Error("Not supported");
       },
     },
-    reply: async (card: { flags?: number }) => {
+    reply: async (card: CardReply) => {
       const cardToSend = { ...card, flags: (card.flags ?? 32768) & ~64 };
-      replyMessage = await message.reply(cardToSend as never).catch(() => undefined);
+      replyMessage = await message
+        .reply(cardMessage(cardToSend))
+        .catch(() => undefined);
       replied = true;
       return replyMessage;
     },
     deferReply: async () => {
       deferred = true;
     },
-    editReply: async (card: { flags?: number }) => {
+    editReply: async (card: CardReply) => {
       if (replyMessage) {
-        await replyMessage.edit(card as never).catch(() => undefined);
+        await replyMessage.edit(cardMessage(card)).catch(() => undefined);
         return;
       }
       const cardToSend = { ...card, flags: (card.flags ?? 32768) & ~64 };
-      replyMessage = await message.reply(cardToSend as never).catch(() => undefined);
+      replyMessage = await message
+        .reply(cardMessage(cardToSend))
+        .catch(() => undefined);
       replied = true;
     },
-    followUp: async (card: object) =>
-      await message.reply(card as never).catch(() => undefined),
+    followUp: async (card: CardReply) =>
+      await message.reply(cardMessage(card)).catch(() => undefined),
   };
 }
 
@@ -235,7 +255,11 @@ export async function handlePrefixMessage(
     }
     if (message.author.bot || !message.guild) return;
 
-    const prefix = await resolvePrefix(context.client, context.services, message);
+    const prefix = await resolvePrefix(
+      context.client,
+      context.services,
+      message,
+    );
     if (!prefix) return;
 
     const withoutPrefix = message.content.slice(prefix.length).trim();
@@ -246,7 +270,26 @@ export async function handlePrefixMessage(
 
     const command = context.registry.get(name);
     if (!command) return;
-    if (command.module && !context.moduleLoader.isActive(message.guild.id, command.module)) {
+    if (
+      command.module &&
+      !context.moduleLoader.isActive(message.guild.id, command.module)
+    ) {
+      return;
+    }
+    if (
+      command.module &&
+      context.services.redis &&
+      (await isModuleLocked(
+        context.services.redis,
+        message.guild.id,
+        command.module,
+      ))
+    ) {
+      await replyError(
+        message,
+        "Temporarily Locked",
+        `The **${command.module}** module is locked while panic mode is active.`,
+      );
       return;
     }
 
@@ -293,8 +336,6 @@ export async function handlePrefixMessage(
       return;
     }
 
-
-
     const defaultPermissions =
       "default_member_permissions" in command.data
         ? command.data.default_member_permissions
@@ -312,7 +353,11 @@ export async function handlePrefixMessage(
       return;
     }
 
-    const syntheticInteraction = createSyntheticInteraction(message, command, args);
+    const syntheticInteraction = createSyntheticInteraction(
+      message,
+      command,
+      args,
+    );
     const services = command.module
       ? servicesForModule(context.services, command.module)
       : context.services;
@@ -324,7 +369,9 @@ export async function handlePrefixMessage(
         guildId: message.guild.id,
         error,
       });
-      await message.reply(commandErrorCard(error) as never).catch(() => undefined);
+      await message
+        .reply(cardMessage(commandErrorCard(error)))
+        .catch(() => undefined);
     }
   } catch (error) {
     context.logger.error("Prefix dispatch failed", {

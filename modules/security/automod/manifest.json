@@ -336,9 +336,7 @@
       "label": "Log Channel",
       "type": "channel",
       "description": "Channel for filter hit logs",
-      "channelTypes": [
-        0
-      ],
+      "channelTypes": [0],
       "category": "Logging"
     }
   ],

@@ -9,8 +9,16 @@ export const warnDef: CommandDefinition = {
     .setName("warn")
     .setDescription("Warn a user")
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption(o => o.setName("user").setDescription("User to warn").setRequired(true))
-    .addStringOption(o => o.setName("reason").setDescription("Reason for warning").setRequired(false).setAutocomplete(true)),
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to warn").setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("reason")
+        .setDescription("Reason for warning")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
   requiredPermit: "mod.warn",
   async execute(interaction, services) {
     const target = interaction.options.getUser("user", true);
@@ -25,11 +33,22 @@ export const warnDef: CommandDefinition = {
     }
 
     await services.db.prisma.moderationCase.create({
-      data: { guildId: guild.id, type: "WARN", targetId: target.id, moderatorId: interaction.user.id, reason },
+      data: {
+        guildId: guild.id,
+        type: "WARN",
+        targetId: target.id,
+        moderatorId: interaction.user.id,
+        reason,
+      },
     });
 
     const warnCount = await services.db.prisma.moderationCase.count({
-      where: { guildId: guild.id, targetId: target.id, type: "WARN", active: true },
+      where: {
+        guildId: guild.id,
+        targetId: target.id,
+        type: "WARN",
+        active: true,
+      },
     });
     const threshold = config.warnThresholds[String(warnCount)];
     let autoAction: string | null = null;
@@ -65,12 +84,15 @@ export const warnDef: CommandDefinition = {
       }
     }
 
-    await interaction.reply(ephemeralCard(makeSuccessCard("Warned", [
-      `**User**\n${target.tag} (\`${target.id}\`)`,
-      `**Warnings**\n${warnCount}`,
-      `**Reason**\n${reason}`,
-      ...(autoAction ? [`**Automatic action**\n${autoAction}`] : []),
-    ])));
+    await interaction.reply(
+      ephemeralCard(
+        makeSuccessCard("Warned", [
+          `**User**\n${target.tag} (\`${target.id}\`)`,
+          `**Warnings**\n${warnCount}`,
+          `**Reason**\n${reason}`,
+          ...(autoAction ? [`**Automatic action**\n${autoAction}`] : []),
+        ]),
+      ),
+    );
   },
 };
-

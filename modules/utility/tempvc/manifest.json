@@ -12,9 +12,7 @@
       "label": "Category",
       "type": "channel",
       "description": "Category to create channels in",
-      "channelTypes": [
-        4
-      ],
+      "channelTypes": [4],
       "default": null,
       "category": "Channels"
     },

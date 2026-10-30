@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -32,6 +34,7 @@
     "@biomejs/biome": "^2.6.3",
     "@types/bun": "^1.4.4",
     "@vitest/coverage-v8": "^5.0.5",
+    "prettier": "^3.6.2",
     "prisma": "^7.10.1",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"

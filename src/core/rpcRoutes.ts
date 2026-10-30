@@ -1,10 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { HealthMonitor } from "@lumi/observability";
-import {
-  httpRequestDuration,
-  httpRequests,
-} from "@lumi/observability";
+import { httpRequestDuration, httpRequests } from "@lumi/observability";
 import type { Client } from "discord.js";
 
 export interface StatusRouteOptions {
@@ -14,11 +11,6 @@ export interface StatusRouteOptions {
 
   token: string | undefined;
 }
-
-
-
-
-
 
 export function createStatusHandler(
   options: StatusRouteOptions,

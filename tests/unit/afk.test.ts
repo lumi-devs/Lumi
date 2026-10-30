@@ -19,13 +19,11 @@ describe("afk cards", () => {
     expect(card.flags).toBe(MessageFlags.IsComponentsV2);
     expect(card).not.toHaveProperty("embeds");
     expect(container.accent_color).toBeUndefined();
-    expect(container.components.map((component: any) => component.type)).toEqual([
-      10, 14, 10,
-    ]);
+    expect(
+      container.components.map((component: any) => component.type),
+    ).toEqual([10, 14, 10]);
     expect(container.components[0].content).toBe("**💤 AFK Set**");
-    expect(container.components[2].content).toBe(
-      "You are now AFK: **Lunch**",
-    );
+    expect(container.components[2].content).toBe("You are now AFK: **Lunch**");
   });
 
   it("renders the updated status card", () => {

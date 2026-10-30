@@ -14,18 +14,11 @@ import type {
 } from "../../permits/flows.js";
 import type { MessageModalSubmit } from "../common.js";
 
-
 export type PermitInteraction =
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | MessageModalSubmit;
-
+  ButtonInteraction | AnySelectMenuInteraction | MessageModalSubmit;
 
 export type AnyPermitInteraction =
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | ModalSubmitInteraction;
-
+  ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
 export interface PermitCardContext {
   readonly permitRepo: PermitRepository;
@@ -38,7 +31,6 @@ export interface PermitCardContext {
   extraOwnerError(): CardReply;
   missingPermitCard(): CardReply;
 }
-
 
 export interface PermitHost extends PermitCardContext {
   mainCard(page: number): Promise<CardReply>;

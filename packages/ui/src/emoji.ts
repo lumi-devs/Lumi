@@ -1,4 +1,7 @@
-import type { ButtonBuilder, StringSelectMenuOptionBuilder } from "@discordjs/builders";
+import type {
+  ButtonBuilder,
+  StringSelectMenuOptionBuilder,
+} from "@discordjs/builders";
 import { type APIMessageComponentEmoji, parseEmoji } from "discord.js";
 
 export function componentEmoji(text: string): APIMessageComponentEmoji {

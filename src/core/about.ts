@@ -31,9 +31,10 @@ const formatMb = (bytes: number): string =>
 
 async function postgresVersion(prisma: PrismaClient): Promise<string> {
   try {
-    const rows = (await prisma.$queryRaw`SELECT version() AS version`) as Array<{
-      version?: string;
-    }>;
+    const rows =
+      (await prisma.$queryRaw`SELECT version() AS version`) as Array<{
+        version?: string;
+      }>;
     const raw = rows[0]?.version ?? "";
     return raw.match(/PostgreSQL\s+\d+(?:\.\d+)?/)?.[0] ?? "PostgreSQL";
   } catch {
@@ -116,8 +117,7 @@ export const aboutCommand = {
       redisVersion(services.redis),
     ]);
     const postgres = database.replace(/^PostgreSQL\s*/, "") || "unknown";
-    const redisVersionNumber =
-      redis.replace(/^Redis\s*/, "") || "unknown";
+    const redisVersionNumber = redis.replace(/^Redis\s*/, "") || "unknown";
     const runtime =
       typeof Bun !== "undefined"
         ? `*Bun* v${Bun.version}`

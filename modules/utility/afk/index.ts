@@ -167,17 +167,18 @@ const afkDef: CommandDefinition = {
           "AFK",
         )
         .catch((error: unknown) =>
-          services.observability?.logger?.warn?.("failed to prefix AFK nickname", {
-            guildId,
-            userId: interaction.user.id,
-            error,
-          }),
+          services.observability?.logger?.warn?.(
+            "failed to prefix AFK nickname",
+            {
+              guildId,
+              userId: interaction.user.id,
+              error,
+            },
+          ),
         );
     }
 
-    await interaction.reply(
-      ephemeralCard(buildAfkStatusCard(status, reason)),
-    );
+    await interaction.reply(ephemeralCard(buildAfkStatusCard(status, reason)));
   },
 };
 
@@ -199,10 +200,12 @@ const onMessageListener: ListenerDefinition = {
       where: { guildId, userId: { in: userIds } },
     });
     const byUser = new Map<string, { reason: string; createdAt: Date }>(
-      entries.map((entry: { userId: string; reason: string; createdAt: Date }) => [
-        entry.userId,
-        entry,
-      ]),
+      entries.map(
+        (entry: { userId: string; reason: string; createdAt: Date }) => [
+          entry.userId,
+          entry,
+        ],
+      ),
     );
     const authorAfk = byUser.get(message.author.id);
 
@@ -236,11 +239,14 @@ const onMessageListener: ListenerDefinition = {
             "No longer AFK",
           )
           .catch((error: unknown) =>
-            services.observability?.logger?.warn?.("failed to strip AFK nickname", {
-              guildId,
-              userId: message.author.id,
-              error,
-            }),
+            services.observability?.logger?.warn?.(
+              "failed to strip AFK nickname",
+              {
+                guildId,
+                userId: message.author.id,
+                error,
+              },
+            ),
           );
       }
 

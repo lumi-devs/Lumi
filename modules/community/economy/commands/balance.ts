@@ -1,9 +1,5 @@
 import type { CommandDefinition } from "@lumi/module-kit";
-import {
-  AccentColors,
-  ephemeralCard,
-  makeCard,
-} from "@lumi/ui";
+import { AccentColors, ephemeralCard, makeCard } from "@lumi/ui";
 import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
 import type { BalanceCardData } from "../balanceCard.js";
 import { getEconomyConfig } from "../config.js";
@@ -15,10 +11,7 @@ export const balanceDef: CommandDefinition = {
     .setName("balance")
     .setDescription("Check your or another user's balance")
     .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to check")
-        .setRequired(false),
+      option.setName("user").setDescription("User to check").setRequired(false),
     ),
   async execute(interaction, services) {
     const guild = await requireGuild(interaction);
@@ -26,12 +19,7 @@ export const balanceDef: CommandDefinition = {
 
     const target = interaction.options.getUser("user") ?? interaction.user;
     const config = await getEconomyConfig(services, guild.id);
-    const user = await getOrCreateUser(
-      services,
-      guild.id,
-      target.id,
-      config,
-    );
+    const user = await getOrCreateUser(services, guild.id, target.id, config);
 
     const symbol = config.currencySymbol;
     const title = `${symbol} ${target.username}`;
@@ -61,10 +49,9 @@ export const balanceDef: CommandDefinition = {
     let attachment: AttachmentBuilder | null = null;
     try {
       const { generateBalanceCard } = await import("../balanceCard.js");
-      attachment = new AttachmentBuilder(
-        await generateBalanceCard(cardData),
-        { name: "balance.png" },
-      );
+      attachment = new AttachmentBuilder(await generateBalanceCard(cardData), {
+        name: "balance.png",
+      });
     } catch (error) {
       services.observability?.logger?.warn?.(
         "[economy] balance card generation failed",

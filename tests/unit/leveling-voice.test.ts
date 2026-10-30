@@ -66,8 +66,12 @@ describe("voiceAudibleTransition", () => {
     const guildId = "transition-guild";
     const userId = "member";
 
-    expect(voiceAudibleTransition(guildId, userId, false, true, 1_000)).toBeNull();
-    expect(voiceAudibleTransition(guildId, userId, true, false, 61_000)).toBe(60_000);
+    expect(
+      voiceAudibleTransition(guildId, userId, false, true, 1_000),
+    ).toBeNull();
+    expect(voiceAudibleTransition(guildId, userId, true, false, 61_000)).toBe(
+      60_000,
+    );
   });
 
   it("starts a fresh session after unmuting again", () => {
@@ -75,17 +79,25 @@ describe("voiceAudibleTransition", () => {
     const userId = "member";
 
     voiceAudibleTransition(guildId, userId, false, true, 1_000);
-    expect(voiceAudibleTransition(guildId, userId, true, false, 61_000)).toBe(60_000);
+    expect(voiceAudibleTransition(guildId, userId, true, false, 61_000)).toBe(
+      60_000,
+    );
 
     voiceAudibleTransition(guildId, userId, false, true, 181_000);
-    expect(voiceAudibleTransition(guildId, userId, true, false, 241_000)).toBe(60_000);
+    expect(voiceAudibleTransition(guildId, userId, true, false, 241_000)).toBe(
+      60_000,
+    );
   });
 
   it("ignores transitions where audibility does not change", () => {
     const guildId = "unchanged-guild";
     const userId = "member";
 
-    expect(voiceAudibleTransition(guildId, userId, false, false, 1_000)).toBeNull();
-    expect(voiceAudibleTransition(guildId, userId, true, true, 2_000)).toBeNull();
+    expect(
+      voiceAudibleTransition(guildId, userId, false, false, 1_000),
+    ).toBeNull();
+    expect(
+      voiceAudibleTransition(guildId, userId, true, true, 2_000),
+    ).toBeNull();
   });
 });

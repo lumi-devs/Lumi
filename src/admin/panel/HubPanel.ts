@@ -22,7 +22,9 @@ export async function handleHubInteraction(
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply(
-      ephemeralCard(makeErrorCard("Lumi", "This panel only works in a server.")),
+      ephemeralCard(
+        makeErrorCard("Lumi", "This panel only works in a server."),
+      ),
     );
     return true;
   }

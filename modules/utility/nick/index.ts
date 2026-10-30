@@ -29,15 +29,20 @@ const getNickConfig = async (
   services: ModuleServices,
   guildId: string,
 ): Promise<NickConfig> =>
-  NickConfigSchema.parse((await services.config.get(guildId, NickConfigKey)) ?? {});
+  NickConfigSchema.parse(
+    (await services.config.get(guildId, NickConfigKey)) ?? {},
+  );
 
-type AnyGuildMember = GuildMember | APIInteractionGuildMember | null | undefined;
+type AnyGuildMember =
+  GuildMember | APIInteractionGuildMember | null | undefined;
 
 function roleIdsOf(member: AnyGuildMember): string[] {
   if (!member) return [];
   const roles: unknown = member.roles;
   if (Array.isArray(roles)) {
-    return roles.filter((roleId): roleId is string => typeof roleId === "string");
+    return roles.filter(
+      (roleId): roleId is string => typeof roleId === "string",
+    );
   }
   const cache = (roles as { cache?: Map<string, unknown> } | undefined)?.cache;
   return cache ? [...cache.keys()] : [];
@@ -100,7 +105,10 @@ const nickDef: CommandDefinition = {
     if (!guild) {
       await interaction.reply(
         ephemeralCard(
-          makeErrorCard("Server Only", "Nicknames can only be changed in a server."),
+          makeErrorCard(
+            "Server Only",
+            "Nicknames can only be changed in a server.",
+          ),
         ),
       );
       return;
@@ -164,10 +172,7 @@ const nickDef: CommandDefinition = {
       }
 
       try {
-        await self.setNickname(
-          nextNickname,
-          "Self nickname change",
-        );
+        await self.setNickname(nextNickname, "Self nickname change");
       } catch {
         await interaction.reply(
           ephemeralCard(
@@ -282,7 +287,8 @@ const nickModule: ModuleDefinition = defineModule({
   name: "utility-nick",
   displayName: "Nicknames",
   emoji: "📛",
-  description: "Nickname changes with hierarchy checks and optional self-service",
+  description:
+    "Nickname changes with hierarchy checks and optional self-service",
   version: "2.0.0",
   config: NickConfigSchema,
   commands: [nickDef],

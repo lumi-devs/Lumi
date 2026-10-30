@@ -16,10 +16,7 @@ describe("permit node helpers", () => {
   });
 
   it("removes duplicate and empty nodes", () => {
-    expect(parseNodeList("mod.ban, mod.ban, , *")).toEqual([
-      "mod.ban",
-      "*",
-    ]);
+    expect(parseNodeList("mod.ban, mod.ban, , *")).toEqual(["mod.ban", "*"]);
   });
 
   it("formats a compact node summary", () => {

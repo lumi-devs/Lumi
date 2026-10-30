@@ -32,19 +32,19 @@ describe("card system", () => {
 
   it("adds the ephemeral flag without dropping V2", () => {
     const card = ephemeralCard(makeErrorCard("Error", "Nope"));
-    expect(card.flags).toBe(MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral);
+    expect(card.flags).toBe(
+      MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    );
   });
 
   it("caps action rows at five by five", () => {
     const rows = Array.from({ length: 7 }, () =>
       new ActionRowBuilder<ButtonBuilder>().addComponents(
-        ...Array.from(
-          { length: 7 },
-          (_, index) =>
-            new ButtonBuilder()
-              .setCustomId(`b:${index}`)
-              .setLabel(`B${index}`)
-              .setStyle(ButtonStyle.Secondary),
+        ...Array.from({ length: 7 }, (_, index) =>
+          new ButtonBuilder()
+            .setCustomId(`b:${index}`)
+            .setLabel(`B${index}`)
+            .setStyle(ButtonStyle.Secondary),
         ),
       ),
     );

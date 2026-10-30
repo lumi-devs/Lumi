@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Cache } from "../src/cache.js";
 
-
 const createMockRedis = () => ({
   get: vi.fn(),
   set: vi.fn(),
@@ -15,16 +14,17 @@ const createMockRedis = () => ({
   })),
 });
 
-
 const createMockInvalidationBus = () => {
   const listeners = new Map<string, Set<(keys: string[]) => void>>();
 
   return {
-    subscribe: vi.fn((namespace: string, listener: (keys: string[]) => void) => {
-      if (!listeners.has(namespace)) listeners.set(namespace, new Set());
-      listeners.get(namespace)!.add(listener);
-      return () => listeners.get(namespace)!.delete(listener);
-    }),
+    subscribe: vi.fn(
+      (namespace: string, listener: (keys: string[]) => void) => {
+        if (!listeners.has(namespace)) listeners.set(namespace, new Set());
+        listeners.get(namespace)!.add(listener);
+        return () => listeners.get(namespace)!.delete(listener);
+      },
+    ),
     invalidate: vi.fn(async (namespace: string, keys: string[]) => {
       const ls = listeners.get(namespace) || listeners.get("");
       ls?.forEach((fn) => {

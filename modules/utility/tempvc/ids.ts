@@ -1,10 +1,5 @@
 export type MemberAction =
-  | "kick"
-  | "trust"
-  | "untrust"
-  | "block"
-  | "unblock"
-  | "transfer";
+  "kick" | "trust" | "untrust" | "block" | "unblock" | "transfer";
 
 export const TempVcIds = {
   panel: (channelId: string) => `tempvc:panel:${channelId}`,
@@ -55,8 +50,5 @@ export const TempVcPrefixes = {
   cfgModal: "tempvc:cfg:modal:",
 } as const;
 
-export const stripPrefix = (
-  customId: string,
-  prefix: string,
-): string | null =>
+export const stripPrefix = (customId: string, prefix: string): string | null =>
   customId.startsWith(prefix) ? customId.slice(prefix.length) : null;

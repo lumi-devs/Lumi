@@ -63,6 +63,7 @@ quarantine suspends custom grants.
   hub but cannot add repositories, install modules, or change updates.
 - Expired permits and expired assignments are ignored, as are permits whose
   schedule, timezone, or conditions do not match the evaluation time and context.
+
 ## Panel
 
 `/lumi` → Permissions lists permits by guild number, opens details, creates

@@ -4,18 +4,18 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 
 ## Overview of Major Changes
 
-| Area | v1 | v2 |
-|------|-----|-----|
-| **Architecture** | Single process, monolithic | Monorepo, single process (fleet ready) |
-| **Modules** | `core` (essential) + toggleable | Built-in services + fully toggleable modules |
-| **Permissions** | Tier-based (admin/mod/user) | Permit system: node-based, time/channel/role conditions |
-| **Config** | Guild settings JSON | Zod-validated per-module config in `Guild.settings` |
-| **Database** | Custom migrations, idempotent DDL | Prisma with versioned migrations |
-| **Cache** | In-memory only | L1 LRU + Redis L2 with invalidation bus |
-| **RPC** | None | Token-guarded HTTP control server |
-| **Images** | Sharp/SVG rank cards | Canvas (rank + balance + shop cards) |
-| **Addons** | Basic git installer | Validated git repo manager: installs, updates, pins, rollback |
-| **Boot** | Global container, import-time DI | Explicit composition root, no global state |
+| Area             | v1                                | v2                                                            |
+| ---------------- | --------------------------------- | ------------------------------------------------------------- |
+| **Architecture** | Single process, monolithic        | Monorepo, single process (fleet ready)                        |
+| **Modules**      | `core` (essential) + toggleable   | Built-in services + fully toggleable modules                  |
+| **Permissions**  | Tier-based (admin/mod/user)       | Permit system: node-based, time/channel/role conditions       |
+| **Config**       | Guild settings JSON               | Zod-validated per-module config in `Guild.settings`           |
+| **Database**     | Custom migrations, idempotent DDL | Prisma with versioned migrations                              |
+| **Cache**        | In-memory only                    | L1 LRU + Redis L2 with invalidation bus                       |
+| **RPC**          | None                              | Token-guarded HTTP control server                             |
+| **Images**       | Sharp/SVG rank cards              | Canvas (rank + balance + shop cards)                          |
+| **Addons**       | Basic git installer               | Validated git repo manager: installs, updates, pins, rollback |
+| **Boot**         | Global container, import-time DI  | Explicit composition root, no global state                    |
 
 ---
 
@@ -26,11 +26,13 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 **v1:** `core` module was essential/undeletable, contained base commands, config, etc.
 
 **v2:** Built-in services in `src/`:
+
 - `core/` — Gateway, lifecycle, interaction/prefix dispatch, RPC control server,
   service wiring
 - `admin/` — Module management, `lumi` panel, owner commands
 
 **Migration:**
+
 - Remove `core` from module list
 - Built-in controls always available (`/lumi` hub, `/ping`)
 - Config moved to per-module Zod schemas
@@ -40,6 +42,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 **v1:** Tier-based (Bot Owner → Admin → Mod → User → Everyone)
 
 **v2:** Permit system:
+
 - Node-based: `mod.ban`, `economy.shop`, `*`
 - Polarity: `Grant` / `Deny`
 - Priority: position in chain
@@ -47,6 +50,7 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 - Expiry: time-based with auto-cleanup
 
 **Migration:**
+
 ```ts
 // v1: tier check
 if (userTier >= Tier.Mod) { ... }
@@ -72,15 +76,16 @@ const allowed = (
 
 **v2:** Modules in `modules/`, explicit loader, manifest-based
 
-| v1 | v2 |
-|----|----|
-| `src/modules/mod/` | `modules/moderation/mod/` |
-| `module.ts` with `setup()` | `manifest.json` + `index.ts` |
-| Global `container` | `services` passed to each module |
-| `config.enabled` per guild | `services.modules.isEnabled(guildId, name)` |
-| Essential/disableable flags | All modules toggleable |
+| v1                          | v2                                          |
+| --------------------------- | ------------------------------------------- |
+| `src/modules/mod/`          | `modules/moderation/mod/`                   |
+| `module.ts` with `setup()`  | `manifest.json` + `index.ts`                |
+| Global `container`          | `services` passed to each module            |
+| `config.enabled` per guild  | `services.modules.isEnabled(guildId, name)` |
+| Essential/disableable flags | All modules toggleable                      |
 
 **Migration:**
+
 ```ts
 // v1 module structure
 export const ModModule: Module = {
@@ -106,6 +111,7 @@ export default defineModule({
 **v2:** Prisma Client, versioned migrations, typed repositories
 
 **Migration:**
+
 ```bash
 # 1. Export v1 data (if needed)
 # 2. Run v2 migrations
@@ -221,7 +227,12 @@ for (const u of v1Users) {
   await v2.economyUser.upsert({
     where: { guildId_userId: { guildId: u.guild_id, userId: u.user_id } },
     update: { balance: u.balance, bankBalance: u.bank_balance },
-    create: { guildId: u.guild_id, userId: u.user_id, balance: u.balance, bankBalance: u.bank_balance },
+    create: {
+      guildId: u.guild_id,
+      userId: u.user_id,
+      balance: u.balance,
+      bankBalance: u.bank_balance,
+    },
   });
 }
 ```
@@ -254,15 +265,15 @@ bun dist/index.js
 
 ## Config Mapping
 
-| v1 Setting | v2 Location |
-|------------|-------------|
-| `guildSettings.prefix` | Guild `prefix` setting (`/lumi` → Settings) |
-| `guildSettings.modLogChannel` | `logging` module log channels |
-| `guildSettings.welcomeChannel` | No direct equivalent (no welcome module) |
-| `guildSettings.levelUpChannel` | `community-leveling` → `announceChannel` |
-| `guildSettings.currencyName` | `community-economy` → `currencyName` |
-| `guildSettings.autoModRules` | `security-automod` heat filters |
-| `guildSettings.tempVcCategory` | `utility-tempvc` → `categoryId` |
+| v1 Setting                     | v2 Location                                 |
+| ------------------------------ | ------------------------------------------- |
+| `guildSettings.prefix`         | Guild `prefix` setting (`/lumi` → Settings) |
+| `guildSettings.modLogChannel`  | `logging` module log channels               |
+| `guildSettings.welcomeChannel` | No direct equivalent (no welcome module)    |
+| `guildSettings.levelUpChannel` | `community-leveling` → `announceChannel`    |
+| `guildSettings.currencyName`   | `community-economy` → `currencyName`        |
+| `guildSettings.autoModRules`   | `security-automod` heat filters             |
+| `guildSettings.tempVcCategory` | `utility-tempvc` → `categoryId`             |
 
 ### Example: Economy Config Migration
 
@@ -286,16 +297,16 @@ config: z.object({
 
 ### v1 Tiers → v2 Permits
 
-| v1 Tier | v2 Equivalent |
-|---------|---------------|
-| Bot Owner | `OWNER_IDS` environment variable (global) |
-| Server Owner | Implicit (guild owner bypass) |
-| Extra Owner | Built-in `Extra Owner` permit (`*`, guild) |
+| v1 Tier       | v2 Equivalent                                      |
+| ------------- | -------------------------------------------------- |
+| Bot Owner     | `OWNER_IDS` environment variable (global)          |
+| Server Owner  | Implicit (guild owner bypass)                      |
+| Extra Owner   | Built-in `Extra Owner` permit (`*`, guild)         |
 | Trusted Admin | Built-in `Trusted Admin` permit (`admin.*`, guild) |
-| Admin Role | `admin.*` permit assigned to role |
-| Mod Role | `mod.*` permit assigned to role |
-| DJ Role | `music.*` permit assigned to role |
-| Custom | Custom permits with node patterns |
+| Admin Role    | `admin.*` permit assigned to role                  |
+| Mod Role      | `mod.*` permit assigned to role                    |
+| DJ Role       | `music.*` permit assigned to role                  |
+| Custom        | Custom permits with node patterns                  |
 
 ### Migration Script
 
@@ -303,20 +314,51 @@ config: z.object({
 // scripts/migrate-permits.ts
 async function migratePermits(guildId: string) {
   // 1. Create built-in permits
-  await permitRepo.createPermit({ guildId, name: "Extra Owner", nodes: ["*"], polarity: "Grant", position: 0, builtin: true });
-  await permitRepo.createPermit({ guildId, name: "Trusted Admin", nodes: ["admin.*"], polarity: "Grant", position: 1, builtin: true });
-  
+  await permitRepo.createPermit({
+    guildId,
+    name: "Extra Owner",
+    nodes: ["*"],
+    polarity: "Grant",
+    position: 0,
+    builtin: true,
+  });
+  await permitRepo.createPermit({
+    guildId,
+    name: "Trusted Admin",
+    nodes: ["admin.*"],
+    polarity: "Grant",
+    position: 1,
+    builtin: true,
+  });
+
   // 2. Migrate admin role
   const adminRole = await getOldAdminRole(guildId);
   if (adminRole) {
-    const adminPermit = await permitRepo.createPermit({ guildId, name: "Admin Role", nodes: ["admin.*"], polarity: "Grant", position: 10 });
-    await permitRepo.assignPermit(adminPermit.id, "ROLE", adminRole, "migration");
+    const adminPermit = await permitRepo.createPermit({
+      guildId,
+      name: "Admin Role",
+      nodes: ["admin.*"],
+      polarity: "Grant",
+      position: 10,
+    });
+    await permitRepo.assignPermit(
+      adminPermit.id,
+      "ROLE",
+      adminRole,
+      "migration",
+    );
   }
-  
+
   // 3. Migrate mod role
   const modRole = await getOldModRole(guildId);
   if (modRole) {
-    const modPermit = await permitRepo.createPermit({ guildId, name: "Mod Role", nodes: ["mod.*"], polarity: "Grant", position: 20 });
+    const modPermit = await permitRepo.createPermit({
+      guildId,
+      name: "Mod Role",
+      nodes: ["mod.*"],
+      polarity: "Grant",
+      position: 20,
+    });
     await permitRepo.assignPermit(modPermit.id, "ROLE", modRole, "migration");
   }
 }

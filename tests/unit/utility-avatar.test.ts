@@ -74,9 +74,9 @@ describe("avatar command", () => {
     expect(card.flags).toBe(
       MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
     );
-    expect(container.components.some((component: any) => component.type === 12)).toBe(
-      false,
-    );
+    expect(
+      container.components.some((component: any) => component.type === 12),
+    ).toBe(false);
     expect(container.components[2].components[0]).toMatchObject({
       custom_id: "utility:avatar:view:2",
       label: "View Avatar",

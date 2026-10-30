@@ -4,7 +4,8 @@ const ModerationSupermodule = defineModule({
   name: "moderation",
   displayName: "Moderation",
   emoji: "🛡️",
-  description: "Moderation tools: cases, bans, kicks, timeouts, warns, quarantine, lockdown",
+  description:
+    "Moderation tools: cases, bans, kicks, timeouts, warns, quarantine, lockdown",
   version: "2.0.0",
   config: {},
   commands: [],

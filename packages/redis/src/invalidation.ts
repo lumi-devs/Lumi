@@ -24,15 +24,15 @@ function isInvalidationMessage(value: unknown): value is InvalidationMessage {
 export class InvalidationBus {
   private readonly subscriber: Redis;
   private readonly publisher: Redis;
-  private readonly localListeners = new Map<string, Set<(keys: string[]) => void>>();
+  private readonly localListeners = new Map<
+    string,
+    Set<(keys: string[]) => void>
+  >();
   private readonly channel = "lumi:invalidation";
   private resyncCallbacks: (() => void)[] = [];
   private hasConnected = false;
 
   constructor(redis: Redis) {
-
-
-
     this.publisher = redis;
     this.subscriber = redis.duplicate();
     this.setupSubscriber();
@@ -40,9 +40,6 @@ export class InvalidationBus {
 
   private setupSubscriber(): void {
     this.subscriber.on("ready", () => {
-
-
-
       if (this.hasConnected) this.signalResync();
       else this.hasConnected = true;
     });
@@ -100,8 +97,6 @@ export class InvalidationBus {
       keys,
       timestamp: Date.now(),
     };
-
-
 
     this.handleInvalidation(message);
 

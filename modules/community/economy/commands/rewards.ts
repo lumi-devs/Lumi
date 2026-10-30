@@ -142,9 +142,7 @@ export const workDef: CommandDefinition = {
     const cooldownMs = config.workCooldown * 1000;
 
     if (user.lastWorkAt) {
-      const nextAt = new Date(
-        new Date(user.lastWorkAt).getTime() + cooldownMs,
-      );
+      const nextAt = new Date(new Date(user.lastWorkAt).getTime() + cooldownMs);
       if (nextAt.getTime() > now.getTime()) {
         await interaction.reply(
           ephemeralCard(

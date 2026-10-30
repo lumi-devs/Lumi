@@ -7,11 +7,6 @@ import type {
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
 
-
-
-
-
-
 export interface ModuleServices {
   db: any;
   cache: any;
@@ -35,20 +30,14 @@ export type CommandData =
   | SlashCommandSubcommandsOnlyBuilder
   | CommandDataStub;
 
-
-
-
-
 export interface CommandDataStub {
   readonly name: string;
-
 
   toJSON(): any;
 }
 
 export interface CommandDefinition {
   data: CommandData;
-
 
   execute: (
     interaction: ChatInputCommandInteraction,
@@ -67,7 +56,6 @@ export interface CommandDefinition {
 
 export interface ListenerDefinition {
   event: string;
-
 
   handler: (...args: any[]) => Promise<void>;
   once?: boolean;

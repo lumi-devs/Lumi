@@ -29,13 +29,12 @@ export function evaluateNodeMatch(
   }
   if (grantedNode.endsWith(".*")) {
     const namespace = grantedNode.slice(0, -2);
-    return requiredNode === namespace || requiredNode.startsWith(`${namespace}.`);
+    return (
+      requiredNode === namespace || requiredNode.startsWith(`${namespace}.`)
+    );
   }
   return false;
 }
-
-
-
 
 export function buildPermitChain(
   userId: string,
@@ -63,17 +62,20 @@ function matchDetail(
 
 function verdictForBucket(
   tier: string,
-  bucket: { readonly grant: readonly string[]; readonly deny: readonly string[] },
+  bucket: {
+    readonly grant: readonly string[];
+    readonly deny: readonly string[];
+  },
   permitNode: string,
 ): PermitTierExplanation {
   const deny = matchDetail(bucket.deny, permitNode);
-  if (deny !== undefined) return { tier, verdict: "deny", detail: `deny ${deny}` };
+  if (deny !== undefined)
+    return { tier, verdict: "deny", detail: `deny ${deny}` };
   const grant = matchDetail(bucket.grant, permitNode);
   if (grant !== undefined)
     return { tier, verdict: "allow", detail: `grant ${grant}` };
   return { tier, verdict: "pass" };
 }
-
 
 function parseClock(value: unknown): number | null {
   if (typeof value !== "string") return null;
@@ -100,10 +102,11 @@ export function matchesConditions(
 ): boolean {
   if (!conditions) return true;
 
-
-
   if (conditions.channelIds?.length) {
-    if (!options.channelId || !conditions.channelIds.includes(options.channelId)) {
+    if (
+      !options.channelId ||
+      !conditions.channelIds.includes(options.channelId)
+    ) {
       return false;
     }
   }
@@ -131,8 +134,6 @@ export function matchesConditions(
     try {
       local = zonedTimeParts(now, conditions.timezone ?? fallbackTimezone);
     } catch {
-
-
       return false;
     }
     const currentTime = local.hour * 60 + local.minute;
@@ -195,7 +196,7 @@ function privilegedResult(
   const member = client?.guilds.cache.get(guildId)?.members.cache.get(userId);
   const manager = Boolean(
     member?.permissions.has(PermissionFlagsBits.Administrator) ||
-      member?.permissions.has(PermissionFlagsBits.ManageGuild),
+    member?.permissions.has(PermissionFlagsBits.ManageGuild),
   );
 
   if (!manager) return null;
@@ -310,7 +311,9 @@ export class PermitResolver {
   ): Promise<void> {
     const allowed = await this.hasPermit(options, container);
     if (!allowed) {
-      throw new Error(`Permission denied: missing permit \`${options.permitNode}\``);
+      throw new Error(
+        `Permission denied: missing permit \`${options.permitNode}\``,
+      );
     }
   }
 }

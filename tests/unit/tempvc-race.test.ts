@@ -20,9 +20,7 @@ const makeChannel = (
     members: new Map(),
     userLimit,
     permissionOverwrites: {
-      cache: new Map([
-        ["everyone", { allow: new Set(), deny: new Set() }],
-      ]),
+      cache: new Map([["everyone", { allow: new Set(), deny: new Set() }]]),
       edit: vi.fn(async () => undefined),
     },
     send: vi.fn(async () => undefined),
@@ -75,7 +73,9 @@ const makeFixture = (guildId: string, userId: string) => {
       }
       return values;
     }),
-    findUnique: vi.fn(async ({ where }: any) => rows.get(where.channelId) ?? null),
+    findUnique: vi.fn(
+      async ({ where }: any) => rows.get(where.channelId) ?? null,
+    ),
     findFirst: vi.fn(async ({ where }: any) => {
       return (
         [...rows.values()].find(

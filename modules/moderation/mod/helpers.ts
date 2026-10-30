@@ -30,10 +30,10 @@ export function isTextGuildChannel(
 } {
   return Boolean(
     channel &&
-      "isTextBased" in channel &&
-      channel.isTextBased() &&
-      "permissionOverwrites" in channel &&
-      !channel.isThread(),
+    "isTextBased" in channel &&
+    channel.isTextBased() &&
+    "permissionOverwrites" in channel &&
+    !channel.isThread(),
   );
 }
 
@@ -48,16 +48,12 @@ export async function getTargets(
   const single = interaction.options.getUser("user");
   const extra = interaction.options.getString("users");
   const ids = new Set(
-    extra
-      ? extra.split(/\s+/).filter((s) => isSnowflake(s))
-      : [],
+    extra ? extra.split(/\s+/).filter((s) => isSnowflake(s)) : [],
   );
   if (single) ids.add(single.id);
 
   const fetched = await Promise.all(
-    [...ids].map((id) =>
-      interaction.client.users.fetch(id).catch(() => null),
-    ),
+    [...ids].map((id) => interaction.client.users.fetch(id).catch(() => null)),
   );
   return fetched
     .filter((user): user is User => user !== null)
@@ -70,7 +66,7 @@ export function isImmune(
 ): boolean {
   return Boolean(
     member &&
-      config.immuneRoleIds.some((roleId) => member.roles.cache.has(roleId)),
+    config.immuneRoleIds.some((roleId) => member.roles.cache.has(roleId)),
   );
 }
 

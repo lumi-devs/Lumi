@@ -1,8 +1,3 @@
-
-
-
-
-
 export interface ParsedCron {
   readonly minute: readonly number[];
   readonly hour: readonly number[];
@@ -33,9 +28,6 @@ const Weekdays: Readonly<Record<string, number>> = {
   Fri: 5,
   Sat: 6,
 };
-
-
-
 
 function parseCronField(field: string, min: number, max: number): number[] {
   const result: number[] = [];
@@ -84,9 +76,6 @@ function parseCronField(field: string, min: number, max: number): number[] {
   return [...new Set(result)].sort((a, b) => a - b);
 }
 
-
-
-
 export function parseCron(cron: string): ParsedCron {
   const normalized = cron.trim();
   const cached = parsedCronCache.get(normalized);
@@ -126,7 +115,6 @@ function formatterFor(timezone: string): Intl.DateTimeFormat {
       weekday: "short",
     });
 
-
     if (formatterCache.size >= MaxCachedFormatters) {
       const oldest = formatterCache.keys().next().value;
       if (oldest !== undefined) formatterCache.delete(oldest);
@@ -135,9 +123,6 @@ function formatterFor(timezone: string): Intl.DateTimeFormat {
   }
   return formatter;
 }
-
-
-
 
 export function zonedTimeParts(date: Date, timezone?: string): ZonedTimeParts {
   if (!timezone) {
@@ -155,7 +140,6 @@ export function zonedTimeParts(date: Date, timezone?: string): ZonedTimeParts {
     parts.find((part) => part.type === type)?.value ?? "0";
 
   return {
-
     hour: Number(value("hour")) % 24,
     minute: Number(value("minute")),
     dayOfMonth: Number(value("day")),
@@ -164,7 +148,11 @@ export function zonedTimeParts(date: Date, timezone?: string): ZonedTimeParts {
   };
 }
 
-export function matchesCron(cron: string, date: Date, timezone?: string): boolean {
+export function matchesCron(
+  cron: string,
+  date: Date,
+  timezone?: string,
+): boolean {
   try {
     const parsed = parseCron(cron);
     const parts = zonedTimeParts(date, timezone);
@@ -177,8 +165,6 @@ export function matchesCron(cron: string, date: Date, timezone?: string): boolea
       parsed.dayOfWeek.includes(parts.dayOfWeek)
     );
   } catch {
-
-
     return false;
   }
 }

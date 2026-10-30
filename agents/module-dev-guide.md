@@ -82,21 +82,21 @@ modules/my-module/
 
 ## Manifest Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `apiVersion` | ✅ | Must be `2` |
-| `name` | ✅ | Lowercase, hyphenated; submodules use `<supermodule>-<dir>` |
-| `displayName` | ✅ | Human-readable name |
-| `emoji` | ✅ | Single emoji for UI |
-| `description` | ✅ | One-line description |
-| `version` | ✅ | Semver (e.g., `0.1.0`) |
-| `entry` | ✅ | Relative path to definition file |
-| `dependencies` | ❌ | Other modules: `{ "supermodule-name": "^2.0.0" }` |
-| `requirements` | ❌ | NPM packages: `["lodash@^4.17.21"]` |
-| `conflicts` | ❌ | Module names that cannot co-exist |
-| `capabilities` | ❌ | Descriptive metadata only; validated but not acted on |
-| `configKey` | ❌ | Stored settings key when it differs from `name` |
-| `configFields` | ❌ | `/lumi` settings metadata; defaults to `[]` |
+| Field          | Required | Description                                                 |
+| -------------- | -------- | ----------------------------------------------------------- |
+| `apiVersion`   | ✅       | Must be `2`                                                 |
+| `name`         | ✅       | Lowercase, hyphenated; submodules use `<supermodule>-<dir>` |
+| `displayName`  | ✅       | Human-readable name                                         |
+| `emoji`        | ✅       | Single emoji for UI                                         |
+| `description`  | ✅       | One-line description                                        |
+| `version`      | ✅       | Semver (e.g., `0.1.0`)                                      |
+| `entry`        | ✅       | Relative path to definition file                            |
+| `dependencies` | ❌       | Other modules: `{ "supermodule-name": "^2.0.0" }`           |
+| `requirements` | ❌       | NPM packages: `["lodash@^4.17.21"]`                         |
+| `conflicts`    | ❌       | Module names that cannot co-exist                           |
+| `capabilities` | ❌       | Descriptive metadata only; validated but not acted on       |
+| `configKey`    | ❌       | Stored settings key when it differs from `name`             |
+| `configFields` | ❌       | `/lumi` settings metadata; defaults to `[]`                 |
 
 ---
 
@@ -113,25 +113,31 @@ config: z.object({
   stringSetting: z.string().default("value"),
   numberSetting: z.number().int().min(0).max(100).default(50),
   booleanSetting: z.boolean().default(true),
-  
+
   // Discord-specific
-  channelId: z.string().nullable().optional(),      // Single channel
-  roleId: z.string().nullable().optional(),         // Single role
-  channelIds: z.array(z.string()).default([]),      // Multi-channel
-  roleIds: z.array(z.string()).default([]),         // Multi-role
-  
+  channelId: z.string().nullable().optional(), // Single channel
+  roleId: z.string().nullable().optional(), // Single role
+  channelIds: z.array(z.string()).default([]), // Multi-channel
+  roleIds: z.array(z.string()).default([]), // Multi-role
+
   // Complex
-  thresholds: z.record(z.object({
-    action: z.enum(["warn", "timeout", "ban"]),
-    duration: z.number().int().optional(),
-  })).default({}),
-  
+  thresholds: z
+    .record(
+      z.object({
+        action: z.enum(["warn", "timeout", "ban"]),
+        duration: z.number().int().optional(),
+      }),
+    )
+    .default({}),
+
   // Custom objects
-  customObject: z.object({
-    key1: z.string(),
-    key2: z.number(),
-  }).optional(),
-})
+  customObject: z
+    .object({
+      key1: z.string(),
+      key2: z.number(),
+    })
+    .optional(),
+});
 ```
 
 ### Config Field Types (for UI)
@@ -141,18 +147,18 @@ Declare these in `manifest.json` `configFields`; they are not part of
 `description`, `required`, `default`, `category`, `min`, `max`, `choices`, and
 `channelTypes`.
 
-| Type | Zod | Control |
-|------|-----|---------|
-| `string` | `z.string()` | Text modal |
-| `number` | `z.number()` | Number modal |
-| `boolean` | `z.boolean()` | On/Off toggle |
-| `channel` | `z.string()` | Channel picker |
-| `role` | `z.string()` | Role picker |
-| `multi-channel` | `z.array(z.string())` | Multi-channel picker (`minValues: 0`) |
-| `multi-role` | `z.array(z.string())` | Multi-role picker (`minValues: 0`) |
-| `select` | `z.string()` + `choices` | String select |
-| `multi-string` | `z.string()` | Text modal (stored as one string) |
-| `json` | `z.object()` / `z.array()` | JSON modal |
+| Type            | Zod                        | Control                               |
+| --------------- | -------------------------- | ------------------------------------- |
+| `string`        | `z.string()`               | Text modal                            |
+| `number`        | `z.number()`               | Number modal                          |
+| `boolean`       | `z.boolean()`              | On/Off toggle                         |
+| `channel`       | `z.string()`               | Channel picker                        |
+| `role`          | `z.string()`               | Role picker                           |
+| `multi-channel` | `z.array(z.string())`      | Multi-channel picker (`minValues: 0`) |
+| `multi-role`    | `z.array(z.string())`      | Multi-role picker (`minValues: 0`)    |
+| `select`        | `z.string()` + `choices`   | String select                         |
+| `multi-string`  | `z.string()`               | Text modal (stored as one string)     |
+| `json`          | `z.object()` / `z.array()` | JSON modal                            |
 
 ---
 
@@ -161,7 +167,11 @@ Declare these in `manifest.json` `configFields`; they are not part of
 ### Slash Command Definition
 
 ```ts
-import { SlashCommandBuilder, PermissionFlagsBits, type ChatInputCommandInteraction } from "discord.js";
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  type ChatInputCommandInteraction,
+} from "discord.js";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { makeErrorCard, makeSuccessCard, ephemeralCard } from "@lumi/ui";
 
@@ -170,48 +180,51 @@ export const myCommand: CommandDefinition = {
     .setName("my-command")
     .setDescription("Description shown in Discord")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-    .addStringOption(opt => opt
-      .setName("input")
-      .setDescription("Input description")
-      .setRequired(true)
-      .setAutocomplete(true)
+    .addStringOption((opt) =>
+      opt
+        .setName("input")
+        .setDescription("Input description")
+        .setRequired(true)
+        .setAutocomplete(true),
     )
-    .addUserOption(opt => opt
-      .setName("target")
-      .setDescription("Target user")
-      .setRequired(false)
+    .addUserOption((opt) =>
+      opt.setName("target").setDescription("Target user").setRequired(false),
     ),
-  
+
   // Optional: permit node this command maps to. It feeds the permit catalog
   // and Explain Check; dispatch does not gate on it today.
   requiredPermit: "my-module.my-command",
-  
+
   // Optional: autocomplete handler
   async autocomplete(interaction, services) {
     const focused = interaction.options.getFocused();
     const choices = ["option1", "option2", "option3"]
-      .filter(c => c.includes(focused))
+      .filter((c) => c.includes(focused))
       .slice(0, 25);
-    await interaction.respond(choices.map(c => ({ name: c, value: c })));
+    await interaction.respond(choices.map((c) => ({ name: c, value: c })));
   },
-  
+
   async execute(interaction: ChatInputCommandInteraction, services) {
     const input = interaction.options.getString("input", true);
     const target = interaction.options.getUser("target") ?? interaction.user;
     const guildId = interaction.guildId!;
-    
+
     // Check module is enabled for this guild
     if (!services.modules.isEnabled(guildId, "my-module")) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Disabled", "Module not enabled")));
+      await interaction.reply(
+        ephemeralCard(makeErrorCard("Disabled", "Module not enabled")),
+      );
       return;
     }
-    
+
     // Get guild config (returns unknown; validate or parse it)
     const config = await services.config.get(guildId, "my-module");
     void config;
-    
+
     // Use database
-    const row = await services.db.prisma.myTable.findUnique({ where: { guildId } });
+    const row = await services.db.prisma.myTable.findUnique({
+      where: { guildId },
+    });
     void row;
 
     // Use permits
@@ -228,9 +241,11 @@ export const myCommand: CommandDefinition = {
       )
     ).allowed;
     void hasPermit;
-    
+
     await interaction.reply(
-      ephemeralCard(makeSuccessCard("Done", `Processed: ${input} for ${target.username}`)),
+      ephemeralCard(
+        makeSuccessCard("Done", `Processed: ${input} for ${target.username}`),
+      ),
     );
   },
 };
@@ -262,22 +277,25 @@ export const myListener: ListenerDefinition = {
   async handler(message: Message, services) {
     // Skip DMs
     if (!message.guild) return;
-    
+
     // Check module enabled
     if (!services.modules.isEnabled(message.guildId, "my-module")) return;
-    
+
     // Skip bots
     if (message.author.bot) return;
-    
+
     // Check config (stored value is unknown; parse it with your Zod schema)
     const config = (await services.config.get(message.guildId, "my-module")) as
-      | { someFeature?: boolean }
-      | undefined;
+      { someFeature?: boolean } | undefined;
     if (!config?.someFeature) return;
-    
+
     // Do work...
     await services.db.prisma.myLog.create({
-      data: { guildId: message.guildId, userId: message.author.id, content: message.content }
+      data: {
+        guildId: message.guildId,
+        userId: message.author.id,
+        content: message.content,
+      },
     });
   },
 };
@@ -286,6 +304,7 @@ export const myListener: ListenerDefinition = {
 ### Available Events
 
 Import from `discord.js` Events:
+
 - `Events.MessageCreate` / `MessageUpdate` / `MessageDelete`
 - `Events.GuildMemberAdd` / `GuildMemberRemove` / `GuildMemberUpdate`
 - `Events.VoiceStateUpdate`
@@ -314,7 +333,7 @@ import type { TaskDefinition } from "@lumi/module-kit";
 export const myTask: TaskDefinition = {
   name: "cleanup",
   // Cron expression: minute hour day-of-month month day-of-week
-  cron: "0 3 * * *",  // Daily at 3 AM UTC
+  cron: "0 3 * * *", // Daily at 3 AM UTC
   timezone: "UTC",
   async handler(services) {
     // Not currently invoked by the module loader.
@@ -333,28 +352,30 @@ fixed-interval expressions (`*/N * * * *`) are scheduled exactly.
 
 ```ts
 interface ModuleServices {
-  client: Client;                    // Discord client
-  redis: Redis;                      // ioredis instance
-  db: {                              // Database access
+  client: Client; // Discord client
+  redis: Redis; // ioredis instance
+  db: {
+    // Database access
     prisma: PrismaClient;
     permits: PermitRepository;
   };
-  prisma: PrismaClient;              // Same client, top-level shorthand
-  permits: PermitRepository;         // Permit evaluation
-  modules: {                         // Module state
+  prisma: PrismaClient; // Same client, top-level shorthand
+  permits: PermitRepository; // Permit evaluation
+  modules: {
+    // Module state
     isEnabled: (guildId: string, module: string) => boolean;
   };
   moduleLoader: ModuleLoader;
   moduleManager: ModuleManager;
-  addons: AddonManager;              // Throws if used before wiring
-  scheduler: DistributedScheduler;   // Cron jobs
-  config: ConfigService;             // Guild config get/set
-  configService: ConfigService;      // Same instance
-  rpc: RpcServer;                    // Internal HTTP control server
-  ui: typeof import("@lumi/ui");     // Import @lumi/ui directly
-  discord: { PermissionFlagsBits };  // Discord.js constants
+  addons: AddonManager; // Throws if used before wiring
+  scheduler: DistributedScheduler; // Cron jobs
+  config: ConfigService; // Guild config get/set
+  configService: ConfigService; // Same instance
+  rpc: RpcServer; // Internal HTTP control server
+  ui: typeof import("@lumi/ui"); // Import @lumi/ui directly
+  discord: { PermissionFlagsBits }; // Discord.js constants
   observability: { healthMonitor: HealthMonitor; logger: Logger };
-  __moduleName: string;              // Set per module
+  __moduleName: string; // Set per module
 }
 ```
 
@@ -374,18 +395,25 @@ import { defineModule } from "@lumi/module-kit";
 
 describe("my-module", () => {
   let services: any;
-  
+
   beforeEach(() => {
     services = {
       modules: { isEnabled: vi.fn().mockReturnValue(true) },
       config: { get: vi.fn().mockResolvedValue({}) },
       db: { prisma: { myTable: { findUnique: vi.fn() } } },
       prisma: { myTable: { findUnique: vi.fn() } },
-      permits: { explainPermit: vi.fn().mockResolvedValue({ allowed: true, rows: [] }) },
-      ui: { makeSuccessCard: (t: string, d: string) => ({ title: t, description: d }) },
+      permits: {
+        explainPermit: vi.fn().mockResolvedValue({ allowed: true, rows: [] }),
+      },
+      ui: {
+        makeSuccessCard: (t: string, d: string) => ({
+          title: t,
+          description: d,
+        }),
+      },
     };
   });
-  
+
   it("should export valid module definition", async () => {
     const { default: mod } = await import("../index.ts");
     expect(mod.name).toBe("my-module");
@@ -395,6 +423,7 @@ describe("my-module", () => {
 ```
 
 Run tests:
+
 ```bash
 bun run test
 # or a single file

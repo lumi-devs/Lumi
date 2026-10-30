@@ -22,8 +22,7 @@ function generatorName(
   generator: TempVcGenerator,
 ): string {
   return (
-    guild?.channels.cache.get(generator.channelId)?.name ??
-    generator.channelId
+    guild?.channels.cache.get(generator.channelId)?.name ?? generator.channelId
   );
 }
 

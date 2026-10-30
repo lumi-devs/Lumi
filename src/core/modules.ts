@@ -1,7 +1,16 @@
 import type { AddonRuntime } from "@lumi/downloader";
-import type { CommandDefinition } from "@lumi/module-kit";
+import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
 import type { LoadedModule, ModuleLoader } from "@lumi/module-runtime";
-import type { Client, RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
+import type { ScheduledJob } from "@lumi/scheduler";
+import type {
+  Client,
+  RESTPostAPIApplicationCommandsJSONBody,
+} from "discord.js";
+
+interface SchedulerLike {
+  register(job: ScheduledJob): void;
+  unregister(name: string): void;
+}
 
 export interface RegisteredCommand extends CommandDefinition {
   module: string | null;
@@ -15,8 +24,7 @@ export function commandPayloadForGuild(
   return registry
     .all()
     .filter(
-      (command) =>
-        !command.module || loader.isActive(guildId, command.module),
+      (command) => !command.module || loader.isActive(guildId, command.module),
     )
     .map((command) => command.data.toJSON());
 }
@@ -26,11 +34,6 @@ export interface ModuleHostLogger {
   warn(message: string, meta?: unknown): void;
   error(message: string, meta?: unknown): void;
 }
-
-
-
-
-
 
 export function servicesForModule<T extends object>(
   services: T,
@@ -123,7 +126,10 @@ export class ModuleHost implements AddonRuntime {
   }
 
   async load(discovered: LoadedModule[]): Promise<LoadedModule[]> {
-    const loaded = await this.options.loader.loadAll(discovered, this.options.services);
+    const loaded = await this.options.loader.loadAll(
+      discovered,
+      this.options.services,
+    );
     for (const module of loaded) {
       this.attach(module);
     }
@@ -160,10 +166,6 @@ export class ModuleHost implements AddonRuntime {
     await this.options.syncCommands();
   }
 
-
-
-
-
   async unloadAll(): Promise<void> {
     const names = this.options.loader
       .listAll()
@@ -186,7 +188,10 @@ export class ModuleHost implements AddonRuntime {
   async reload(name: string): Promise<void> {
     const targets = this.options.loader
       .listAll()
-      .filter((module) => module.manifest.name === name || module.supermodule === name);
+      .filter(
+        (module) =>
+          module.manifest.name === name || module.supermodule === name,
+      );
 
     for (const target of targets) {
       this.detach(target.manifest.name);
@@ -215,7 +220,10 @@ export class ModuleHost implements AddonRuntime {
           return;
         }
         void handler(...args, moduleServices).catch((error) =>
-          this.options.logger.error(`[${moduleName}] listener ${event} failed:`, error),
+          this.options.logger.error(
+            `[${moduleName}] listener ${event} failed:`,
+            error,
+          ),
         );
       };
       if (listener.once) {
@@ -226,6 +234,20 @@ export class ModuleHost implements AddonRuntime {
       disposers.push(() => this.options.client.off(event, wrapped));
     }
     this.disposers.set(moduleName, disposers);
+
+    const scheduler = this.options.services.scheduler as
+      SchedulerLike | undefined;
+    for (const task of module.definition.tasks ?? []) {
+      const jobName = `${moduleName}:${task.name}`;
+      scheduler?.register({
+        name: jobName,
+        cron: task.cron,
+        timezone: task.timezone,
+        handler: () =>
+          task.handler(moduleServices as unknown as ModuleServices),
+      });
+      disposers.push(() => scheduler?.unregister(jobName));
+    }
 
     for (const command of module.definition.commands ?? []) {
       if (!this.options.registry.add({ ...command, module: moduleName })) {

@@ -5,6 +5,7 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 ## Architecture: Built-in Services vs Toggleable Supermodules
 
 **Built-in Services** (always running, non-disableable):
+
 - `src/core/` — Gateway, lifecycle, interaction/prefix dispatch, built-in
   commands, RPC control server, service wiring
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
@@ -13,22 +14,27 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 Every module under `modules/` is a **supermodule** that contains independently-toggleable **submodules**:
 
 ### Utility
+
 - `utility-afk` — AFK status with mention replies and nickname prefix
 - `utility-nick` — Nickname changes with role hierarchy checks and optional self-service
 - `utility-tempvc` — Join-to-create temporary voice channels with ownership controls
 - `utility-info` — Avatar, banner, whois, serverinfo, and info commands
 
 ### Community
+
 - `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
 - `community-economy` — Currency, banking, rewards, shop, balance cards
 
 ### Moderation
+
 - `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute)
 
 ### Logging
+
 - `logging-logs` — Message, edit, delete, voice, and moderation logging
 
 ### Security
+
 - `security-antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses
 - `security-join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
 - `security-verification` — Member verification with emoji captcha, web verification, pending/verified roles
@@ -179,6 +185,7 @@ declare a module name.
 ## Panel UI
 
 In `/lumi` → Modules tab:
+
 ```
 🔧 Utility                         Enabled   [Submodules]
 👥 Community                       Enabled   [Submodules]

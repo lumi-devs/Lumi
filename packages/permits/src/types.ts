@@ -65,7 +65,10 @@ export interface PermitChainTarget {
 
 export interface PermitChainResult {
   readonly tiers: readonly {
-    readonly custom: { readonly grant: readonly string[]; readonly deny: readonly string[] };
+    readonly custom: {
+      readonly grant: readonly string[];
+      readonly deny: readonly string[];
+    };
   }[];
   readonly isQuarantined: boolean;
 }

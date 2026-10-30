@@ -168,7 +168,10 @@ export class PermitRepository {
       where: {
         guildId,
         builtin: false,
-        position: direction === "up" ? { lt: permit.position } : { gt: permit.position },
+        position:
+          direction === "up"
+            ? { lt: permit.position }
+            : { gt: permit.position },
       },
       orderBy: { position: direction === "up" ? "desc" : "asc" },
     });
@@ -252,11 +255,8 @@ export class PermitRepository {
       ],
     };
 
-
     const [permits, quarantineValue] = await Promise.all([
       this.prisma.permit.findMany({
-
-
         where: {
           guildId,
           OR: [{ expiresAt: null }, { expiresAt: { gte: at } }],
@@ -311,7 +311,13 @@ export class PermitRepository {
         ) {
           continue;
         }
-        if (!matchesConditions(permit.conditions as PermitConditions, conditionContext, permit.timezone ?? undefined)) {
+        if (
+          !matchesConditions(
+            permit.conditions as PermitConditions,
+            conditionContext,
+            permit.timezone ?? undefined,
+          )
+        ) {
           continue;
         }
       }
@@ -341,7 +347,11 @@ export class PermitRepository {
     const chainResult = await this.getPermitChain(
       options.guildId,
       options.userId,
-      buildPermitChain(options.userId, options.channelId, options.roleIds ?? []),
+      buildPermitChain(
+        options.userId,
+        options.channelId,
+        options.roleIds ?? [],
+      ),
     );
     if (chainResult.isQuarantined) return false;
     for (const tier of chainResult.tiers) {
@@ -381,7 +391,11 @@ export class PermitRepository {
     const chainResult = await this.getPermitChain(
       options.guildId,
       options.userId,
-      buildPermitChain(options.userId, options.channelId, options.roleIds ?? []),
+      buildPermitChain(
+        options.userId,
+        options.channelId,
+        options.roleIds ?? [],
+      ),
     );
 
     for (const node of nodes) {
@@ -422,13 +436,14 @@ export class PermitRepository {
           builtin: true,
         });
       } catch (error) {
-
         if (!isUniqueConstraintError(error)) throw error;
       }
     }
   }
 
-  async createAuditLog(data: PermitAuditLogInput): Promise<PermitAuditLogEntry> {
+  async createAuditLog(
+    data: PermitAuditLogInput,
+  ): Promise<PermitAuditLogEntry> {
     return createAuditLog(this.prisma, data);
   }
 

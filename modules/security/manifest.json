@@ -6,5 +6,28 @@
   "description": "Server protection suite: anti-nuke, join gate, verification, panic mode, backups, and automod",
   "version": "2.0.0",
   "entry": "index.ts",
-  "configFields": []
+  "configFields": [
+    {
+      "key": "logChannelId",
+      "label": "Security Log Channel",
+      "type": "channel",
+      "description": "Channel for security events and verification prompts",
+      "category": "General",
+      "channelTypes": [0]
+    },
+    {
+      "key": "quarantineRoleId",
+      "label": "Quarantine Role",
+      "type": "role",
+      "description": "Role assigned when a member is quarantined or held for verification",
+      "category": "General"
+    },
+    {
+      "key": "trustedRoleIds",
+      "label": "Trusted Roles",
+      "type": "multi-role",
+      "description": "Roles exempt from anti-nuke, join gate, and betrayal monitoring",
+      "category": "General"
+    }
+  ]
 }

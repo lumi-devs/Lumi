@@ -38,7 +38,10 @@ export async function handleAddonInteraction(
   if (!isBotOwner(interaction.user.id)) {
     await interaction.reply(
       ephemeralCard(
-        makeErrorCard("Bot Owners Only", "Add-ons can only be managed by bot owners."),
+        makeErrorCard(
+          "Bot Owners Only",
+          "Add-ons can only be managed by bot owners.",
+        ),
       ),
     );
     return true;
@@ -63,7 +66,10 @@ export async function handleAddonInteraction(
         return true;
       case "repo": {
         if (!interaction.isStringSelectMenu()) return true;
-        await show(interaction, services, { kind: "repo", name: interaction.values[0]! });
+        await show(interaction, services, {
+          kind: "repo",
+          name: interaction.values[0]!,
+        });
         return true;
       }
       case "view": {
@@ -82,7 +88,10 @@ export async function handleAddonInteraction(
       }
       case "manage": {
         if (!interaction.isStringSelectMenu()) return true;
-        await show(interaction, services, { kind: "manage", name: interaction.values[0]! });
+        await show(interaction, services, {
+          kind: "manage",
+          name: interaction.values[0]!,
+        });
         return true;
       }
       case "addrepo":
@@ -91,13 +100,21 @@ export async function handleAddonInteraction(
         return true;
       case "addrepomodal": {
         if (!interaction.isModalSubmit()) return true;
-        const name = interaction.fields.getTextInputValue("name").trim().toLowerCase();
+        const name = interaction.fields
+          .getTextInputValue("name")
+          .trim()
+          .toLowerCase();
         const url = interaction.fields.getTextInputValue("url").trim();
         const branch = interaction.fields.getTextInputValue("branch").trim();
         await interaction.deferUpdate();
         try {
           await services.addons.addRepo(name, url, branch || undefined);
-          await show(interaction, services, { kind: "repo", name }, `Repository ${name} added.`);
+          await show(
+            interaction,
+            services,
+            { kind: "repo", name },
+            `Repository ${name} added.`,
+          );
         } catch (error) {
           await replyEphemeralError(
             interaction,
@@ -118,14 +135,24 @@ export async function handleAddonInteraction(
               ? `Updated ${report.updated.length} add-on(s) to ${formatCommit(report.newCommit)}.`
               : "Repository updated; no unpinned add-ons to reload."
             : "Already up to date.";
-        await show(interaction, services, { kind: "repo", name: target }, cut(notice, 500));
+        await show(
+          interaction,
+          services,
+          { kind: "repo", name: target },
+          cut(notice, 500),
+        );
         return true;
       }
       case "remove": {
         if (!target) return false;
         await interaction.deferUpdate();
         await services.addons.removeRepo(target);
-        await show(interaction, services, { kind: "repos" }, `Repository ${target} removed.`);
+        await show(
+          interaction,
+          services,
+          { kind: "repos" },
+          `Repository ${target} removed.`,
+        );
         return true;
       }
       case "install": {
@@ -144,7 +171,12 @@ export async function handleAddonInteraction(
         if (!target) return false;
         await interaction.deferUpdate();
         await services.addons.uninstall(target);
-        await show(interaction, services, { kind: "installed" }, `Uninstalled ${target}.`);
+        await show(
+          interaction,
+          services,
+          { kind: "installed" },
+          `Uninstalled ${target}.`,
+        );
         return true;
       }
       case "pin": {
@@ -173,7 +205,9 @@ export async function handleAddonInteraction(
       case "autotoggle": {
         await interaction.deferUpdate();
         const state = await services.addons.getAutoUpdate();
-        const next = await services.addons.setAutoUpdate({ enabled: !state.enabled });
+        const next = await services.addons.setAutoUpdate({
+          enabled: !state.enabled,
+        });
         await show(
           interaction,
           services,
@@ -199,7 +233,11 @@ export async function handleAddonInteraction(
         return false;
     }
   } catch (error) {
-    await replyEphemeralError(interaction, "Add-on Action Failed", errorMessage(error));
+    await replyEphemeralError(
+      interaction,
+      "Add-on Action Failed",
+      errorMessage(error),
+    );
     return true;
   }
 }

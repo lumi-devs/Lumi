@@ -1,9 +1,5 @@
 import type { ModuleLoader } from "@lumi/module-runtime";
-import {
-  isBotOwner,
-  type Permit,
-  type PermitRepository,
-} from "@lumi/permits";
+import { isBotOwner, type Permit, type PermitRepository } from "@lumi/permits";
 import type { CardReply } from "@lumi/ui";
 import {
   type AssignFlow,
@@ -148,8 +144,6 @@ export class PermitPanel implements PermitHost {
   }
 
   flowKey(): string {
-
-
     const messageId = this.interaction.message?.id ?? this.interaction.customId;
     return permitFlowKey(messageId, this.interaction.user.id);
   }

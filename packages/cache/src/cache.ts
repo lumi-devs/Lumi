@@ -1,19 +1,17 @@
 import { type Codec, createCodec } from "./codec.js";
 
-
-
-
-
 export interface CacheRedis {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, unit: "PX", ttlMs: number): Promise<unknown>;
   del(...keys: string[]): Promise<unknown>;
   mget(...keys: string[]): Promise<(string | null)[]>;
 
-
-
-
-  eval?(script: string, numKeys: number, key: string, value: string): Promise<unknown>;
+  eval?(
+    script: string,
+    numKeys: number,
+    key: string,
+    value: string,
+  ): Promise<unknown>;
 }
 
 export interface CacheOptions {
@@ -69,7 +67,6 @@ interface LoadFlight<T> {
 
 const DELETE_IF_VALUE_SCRIPT =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-
 
 interface CacheState<T> {
   l1: Map<string, L1Entry<T>>;
@@ -159,11 +156,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     return `${this.namespacePrefix}${key}`;
   }
 
-
-
-
-
-
   private discard(keys: readonly string[]): void {
     for (const fullKey of keys) {
       this.discardKey(fullKey);
@@ -179,8 +171,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     const flight = this.flights.get(fullKey);
     if (!flight) return;
     this.loadGenerations.set(fullKey, flight.generation + 1);
-
-
 
     this.flights.delete(fullKey);
   }
@@ -238,7 +228,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       this.recordL1Hit(decoded);
       return decoded;
     } catch {
-
       this.metrics?.recordMiss(this.label);
       return null;
     }
@@ -271,7 +260,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       reject = rej;
     });
 
-
     this.flights.set(fullKey, { promise, generation });
     this.loadGenerations.set(fullKey, generation);
     void this.runFlight(
@@ -284,13 +272,11 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     return promise;
   }
 
-
   private async dropIfStill(fullKey: string, encoded: string): Promise<void> {
     if (this.redis.eval) {
       await this.redis.eval(DELETE_IF_VALUE_SCRIPT, 1, fullKey, encoded);
       return;
     }
-
 
     const current = await this.redis.get(fullKey);
     if (current === encoded) await this.redis.del(fullKey);
@@ -311,17 +297,18 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
         return value;
       }
 
-      const encoded = value === null ? this.codec.encodeNull() : this.codec.encode(value);
+      const encoded =
+        value === null ? this.codec.encodeNull() : this.codec.encode(value);
       const writeTtlMs = value === null ? negativeTtlMs : ttlMs;
       await this.redis.set(fullKey, encoded, "PX", writeTtlMs);
 
       if ((this.loadGenerations.get(fullKey) ?? 0) !== generation) {
-
-
-
         this.metrics?.recordStaleWrite(this.label);
         await this.dropIfStill(fullKey, encoded).catch((error: unknown) => {
-          console.error("cache stale write cleanup failed", { key: fullKey, error });
+          console.error("cache stale write cleanup failed", {
+            key: fullKey,
+            error,
+          });
         });
         return value;
       }
@@ -336,8 +323,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
         this.flights.delete(fullKey);
         this.loadGenerations.delete(fullKey);
       } else if (!current) {
-
-
         this.loadGenerations.delete(fullKey);
       }
     }

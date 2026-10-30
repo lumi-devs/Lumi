@@ -3,7 +3,6 @@ import type { ModuleLoader } from "@lumi/module-runtime";
 import type { Client, Guild } from "discord.js";
 import { type CommandRegistry, commandPayloadForGuild } from "./modules.js";
 
-
 const GuildBatchSize = 10;
 
 export interface CommandSyncOptions {

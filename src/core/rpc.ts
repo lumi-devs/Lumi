@@ -1,4 +1,8 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 
 export interface RpcServerOptions {
   port: number;
@@ -24,8 +28,6 @@ export class RpcServer {
       try {
         await this.handler(req, res);
       } catch {
-
-
         res.statusCode = 500;
         res.end("Internal Server Error");
       }

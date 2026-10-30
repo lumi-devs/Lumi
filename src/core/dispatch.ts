@@ -18,12 +18,11 @@ import type { PermitPanel } from "../admin/panel/PermitPanel.js";
 import type { HubServices } from "../admin/panel/services.js";
 import { handlePingButton } from "./commands.js";
 import { commandErrorCard } from "./errors.js";
+import { isModuleLocked } from "./locks.js";
 import { type CommandRegistry, servicesForModule } from "./modules.js";
 
 export type BotInteraction =
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | ModalSubmitInteraction;
+  ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
 export interface DispatchServices extends HubServices {
   client: Client;
@@ -146,7 +145,10 @@ async function handleChatInput(
     await interaction
       .reply(
         ui.ephemeralCard(
-          ui.makeErrorCard("Unknown Command", "That command is not registered."),
+          ui.makeErrorCard(
+            "Unknown Command",
+            "That command is not registered.",
+          ),
         ),
       )
       .catch(() => undefined);
@@ -165,6 +167,25 @@ async function handleChatInput(
             ui.makeErrorCard(
               "Module Disabled",
               `The **${command.module}** module is disabled on this server. Open \`/lumi\` to enable it.`,
+            ),
+          ),
+        )
+        .catch(() => undefined);
+      return;
+    }
+    if (
+      await isModuleLocked(
+        context.services.redis,
+        interaction.guildId,
+        command.module,
+      )
+    ) {
+      await interaction
+        .reply(
+          ui.ephemeralCard(
+            ui.makeErrorCard(
+              "Temporarily Locked",
+              `The **${command.module}** module is locked while panic mode is active.`,
             ),
           ),
         )
@@ -245,7 +266,10 @@ async function handleComponent(
     return;
   }
 
-  if (interaction.isButton() && (await handlePingButton(interaction, context.services))) {
+  if (
+    interaction.isButton() &&
+    (await handlePingButton(interaction, context.services))
+  ) {
     return;
   }
   if (await handleHubInteraction(interaction, context.services)) return;

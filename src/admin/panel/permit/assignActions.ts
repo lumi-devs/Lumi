@@ -2,7 +2,11 @@ import type { PermitTargetType } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import { errorMessage } from "../../../core/errors.js";
 import type { AssignFlow } from "../../permits/flows.js";
-import { expiryFromValue, targetMention, targetTypeLabel } from "../../permits/format.js";
+import {
+  expiryFromValue,
+  targetMention,
+  targetTypeLabel,
+} from "../../permits/format.js";
 import type { PermitHost } from "./host.js";
 import { missingPermitCard } from "./listViews.js";
 
@@ -136,7 +140,6 @@ export async function handleAssignSelect(
     await interaction.update(await host.assignExpiryCard(flow));
     return true;
   }
-
 
   if (flow.targetId === undefined) {
     await interaction.update(await host.assignCard(flow));

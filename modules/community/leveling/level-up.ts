@@ -1,7 +1,11 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { makeSuccessCard } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
-import { type LevelingConfig, type LevelReward, rolesEarnXp } from "./config.js";
+import {
+  type LevelingConfig,
+  type LevelReward,
+  rolesEarnXp,
+} from "./config.js";
 import { levelForTotalXp, levelProgress } from "./formulas.js";
 
 interface GrantXpInput {
@@ -16,10 +20,7 @@ interface GrantXpInput {
   fallbackChannelId?: string | null;
 }
 
-function earnedRewards(
-  rewards: LevelReward[],
-  level: number,
-): LevelReward[] {
+function earnedRewards(rewards: LevelReward[], level: number): LevelReward[] {
   return rewards
     .filter((reward) => reward.level <= level)
     .sort((a, b) => a.level - b.level);
@@ -179,17 +180,14 @@ export async function grantXp(
   const member =
     input.member ??
     (input.guild
-      ? await input.guild.members
-          .fetch(input.userId)
-          .catch(() => null)
+      ? await input.guild.members.fetch(input.userId).catch(() => null)
       : null);
 
   if (member) {
     await applyRewardRoles(services, config, member, level);
   }
 
-  const guild =
-    input.guild ?? member?.guild ?? null;
+  const guild = input.guild ?? member?.guild ?? null;
   if (guild) {
     await announceLevelUp(services, config, guild, input, level, totalXp);
   }

@@ -6,11 +6,11 @@ date.
 
 ## Storage layout
 
-| Path | Contents |
-|------|----------|
-| `data/repos/<repo>` | Shallow clone of a tracked repository |
-| `data/addons/<module>` | Installed supermodule (loaded by the module loader) |
-| `data/addon-backups/<module>` | Copy used to roll back a failed update |
+| Path                          | Contents                                            |
+| ----------------------------- | --------------------------------------------------- |
+| `data/repos/<repo>`           | Shallow clone of a tracked repository               |
+| `data/addons/<module>`        | Installed supermodule (loaded by the module loader) |
+| `data/addon-backups/<module>` | Copy used to roll back a failed update              |
 
 Repositories and installs are recorded in Prisma: `DownloaderRepo` and
 `DownloaderModule`. `DownloaderModule.name` is the primary key, so an add-on can

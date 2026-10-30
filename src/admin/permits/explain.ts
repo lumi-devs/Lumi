@@ -11,9 +11,7 @@ function verdictIcon(verdict: PermitTierExplanation["verdict"]): string {
   return "➡️";
 }
 
-function verdictLabel(
-  verdict: PermitTierExplanation["verdict"],
-): string {
+function verdictLabel(verdict: PermitTierExplanation["verdict"]): string {
   if (verdict === "allow") return "Allowed";
   if (verdict === "deny") return "Denied";
   return "Passed";

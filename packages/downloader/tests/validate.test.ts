@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { validateAddon } from "../src/validate.js";
 
-
 const describeBun = describe.skipIf(typeof Bun === "undefined");
 
 const roots: string[] = [];
@@ -43,12 +42,16 @@ async function makeAddon(
 }
 
 afterEach(async () => {
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  await Promise.all(
+    roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
+  );
 });
 
 describeBun("validateAddon", () => {
   it("accepts a self-contained addon", async () => {
-    const dir = await makeAddon({ "index.ts": 'import { x } from "./lib.js";\nexport default x;\n' });
+    const dir = await makeAddon({
+      "index.ts": 'import { x } from "./lib.js";\nexport default x;\n',
+    });
     await expect(validateAddon(dir)).resolves.toEqual([]);
   });
 
@@ -82,9 +85,14 @@ describeBun("validateAddon", () => {
   });
 
   it("rejects a manifest name that does not match the directory", async () => {
-    const dir = await makeAddon({ "manifest.json": JSON.stringify({ name: "test-addon" }) }, "other-name");
+    const dir = await makeAddon(
+      { "manifest.json": JSON.stringify({ name: "test-addon" }) },
+      "other-name",
+    );
     await expect(validateAddon(dir)).resolves.toContainEqual(
-      expect.stringContaining('manifest name "test-addon" must match the directory name'),
+      expect.stringContaining(
+        'manifest name "test-addon" must match the directory name',
+      ),
     );
   });
 });

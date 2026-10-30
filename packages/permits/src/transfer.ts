@@ -69,8 +69,6 @@ export async function exportPermits(
   db: Pick<PrismaClient, "permit">,
   guildId: string,
 ): Promise<PermitExportData> {
-
-
   const permits = await db.permit.findMany({
     where: { guildId },
     include: { assignments: true },
@@ -195,7 +193,9 @@ export async function importPermits(
             polarity: permitData.polarity,
             position: permitData.position,
             builtin: permitData.builtin,
-            expiresAt: permitData.expiresAt ? new Date(permitData.expiresAt) : null,
+            expiresAt: permitData.expiresAt
+              ? new Date(permitData.expiresAt)
+              : null,
             schedule: toJsonInput(permitData.schedule),
             timezone: permitData.timezone,
             conditions: toJsonInput(permitData.conditions),
@@ -241,7 +241,9 @@ export async function importPermits(
       if (imported) result.imported++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      result.errors.push(`Failed to import permit ${permitData.name}: ${message}`);
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: ${message}`,
+      );
     }
   }
 

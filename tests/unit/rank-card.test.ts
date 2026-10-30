@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { generateRankCard } from "../../modules/community/leveling/rankCard.ts";
 
-const PngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const PngSignature = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
 
 describe("generateRankCard", () => {
   it("renders a PNG and falls back when the avatar cannot load", async () => {

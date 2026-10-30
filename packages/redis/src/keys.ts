@@ -1,8 +1,3 @@
-
-
-
-
-
 export function createKeys(namespace = "lumi") {
   const prefix = (parts: string[]): string => [namespace, ...parts].join(":");
 
@@ -27,7 +22,8 @@ export function createKeys(namespace = "lumi") {
         `${targetId.length}:${targetId}:${dataKey}`,
       ]),
     afk: (guildId: string, userId: string) => prefix(["afk", guildId, userId]),
-    afkMentions: (guildId: string, userId: string) => prefix(["afk", "mentions", guildId, userId]),
+    afkMentions: (guildId: string, userId: string) =>
+      prefix(["afk", "mentions", guildId, userId]),
     cooldown: (scope: string, id: string) => prefix(["cd", scope, id]),
     permits: (guildId: string, targetType: string, targetId: string) =>
       prefix(["permits", guildId, targetType, targetId]),
@@ -36,6 +32,8 @@ export function createKeys(namespace = "lumi") {
       prefix(["mod", guildId, "quarantine", userId]),
     panelSession: (messageId: string) => prefix(["panel", messageId]),
     lock: (name: string) => prefix(["lock", name]),
+    moduleLock: (guildId: string, moduleName: string) =>
+      prefix(["lock", "module", guildId, moduleName]),
     botStats: () => prefix(["stats", "bot"]),
   };
 }

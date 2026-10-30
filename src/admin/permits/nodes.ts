@@ -83,11 +83,13 @@ export async function permitNodeCatalog(
 }
 
 export function permitNamespaces(nodes: string[]): string[] {
-  return Array.from(new Set(nodes.map(namespaceForNode))).sort((left, right) => {
-    if (left === GlobalPermitNamespace) return -1;
-    if (right === GlobalPermitNamespace) return 1;
-    return left.localeCompare(right);
-  });
+  return Array.from(new Set(nodes.map(namespaceForNode))).sort(
+    (left, right) => {
+      if (left === GlobalPermitNamespace) return -1;
+      if (right === GlobalPermitNamespace) return 1;
+      return left.localeCompare(right);
+    },
+  );
 }
 
 export function nodesInNamespace(nodes: string[], namespace: string): string[] {
@@ -129,10 +131,7 @@ export function parseNodeList(input: string): string[] {
   );
 }
 
-export function formatPermitNodes(
-  nodes: readonly string[],
-  limit = 3,
-): string {
+export function formatPermitNodes(nodes: readonly string[], limit = 3): string {
   if (nodes.length === 0) return "*no nodes*";
   const shown = nodes
     .slice(0, limit)
@@ -164,7 +163,6 @@ export function suggestPermitName(
   const base = readablePermitName(nodes[0]!, polarity).slice(0, 56);
   return `${base} +${nodes.length - 1}`.slice(0, 64);
 }
-
 
 export function uniquePermitName(
   existingNames: Iterable<string>,

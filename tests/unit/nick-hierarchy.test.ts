@@ -68,10 +68,12 @@ function makeInteraction(options: {
   };
 }
 
-function services(options: {
-  permitAllowed?: boolean;
-  config?: Record<string, unknown>;
-} = {}) {
+function services(
+  options: {
+    permitAllowed?: boolean;
+    config?: Record<string, unknown>;
+  } = {},
+) {
   return {
     client: {},
     config: {

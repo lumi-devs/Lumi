@@ -12,7 +12,12 @@ import {
 } from "discord.js";
 import { formatPermitNodes } from "../permits/nodes.js";
 import { renderAddonPanel } from "./addonViews.js";
-import { type HubInteraction, type HubView, navigationRow, panelOptions } from "./common.js";
+import {
+  type HubInteraction,
+  type HubView,
+  navigationRow,
+  panelOptions,
+} from "./common.js";
 import { renderModules } from "./moduleList.js";
 import type { HubServices } from "./services.js";
 
@@ -60,7 +65,13 @@ async function renderHome(
         .map((line) => `-# ${line}`)
         .join("\n"),
     ],
-    panelOptions(interaction, "home", ["Hub"], [], "Select a tab below to continue."),
+    panelOptions(
+      interaction,
+      "home",
+      ["Hub"],
+      [],
+      "Select a tab below to continue.",
+    ),
   );
 }
 
@@ -113,7 +124,13 @@ export async function renderSettings(
       : [],
     {
       sections,
-      ...panelOptions(interaction, "settings", ["Hub", "Settings"], rows, "Guild configuration"),
+      ...panelOptions(
+        interaction,
+        "settings",
+        ["Hub", "Settings"],
+        rows,
+        "Guild configuration",
+      ),
     },
   );
 }

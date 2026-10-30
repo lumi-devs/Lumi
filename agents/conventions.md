@@ -51,4 +51,4 @@ Message strings are constant; data goes in the object.
 
 - Delete dead code; no compatibility re-exports.
 - One purpose per file.
-- Comments explain *why*, never *what*.
+- Comments explain _why_, never _what_.

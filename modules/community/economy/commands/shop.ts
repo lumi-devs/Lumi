@@ -70,8 +70,7 @@ export const shopDef: CommandDefinition = {
     );
     const options = {
       subtitle: `${guild.name} · ${currencyName}`,
-      thumbnailUrl:
-        guild.iconURL({ size: 256, extension: "png" }) ?? undefined,
+      thumbnailUrl: guild.iconURL({ size: 256, extension: "png" }) ?? undefined,
       footer: formatPageFooter(page - 1, totalPages, items.length),
     };
 
@@ -152,10 +151,7 @@ export const buyDef: CommandDefinition = {
     if (!item) {
       await interaction.reply(
         ephemeralCard(
-          makeErrorCard(
-            "Item not found",
-            "That item is not in the shop.",
-          ),
+          makeErrorCard("Item not found", "That item is not in the shop."),
         ),
       );
       return;
@@ -286,9 +282,7 @@ export const buyDef: CommandDefinition = {
     const focused = interaction.options.getFocused();
     const config = await getEconomyConfig(services, guildId);
     const choices = config.shopItems
-      .filter((item) =>
-        item.name.toLowerCase().includes(focused.toLowerCase()),
-      )
+      .filter((item) => item.name.toLowerCase().includes(focused.toLowerCase()))
       .slice(0, 25)
       .map((item) => ({
         name: `${item.name} (${config.currencySymbol} ${item.price})`,

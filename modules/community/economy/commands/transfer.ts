@@ -16,10 +16,7 @@ export const transferDef: CommandDefinition = {
     .setName("pay")
     .setDescription("Transfer money to another user")
     .addUserOption((option) =>
-      option
-        .setName("user")
-        .setDescription("User to pay")
-        .setRequired(true),
+      option.setName("user").setDescription("User to pay").setRequired(true),
     )
     .addIntegerOption((option) =>
       option
@@ -57,7 +54,8 @@ export const transferDef: CommandDefinition = {
     }
 
     const user = await getOrCreateUser(services, guildId, userId, config);
-    const tax = (amount * BigInt(Math.floor(config.taxRate * 10_000))) / 10_000n;
+    const tax =
+      (amount * BigInt(Math.floor(config.taxRate * 10_000))) / 10_000n;
     const netAmount = amount - tax;
 
     if (
@@ -105,7 +103,9 @@ export const transferDef: CommandDefinition = {
         });
       }
     } catch (error) {
-      await refundWallet(services, guildId, userId, amount).catch(() => undefined);
+      await refundWallet(services, guildId, userId, amount).catch(
+        () => undefined,
+      );
       services.observability?.logger?.error?.(
         "[economy] transfer failed after debit",
         { error, guildId, userId, targetId: target.id },

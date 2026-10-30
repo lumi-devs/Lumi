@@ -110,9 +110,12 @@ export async function handleEditSubmit(
   }
 
   const name = interaction.fields.getTextInputValue("name").trim();
-  const nodes = parseNodeList(interaction.fields.getTextInputValue("nodes").trim());
+  const nodes = parseNodeList(
+    interaction.fields.getTextInputValue("nodes").trim(),
+  );
   const rawPolarity = interaction.fields.getTextInputValue("polarity").trim();
-  const schedule = interaction.fields.getTextInputValue("schedule").trim() || null;
+  const schedule =
+    interaction.fields.getTextInputValue("schedule").trim() || null;
 
   if (!name || nodes.length === 0) {
     await interaction.reply(
@@ -147,7 +150,10 @@ export async function handleEditSubmit(
   if (rawPolarity !== "Grant" && rawPolarity !== "Deny") {
     await interaction.reply(
       ephemeralCard(
-        makeErrorCard("Invalid Polarity", "Polarity must be either `Grant` or `Deny`."),
+        makeErrorCard(
+          "Invalid Polarity",
+          "Polarity must be either `Grant` or `Deny`.",
+        ),
       ),
     );
     return;
@@ -158,8 +164,6 @@ export async function handleEditSubmit(
       name,
       nodes,
       polarity: rawPolarity,
-
-
 
       schedule: schedule as unknown as Prisma.PermitUpdateInput["schedule"],
     });

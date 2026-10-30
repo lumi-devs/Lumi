@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: lumi
-  labels:
-    name: lumi
-    environment: production

@@ -7,11 +7,9 @@ function databaseFromPath(pathname: string): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-
-
-
-
-export function redisOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): RedisOptions {
+export function redisOptionsFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): RedisOptions {
   const url = env.REDIS_URL;
   if (url) {
     const parsed = new URL(url);
@@ -19,8 +17,12 @@ export function redisOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): Redis
     return {
       host: parsed.hostname,
       port: Number(parsed.port || 6379),
-      ...(parsed.username ? { username: decodeURIComponent(parsed.username) } : {}),
-      ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+      ...(parsed.username
+        ? { username: decodeURIComponent(parsed.username) }
+        : {}),
+      ...(parsed.password
+        ? { password: decodeURIComponent(parsed.password) }
+        : {}),
       ...(db === undefined ? {} : { db }),
     };
   }

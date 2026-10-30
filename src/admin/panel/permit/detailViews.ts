@@ -20,9 +20,7 @@ import {
   targetMention,
   targetTypeLabel,
 } from "../../permits/format.js";
-import {
-  formatPermitNodeLines,
-} from "../../permits/nodes.js";
+import { formatPermitNodeLines } from "../../permits/nodes.js";
 import { backButton, cut } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 
@@ -217,12 +215,16 @@ export async function deleteCard(
   }
 
   if (permit.builtin) {
-    return makeErrorCard("Built-in Permit", "Built-in permits cannot be deleted.", {
-      breadcrumbs: ["Admin", "Permits", permit.name],
-      actionRows: buildSafeActionRows([
-        row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
-      ]),
-    });
+    return makeErrorCard(
+      "Built-in Permit",
+      "Built-in permits cannot be deleted.",
+      {
+        breadcrumbs: ["Admin", "Permits", permit.name],
+        actionRows: buildSafeActionRows([
+          row(backButton(`permit_view:${permit.id}`, "Back to Permit")),
+        ]),
+      },
+    );
   }
 
   return makeWarningCard(

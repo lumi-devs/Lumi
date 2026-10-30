@@ -24,18 +24,24 @@ export const caseDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("case")
     .setDescription("View a moderation case")
-    .addIntegerOption(o => o.setName("id").setDescription("Case ID").setRequired(true)),
+    .addIntegerOption((o) =>
+      o.setName("id").setDescription("Case ID").setRequired(true),
+    ),
   requiredPermit: "mod.case",
   async execute(interaction, services) {
     const caseId = interaction.options.getInteger("id", true);
     const guildId = interaction.guildId!;
 
     const modCase = await services.db.prisma.moderationCase.findFirst({
-      where: { guildId, caseNumber: caseId }
+      where: { guildId, caseNumber: caseId },
     });
 
     if (!modCase) {
-      await replyError(interaction, "Not found", `Case #${caseId} does not exist`);
+      await replyError(
+        interaction,
+        "Not found",
+        `Case #${caseId} does not exist`,
+      );
       return;
     }
 
@@ -46,18 +52,25 @@ export const caseDef: CommandDefinition = {
     const createdAt = Math.floor(new Date(modCase.createdAt).getTime() / 1000);
     const caseType = modCase.type ?? modCase.action ?? "CASE";
 
-    await interaction.reply(ephemeralCard(makeInfoCard(
-      `Case #${modCase.caseNumber} — ${caseType}`,
-      [
-        `**Target**\n${target?.tag ?? "Unknown"} (\`${modCase.targetId}\`)`,
-        `**Moderator**\n${moderator?.tag ?? "Unknown"} (\`${modCase.moderatorId}\`)`,
-        `**Reason**\n${modCase.reason ?? "No reason provided"}`,
-      ],
-      {
-        statusBadge: { status: modCase.active === false ? "inactive" : "active", label: modCase.active === false ? "CLOSED" : "ACTIVE" },
-        footer: `Created <t:${createdAt}:F>`,
-      },
-    )));
+    await interaction.reply(
+      ephemeralCard(
+        makeInfoCard(
+          `Case #${modCase.caseNumber} — ${caseType}`,
+          [
+            `**Target**\n${target?.tag ?? "Unknown"} (\`${modCase.targetId}\`)`,
+            `**Moderator**\n${moderator?.tag ?? "Unknown"} (\`${modCase.moderatorId}\`)`,
+            `**Reason**\n${modCase.reason ?? "No reason provided"}`,
+          ],
+          {
+            statusBadge: {
+              status: modCase.active === false ? "inactive" : "active",
+              label: modCase.active === false ? "CLOSED" : "ACTIVE",
+            },
+            footer: `Created <t:${createdAt}:F>`,
+          },
+        ),
+      ),
+    );
   },
 };
 
@@ -71,7 +84,9 @@ async function buildCasesCard(
   targetTag: string,
   pageIndex: number,
 ): Promise<CardReply> {
-  const total = await services.db.prisma.moderationCase.count({ where: { guildId, targetId } });
+  const total = await services.db.prisma.moderationCase.count({
+    where: { guildId, targetId },
+  });
   const totalPages = Math.max(1, Math.ceil(total / CasesPerPage));
   const page = Math.min(Math.max(1, pageIndex + 1), totalPages);
 
@@ -83,9 +98,13 @@ async function buildCasesCard(
   });
 
   if (cases.length === 0) {
-    return makeInfoCard(`📋 Cases for ${targetTag}`, "No moderation cases found.", {
-      footer: formatPageFooter(0, 1, total),
-    });
+    return makeInfoCard(
+      `📋 Cases for ${targetTag}`,
+      "No moderation cases found.",
+      {
+        footer: formatPageFooter(0, 1, total),
+      },
+    );
   }
 
   const offset = (page - 1) * CasesPerPage;
@@ -104,7 +123,9 @@ async function buildCasesCard(
       const moderator = client.users.cache.get(c.moderatorId);
       const reason = (c.reason ?? "No reason provided").slice(0, 80);
       const timestamp = Math.floor(new Date(c.createdAt).getTime() / 1000);
-      const when = Number.isFinite(timestamp) ? `<t:${timestamp}:R>` : "unknown time";
+      const when = Number.isFinite(timestamp)
+        ? `<t:${timestamp}:R>`
+        : "unknown time";
       const caseType = c.type ?? c.action ?? "CASE";
       const caseNumber = c.caseNumber ?? offset + i + 1;
       return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}`;
@@ -128,8 +149,19 @@ export const casesDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("cases")
     .setDescription("List moderation cases for a user")
-    .addUserOption(o => o.setName("user").setDescription("User to view cases for").setRequired(true))
-    .addIntegerOption(o => o.setName("page").setDescription("Page number").setMinValue(1).setRequired(false)),
+    .addUserOption((o) =>
+      o
+        .setName("user")
+        .setDescription("User to view cases for")
+        .setRequired(true),
+    )
+    .addIntegerOption((o) =>
+      o
+        .setName("page")
+        .setDescription("Page number")
+        .setMinValue(1)
+        .setRequired(false),
+    ),
   requiredPermit: "mod.case",
   async execute(interaction, services) {
     const target = interaction.options.getUser("user", true);
@@ -152,14 +184,22 @@ export const casesPaginationListener: ListenerDefinition = {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith("mod:cases:")) return;
 
-    const [prefix, scope, targetId, action, pageValue] = interaction.customId.split(":");
+    const [prefix, scope, targetId, action, pageValue] =
+      interaction.customId.split(":");
     if (prefix !== "mod" || scope !== "cases" || !targetId) return;
     if (action !== "prev" && action !== "next") return;
 
     const guildId = interaction.guildId;
     if (!guildId) return;
     if (!(services.modules?.isEnabled(guildId, ModerationModuleName) ?? true)) {
-      await interaction.reply(ephemeralCard(makeErrorCard("Module disabled", "The moderation module is disabled on this server.")));
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Module disabled",
+            "The moderation module is disabled on this server.",
+          ),
+        ),
+      );
       return;
     }
 
@@ -168,7 +208,9 @@ export const casesPaginationListener: ListenerDefinition = {
     await interaction.deferUpdate().catch(() => {});
 
     try {
-      const target = await interaction.client.users.fetch(targetId).catch(() => null);
+      const target = await interaction.client.users
+        .fetch(targetId)
+        .catch(() => null);
       const card = await buildCasesCard(
         interaction.client,
         services,
@@ -179,8 +221,9 @@ export const casesPaginationListener: ListenerDefinition = {
       );
       await interaction.editReply(card);
     } catch (e) {
-      await interaction.editReply(makeErrorCard("Cases failed", describeError(e))).catch(() => {});
+      await interaction
+        .editReply(makeErrorCard("Cases failed", describeError(e)))
+        .catch(() => {});
     }
   },
 };
-

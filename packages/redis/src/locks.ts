@@ -31,10 +31,15 @@ export class DistributedLock {
   async acquire(): Promise<boolean> {
     if (this.acquired) return true;
 
-
     const token = crypto.randomUUID();
     for (let i = 0; i < this.maxRetries; i++) {
-      const result = await this.redis.set(this.key, token, "PX", this.ttlMs, "NX");
+      const result = await this.redis.set(
+        this.key,
+        token,
+        "PX",
+        this.ttlMs,
+        "NX",
+      );
       if (result === "OK") {
         this.acquired = true;
         this.token = token;
@@ -54,7 +59,11 @@ export class DistributedLock {
   }
 }
 
-export function createLock(redis: Redis, key: string, options?: LockOptions): DistributedLock {
+export function createLock(
+  redis: Redis,
+  key: string,
+  options?: LockOptions,
+): DistributedLock {
   return new DistributedLock(redis, key, options);
 }
 

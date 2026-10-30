@@ -2,11 +2,7 @@ import { defineModule, type ModuleDefinition } from "@lumi/module-kit";
 import { balanceDef } from "./commands/balance.js";
 import { depositDef, withdrawDef } from "./commands/bank.js";
 import { leaderboardDef } from "./commands/leaderboard.js";
-import {
-  dailyDef,
-  weeklyDef,
-  workDef,
-} from "./commands/rewards.js";
+import { dailyDef, weeklyDef, workDef } from "./commands/rewards.js";
 import { buyDef, shopDef } from "./commands/shop.js";
 import { transferDef } from "./commands/transfer.js";
 import { EconomyConfigSchema } from "./config.js";

@@ -100,7 +100,15 @@ export async function checkout(dir: string, commit: string): Promise<void> {
     throw new Error(`Invalid git commit "${commit}".`);
   }
   run(
-    ["-c", "advice.detachedHead=false", "checkout", "--quiet", "--force", "--detach", commit],
+    [
+      "-c",
+      "advice.detachedHead=false",
+      "checkout",
+      "--quiet",
+      "--force",
+      "--detach",
+      commit,
+    ],
     dir,
   );
 }

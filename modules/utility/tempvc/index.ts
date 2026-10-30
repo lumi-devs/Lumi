@@ -42,7 +42,9 @@ const tempvcCommand: CommandDefinition = {
       sub.setName("panel").setDescription("Open your temp VC control panel"),
     )
     .addSubcommand((sub) =>
-      sub.setName("admin").setDescription("Manage voice generator channels (staff only)"),
+      sub
+        .setName("admin")
+        .setDescription("Manage voice generator channels (staff only)"),
     ),
   async execute(interaction, services) {
     const guildId = guildIdOf(interaction.guildId);
@@ -112,7 +114,11 @@ const tempvcCommand: CommandDefinition = {
 
 const onVoiceStateListener: ListenerDefinition = {
   event: "voiceStateUpdate",
-  async handler(oldState: VoiceState, newState: VoiceState, services: ModuleServices) {
+  async handler(
+    oldState: VoiceState,
+    newState: VoiceState,
+    services: ModuleServices,
+  ) {
     await handleVoiceStateChange(oldState, newState, services);
   },
 };
@@ -135,7 +141,8 @@ const tempvcModule: ModuleDefinition = defineModule({
   name: "utility-tempvc",
   displayName: "Temporary Voice",
   emoji: "🔊",
-  description: "Join-to-create temporary voice channels with ownership controls",
+  description:
+    "Join-to-create temporary voice channels with ownership controls",
   version: "2.0.0",
   config: TempVcConfigSchema,
   commands: [tempvcCommand],

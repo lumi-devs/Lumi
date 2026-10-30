@@ -16,16 +16,33 @@ export const kickDef: CommandDefinition = {
     .setName("kick")
     .setDescription("Kick a user")
     .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
-    .addUserOption(o => o.setName("user").setDescription("User to kick").setRequired(false))
-    .addStringOption(o => o.setName("users").setDescription("Additional user IDs").setRequired(false))
-    .addStringOption(o => o.setName("reason").setDescription("Reason for kick").setRequired(false).setAutocomplete(true)),
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to kick").setRequired(false),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("users")
+        .setDescription("Additional user IDs")
+        .setRequired(false),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("reason")
+        .setDescription("Reason for kick")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
   requiredPermit: "mod.kick",
   async execute(interaction, services) {
     const guild = interaction.guild!;
     const config = await getModerationConfig(services, guild.id);
     const targets = await getTargets(interaction, config.maxTargets);
     if (targets.length === 0) {
-      await replyError(interaction, "No targets", "Specify at least one user to kick");
+      await replyError(
+        interaction,
+        "No targets",
+        "Specify at least one user to kick",
+      );
       return;
     }
 
@@ -55,7 +72,13 @@ export const kickDef: CommandDefinition = {
         await member.kick(reason);
 
         await services.db.prisma.moderationCase.create({
-          data: { guildId: guild.id, type: "KICK", targetId: target.id, moderatorId: interaction.user.id, reason },
+          data: {
+            guildId: guild.id,
+            type: "KICK",
+            targetId: target.id,
+            moderatorId: interaction.user.id,
+            reason,
+          },
         });
 
         lines.push(`✅ ${target.tag} (\`${target.id}\`)`);
@@ -65,7 +88,8 @@ export const kickDef: CommandDefinition = {
       }
     }
 
-    await interaction.reply(ephemeralCard(actionCard("Kicked", lines, failures, targets.length)));
+    await interaction.reply(
+      ephemeralCard(actionCard("Kicked", lines, failures, targets.length)),
+    );
   },
 };
-

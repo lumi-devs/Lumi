@@ -27,11 +27,8 @@ export type HubInteraction =
   | AnySelectMenuInteraction
   | ModalSubmitInteraction;
 
-
 export type PanelInteraction =
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | ModalSubmitInteraction;
+  ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
 export type MessageModalSubmit = ModalSubmitInteraction & {
   update(reply: CardReply): Promise<unknown>;
@@ -55,10 +52,6 @@ export function navigationRow(
   return tabRow("lumi", HubTabs, active);
 }
 
-
-
-
-
 export async function showPanel(
   interaction: PanelInteraction,
   render: () => Promise<CardReply>,
@@ -68,10 +61,6 @@ export async function showPanel(
   }
   await interaction.editReply(await render());
 }
-
-
-
-
 
 export async function replyEphemeralError(
   interaction: PanelInteraction,
@@ -85,7 +74,6 @@ export async function replyEphemeralError(
     await interaction.reply(card);
   }
 }
-
 
 export function backButton(
   customId: string,
@@ -112,10 +100,7 @@ export function panelOptions(
     breadcrumbs,
     thumbnailUrl: interaction.guild?.iconURL({ size: 128 }) ?? undefined,
     footer,
-    actionRows: [
-      ...(showTabs ? [navigationRow(active)] : []),
-      ...extraRows,
-    ],
+    actionRows: [...(showTabs ? [navigationRow(active)] : []), ...extraRows],
     separatorAboveActionRows: true,
   };
 }

@@ -10,11 +10,7 @@ import {
 } from "discord.js";
 import { canUseTempVcAdmin } from "./access.js";
 import { getTempVcConfig, saveTempVcConfig } from "./config.js";
-import {
-  stripPrefix,
-  TempVcIds,
-  TempVcPrefixes,
-} from "./ids.js";
+import { stripPrefix, TempVcIds, TempVcPrefixes } from "./ids.js";
 import {
   type TempVcConfig,
   TempVcConfigSchema,
@@ -149,7 +145,11 @@ async function openConfigModal(
 ): Promise<void> {
   const meta = configFieldMeta[key];
   if (!meta) {
-    await replyError(interaction, "Unknown Setting", "That setting cannot be edited.");
+    await replyError(
+      interaction,
+      "Unknown Setting",
+      "That setting cannot be edited.",
+    );
     return;
   }
   const current = (config as Record<string, unknown>)[key];
@@ -180,7 +180,11 @@ async function generatorModal(
     (item) => item.channelId === generatorId,
   );
   if (!generator) {
-    await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
+    await replyError(
+      interaction,
+      "Generator Missing",
+      "That generator is no longer configured.",
+    );
     return;
   }
   const rename = kind === "rename";
@@ -233,7 +237,11 @@ export async function handleAdminInteraction(
   if (customId === TempVcIds.adminAdd) {
     const channelId = interaction.values?.[0];
     if (!isSnowflake(channelId)) {
-      await replyError(interaction, "Invalid Channel", "Choose a voice channel.");
+      await replyError(
+        interaction,
+        "Invalid Channel",
+        "Choose a voice channel.",
+      );
       return;
     }
     const config = await getTempVcConfig(services, guildId);
@@ -258,10 +266,18 @@ export async function handleAdminInteraction(
     };
     const saved = await saveTempVcConfig(services, guildId, next);
     if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not save the generator.");
+      await replyError(
+        interaction,
+        "Save Failed",
+        "Could not save the generator.",
+      );
       return;
     }
-    await showAdminPanel(interaction, services, `✅ Added <#${channelId}> as a generator.`);
+    await showAdminPanel(
+      interaction,
+      services,
+      `✅ Added <#${channelId}> as a generator.`,
+    );
     return;
   }
 
@@ -295,13 +311,21 @@ export async function handleAdminInteraction(
       interaction.fields?.getTextInputValue("value") ?? "",
     ).trim();
     if (value.length === 0) {
-      await replyError(interaction, "Invalid Template", "The template cannot be empty.");
+      await replyError(
+        interaction,
+        "Invalid Template",
+        "The template cannot be empty.",
+      );
       return;
     }
     generator.templateName = value.slice(0, 100);
     const saved = await saveTempVcConfig(services, guildId, config);
     if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not save the template.");
+      await replyError(
+        interaction,
+        "Save Failed",
+        "Could not save the template.",
+      );
       return;
     }
     await showGeneratorPanel(
@@ -318,10 +342,16 @@ export async function handleAdminInteraction(
     const loaded = await loadGenerator(interaction, services, adminLimit);
     if (!loaded) return;
     const { config, generator } = loaded;
-    const raw = String(interaction.fields?.getTextInputValue("value") ?? "").trim();
+    const raw = String(
+      interaction.fields?.getTextInputValue("value") ?? "",
+    ).trim();
     const limit = Number.parseInt(raw, 10);
     if (!Number.isInteger(limit) || limit < 0 || limit > 99) {
-      await replyError(interaction, "Invalid Limit", "Enter a number from 0 to 99.");
+      await replyError(
+        interaction,
+        "Invalid Limit",
+        "Enter a number from 0 to 99.",
+      );
       return;
     }
     generator.userLimit = limit;
@@ -352,12 +382,20 @@ export async function handleAdminInteraction(
       ),
     };
     if (next.generators.length === config.generators.length) {
-      await replyError(interaction, "Generator Missing", "That generator is no longer configured.");
+      await replyError(
+        interaction,
+        "Generator Missing",
+        "That generator is no longer configured.",
+      );
       return;
     }
     const saved = await saveTempVcConfig(services, guildId, next);
     if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not remove the generator.");
+      await replyError(
+        interaction,
+        "Save Failed",
+        "Could not remove the generator.",
+      );
       return;
     }
     await showAdminPanel(
@@ -416,7 +454,11 @@ export async function handleAdminInteraction(
       categoryId: channelId,
     });
     if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not save the category.");
+      await replyError(
+        interaction,
+        "Save Failed",
+        "Could not save the category.",
+      );
       return;
     }
     await showCard(
@@ -442,7 +484,11 @@ export async function handleAdminInteraction(
         ownerLeaveDelete: !config.ownerLeaveDelete,
       });
       if (!saved) {
-        await replyError(interaction, "Save Failed", "Could not save the setting.");
+        await replyError(
+          interaction,
+          "Save Failed",
+          "Could not save the setting.",
+        );
         return;
       }
       await showCard(
@@ -463,10 +509,16 @@ export async function handleAdminInteraction(
   if (cfgModal) {
     const meta = configFieldMeta[cfgModal];
     if (!meta) {
-      await replyError(interaction, "Unknown Setting", "That setting cannot be edited.");
+      await replyError(
+        interaction,
+        "Unknown Setting",
+        "That setting cannot be edited.",
+      );
       return;
     }
-    const raw = String(interaction.fields?.getTextInputValue("value") ?? "").trim();
+    const raw = String(
+      interaction.fields?.getTextInputValue("value") ?? "",
+    ).trim();
     let value: string | number;
     if (meta.integer) {
       const parsed = Number.parseInt(raw, 10);
@@ -495,10 +547,17 @@ export async function handleAdminInteraction(
     });
     const saved = await saveTempVcConfig(services, guildId, next);
     if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not save the setting.");
+      await replyError(
+        interaction,
+        "Save Failed",
+        "Could not save the setting.",
+      );
       return;
     }
-    await showCard(interaction, configPanelCard(next, `✅ **${meta.title}** updated.`));
+    await showCard(
+      interaction,
+      configPanelCard(next, `✅ **${meta.title}** updated.`),
+    );
     return;
   }
 

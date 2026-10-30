@@ -1,9 +1,5 @@
 import { isBotOwner } from "@lumi/permits";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "@lumi/ui";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
   ActionRowBuilder,
   ModalBuilder,
@@ -23,7 +19,6 @@ import type { PermitHost } from "./host.js";
 
 const SelectOptionLimit = 25;
 
-
 async function activeCreateFlow(host: PermitHost): Promise<CreateFlow | null> {
   const flow = host.getFlow();
   if (flow?.kind === "create") return flow;
@@ -31,7 +26,10 @@ async function activeCreateFlow(host: PermitHost): Promise<CreateFlow | null> {
   return null;
 }
 
-export function showCreateNameModal(host: PermitHost, flow: CreateFlow): Promise<void> {
+export function showCreateNameModal(
+  host: PermitHost,
+  flow: CreateFlow,
+): Promise<void> {
   const interaction = host.interaction;
   if (!interaction.isButton()) return Promise.resolve();
 
@@ -81,7 +79,10 @@ export async function handleCreateAction(
     return true;
   }
 
-  if (customId !== "permit_create_submit" && customId !== "permit_create_name") {
+  if (
+    customId !== "permit_create_submit" &&
+    customId !== "permit_create_name"
+  ) {
     return false;
   }
 
@@ -119,7 +120,10 @@ export async function handleCreateAction(
 
     const name =
       requested ??
-      uniquePermitName(existingNames, suggestPermitName(flow.nodes, flow.polarity));
+      uniquePermitName(
+        existingNames,
+        suggestPermitName(flow.nodes, flow.polarity),
+      );
 
     const position = permits.reduce(
       (next, permit) => Math.max(next, permit.position + 1),
@@ -184,7 +188,10 @@ export async function handleCreateSelect(
     const currentNamespace = selected.filter(
       (node) => namespaceForNode(node) === flow.namespace,
     );
-    flow.nodes = [...otherNamespaces, ...currentNamespace].slice(0, SelectOptionLimit);
+    flow.nodes = [...otherNamespaces, ...currentNamespace].slice(
+      0,
+      SelectOptionLimit,
+    );
     host.setFlow(flow);
     await interaction.update(await host.createCard(flow));
     return true;

@@ -14,7 +14,9 @@ import { createStringSelectMenu } from "./selects.js";
 export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
 export function row(...components: MessageActionRowComponentBuilder[]): Row {
-  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(...components);
+  return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+    ...components,
+  );
 }
 
 export interface CreateActionButtonOptions {
@@ -51,13 +53,17 @@ export function createActionButton(
   options: CreateActionButtonOptions,
 ): ButtonBuilder {
   if (options.customId && options.url) {
-    throw new Error("createActionButton: customId and url are mutually exclusive.");
+    throw new Error(
+      "createActionButton: customId and url are mutually exclusive.",
+    );
   }
   const button = new ButtonBuilder();
   if (options.customId) button.setCustomId(options.customId);
   if (options.url) button.setURL(options.url);
   if (options.label) button.setLabel(clipLabel(options.label));
-  button.setStyle(options.style ?? (options.url ? ButtonStyle.Link : ButtonStyle.Primary));
+  button.setStyle(
+    options.style ?? (options.url ? ButtonStyle.Link : ButtonStyle.Primary),
+  );
   setEmojiIfPresent(button, options.emoji);
   if (options.disabled !== undefined) button.setDisabled(options.disabled);
   return button;
@@ -105,12 +111,16 @@ export function buildSafeActionRows<
   const MaxComponents = 5;
 
   if (!Array.isArray(rows)) return [];
-  const validRows = rows.filter((r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder);
+  const validRows = rows.filter(
+    (r): r is ActionRowBuilder<T> => r instanceof ActionRowBuilder,
+  );
   const finalRows = validRows.slice(0, MaxRows);
 
   return finalRows.map((row) => {
     if (row.components.length > MaxComponents) {
-      return new ActionRowBuilder<T>().addComponents(row.components.slice(0, MaxComponents));
+      return new ActionRowBuilder<T>().addComponents(
+        row.components.slice(0, MaxComponents),
+      );
     }
     return row;
   });

@@ -19,7 +19,10 @@ function write(
     instance[level](message);
     return;
   }
-  instance[level](typeof meta === "object" && meta !== null ? meta : { meta }, message);
+  instance[level](
+    typeof meta === "object" && meta !== null ? meta : { meta },
+    message,
+  );
 }
 
 export function createLogger(name: string): Logger {

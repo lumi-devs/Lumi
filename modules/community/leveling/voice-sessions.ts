@@ -43,7 +43,8 @@ export function voiceAudibleTransition(
 
 export function isAudible(state: VoiceState): boolean {
   if (!state.channelId) return false;
-  if (state.mute || state.deaf || state.selfMute || state.selfDeaf) return false;
+  if (state.mute || state.deaf || state.selfMute || state.selfDeaf)
+    return false;
   if (state.suppress) return false;
   const member = state.member;
   if (!member || member.user.bot) return false;

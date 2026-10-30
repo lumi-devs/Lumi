@@ -65,8 +65,10 @@ function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   return a.patch - b.patch;
 }
 
-
-function matchesComparator(version: ParsedVersion, comparator: string): boolean {
+function matchesComparator(
+  version: ParsedVersion,
+  comparator: string,
+): boolean {
   const operator = /^(>=|<=|>|<|=|\^|~)/.exec(comparator)?.[1] ?? "";
   const target = parseVersion(comparator.slice(operator.length));
   if (!target) return false;
@@ -75,11 +77,17 @@ function matchesComparator(version: ParsedVersion, comparator: string): boolean 
     case "^":
       if (target.major > 0) return version.major === target.major && order >= 0;
       if (target.minor > 0) {
-        return version.major === 0 && version.minor === target.minor && order >= 0;
+        return (
+          version.major === 0 && version.minor === target.minor && order >= 0
+        );
       }
       return order === 0;
     case "~":
-      return version.major === target.major && version.minor === target.minor && order >= 0;
+      return (
+        version.major === target.major &&
+        version.minor === target.minor &&
+        order >= 0
+      );
     case ">=":
       return order >= 0;
     case ">":
@@ -105,11 +113,13 @@ function satisfiesRange(version: string, range: string): boolean {
     .filter(Boolean);
   if (alternatives.length === 0) return true;
   return alternatives.some((alternative) =>
-    alternative.split(/\s+/).every((comparator) =>
-      comparator === "*" || comparator === "x" || comparator === "X"
-        ? true
-        : matchesComparator(parsed, comparator),
-    ),
+    alternative
+      .split(/\s+/)
+      .every((comparator) =>
+        comparator === "*" || comparator === "x" || comparator === "X"
+          ? true
+          : matchesComparator(parsed, comparator),
+      ),
   );
 }
 
@@ -145,7 +155,6 @@ export function checkDependencies(
   }
   return issues;
 }
-
 
 export function submoduleManifestName(
   supermodule: string,
@@ -191,7 +200,12 @@ export class ModuleLoader {
           continue;
         }
 
-        await this.discoverSupermodule(modulePath, manifest, root.origin, discovered);
+        await this.discoverSupermodule(
+          modulePath,
+          manifest,
+          root.origin,
+          discovered,
+        );
       }
     }
 
@@ -304,8 +318,6 @@ export class ModuleLoader {
       const subManifest = await this.readManifest(subPath);
       if (!subManifest) continue;
 
-
-
       const expectedName = submoduleManifestName(manifest.name, entry.name);
       if (subManifest.name !== expectedName) {
         console.error(
@@ -362,7 +374,9 @@ export class ModuleLoader {
       );
       for (const issue of dependencyIssues) {
         if (issue.reason === "missing") {
-          console.warn(`Module ${name} depends on missing module ${issue.dependency}.`);
+          console.warn(
+            `Module ${name} depends on missing module ${issue.dependency}.`,
+          );
         } else {
           console.warn(
             `Module ${name} requires ${issue.dependency}@${issue.required} but found ${issue.found}, skipping.`,
@@ -441,7 +455,11 @@ export class ModuleLoader {
     return { ordered, cyclic };
   }
 
-  async setEnabled(moduleName: string, guildId: string, enabled: boolean): Promise<void> {
+  async setEnabled(
+    moduleName: string,
+    guildId: string,
+    enabled: boolean,
+  ): Promise<void> {
     const module = this.modules.get(moduleName);
     if (!module) return;
 
@@ -489,7 +507,8 @@ export class ModuleLoader {
   async unload(moduleName: string): Promise<LoadedModule[]> {
     const removed = this.listAll().filter(
       (module) =>
-        module.manifest.name === moduleName || module.supermodule === moduleName,
+        module.manifest.name === moduleName ||
+        module.supermodule === moduleName,
     );
 
     for (const module of removed) {

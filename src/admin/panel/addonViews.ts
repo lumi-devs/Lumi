@@ -15,7 +15,13 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { backButton, cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
+import {
+  backButton,
+  cut,
+  type HubInteraction,
+  pageRow,
+  panelOptions,
+} from "./common.js";
 import { ModulesPerPage } from "./modules.js";
 import { paginate } from "./pages.js";
 import type { HubServices } from "./services.js";
@@ -137,25 +143,30 @@ async function renderHome(
     ],
     {
       sections,
-      ...panelOptions(interaction, "addons", ["Hub", "Add-ons"], [
-        row(
-          createActionButton({
-            customId: "lumi:addon:repos",
-            label: "Repositories",
-            emoji: "🔗",
-          }),
-          createActionButton({
-            customId: "lumi:addon:installed",
-            label: "Installed",
-            emoji: "📦",
-          }),
-          createActionButton({
-            customId: "lumi:addon:auto",
-            label: "Auto-update",
-            emoji: "🔄",
-          }),
-        ),
-      ]),
+      ...panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons"],
+        [
+          row(
+            createActionButton({
+              customId: "lumi:addon:repos",
+              label: "Repositories",
+              emoji: "🔗",
+            }),
+            createActionButton({
+              customId: "lumi:addon:installed",
+              label: "Installed",
+              emoji: "📦",
+            }),
+            createActionButton({
+              customId: "lumi:addon:auto",
+              label: "Auto-update",
+              emoji: "🔄",
+            }),
+          ),
+        ],
+      ),
     },
   );
 }
@@ -166,17 +177,22 @@ async function renderRepos(
   notice?: string,
 ): Promise<CardReply> {
   const repos = await services.addons.listRepos();
-  const options = panelOptions(interaction, "addons", ["Hub", "Add-ons", "Repositories"], [
-    row(
-      createActionButton({
-        customId: "lumi:addon:addrepo",
-        label: "Add Repository",
-        emoji: "➕",
-        style: ButtonStyle.Success,
-      }),
-      backButton("lumi:addon:home", "Back", "◀️"),
-    ),
-  ]);
+  const options = panelOptions(
+    interaction,
+    "addons",
+    ["Hub", "Add-ons", "Repositories"],
+    [
+      row(
+        createActionButton({
+          customId: "lumi:addon:addrepo",
+          label: "Add Repository",
+          emoji: "➕",
+          style: ButtonStyle.Success,
+        }),
+        backButton("lumi:addon:home", "Back", "◀️"),
+      ),
+    ],
+  );
 
   if (repos.length === 0) {
     return makeEmptyCard(
@@ -221,13 +237,20 @@ async function renderRepo(
   name: string,
   notice?: string,
 ): Promise<CardReply> {
-  const repo = (await services.addons.listRepos()).find((entry) => entry.name === name);
+  const repo = (await services.addons.listRepos()).find(
+    (entry) => entry.name === name,
+  );
   if (!repo) {
     return makeCard(
       undefined,
       "🔗 Repository",
       ["That repository is no longer tracked."],
-      panelOptions(interaction, "addons", ["Hub", "Add-ons", "Repositories"], [backRow()]),
+      panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons", "Repositories"],
+        [backRow()],
+      ),
     );
   }
 
@@ -242,29 +265,34 @@ async function renderRepo(
       `**Installed:** ${repo.installed}`,
     ],
     {
-      ...panelOptions(interaction, "addons", ["Hub", "Add-ons", "Repositories", repo.name], [
-        row(
-          createActionButton({
-            customId: `lumi:addon:browse:${repo.name}:0`,
-            label: "Browse",
-            emoji: "📚",
-            style: ButtonStyle.Primary,
-          }),
-          createActionButton({
-            customId: `lumi:addon:update:${repo.name}`,
-            label: "Update",
-            emoji: "🔄",
-          }),
-          createActionButton({
-            customId: `lumi:addon:remove:${repo.name}`,
-            label: "Remove",
-            emoji: "🗑️",
-            style: ButtonStyle.Danger,
-            disabled: repo.installed > 0,
-          }),
-          backButton("lumi:addon:repos", "Back", "◀️"),
-        ),
-      ]),
+      ...panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons", "Repositories", repo.name],
+        [
+          row(
+            createActionButton({
+              customId: `lumi:addon:browse:${repo.name}:0`,
+              label: "Browse",
+              emoji: "📚",
+              style: ButtonStyle.Primary,
+            }),
+            createActionButton({
+              customId: `lumi:addon:update:${repo.name}`,
+              label: "Update",
+              emoji: "🔄",
+            }),
+            createActionButton({
+              customId: `lumi:addon:remove:${repo.name}`,
+              label: "Remove",
+              emoji: "🗑️",
+              style: ButtonStyle.Danger,
+              disabled: repo.installed > 0,
+            }),
+            backButton("lumi:addon:repos", "Back", "◀️"),
+          ),
+        ],
+      ),
     },
   );
 }
@@ -277,11 +305,11 @@ async function renderBrowse(
   notice?: string,
 ): Promise<CardReply> {
   const modules = await services.addons.listRepoModules(name).catch(() => []);
-  const { items, page: current, totalPages } = paginate(
-    modules,
-    page,
-    ModulesPerPage,
-  );
+  const {
+    items,
+    page: current,
+    totalPages,
+  } = paginate(modules, page, ModulesPerPage);
 
   const options = panelOptions(
     interaction,
@@ -348,16 +376,21 @@ async function renderInstalled(
   notice?: string,
 ): Promise<CardReply> {
   const installed = await services.addons.listInstalled();
-  const options = panelOptions(interaction, "addons", ["Hub", "Add-ons", "Installed"], [
-    row(
-      createActionButton({
-        customId: "lumi:addon:repos",
-        label: "Repositories",
-        emoji: "🔗",
-      }),
-      backButton("lumi:addon:home", "Back", "◀️"),
-    ),
-  ]);
+  const options = panelOptions(
+    interaction,
+    "addons",
+    ["Hub", "Add-ons", "Installed"],
+    [
+      row(
+        createActionButton({
+          customId: "lumi:addon:repos",
+          label: "Repositories",
+          emoji: "🔗",
+        }),
+        backButton("lumi:addon:home", "Back", "◀️"),
+      ),
+    ],
+  );
 
   if (installed.length === 0) {
     return makeEmptyCard(
@@ -379,7 +412,9 @@ async function renderInstalled(
           (addon) =>
             `${addon.pinned ? "📌" : "📦"} **${addon.name}** \`${addon.version ?? "unknown"}\` · ${addon.repoName}`,
         ),
-      ...(installed.length > 10 ? [`-# ...and ${installed.length - 10} more.`] : []),
+      ...(installed.length > 10
+        ? [`-# ...and ${installed.length - 10} more.`]
+        : []),
     ],
     {
       ...options,
@@ -407,13 +442,20 @@ async function renderManage(
   name: string,
   notice?: string,
 ): Promise<CardReply> {
-  const addon = (await services.addons.listInstalled()).find((entry) => entry.name === name);
+  const addon = (await services.addons.listInstalled()).find(
+    (entry) => entry.name === name,
+  );
   if (!addon) {
     return makeCard(
       undefined,
       "📦 Add-on",
       ["That add-on is no longer installed."],
-      panelOptions(interaction, "addons", ["Hub", "Add-ons", "Installed"], [backRow()]),
+      panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons", "Installed"],
+        [backRow()],
+      ),
     );
   }
 
@@ -429,29 +471,34 @@ async function renderManage(
       `**Installed:** <t:${Math.floor(addon.installedAt.getTime() / 1000)}:R>`,
     ],
     {
-      ...panelOptions(interaction, "addons", ["Hub", "Add-ons", "Installed", addon.name], [
-        row(
-          createActionButton({
-            customId: `lumi:modopen:${addon.name}:0`,
-            label: "Open",
-            emoji: "⚙️",
-            style: ButtonStyle.Primary,
-          }),
-          createActionButton({
-            customId: `lumi:addon:pin:${addon.name}`,
-            label: addon.pinned ? "Unpin" : "Pin",
-            emoji: "📌",
-            style: ButtonStyle.Secondary,
-          }),
-          createActionButton({
-            customId: `lumi:addon:uninstall:${addon.name}`,
-            label: "Uninstall",
-            emoji: "🗑️",
-            style: ButtonStyle.Danger,
-          }),
-        ),
-        row(backButton("lumi:addon:installed", "Back", "◀️")),
-      ]),
+      ...panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons", "Installed", addon.name],
+        [
+          row(
+            createActionButton({
+              customId: `lumi:modopen:${addon.name}:0`,
+              label: "Open",
+              emoji: "⚙️",
+              style: ButtonStyle.Primary,
+            }),
+            createActionButton({
+              customId: `lumi:addon:pin:${addon.name}`,
+              label: addon.pinned ? "Unpin" : "Pin",
+              emoji: "📌",
+              style: ButtonStyle.Secondary,
+            }),
+            createActionButton({
+              customId: `lumi:addon:uninstall:${addon.name}`,
+              label: "Uninstall",
+              emoji: "🗑️",
+              style: ButtonStyle.Danger,
+            }),
+          ),
+          row(backButton("lumi:addon:installed", "Back", "◀️")),
+        ],
+      ),
     },
   );
 }
@@ -474,24 +521,29 @@ async function renderAutoUpdate(
       "-# Updates apply automatically. Failed updates roll back.",
     ],
     {
-      ...panelOptions(interaction, "addons", ["Hub", "Add-ons", "Auto-update"], [
-        row(
-          createActionButton({
-            customId: "lumi:addon:autotoggle",
-            label: auto.enabled ? "Disable" : "Enable",
-            emoji: auto.enabled ? "⏸️" : "▶️",
-            style: auto.enabled ? ButtonStyle.Danger : ButtonStyle.Success,
-          }),
-          backButton("lumi:addon:home", "Back", "◀️"),
-        ),
-        row(
-          createStringSelectMenu({
-            customId: "lumi:addon:interval",
-            placeholder: "Update interval",
-            options: IntervalChoices,
-          }),
-        ),
-      ]),
+      ...panelOptions(
+        interaction,
+        "addons",
+        ["Hub", "Add-ons", "Auto-update"],
+        [
+          row(
+            createActionButton({
+              customId: "lumi:addon:autotoggle",
+              label: auto.enabled ? "Disable" : "Enable",
+              emoji: auto.enabled ? "⏸️" : "▶️",
+              style: auto.enabled ? ButtonStyle.Danger : ButtonStyle.Success,
+            }),
+            backButton("lumi:addon:home", "Back", "◀️"),
+          ),
+          row(
+            createStringSelectMenu({
+              customId: "lumi:addon:interval",
+              placeholder: "Update interval",
+              options: IntervalChoices,
+            }),
+          ),
+        ],
+      ),
     },
   );
 }

@@ -5,14 +5,14 @@ bundled modules, are installed from git repositories, and run in-process.
 
 ## Differences from bundled modules
 
-| Aspect | Bundled | Add-on |
-|--------|---------|--------|
-| Location | `modules/<supermodule>/` | `data/addons/<supermodule>/` |
-| Origin | `bundled` | `addon` |
-| Install | Deployed with the bot | `/lumi` → Add-ons, bot owners only |
-| Update | Deploy the bot | Repo update or auto-update |
-| npm dependencies | Root `package.json` | `manifest.requirements` |
-| Trust | Full | Static validation on install |
+| Aspect           | Bundled                  | Add-on                             |
+| ---------------- | ------------------------ | ---------------------------------- |
+| Location         | `modules/<supermodule>/` | `data/addons/<supermodule>/`       |
+| Origin           | `bundled`                | `addon`                            |
+| Install          | Deployed with the bot    | `/lumi` → Add-ons, bot owners only |
+| Update           | Deploy the bot           | Repo update or auto-update         |
+| npm dependencies | Root `package.json`      | `manifest.requirements`            |
+| Trust            | Full                     | Static validation on install       |
 
 ## Structure
 

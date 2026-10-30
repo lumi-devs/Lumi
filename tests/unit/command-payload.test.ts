@@ -23,9 +23,10 @@ describe("commandPayloadForGuild", () => {
         guildId !== "guild" || name !== "utility-afk",
     };
 
-    expect(
-      commandPayloadForGuild(registry, loader, "guild"),
-    ).toEqual([{ name: "ping" }, { name: "rank" }]);
+    expect(commandPayloadForGuild(registry, loader, "guild")).toEqual([
+      { name: "ping" },
+      { name: "rank" },
+    ]);
   });
 
   it("includes every command for guilds with all modules active", () => {

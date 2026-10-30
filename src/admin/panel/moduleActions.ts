@@ -26,7 +26,6 @@ function pageNumber(raw: string | undefined): number {
   return Number(raw) || 0;
 }
 
-
 async function toggleModule(
   services: HubServices,
   guildId: string,
@@ -37,10 +36,6 @@ async function toggleModule(
   else await services.moduleManager.enable(guildId, moduleName);
   return wasEnabled;
 }
-
-
-
-
 
 export async function handleModuleAction(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
@@ -171,7 +166,12 @@ export async function handleModuleAction(
       if (!field) return true;
       const config = await readModuleConfig(services, guildId, target);
       await interaction.showModal(
-        fieldModal(target, field, pageNumber(extra2), fieldValue(field, config)),
+        fieldModal(
+          target,
+          field,
+          pageNumber(extra2),
+          fieldValue(field, config),
+        ),
       );
       return true;
     }
@@ -221,7 +221,6 @@ export async function handleModuleAction(
       return false;
   }
 }
-
 
 export async function handleModuleModal(
   interaction: ModalSubmitInteraction,

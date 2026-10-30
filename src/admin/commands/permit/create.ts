@@ -71,10 +71,7 @@ export async function createPermit(
   }
   const position =
     interaction.options.getInteger("position") ??
-    permits.reduce(
-      (next, permit) => Math.max(next, permit.position + 1),
-      0,
-    );
+    permits.reduce((next, permit) => Math.max(next, permit.position + 1), 0);
   const name =
     requestedName ??
     uniquePermitName(existingNames, suggestPermitName(nodes, polarity));

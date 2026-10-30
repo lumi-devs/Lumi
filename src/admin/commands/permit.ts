@@ -68,9 +68,7 @@ export const permitCommand = {
             .setAutocomplete(true),
         )
         .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Optional channel context"),
+          option.setName("channel").setDescription("Optional channel context"),
         ),
     ),
   async execute(

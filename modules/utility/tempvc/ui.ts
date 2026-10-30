@@ -105,7 +105,8 @@ export function controlPanelCard(
 
   return makeCard(undefined, `🔊 ${state.channelName}`, body, {
     subtitle: "Temporary voice control",
-    footer: "Channel owners and members with Manage Channels can use these controls",
+    footer:
+      "Channel owners and members with Manage Channels can use these controls",
     separatorAboveActionRows: true,
     actionRows: [
       row(

@@ -75,7 +75,10 @@ function sumCounter(metric: CounterSnapshot): number {
 }
 
 async function getCacheHitRatio(): Promise<number> {
-  const [hits, misses] = await Promise.all([cacheHits.get(), cacheMisses.get()]);
+  const [hits, misses] = await Promise.all([
+    cacheHits.get(),
+    cacheMisses.get(),
+  ]);
   const hitCount = sumCounter(hits);
   const total = hitCount + sumCounter(misses);
   return total > 0 ? (hitCount / total) * 100 : 0;
@@ -85,10 +88,7 @@ async function getDbLatency(prisma: PrismaClient): Promise<number> {
   const startedAt = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
-  } catch {
-
-
-  }
+  } catch {}
   return Date.now() - startedAt;
 }
 
@@ -146,7 +146,9 @@ async function buildPingComponents(
 
   const shardBlocks = pageShardIds.map((shardId) => {
     const shard = client.ws.shards.get(shardId);
-    const shardGuilds = guilds.filter((guild) => (guild.shardId ?? 0) === shardId);
+    const shardGuilds = guilds.filter(
+      (guild) => (guild.shardId ?? 0) === shardId,
+    );
     return buildShardBlock({
       shardId,
       ping: shard?.ping ?? client.ws.ping ?? 0,

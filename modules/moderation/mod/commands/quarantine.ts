@@ -7,10 +7,20 @@ import { getReason, isImmune, replyError } from "../helpers.js";
 export const quarantineDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("quarantine")
-    .setDescription("Quarantine a user (assign quarantine role, remove other roles)")
+    .setDescription(
+      "Quarantine a user (assign quarantine role, remove other roles)",
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption(o => o.setName("user").setDescription("User to quarantine").setRequired(true))
-    .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false).setAutocomplete(true)),
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to quarantine").setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("reason")
+        .setDescription("Reason")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
   requiredPermit: "mod.quarantine",
   async execute(interaction, services) {
     const target = interaction.options.getUser("user", true);
@@ -19,7 +29,11 @@ export const quarantineDef: CommandDefinition = {
     const config = await getModerationConfig(services, guild.id);
 
     if (!config.quarantineRoleId) {
-      await replyError(interaction, "Not configured", "Quarantine role not set");
+      await replyError(
+        interaction,
+        "Not configured",
+        "Quarantine role not set",
+      );
       return;
     }
 
@@ -41,7 +55,9 @@ export const quarantineDef: CommandDefinition = {
       return;
     }
 
-    const oldRoles = member.roles.cache.filter(r => r.id !== guild.id).map(r => r.id);
+    const oldRoles = member.roles.cache
+      .filter((r) => r.id !== guild.id)
+      .map((r) => r.id);
     const quarantineRole = guild.roles.cache.get(config.quarantineRoleId);
 
     if (!quarantineRole) {
@@ -58,15 +74,19 @@ export const quarantineDef: CommandDefinition = {
         targetId: target.id,
         moderatorId: interaction.user.id,
         reason,
-        metadata: { oldRoles }
+        metadata: { oldRoles },
       },
     });
 
-    await interaction.reply(ephemeralCard(makeWarningCard("Quarantined", [
-      `**User**\n${target.tag} (\`${target.id}\`)`,
-      `**Role**\n${quarantineRole}`,
-      `**Reason**\n${reason}`,
-    ])));
+    await interaction.reply(
+      ephemeralCard(
+        makeWarningCard("Quarantined", [
+          `**User**\n${target.tag} (\`${target.id}\`)`,
+          `**Role**\n${quarantineRole}`,
+          `**Reason**\n${reason}`,
+        ]),
+      ),
+    );
   },
 };
 
@@ -75,8 +95,15 @@ export const unquarantineDef: CommandDefinition = {
     .setName("unquarantine")
     .setDescription("Remove quarantine from a user")
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
-    .addUserOption(o => o.setName("user").setDescription("User to unquarantine").setRequired(true))
-    .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false)),
+    .addUserOption((o) =>
+      o
+        .setName("user")
+        .setDescription("User to unquarantine")
+        .setRequired(true),
+    )
+    .addStringOption((o) =>
+      o.setName("reason").setDescription("Reason").setRequired(false),
+    ),
   requiredPermit: "mod.quarantine",
   async execute(interaction, services) {
     const target = interaction.options.getUser("user", true);
@@ -98,31 +125,45 @@ export const unquarantineDef: CommandDefinition = {
     }
 
     const quarantineCase = await services.db.prisma.moderationCase.findFirst({
-      where: { guildId: guild.id, type: "QUARANTINE", targetId: target.id, active: true },
-      orderBy: { createdAt: "desc" }
+      where: {
+        guildId: guild.id,
+        type: "QUARANTINE",
+        targetId: target.id,
+        active: true,
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    const oldRoles = quarantineCase?.metadata?.oldRoles as string[] ?? [];
-    const validRoles = oldRoles.filter(id => guild.roles.cache.has(id));
+    const oldRoles = (quarantineCase?.metadata?.oldRoles as string[]) ?? [];
+    const validRoles = oldRoles.filter((id) => guild.roles.cache.has(id));
 
     await member.roles.set(validRoles, reason);
 
     if (quarantineCase) {
       await services.db.prisma.moderationCase.update({
         where: { id: quarantineCase.id },
-        data: { active: false }
+        data: { active: false },
       });
     }
 
     await services.db.prisma.moderationCase.create({
-      data: { guildId: guild.id, type: "UNQUARANTINE", targetId: target.id, moderatorId: interaction.user.id, reason },
+      data: {
+        guildId: guild.id,
+        type: "UNQUARANTINE",
+        targetId: target.id,
+        moderatorId: interaction.user.id,
+        reason,
+      },
     });
 
-    await interaction.reply(ephemeralCard(makeSuccessCard("Unquarantined", [
-      `**User**\n${target.tag} (\`${target.id}\`)`,
-      `**Roles restored**\n${validRoles.length}`,
-      `**Reason**\n${reason}`,
-    ])));
+    await interaction.reply(
+      ephemeralCard(
+        makeSuccessCard("Unquarantined", [
+          `**User**\n${target.tag} (\`${target.id}\`)`,
+          `**Roles restored**\n${validRoles.length}`,
+          `**Reason**\n${reason}`,
+        ]),
+      ),
+    );
   },
 };
-

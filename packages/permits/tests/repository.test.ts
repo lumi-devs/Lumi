@@ -128,10 +128,7 @@ describe("PermitRepository.createPermit", () => {
 
   it("rejects a permit without nodes", async () => {
     const create = vi.fn();
-    const repo = new PermitRepository(
-      { permit: { create } } as any,
-      {} as any,
-    );
+    const repo = new PermitRepository({ permit: { create } } as any, {} as any);
 
     await expect(
       repo.createPermit({

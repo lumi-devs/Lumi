@@ -15,7 +15,9 @@ export interface BalanceCardData {
   totalSpent?: string;
 }
 
-export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer> {
+export async function generateBalanceCard(
+  data: BalanceCardData,
+): Promise<Buffer> {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext("2d");
 
@@ -33,9 +35,7 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
   let avatar: Image | null = null;
   try {
     avatar = await loadImage(data.avatarUrl);
-  } catch {
-
-  }
+  } catch {}
 
   const avatarSize = 120;
   const avatarX = 40;
@@ -43,7 +43,13 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI * 2);
+  ctx.arc(
+    avatarX + avatarSize / 2,
+    avatarY + avatarSize / 2,
+    avatarSize / 2,
+    0,
+    Math.PI * 2,
+  );
   ctx.clip();
 
   if (avatar) {
@@ -54,14 +60,24 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
     ctx.fillStyle = "#fff";
     ctx.font = "bold 50px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(data.username.charAt(0).toUpperCase(), avatarX + avatarSize/2, avatarY + avatarSize/2 + 18);
+    ctx.fillText(
+      data.username.charAt(0).toUpperCase(),
+      avatarX + avatarSize / 2,
+      avatarY + avatarSize / 2 + 18,
+    );
   }
   ctx.restore();
 
   ctx.strokeStyle = "#4c6ef5";
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(avatarX + avatarSize/2, avatarY + avatarSize/2, avatarSize/2, 0, Math.PI * 2);
+  ctx.arc(
+    avatarX + avatarSize / 2,
+    avatarY + avatarSize / 2,
+    avatarSize / 2,
+    0,
+    Math.PI * 2,
+  );
   ctx.stroke();
 
   ctx.fillStyle = "#fff";
@@ -71,7 +87,11 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.fillStyle = "#adb5bd";
   ctx.font = "18px Arial";
-  ctx.fillText(`${data.currencyName} Balance`, avatarX + avatarSize + 30, avatarY + 85);
+  ctx.fillText(
+    `${data.currencyName} Balance`,
+    avatarX + avatarSize + 30,
+    avatarY + 85,
+  );
 
   const walletX = avatarX + avatarSize + 30;
   const walletY = avatarY + 130;
@@ -88,7 +108,11 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.fillStyle = "#fff";
   ctx.font = "bold 28px Arial";
-  ctx.fillText(`${data.currencySymbol} ${data.balance}`, walletX + 20, walletY + 70);
+  ctx.fillText(
+    `${data.currencySymbol} ${data.balance}`,
+    walletX + 20,
+    walletY + 70,
+  );
 
   const bankX = walletX + boxWidth + 20;
   ctx.fillStyle = "rgba(255,255,255,0.05)";
@@ -101,7 +125,11 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.fillStyle = "#fff";
   ctx.font = "bold 28px Arial";
-  ctx.fillText(`${data.currencySymbol} ${data.bankBalance}`, bankX + 20, walletY + 70);
+  ctx.fillText(
+    `${data.currencySymbol} ${data.bankBalance}`,
+    bankX + 20,
+    walletY + 70,
+  );
 
   const statsY = walletY + boxHeight + 30;
   const statWidth = (CARD_WIDTH - 80 - 30) / 2;
@@ -116,7 +144,11 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.fillStyle = "#fff";
   ctx.font = "bold 20px Arial";
-  ctx.fillText(data.totalEarned ? `${data.currencySymbol} ${data.totalEarned}` : "—", 55, statsY + 60);
+  ctx.fillText(
+    data.totalEarned ? `${data.currencySymbol} ${data.totalEarned}` : "—",
+    55,
+    statsY + 60,
+  );
 
   ctx.fillStyle = "rgba(255,255,255,0.05)";
   roundRect(ctx, 40 + statWidth + 20, statsY, statWidth, 70, 12);
@@ -128,7 +160,11 @@ export async function generateBalanceCard(data: BalanceCardData): Promise<Buffer
 
   ctx.fillStyle = "#fff";
   ctx.font = "bold 20px Arial";
-  ctx.fillText(data.totalSpent ? `${data.currencySymbol} ${data.totalSpent}` : "—", 40 + statWidth + 35, statsY + 60);
+  ctx.fillText(
+    data.totalSpent ? `${data.currencySymbol} ${data.totalSpent}` : "—",
+    40 + statWidth + 35,
+    statsY + 60,
+  );
 
   ctx.fillStyle = "#6c757d";
   ctx.font = "12px Arial";

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { type CommandDefinition, defineModule, type ListenerDefinition } from "../src/index.js";
+import {
+  type CommandDefinition,
+  defineModule,
+  type ListenerDefinition,
+} from "../src/index.js";
 
 describe("Module Kit", () => {
   describe("defineModule", () => {
@@ -11,14 +15,19 @@ describe("Module Kit", () => {
         emoji: "🧪",
         description: "A test module",
         version: "1.0.0",
-        config: z.object({
-          setting1: z.string().default("default"),
-          setting2: z.number().int().min(0).default(10),
-        }, {}),
+        config: z.object(
+          {
+            setting1: z.string().default("default"),
+            setting2: z.number().int().min(0).default(10),
+          },
+          {},
+        ),
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(_services) { return []; },
+        async onLoad(_services) {
+          return [];
+        },
         async onUnload(_services) {},
       });
 
@@ -38,20 +47,24 @@ describe("Module Kit", () => {
         emoji: "📝",
         description: "Module with typed config",
         version: "1.0.0",
-        config: z.object({
-          stringSetting: z.string().default("value"),
-          numberSetting: z.number().int().min(0).max(100).default(50),
-          booleanSetting: z.boolean().default(true),
-          arraySetting: z.array(z.string(), {}).default([]),
-          objectSetting: z.object({ key: z.string() }).optional(),
-        }, {}),
+        config: z.object(
+          {
+            stringSetting: z.string().default("value"),
+            numberSetting: z.number().int().min(0).max(100).default(50),
+            booleanSetting: z.boolean().default(true),
+            arraySetting: z.array(z.string(), {}).default([]),
+            objectSetting: z.object({ key: z.string() }).optional(),
+          },
+          {},
+        ),
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(_services) { return []; },
+        async onLoad(_services) {
+          return [];
+        },
         async onUnload(_services) {},
       });
-
 
       const config = mod.config.parse({
         stringSetting: "test",
@@ -75,14 +88,19 @@ describe("Module Kit", () => {
         emoji: "⚙️",
         description: "Module with defaults",
         version: "1.0.0",
-        config: z.object({
-          withDefault: z.string().default("default-value"),
-          withoutDefault: z.string().optional(),
-        }, {}),
+        config: z.object(
+          {
+            withDefault: z.string().default("default-value"),
+            withoutDefault: z.string().optional(),
+          },
+          {},
+        ),
         commands: [],
         listeners: [],
         tasks: [],
-        async onLoad(_services) { return []; },
+        async onLoad(_services) {
+          return [];
+        },
         async onUnload(_services) {},
       });
 

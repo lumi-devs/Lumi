@@ -3,10 +3,7 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
 import { roleIdsFrom } from "../../access.js";
 import type { HubServices } from "../../panel/services.js";
-import {
-  allExplanationCard,
-  explanationCard,
-} from "../../permits/explain.js";
+import { allExplanationCard, explanationCard } from "../../permits/explain.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 import { openPermitsRow, replyPermitError } from "./shared.js";
 

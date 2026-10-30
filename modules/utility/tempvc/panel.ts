@@ -49,8 +49,7 @@ const prisma = (services: ModuleServices): any => services?.db?.prisma;
 const localCreateCooldowns = new Map<string, number>();
 
 type CreateCooldown =
-  | { acquired: true; key: string }
-  | { acquired: false; waitMs: number };
+  { acquired: true; key: string } | { acquired: false; waitMs: number };
 
 async function acquireCreateCooldown(
   services: ModuleServices,
@@ -234,7 +233,8 @@ export async function resolveGuildVoiceChannel(
   guildId: string,
   channelId: string,
 ): Promise<VoiceChannel | null> {
-  const guild: Guild | undefined = services?.client?.guilds?.cache?.get(guildId);
+  const guild: Guild | undefined =
+    services?.client?.guilds?.cache?.get(guildId);
   if (!guild) return null;
   const cached = guild.channels.cache.get(channelId);
   const channel =
@@ -288,7 +288,8 @@ export async function createTempVoiceChannel(
   config: TempVcConfig,
   generator?: TempVcGenerator,
 ): Promise<VoiceChannel | null> {
-  const guild: Guild | undefined = services?.client?.guilds?.cache?.get(guildId);
+  const guild: Guild | undefined =
+    services?.client?.guilds?.cache?.get(guildId);
   if (!guild || member.user.bot) return null;
 
   const ownedChannels = await listOwnedTempChannels(
@@ -311,9 +312,7 @@ export async function createTempVoiceChannel(
       .then(() => true)
       .catch(() => false);
     await updateTempRecord(services, owned.channelId, {
-      expiresAt: moved
-        ? null
-        : new Date(Date.now() + config.emptyTimeoutMs),
+      expiresAt: moved ? null : new Date(Date.now() + config.emptyTimeoutMs),
     });
     return moved ? existing : null;
   }
@@ -341,9 +340,7 @@ export async function createTempVoiceChannel(
   const categoryParent =
     category?.type === ChannelType.GuildCategory ? category.id : undefined;
   const template = generator?.templateName ?? config.templateName;
-  const name = template
-    .replaceAll("{user}", member.displayName)
-    .slice(0, 100);
+  const name = template.replaceAll("{user}", member.displayName).slice(0, 100);
 
   let channel: VoiceChannel;
   try {
@@ -422,7 +419,8 @@ export async function deleteTempVoiceChannel(
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const guild: Guild | undefined = services?.client?.guilds?.cache?.get(guildId);
+  const guild: Guild | undefined =
+    services?.client?.guilds?.cache?.get(guildId);
   const channel =
     guild?.channels.cache.get(channelId) ??
     (await guild?.channels.fetch(channelId).catch(() => null));
@@ -437,7 +435,9 @@ export async function deleteTempVoiceChannel(
   return true;
 }
 
-export async function sweepExpiredTempChannels(services: ModuleServices): Promise<void> {
+export async function sweepExpiredTempChannels(
+  services: ModuleServices,
+): Promise<void> {
   const rows = await listExpiredTempChannels(services);
   if (rows.length === 0) return;
   const now = Date.now();

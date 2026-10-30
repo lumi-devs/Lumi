@@ -9,7 +9,7 @@ on:
     types: [published]
   schedule:
     # Run load tests weekly on Sundays at 2 AM UTC
-    - cron: '0 2 * * 0'
+    - cron: "0 2 * * 0"
 
 env:
   BUN_VERSION: "1.4.2"
@@ -23,18 +23,18 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Run lint
         run: bun run lint
-      
+
       - name: Run typecheck
         run: bun run typecheck
 
@@ -45,15 +45,15 @@ jobs:
     needs: lint-and-typecheck
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Run unit tests
         run: bun run test --reporter=verbose
 
@@ -64,18 +64,18 @@ jobs:
     needs: [lint-and-typecheck, unit-tests]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Build
         run: bun run build
-      
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -116,26 +116,26 @@ jobs:
       TEST_REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Wait for services
         run: |
           sleep 5
           until pg_isready -h localhost -U lumi_test; do sleep 1; done
           until redis-cli ping; do sleep 1; done
-      
+
       - name: Run migrations
         run: bun run db:migrate deploy
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-      
+
       - name: Run integration tests
         run: bun run test tests/integration --reporter=verbose
         env:
@@ -150,20 +150,20 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      
+
       - name: Run load tests
         run: bun run test tests/load --reporter=verbose
         env:
           LOAD_TEST_DURATION: 60000
-      
+
       - name: Upload load test results
         uses: actions/upload-artifact@v4
         with:
@@ -182,17 +182,17 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -204,7 +204,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
-      
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -245,7 +245,7 @@ jobs:
           # kubectl apply -k k8s/overlays/production
           # or use ArgoCD/Flux sync with blue-green
           echo "Production deployment complete"
-      
+
       - name: Post-deployment smoke tests
         run: |
           echo "Running smoke tests against production..."
@@ -260,20 +260,20 @@ jobs:
     needs: lint-and-typecheck
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-      
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
-      
+          sarif_file: "trivy-results.sarif"
+
       - name: Run npm audit
         run: bun audit --audit-level=high || true
 
@@ -284,15 +284,15 @@ jobs:
     if: github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      
+
       - name: Check for outdated dependencies
         run: bun outdated || true
-      
+
       - name: Create issue if updates available
         run: |
           # Check if there are updates

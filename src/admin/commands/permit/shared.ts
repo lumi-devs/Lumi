@@ -7,7 +7,6 @@ import {
 } from "@lumi/ui";
 import { ButtonStyle, type ChatInputCommandInteraction } from "discord.js";
 
-
 export async function replyPermitError(
   interaction: ChatInputCommandInteraction,
   title: string,

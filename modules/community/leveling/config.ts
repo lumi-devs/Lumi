@@ -148,12 +148,13 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export async function getLevelingConfig(
-  services: { config: { get(guildId: string, name: string): Promise<unknown> } },
+  services: {
+    config: { get(guildId: string, name: string): Promise<unknown> };
+  },
   guildId: string,
 ): Promise<LevelingConfig> {
-  const stored =
-    ((await services.config.get(guildId, LevelingConfigKey)) ??
-      {}) as Record<string, unknown>;
+  const stored = ((await services.config.get(guildId, LevelingConfigKey)) ??
+    {}) as Record<string, unknown>;
 
   const announceChannel = stored.announceChannel;
   return {
@@ -174,10 +175,7 @@ export async function getLevelingConfig(
         3600,
       ),
     ),
-    voiceEnabled: asBoolean(
-      stored.voiceEnabled,
-      LevelingDefaults.voiceEnabled,
-    ),
+    voiceEnabled: asBoolean(stored.voiceEnabled, LevelingDefaults.voiceEnabled),
     voiceXpPerMinute: Math.floor(
       clamp(
         asNumber(stored.voiceXpPerMinute, LevelingDefaults.voiceXpPerMinute),

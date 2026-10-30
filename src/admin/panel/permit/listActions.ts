@@ -4,7 +4,6 @@ import { showEditModal } from "./editDialog.js";
 import type { PermitHost } from "./host.js";
 import { missingPermitCard } from "./listViews.js";
 
-
 function pageFrom(raw: string): number {
   const page = Number(raw);
   return Number.isNaN(page) ? 0 : page;

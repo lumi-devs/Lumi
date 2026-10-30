@@ -1,5 +1,11 @@
 import { requireGuildId as guildIdOf } from "@lumi/foundation";
-import { type CommandDefinition, defineModule, type ListenerDefinition, type ModuleDefinition, type ModuleServices } from "@lumi/module-kit";
+import {
+  type CommandDefinition,
+  defineModule,
+  type ListenerDefinition,
+  type ModuleDefinition,
+  type ModuleServices,
+} from "@lumi/module-kit";
 import {
   AccentColors,
   type CardReply,
@@ -28,15 +34,9 @@ import {
   rolesEarnXp,
 } from "./config.js";
 import { LevelingModuleName } from "./constants.js";
-import {
-  levelForTotalXp,
-  levelProgress,
-} from "./formulas.js";
+import { levelForTotalXp, levelProgress } from "./formulas.js";
 import { applyRewardRoles, grantVoiceXp, grantXp } from "./level-up.js";
-import {
-  isAudible,
-  voiceAudibleTransition,
-} from "./voice-sessions.js";
+import { isAudible, voiceAudibleTransition } from "./voice-sessions.js";
 
 async function requireGuildId(
   interaction: ChatInputCommandInteraction,
@@ -59,7 +59,9 @@ const rankDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("rank")
     .setDescription("Check your or another user's level")
-    .addUserOption(o => o.setName("user").setDescription("User to check").setRequired(false)),
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to check").setRequired(false),
+    ),
   async execute(interaction, services) {
     const target = interaction.options.getUser("user") ?? interaction.user;
     const guildId = await requireGuildId(interaction);
@@ -70,11 +72,15 @@ const rankDef: CommandDefinition = {
     });
 
     if (!user) {
-      await interaction.reply(ephemeralCard(makeEmptyCard(
-        "No XP yet",
-        `${target.username} has not earned any XP.`,
-        "Send a message or join a voice channel to start earning XP.",
-      )));
+      await interaction.reply(
+        ephemeralCard(
+          makeEmptyCard(
+            "No XP yet",
+            `${target.username} has not earned any XP.`,
+            "Send a message or join a voice channel to start earning XP.",
+          ),
+        ),
+      );
       return;
     }
 
@@ -134,23 +140,31 @@ const rankDef: CommandDefinition = {
 
     if (attachment) {
       await interaction.reply({
-        ...ephemeralCard(makeCard(undefined, "", "", {
-          headerImages: ["attachment://rank.png"],
-          footer,
-          noAccent: true,
-        })),
+        ...ephemeralCard(
+          makeCard(undefined, "", "", {
+            headerImages: ["attachment://rank.png"],
+            footer,
+            noAccent: true,
+          }),
+        ),
         files: [attachment],
       });
       return;
     }
 
-    await interaction.reply(ephemeralCard(makeCard(AccentColors.purple, target.username, body, options)));
+    await interaction.reply(
+      ephemeralCard(
+        makeCard(AccentColors.purple, target.username, body, options),
+      ),
+    );
   },
 };
 
 type LeaderboardType = "overall" | "voice";
 
-function parseLeaderboardType(value: string | null | undefined): LeaderboardType {
+function parseLeaderboardType(
+  value: string | null | undefined,
+): LeaderboardType {
   return value === "voice" ? "voice" : "overall";
 }
 
@@ -169,7 +183,9 @@ async function renderLeaderboard(
       ? { voiceMinutes: "desc" as const }
       : { totalXp: "desc" as const };
 
-  const total = await services.db.prisma.levelingUser.count({ where: { guildId } });
+  const total = await services.db.prisma.levelingUser.count({
+    where: { guildId },
+  });
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const page = Math.min(Math.max(1, requestedPage), totalPages);
 
@@ -189,7 +205,10 @@ async function renderLeaderboard(
   }
 
   const lines = users.map(
-    (u: { userId: string; totalXp: bigint; voiceMinutes: number }, i: number) => {
+    (
+      u: { userId: string; totalXp: bigint; voiceMinutes: number },
+      i: number,
+    ) => {
       const member = guild?.members.cache.get(u.userId);
       const name = member?.user.tag ?? `Unknown (${u.userId})`;
       if (boardType === "voice") {
@@ -202,17 +221,20 @@ async function renderLeaderboard(
     },
   );
 
-  const title = boardType === "voice" ? "🎙️ Voice Leaderboard" : "🏆 XP Leaderboard";
+  const title =
+    boardType === "voice" ? "🎙️ Voice Leaderboard" : "🏆 XP Leaderboard";
   const color = boardType === "voice" ? AccentColors.cyan : AccentColors.gold;
 
   return makeCard(color, title, lines, {
     subtitle: guild?.name,
     footer: formatPageFooter(page - 1, totalPages, total),
-    actionRows: [createPaginationRow({
-      customIdPrefix: `leveling:lb:${boardType}`,
-      currentPage: page - 1,
-      totalPages,
-    })],
+    actionRows: [
+      createPaginationRow({
+        customIdPrefix: `leveling:lb:${boardType}`,
+        currentPage: page - 1,
+        totalPages,
+      }),
+    ],
   });
 }
 
@@ -220,18 +242,39 @@ const leaderboardDef: CommandDefinition = {
   data: new SlashCommandBuilder()
     .setName("leaderboard")
     .setDescription("View the server XP leaderboard")
-    .addIntegerOption(o => o.setName("page").setDescription("Page number").setMinValue(1).setRequired(false))
-    .addStringOption(o => o.setName("type").setDescription("Leaderboard type").addChoices(
-      { name: "Overall XP", value: "overall" },
-      { name: "Voice Minutes", value: "voice" },
-    ).setRequired(false)),
+    .addIntegerOption((o) =>
+      o
+        .setName("page")
+        .setDescription("Page number")
+        .setMinValue(1)
+        .setRequired(false),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("type")
+        .setDescription("Leaderboard type")
+        .addChoices(
+          { name: "Overall XP", value: "overall" },
+          { name: "Voice Minutes", value: "voice" },
+        )
+        .setRequired(false),
+    ),
   async execute(interaction, services) {
     const page = interaction.options.getInteger("page") ?? 1;
-    const boardType = parseLeaderboardType(interaction.options.getString("type"));
+    const boardType = parseLeaderboardType(
+      interaction.options.getString("type"),
+    );
     const guildId = await requireGuildId(interaction);
     if (!guildId) return;
     const config = await getLevelingConfig(services, guildId);
-    const card = await renderLeaderboard(config, interaction.guild, guildId, page, services, boardType);
+    const card = await renderLeaderboard(
+      config,
+      interaction.guild,
+      guildId,
+      page,
+      services,
+      boardType,
+    );
     await interaction.reply(ephemeralCard(card));
   },
 };
@@ -239,7 +282,11 @@ const leaderboardDef: CommandDefinition = {
 const leaderboardListener: ListenerDefinition = {
   event: "interactionCreate",
   async handler(interaction: Interaction, services: ModuleServices) {
-    if (!interaction.isButton() || !interaction.customId.startsWith("leveling:lb:")) return;
+    if (
+      !interaction.isButton() ||
+      !interaction.customId.startsWith("leveling:lb:")
+    )
+      return;
 
     const [, , boardType, action, token] = interaction.customId.split(":");
     if (action !== "prev" && action !== "next") return;
@@ -250,7 +297,14 @@ const leaderboardListener: ListenerDefinition = {
 
     await interaction.deferUpdate();
     const config = await getLevelingConfig(services, guildId);
-    const card = await renderLeaderboard(config, interaction.guild, guildId, page + 1, services, parseLeaderboardType(boardType));
+    const card = await renderLeaderboard(
+      config,
+      interaction.guild,
+      guildId,
+      page + 1,
+      services,
+      parseLeaderboardType(boardType),
+    );
     await interaction.editReply(card);
   },
 };
@@ -338,7 +392,11 @@ const onMessageListener: ListenerDefinition = {
 
 const onVoiceStateListener: ListenerDefinition = {
   event: Events.VoiceStateUpdate,
-  async handler(oldState: VoiceState, newState: VoiceState, services: ModuleServices) {
+  async handler(
+    oldState: VoiceState,
+    newState: VoiceState,
+    services: ModuleServices,
+  ) {
     const member = newState.member ?? oldState.member;
     if (!member || member.user.bot) return;
     const guild = newState.guild ?? oldState.guild;
@@ -396,7 +454,10 @@ const onMemberAddListener: ListenerDefinition = {
     });
     if (!user) return;
 
-    const { level } = levelForTotalXp(config.levelFormula, Number(user.totalXp));
+    const { level } = levelForTotalXp(
+      config.levelFormula,
+      Number(user.totalXp),
+    );
     if (level <= 1) return;
 
     await applyRewardRoles(services, config, member, level);
@@ -407,7 +468,8 @@ const levelingModule: ModuleDefinition = defineModule({
   name: LevelingModuleName,
   displayName: "Leveling",
   emoji: "📈",
-  description: "XP, levels, role rewards, and leaderboards with voice XP support",
+  description:
+    "XP, levels, role rewards, and leaderboards with voice XP support",
   version: "2.1.0",
   config: {},
   commands: [rankDef, leaderboardDef],

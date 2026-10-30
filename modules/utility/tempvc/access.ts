@@ -23,7 +23,9 @@ function roleIdsOf(
   if (!member) return [];
   const roles: unknown = member.roles;
   if (Array.isArray(roles)) {
-    return roles.filter((roleId): roleId is string => typeof roleId === "string");
+    return roles.filter(
+      (roleId): roleId is string => typeof roleId === "string",
+    );
   }
   const cache = (roles as { cache?: Map<string, unknown> } | undefined)?.cache;
   return cache ? [...cache.keys()] : [];

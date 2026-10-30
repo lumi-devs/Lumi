@@ -35,9 +35,7 @@ export function xpForLevel(formula: LevelFormula, level: number): number {
   switch (formula) {
     case "disgaea": {
       const t = lv - 1;
-      return Math.floor(
-        100 + 0.04 * t * t * t + 0.8 * t * t + 2 * t + 0.5,
-      );
+      return Math.floor(100 + 0.04 * t * t * t + 0.8 * t * t + 2 * t + 0.5);
     }
     case "fibonacci":
       if (lv === 1) return 100;
@@ -102,10 +100,7 @@ export function levelProgress(
     return { level: safeLevel, xpIntoLevel: 0, xpForNext: 0, progress: 1 };
   }
 
-  const total = Math.max(
-    0,
-    Math.floor(Number.isFinite(totalXp) ? totalXp : 0),
-  );
+  const total = Math.max(0, Math.floor(Number.isFinite(totalXp) ? totalXp : 0));
   const previousLevels = totalXpForLevel(formula, safeLevel);
   const required = xpForLevel(formula, safeLevel);
   const xpIntoLevel = Math.max(0, Math.min(required, total - previousLevels));

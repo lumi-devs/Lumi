@@ -25,7 +25,9 @@ export const moduleCommands = [
         );
         return;
       }
-      await interaction.reply(ephemeralCard(await renderHubPanel("home", interaction, services)));
+      await interaction.reply(
+        ephemeralCard(await renderHubPanel("home", interaction, services)),
+      );
     },
   },
   permitCommand,

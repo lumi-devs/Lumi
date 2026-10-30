@@ -47,9 +47,7 @@ export async function autocompleteNode(
     .filter((part) => part.length > 0);
   const prefix = completed.length > 0 ? `${completed.join(", ")}, ` : "";
   const lowered = query.toLowerCase();
-  const matches = nodes.filter((node) =>
-    node.toLowerCase().includes(lowered),
-  );
+  const matches = nodes.filter((node) => node.toLowerCase().includes(lowered));
   const choices = matches.slice(0, 25).map((node) => {
     const value = `${prefix}${node}`.slice(0, 100);
     return { name: value, value };

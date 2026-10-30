@@ -9,8 +9,16 @@ export const softbanDef: CommandDefinition = {
     .setName("softban")
     .setDescription("Softban a user (ban + immediate unban)")
     .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
-    .addUserOption(o => o.setName("user").setDescription("User to softban").setRequired(true))
-    .addStringOption(o => o.setName("reason").setDescription("Reason").setRequired(false).setAutocomplete(true)),
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to softban").setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("reason")
+        .setDescription("Reason")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
   requiredPermit: "mod.ban",
   async execute(interaction, services) {
     const target = interaction.options.getUser("user", true);
@@ -37,16 +45,25 @@ export const softbanDef: CommandDefinition = {
       await guild.bans.remove(target.id, `Softban: ${reason}`);
 
       await services.db.prisma.moderationCase.create({
-        data: { guildId: guild.id, type: "SOFTBAN", targetId: target.id, moderatorId: interaction.user.id, reason },
+        data: {
+          guildId: guild.id,
+          type: "SOFTBAN",
+          targetId: target.id,
+          moderatorId: interaction.user.id,
+          reason,
+        },
       });
 
-      await interaction.reply(ephemeralCard(makeSuccessCard("Softbanned", [
-        `**User**\n${target.tag} (\`${target.id}\`)`,
-        `**Reason**\n${reason}`,
-      ])));
+      await interaction.reply(
+        ephemeralCard(
+          makeSuccessCard("Softbanned", [
+            `**User**\n${target.tag} (\`${target.id}\`)`,
+            `**Reason**\n${reason}`,
+          ]),
+        ),
+      );
     } catch (e) {
       await replyError(interaction, "Softban failed", describeError(e));
     }
   },
 };
-

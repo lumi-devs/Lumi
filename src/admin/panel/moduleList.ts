@@ -12,7 +12,13 @@ import {
   ButtonStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { backButton, cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
+import {
+  backButton,
+  cut,
+  type HubInteraction,
+  pageRow,
+  panelOptions,
+} from "./common.js";
 import {
   ModulesPerPage,
   moduleListRowId,
@@ -32,9 +38,8 @@ export async function renderModules(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const modules = supermoduleItems(
-    services.moduleLoader.listGlobal(),
-    (name) => services.moduleLoader.isEnabled(guildId, name),
+  const modules = supermoduleItems(services.moduleLoader.listGlobal(), (name) =>
+    services.moduleLoader.isEnabled(guildId, name),
   );
 
   if (modules.length === 0) {
@@ -46,11 +51,11 @@ export async function renderModules(
     );
   }
 
-  const { items: shown, page: currentPage, totalPages } = paginate(
-    modules,
-    page,
-    ModulesPerPage,
-  );
+  const {
+    items: shown,
+    page: currentPage,
+    totalPages,
+  } = paginate(modules, page, ModulesPerPage);
 
   const sections = shown.map((module) =>
     settingRow(
@@ -113,16 +118,14 @@ export async function renderSubmodules(
   }
 
   const breadcrumbs = ["Hub", "Modules", parent.displayName];
-  const children = submoduleItems(
-    modules,
-    supermoduleName,
-    (name) => services.moduleLoader.isEnabled(guildId, name),
+  const children = submoduleItems(modules, supermoduleName, (name) =>
+    services.moduleLoader.isEnabled(guildId, name),
   );
-  const { items: shown, page: currentPage, totalPages } = paginate(
-    children,
-    page,
-    SubmodulesPerPage,
-  );
+  const {
+    items: shown,
+    page: currentPage,
+    totalPages,
+  } = paginate(children, page, SubmodulesPerPage);
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
   for (const module of shown) {
@@ -134,22 +137,20 @@ export async function renderSubmodules(
           style: ButtonStyle.Primary,
         }),
         createActionButton({
-          customId: submoduleToggleId(
-            module.name,
-            originPage,
-            currentPage,
-          ),
+          customId: submoduleToggleId(module.name, originPage, currentPage),
           label: `${module.enabled ? "Disable" : "Enable"} ${module.displayName}`,
-          style: module.enabled
-            ? ButtonStyle.Danger
-            : ButtonStyle.Success,
+          style: module.enabled ? ButtonStyle.Danger : ButtonStyle.Success,
         }),
       ),
     );
   }
   if (totalPages > 1) {
     rows.push(
-      pageRow(moduleListRowId(supermoduleName, originPage), currentPage, totalPages),
+      pageRow(
+        moduleListRowId(supermoduleName, originPage),
+        currentPage,
+        totalPages,
+      ),
     );
   }
   rows.push(

@@ -32,7 +32,9 @@ export function submoduleItems(
   isEnabled: (name: string) => boolean,
 ): SubmoduleItem[] {
   return modules
-    .filter((module) => module.isSubmodule && module.supermodule === supermodule)
+    .filter(
+      (module) => module.isSubmodule && module.supermodule === supermodule,
+    )
     .map((module) => ({
       ...module,
       enabled: isEnabled(module.name),
@@ -42,7 +44,6 @@ export function submoduleItems(
 export function moduleListRowId(name: string, page: number): string {
   return `lumi:modsubs:${name}:${page}`;
 }
-
 
 export function submoduleToggleId(
   moduleName: string,

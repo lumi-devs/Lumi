@@ -58,7 +58,9 @@ function loadedModule(
 }
 
 function fakeLoader(initial: LoadedModule[]) {
-  const modules = new Map(initial.map((module) => [module.manifest.name, module]));
+  const modules = new Map(
+    initial.map((module) => [module.manifest.name, module]),
+  );
 
   return {
     discover: vi.fn(async () => Array.from(modules.values())),
@@ -138,11 +140,7 @@ describe("ModuleHost", () => {
 
   it("mounts a supermodule together with its submodules", async () => {
     const parent = loadedModule("utility", { commands: ["utility"] });
-    const child = loadedModule(
-      "utility-afk",
-      { commands: ["afk"] },
-      "utility",
-    );
+    const child = loadedModule("utility-afk", { commands: ["afk"] }, "utility");
     const { host, registry, loader } = setup([parent, child]);
 
     await host.mount("utility");

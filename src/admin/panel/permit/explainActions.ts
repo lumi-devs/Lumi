@@ -30,7 +30,9 @@ export async function handleExplainAction(
   const flow = host.getFlow();
   if (flow?.kind !== "explain" || flow.userId === undefined) {
     await interaction.update(
-      flow?.kind === "explain" ? await host.explainCard(flow) : await host.mainCard(0),
+      flow?.kind === "explain"
+        ? await host.explainCard(flow)
+        : await host.mainCard(0),
     );
     return true;
   }

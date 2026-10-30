@@ -11,10 +11,7 @@ import {
   row,
 } from "@lumi/ui";
 import { ButtonStyle } from "discord.js";
-import {
-  formatTimestamp,
-  polarityIcon,
-} from "../../permits/format.js";
+import { formatTimestamp, polarityIcon } from "../../permits/format.js";
 import { formatPermitNodes } from "../../permits/nodes.js";
 import { backButton, cut } from "../common.js";
 import { paginate } from "../pages.js";
@@ -148,15 +145,20 @@ export async function mainCard(
       : []),
   ]);
 
-  return makeCard(undefined, "Permit Management", [
-    ...lines,
-    "-# Select a permit below to view, edit, or manage its assignments.",
-  ], {
-    subtitle: `${builtinCount} built-in · ${permits.length - builtinCount} custom · ${permits.length} total`,
-    breadcrumbs: ["Admin", "Permits"],
-    footer: formatPageFooter(currentPage, totalPages, permits.length),
-    actionRows,
-  });
+  return makeCard(
+    undefined,
+    "Permit Management",
+    [
+      ...lines,
+      "-# Select a permit below to view, edit, or manage its assignments.",
+    ],
+    {
+      subtitle: `${builtinCount} built-in · ${permits.length - builtinCount} custom · ${permits.length} total`,
+      breadcrumbs: ["Admin", "Permits"],
+      footer: formatPageFooter(currentPage, totalPages, permits.length),
+      actionRows,
+    },
+  );
 }
 
 export async function reorderCard(

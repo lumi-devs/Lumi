@@ -1,18 +1,11 @@
 import { defineModule, type ModuleDefinition } from "@lumi/module-kit";
 import { banAdd, banRemove } from "./commands/ban.js";
-import {
-  caseDef,
-  casesDef,
-  casesPaginationListener,
-} from "./commands/case.js";
+import { caseDef, casesDef, casesPaginationListener } from "./commands/case.js";
 import { lockDef, lockdownDef, unlockDef } from "./commands/channel.js";
 import { kickDef } from "./commands/kick.js";
 import { noteDef } from "./commands/note.js";
 import { purgeDef } from "./commands/purge.js";
-import {
-  quarantineDef,
-  unquarantineDef,
-} from "./commands/quarantine.js";
+import { quarantineDef, unquarantineDef } from "./commands/quarantine.js";
 import { softbanDef } from "./commands/softban.js";
 import { timeoutDef } from "./commands/timeout.js";
 import { vcmuteDef, vcmuteRemoveDef } from "./commands/voice.js";

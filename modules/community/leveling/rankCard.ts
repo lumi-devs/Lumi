@@ -118,7 +118,12 @@ export async function generateRankCard(data: RankCardData): Promise<Buffer> {
 
   const progressWidth = barWidth * progress;
   if (progressWidth > 0) {
-    const barGradient = ctx.createLinearGradient(barX, 0, barX + progressWidth, 0);
+    const barGradient = ctx.createLinearGradient(
+      barX,
+      0,
+      barX + progressWidth,
+      0,
+    );
     barGradient.addColorStop(0, "#4c6ef5");
     barGradient.addColorStop(1, "#9775fa");
     ctx.fillStyle = barGradient;

@@ -6,9 +6,18 @@ import {
   TextDisplayBuilder,
   ThumbnailBuilder,
 } from "@discordjs/builders";
-import type { MessageMentionOptions } from "discord.js";
+import type {
+  MessageCreateOptions,
+  MessageEditOptions,
+  MessageMentionOptions,
+  MessageReplyOptions,
+} from "discord.js";
 import { MessageFlags } from "discord.js";
-import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
+import {
+  formatBreadcrumbs,
+  formatStatusBadge,
+  formatSubtitle,
+} from "./layout.js";
 import { resolveCardColor } from "./palette.js";
 import { buildSafeActionRows, type Row } from "./panels.js";
 
@@ -16,6 +25,16 @@ export interface CardReply {
   readonly flags?: number;
   readonly components: readonly ContainerBuilder[];
   readonly allowedMentions?: MessageMentionOptions;
+}
+
+export type CardMessageOptions = MessageReplyOptions & MessageEditOptions;
+
+export function cardMessage(card: CardReply): CardMessageOptions {
+  return card as unknown as CardMessageOptions;
+}
+
+export function cardCreateOptions(card: CardReply): MessageCreateOptions {
+  return card as unknown as MessageCreateOptions;
 }
 
 export interface CardOptions {
@@ -62,7 +81,9 @@ function buildContainer(
     headerParts.push(formatBreadcrumbs(opts.breadcrumbs));
   }
   if (opts.statusBadge) {
-    headerParts.push(formatStatusBadge(opts.statusBadge.status, opts.statusBadge.label));
+    headerParts.push(
+      formatStatusBadge(opts.statusBadge.status, opts.statusBadge.label),
+    );
   }
   if (headerParts.length > 0) {
     c.addTextDisplayComponents(
@@ -91,8 +112,7 @@ function buildContainer(
   }
 
   const parts = Array.isArray(body) ? body : [body];
-  const thumbUrl =
-    !opts.sections?.length && opts.thumbnailUrl;
+  const thumbUrl = !opts.sections?.length && opts.thumbnailUrl;
 
   if (thumbUrl) {
     const thumbSec = new SectionBuilder().setThumbnailAccessory(
@@ -112,7 +132,8 @@ function buildContainer(
   } else {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      if (i > 0) c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      if (i > 0)
+        c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
       if (part && part.length > 0) {
         c.addTextDisplayComponents(new TextDisplayBuilder().setContent(part));
       }
@@ -125,7 +146,9 @@ function buildContainer(
   if (headerUrls.length > 0) {
     c.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
-        ...headerUrls.map((url) => new MediaGalleryItemBuilder({ media: { url } })),
+        ...headerUrls.map(
+          (url) => new MediaGalleryItemBuilder({ media: { url } }),
+        ),
       ),
     );
   }
@@ -198,10 +221,7 @@ const cutText = (text: string, limit: number): string =>
 
 export const TextDisplayLimit = 4000;
 
-export function fitLines(
-  lines: string[],
-  budget = TextDisplayLimit,
-): string {
+export function fitLines(lines: string[], budget = TextDisplayLimit): string {
   const kept: string[] = [];
   let used = 0;
 
@@ -256,14 +276,8 @@ export function makeEmptyCard(
   const body = suggestion
     ? fitLines([reason, "", `**Try:** ${suggestion}`])
     : reason;
-  return makeCard(
-    undefined,
-    `📭 ${title}`,
-    body,
-    {
-      ...opts,
-      footer: opts?.footer ?? "No items to display",
-    },
-  );
+  return makeCard(undefined, `📭 ${title}`, body, {
+    ...opts,
+    footer: opts?.footer ?? "No items to display",
+  });
 }
-

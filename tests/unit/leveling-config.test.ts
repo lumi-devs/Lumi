@@ -15,7 +15,9 @@ const Channel = "333333333333333333";
 
 describe("getLevelingConfig", () => {
   it("uses defaults when nothing is stored", async () => {
-    await expect(getLevelingConfig(services(undefined), "guild")).resolves.toMatchObject({
+    await expect(
+      getLevelingConfig(services(undefined), "guild"),
+    ).resolves.toMatchObject({
       levelFormula: "disgaea",
       xpPerMessage: 15,
       cooldownSeconds: 60,

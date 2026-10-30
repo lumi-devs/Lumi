@@ -29,7 +29,9 @@ export class AddonStorage {
   }
 
   async readManifest(dir: string): Promise<ModuleManifest> {
-    return validateManifest(JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")));
+    return validateManifest(
+      JSON.parse(await readFile(join(dir, "manifest.json"), "utf-8")),
+    );
   }
 
   async copyModule(source: string, target: string): Promise<void> {
@@ -78,12 +80,27 @@ export class AddonStorage {
     if (!(await pathExists(packagePath))) {
       await writeFile(
         packagePath,
-        JSON.stringify({ name: `lumi-addon-${packageName}`, version: "1.0.0", private: true }, null, 2),
+        JSON.stringify(
+          {
+            name: `lumi-addon-${packageName}`,
+            version: "1.0.0",
+            private: true,
+          },
+          null,
+          2,
+        ),
       );
     }
 
     const proc = Bun.spawn(
-      ["bun", "add", "--production", "--ignore-scripts", "--no-save", ...requirements],
+      [
+        "bun",
+        "add",
+        "--production",
+        "--ignore-scripts",
+        "--no-save",
+        ...requirements,
+      ],
       { cwd: dir, stdout: "ignore", stderr: "pipe" },
     );
     const [stderr, exitCode] = await Promise.all([

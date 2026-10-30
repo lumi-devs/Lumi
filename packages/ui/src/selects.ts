@@ -49,7 +49,9 @@ export interface StringSelectOptionInput {
 }
 
 export interface CreateStringSelectMenuOptions extends SelectMenuOptions {
-  readonly options?: readonly (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
+  readonly options?: readonly (
+    StringSelectOptionInput | StringSelectMenuOptionBuilder
+  )[];
 }
 
 export function createUserSelectMenu(

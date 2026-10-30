@@ -30,7 +30,6 @@ export class ConfigService {
       this.load(guildId),
     );
 
-
     return settings ? structuredClone(settings) : {};
   }
 

@@ -1,6 +1,11 @@
-import { describe, expect, it, } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parseCron } from "../src/cron.js";
-import { evaluateNodeMatch, isBotOwner, isGuildOwner, PermitResolver } from "../src/evaluator.js";
+import {
+  evaluateNodeMatch,
+  isBotOwner,
+  isGuildOwner,
+  PermitResolver,
+} from "../src/evaluator.js";
 
 describe("Permit Evaluator", () => {
   describe("evaluateNodeMatch", () => {
@@ -21,7 +26,9 @@ describe("Permit Evaluator", () => {
 
     it("should match nested namespace", () => {
       expect(evaluateNodeMatch("mod.*", "mod")).toBe(true);
-      expect(evaluateNodeMatch("admin.config.*", "admin.config.users")).toBe(true);
+      expect(evaluateNodeMatch("admin.config.*", "admin.config.users")).toBe(
+        true,
+      );
     });
 
     it("should not match partial", () => {
@@ -35,7 +42,6 @@ describe("Permit Evaluator", () => {
     });
 
     it("should return false for non-owner when OWNER_IDS not set", () => {
-
       expect(isBotOwner("999")).toBe(false);
     });
   });
@@ -85,8 +91,8 @@ describe("Permit Evaluator", () => {
     });
 
     it("should accept permits without expiry (null)", () => {
-
-      const checkExpiry = (expiry: Date | null) => expiry !== null && expiry < new Date();
+      const checkExpiry = (expiry: Date | null) =>
+        expiry !== null && expiry < new Date();
       expect(checkExpiry(null)).toBe(false);
       expect(checkExpiry(new Date(Date.now() + 1000))).toBe(false);
       expect(checkExpiry(new Date(Date.now() - 1000))).toBe(true);

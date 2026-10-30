@@ -1,7 +1,4 @@
-import {
-  requireGuildId as guildIdOf,
-  isSnowflake,
-} from "@lumi/foundation";
+import { requireGuildId as guildIdOf, isSnowflake } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   ActionRowBuilder,
@@ -17,10 +14,7 @@ import {
 } from "discord.js";
 import { handleAdminInteraction } from "./admin.js";
 import { isModuleEnabled } from "./config.js";
-import {
-  stripPrefix,
-  TempVcPrefixes,
-} from "./ids.js";
+import { stripPrefix, TempVcPrefixes } from "./ids.js";
 import {
   buildControlPanel,
   controlState,
@@ -33,7 +27,6 @@ import {
 import { replyError, replySuccess, showCard } from "./reply.js";
 import type { TempVcInteraction } from "./types.js";
 import { deleteConfirmCard, memberActionCard } from "./ui.js";
-
 
 async function loadManaged(
   interaction: TempVcInteraction,
@@ -194,7 +187,11 @@ async function handlePanelAction(
       );
       return;
     default:
-      await refreshNotice(interaction, managed, "That action is not available.");
+      await refreshNotice(
+        interaction,
+        managed,
+        "That action is not available.",
+      );
   }
 }
 
@@ -264,7 +261,11 @@ async function handleMemberPick(
       ownerId: targetId,
     });
     if (!updated) {
-      await replyError(interaction, "Update Failed", "Could not transfer ownership.");
+      await replyError(
+        interaction,
+        "Update Failed",
+        "Could not transfer ownership.",
+      );
       return;
     }
     const previousOwner = record.ownerId;
@@ -393,7 +394,11 @@ async function handlePanelInteraction(
       return;
     }
     if (managed.record.ownerId === interaction.user.id) {
-      await replyError(interaction, "Already Owner", "You already own this channel.");
+      await replyError(
+        interaction,
+        "Already Owner",
+        "You already own this channel.",
+      );
       return;
     }
     const previousOwner = managed.record.ownerId;
@@ -409,7 +414,11 @@ async function handlePanelInteraction(
       ownerId: interaction.user.id,
     });
     if (!updated) {
-      await replyError(interaction, "Claim Failed", "Could not claim ownership.");
+      await replyError(
+        interaction,
+        "Claim Failed",
+        "Could not claim ownership.",
+      );
       return;
     }
     managed.record.ownerId = interaction.user.id;
@@ -439,9 +448,17 @@ async function handlePanelInteraction(
       managed.channel.id,
     );
     if (deleted) {
-      await replySuccess(interaction, "Channel Deleted", `Deleted **${name}**.`);
+      await replySuccess(
+        interaction,
+        "Channel Deleted",
+        `Deleted **${name}**.`,
+      );
     } else {
-      await replyError(interaction, "Delete Failed", "The channel could not be deleted.");
+      await replyError(
+        interaction,
+        "Delete Failed",
+        "The channel could not be deleted.",
+      );
     }
     return;
   }
@@ -455,7 +472,11 @@ async function handlePanelInteraction(
       interaction.fields?.getTextInputValue("value") ?? "",
     ).trim();
     if (value.length === 0) {
-      await replyError(interaction, "Invalid Name", "The channel name cannot be empty.");
+      await replyError(
+        interaction,
+        "Invalid Name",
+        "The channel name cannot be empty.",
+      );
       return;
     }
     await managed.channel.setName(value.slice(0, 100)).catch(() => undefined);
@@ -472,10 +493,16 @@ async function handlePanelInteraction(
     const managed = await loadManaged(interaction, services, limitId);
     if (!managed) return;
     if (!(await assertOwnerOrManage(interaction, managed))) return;
-    const raw = String(interaction.fields?.getTextInputValue("value") ?? "").trim();
+    const raw = String(
+      interaction.fields?.getTextInputValue("value") ?? "",
+    ).trim();
     const limit = Number.parseInt(raw, 10);
     if (!Number.isInteger(limit) || limit < 0 || limit > 99) {
-      await replyError(interaction, "Invalid Limit", "Enter a number from 0 to 99.");
+      await replyError(
+        interaction,
+        "Invalid Limit",
+        "Enter a number from 0 to 99.",
+      );
       return;
     }
     await managed.channel.setUserLimit(limit).catch(() => undefined);

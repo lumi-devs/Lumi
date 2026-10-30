@@ -33,7 +33,6 @@ import { createGuildSync } from "./core/guildSync.js";
 import { CommandRegistry, ModuleHost } from "./core/modules.js";
 import { createStatusHandler } from "./core/rpcRoutes.js";
 
-
 const GuildBatchSize = 10;
 
 async function main(): Promise<void> {
@@ -94,7 +93,11 @@ async function main(): Promise<void> {
   let metricsServer: MetricsServer | undefined;
   if (process.env.METRICS_ENABLED !== "false") {
     const metricsPort = Number.parseInt(process.env.METRICS_PORT ?? "9090", 10);
-    metricsServer = startMetricsServer(metricsPort, () => client.isReady(), logger);
+    metricsServer = startMetricsServer(
+      metricsPort,
+      () => client.isReady(),
+      logger,
+    );
   }
 
   const registry = new CommandRegistry();
@@ -109,8 +112,6 @@ async function main(): Promise<void> {
     prisma,
     commandSync.syncGuild,
   );
-
-
 
   let addonManager: AddonManager | undefined;
 
@@ -133,7 +134,9 @@ async function main(): Promise<void> {
     scheduler,
     get addons(): AddonManager {
       if (!addonManager) {
-        throw new Error("services.addons used before the addon manager was wired");
+        throw new Error(
+          "services.addons used before the addon manager was wired",
+        );
       }
       return addonManager;
     },
@@ -208,16 +211,13 @@ async function main(): Promise<void> {
       const guilds = Array.from(client.guilds.cache.values());
       for (let index = 0; index < guilds.length; index += GuildBatchSize) {
         await Promise.all(
-          guilds
-            .slice(index, index + GuildBatchSize)
-            .map(async (guild) => {
-
-              await Promise.all([
-                guildSync.syncRecord(guild),
-                guildSync.syncModules(guild.id),
-              ]);
-              await commandSync.registerGuild(guild);
-            }),
+          guilds.slice(index, index + GuildBatchSize).map(async (guild) => {
+            await Promise.all([
+              guildSync.syncRecord(guild),
+              guildSync.syncModules(guild.id),
+            ]);
+            await commandSync.registerGuild(guild);
+          }),
         );
       }
 
@@ -295,8 +295,6 @@ async function main(): Promise<void> {
     shuttingDown = true;
     logger.info("Shutting down", { signal });
 
-
-
     const steps: Array<[string, () => unknown]> = [
       ["metrics", () => metricsServer?.stop()],
       ["rpc", () => rpc.stop()],
@@ -317,7 +315,6 @@ async function main(): Promise<void> {
 
     process.exit(0);
   };
-
 
   process.on("SIGINT", () => void shutdownAll("SIGINT"));
   process.on("SIGTERM", () => void shutdownAll("SIGTERM"));

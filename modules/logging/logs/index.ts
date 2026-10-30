@@ -28,7 +28,12 @@ import {
 } from "./config.js";
 import { isIgnored, sendLog } from "./services.js";
 
-function eventCard(title: string, color: number, lines: string[], footer?: string): CardReply {
+function eventCard(
+  title: string,
+  color: number,
+  lines: string[],
+  footer?: string,
+): CardReply {
   return makeCard(color, title, lines, footer ? { footer } : undefined);
 }
 
@@ -54,26 +59,65 @@ const loggingConfigDef: CommandDefinition = {
     .setName("logging")
     .setDescription("Configure logging channels")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .addSubcommand(s => s.setName("set").setDescription("Set a log channel")
-      .addStringOption(o => o.setName("type").setDescription("Log type").setRequired(true).addChoices(
-        { name: "Message", value: "message" },
-        { name: "Edit", value: "edit" },
-        { name: "Delete", value: "delete" },
-        { name: "Voice", value: "voice" }
-      ))
-      .addChannelOption(o => o.setName("channel").setDescription("Channel to log to").setRequired(true))
+    .addSubcommand((s) =>
+      s
+        .setName("set")
+        .setDescription("Set a log channel")
+        .addStringOption((o) =>
+          o
+            .setName("type")
+            .setDescription("Log type")
+            .setRequired(true)
+            .addChoices(
+              { name: "Message", value: "message" },
+              { name: "Edit", value: "edit" },
+              { name: "Delete", value: "delete" },
+              { name: "Voice", value: "voice" },
+            ),
+        )
+        .addChannelOption((o) =>
+          o
+            .setName("channel")
+            .setDescription("Channel to log to")
+            .setRequired(true),
+        ),
     )
-    .addSubcommand(s => s.setName("remove").setDescription("Remove a log channel")
-      .addStringOption(o => o.setName("type").setDescription("Log type").setRequired(true).addChoices(
-        { name: "Message", value: "message" },
-        { name: "Edit", value: "edit" },
-        { name: "Delete", value: "delete" },
-        { name: "Voice", value: "voice" }
-      ))
+    .addSubcommand((s) =>
+      s
+        .setName("remove")
+        .setDescription("Remove a log channel")
+        .addStringOption((o) =>
+          o
+            .setName("type")
+            .setDescription("Log type")
+            .setRequired(true)
+            .addChoices(
+              { name: "Message", value: "message" },
+              { name: "Edit", value: "edit" },
+              { name: "Delete", value: "delete" },
+              { name: "Voice", value: "voice" },
+            ),
+        ),
     )
-    .addSubcommand(s => s.setName("ignore").setDescription("Ignore a channel").addChannelOption(o => o.setName("channel").setDescription("Channel").setRequired(true)))
-    .addSubcommand(s => s.setName("unignore").setDescription("Unignore a channel").addChannelOption(o => o.setName("channel").setDescription("Channel").setRequired(true)))
-    .addSubcommand(s => s.setName("view").setDescription("View current settings")),
+    .addSubcommand((s) =>
+      s
+        .setName("ignore")
+        .setDescription("Ignore a channel")
+        .addChannelOption((o) =>
+          o.setName("channel").setDescription("Channel").setRequired(true),
+        ),
+    )
+    .addSubcommand((s) =>
+      s
+        .setName("unignore")
+        .setDescription("Unignore a channel")
+        .addChannelOption((o) =>
+          o.setName("channel").setDescription("Channel").setRequired(true),
+        ),
+    )
+    .addSubcommand((s) =>
+      s.setName("view").setDescription("View current settings"),
+    ),
   requiredPermit: "admin.config",
   async execute(interaction, services) {
     const sub = interaction.options.getSubcommand();
@@ -85,17 +129,25 @@ const loggingConfigDef: CommandDefinition = {
         const type = interaction.options.getString("type", true);
         const channel = interaction.options.getChannel("channel", true);
         if (!channel || !("guildId" in channel)) {
-          await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild text channel")));
+          await interaction.reply(
+            ephemeralCard(
+              makeErrorCard("Invalid channel", "Must be a guild text channel"),
+            ),
+          );
           return;
         }
         const key = logChannelKey(type);
         if (!key) return;
         config[key] = channel.id;
         await services.config.set(guildId, LoggingConfigKey, config);
-        await interaction.reply(ephemeralCard(makeSuccessCard("Log channel set", [
-          `**Type**\n${type}`,
-          `**Channel**\n${channel}`,
-        ])));
+        await interaction.reply(
+          ephemeralCard(
+            makeSuccessCard("Log channel set", [
+              `**Type**\n${type}`,
+              `**Channel**\n${channel}`,
+            ]),
+          ),
+        );
         break;
       }
       case "remove": {
@@ -104,51 +156,73 @@ const loggingConfigDef: CommandDefinition = {
         if (!key) return;
         delete config[key];
         await services.config.set(guildId, LoggingConfigKey, config);
-        await interaction.reply(ephemeralCard(makeSuccessCard("Log channel removed", [
-          `**Type**\n${type}`,
-        ])));
+        await interaction.reply(
+          ephemeralCard(
+            makeSuccessCard("Log channel removed", [`**Type**\n${type}`]),
+          ),
+        );
         break;
       }
       case "ignore": {
         const channel = interaction.options.getChannel("channel", true);
         if (!channel || !("guildId" in channel)) {
-          await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild channel")));
+          await interaction.reply(
+            ephemeralCard(
+              makeErrorCard("Invalid channel", "Must be a guild channel"),
+            ),
+          );
           return;
         }
-        if (!config.ignoredChannels.includes(channel.id)) config.ignoredChannels.push(channel.id);
+        if (!config.ignoredChannels.includes(channel.id))
+          config.ignoredChannels.push(channel.id);
         await services.config.set(guildId, LoggingConfigKey, config);
-        await interaction.reply(ephemeralCard(makeSuccessCard("Channel ignored", [
-          `**Channel**\n${channel}`,
-        ])));
+        await interaction.reply(
+          ephemeralCard(
+            makeSuccessCard("Channel ignored", [`**Channel**\n${channel}`]),
+          ),
+        );
         break;
       }
       case "unignore": {
         const channel = interaction.options.getChannel("channel", true);
         if (!channel || !("guildId" in channel)) {
-          await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild channel")));
+          await interaction.reply(
+            ephemeralCard(
+              makeErrorCard("Invalid channel", "Must be a guild channel"),
+            ),
+          );
           return;
         }
-        config.ignoredChannels = config.ignoredChannels.filter((id) => id !== channel.id);
+        config.ignoredChannels = config.ignoredChannels.filter(
+          (id) => id !== channel.id,
+        );
         await services.config.set(guildId, LoggingConfigKey, config);
-        await interaction.reply(ephemeralCard(makeSuccessCard("Channel unignored", [
-          `**Channel**\n${channel}`,
-        ])));
+        await interaction.reply(
+          ephemeralCard(
+            makeSuccessCard("Channel unignored", [`**Channel**\n${channel}`]),
+          ),
+        );
         break;
       }
       case "view": {
-        const ignored = config.ignoredChannels.map((id) => `<#${id}>`).join(", ") || "None";
-        await interaction.reply(ephemeralCard(makeCard(
-          undefined,
-          "📝 Logging Settings",
-          [
-            `**Message Log**\n${config.messageLogChannel ? `<#${config.messageLogChannel}>` : "None"}`,
-            `**Edit Log**\n${config.editLogChannel ? `<#${config.editLogChannel}>` : "None"}`,
-            `**Delete Log**\n${config.deleteLogChannel ? `<#${config.deleteLogChannel}>` : "None"}`,
-            `**Voice Log**\n${config.voiceLogChannel ? `<#${config.voiceLogChannel}>` : "None"}`,
-            `**Ignored Channels**\n${ignored}`,
-          ],
-          { footer: "Use /logging set to configure a channel" },
-        )));
+        const ignored =
+          config.ignoredChannels.map((id) => `<#${id}>`).join(", ") || "None";
+        await interaction.reply(
+          ephemeralCard(
+            makeCard(
+              undefined,
+              "📝 Logging Settings",
+              [
+                `**Message Log**\n${config.messageLogChannel ? `<#${config.messageLogChannel}>` : "None"}`,
+                `**Edit Log**\n${config.editLogChannel ? `<#${config.editLogChannel}>` : "None"}`,
+                `**Delete Log**\n${config.deleteLogChannel ? `<#${config.deleteLogChannel}>` : "None"}`,
+                `**Voice Log**\n${config.voiceLogChannel ? `<#${config.voiceLogChannel}>` : "None"}`,
+                `**Ignored Channels**\n${ignored}`,
+              ],
+              { footer: "Use /logging set to configure a channel" },
+            ),
+          ),
+        );
         break;
       }
     }
@@ -166,11 +240,16 @@ const onMessageCreateListener: ListenerDefinition = {
 
     if (isIgnored(message, config)) return;
 
-    const card = eventCard("📨 Message Sent", AccentColors.success, [
-      `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
-      `**Channel**\n<#${message.channelId}>`,
-      `**Content**\n${message.content.slice(0, 1024) || "*No content*"}`,
-    ], `Message ID: ${message.id}`);
+    const card = eventCard(
+      "📨 Message Sent",
+      AccentColors.success,
+      [
+        `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
+        `**Channel**\n<#${message.channelId}>`,
+        `**Content**\n${message.content.slice(0, 1024) || "*No content*"}`,
+      ],
+      `Message ID: ${message.id}`,
+    );
 
     await sendLog(services, config.messageLogChannel, card);
   },
@@ -178,7 +257,11 @@ const onMessageCreateListener: ListenerDefinition = {
 
 const onMessageUpdateListener: ListenerDefinition = {
   event: "messageUpdate",
-  async handler(oldMessage: Message, newMessage: Message, services: ModuleServices) {
+  async handler(
+    oldMessage: Message,
+    newMessage: Message,
+    services: ModuleServices,
+  ) {
     if (!newMessage.inGuild() || newMessage.author.bot) return;
     if (oldMessage.content === newMessage.content) return;
 
@@ -188,12 +271,17 @@ const onMessageUpdateListener: ListenerDefinition = {
 
     if (isIgnored(newMessage, config)) return;
 
-    const card = eventCard("✏️ Message Edited", AccentColors.warning, [
-      `**Author**\n${newMessage.author.tag} (\`${newMessage.author.id}\`)`,
-      `**Channel**\n<#${newMessage.channelId}>`,
-      `**Before**\n${(oldMessage.content ?? "").slice(0, 512) || "*No content*"}`,
-      `**After**\n${(newMessage.content ?? "").slice(0, 512) || "*No content*"}`,
-    ], `Message ID: ${newMessage.id}`);
+    const card = eventCard(
+      "✏️ Message Edited",
+      AccentColors.warning,
+      [
+        `**Author**\n${newMessage.author.tag} (\`${newMessage.author.id}\`)`,
+        `**Channel**\n<#${newMessage.channelId}>`,
+        `**Before**\n${(oldMessage.content ?? "").slice(0, 512) || "*No content*"}`,
+        `**After**\n${(newMessage.content ?? "").slice(0, 512) || "*No content*"}`,
+      ],
+      `Message ID: ${newMessage.id}`,
+    );
 
     await sendLog(services, config.editLogChannel, card);
   },
@@ -210,11 +298,16 @@ const onMessageDeleteListener: ListenerDefinition = {
 
     if (isIgnored(message, config)) return;
 
-    const card = eventCard("🗑️ Message Deleted", AccentColors.error, [
-      `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
-      `**Channel**\n<#${message.channelId}>`,
-      `**Content**\n${(message.content ?? "").slice(0, 1024) || "*No content*"}`,
-    ], `Message ID: ${message.id}`);
+    const card = eventCard(
+      "🗑️ Message Deleted",
+      AccentColors.error,
+      [
+        `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
+        `**Channel**\n<#${message.channelId}>`,
+        `**Content**\n${(message.content ?? "").slice(0, 1024) || "*No content*"}`,
+      ],
+      `Message ID: ${message.id}`,
+    );
 
     await sendLog(services, config.deleteLogChannel, card);
   },
@@ -222,7 +315,11 @@ const onMessageDeleteListener: ListenerDefinition = {
 
 const onVoiceStateListener: ListenerDefinition = {
   event: "voiceStateUpdate",
-  async handler(oldState: VoiceState, newState: VoiceState, services: ModuleServices) {
+  async handler(
+    oldState: VoiceState,
+    newState: VoiceState,
+    services: ModuleServices,
+  ) {
     const guildId = newState.guild?.id ?? oldState.guild?.id;
     if (!guildId) return;
 
@@ -234,21 +331,48 @@ const onVoiceStateListener: ListenerDefinition = {
     if (!member) return;
 
     if (!oldState.channelId && newState.channelId) {
-      await sendLog(services, config.voiceLogChannel, eventCard("🔊 Voice Join", AccentColors.success, [
-        `**User**\n${member.user.tag} (\`${member.id}\`)`,
-        `**Channel**\n<#${newState.channelId}>`,
-      ], `User ID: ${member.id}`));
+      await sendLog(
+        services,
+        config.voiceLogChannel,
+        eventCard(
+          "🔊 Voice Join",
+          AccentColors.success,
+          [
+            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**Channel**\n<#${newState.channelId}>`,
+          ],
+          `User ID: ${member.id}`,
+        ),
+      );
     } else if (oldState.channelId && !newState.channelId) {
-      await sendLog(services, config.voiceLogChannel, eventCard("🔇 Voice Leave", AccentColors.error, [
-        `**User**\n${member.user.tag} (\`${member.id}\`)`,
-        `**Channel**\n<#${oldState.channelId}>`,
-      ], `User ID: ${member.id}`));
+      await sendLog(
+        services,
+        config.voiceLogChannel,
+        eventCard(
+          "🔇 Voice Leave",
+          AccentColors.error,
+          [
+            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**Channel**\n<#${oldState.channelId}>`,
+          ],
+          `User ID: ${member.id}`,
+        ),
+      );
     } else if (oldState.channelId !== newState.channelId) {
-      await sendLog(services, config.voiceLogChannel, eventCard("🔄 Voice Move", AccentColors.cyan, [
-        `**User**\n${member.user.tag} (\`${member.id}\`)`,
-        `**From**\n<#${oldState.channelId}>`,
-        `**To**\n<#${newState.channelId}>`,
-      ], `User ID: ${member.id}`));
+      await sendLog(
+        services,
+        config.voiceLogChannel,
+        eventCard(
+          "🔄 Voice Move",
+          AccentColors.cyan,
+          [
+            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**From**\n<#${oldState.channelId}>`,
+            `**To**\n<#${newState.channelId}>`,
+          ],
+          `User ID: ${member.id}`,
+        ),
+      );
     }
   },
 };
@@ -261,7 +385,12 @@ const loggingModule: ModuleDefinition = defineModule({
   version: "2.0.0",
   config: LoggingConfigSchema,
   commands: [loggingConfigDef],
-  listeners: [onMessageCreateListener, onMessageUpdateListener, onMessageDeleteListener, onVoiceStateListener],
+  listeners: [
+    onMessageCreateListener,
+    onMessageUpdateListener,
+    onMessageDeleteListener,
+    onVoiceStateListener,
+  ],
   tasks: [],
   async onLoad(_services) {
     console.log("[logging] Module loaded");

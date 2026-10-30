@@ -20,7 +20,12 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { backButton, cut, type HubInteraction, panelOptions } from "./common.js";
+import {
+  backButton,
+  cut,
+  type HubInteraction,
+  panelOptions,
+} from "./common.js";
 import { fieldPages } from "./configFields.js";
 import type { HubServices } from "./services.js";
 
@@ -30,7 +35,10 @@ const DefaultPrefix = ",";
 
 type FieldValue = unknown;
 
-export function fieldValue(field: ConfigField, config: Record<string, unknown>): FieldValue {
+export function fieldValue(
+  field: ConfigField,
+  config: Record<string, unknown>,
+): FieldValue {
   const stored = config[field.key];
   return stored === undefined || stored === null || stored === ""
     ? field.default
@@ -48,11 +56,15 @@ function formatValue(field: ConfigField, value: FieldValue): string {
       return `<@&${value}>`;
     case "multi-channel": {
       const values = Array.isArray(value) ? value : [];
-      return values.length ? values.map((id) => `<#${id}>`).join(", ") : "*none*";
+      return values.length
+        ? values.map((id) => `<#${id}>`).join(", ")
+        : "*none*";
     }
     case "multi-role": {
       const values = Array.isArray(value) ? value : [];
-      return values.length ? values.map((id) => `<@&${id}>`).join(", ") : "*none*";
+      return values.length
+        ? values.map((id) => `<@&${id}>`).join(", ")
+        : "*none*";
     }
     case "number":
       return `\`${value}\``;
@@ -89,7 +101,10 @@ export async function readModuleConfig(
   guildId: string,
   moduleName: string,
 ): Promise<Record<string, unknown>> {
-  const value = await services.configService.get(guildId, configKeyFor(services, moduleName));
+  const value = await services.configService.get(
+    guildId,
+    configKeyFor(services, moduleName),
+  );
   return value && typeof value === "object" && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : {};
@@ -101,14 +116,24 @@ export async function writeModuleConfig(
   moduleName: string,
   config: Record<string, unknown>,
 ): Promise<void> {
-  await services.configService.set(guildId, configKeyFor(services, moduleName), config);
+  await services.configService.set(
+    guildId,
+    configKeyFor(services, moduleName),
+    config,
+  );
 }
 
 function moduleByName(services: HubServices, name: string) {
-  return services.moduleLoader.listAll().find((module) => module.manifest.name === name);
+  return services.moduleLoader
+    .listAll()
+    .find((module) => module.manifest.name === name);
 }
 
-export function findField(services: HubServices, moduleName: string, key: string): ConfigField | undefined {
+export function findField(
+  services: HubServices,
+  moduleName: string,
+  key: string,
+): ConfigField | undefined {
   return moduleByName(services, moduleName)?.manifest.configFields?.find(
     (field) => field.key === key,
   );
@@ -223,7 +248,9 @@ export async function renderModuleDetail(
         "modules",
         ["Hub", "Modules", meta.displayName],
         rows,
-        fields.length === 0 ? "This module has no configurable settings." : undefined,
+        fields.length === 0
+          ? "This module has no configurable settings."
+          : undefined,
         false,
       ),
     },
@@ -254,7 +281,9 @@ export async function renderFieldEditor(
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const loaded = moduleByName(services, moduleName);
-  const field = loaded?.manifest.configFields?.find((item) => item.key === fieldKey);
+  const field = loaded?.manifest.configFields?.find(
+    (item) => item.key === fieldKey,
+  );
   if (!loaded || !field) {
     return makeErrorCard(
       "Unknown Setting",
@@ -395,7 +424,12 @@ export function prefixModal(): ModalBuilder {
     );
 }
 
-export function fieldModal(moduleName: string, field: ConfigField, pageIndex: number, value: FieldValue): ModalBuilder {
+export function fieldModal(
+  moduleName: string,
+  field: ConfigField,
+  pageIndex: number,
+  value: FieldValue,
+): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(`lumi:modinput:${moduleName}:${field.key}:${pageIndex}`)
     .setTitle(cut(`Edit ${field.label}`, 45))
@@ -405,8 +439,10 @@ export function fieldModal(moduleName: string, field: ConfigField, pageIndex: nu
           .setCustomId("value")
           .setLabel(cut(field.label, 45))
           .setStyle(
-            (field.type === "json" ||
-              (field.type === "string" && field.description && field.description.length > 60))
+            field.type === "json" ||
+              (field.type === "string" &&
+                field.description &&
+                field.description.length > 60)
               ? TextInputStyle.Paragraph
               : TextInputStyle.Short,
           )

@@ -20,42 +20,42 @@ enum PermitTargetType {
 }
 
 model Guild {
-  id            String   @id
-  name          String   @default("")
-  icon          String?
-  ownerId       String   @default("") @map("owner_id")
-  joinedAt      DateTime @default(now()) @map("joined_at")
-  leftAt        DateTime? @map("left_at")
-  settings      Json     @default("{}")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id        String    @id
+  name      String    @default("")
+  icon      String?
+  ownerId   String    @default("") @map("owner_id")
+  joinedAt  DateTime  @default(now()) @map("joined_at")
+  leftAt    DateTime? @map("left_at")
+  settings  Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
-  permits       Permit[]
+  permits           Permit[]
   permitAssignments PermitAssignment[]
-  modules       GuildModule[]
-  levelingConfig LevelingConfig?
-  economyConfig EconomyConfig?
-  tempVcConfig  TempVcConfig?
+  modules           GuildModule[]
+  levelingConfig    LevelingConfig?
+  economyConfig     EconomyConfig?
+  tempVcConfig      TempVcConfig?
 
   @@map("guilds")
 }
 
 model Permit {
-  id          Int           @id @default(autoincrement())
-  guildId     String        @map("guild_id")
-  guild       Guild         @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  name        String
-  number      Int
-  nodes       String[]
-  polarity    Polarity
-  position    Int
-  builtin     Boolean       @default(false)
-  expiresAt   DateTime?     @map("expires_at")
-  schedule    Json?
-  timezone    String?
-  conditions  Json?
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  id         Int       @id @default(autoincrement())
+  guildId    String    @map("guild_id")
+  guild      Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  name       String
+  number     Int
+  nodes      String[]
+  polarity   Polarity
+  position   Int
+  builtin    Boolean   @default(false)
+  expiresAt  DateTime? @map("expires_at")
+  schedule   Json?
+  timezone   String?
+  conditions Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
 
   assignments PermitAssignment[]
 
@@ -66,16 +66,16 @@ model Permit {
 }
 
 model PermitAssignment {
-  id          Int              @id @default(autoincrement())
-  permitId    Int              @map("permit_id")
-  permit      Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
-  guildId     String           @map("guild_id")
-  guild       Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  targetType  PermitTargetType @map("target_type")
-  targetId    String           @map("target_id")
-  grantedAt   DateTime         @default(now()) @map("granted_at")
-  grantedBy   String           @map("granted_by")
-  expiresAt   DateTime?        @map("expires_at")
+  id         Int              @id @default(autoincrement())
+  permitId   Int              @map("permit_id")
+  permit     Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  guildId    String           @map("guild_id")
+  guild      Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  targetType PermitTargetType @map("target_type")
+  targetId   String           @map("target_id")
+  grantedAt  DateTime         @default(now()) @map("granted_at")
+  grantedBy  String           @map("granted_by")
+  expiresAt  DateTime?        @map("expires_at")
 
   @@unique([permitId, targetType, targetId])
   @@index([permitId])
@@ -116,16 +116,16 @@ model LevelingConfig {
 }
 
 model LevelingUser {
-  id           String   @id @default(cuid())
-  guildId      String   @map("guild_id")
-  userId       String   @map("user_id")
-  xp           BigInt   @default(0)
-  level        Int      @default(0)
-  totalXp      BigInt   @default(0) @map("total_xp")
-  voiceMinutes Int      @default(0) @map("voice_minutes")
-  messageCount Int      @default(0) @map("message_count")
+  id           String    @id @default(cuid())
+  guildId      String    @map("guild_id")
+  userId       String    @map("user_id")
+  xp           BigInt    @default(0)
+  level        Int       @default(0)
+  totalXp      BigInt    @default(0) @map("total_xp")
+  voiceMinutes Int       @default(0) @map("voice_minutes")
+  messageCount Int       @default(0) @map("message_count")
   lastXpAt     DateTime? @map("last_xp_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@unique([guildId, userId])
   @@index([guildId, level])
@@ -155,18 +155,18 @@ model EconomyConfig {
 }
 
 model EconomyUser {
-  id            String   @id @default(cuid())
-  guildId       String   @map("guild_id")
-  userId        String   @map("user_id")
-  balance       BigInt   @default(0)
-  bankBalance   BigInt   @default(0) @map("bank_balance")
-  totalEarned   BigInt   @default(0) @map("total_earned")
-  totalSpent    BigInt   @default(0) @map("total_spent")
+  id            String    @id @default(cuid())
+  guildId       String    @map("guild_id")
+  userId        String    @map("user_id")
+  balance       BigInt    @default(0)
+  bankBalance   BigInt    @default(0) @map("bank_balance")
+  totalEarned   BigInt    @default(0) @map("total_earned")
+  totalSpent    BigInt    @default(0) @map("total_spent")
   lastDailyAt   DateTime? @map("last_daily_at")
   lastWeeklyAt  DateTime? @map("last_weekly_at")
   lastMonthlyAt DateTime? @map("last_monthly_at")
   lastWorkAt    DateTime? @map("last_work_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@unique([guildId, userId])
   @@index([guildId, balance])
@@ -179,7 +179,7 @@ model EconomyTransaction {
   fromUserId  String?  @map("from_user_id")
   toUserId    String?  @map("to_user_id")
   amount      BigInt
-  type        String   // transfer, deposit, withdraw, purchase, work, daily, etc.
+  type        String // transfer, deposit, withdraw, purchase, work, daily, etc.
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -192,29 +192,29 @@ model EconomyTransaction {
 
 // TempVC
 model TempVcConfig {
-  id                String   @id @default(cuid())
-  guildId           String   @unique @map("guild_id")
-  guild             Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  categoryId        String?  @map("category_id")
-  templateName      String   @default("➕ {user}'s Channel") @map("template_name")
-  defaultBitrate    Int      @default(64000) @map("default_bitrate")
-  defaultUserLimit  Int      @default(0) @map("default_user_limit")
-  maxChannels       Int      @default(50) @map("max_channels")
-  maxPerUser        Int      @default(1) @map("max_per_user")
-  emptyTimeoutMs    Int      @default(300000) @map("empty_timeout_ms")
-  ownerLeaveDelete  Boolean  @default(true) @map("owner_leave_delete")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(cuid())
+  guildId          String   @unique @map("guild_id")
+  guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  categoryId       String?  @map("category_id")
+  templateName     String   @default("➕ {user}'s Channel") @map("template_name")
+  defaultBitrate   Int      @default(64000) @map("default_bitrate")
+  defaultUserLimit Int      @default(0) @map("default_user_limit")
+  maxChannels      Int      @default(50) @map("max_channels")
+  maxPerUser       Int      @default(1) @map("max_per_user")
+  emptyTimeoutMs   Int      @default(300000) @map("empty_timeout_ms")
+  ownerLeaveDelete Boolean  @default(true) @map("owner_leave_delete")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@map("tempvc_configs")
 }
 
 model TempVcChannel {
-  id          String   @id @default(cuid())
-  guildId     String   @map("guild_id")
-  channelId   String   @unique @map("channel_id")
-  ownerId     String   @map("owner_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  expiresAt   DateTime? @map("expires_at")
+  id        String    @id @default(cuid())
+  guildId   String    @map("guild_id")
+  channelId String    @unique @map("channel_id")
+  ownerId   String    @map("owner_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
 
   @@index([guildId])
   @@index([guildId, ownerId])
@@ -261,16 +261,28 @@ model DownloaderModule {
   @@map("downloader_modules")
 }
 
-// Audit log
-model AuditLog {
+// Security backups
+model SecurityBackup {
   id        String   @id @default(cuid())
   guildId   String   @map("guild_id")
-  userId    String   @map("user_id")
-  action    String
-  targetId  String?  @map("target_id")
-  targetType String? @map("target_type")
-  changes   Json?
+  reason    String   @default("scheduled")
+  data      Json
   createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([guildId, createdAt])
+  @@map("security_backups")
+}
+
+// Audit log
+model AuditLog {
+  id         String   @id @default(cuid())
+  guildId    String   @map("guild_id")
+  userId     String   @map("user_id")
+  action     String
+  targetId   String?  @map("target_id")
+  targetType String?  @map("target_type")
+  changes    Json?
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([guildId])
   @@index([guildId, userId])

@@ -52,9 +52,7 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   if (data.guildIconUrl) {
     try {
       guildIcon = await loadImage(data.guildIconUrl);
-    } catch {
-
-    }
+    } catch {}
   }
 
   const iconSize = 60;
@@ -63,7 +61,13 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
 
   ctx.save();
   ctx.beginPath();
-  ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
+  ctx.arc(
+    iconX + iconSize / 2,
+    iconY + iconSize / 2,
+    iconSize / 2,
+    0,
+    Math.PI * 2,
+  );
   ctx.clip();
 
   if (guildIcon) {
@@ -74,14 +78,24 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
     ctx.fillStyle = "#1a1a2e";
     ctx.font = "bold 30px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(data.guildName.charAt(0).toUpperCase(), iconX + iconSize/2, iconY + iconSize/2 + 12);
+    ctx.fillText(
+      data.guildName.charAt(0).toUpperCase(),
+      iconX + iconSize / 2,
+      iconY + iconSize / 2 + 12,
+    );
   }
   ctx.restore();
 
   ctx.strokeStyle = "#ffd43b";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
+  ctx.arc(
+    iconX + iconSize / 2,
+    iconY + iconSize / 2,
+    iconSize / 2,
+    0,
+    Math.PI * 2,
+  );
   ctx.stroke();
 
   ctx.fillStyle = "#fff";
@@ -96,7 +110,11 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   ctx.fillStyle = "#ffd43b";
   ctx.font = "bold 16px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`Page ${data.page} / ${data.totalPages}`, CARD_WIDTH - 40, iconY + 55);
+  ctx.fillText(
+    `Page ${data.page} / ${data.totalPages}`,
+    CARD_WIDTH - 40,
+    iconY + 55,
+  );
 
   const startY = 130;
   const itemHeight = 90;
@@ -115,7 +133,11 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   ctx.fillStyle = "#6c757d";
   ctx.font = "12px Arial";
   ctx.textAlign = "center";
-  ctx.fillText("Lumi Economy • Use /shop buy <item> to purchase", CARD_WIDTH / 2, CARD_HEIGHT - 20);
+  ctx.fillText(
+    "Lumi Economy • Use /shop buy <item> to purchase",
+    CARD_WIDTH / 2,
+    CARD_HEIGHT - 20,
+  );
 
   return canvas.toBuffer("image/png");
 }
@@ -126,7 +148,7 @@ function drawShopItem(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ) {
   ctx.fillStyle = "rgba(255,255,255,0.04)";
   roundRect(ctx, x, y, width, height, 12);
@@ -157,7 +179,11 @@ function drawShopItem(
   ctx.font = "bold 12px Arial";
   ctx.textAlign = "center";
   const typeLabel = item.type.charAt(0).toUpperCase() + item.type.slice(1);
-  ctx.fillText(typeLabel, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 4);
+  ctx.fillText(
+    typeLabel,
+    badgeX + badgeWidth / 2,
+    badgeY + badgeHeight / 2 + 4,
+  );
 
   ctx.fillStyle = "#fff";
   ctx.font = "bold 22px Arial";
@@ -167,7 +193,11 @@ function drawShopItem(
   ctx.fillStyle = "#ffd43b";
   ctx.font = "bold 20px Arial";
   ctx.textAlign = "right";
-  ctx.fillText(`${item.currencySymbol} ${item.price.toLocaleString()}`, x + width - 20, badgeY + 20);
+  ctx.fillText(
+    `${item.currencySymbol} ${item.price.toLocaleString()}`,
+    x + width - 20,
+    badgeY + 20,
+  );
 
   ctx.fillStyle = "#adb5bd";
   ctx.font = "15px Arial";

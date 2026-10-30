@@ -111,7 +111,7 @@ export async function debitWallet(
     where: { guildId, userId, balance: { gte: amount } },
     data: {
       balance: { decrement: amount },
-      ...(options.trackSpent ?? true
+      ...((options.trackSpent ?? true)
         ? { totalSpent: { increment: amount } }
         : {}),
     },

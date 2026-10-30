@@ -47,21 +47,24 @@ export function createGuildSync(options: GuildSyncOptions): GuildSync {
     try {
       rows = await prisma.guildModule.findMany({ where: { guildId } });
     } catch (error) {
-
       logger.warn("Could not load guild module state, defaulting to enabled", {
         guildId,
         error,
       });
     }
-    const state = new Map(rows.map((row) => [row.module, row.enabled] as const));
+    const state = new Map(
+      rows.map((row) => [row.module, row.enabled] as const),
+    );
     await Promise.all(
-      moduleLoader.listAll().map((module) =>
-        moduleLoader.setEnabled(
-          module.manifest.name,
-          guildId,
-          state.get(module.manifest.name) ?? true,
+      moduleLoader
+        .listAll()
+        .map((module) =>
+          moduleLoader.setEnabled(
+            module.manifest.name,
+            guildId,
+            state.get(module.manifest.name) ?? true,
+          ),
         ),
-      ),
     );
   }
 

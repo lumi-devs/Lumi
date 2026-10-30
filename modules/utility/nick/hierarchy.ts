@@ -6,8 +6,7 @@ interface NickHierarchyInput {
 }
 
 type NickHierarchyDecision =
-  | { allowed: true }
-  | { allowed: false; reason: string };
+  { allowed: true } | { allowed: false; reason: string };
 
 export function canChangeNickname(
   input: NickHierarchyInput,

@@ -37,6 +37,7 @@ packages/scheduler/       distributed cron with Redis locks
 ## Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
+
 - `src/core/` — Gateway, lifecycle, interaction/prefix dispatch, built-in
   commands, RPC control server, service wiring
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
@@ -44,6 +45,7 @@ packages/scheduler/       distributed cron with Redis locks
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
 Every module under `modules/` is a supermodule; its submodules toggle
 independently:
+
 - `community` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
   `economy` (currency, banking, rewards, shop)
 - `moderation` — `mod` (case-backed ban, kick, timeout, warn, purge, notes,

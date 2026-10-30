@@ -10,13 +10,6 @@ export interface ScheduledJob {
   readonly lockTtlMs?: number;
 }
 
-
-
-
-
-
-
-
 export class DistributedScheduler {
   private readonly redis: Redis;
   private readonly jobs = new Map<string, ScheduledJob>();
@@ -59,14 +52,19 @@ export class DistributedScheduler {
     const run = (): void => {
       void this.runJob(job);
     };
-    this.intervals.set(job.name, setInterval(run, this.parseCronToMs(job.cron)));
+    this.intervals.set(
+      job.name,
+      setInterval(run, this.parseCronToMs(job.cron)),
+    );
     run();
   }
 
   private async runJob(job: ScheduledJob): Promise<void> {
-
-
-    if (!this.started || !this.jobs.has(job.name) || this.running.has(job.name)) {
+    if (
+      !this.started ||
+      !this.jobs.has(job.name) ||
+      this.running.has(job.name)
+    ) {
       return;
     }
     this.running.add(job.name);
@@ -77,7 +75,6 @@ export class DistributedScheduler {
       const acquired = await lock.acquire();
       if (!acquired) return;
       try {
-
         if (!this.started || !this.jobs.has(job.name)) return;
         await job.handler();
       } finally {

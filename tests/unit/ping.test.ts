@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  handlePingButton,
-  pingCommand,
-} from "../../src/core/commands.ts";
+import { handlePingButton, pingCommand } from "../../src/core/commands.ts";
 
 const makeServices = (
   options: {
@@ -15,9 +12,7 @@ const makeServices = (
     client: {
       ws: {
         ping: 42,
-        shards: new Map(
-          shardPings.map((ping, id) => [id, { ping }] as const),
-        ),
+        shards: new Map(shardPings.map((ping, id) => [id, { ping }] as const)),
       },
       guilds: {
         cache: new Map(
@@ -47,8 +42,8 @@ const containerOf = (card: any) =>
   JSON.parse(JSON.stringify(card.components[0]));
 
 const displaysOf = (card: any): string[] =>
-  containerOf(card).components
-    .filter((component: any) => component.type === 10)
+  containerOf(card)
+    .components.filter((component: any) => component.type === 10)
     .map((component: any) => component.content);
 
 const buttonsOf = (card: any): any[] => {
@@ -76,9 +71,9 @@ describe("ping panel", () => {
     const container = containerOf(card);
     expect(container.type).toBe(17);
     expect(container.accent_color ?? null).toBeNull();
-    expect(container.components.map((component: any) => component.type)).toEqual([
-      10, 14, 10, 14, 10, 14, 10, 14, 1,
-    ]);
+    expect(
+      container.components.map((component: any) => component.type),
+    ).toEqual([10, 14, 10, 14, 10, 14, 10, 14, 1]);
     for (const separator of container.components.filter(
       (component: any) => component.type === 14,
     )) {
@@ -182,5 +177,4 @@ describe("ping panel", () => {
     expect(cards).toHaveLength(2);
     expect(JSON.stringify(cards[1])).toContain("belongs to another user");
   });
-
 });

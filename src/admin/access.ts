@@ -8,9 +8,6 @@ export interface PermitAccessOptions {
   channelId?: string;
   guildOwnerId?: string | null;
 
-
-
-
   client?: unknown;
   permits: PermitRepository;
 }

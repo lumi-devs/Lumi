@@ -22,10 +22,6 @@ function hasPrismaCode(error: unknown, code: string): boolean {
   return (error as { code?: unknown }).code === code;
 }
 
-
-
-
-
 export async function nextPermitNumber(
   db: PermitDelegateSource,
   guildId: string,

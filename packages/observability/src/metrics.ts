@@ -1,4 +1,10 @@
-import { Counter, collectDefaultMetrics, Gauge, Histogram, Registry } from "prom-client";
+import {
+  Counter,
+  collectDefaultMetrics,
+  Gauge,
+  Histogram,
+  Registry,
+} from "prom-client";
 
 export const registry = new Registry();
 
@@ -158,7 +164,6 @@ export const dbQueriesTotal = new Counter({
   registers: [registry],
 });
 
-
 export interface CacheMetrics {
   recordHit(namespace: string): void;
   recordMiss(namespace: string): void;
@@ -173,13 +178,16 @@ export interface CacheMetrics {
 export const prometheusCacheMetrics: CacheMetrics = {
   recordHit: (namespace) => void cacheHits.inc({ cache: namespace }),
   recordMiss: (namespace) => void cacheMisses.inc({ cache: namespace }),
-  recordNegativeHit: (namespace) => void cacheNegativeHits.inc({ cache: namespace }),
+  recordNegativeHit: (namespace) =>
+    void cacheNegativeHits.inc({ cache: namespace }),
   recordWrite: (namespace) => void cacheWrites.inc({ cache: namespace }),
   recordEviction: (namespace) => void cacheEvictions.inc({ cache: namespace }),
-  recordInvalidation: (namespace) => void cacheInvalidations.inc({ cache: namespace }),
+  recordInvalidation: (namespace) =>
+    void cacheInvalidations.inc({ cache: namespace }),
   recordFillDuration: (namespace, durationMs) =>
     cacheFillDuration.observe({ cache: namespace }, durationMs / 1000),
-  recordStaleWrite: (namespace) => void cacheStaleWrites.inc({ cache: namespace }),
+  recordStaleWrite: (namespace) =>
+    void cacheStaleWrites.inc({ cache: namespace }),
 };
 
 export const noopCacheMetrics: CacheMetrics = {

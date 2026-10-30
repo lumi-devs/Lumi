@@ -61,7 +61,10 @@ export async function assignCard(
   context: PermitCardContext,
   flow: AssignFlow,
 ): Promise<CardReply> {
-  const permit = await context.permitRepo.getPermit(context.guildId, flow.permitId);
+  const permit = await context.permitRepo.getPermit(
+    context.guildId,
+    flow.permitId,
+  );
   if (!permit) return context.missingPermitCard();
 
   const targetRow =
@@ -153,7 +156,10 @@ export async function assignExpiryCard(
   context: PermitCardContext,
   flow: AssignFlow,
 ): Promise<CardReply> {
-  const permit = await context.permitRepo.getPermit(context.guildId, flow.permitId);
+  const permit = await context.permitRepo.getPermit(
+    context.guildId,
+    flow.permitId,
+  );
   if (!permit) return context.missingPermitCard();
   if (flow.targetId === undefined) return assignCard(context, flow);
 
