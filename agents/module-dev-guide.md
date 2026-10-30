@@ -18,11 +18,15 @@ cat > manifest.json << 'EOF'
   "emoji": "✨",
   "description": "A short description",
   "version": "0.1.0",
-  "entry": "./index.ts",
+  "entry": "index.ts",
   "dependencies": {},
   "requirements": [],
   "conflicts": [],
-  "capabilities": []
+  "capabilities": [],
+  "configFields": [
+    { "key": "setting1", "label": "Setting 1", "type": "string", "description": "Description" },
+    { "key": "setting2", "label": "Setting 2", "type": "number", "description": "Description" }
+  ]
 }
 EOF
 
@@ -42,13 +46,9 @@ export default defineModule({
     setting1: z.string().default("default"),
     setting2: z.number().int().min(0).default(10),
   }),
-  configFields: [
-    { key: "setting1", label: "Setting 1", type: "string", description: "Description" },
-    { key: "setting2", label: "Setting 2", type: "number", description: "Description" },
-  ],
   commands: [],      // Add commands here
   listeners: [],     // Add listeners here
-  tasks: [],         // Add scheduled tasks here
+  tasks: [],         // Reserved; see "Tasks" below
   async onLoad(services) {
     console.log("[my-module] Loaded");
     return []; // return disposers if needed
@@ -85,24 +85,25 @@ modules/my-module/
 | Field | Required | Description |
 |-------|----------|-------------|
 | `apiVersion` | ✅ | Must be `2` |
-| `name` | ✅ | Lowercase, hyphenated, matches directory |
+| `name` | ✅ | Lowercase, hyphenated; submodules use `<supermodule>-<dir>` |
 | `displayName` | ✅ | Human-readable name |
 | `emoji` | ✅ | Single emoji for UI |
 | `description` | ✅ | One-line description |
 | `version` | ✅ | Semver (e.g., `0.1.0`) |
 | `entry` | ✅ | Relative path to definition file |
-| `dependencies` | ❌ | Other modules: `{ "leveling": "^0.1.0" }` |
+| `dependencies` | ❌ | Other modules: `{ "supermodule-name": "^2.0.0" }` |
 | `requirements` | ❌ | NPM packages: `["lodash@^4.17.21"]` |
 | `conflicts` | ❌ | Module names that cannot co-exist |
-| `capabilities` | ❌ | Future: declare provided capabilities |
-| `minBotVersion` | ❌ | Minimum Lumi version required |
-| `maxBotVersion` | ❌ | Maximum Lumi version supported |
+| `capabilities` | ❌ | Descriptive metadata only; validated but not acted on |
+| `configKey` | ❌ | Stored settings key when it differs from `name` |
+| `configFields` | ❌ | `/lumi` settings metadata; defaults to `[]` |
 
 ---
 
 ## Configuration Schema
 
-Use **Zod** for validation. The `config` schema is persisted per-guild.
+Use **Zod** for validation. The parsed `config` shape is stored per guild in
+`Guild.settings`; the Zod schema itself is not persisted.
 
 ```ts
 import { z } from "zod";
@@ -135,15 +136,23 @@ config: z.object({
 
 ### Config Field Types (for UI)
 
-| Type | Zod | Description |
-|------|-----|-------------|
-| `string` | `z.string()` | Text input |
-| `number` | `z.number()` | Number input |
-| `boolean` | `z.boolean()` | Toggle |
-| `channel` | `z.string()` | Single channel select |
-| `role` | `z.string()` | Single role select |
-| `multi-channel` | `z.array(z.string())` | Multi-channel select |
-| `multi-role` | `z.array(z.string())` | Multi-role select |
+Declare these in `manifest.json` `configFields`; they are not part of
+`defineModule`. Each field supports `key`, `label`, `type`, optional
+`description`, `required`, `default`, `category`, `min`, `max`, `choices`, and
+`channelTypes`.
+
+| Type | Zod | Control |
+|------|-----|---------|
+| `string` | `z.string()` | Text modal |
+| `number` | `z.number()` | Number modal |
+| `boolean` | `z.boolean()` | On/Off toggle |
+| `channel` | `z.string()` | Channel picker |
+| `role` | `z.string()` | Role picker |
+| `multi-channel` | `z.array(z.string())` | Multi-channel picker (`minValues: 0`) |
+| `multi-role` | `z.array(z.string())` | Multi-role picker (`minValues: 0`) |
+| `select` | `z.string()` + `choices` | String select |
+| `multi-string` | `z.string()` | Text modal (stored as one string) |
+| `json` | `z.object()` / `z.array()` | JSON modal |
 
 ---
 
@@ -152,9 +161,9 @@ config: z.object({
 ### Slash Command Definition
 
 ```ts
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from "discord.js";
-import { CommandDefinition } from "@lumi/module-kit";
-import { createCard, errorCard, successCard } from "@lumi/ui";
+import { SlashCommandBuilder, PermissionFlagsBits, type ChatInputCommandInteraction } from "discord.js";
+import type { CommandDefinition } from "@lumi/module-kit";
+import { makeErrorCard, makeSuccessCard, ephemeralCard } from "@lumi/ui";
 
 export const myCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -173,7 +182,8 @@ export const myCommand: CommandDefinition = {
       .setRequired(false)
     ),
   
-  // Optional: permit required to run (bypasses guild enablement if user has it)
+  // Optional: permit node this command maps to. It feeds the permit catalog
+  // and Explain Check; dispatch does not gate on it today.
   requiredPermit: "my-module.my-command",
   
   // Optional: autocomplete handler
@@ -196,20 +206,31 @@ export const myCommand: CommandDefinition = {
       return;
     }
     
-    // Get guild config
+    // Get guild config (returns unknown; validate or parse it)
     const config = await services.config.get(guildId, "my-module");
+    void config;
     
     // Use database
     const row = await services.db.prisma.myTable.findUnique({ where: { guildId } });
-    
-    // Use cache
-    const cached = await services.cache.get("my-module", `key-${guildId}`);
-    
+    void row;
+
     // Use permits
-    const hasPermit = await services.permits.check(interaction.user.id, "my-module.my-command");
+    const hasPermit = (
+      await services.permits.explainPermit(
+        {
+          guildId,
+          userId: interaction.user.id,
+          channelId: interaction.channelId,
+          roleIds: [],
+          permitNode: "my-module.my-command",
+        },
+        services.client,
+      )
+    ).allowed;
+    void hasPermit;
     
     await interaction.reply(
-      ephemeralCard(makeSuccessCard("Done", `Processed: ${input}`)),
+      ephemeralCard(makeSuccessCard("Done", `Processed: ${input} for ${target.username}`)),
     );
   },
 };
@@ -218,11 +239,13 @@ export const myCommand: CommandDefinition = {
 ### Command Best Practices
 
 1. **Always check `services.modules.isEnabled(guildId, name)`** at the start of `execute`
-2. **Use `requiredPermit`** for fine-grained permissions
+2. **Use `requiredPermit`** to attach the command to a permit node in the panel;
+   dispatch does not enforce it, so check `services.permits` in `execute` when
+   the command needs a runtime gate.
 3. **Use `ephemeralCard(card)`** for non-public responses
 4. **Use `@lumi/ui` cards** — never raw `EmbedBuilder` and never `embeds:`
 5. **Validate inputs** — Discord validates required options, but check business logic
-6. **Handle errors** — wrap in try/catch, reply with `errorCard`
+6. **Handle errors** — wrap in try/catch and reply with `makeErrorCard`
 
 ---
 
@@ -232,11 +255,11 @@ export const myCommand: CommandDefinition = {
 
 ```ts
 import { Events, Message } from "discord.js";
-import { ListenerDefinition } from "@lumi/module-kit";
+import type { ListenerDefinition } from "@lumi/module-kit";
 
 export const myListener: ListenerDefinition = {
   event: Events.MessageCreate,
-  async execute(message: Message, services) {
+  async handler(message: Message, services) {
     // Skip DMs
     if (!message.guild) return;
     
@@ -246,9 +269,11 @@ export const myListener: ListenerDefinition = {
     // Skip bots
     if (message.author.bot) return;
     
-    // Check config
-    const config = await services.config.get(message.guildId, "my-module");
-    if (!config.someFeature) return;
+    // Check config (stored value is unknown; parse it with your Zod schema)
+    const config = (await services.config.get(message.guildId, "my-module")) as
+      | { someFeature?: boolean }
+      | undefined;
+    if (!config?.someFeature) return;
     
     // Do work...
     await services.db.prisma.myLog.create({
@@ -272,38 +297,35 @@ Import from `discord.js` Events:
 
 1. **Early returns** — check guild, bot, enabled, config early
 2. **Don't block** — listeners run synchronously in the event loop; defer heavy work
-3. **Use services** — `services.db`, `services.cache`, `services.redis`, `services.permits`
+3. **Use services** — `services.db`, `services.config`, `services.redis`, `services.permits`
 4. **No side-effect imports** — listeners are called via the loader, not imported directly
 
 ---
 
 ## Tasks (Scheduled Jobs)
 
+`ModuleDefinition.tasks` is a reserved field in the contract; the loader does not
+register or start module tasks today. Process-level jobs are registered on the
+shared scheduler in `src/index.ts` (for example the add-on auto-update job).
+
 ```ts
-import { TaskDefinition } from "@lumi/module-kit";
+import type { TaskDefinition } from "@lumi/module-kit";
 
 export const myTask: TaskDefinition = {
   name: "cleanup",
   // Cron expression: minute hour day-of-month month day-of-week
   cron: "0 3 * * *",  // Daily at 3 AM UTC
   timezone: "UTC",
-  async execute(services) {
-    // Runs on ONE worker (leader-elected)
-    const deleted = await services.db.prisma.myTable.deleteMany({
-      where: { expiresAt: { lt: new Date() } },
-    });
-    console.log(`[my-module] Cleaned up ${deleted.count} rows`);
+  async handler(services) {
+    // Not currently invoked by the module loader.
+    console.log("[my-module] cleanup");
   },
 };
 ```
 
-### Task Types
-
-| Type | `runOn` | Description |
-|------|---------|-------------|
-| Leader-only | `"leader"` | Runs on elected leader (default) |
-| All workers | `"all"` | Runs on every worker |
-| Single worker | `"single"` | Runs on one worker (distributed lock) |
+`@lumi/scheduler` runs minute-granularity jobs with a Redis lock per tick and
+exposes `register({ name, cron, handler, timezone?, lockTtlMs? })`; only
+fixed-interval expressions (`*/N * * * *`) are scheduled exactly.
 
 ---
 
@@ -311,27 +333,33 @@ export const myTask: TaskDefinition = {
 
 ```ts
 interface ModuleServices {
+  client: Client;                    // Discord client
   redis: Redis;                      // ioredis instance
-  cache: Cache;                      // L1/L2 cache with invalidation
   db: {                              // Database access
     prisma: PrismaClient;
     permits: PermitRepository;
   };
+  prisma: PrismaClient;              // Same client, top-level shorthand
+  permits: PermitRepository;         // Permit evaluation
   modules: {                         // Module state
     isEnabled: (guildId: string, module: string) => boolean;
   };
-  permits: PermitRepository;         // Permit evaluation
+  moduleLoader: ModuleLoader;
+  moduleManager: ModuleManager;
+  addons: AddonManager;              // Throws if used before wiring
   scheduler: DistributedScheduler;   // Cron jobs
-  config: {                          // Guild config
-    get: (guildId: string, key: string) => Promise<any>;
-    set: (guildId: string, key: string, value: any) => Promise<void>;
-  };
-  ui: any;                           // Import @lumi/ui directly
+  config: ConfigService;             // Guild config get/set
+  configService: ConfigService;      // Same instance
   rpc: RpcServer;                    // Internal HTTP control server
+  ui: typeof import("@lumi/ui");     // Import @lumi/ui directly
   discord: { PermissionFlagsBits };  // Discord.js constants
-  observability: { healthMonitor };  // Health checks
+  observability: { healthMonitor: HealthMonitor; logger: Logger };
+  __moduleName: string;              // Set per module
 }
 ```
+
+The runtime bag is authoritative; `@lumi/module-kit` declares a loose subset of
+these fields.
 
 ---
 
@@ -352,14 +380,14 @@ describe("my-module", () => {
       modules: { isEnabled: vi.fn().mockReturnValue(true) },
       config: { get: vi.fn().mockResolvedValue({}) },
       db: { prisma: { myTable: { findUnique: vi.fn() } } },
-      cache: { get: vi.fn(), set: vi.fn() },
-      permits: { check: vi.fn().mockResolvedValue(true) },
-      ui: { successCard: (t, d) => ({ title: t, description: d, color: 0x00ff00 }) },
+      prisma: { myTable: { findUnique: vi.fn() } },
+      permits: { explainPermit: vi.fn().mockResolvedValue({ allowed: true, rows: [] }) },
+      ui: { makeSuccessCard: (t: string, d: string) => ({ title: t, description: d }) },
     };
   });
   
   it("should export valid module definition", async () => {
-    const { default: mod } = await import("../index.js");
+    const { default: mod } = await import("../index.ts");
     expect(mod.name).toBe("my-module");
     expect(mod.commands).toHaveLength(1);
   });
@@ -368,7 +396,9 @@ describe("my-module", () => {
 
 Run tests:
 ```bash
-bun test modules/my-module/tests/
+bun run test
+# or a single file
+bunx vitest run modules/my-module/tests/my-module.test.ts
 ```
 
 ---
@@ -377,14 +407,14 @@ bun test modules/my-module/tests/
 
 - [ ] `manifest.json` validates (apiVersion: 2, name matches dir, entry exists)
 - [ ] Zod config schema covers all settings with defaults
-- [ ] `configFields` metadata matches schema types
+- [ ] Manifest `configFields` metadata matches schema types
 - [ ] All commands have `requiredPermit` or check `isEnabled`
 - [ ] All listeners check `isEnabled` at start
 - [ ] No `EmbedBuilder` usage — use `@lumi/ui` cards
 - [ ] No direct imports of `src`, `modules/*`, or internal packages
 - [ ] Dependencies declared in manifest (both modules + npm)
 - [ ] No dependency cycles
-- [ ] Tests pass (`bun test`)
+- [ ] Tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run typecheck`)
 - [ ] Build passes (`bun run build`)
 

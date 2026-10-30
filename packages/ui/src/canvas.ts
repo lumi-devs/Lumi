@@ -7,7 +7,7 @@ export function roundRect(
   width: number,
   height: number,
   radius: number,
-) {
+): void {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
   ctx.lineTo(x + width - radius, y);

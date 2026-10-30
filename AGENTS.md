@@ -52,7 +52,7 @@ Run through the nix shell:
 
 ```sh
 nix develop --command bun run typecheck
-nix develop --command bun test
+nix develop --command bun run test
 ```
 
 Database-backed checks need Postgres and Redis; see `agents/testing.md`.

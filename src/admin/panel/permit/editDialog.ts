@@ -158,9 +158,9 @@ export async function handleEditSubmit(
       name,
       nodes,
       polarity: rawPolarity,
-      // The JSON-null sentinel is a runtime value in packages/db's Prisma
-      // install; keep the established null write until @lumi/permits accepts
-      // a plain null.
+
+
+
       schedule: schedule as unknown as Prisma.PermitUpdateInput["schedule"],
     });
 

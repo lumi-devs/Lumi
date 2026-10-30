@@ -29,8 +29,8 @@ export class ConfigService {
     const settings = await this.cache.getOrLoad(guildId, ConfigTtlMs, () =>
       this.load(guildId),
     );
-    // The cache hands back the shared object. Copy before callers mutate it so
-    // a failed write cannot leave a half-edited value in the L1/L2 cache.
+
+
     return settings ? structuredClone(settings) : {};
   }
 

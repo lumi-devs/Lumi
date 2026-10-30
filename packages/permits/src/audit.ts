@@ -1,30 +1,30 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 
 export interface PermitAuditLogEntry {
-  id: string;
-  guildId: string;
-  userId: string;
-  action: string;
-  targetId: string | null;
-  targetType: string | null;
-  changes: Prisma.JsonValue | null;
-  createdAt: Date;
+  readonly id: string;
+  readonly guildId: string;
+  readonly userId: string;
+  readonly action: string;
+  readonly targetId: string | null;
+  readonly targetType: string | null;
+  readonly changes: Prisma.JsonValue | null;
+  readonly createdAt: Date;
 }
 
 export interface PermitAuditLogInput {
-  guildId: string;
-  userId: string;
-  action: string;
-  targetId?: string | null;
-  targetType?: string | null;
-  changes?: Prisma.InputJsonValue | null;
+  readonly guildId: string;
+  readonly userId: string;
+  readonly action: string;
+  readonly targetId?: string | null;
+  readonly targetType?: string | null;
+  readonly changes?: Prisma.InputJsonValue | null;
 }
 
 export interface PermitAuditLogQuery {
-  userId?: string;
-  action?: string;
-  limit?: number;
-  offset?: number;
+  readonly userId?: string;
+  readonly action?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export type AuditLogSource = Pick<PrismaClient, "auditLog">;

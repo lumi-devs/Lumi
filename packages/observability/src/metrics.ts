@@ -158,7 +158,7 @@ export const dbQueriesTotal = new Counter({
   registers: [registry],
 });
 
-// Mirrors the `CacheMetrics` contract in `@lumi/cache`; keep the two in sync.
+
 export interface CacheMetrics {
   recordHit(namespace: string): void;
   recordMiss(namespace: string): void;

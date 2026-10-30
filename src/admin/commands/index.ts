@@ -13,7 +13,10 @@ export const moduleCommands = [
     data: new SlashCommandBuilder()
       .setName("lumi")
       .setDescription("Open the Lumi control panel"),
-    async execute(interaction: ChatInputCommandInteraction, services: HubServices) {
+    async execute(
+      interaction: ChatInputCommandInteraction,
+      services: HubServices,
+    ): Promise<void> {
       if (!interaction.guildId) {
         await interaction.reply(
           ephemeralCard(

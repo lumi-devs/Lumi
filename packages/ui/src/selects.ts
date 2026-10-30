@@ -25,11 +25,11 @@ function applySelectMenuOptions(
 }
 
 export interface SelectMenuOptions {
-  customId: string;
-  placeholder?: string;
-  minValues?: number;
-  maxValues?: number;
-  disabled?: boolean;
+  readonly customId: string;
+  readonly placeholder?: string;
+  readonly minValues?: number;
+  readonly maxValues?: number;
+  readonly disabled?: boolean;
 }
 
 export type CreateUserSelectMenuOptions = SelectMenuOptions;
@@ -37,19 +37,19 @@ export type CreateRoleSelectMenuOptions = SelectMenuOptions;
 export type CreateMentionableSelectMenuOptions = SelectMenuOptions;
 
 export interface CreateChannelSelectMenuOptions extends SelectMenuOptions {
-  channelTypes?: ChannelType[];
+  readonly channelTypes?: readonly ChannelType[];
 }
 
 export interface StringSelectOptionInput {
-  label: string;
-  value: string;
-  description?: string | undefined;
-  emoji?: string | APIMessageComponentEmoji | undefined;
-  default?: boolean;
+  readonly label: string;
+  readonly value: string;
+  readonly description?: string | undefined;
+  readonly emoji?: string | APIMessageComponentEmoji | undefined;
+  readonly default?: boolean;
 }
 
 export interface CreateStringSelectMenuOptions extends SelectMenuOptions {
-  options?: (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
+  readonly options?: readonly (StringSelectOptionInput | StringSelectMenuOptionBuilder)[];
 }
 
 export function createUserSelectMenu(
@@ -73,7 +73,7 @@ export function createChannelSelectMenu(
 ): ChannelSelectMenuBuilder {
   const menu = new ChannelSelectMenuBuilder().setCustomId(options.customId);
   if (options.channelTypes && options.channelTypes.length > 0) {
-    menu.setChannelTypes(options.channelTypes);
+    menu.setChannelTypes([...options.channelTypes]);
   }
   applySelectMenuOptions(menu, options);
   return menu;

@@ -92,7 +92,7 @@ export function allExplanationCard(
   for (const [node, result] of results) {
     if (result.allowed) {
       allowed.push(node);
-    } else if (result.rows.some((row) => row.verdict === "deny")) {
+    } else if (result.rows.some((tier) => tier.verdict === "deny")) {
       denied.push(node);
     } else {
       passed.push(node);

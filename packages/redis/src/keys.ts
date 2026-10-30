@@ -1,25 +1,37 @@
-/**
- * Canonical Redis key builders and TTLs (seconds).
- *
- * Never hand-build a `lumi:*` key outside this module.
- */
+
+
+
+
+
 export function createKeys(namespace = "lumi") {
   const prefix = (parts: string[]): string => [namespace, ...parts].join(":");
 
   return {
     guild: (guildId: string) => prefix(["guild", guildId]),
-    guildConfig: (guildId: string, module: string) => prefix(["cfg", guildId, module]),
+    guildConfig: (guildId: string, moduleName: string) =>
+      prefix(["cfg", guildId, moduleName]),
     guildConfigAll: (guildId: string) => prefix(["cfg", guildId, "__all__"]),
-    moduleGlobal: (module: string) => prefix(["mod", "global", module]),
-    moduleGuild: (guildId: string, module: string) => prefix(["mod", guildId, module]),
-    moduleData: (guildId: string, module: string, targetId: string, key: string) =>
-      prefix(["kv", guildId, module, `${targetId.length}:${targetId}:${key}`]),
+    moduleGlobal: (moduleName: string) => prefix(["mod", "global", moduleName]),
+    moduleGuild: (guildId: string, moduleName: string) =>
+      prefix(["mod", guildId, moduleName]),
+    moduleData: (
+      guildId: string,
+      moduleName: string,
+      targetId: string,
+      dataKey: string,
+    ) =>
+      prefix([
+        "kv",
+        guildId,
+        moduleName,
+        `${targetId.length}:${targetId}:${dataKey}`,
+      ]),
     afk: (guildId: string, userId: string) => prefix(["afk", guildId, userId]),
     afkMentions: (guildId: string, userId: string) => prefix(["afk", "mentions", guildId, userId]),
     cooldown: (scope: string, id: string) => prefix(["cd", scope, id]),
     permits: (guildId: string, targetType: string, targetId: string) =>
       prefix(["permits", guildId, targetType, targetId]),
-    // Matches the permit repository's quarantine marker: lumi:mod:<guild>:quarantine:<user>.
+
     quarantine: (guildId: string, userId: string) =>
       prefix(["mod", guildId, "quarantine", userId]),
     panelSession: (messageId: string) => prefix(["panel", messageId]),

@@ -4,7 +4,6 @@ import {
   moduleListRowId,
   parseSubmoduleTogglePages,
   submoduleItems,
-  submodulePagePrefix,
   submoduleToggleId,
   supermoduleItems,
 } from "../../src/admin/panel/modules.ts";
@@ -72,7 +71,7 @@ describe("module panel ids", () => {
   });
 
   it("keeps the origin page in the submodule pagination prefix", () => {
-    expect(submodulePagePrefix("security", 3)).toBe(
+    expect(moduleListRowId("security", 3)).toBe(
       "lumi:modsubs:security:3",
     );
   });

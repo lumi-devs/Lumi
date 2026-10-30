@@ -90,7 +90,7 @@ export const aboutCommand = {
   async execute(
     interaction: ChatInputCommandInteraction,
     services: AboutServices,
-  ) {
+  ): Promise<void> {
     const client = services.client;
     const guilds = Array.from(client.guilds.cache.values());
     const members = guilds.reduce(

@@ -1,5 +1,10 @@
 import { roundRect } from "@lumi/ui";
-import { type CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
+import {
+  type CanvasRenderingContext2D,
+  createCanvas,
+  type Image,
+  loadImage,
+} from "canvas";
 
 const CARD_WIDTH = 900;
 const CARD_HEIGHT = 600;
@@ -28,31 +33,28 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   const canvas = createCanvas(CARD_WIDTH, CARD_HEIGHT);
   const ctx = canvas.getContext("2d");
 
-  // Background gradient
   const gradient = ctx.createLinearGradient(0, 0, CARD_WIDTH, CARD_HEIGHT);
   gradient.addColorStop(0, "#1a1a2e");
   gradient.addColorStop(1, "#16213e");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
-  // Decorative accent
   ctx.fillStyle = "rgba(255, 212, 59, 0.06)";
   ctx.beginPath();
   ctx.arc(CARD_WIDTH - 100, 100, 250, 0, Math.PI * 2);
   ctx.fill();
 
-  // Header background
   ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
   roundRect(ctx, 20, 20, CARD_WIDTH - 40, 80, 15);
   ctx.fill();
 
-  // Guild icon
-  let guildIcon: any = null;
+  let guildIcon: Image | null = null;
   if (data.guildIconUrl) {
     try {
-      const iconImg = await loadImage(data.guildIconUrl);
-      guildIcon = iconImg;
-    } catch {}
+      guildIcon = await loadImage(data.guildIconUrl);
+    } catch {
+
+    }
   }
 
   const iconSize = 60;
@@ -76,31 +78,26 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   }
   ctx.restore();
 
-  // Guild icon border
   ctx.strokeStyle = "#ffd43b";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(iconX + iconSize/2, iconY + iconSize/2, iconSize/2, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Guild name
   ctx.fillStyle = "#fff";
   ctx.font = "bold 28px Arial";
   ctx.textAlign = "left";
   ctx.fillText(data.guildName, iconX + iconSize + 20, iconY + 30);
 
-  // Currency info
   ctx.fillStyle = "#adb5bd";
   ctx.font = "16px Arial";
   ctx.fillText(`${data.currencyName} Shop`, iconX + iconSize + 20, iconY + 60);
 
-  // Page indicator
   ctx.fillStyle = "#ffd43b";
   ctx.font = "bold 16px Arial";
   ctx.textAlign = "right";
   ctx.fillText(`Page ${data.page} / ${data.totalPages}`, CARD_WIDTH - 40, iconY + 55);
 
-  // Items area
   const startY = 130;
   const itemHeight = 90;
   const itemSpacing = 10;
@@ -111,11 +108,10 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
   for (let i = 0; i < Math.min(data.items.length, maxItemsPerPage); i++) {
     const item = data.items[i];
     const y = startY + i * (itemHeight + itemSpacing);
-    
+
     drawShopItem(ctx, item, startX, y, itemWidth, itemHeight);
   }
 
-  // Footer
   ctx.fillStyle = "#6c757d";
   ctx.font = "12px Arial";
   ctx.textAlign = "center";
@@ -125,19 +121,17 @@ export async function generateShopCard(data: ShopCardData): Promise<Buffer> {
 }
 
 function drawShopItem(
-  ctx: CanvasRenderingContext2D, 
-  item: ShopItemData, 
-  x: number, 
-  y: number, 
-  width: number, 
+  ctx: CanvasRenderingContext2D,
+  item: ShopItemData,
+  x: number,
+  y: number,
+  width: number,
   height: number
 ) {
-  // Item background
   ctx.fillStyle = "rgba(255,255,255,0.04)";
   roundRect(ctx, x, y, width, height, 12);
   ctx.fill();
 
-  // Item border based on type
   const typeColors: Record<string, string> = {
     role: "#4ade80",
     item: "#4c6ef5",
@@ -150,7 +144,6 @@ function drawShopItem(
   roundRect(ctx, x, y, width, height, 12);
   ctx.stroke();
 
-  // Type badge
   const badgeWidth = 80;
   const badgeHeight = 24;
   const badgeX = x + 20;
@@ -166,24 +159,20 @@ function drawShopItem(
   const typeLabel = item.type.charAt(0).toUpperCase() + item.type.slice(1);
   ctx.fillText(typeLabel, badgeX + badgeWidth/2, badgeY + badgeHeight/2 + 4);
 
-  // Item name
   ctx.fillStyle = "#fff";
   ctx.font = "bold 22px Arial";
   ctx.textAlign = "left";
   ctx.fillText(item.name, badgeX + badgeWidth + 20, badgeY + 20);
 
-  // Price
   ctx.fillStyle = "#ffd43b";
   ctx.font = "bold 20px Arial";
   ctx.textAlign = "right";
   ctx.fillText(`${item.currencySymbol} ${item.price.toLocaleString()}`, x + width - 20, badgeY + 20);
 
-  // Description
   ctx.fillStyle = "#adb5bd";
   ctx.font = "15px Arial";
   ctx.textAlign = "left";
-  
-  // Truncate description if too long
+
   const maxDescWidth = width - 160;
   let desc = item.description;
   while (ctx.measureText(desc).width > maxDescWidth && desc.length > 3) {
@@ -194,7 +183,6 @@ function drawShopItem(
   }
   ctx.fillText(desc, badgeX + badgeWidth + 20, badgeY + 50);
 
-  // Role indicator if applicable
   if (item.type === "role" && item.roleId) {
     ctx.fillStyle = "#4ade80";
     ctx.font = "13px Arial";

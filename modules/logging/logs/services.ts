@@ -1,24 +1,31 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import type { CardReply } from "@lumi/ui";
 import type { Message } from "discord.js";
+import type { LoggingConfig } from "./config.js";
 
-interface LoggingConfig {
-  messageLogChannel?: string | null;
-  editLogChannel?: string | null;
-  deleteLogChannel?: string | null;
-  voiceLogChannel?: string | null;
-  ignoredChannels?: string[] | null;
-}
-
-export async function sendLog(services: any, channelId: string | null | undefined, card: CardReply) {
+export async function sendLog(
+  services: ModuleServices,
+  channelId: string | null | undefined,
+  card: CardReply,
+): Promise<void> {
   if (!channelId) return;
 
   const channel = services.client.channels.cache.get(channelId);
-  if (channel?.isTextBased()) {
-    try {
-      await channel.send(card);
-    } catch (e) {
-      console.error("Failed to send log:", e);
-    }
+  if (
+    !channel?.isTextBased() ||
+    !("send" in channel) ||
+    typeof channel.send !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    await channel.send(card);
+  } catch (error) {
+    services.observability?.logger?.warn?.("log message send failed", {
+      channelId,
+      error,
+    });
   }
 }
 

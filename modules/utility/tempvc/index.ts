@@ -4,11 +4,14 @@ import {
   defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
+  type ModuleServices,
 } from "@lumi/module-kit";
 import { ephemeralCard } from "@lumi/ui";
 import {
   type GuildMember,
+  type Interaction,
   SlashCommandBuilder,
+  type VoiceState,
 } from "discord.js";
 import { canUseTempVcAdmin } from "./access.js";
 import { getTempVcConfig, isModuleEnabled } from "./config.js";
@@ -109,18 +112,18 @@ const tempvcCommand: CommandDefinition = {
 
 const onVoiceStateListener: ListenerDefinition = {
   event: "voiceStateUpdate",
-  async handler(oldState, newState, services: any) {
+  async handler(oldState: VoiceState, newState: VoiceState, services: ModuleServices) {
     await handleVoiceStateChange(oldState, newState, services);
   },
 };
 
 const onInteractionListener: ListenerDefinition = {
   event: "interactionCreate",
-  async handler(interaction: any, services: any) {
+  async handler(interaction: Interaction, services: ModuleServices) {
     if (
-      !interaction?.isButton?.() &&
-      !interaction?.isAnySelectMenu?.() &&
-      !interaction?.isModalSubmit?.()
+      !interaction.isButton() &&
+      !interaction.isAnySelectMenu() &&
+      !interaction.isModalSubmit()
     ) {
       return;
     }

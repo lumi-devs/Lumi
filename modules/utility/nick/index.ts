@@ -2,10 +2,13 @@ import {
   type CommandDefinition,
   defineModule,
   type ModuleDefinition,
+  type ModuleServices,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
   type APIInteractionGuildMember,
+  type ChatInputCommandInteraction,
+  type Guild,
   type GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
@@ -16,31 +19,40 @@ import { canChangeNickname } from "./hierarchy.js";
 const NickConfigSchema = z.object({
   allowSelfNick: z.boolean().default(false),
   maxLength: z.number().int().min(1).max(32).default(32),
-}, {});
+});
 
-const getNickConfig = async (services: any, guildId: string) =>
-  NickConfigSchema.parse((await services.config.get(guildId, "nick")) ?? {});
+type NickConfig = z.infer<typeof NickConfigSchema>;
+
+const NickConfigKey = "nick";
+
+const getNickConfig = async (
+  services: ModuleServices,
+  guildId: string,
+): Promise<NickConfig> =>
+  NickConfigSchema.parse((await services.config.get(guildId, NickConfigKey)) ?? {});
 
 type AnyGuildMember = GuildMember | APIInteractionGuildMember | null | undefined;
 
 function roleIdsOf(member: AnyGuildMember): string[] {
   if (!member) return [];
-  const roles = (member as { roles?: unknown }).roles;
-  if (Array.isArray(roles)) return roles as string[];
+  const roles: unknown = member.roles;
+  if (Array.isArray(roles)) {
+    return roles.filter((roleId): roleId is string => typeof roleId === "string");
+  }
   const cache = (roles as { cache?: Map<string, unknown> } | undefined)?.cache;
-  return cache ? Array.from(cache.keys()) : [];
+  return cache ? [...cache.keys()] : [];
 }
 
-function topRolePosition(guild: any, member: AnyGuildMember): number {
+function topRolePosition(guild: Guild, member: AnyGuildMember): number {
   return roleIdsOf(member).reduce((top, roleId) => {
-    const position = guild.roles?.cache?.get(roleId)?.position ?? 0;
+    const position = guild.roles.cache.get(roleId)?.position ?? 0;
     return Math.max(top, position);
   }, 0);
 }
 
 async function hasNickPermit(
-  interaction: any,
-  services: any,
+  interaction: ChatInputCommandInteraction,
+  services: ModuleServices,
 ): Promise<boolean> {
   try {
     const result = await services.permits.explainPermit(
@@ -55,7 +67,12 @@ async function hasNickPermit(
       services.client,
     );
     return result.allowed === true;
-  } catch {
+  } catch (error) {
+    services.observability?.logger?.warn?.("nick permit check failed", {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      error,
+    });
     return false;
   }
 }
@@ -195,7 +212,7 @@ const nickDef: CommandDefinition = {
     }
 
     const decision = canChangeNickname({
-      actorTopRolePosition: topRolePosition(guild, interaction.member as AnyGuildMember),
+      actorTopRolePosition: topRolePosition(guild, interaction.member),
       targetTopRolePosition: topRolePosition(guild, target),
       actorIsGuildOwner: interaction.user.id === guild.ownerId,
       targetIsGuildOwner: target.id === guild.ownerId,

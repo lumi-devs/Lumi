@@ -1,4 +1,16 @@
-import type { AutocompleteInteraction, ChatInputCommandInteraction, } from "discord.js";
+import type {
+  AutocompleteInteraction,
+  ChatInputCommandInteraction,
+  Client,
+  SlashCommandBuilder,
+  SlashCommandOptionsOnlyBuilder,
+  SlashCommandSubcommandsOnlyBuilder,
+} from "discord.js";
+
+
+
+
+
 
 export interface ModuleServices {
   db: any;
@@ -11,16 +23,42 @@ export interface ModuleServices {
   ui: any;
   scheduler: any;
   observability: any;
+  client: Client;
   modules: {
     isEnabled: (guildId: string, moduleName: string) => boolean;
   };
 }
 
+export type CommandData =
+  | SlashCommandBuilder
+  | SlashCommandOptionsOnlyBuilder
+  | SlashCommandSubcommandsOnlyBuilder
+  | CommandDataStub;
+
+
+
+
+
+export interface CommandDataStub {
+  readonly name: string;
+
+
+  toJSON(): any;
+}
+
 export interface CommandDefinition {
-  data: any; // SlashCommandBuilder
-  execute: (interaction: ChatInputCommandInteraction, services: any) => Promise<void>;
-  autocomplete?: (interaction: AutocompleteInteraction, services: any) => Promise<void>;
-  aliases?: string[];
+  data: CommandData;
+
+
+  execute: (
+    interaction: ChatInputCommandInteraction,
+    services: any,
+  ) => Promise<void>;
+  autocomplete?: (
+    interaction: AutocompleteInteraction,
+    services: any,
+  ) => Promise<void>;
+  aliases?: readonly string[];
   requiredPermit?: string;
   requiresAdmin?: boolean;
   dmPermission?: boolean;
@@ -29,6 +67,8 @@ export interface CommandDefinition {
 
 export interface ListenerDefinition {
   event: string;
+
+
   handler: (...args: any[]) => Promise<void>;
   once?: boolean;
 }
@@ -36,12 +76,12 @@ export interface ListenerDefinition {
 export interface TaskDefinition {
   name: string;
   cron: string;
-  handler: (services: any) => Promise<void>;
+  handler: (services: ModuleServices) => Promise<void>;
   timezone?: string;
 }
 
 export interface ModuleCapability {
-  name: string;
-  version: string;
-  provides: string[];
+  readonly name: string;
+  readonly version: string;
+  readonly provides: readonly string[];
 }

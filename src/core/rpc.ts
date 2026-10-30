@@ -23,7 +23,9 @@ export class RpcServer {
     this.server = createServer(async (req, res) => {
       try {
         await this.handler(req, res);
-      } catch (_err) {
+      } catch {
+
+
         res.statusCode = 500;
         res.end("Internal Server Error");
       }
@@ -32,9 +34,9 @@ export class RpcServer {
 
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.server.once('error', reject);
+      this.server.once("error", reject);
       this.server.listen(this.port, this.host, () => {
-        this.server.off('error', reject);
+        this.server.off("error", reject);
         resolve();
       });
     });

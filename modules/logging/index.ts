@@ -1,13 +1,5 @@
 import { defineModule } from "@lumi/module-kit";
-import { z } from "zod";
-
-const LoggingConfigSchema = z.object({
-  messageLogChannel: z.string().nullable().default(null),
-  editLogChannel: z.string().nullable().default(null),
-  deleteLogChannel: z.string().nullable().default(null),
-  voiceLogChannel: z.string().nullable().default(null),
-  ignoredChannels: z.array(z.string(), {}).default([]),
-}, {});
+import { LoggingConfigSchema } from "./logs/config.js";
 
 const LoggingSupermodule = defineModule({
   name: "logging",

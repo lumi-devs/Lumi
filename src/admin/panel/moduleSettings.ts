@@ -126,7 +126,7 @@ export async function renderModuleDetail(
   interaction: HubInteraction,
   services: HubServices,
   moduleName: string,
-  section = 0,
+  pageIndex = 0,
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
@@ -143,8 +143,8 @@ export async function renderModuleDetail(
   const fields = meta.configFields ?? [];
   const pages = fieldPages(fields, FieldsPerPage);
   const total = Math.max(1, pages.length);
-  const safeSection = Math.max(0, Math.min(section, total - 1));
-  const page = pages[safeSection] ?? { label: "General", fields: [] };
+  const safePage = Math.max(0, Math.min(pageIndex, total - 1));
+  const page = pages[safePage] ?? { label: "General", fields: [] };
   const current = page.fields;
   const config = await readModuleConfig(services, guildId, moduleName);
   const enabled = services.moduleLoader.isEnabled(guildId, moduleName);
@@ -153,15 +153,15 @@ export async function renderModuleDetail(
     const value = fieldValue(field, config);
     const lines = fieldLine(field, value);
     if (field.type === "boolean") {
-      const on = Boolean(value);
+      const isEnabled = Boolean(value);
       return settingRow(lines, {
-        customId: `lumi:modbool:${moduleName}:${field.key}:${safeSection}`,
-        label: on ? "On" : "Off",
-        style: on ? ButtonStyle.Success : ButtonStyle.Secondary,
+        customId: `lumi:modbool:${moduleName}:${field.key}:${safePage}`,
+        label: isEnabled ? "On" : "Off",
+        style: isEnabled ? ButtonStyle.Success : ButtonStyle.Secondary,
       });
     }
     return settingRow(lines, {
-      customId: `lumi:modfield:${moduleName}:${field.key}:${safeSection}`,
+      customId: `lumi:modfield:${moduleName}:${field.key}:${safePage}`,
       label: "Configure",
       emoji: "✏️",
       style: ButtonStyle.Secondary,
@@ -179,7 +179,7 @@ export async function renderModuleDetail(
             label: page.label,
             value: String(index),
             description: `${page.fields.length} setting(s)`,
-            default: index === safeSection,
+            default: index === safePage,
           })),
         }),
       ),
@@ -189,13 +189,13 @@ export async function renderModuleDetail(
   rows.push(
     row(
       createActionButton({
-        customId: `lumi:modtoggle:${moduleName}:${safeSection}`,
+        customId: `lumi:modtoggle:${moduleName}:${safePage}`,
         label: enabled ? "Disable" : "Enable",
         emoji: enabled ? "⛔" : "✅",
         style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
       }),
       createActionButton({
-        customId: `lumi:modreset:${moduleName}:${safeSection}`,
+        customId: `lumi:modreset:${moduleName}:${safePage}`,
         label: "Reset",
         emoji: "↩️",
         style: ButtonStyle.Secondary,
@@ -250,7 +250,7 @@ export async function renderFieldEditor(
   services: HubServices,
   moduleName: string,
   fieldKey: string,
-  section: number,
+  pageIndex: number,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const loaded = moduleByName(services, moduleName);
@@ -271,7 +271,7 @@ export async function renderFieldEditor(
     rows.push(
       row(
         createStringSelectMenu({
-          customId: `lumi:modpick:${moduleName}:${fieldKey}:${section}`,
+          customId: `lumi:modpick:${moduleName}:${fieldKey}:${pageIndex}`,
           placeholder: cut(field.label, 100),
           options: (field.choices ?? []).slice(0, MaxOptions).map((choice) => ({
             label: cut(choice, 100),
@@ -285,7 +285,7 @@ export async function renderFieldEditor(
     rows.push(
       row(
         createChannelSelectMenu({
-          customId: `lumi:modpick:${moduleName}:${fieldKey}:${section}`,
+          customId: `lumi:modpick:${moduleName}:${fieldKey}:${pageIndex}`,
           placeholder: cut(field.label, 100),
           channelTypes: channelTypesFor(field),
           minValues: 0,
@@ -297,7 +297,7 @@ export async function renderFieldEditor(
     rows.push(
       row(
         createRoleSelectMenu({
-          customId: `lumi:modpick:${moduleName}:${fieldKey}:${section}`,
+          customId: `lumi:modpick:${moduleName}:${fieldKey}:${pageIndex}`,
           placeholder: cut(field.label, 100),
           minValues: 0,
           maxValues: isMulti(field) ? MaxOptions : 1,
@@ -308,7 +308,7 @@ export async function renderFieldEditor(
     rows.push(
       row(
         createActionButton({
-          customId: `lumi:modinput:${moduleName}:${fieldKey}:${section}`,
+          customId: `lumi:modinput:${moduleName}:${fieldKey}:${pageIndex}`,
           label: "Enter value…",
           emoji: "⌨️",
           style: ButtonStyle.Primary,
@@ -320,13 +320,13 @@ export async function renderFieldEditor(
   rows.push(
     row(
       createActionButton({
-        customId: `lumi:modclear:${moduleName}:${fieldKey}:${section}`,
+        customId: `lumi:modclear:${moduleName}:${fieldKey}:${pageIndex}`,
         label: "Clear",
         emoji: "🧹",
         style: ButtonStyle.Secondary,
         disabled: value === undefined || value === null || value === "",
       }),
-      backButton(`lumi:modopen:${moduleName}:${section}`),
+      backButton(`lumi:modopen:${moduleName}:${pageIndex}`),
     ),
   );
 
@@ -364,17 +364,16 @@ export function parseFieldInput(field: ConfigField, raw: string): FieldValue {
       .filter(Boolean);
   }
   if (field.type === "json") {
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(value);
-      if (parsed === null || typeof parsed !== "object") {
-        throw new Error("JSON settings must be an object or array.");
-      }
-      return parsed;
-    } catch (error) {
-      throw new Error(
-        error instanceof SyntaxError ? "Enter valid JSON." : (error as Error).message,
-      );
+      parsed = JSON.parse(value);
+    } catch {
+      throw new Error("Enter valid JSON.");
     }
+    if (parsed === null || typeof parsed !== "object") {
+      throw new Error("JSON settings must be an object or array.");
+    }
+    return parsed;
   }
   return value;
 }
@@ -396,9 +395,9 @@ export function prefixModal(): ModalBuilder {
     );
 }
 
-export function fieldModal(moduleName: string, field: ConfigField, section: number, value: FieldValue): ModalBuilder {
+export function fieldModal(moduleName: string, field: ConfigField, pageIndex: number, value: FieldValue): ModalBuilder {
   return new ModalBuilder()
-    .setCustomId(`lumi:modinput:${moduleName}:${field.key}:${section}`)
+    .setCustomId(`lumi:modinput:${moduleName}:${field.key}:${pageIndex}`)
     .setTitle(cut(`Edit ${field.label}`, 45))
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(

@@ -4,8 +4,15 @@ import {
   makeErrorCard,
   makeSuccessCard,
 } from "@lumi/ui";
+import type { ChatInputCommandInteraction } from "discord.js";
+import type { TempVcInteraction } from "./types.js";
 
-async function replyCard(interaction: any, card: CardReply): Promise<void> {
+type TempVcReplyTarget = ChatInputCommandInteraction | TempVcInteraction;
+
+async function replyCard(
+  interaction: TempVcReplyTarget,
+  card: CardReply,
+): Promise<void> {
   if (interaction.deferred || interaction.replied) {
     await interaction.followUp(card).catch(() => undefined);
     return;
@@ -14,7 +21,7 @@ async function replyCard(interaction: any, card: CardReply): Promise<void> {
 }
 
 export async function replyError(
-  interaction: any,
+  interaction: TempVcReplyTarget,
   title: string,
   body: string,
 ): Promise<void> {
@@ -22,7 +29,7 @@ export async function replyError(
 }
 
 export async function replySuccess(
-  interaction: any,
+  interaction: TempVcReplyTarget,
   title: string,
   body: string,
 ): Promise<void> {
@@ -30,10 +37,10 @@ export async function replySuccess(
 }
 
 export async function showCard(
-  interaction: any,
+  interaction: TempVcInteraction,
   card: CardReply,
 ): Promise<void> {
-  if (interaction.isModalSubmit?.() && !interaction.isFromMessage?.()) {
+  if (interaction.isModalSubmit() && !interaction.isFromMessage()) {
     await interaction.reply(card).catch(() => undefined);
     return;
   }

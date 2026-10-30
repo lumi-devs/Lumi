@@ -137,7 +137,7 @@ export async function handleAssignSelect(
     return true;
   }
 
-  // permit_assign_expiry
+
   if (flow.targetId === undefined) {
     await interaction.update(await host.assignCard(flow));
     return true;

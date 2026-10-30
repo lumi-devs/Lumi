@@ -1,4 +1,5 @@
-import { ChannelType, type VoiceChannel, type VoiceState } from "discord.js";
+import type { ModuleServices } from "@lumi/module-kit";
+import { ChannelType, type VoiceState } from "discord.js";
 import { getTempVcConfig, isModuleEnabled } from "./config.js";
 import {
   createTempVoiceChannel,
@@ -10,7 +11,7 @@ import {
 export async function handleVoiceStateChange(
   oldState: VoiceState,
   newState: VoiceState,
-  services: any,
+  services: ModuleServices,
 ): Promise<void> {
   const guildId = newState.guild?.id ?? oldState.guild?.id;
   if (!guildId || !isModuleEnabled(services, guildId)) return;
@@ -35,7 +36,7 @@ export async function handleVoiceStateChange(
         if (
           channel &&
           channel.type === ChannelType.GuildVoice &&
-          (channel as VoiceChannel).members.size === 0
+          channel.members.size === 0
         ) {
           await updateTempRecord(services, oldState.channelId, {
             expiresAt: new Date(Date.now() + config.emptyTimeoutMs),

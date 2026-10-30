@@ -1,9 +1,5 @@
 import { isBotOwner, type Polarity } from "@lumi/permits";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-} from "@lumi/ui";
+import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
 import type { HubServices } from "../../panel/services.js";
@@ -14,7 +10,7 @@ import {
   suggestPermitName,
   uniquePermitName,
 } from "../../permits/nodes.js";
-import { openPermitsRow } from "./shared.js";
+import { openPermitsRow, replyPermitError } from "./shared.js";
 
 export async function createPermit(
   interaction: ChatInputCommandInteraction,
@@ -22,53 +18,42 @@ export async function createPermit(
 ): Promise<void> {
   const guildId = interaction.guildId;
   if (guildId === null) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard("Permit", "This command can only be used in a server."),
-      ),
+    await replyPermitError(
+      interaction,
+      "Permit",
+      "This command can only be used in a server.",
     );
     return;
   }
 
-  const nodes = parseNodeList(
-    interaction.options.getString("nodes", true),
-  );
+  const nodes = parseNodeList(interaction.options.getString("nodes", true));
   const invalidNode = nodes.find((node) => !isValidNode(node));
   if (invalidNode !== undefined || nodes.length === 0) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Invalid Node",
-          invalidNode
-            ? `\`${invalidNode}\` is not a valid permission node.`
-            : "Use at least one node such as `mod.ban`, `admin.*`, or `*`.",
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Invalid Node",
+      invalidNode
+        ? `\`${invalidNode}\` is not a valid permission node.`
+        : "Use at least one node such as `mod.ban`, `admin.*`, or `*`.",
     );
     return;
   }
 
   if (nodes.includes("*") && !isBotOwner(interaction.user.id)) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Extra Owner",
-          "Only bot owners can create a permit with `*`.",
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Extra Owner",
+      "Only bot owners can create a permit with `*`.",
     );
     return;
   }
 
   const polarityValue = interaction.options.getString("polarity", true);
   if (polarityValue !== "Grant" && polarityValue !== "Deny") {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Invalid Polarity",
-          "Polarity must be either `Grant` or `Deny`.",
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Invalid Polarity",
+      "Polarity must be either `Grant` or `Deny`.",
     );
     return;
   }
@@ -77,13 +62,10 @@ export async function createPermit(
   const permits = await services.permits.listPermits(guildId);
   const existingNames = new Set(permits.map((permit) => permit.name));
   if (requestedName && existingNames.has(requestedName)) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Name Taken",
-          `A permit named **${requestedName}** already exists.`,
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Name Taken",
+      `A permit named **${requestedName}** already exists.`,
     );
     return;
   }
@@ -125,13 +107,10 @@ export async function createPermit(
       ),
     );
   } catch (error: unknown) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Create Failed",
-          `Could not create the permit: ${errorMessage(error)}`,
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Create Failed",
+      `Could not create the permit: ${errorMessage(error)}`,
     );
   }
 }

@@ -6,17 +6,17 @@ export interface ScheduledJob {
   readonly cron: string;
   readonly handler: () => Promise<void>;
   readonly timezone?: string;
-  /** Lock lease; must exceed the handler's typical runtime. */
+
   readonly lockTtlMs?: number;
 }
 
-/**
- * Minute-granularity cron with one Redis-lock holder per tick.
- *
- * `setInterval` drives ticks, so only fixed-interval expressions (`*\/N * * * *`)
- * are scheduled exactly; other expressions fall back to a one-minute tick and
- * will over-run. Callers currently use `*\/N` only.
- */
+
+
+
+
+
+
+
 export class DistributedScheduler {
   private readonly redis: Redis;
   private readonly jobs = new Map<string, ScheduledJob>();
@@ -30,7 +30,6 @@ export class DistributedScheduler {
 
   register(job: ScheduledJob): void {
     if (this.started) {
-      // Drop an existing interval before adding the replacement.
       this.unregister(job.name);
     }
     this.jobs.set(job.name, job);
@@ -65,8 +64,8 @@ export class DistributedScheduler {
   }
 
   private async runJob(job: ScheduledJob): Promise<void> {
-    // Do not stack ticks when a handler outlives its interval, and do not start
-    // work that was stopped (or unregistered) after the timer fired.
+
+
     if (!this.started || !this.jobs.has(job.name) || this.running.has(job.name)) {
       return;
     }
@@ -78,7 +77,7 @@ export class DistributedScheduler {
       const acquired = await lock.acquire();
       if (!acquired) return;
       try {
-        // stop()/unregister() may have run while we waited for the lock.
+
         if (!this.started || !this.jobs.has(job.name)) return;
         await job.handler();
       } finally {
@@ -95,7 +94,7 @@ export class DistributedScheduler {
     const [minuteField] = cron.trim().split(/\s+/);
     if (minuteField?.startsWith("*/")) {
       const minutes = Number(minuteField.slice(2));
-      // A zero/NaN step would create a tight loop or a 0ms interval.
+
       if (Number.isInteger(minutes) && minutes > 0) return minutes * 60_000;
     }
     return 60_000;

@@ -27,11 +27,11 @@ export interface ModuleHostLogger {
   error(message: string, meta?: unknown): void;
 }
 
-/**
- * The loader hands `onLoad`/`onUnload` a bag containing `__moduleName`, but
- * command and listener handlers would otherwise receive the raw shared bag.
- * Build the same shape here so every entry point resolves services identically.
- */
+
+
+
+
+
 export function servicesForModule<T extends object>(
   services: T,
   moduleName: string,
@@ -160,10 +160,10 @@ export class ModuleHost implements AddonRuntime {
     await this.options.syncCommands();
   }
 
-  /**
-   * Detach every listener and run each module's onUnload before the process
-   * tears down its databases. Command re-sync is skipped: Discord is going away.
-   */
+
+
+
+
   async unloadAll(): Promise<void> {
     const names = this.options.loader
       .listAll()

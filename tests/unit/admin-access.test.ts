@@ -1,6 +1,10 @@
 import { PermissionFlagsBits } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { hasAdminAccess, roleIdsFrom } from "../../src/admin/access.ts";
+import {
+  hasAdminAccess,
+  hasPermitAccess,
+  roleIdsFrom,
+} from "../../src/admin/access.ts";
 
 function permits(allowed: boolean) {
   return {
@@ -63,6 +67,48 @@ describe("hasAdminAccess", () => {
         memberPermissions: { has: () => false },
         permits: repo,
       }),
+    ).resolves.toBe(false);
+  });
+});
+
+describe("hasPermitAccess", () => {
+  it("evaluates the requested permit node with channel context", async () => {
+    const repo = permits(true);
+
+    await expect(
+      hasPermitAccess(
+        {
+          guildId: "guild",
+          userId: "user",
+          roleIds: ["role"],
+          channelId: "channel",
+          client: { tag: "client" },
+          permits: repo,
+        },
+        "mod.ban",
+      ),
+    ).resolves.toBe(true);
+    expect(repo.explainPermit).toHaveBeenCalledWith(
+      {
+        guildId: "guild",
+        userId: "user",
+        roleIds: ["role"],
+        channelId: "channel",
+        guildOwnerId: undefined,
+        permitNode: "mod.ban",
+      },
+      { tag: "client" },
+    );
+  });
+
+  it("returns false when the permit is denied", async () => {
+    const repo = permits(false);
+
+    await expect(
+      hasPermitAccess(
+        { guildId: "guild", userId: "user", roleIds: [], permits: repo },
+        "mod.ban",
+      ),
     ).resolves.toBe(false);
   });
 });

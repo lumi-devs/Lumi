@@ -1,5 +1,4 @@
 import {
-  type ActionRowBuilder,
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
@@ -11,7 +10,7 @@ import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
 import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "./layout.js";
 import { resolveCardColor } from "./palette.js";
-import { buildSafeActionRows } from "./panels.js";
+import { buildSafeActionRows, type Row } from "./panels.js";
 
 export interface CardReply {
   readonly flags?: number;
@@ -20,19 +19,21 @@ export interface CardReply {
 }
 
 export interface CardOptions {
-  subtitle?: string | undefined;
-  breadcrumbs?: string[] | undefined;
-  statusBadge?: { status: string; label?: string | undefined } | undefined;
-  footer?: string | undefined;
-  thumbnailUrl?: string | undefined;
-  divider?: boolean | undefined;
-  hideTitle?: boolean | undefined;
-  noAccent?: boolean | undefined;
-  sections?: SectionBuilder[] | undefined;
-  actionRows?: ActionRowBuilder<any>[] | undefined;
-  separatorAboveActionRows?: boolean | undefined;
-  mediaGallery?: MediaGalleryBuilder | undefined;
-  headerImages?: string[] | undefined;
+  readonly subtitle?: string | undefined;
+  readonly breadcrumbs?: readonly string[] | undefined;
+  readonly statusBadge?:
+    | { readonly status: string; readonly label?: string | undefined }
+    | undefined;
+  readonly footer?: string | undefined;
+  readonly thumbnailUrl?: string | undefined;
+  readonly divider?: boolean | undefined;
+  readonly hideTitle?: boolean | undefined;
+  readonly noAccent?: boolean | undefined;
+  readonly sections?: readonly SectionBuilder[] | undefined;
+  readonly actionRows?: readonly Row[] | undefined;
+  readonly separatorAboveActionRows?: boolean | undefined;
+  readonly mediaGallery?: MediaGalleryBuilder | undefined;
+  readonly headerImages?: readonly string[] | undefined;
 }
 
 export const ephemeralCard = (card: CardReply): CardReply => ({
@@ -50,7 +51,7 @@ function buildContainer(
   body: string | string[],
   opts: CardOptions = {},
   accentColor?: number,
-) {
+): ContainerBuilder {
   const c = new ContainerBuilder();
   if (accentColor !== undefined && !opts.noAccent) {
     c.setAccentColor(accentColor);
@@ -165,32 +166,32 @@ export const makeSuccessCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => makeCard(resolveCardColor("success"), title, body, opts);
+): CardReply => makeCard(resolveCardColor("success"), title, body, opts);
 
 export const makeErrorCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => makeCard(resolveCardColor("error"), title, body, opts);
+): CardReply => makeCard(resolveCardColor("error"), title, body, opts);
 
 export const makeWarningCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => makeCard(resolveCardColor("warning"), title, body, opts);
+): CardReply => makeCard(resolveCardColor("warning"), title, body, opts);
 
 export const makeInfoCard = (
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => makeCard(undefined, title, body, opts);
+): CardReply => makeCard(undefined, title, body, opts);
 
 export const makeCard = (
   color: number | undefined,
   title: string,
   body: string | string[],
   opts?: CardOptions,
-) => wrap(buildContainer(title, body, opts, color));
+): CardReply => wrap(buildContainer(title, body, opts, color));
 
 const cutText = (text: string, limit: number): string =>
   text.length > limit ? `${text.slice(0, Math.max(0, limit - 1))}…` : text;

@@ -22,7 +22,7 @@ export const EconomyConfigSchema = z.object({
   workMinPay: z.coerce.number().int().min(1).default(50),
   workMaxPay: z.coerce.number().int().min(1).default(200),
   shopItems: z.array(ShopItemSchema).default([]),
-}, {});
+});
 
 export type EconomyConfig = z.infer<typeof EconomyConfigSchema>;
 export type ShopItem = z.infer<typeof ShopItemSchema>;

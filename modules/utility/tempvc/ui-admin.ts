@@ -28,7 +28,6 @@ function generatorName(
 }
 
 function generatorLines(
-  _guild: Guild | null,
   generators: TempVcGenerator[],
   config: TempVcConfig,
 ): string[] {
@@ -53,7 +52,7 @@ export function adminPanelCard(
       : `**${generators.length}** generator${generators.length === 1 ? "" : "s"} configured.`,
   );
   if (generators.length > 0) {
-    body.push(...generatorLines(guild, generators, config));
+    body.push(...generatorLines(generators, config));
     if (generators.length > 20) {
       body.push(`-# ...and ${generators.length - 20} more generator(s).`);
     }

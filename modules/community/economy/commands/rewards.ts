@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "@lumi/module-kit";
+import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import { SlashCommandBuilder } from "discord.js";
 import { type EconomyConfig, getEconomyConfig } from "../config.js";
@@ -28,7 +28,7 @@ function capitalize(value: string): string {
 
 async function claimFixedReward(
   interaction: Parameters<CommandDefinition["execute"]>[0],
-  services: any,
+  services: ModuleServices,
   reward: RewardDefinition,
 ): Promise<void> {
   const guild = await requireGuild(interaction);

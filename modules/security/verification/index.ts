@@ -9,7 +9,7 @@ const VerificationConfigSchema = z.object({
   kickOnTimeout: z.boolean().default(false),
   mode: z.enum(["emoji", "none", "web"]).default("emoji"),
   target: z.enum(["everyone", "suspicious"]).default("everyone"),
-}, {});
+});
 
 export default defineModule({
   name: "security-verification",

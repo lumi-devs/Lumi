@@ -68,11 +68,13 @@ export const leaderboardDef: CommandDefinition = {
       return;
     }
 
-    const lines = users.map((user: any, index: number) => {
-      const member = guild.members.cache.get(user.userId);
-      const name = member?.user.tag ?? `Unknown (${user.userId})`;
-      return `**#${(page - 1) * PerPage + index + 1}** ${name} — ${symbol} ${user.balance.toLocaleString()}`;
-    });
+    const lines = users.map(
+      (user: { userId: string; balance: bigint }, index: number) => {
+        const member = guild.members.cache.get(user.userId);
+        const name = member?.user.tag ?? `Unknown (${user.userId})`;
+        return `**#${(page - 1) * PerPage + index + 1}** ${name} — ${symbol} ${user.balance.toLocaleString()}`;
+      },
+    );
 
     await interaction.reply(
       ephemeralCard(

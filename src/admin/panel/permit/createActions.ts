@@ -23,7 +23,7 @@ import type { PermitHost } from "./host.js";
 
 const SelectOptionLimit = 25;
 
-/** Active create flow, or the permit list after resetting a stale one. */
+
 async function activeCreateFlow(host: PermitHost): Promise<CreateFlow | null> {
   const flow = host.getFlow();
   if (flow?.kind === "create") return flow;
@@ -120,7 +120,7 @@ export async function handleCreateAction(
     const name =
       requested ??
       uniquePermitName(existingNames, suggestPermitName(flow.nodes, flow.polarity));
-    // New permits go last; `position` only needs to be past the current tail.
+
     const position = permits.reduce(
       (next, permit) => Math.max(next, permit.position + 1),
       0,

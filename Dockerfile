@@ -43,7 +43,7 @@ COPY --chown=1000:1000 config/redis.conf /usr/local/etc/redis/redis.conf
 RUN mkdir -p /app/data/addons && chown -R 1000:1000 /app/data
 
 USER bun
-EXPOSE 8080 8091 9090
+EXPOSE 8091 9090
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl -f http://localhost:9090/healthz || exit 1

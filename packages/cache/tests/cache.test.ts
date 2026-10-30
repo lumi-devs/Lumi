@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Cache } from "../src/cache.js";
 
-// Mock Redis
+
 const createMockRedis = () => ({
   get: vi.fn(),
   set: vi.fn(),
@@ -15,10 +15,10 @@ const createMockRedis = () => ({
   })),
 });
 
-// Mock InvalidationBus
+
 const createMockInvalidationBus = () => {
   const listeners = new Map<string, Set<(keys: string[]) => void>>();
-  
+
   return {
     subscribe: vi.fn((namespace: string, listener: (keys: string[]) => void) => {
       if (!listeners.has(namespace)) listeners.set(namespace, new Set());
@@ -43,12 +43,12 @@ describe("Cache", () => {
   beforeEach(() => {
     mockRedis = createMockRedis();
     mockInvalidation = createMockInvalidationBus();
-    
+
     mockRedis.get.mockResolvedValue(null);
     mockRedis.set.mockResolvedValue("OK");
     mockRedis.del.mockResolvedValue(1);
     mockRedis.mget.mockResolvedValue([null, null]);
-    
+
     cache = new Cache({
       redis: mockRedis,
       invalidation: mockInvalidation,

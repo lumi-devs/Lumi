@@ -11,10 +11,10 @@ cluster/sentinel branches without a measured requirement.
 
 ## Clients
 
-- `createRedisClient({ url, role, logger })` — lazy connect, 5s command timeout,
-  no offline queue, bounded retry backoff, command-duration metrics.
+- `createRedisClient(options?)` — lazy connect, ready check, bounded retry
+  backoff, `maxRetriesPerRequest: 3`.
 - Cache/publisher: one client.
-- Subscriber: a dedicated client owned by `InvalidationBus`.
+- Subscriber: a dedicated client owned by `InvalidationBus` (`redis.duplicate()`).
 
 ## Keys
 
@@ -47,7 +47,9 @@ cache clears its local state. Writes must call this after commit.
 
 ## Locks and cooldowns
 
-- `withLock(redis, key, ttlMs, work)` — SET NX PX + compare-and-delete Lua.
-- `claim(redis, key, ttlMs)` — one-shot cooldown claim, returns `false` if held.
+- `withLock(redis, key, fn, options?)` — acquires a SET NX PX lock, runs `fn`,
+  and releases with a compare-and-delete Lua script.
+- `createLock(redis, key, options?)` / `DistributedLock` — manual acquire/release
+  with the same semantics.
 
 Do not use a local `Map` for cross-process coordination.

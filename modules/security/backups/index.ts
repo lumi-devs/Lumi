@@ -5,7 +5,7 @@ const BackupsConfigSchema = z.object({
   enabled: z.boolean().default(false),
   intervalHours: z.number().int().min(1).max(168).default(3),
   keepCount: z.number().int().min(1).max(50).default(10),
-}, {});
+});
 
 export default defineModule({
   name: "security-backups",

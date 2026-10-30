@@ -36,7 +36,7 @@ export function formatSubtitle(text: string, icon?: string): string {
   return `-# ${formatted}`;
 }
 
-export function formatBreadcrumbs(crumbs: string[], separator = " ❯ "): string {
+export function formatBreadcrumbs(crumbs: readonly string[], separator = " ❯ "): string {
   return crumbs
     .map((crumb, idx) =>
       idx === crumbs.length - 1 ? `**${crumb}**` : crumb,

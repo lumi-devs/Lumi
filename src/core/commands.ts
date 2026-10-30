@@ -82,11 +82,14 @@ async function getCacheHitRatio(): Promise<number> {
 }
 
 async function getDbLatency(prisma: PrismaClient): Promise<number> {
-  const t0 = Date.now();
+  const startedAt = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
-  } catch {}
-  return Date.now() - t0;
+  } catch {
+
+
+  }
+  return Date.now() - startedAt;
 }
 
 interface ShardBlockInput {
@@ -143,7 +146,7 @@ async function buildPingComponents(
 
   const shardBlocks = pageShardIds.map((shardId) => {
     const shard = client.ws.shards.get(shardId);
-    const shardGuilds = guilds.filter((g) => (g.shardId ?? 0) === shardId);
+    const shardGuilds = guilds.filter((guild) => (guild.shardId ?? 0) === shardId);
     return buildShardBlock({
       shardId,
       ping: shard?.ping ?? client.ws.ping ?? 0,
@@ -152,7 +155,10 @@ async function buildPingComponents(
       rss: mem.rss,
       ramPercent,
       servers: shardGuilds.length,
-      members: shardGuilds.reduce((sum, g) => sum + (g.memberCount ?? 0), 0),
+      members: shardGuilds.reduce(
+        (sum, guild) => sum + (guild.memberCount ?? 0),
+        0,
+      ),
     });
   });
 
@@ -208,7 +214,7 @@ export const pingCommand = {
   async execute(
     interaction: ChatInputCommandInteraction,
     services: { prisma: PrismaClient; client: Client },
-  ) {
+  ): Promise<void> {
     const userId = interaction.user.id;
     const dbLatency = await getDbLatency(services.prisma);
 
@@ -223,14 +229,14 @@ export async function handlePingButton(
   interaction: ButtonInteraction,
   services: { prisma: PrismaClient; client: Client },
 ): Promise<boolean> {
-  const [, action, deltaStr, userId] = interaction.customId.split(":");
-  if (action !== "p" || !deltaStr || !userId) return false;
+  const [, action, deltaText, userId] = interaction.customId.split(":");
+  if (action !== "p" || !deltaText || !userId) return false;
   if (interaction.user.id !== userId) {
     await interaction.reply(ownershipDenied());
     return true;
   }
 
-  const delta = parseInt(deltaStr, 10);
+  const delta = parseInt(deltaText, 10);
   const currentPage = pingPage(userId);
   const maxPage = totalPagesFor(services.client.ws.shards.size) - 1;
   const newPage = Math.min(maxPage, Math.max(0, currentPage + delta));

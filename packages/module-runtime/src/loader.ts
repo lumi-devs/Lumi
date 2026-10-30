@@ -65,7 +65,7 @@ function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   return a.patch - b.patch;
 }
 
-/** Fallback for the operators manifests use when `Bun.semver` is unavailable. */
+
 function matchesComparator(version: ParsedVersion, comparator: string): boolean {
   const operator = /^(>=|<=|>|<|=|\^|~)/.exec(comparator)?.[1] ?? "";
   const target = parseVersion(comparator.slice(operator.length));
@@ -146,11 +146,19 @@ export function checkDependencies(
   return issues;
 }
 
+
+export function submoduleManifestName(
+  supermodule: string,
+  directory: string,
+): string {
+  return `${supermodule}-${directory}`;
+}
+
 export class ModuleLoader {
   private modules = new Map<string, LoadedModule>();
   private moduleServices = new Map<string, ModuleServices>();
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
-  private services: any = {};
+  private services = {} as ModuleServices;
 
   addRoot(path: string, origin: "bundled" | "addon"): void {
     this.roots.push({ path: resolve(path), origin });
@@ -295,9 +303,13 @@ export class ModuleLoader {
       const subPath = join(modulePath, entry.name);
       const subManifest = await this.readManifest(subPath);
       if (!subManifest) continue;
-      if (entry.name !== subManifest.name) {
+
+
+
+      const expectedName = submoduleManifestName(manifest.name, entry.name);
+      if (subManifest.name !== expectedName) {
         console.error(
-          `Submodule directory "${entry.name}" does not match manifest name "${subManifest.name}".`,
+          `Submodule directory "${entry.name}" must use manifest name "${expectedName}", got "${subManifest.name}".`,
         );
         continue;
       }
@@ -317,8 +329,11 @@ export class ModuleLoader {
     }
   }
 
-  async loadAll(discovered: LoadedModule[], services: any): Promise<LoadedModule[]> {
-    this.services = services;
+  async loadAll(
+    discovered: LoadedModule[],
+    services: Record<string, unknown>,
+  ): Promise<LoadedModule[]> {
+    this.services = services as unknown as ModuleServices;
     const { ordered, cyclic } = this.sortModules(discovered);
     for (const name of cyclic) {
       console.error(`Module ${name} is part of a dependency cycle; skipping.`);
@@ -358,7 +373,10 @@ export class ModuleLoader {
         continue;
       }
 
-      const moduleServices: ModuleServices = { ...services, __moduleName: name };
+      const moduleServices = {
+        ...services,
+        __moduleName: name,
+      } as unknown as ModuleServices;
       try {
         await module.definition.onLoad(moduleServices);
       } catch (error) {
@@ -468,28 +486,29 @@ export class ModuleLoader {
     await definition.onLoad(services);
   }
 
-  async unload(name: string): Promise<LoadedModule[]> {
+  async unload(moduleName: string): Promise<LoadedModule[]> {
     const removed = this.listAll().filter(
-      (module) => module.manifest.name === name || module.supermodule === name,
+      (module) =>
+        module.manifest.name === moduleName || module.supermodule === moduleName,
     );
 
     for (const module of removed) {
-      const moduleName = module.manifest.name;
-      const services = this.moduleServices.get(moduleName) ?? this.services;
+      const name = module.manifest.name;
+      const services = this.moduleServices.get(name) ?? this.services;
       try {
         await module.definition.onUnload(services);
       } catch (error) {
-        console.error(`Failed to unload module ${moduleName}:`, error);
+        console.error(`Failed to unload module ${name}:`, error);
       }
-      this.modules.delete(moduleName);
-      this.moduleServices.delete(moduleName);
+      this.modules.delete(name);
+      this.moduleServices.delete(name);
     }
 
     return removed;
   }
 
-  getModule(name: string): LoadedModule | undefined {
-    return this.modules.get(name);
+  getModule(moduleName: string): LoadedModule | undefined {
+    return this.modules.get(moduleName);
   }
 
   listAll(): LoadedModule[] {

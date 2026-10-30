@@ -19,7 +19,7 @@ export async function connectDatabase(): Promise<void> {
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  // Shutdown must not throw, but a failed disconnect still needs to be visible.
+
   try {
     await prisma.$disconnect();
   } catch (error) {

@@ -17,7 +17,6 @@ import {
   ModulesPerPage,
   moduleListRowId,
   submoduleItems,
-  submodulePagePrefix,
   submoduleToggleId,
   supermoduleItems,
 } from "./modules.js";
@@ -150,7 +149,7 @@ export async function renderSubmodules(
   }
   if (totalPages > 1) {
     rows.push(
-      pageRow(submodulePagePrefix(supermoduleName, originPage), currentPage, totalPages),
+      pageRow(moduleListRowId(supermoduleName, originPage), currentPage, totalPages),
     );
   }
   rows.push(

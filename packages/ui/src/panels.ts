@@ -18,19 +18,19 @@ export function row(...components: MessageActionRowComponentBuilder[]): Row {
 }
 
 export interface CreateActionButtonOptions {
-  customId?: string | undefined;
-  url?: string | undefined;
-  label?: string | undefined;
-  style?: ButtonStyle | undefined;
-  emoji?: string | APIMessageComponentEmoji | undefined;
-  disabled?: boolean | undefined;
+  readonly customId?: string | undefined;
+  readonly url?: string | undefined;
+  readonly label?: string | undefined;
+  readonly style?: ButtonStyle | undefined;
+  readonly emoji?: string | APIMessageComponentEmoji | undefined;
+  readonly disabled?: boolean | undefined;
 }
 
 export interface CreatePaginationRowOptions {
-  customIdPrefix: string;
-  currentPage: number;
-  totalPages: number;
-  disabled?: boolean;
+  readonly customIdPrefix: string;
+  readonly currentPage: number;
+  readonly totalPages: number;
+  readonly disabled?: boolean;
 }
 
 export const ButtonLabelLimit = 80;
@@ -100,7 +100,7 @@ export function createPaginationRow(
 
 export function buildSafeActionRows<
   T extends AnyComponentBuilder = MessageActionRowComponentBuilder,
->(rows: (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
+>(rows: readonly (ActionRowBuilder<T> | unknown)[]): ActionRowBuilder<T>[] {
   const MaxRows = 5;
   const MaxComponents = 5;
 
@@ -117,9 +117,9 @@ export function buildSafeActionRows<
 }
 
 export interface Tab {
-  id: string;
-  label: string;
-  emoji?: string | APIMessageComponentEmoji;
+  readonly id: string;
+  readonly label: string;
+  readonly emoji?: string | APIMessageComponentEmoji;
 }
 
 export function tabRow(
@@ -144,11 +144,11 @@ export function tabRow(
 }
 
 export interface AccessoryButton {
-  customId: string;
-  label?: string;
-  style?: ButtonStyle;
-  emoji?: string | APIMessageComponentEmoji;
-  disabled?: boolean;
+  readonly customId: string;
+  readonly label?: string;
+  readonly style?: ButtonStyle;
+  readonly emoji?: string | APIMessageComponentEmoji;
+  readonly disabled?: boolean;
 }
 
 export const SectionLineLimit = 3;
@@ -192,24 +192,24 @@ export function confirmRow(
 }
 
 export interface ConfirmRowOptions {
-  confirmId: string;
-  cancelId: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  confirmStyle?: ButtonStyle;
+  readonly confirmId: string;
+  readonly cancelId: string;
+  readonly confirmLabel?: string;
+  readonly cancelLabel?: string;
+  readonly confirmStyle?: ButtonStyle;
 }
 
 export interface CategoryTab {
-  id: string;
-  label: string;
-  emoji?: string;
-  count?: number;
-  description?: string;
+  readonly id: string;
+  readonly label: string;
+  readonly emoji?: string;
+  readonly count?: number;
+  readonly description?: string;
 }
 
 export function createCategorySubmenuRow(
   customId: string,
-  categories: CategoryTab[],
+  categories: readonly CategoryTab[],
   activeCategoryId?: string,
   placeholder = "Select Category...",
 ): ActionRowBuilder<StringSelectMenuBuilder> {
@@ -232,17 +232,17 @@ export function createCategorySubmenuRow(
 }
 
 export interface NavAction {
-  customId: string;
-  label: string;
-  style?: ButtonStyle;
-  emoji?: string | APIMessageComponentEmoji;
-  disabled?: boolean;
+  readonly customId: string;
+  readonly label: string;
+  readonly style?: ButtonStyle;
+  readonly emoji?: string | APIMessageComponentEmoji;
+  readonly disabled?: boolean;
 }
 
 export interface NavRowOptions {
-  backId: string;
-  backLabel?: string;
-  action: NavAction;
+  readonly backId: string;
+  readonly backLabel?: string;
+  readonly action: NavAction;
 }
 
 export function backRow(

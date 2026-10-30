@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import { makeSuccessCard } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
 import { type LevelingConfig, type LevelReward, rolesEarnXp } from "./config.js";
@@ -25,7 +26,7 @@ function earnedRewards(
 }
 
 export async function applyRewardRoles(
-  services: any,
+  services: ModuleServices,
   config: LevelingConfig,
   member: GuildMember,
   level: number,
@@ -101,7 +102,7 @@ function formatAnnouncement(
 }
 
 async function announceLevelUp(
-  services: any,
+  services: ModuleServices,
   config: LevelingConfig,
   guild: Guild,
   input: GrantXpInput,
@@ -131,7 +132,7 @@ async function announceLevelUp(
 }
 
 export async function grantXp(
-  services: any,
+  services: ModuleServices,
   config: LevelingConfig,
   input: GrantXpInput,
 ): Promise<void> {
@@ -195,7 +196,7 @@ export async function grantXp(
 }
 
 export async function grantVoiceXp(
-  services: any,
+  services: ModuleServices,
   guild: Guild,
   member: GuildMember,
   minutes: number,

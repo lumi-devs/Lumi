@@ -8,7 +8,7 @@ const PanicConfigSchema = z.object({
   durationMinutes: z.number().int().min(1).max(1440).default(30),
   notifyOwners: z.boolean().default(true),
   lockModCommands: z.boolean().default(false),
-}, {});
+});
 
 export default defineModule({
   name: "security-panic",

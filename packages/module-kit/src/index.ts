@@ -1,5 +1,10 @@
-
-import type { CommandDefinition, ListenerDefinition, ModuleCapability, ModuleServices, TaskDefinition } from "./types.js";
+import type {
+  CommandDefinition,
+  ListenerDefinition,
+  ModuleCapability,
+  ModuleServices,
+  TaskDefinition,
+} from "./types.js";
 
 export interface ModuleDefinition {
   name: string;
@@ -7,16 +12,16 @@ export interface ModuleDefinition {
   emoji: string;
   description: string;
   version: string;
-  config: any;
-  commands: CommandDefinition[];
-  listeners: ListenerDefinition[];
-  tasks: TaskDefinition[];
+  config: unknown;
+  commands: readonly CommandDefinition[];
+  listeners: readonly ListenerDefinition[];
+  tasks: readonly TaskDefinition[];
   onLoad: (services: ModuleServices) => Promise<Disposer[]>;
   onUnload: (services: ModuleServices) => Promise<void>;
-  dependencies?: Record<string, string>;
-  requirements?: string[];
-  conflicts?: string[];
-  capabilities?: ModuleCapability[];
+  dependencies?: Readonly<Record<string, string>>;
+  requirements?: readonly string[];
+  conflicts?: readonly string[];
+  capabilities?: readonly ModuleCapability[];
 }
 
 export type Disposer = () => void | Promise<void>;

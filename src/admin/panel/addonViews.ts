@@ -38,11 +38,11 @@ const IntervalChoices = [
   { label: "Every week", value: "10080" },
 ];
 
-export function short(commit: string | null): string {
+export function formatCommit(commit: string | null): string {
   return commit ? `\`${commit.slice(0, 7)}\`` : "*unknown*";
 }
 
-export function intervalLabel(minutes: number): string {
+export function formatInterval(minutes: number): string {
   if (minutes % 10080 === 0) return `${minutes / 10080} week(s)`;
   if (minutes % 1440 === 0) return `${minutes / 1440} day(s)`;
   if (minutes % 60 === 0) return `${minutes / 60} hour(s)`;
@@ -133,7 +133,7 @@ async function renderHome(
       ...(notice ? [`✅ ${notice}`, ""] : []),
       `**Repositories:** ${repos.length}`,
       `**Installed:** ${installed.length}`,
-      `**Auto-update:** ${auto.enabled ? `every ${intervalLabel(auto.intervalMinutes)}` : "disabled"}`,
+      `**Auto-update:** ${auto.enabled ? `every ${formatInterval(auto.intervalMinutes)}` : "disabled"}`,
     ],
     {
       sections,
@@ -205,7 +205,7 @@ async function renderRepos(
             options: repos.slice(0, ReposPerPage).map((repo) => ({
               label: repo.name,
               value: repo.name,
-              description: `${repo.branch ?? "default branch"} · ${short(repo.commit)} · ${repo.installed} installed`,
+              description: `${repo.branch ?? "default branch"} · ${formatCommit(repo.commit)} · ${repo.installed} installed`,
             })),
           }),
         ),
@@ -238,7 +238,7 @@ async function renderRepo(
       ...(notice ? [`✅ ${notice}`, ""] : []),
       `**URL:** ${repo.url}`,
       `**Branch:** ${repo.branch ?? "*default*"}`,
-      `**Commit:** ${short(repo.commit)}`,
+      `**Commit:** ${formatCommit(repo.commit)}`,
       `**Installed:** ${repo.installed}`,
     ],
     {
@@ -424,7 +424,7 @@ async function renderManage(
       ...(notice ? [`✅ ${notice}`, ""] : []),
       `**Repository:** ${addon.repoName}`,
       `**Version:** ${addon.version ?? "unknown"}`,
-      `**Commit:** ${short(addon.commit)}`,
+      `**Commit:** ${formatCommit(addon.commit)}`,
       `**Pinned:** ${addon.pinned ? "Yes — excluded from updates" : "No"}`,
       `**Installed:** <t:${Math.floor(addon.installedAt.getTime() / 1000)}:R>`,
     ],
@@ -469,7 +469,7 @@ async function renderAutoUpdate(
     [
       ...(notice ? [`✅ ${notice}`, ""] : []),
       `**Status:** ${auto.enabled ? "enabled" : "disabled"}`,
-      `**Interval:** every ${intervalLabel(auto.intervalMinutes)}`,
+      `**Interval:** every ${formatInterval(auto.intervalMinutes)}`,
       `**Last check:** ${auto.lastCheckedAt ? `<t:${Math.floor(Date.parse(auto.lastCheckedAt) / 1000)}:R>` : "*never*"}`,
       "-# Updates apply automatically. Failed updates roll back.",
     ],

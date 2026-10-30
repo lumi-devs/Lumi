@@ -165,7 +165,7 @@ export function suggestPermitName(
   return `${base} +${nodes.length - 1}`.slice(0, 64);
 }
 
-/** Append a numeric suffix so generated names never collide with an existing permit. */
+
 export function uniquePermitName(
   existingNames: Iterable<string>,
   base: string,

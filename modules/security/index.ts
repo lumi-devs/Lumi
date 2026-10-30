@@ -4,9 +4,9 @@ import { z } from "zod";
 const SecurityConfigSchema = z.object({
   logChannelId: z.string().nullable().default(null),
   quarantineRoleId: z.string().nullable().default(null),
-  trustedRoleIds: z.array(z.string(), {}).default([]),
+  trustedRoleIds: z.array(z.string()).default([]),
   minAccountAgeHours: z.number().int().min(0).max(8760).default(0),
-}, {});
+});
 
 const SecuritySupermodule = defineModule({
   name: "security",

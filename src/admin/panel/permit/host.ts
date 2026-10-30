@@ -1,6 +1,5 @@
 import type { ModuleLoader } from "@lumi/module-runtime";
-import type { Permit, PermitRepository } from "@lumi/permits";
-import { isBotOwner } from "@lumi/permits";
+import { isBotOwner, type Permit, type PermitRepository } from "@lumi/permits";
 import type { CardReply } from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
@@ -15,19 +14,19 @@ import type {
 } from "../../permits/flows.js";
 import type { MessageModalSubmit } from "../common.js";
 
-/** Interactions whose message can be edited in place. */
+
 export type PermitInteraction =
   | ButtonInteraction
   | AnySelectMenuInteraction
   | MessageModalSubmit;
 
-/** Any interaction the panel accepts at its boundary. */
+
 export type AnyPermitInteraction =
   | ButtonInteraction
   | AnySelectMenuInteraction
   | ModalSubmitInteraction;
 
-/** State the card builders need to render a permit view. */
+
 export interface PermitCardContext {
   readonly permitRepo: PermitRepository;
   readonly guildId: string;
@@ -40,7 +39,7 @@ export interface PermitCardContext {
   missingPermitCard(): CardReply;
 }
 
-/** Everything an action handler needs: card builders plus flow storage. */
+
 export interface PermitHost extends PermitCardContext {
   mainCard(page: number): Promise<CardReply>;
   reorderCard(page: number): Promise<CardReply>;

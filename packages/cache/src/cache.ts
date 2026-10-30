@@ -1,29 +1,29 @@
 import { type Codec, createCodec } from "./codec.js";
 
-/**
- * Minimal Redis surface used by the cache. Kept structural so tests can use a
- * plain mock and ioredis clients satisfy it without adapters.
- */
+
+
+
+
 export interface CacheRedis {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, unit: "PX", ttlMs: number): Promise<unknown>;
   del(...keys: string[]): Promise<unknown>;
   mget(...keys: string[]): Promise<(string | null)[]>;
-  /**
-   * Only needed for the stale-write cleanup. Optional so test doubles do not
-   * have to emulate Lua; a production ioredis client always provides it.
-   */
+
+
+
+
   eval?(script: string, numKeys: number, key: string, value: string): Promise<unknown>;
 }
 
-export interface CacheOptions<_T> {
-  redis: CacheRedis;
-  invalidation: InvalidationBus;
-  metrics?: CacheMetrics;
-  defaultTtlMs?: number;
-  defaultNegativeTtlMs?: number;
-  l1MaxSize?: number;
-  l1MaxTtlMs?: number;
+export interface CacheOptions {
+  readonly redis: CacheRedis;
+  readonly invalidation: InvalidationBus;
+  readonly metrics?: CacheMetrics;
+  readonly defaultTtlMs?: number;
+  readonly defaultNegativeTtlMs?: number;
+  readonly l1MaxSize?: number;
+  readonly l1MaxTtlMs?: number;
 }
 
 export interface InvalidationBus {
@@ -70,7 +70,7 @@ interface LoadFlight<T> {
 const DELETE_IF_VALUE_SCRIPT =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
 
-/** State shared by a cache and all of its namespaces in one process. */
+
 interface CacheState<T> {
   l1: Map<string, L1Entry<T>>;
   flights: Map<string, LoadFlight<T>>;
@@ -94,7 +94,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
   private namespacePrefix = "";
   private label = "default";
 
-  constructor(options: CacheOptions<T>, shared?: CacheState<T>) {
+  constructor(options: CacheOptions, shared?: CacheState<T>) {
     this.redis = options.redis;
     this.invalidation = options.invalidation;
     this.metrics = options.metrics;
@@ -125,7 +125,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       .onResync()
       .then(() => {
         this.l1.clear();
-        // Loads that started before the reconnect may carry pre-outage data.
+
         for (const fullKey of this.flights.keys()) this.markDiscarded(fullKey);
       })
       .catch((error: unknown) => {
@@ -159,18 +159,17 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     return `${this.namespacePrefix}${key}`;
   }
 
-  /**
-   * Invalidate local entries and mark any in-flight load as discarded. The
-   * generation counter makes a load that started before the invalidation skip
-   * its write, so it cannot resurrect the value that was just removed.
-   */
+
+
+
+
+
   private discard(keys: readonly string[]): void {
     for (const fullKey of keys) {
       this.discardKey(fullKey);
     }
   }
 
-  /** Drop a single key's L1 entry and discard its in-flight load, if any. */
   private discardKey(fullKey: string): void {
     this.l1.delete(fullKey);
     this.markDiscarded(fullKey);
@@ -180,9 +179,9 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     const flight = this.flights.get(fullKey);
     if (!flight) return;
     this.loadGenerations.set(fullKey, flight.generation + 1);
-    // Do not let callers arriving after the invalidation join a load whose
-    // result is already known to be stale. The original callers keep their
-    // reference to the promise and still receive its result.
+
+
+
     this.flights.delete(fullKey);
   }
 
@@ -193,7 +192,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       this.l1.delete(fullKey);
       return undefined;
     }
-    // Map iteration order is insertion order; re-insert to implement LRU.
+
     this.l1.delete(fullKey);
     this.l1.set(fullKey, entry);
     return entry;
@@ -239,7 +238,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       this.recordL1Hit(decoded);
       return decoded;
     } catch {
-      // A value that cannot be decoded is a miss; the next load rewrites it.
+
       this.metrics?.recordMiss(this.label);
       return null;
     }
@@ -271,8 +270,8 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       resolve = res;
       reject = rej;
     });
-    // Register the flight before the loader can run so a synchronous throw or
-    // invalidation still finds it.
+
+
     this.flights.set(fullKey, { promise, generation });
     this.loadGenerations.set(fullKey, generation);
     void this.runFlight(
@@ -285,14 +284,14 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
     return promise;
   }
 
-  /** Remove a value we wrote only if nothing newer replaced it in the meantime. */
+
   private async dropIfStill(fullKey: string, encoded: string): Promise<void> {
     if (this.redis.eval) {
       await this.redis.eval(DELETE_IF_VALUE_SCRIPT, 1, fullKey, encoded);
       return;
     }
-    // Test doubles without Lua: the key is only present when this load won the
-    // race, so an unconditional delete cannot remove another value there.
+
+
     const current = await this.redis.get(fullKey);
     if (current === encoded) await this.redis.del(fullKey);
   }
@@ -317,9 +316,9 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       await this.redis.set(fullKey, encoded, "PX", writeTtlMs);
 
       if ((this.loadGenerations.get(fullKey) ?? 0) !== generation) {
-        // The invalidation may have run its DEL before this SET reached Redis.
-        // Delete only if the stored value is still ours; a newer explicit
-        // `set` must survive this cleanup.
+
+
+
         this.metrics?.recordStaleWrite(this.label);
         await this.dropIfStill(fullKey, encoded).catch((error: unknown) => {
           console.error("cache stale write cleanup failed", { key: fullKey, error });
@@ -337,8 +336,8 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
         this.flights.delete(fullKey);
         this.loadGenerations.delete(fullKey);
       } else if (!current) {
-        // This flight was discarded and no newer load replaced it, so its
-        // bumped generation would otherwise leak for the key.
+
+
         this.loadGenerations.delete(fullKey);
       }
     }
@@ -392,7 +391,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
 
   async set(key: string, value: T, ttlMs: number): Promise<void> {
     const fullKey = this.makeKey(key);
-    // An explicit write wins over a load that started earlier.
+
     this.discardKey(fullKey);
     const encoded = this.codec.encode(value);
     await this.redis.set(fullKey, encoded, "PX", ttlMs);
@@ -413,6 +412,6 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
   }
 }
 
-export function createCache<T>(options: CacheOptions<T>): Cache<T> {
+export function createCache<T>(options: CacheOptions): Cache<T> {
   return new Cache<T>(options);
 }

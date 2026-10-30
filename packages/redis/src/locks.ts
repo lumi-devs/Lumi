@@ -6,9 +6,9 @@ const releaseScript =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
 
 export interface LockOptions {
-  ttlMs?: number;
-  retryMs?: number;
-  maxRetries?: number;
+  readonly ttlMs?: number;
+  readonly retryMs?: number;
+  readonly maxRetries?: number;
 }
 
 export class DistributedLock {
@@ -30,8 +30,8 @@ export class DistributedLock {
 
   async acquire(): Promise<boolean> {
     if (this.acquired) return true;
-    // A per-acquisition token stops a slow owner from deleting a lock that a
-    // later owner acquired after this one's TTL expired.
+
+
     const token = crypto.randomUUID();
     for (let i = 0; i < this.maxRetries; i++) {
       const result = await this.redis.set(this.key, token, "PX", this.ttlMs, "NX");
@@ -40,7 +40,7 @@ export class DistributedLock {
         this.token = token;
         return true;
       }
-      await new Promise((r) => setTimeout(r, this.retryMs));
+      await new Promise((resolve) => setTimeout(resolve, this.retryMs));
     }
     return false;
   }

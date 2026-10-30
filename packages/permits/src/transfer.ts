@@ -40,22 +40,22 @@ export interface PermitExportData {
 }
 
 export interface PermitImportOptions {
-  overwrite?: boolean;
-  skipBuiltin?: boolean;
-  /** Author recorded on the import audit-log rows. */
-  userId?: string;
+  readonly overwriteExisting?: boolean;
+  readonly skipBuiltins?: boolean;
+
+  readonly userId?: string;
 }
 
 export interface PermitImportResult {
-  imported: number;
-  skipped: number;
-  errors: string[];
+  readonly imported: number;
+  readonly skipped: number;
+  readonly errors: readonly string[];
 }
 
-const TARGET_TYPES: ReadonlySet<string> = new Set(["USER", "ROLE", "CHANNEL"]);
+const TargetTypes: ReadonlySet<string> = new Set(["USER", "ROLE", "CHANNEL"]);
 
 function isPermitTargetType(value: unknown): value is PermitTargetType {
-  return typeof value === "string" && TARGET_TYPES.has(value);
+  return typeof value === "string" && TargetTypes.has(value);
 }
 
 function toJsonInput(
@@ -69,8 +69,8 @@ export async function exportPermits(
   db: Pick<PrismaClient, "permit">,
   guildId: string,
 ): Promise<PermitExportData> {
-  // Assignments arrive with their permit; a second query for the same rows
-  // only duplicated work and output.
+
+
   const permits = await db.permit.findMany({
     where: { guildId },
     include: { assignments: true },
@@ -127,10 +127,10 @@ export async function importPermits(
   data: PermitExportData,
   options: PermitImportOptions = {},
 ): Promise<PermitImportResult> {
-  const overwrite = options.overwrite ?? false;
-  const skipBuiltin = options.skipBuiltin ?? true;
+  const overwriteExisting = options.overwriteExisting ?? false;
+  const skipBuiltins = options.skipBuiltins ?? true;
   const userId = options.userId ?? "unknown";
-  const result: PermitImportResult = { imported: 0, skipped: 0, errors: [] };
+  const result = { imported: 0, skipped: 0, errors: [] as string[] };
 
   if (data.guildId !== guildId) {
     result.errors.push("Guild ID mismatch in import data");
@@ -149,7 +149,7 @@ export async function importPermits(
   }
 
   for (const permitData of data.permits) {
-    if (skipBuiltin && permitData.builtin) {
+    if (skipBuiltins && permitData.builtin) {
       result.skipped++;
       continue;
     }
@@ -173,7 +173,7 @@ export async function importPermits(
           select: { id: true },
         });
 
-        if (existing && !overwrite) {
+        if (existing && !overwriteExisting) {
           result.skipped++;
           return;
         }
@@ -237,7 +237,7 @@ export async function importPermits(
 
         imported = true;
       });
-      // Commit succeeded: only now count the import.
+
       if (imported) result.imported++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

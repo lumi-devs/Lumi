@@ -4,6 +4,12 @@ import { showEditModal } from "./editDialog.js";
 import type { PermitHost } from "./host.js";
 import { missingPermitCard } from "./listViews.js";
 
+
+function pageFrom(raw: string): number {
+  const page = Number(raw);
+  return Number.isNaN(page) ? 0 : page;
+}
+
 export async function handleListAction(
   host: PermitHost,
   customId: string,
@@ -24,10 +30,7 @@ export async function handleListAction(
   if (customId.startsWith("permit_reorder_page:")) {
     const [, direction, rawPage] = customId.split(":");
     if (direction === "prev" || direction === "next") {
-      const page = Number(rawPage);
-      await interaction.update(
-        await host.reorderCard(Number.isNaN(page) ? 0 : page),
-      );
+      await interaction.update(await host.reorderCard(pageFrom(rawPage)));
     }
     return true;
   }
@@ -36,22 +39,16 @@ export async function handleListAction(
     const [, direction, rawId, rawPage] = customId.split(":");
     if (direction !== "up" && direction !== "down") return true;
     const permitId = Number(rawId);
-    const page = Number(rawPage);
     if (!Number.isInteger(permitId)) return true;
     await host.permitRepo.movePermit(host.guildId, permitId, direction);
-    await interaction.update(
-      await host.reorderCard(Number.isNaN(page) ? 0 : page),
-    );
+    await interaction.update(await host.reorderCard(pageFrom(rawPage)));
     return true;
   }
 
   if (customId.startsWith("permit_page:")) {
     const [, direction, rawPage] = customId.split(":");
     if (direction === "prev" || direction === "next") {
-      const page = Number(rawPage);
-      await interaction.update(
-        await host.mainCard(Number.isNaN(page) ? 0 : page),
-      );
+      await interaction.update(await host.mainCard(pageFrom(rawPage)));
     }
     return true;
   }

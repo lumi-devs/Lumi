@@ -79,6 +79,14 @@
       "description": "Maximum /work payout",
       "default": 200,
       "category": "Work"
+    },
+    {
+      "key": "shopItems",
+      "label": "Shop Items",
+      "type": "json",
+      "description": "Items sold by /shop",
+      "default": [],
+      "category": "Shop"
     }
   ],
   "dependencies": {

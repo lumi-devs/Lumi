@@ -81,6 +81,14 @@
       "description": "Delete channel when owner leaves",
       "default": true,
       "category": "Limits"
+    },
+    {
+      "key": "generators",
+      "label": "Generators",
+      "type": "json",
+      "description": "Join-to-create generator channels",
+      "default": [],
+      "category": "Limits"
     }
   ],
   "dependencies": {

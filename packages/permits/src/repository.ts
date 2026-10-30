@@ -16,7 +16,12 @@ import {
   isPermitValid,
   matchesConditions,
 } from "./evaluator.js";
-import { isPermitNumberConflict, isRecordNotFoundError, isUniqueConstraintError, nextPermitNumber } from "./numbering.js";
+import {
+  isPermitNumberConflict,
+  isRecordNotFoundError,
+  isUniqueConstraintError,
+  nextPermitNumber,
+} from "./numbering.js";
 import type {
   PermitExportData,
   PermitImportOptions,
@@ -62,7 +67,10 @@ export class PermitRepository {
     });
   }
 
-  async getPermit(guildId: string, permitId: number): Promise<PermitWithAssignments | null> {
+  async getPermit(
+    guildId: string,
+    permitId: number,
+  ): Promise<PermitWithAssignments | null> {
     return this.prisma.permit.findFirst({
       where: { id: permitId, guildId },
       include: { assignments: true },
@@ -72,7 +80,7 @@ export class PermitRepository {
   async createPermit(data: {
     guildId: string;
     name: string;
-    nodes: string[];
+    nodes: readonly string[];
     polarity: Polarity;
     position: number;
     number?: number;
@@ -120,7 +128,10 @@ export class PermitRepository {
     throw new Error("Could not allocate a permit number.");
   }
 
-  async updatePermit(permitId: number, data: Prisma.PermitUpdateInput): Promise<PermitWithAssignments | null> {
+  async updatePermit(
+    permitId: number,
+    data: Prisma.PermitUpdateInput,
+  ): Promise<PermitWithAssignments | null> {
     try {
       return await this.prisma.permit.update({
         where: { id: permitId },
@@ -143,7 +154,11 @@ export class PermitRepository {
     }
   }
 
-  async movePermit(guildId: string, permitId: number, direction: "up" | "down"): Promise<boolean> {
+  async movePermit(
+    guildId: string,
+    permitId: number,
+    direction: "up" | "down",
+  ): Promise<boolean> {
     const permit = await this.prisma.permit.findFirst({
       where: { id: permitId, guildId },
     });
@@ -198,7 +213,11 @@ export class PermitRepository {
     });
   }
 
-  async unassignPermit(permitId: number, targetType: PermitTargetType, targetId: string): Promise<boolean> {
+  async unassignPermit(
+    permitId: number,
+    targetType: PermitTargetType,
+    targetId: string,
+  ): Promise<boolean> {
     try {
       await this.prisma.permitAssignment.delete({
         where: {
@@ -233,11 +252,11 @@ export class PermitRepository {
       ],
     };
 
-    // The permit rows and the quarantine marker are independent reads.
+
     const [permits, quarantineValue] = await Promise.all([
       this.prisma.permit.findMany({
-        // Only rows that can contribute a grant/deny for this chain are
-        // fetched; conditions/schedule still need the in-memory checks below.
+
+
         where: {
           guildId,
           OR: [{ expiresAt: null }, { expiresAt: { gte: at } }],
@@ -353,7 +372,7 @@ export class PermitRepository {
 
   async explainPermitNodes(
     options: Omit<EvaluatePermitOptions, "permitNode">,
-    nodes: string[],
+    nodes: readonly string[],
     client?: Client,
   ): Promise<Map<string, EvaluatedPermit>> {
     const results = new Map<string, EvaluatedPermit>();
@@ -403,7 +422,7 @@ export class PermitRepository {
           builtin: true,
         });
       } catch (error) {
-        // A concurrent boot may have seeded the same name first.
+
         if (!isUniqueConstraintError(error)) throw error;
       }
     }

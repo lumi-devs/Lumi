@@ -7,7 +7,11 @@ import {
   makeWarningCard,
 } from "@lumi/ui";
 import type {
+  APIInteractionDataResolvedChannel,
+  Channel,
   ChatInputCommandInteraction,
+  GuildBasedChannel,
+  GuildChannel,
   GuildMember,
   GuildTextBasedChannel,
   User,
@@ -15,12 +19,21 @@ import type {
 import type { ModerationConfig } from "./config.js";
 
 export function isTextGuildChannel(
-  channel: any,
-): channel is GuildTextBasedChannel & { permissionOverwrites: any } {
-  return (
-    channel?.isTextBased?.() &&
-    "permissionOverwrites" in channel &&
-    !channel.isThread?.()
+  channel:
+    | Channel
+    | GuildBasedChannel
+    | APIInteractionDataResolvedChannel
+    | null
+    | undefined,
+): channel is GuildTextBasedChannel & {
+  permissionOverwrites: GuildChannel["permissionOverwrites"];
+} {
+  return Boolean(
+    channel &&
+      "isTextBased" in channel &&
+      channel.isTextBased() &&
+      "permissionOverwrites" in channel &&
+      !channel.isThread(),
   );
 }
 

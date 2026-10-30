@@ -3,6 +3,7 @@ import {
   defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
+  type ModuleServices,
 } from "@lumi/module-kit";
 import {
   AccentColors,
@@ -18,32 +19,34 @@ import {
   SlashCommandBuilder,
   type VoiceState,
 } from "discord.js";
-import { z } from "zod";
 
+import {
+  getLoggingConfig,
+  isLoggingEnabled,
+  LoggingConfigKey,
+  LoggingConfigSchema,
+} from "./config.js";
 import { isIgnored, sendLog } from "./services.js";
-
-const LoggingConfigSchema = z.object({
-  messageLogChannel: z.string().nullable().optional(),
-  editLogChannel: z.string().nullable().optional(),
-  deleteLogChannel: z.string().nullable().optional(),
-  voiceLogChannel: z.string().nullable().optional(),
-  ignoredChannels: z.array(z.string(), {}).default([]),
-}, {});
-
-type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
-
-const LoggingConfigKey = "logging";
 
 function eventCard(title: string, color: number, lines: string[], footer?: string): CardReply {
   return makeCard(color, title, lines, footer ? { footer } : undefined);
 }
 
-function isLoggingEnabled(services: any, guildId: string): boolean {
-  return services.modules?.isEnabled(guildId, LoggingConfigKey) ?? true;
-}
+type LogChannelKey =
+  | "messageLogChannel"
+  | "editLogChannel"
+  | "deleteLogChannel"
+  | "voiceLogChannel";
 
-async function getLoggingConfig(services: any, guildId: string): Promise<LoggingConfig> {
-  return ((await services.config.get(guildId, LoggingConfigKey)) ?? {}) as LoggingConfig;
+const LogChannelKeys: Record<string, LogChannelKey> = {
+  message: "messageLogChannel",
+  edit: "editLogChannel",
+  delete: "deleteLogChannel",
+  voice: "voiceLogChannel",
+};
+
+function logChannelKey(type: string): LogChannelKey | null {
+  return LogChannelKeys[type] ?? null;
 }
 
 const loggingConfigDef: CommandDefinition = {
@@ -75,7 +78,7 @@ const loggingConfigDef: CommandDefinition = {
   async execute(interaction, services) {
     const sub = interaction.options.getSubcommand();
     const guildId = interaction.guildId!;
-    const config = (await getLoggingConfig(services, guildId)) as any;
+    const config = await getLoggingConfig(services, guildId);
 
     switch (sub) {
       case "set": {
@@ -85,7 +88,8 @@ const loggingConfigDef: CommandDefinition = {
           await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild text channel")));
           return;
         }
-        const key = `${type}LogChannel`;
+        const key = logChannelKey(type);
+        if (!key) return;
         config[key] = channel.id;
         await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Log channel set", [
@@ -96,7 +100,8 @@ const loggingConfigDef: CommandDefinition = {
       }
       case "remove": {
         const type = interaction.options.getString("type", true);
-        const key = `${type}LogChannel`;
+        const key = logChannelKey(type);
+        if (!key) return;
         delete config[key];
         await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Log channel removed", [
@@ -110,7 +115,6 @@ const loggingConfigDef: CommandDefinition = {
           await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild channel")));
           return;
         }
-        config.ignoredChannels = config.ignoredChannels ?? [];
         if (!config.ignoredChannels.includes(channel.id)) config.ignoredChannels.push(channel.id);
         await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel ignored", [
@@ -124,7 +128,7 @@ const loggingConfigDef: CommandDefinition = {
           await interaction.reply(ephemeralCard(makeErrorCard("Invalid channel", "Must be a guild channel")));
           return;
         }
-        config.ignoredChannels = (config.ignoredChannels ?? []).filter((id: string) => id !== channel.id);
+        config.ignoredChannels = config.ignoredChannels.filter((id) => id !== channel.id);
         await services.config.set(guildId, LoggingConfigKey, config);
         await interaction.reply(ephemeralCard(makeSuccessCard("Channel unignored", [
           `**Channel**\n${channel}`,
@@ -132,7 +136,7 @@ const loggingConfigDef: CommandDefinition = {
         break;
       }
       case "view": {
-        const ignored = (config.ignoredChannels ?? []).map((id: string) => `<#${id}>`).join(", ") || "None";
+        const ignored = config.ignoredChannels.map((id) => `<#${id}>`).join(", ") || "None";
         await interaction.reply(ephemeralCard(makeCard(
           undefined,
           "📝 Logging Settings",
@@ -153,7 +157,7 @@ const loggingConfigDef: CommandDefinition = {
 
 const onMessageCreateListener: ListenerDefinition = {
   event: "messageCreate",
-  async handler(message: Message, services: any) {
+  async handler(message: Message, services: ModuleServices) {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId;
@@ -174,7 +178,7 @@ const onMessageCreateListener: ListenerDefinition = {
 
 const onMessageUpdateListener: ListenerDefinition = {
   event: "messageUpdate",
-  async handler(oldMessage: Message, newMessage: Message, services: any) {
+  async handler(oldMessage: Message, newMessage: Message, services: ModuleServices) {
     if (!newMessage.inGuild() || newMessage.author.bot) return;
     if (oldMessage.content === newMessage.content) return;
 
@@ -197,10 +201,10 @@ const onMessageUpdateListener: ListenerDefinition = {
 
 const onMessageDeleteListener: ListenerDefinition = {
   event: "messageDelete",
-  async handler(message: Message, services: any) {
+  async handler(message: Message, services: ModuleServices) {
     if (!message.inGuild() || message.author.bot) return;
 
-    const guildId = message.guildId!;
+    const guildId = message.guildId;
     if (!isLoggingEnabled(services, guildId)) return;
     const config = await getLoggingConfig(services, guildId);
 
@@ -218,7 +222,7 @@ const onMessageDeleteListener: ListenerDefinition = {
 
 const onVoiceStateListener: ListenerDefinition = {
   event: "voiceStateUpdate",
-  async handler(oldState: VoiceState, newState: VoiceState, services: any) {
+  async handler(oldState: VoiceState, newState: VoiceState, services: ModuleServices) {
     const guildId = newState.guild?.id ?? oldState.guild?.id;
     if (!guildId) return;
 

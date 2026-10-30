@@ -2,6 +2,8 @@ import {
   type CardOptions,
   type CardReply,
   createActionButton,
+  ephemeralCard,
+  makeErrorCard,
   row,
   type Tab,
   tabRow,
@@ -21,6 +23,12 @@ export type HubView = "home" | "modules" | "settings" | "permits" | "addons";
 
 export type HubInteraction =
   | ChatInputCommandInteraction
+  | ButtonInteraction
+  | AnySelectMenuInteraction
+  | ModalSubmitInteraction;
+
+
+export type PanelInteraction =
   | ButtonInteraction
   | AnySelectMenuInteraction
   | ModalSubmitInteraction;
@@ -47,7 +55,38 @@ export function navigationRow(
   return tabRow("lumi", HubTabs, active);
 }
 
-/** Secondary "back" button every sub-panel uses on its last action row. */
+
+
+
+
+export async function showPanel(
+  interaction: PanelInteraction,
+  render: () => Promise<CardReply>,
+): Promise<void> {
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferUpdate();
+  }
+  await interaction.editReply(await render());
+}
+
+
+
+
+
+export async function replyEphemeralError(
+  interaction: PanelInteraction,
+  title: string,
+  body: string,
+): Promise<void> {
+  const card = ephemeralCard(makeErrorCard(title, body));
+  if (interaction.deferred || interaction.replied) {
+    await interaction.followUp(card);
+  } else {
+    await interaction.reply(card);
+  }
+}
+
+
 export function backButton(
   customId: string,
   label = "Back",

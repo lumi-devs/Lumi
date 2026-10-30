@@ -5,7 +5,8 @@
 ```
 src/                      deployable process: entry, composition root, dispatch,
                           built-in commands, Lumi control panel
-  core/                   gateway, sharding, HTTP control server, scheduler
+  core/                   gateway, lifecycle, interaction/prefix dispatch,
+                          built-in commands, RPC control server, service wiring
   admin/                  module management, config, /lumi panel
 modules/                  bundled feature modules (toggleable)
   <supermodule>/          manifest.json + index.ts
@@ -36,38 +37,43 @@ packages/scheduler/       distributed cron with Redis locks
 ## Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
-- `src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
+- `src/core/` — Gateway, lifecycle, interaction/prefix dispatch, built-in
+  commands, RPC control server, service wiring
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
 Every module under `modules/` is a supermodule; its submodules toggle
 independently:
 - `community` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
-  `economy` (currency, banking, shop, jobs, gambling)
+  `economy` (currency, banking, rewards, shop)
 - `moderation` — `mod` (case-backed ban, kick, timeout, warn, purge, notes,
-  lockdown, quarantine)
+  lockdown, quarantine, softban, voice mute)
 - `logging` — `logs` (message, edit, delete, voice, moderation logging)
 - `security` — `antinuke`, `join-gate`, `verification`, `panic`, `backups`,
   `betrayal`, `autorecovery`, `automod`
-- `utility` — `afk` (AFK status + mention replies), `tempvc` (join-to-create
-  voice channels), `info` (avatar, banner, whois, serverinfo, nick, purge)
+- `utility` — `afk` (AFK status + mention replies), `nick` (nickname changes
+  with hierarchy checks), `tempvc` (join-to-create voice channels), `info`
+  (avatar, banner, whois, serverinfo)
 
 ## Dependency direction
 
 ```
-foundation (pino)
-redis <- cache
-      <- db <- module-kit <- module-runtime <- downloader
-                                          <- src
-ui (discord.js builders) <- module-kit
-built-in services (core, admin) <- src
-toggleable modules (module-kit + db + redis + ui) <- src
+foundation        (pino)
+observability     (prom-client)
+redis             (ioredis) <- scheduler, permits
+db                (prisma, pg) <- downloader
+module-kit        (discord.js) <- module-runtime <- downloader
+ui                (discord.js, canvas)
+cache             (devalue; Redis-shaped port injected at runtime)
+
+all packages <- src
 ```
 
 Rules:
 
 - `foundation` imports no other Lumi package.
-- `cache` and `db` never import `src` or `modules`.
+- `cache`, `db`, `redis`, `scheduler`, `permits`, `observability` and `ui`
+  never import `src` or `modules`.
 - `module-runtime` and `downloader` never import `src` or `modules`.
 - Only `src` constructs services and owns the process lifecycle.
 - Built-in services live in `src/` and are non-disableable.
@@ -76,18 +82,28 @@ Rules:
 
 ## Boot order
 
-1. `src/index.ts` creates the Discord client and logger.
-2. `createCoreServices()` connects Redis, starts the invalidation bus, builds the
-   cache namespaces, the Prisma handle, and repositories.
-3. The app builds a `ModuleLoader` with the bundled and add-on roots, a
-   `CommandRegistry`, and a `ModuleHost`, then an `AddonManager` bound to it.
-4. Services are composed and shared with modules and the admin panel.
-5. `host.load()` discovers roots, resolves dependencies, imports entries,
-   attaches listeners, and registers commands.
-6. The metrics server starts (`/metrics`, `/healthz`).
-7. `client.login()`.
-8. On ready: register global slash commands (built-ins + loaded modules). Any
-    later module change re-registers them through the loader's `onChange` hook.
+1. `src/index.ts` creates the Redis client (`redisOptionsFromEnv()`) and connects
+   it, then connects the database, then creates the Discord client. (The logger
+   is created when `@lumi/core` is imported, before boot.)
+2. `createCoreServices()` builds the invalidation bus, the cache namespaces, the
+   `ConfigService`, the `PermitRepository`, the distributed scheduler, and the
+   health monitor. Redis and Discord readiness checks are registered on the
+   monitor.
+3. The module loader gets the bundled (`modules`) and add-on (`data/addons`)
+   roots. The RPC control server starts (`/healthz`, `/ready`,
+   `/api/v1/status`); the metrics server starts on `METRICS_PORT` unless
+   `METRICS_ENABLED=false` (`/metrics`, `/healthz`).
+4. The `ModuleHost`, `CommandRegistry`, `ModuleManager`, `AddonManager`, and the
+   shared `services` bag are constructed. Built-in commands are registered with
+   `module: null`.
+5. `loader.discover()` reads manifests; `host.load()` resolves dependencies,
+   imports entries, runs `onLoad`, attaches listeners, registers commands, and
+   resyncs guild commands.
+6. The `addons-autoupdate` job is registered on the scheduler and the scheduler
+   starts.
+7. Discord event handlers are wired, then `client.login()` runs.
+8. On ready: every guild's record and module state are synced, slash commands are
+   registered **per guild**, and the global command set is cleared.
 
 ## Process model
 

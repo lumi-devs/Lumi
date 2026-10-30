@@ -1,55 +1,55 @@
 export interface ModuleInfo {
-  name: string;
-  displayName: string;
-  emoji: string;
-  description: string;
-  version: string;
-  installed: boolean;
+  readonly name: string;
+  readonly displayName: string;
+  readonly emoji: string;
+  readonly description: string;
+  readonly version: string;
+  readonly installed: boolean;
 }
 
 export interface RepoRecord {
-  id: number;
-  name: string;
-  url: string;
-  branch: string | null;
-  commit: string | null;
-  installed: number;
+  readonly id: number;
+  readonly name: string;
+  readonly url: string;
+  readonly branch: string | null;
+  readonly commit: string | null;
+  readonly installed: number;
 }
 
 export interface InstalledAddon {
-  name: string;
-  version: string | null;
-  commit: string | null;
-  pinned: boolean;
-  installedAt: Date;
-  repoName: string;
+  readonly name: string;
+  readonly version: string | null;
+  readonly commit: string | null;
+  readonly pinned: boolean;
+  readonly installedAt: Date;
+  readonly repoName: string;
 }
 
 export interface UpdateFailure {
-  module: string;
-  error: string;
+  readonly module: string;
+  readonly error: string;
 }
 
 export interface RepoUpdateResult {
-  repo: string;
-  oldCommit: string | null;
-  newCommit: string;
-  changed: boolean;
-  updated: string[];
-  pinned: string[];
-  failures: UpdateFailure[];
+  readonly repo: string;
+  readonly oldCommit: string | null;
+  readonly newCommit: string;
+  readonly changed: boolean;
+  readonly updated: readonly string[];
+  readonly pinned: readonly string[];
+  readonly failures: readonly UpdateFailure[];
 }
 
 export interface AutoUpdateState {
-  enabled: boolean;
-  intervalMinutes: number;
-  lastCheckedAt: string | null;
+  readonly enabled: boolean;
+  readonly intervalMinutes: number;
+  readonly lastCheckedAt: string | null;
 }
 
 export interface AutoUpdateReport {
-  checked: number;
-  updated: string[];
-  failures: UpdateFailure[];
+  readonly checked: number;
+  readonly updated: readonly string[];
+  readonly failures: readonly UpdateFailure[];
 }
 
 export interface AddonRuntime {

@@ -1,6 +1,7 @@
 # Testing
 
-Runner: `bun test --isolate` (`bun run test`).
+Runner: Vitest via `bun run test` (`vitest run`). Run one file with
+`bunx vitest run <path>`.
 
 ## Layout
 
@@ -28,7 +29,7 @@ Use a test-local in-memory fake that implements `CacheRedis` (see
 Repository logic should be testable without a live server. Integration tests are
 gated on `TEST_DATABASE_URL`; skip when absent. When present:
 
-1. `bun run db:deploy` against the test database.
+1. `bunx prisma migrate deploy` against the test database.
 2. Seed only the rows the test owns.
 3. Clean up by unique guild IDs.
 
@@ -40,8 +41,8 @@ Build fixture roots with `mkdtemp`, write `manifest.json` + entry files, and dri
 `ModuleLoader` with a fake `LumiServices`. Cover:
 
 - dependency ordering
-- missing dependency failure
-- cycle detection marks the cycle broken without failing the whole load
+- missing dependency warning (the module still loads)
+- unsatisfied version range skips the module
 - command and listener ownership, reserved command collisions, builder mismatches
 - disabled module not loaded
 - reload unloads listeners/commands first

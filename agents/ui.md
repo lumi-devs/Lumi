@@ -50,8 +50,8 @@ and never pass `ephemeral: true` directly. Use `ephemeralCard`.
   `createChannelSelectMenu`, `createCategorySubmenuRow`
 - `tabRow`, `settingRow`, `confirmRow`, `navRow`, `backRow`, `row`
 - `buildSafeActionRows` enforces five rows and five components per row
-- `pageFooter`, `formatStatusBadge`, `formatSubtitle`, `formatBreadcrumbs`,
-  `formatPageFooter`, `componentEmoji`
+- `formatPageFooter`, `formatStatusBadge`, `formatSubtitle`, `formatBreadcrumbs`,
+  `componentEmoji`
 - `AccentColors`, `resolveCardColor`
 
 ## Rules

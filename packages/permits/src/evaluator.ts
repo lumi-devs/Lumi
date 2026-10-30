@@ -34,9 +34,9 @@ export function evaluateNodeMatch(
   return false;
 }
 
-/**
- * The custom tiers for one user, in evaluation order: user, channel, roles.
- */
+
+
+
 export function buildPermitChain(
   userId: string,
   channelId?: string,
@@ -63,7 +63,7 @@ function matchDetail(
 
 function verdictForBucket(
   tier: string,
-  bucket: { grant: string[]; deny: string[] },
+  bucket: { readonly grant: readonly string[]; readonly deny: readonly string[] },
   permitNode: string,
 ): PermitTierExplanation {
   const deny = matchDetail(bucket.deny, permitNode);
@@ -74,7 +74,7 @@ function verdictForBucket(
   return { tier, verdict: "pass" };
 }
 
-/** Minutes since midnight for a stored "HH:MM" value. */
+
 function parseClock(value: unknown): number | null {
   if (typeof value !== "string") return null;
   const [hours, minutes] = value.split(":").map(Number);
@@ -100,8 +100,8 @@ export function matchesConditions(
 ): boolean {
   if (!conditions) return true;
 
-  // Restrictions fail closed: a channel/role-scoped permit must not apply when
-  // the evaluation has no channel or roles (e.g. a prefix command in DMs).
+
+
   if (conditions.channelIds?.length) {
     if (!options.channelId || !conditions.channelIds.includes(options.channelId)) {
       return false;
@@ -131,8 +131,8 @@ export function matchesConditions(
     try {
       local = zonedTimeParts(now, conditions.timezone ?? fallbackTimezone);
     } catch {
-      // An invalid stored timezone must not throw on every evaluation; treat
-      // the condition as unmatched, like an invalid cron schedule.
+
+
       return false;
     }
     const currentTime = local.hour * 60 + local.minute;
@@ -249,10 +249,12 @@ export function evaluatePermitWithChain(
     const row = verdictForBucket(`custom:${label}`, tier.custom, permitNode);
 
     if (chainResult.isQuarantined) {
-      row.detail = row.detail
-        ? `${row.detail}, ignored while quarantined`
-        : "ignored while quarantined";
-      rows.push(row);
+      rows.push({
+        ...row,
+        detail: row.detail
+          ? `${row.detail}, ignored while quarantined`
+          : "ignored while quarantined",
+      });
       return;
     }
     consider(row);
@@ -291,18 +293,18 @@ export function isGuildOwner(
 }
 
 export class PermitResolver {
-  public evaluateNodeMatch(grantedNode: string, requiredNode: string): boolean {
+  evaluateNodeMatch(grantedNode: string, requiredNode: string): boolean {
     return evaluateNodeMatch(grantedNode, requiredNode);
   }
 
-  public async hasPermit(
+  async hasPermit(
     options: EvaluatePermitOptions,
     container: PermitContainer,
   ): Promise<boolean> {
     return (await evaluatePermit(options, container)).allowed;
   }
 
-  public async assertPermit(
+  async assertPermit(
     options: EvaluatePermitOptions,
     container: PermitContainer,
   ): Promise<void> {

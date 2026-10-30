@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import type { EconomyConfig } from "./config.js";
 
 interface TransactionInput {
@@ -9,19 +10,31 @@ interface TransactionInput {
   description?: string;
 }
 
+export interface EconomyUser {
+  guildId: string;
+  userId: string;
+  balance: bigint;
+  bankBalance: bigint;
+  totalEarned: bigint;
+  totalSpent: bigint;
+  lastDailyAt: Date | null;
+  lastWeeklyAt: Date | null;
+  lastWorkAt: Date | null;
+}
+
 export async function recordTransaction(
-  services: any,
+  services: ModuleServices,
   input: TransactionInput,
 ): Promise<void> {
   await services.db.prisma.economyTransaction.create({ data: input });
 }
 
 export async function getOrCreateUser(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   config: EconomyConfig,
-) {
+): Promise<EconomyUser> {
   const startingBalance = Number.isFinite(config.startingBalance)
     ? BigInt(Math.max(0, Math.trunc(config.startingBalance)))
     : 0n;
@@ -41,7 +54,7 @@ export async function getOrCreateUser(
 }
 
 export async function addBalance(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -86,7 +99,7 @@ interface WalletOptions {
 }
 
 export async function debitWallet(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -107,7 +120,7 @@ export async function debitWallet(
 }
 
 export async function creditWallet(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -134,7 +147,7 @@ export async function creditWallet(
 }
 
 export async function refundWallet(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -158,7 +171,7 @@ export async function refundWallet(
 }
 
 export async function depositToBank(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -174,7 +187,7 @@ export async function depositToBank(
 }
 
 export async function withdrawFromBank(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   amount: bigint,
@@ -192,7 +205,7 @@ export async function withdrawFromBank(
 export type RewardField = "lastDailyAt" | "lastWeeklyAt" | "lastWorkAt";
 
 export async function claimReward(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   field: RewardField,

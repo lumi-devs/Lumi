@@ -322,13 +322,6 @@
       "category": "Filters"
     },
     {
-      "key": "exemptRoles",
-      "label": "Exempt Roles (legacy)",
-      "type": "multi-role",
-      "description": "Role IDs bypassing all filters (use automod.bypass permits instead)",
-      "category": "Filters"
-    },
-    {
       "key": "filterTimeoutMinutes",
       "label": "Default Timeout (minutes)",
       "type": "number",

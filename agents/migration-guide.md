@@ -6,10 +6,10 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 
 | Area | v1 | v2 |
 |------|-----|-----|
-| **Architecture** | Single process, monolithic | Monorepo, multi-process fleet ready |
+| **Architecture** | Single process, monolithic | Monorepo, single process (fleet ready) |
 | **Modules** | `core` (essential) + toggleable | Built-in services + fully toggleable modules |
 | **Permissions** | Tier-based (admin/mod/user) | Permit system: node-based, time/channel/role conditions |
-| **Config** | Guild settings JSON | Zod-validated per-module config |
+| **Config** | Guild settings JSON | Zod-validated per-module config in `Guild.settings` |
 | **Database** | Custom migrations, idempotent DDL | Prisma with versioned migrations |
 | **Cache** | In-memory only | L1 LRU + Redis L2 with invalidation bus |
 | **RPC** | None | Token-guarded HTTP control server |
@@ -26,8 +26,9 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 **v1:** `core` module was essential/undeletable, contained base commands, config, etc.
 
 **v2:** Built-in services in `src/`:
-- `core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
-- `admin/` — Module management, `/lumi` panel, owner commands
+- `core/` — Gateway, lifecycle, interaction/prefix dispatch, RPC control server,
+  service wiring
+- `admin/` — Module management, `lumi` panel, owner commands
 
 **Migration:**
 - Remove `core` from module list
@@ -50,11 +51,19 @@ This guide covers breaking changes and migration steps for moving from Lumi v1 t
 // v1: tier check
 if (userTier >= Tier.Mod) { ... }
 
-// v2: permit check
-const allowed = await services.permits.check(userId, "mod.ban", {
-  channelId: interaction.channelId,
-  roleIds: member.roles.cache.map(r => r.id),
-});
+// v2: evaluate a permit node
+const allowed = (
+  await services.permits.explainPermit(
+    {
+      guildId: interaction.guildId!,
+      userId: interaction.user.id,
+      channelId: interaction.channelId,
+      roleIds: member.roles.cache.map((r) => r.id),
+      permitNode: "mod.ban",
+    },
+    services.client,
+  )
+).allowed;
 ```
 
 ### 3. Module System Overhaul
@@ -65,7 +74,7 @@ const allowed = await services.permits.check(userId, "mod.ban", {
 
 | v1 | v2 |
 |----|----|
-| `src/modules/mod/` | `modules/mod/` |
+| `src/modules/mod/` | `modules/moderation/mod/` |
 | `module.ts` with `setup()` | `manifest.json` + `index.ts` |
 | Global `container` | `services` passed to each module |
 | `config.enabled` per guild | `services.modules.isEnabled(guildId, name)` |
@@ -80,9 +89,9 @@ export const ModModule: Module = {
   config: { enabled: true },
 };
 
-// v2 module structure (modules/mod/index.ts)
+// v2 module structure (modules/moderation/mod/index.ts)
 export default defineModule({
-  name: "mod",
+  name: "moderation-mod",
   config: z.object({ ... }),
   commands: [banCmd, kickCmd, ...],
   listeners: [modLogListener],
@@ -114,32 +123,37 @@ const user = await services.db.prisma.economyUser.findUnique({
 
 **v2:** L1 (LRU, in-process) + L2 (Redis) + Invalidation Bus
 
-**Migration:**
+**Migration:** modules do not own a cache. Read and write guild settings through
+`services.config`; the shared cache is constructed in `src/core/services.ts` and
+owned by the `ConfigService`.
+
 ```ts
 // v1
 const cached = cache.get(key);
 cache.set(key, value, 60000);
 
 // v2
-const cached = await services.cache.get("my-module", key);
-await services.cache.set("my-module", key, value, 60000);
-// Invalidation is automatic on writes
+const settings = await services.config.get(guildId, "my-module");
+await services.config.set(guildId, "my-module", settings);
+// ConfigService caches and invalidates through the shared cache.
 ```
 
-### 6. Commands: Permit-Gated
+### 6. Commands: Permit Nodes
 
 **v1:** Tier checks inside command
 
-**v2:** `requiredPermit` on command definition + `isEnabled` check
+**v2:** `requiredPermit` maps a command to a permit node for the catalog and
+Explain Check; dispatch does not enforce it. Runtime gating is `requiresAdmin`
+or an explicit permit check in `execute`.
 
 ```ts
 // v2 command
 export const banCmd: CommandDefinition = {
   data: new SlashCommandBuilder().setName("ban")...,
-  requiredPermit: "mod.ban",  // Checked before execute
+  requiredPermit: "mod.ban",  // Catalog metadata; evaluate permits yourself
   async execute(interaction, services) {
     // Module enablement still needed
-    if (!services.modules.isEnabled(guildId, "mod")) return;
+    if (!services.modules.isEnabled(guildId, "moderation-mod")) return;
     ...
   },
 };
@@ -221,7 +235,7 @@ For each v1 custom module:
 3. Port commands to v2 format
 4. Port listeners to v2 format
 5. Convert config to Zod schema
-6. Add `configFields` for UI
+6. Add `configFields` to `manifest.json` for the UI
 7. Test with `bun run typecheck`
 
 ### 6. Update Deploy
@@ -233,7 +247,7 @@ docker run -d --env-file .env lumi:v2
 
 # Or bare metal
 bun run build
-bun src/index.ts
+bun dist/index.js
 ```
 
 ---
@@ -242,13 +256,13 @@ bun src/index.ts
 
 | v1 Setting | v2 Location |
 |------------|-------------|
-| `guildSettings.prefix` | Removed (slash commands only) |
-| `guildSettings.modLogChannel` | `mod` module config |
-| `guildSettings.welcomeChannel` | `welcome` module config |
-| `guildSettings.levelUpChannel` | `leveling` module config |
-| `guildSettings.currencyName` | `economy` module config |
-| `guildSettings.autoModRules` | `filter` module config |
-| `guildSettings.tempVcCategory` | `tempvc` module config |
+| `guildSettings.prefix` | Guild `prefix` setting (`/lumi` → Settings) |
+| `guildSettings.modLogChannel` | `logging` module log channels |
+| `guildSettings.welcomeChannel` | No direct equivalent (no welcome module) |
+| `guildSettings.levelUpChannel` | `community-leveling` → `announceChannel` |
+| `guildSettings.currencyName` | `community-economy` → `currencyName` |
+| `guildSettings.autoModRules` | `security-automod` heat filters |
+| `guildSettings.tempVcCategory` | `utility-tempvc` → `categoryId` |
 
 ### Example: Economy Config Migration
 
@@ -256,7 +270,7 @@ bun src/index.ts
 // v1: flat guild settings
 { currencyName: "Coins", currencySymbol: "🪙", dailyAmount: 150 }
 
-// v2: per-module Zod schema (modules/economy/index.ts)
+// v2: per-module Zod schema (modules/community/economy/config.ts)
 config: z.object({
   currencyName: z.string().default("Credits"),
   currencySymbol: z.string().default("💰"),
@@ -334,13 +348,13 @@ async function migratePermits(guildId: string) {
 ### "Database connection failed"
 
 - Check `DATABASE_URL` format: `postgresql://user:pass@host:5432/db?schema=public`
-- Ensure Postgres 14+ is running
+- Ensure Postgres 18+ is running
 - Run `bun run db:migrate` to create tables
 
 ### "Redis connection failed"
 
-- Check `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
-- Ensure Redis 7+ is running
+- Check `REDIS_URL`, or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`
+- Ensure Redis 8+ is running
 - v2 uses single endpoint only
 
 ---

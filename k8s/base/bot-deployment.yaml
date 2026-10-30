@@ -18,7 +18,7 @@ spec:
         component: bot
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
+        prometheus.io/port: "9090"
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: lumi-bot
@@ -32,14 +32,12 @@ spec:
           image: lumibot/lumi-v2:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
-              name: http
-            - containerPort: 8081
-              name: grpc
-            - containerPort: 8082
+            - containerPort: 8091
+              name: rpc
+            - containerPort: 9090
               name: metrics
           env:
-            - name: DISCORD_TOKEN
+            - name: BOT_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: lumi-secrets
@@ -58,8 +56,6 @@ spec:
                 secretKeyRef:
                   name: lumi-secrets
                   key: redis-password
-            - name: NODE_ENV
-              value: "production"
             - name: LOG_LEVEL
               value: "info"
             - name: OWNER_IDS
@@ -67,6 +63,14 @@ spec:
                 secretKeyRef:
                   name: lumi-secrets
                   key: owner-ids
+            - name: RPC_HTTP_HOST
+              value: "0.0.0.0"
+            - name: RPC_HTTP_PORT
+              value: "8091"
+            - name: METRICS_ENABLED
+              value: "true"
+            - name: METRICS_PORT
+              value: "9090"
           resources:
             requests:
               memory: "512Mi"
@@ -77,7 +81,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 8080
+              port: 8091
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -85,7 +89,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8080
+              port: 8091
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3

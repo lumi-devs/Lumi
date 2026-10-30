@@ -2,7 +2,11 @@ import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type { Client, Message } from "discord.js";
-import { hasAdminAccess, roleIdsFrom } from "../admin/access.js";
+import {
+  hasAdminAccess,
+  hasPermitAccess,
+  roleIdsFrom,
+} from "../admin/access.js";
 import { commandErrorCard } from "./errors.js";
 import {
   type CommandRegistry,
@@ -15,6 +19,12 @@ const UserMention = /^<@!?(\d+)>$/;
 const RoleMention = /^<@&(\d+)>$/;
 const ChannelMention = /^<#(\d+)>$/;
 const Snowflake = /^\d{15,20}$/;
+
+interface CommandOption {
+  readonly name: string;
+  readonly type?: number;
+  readonly options?: readonly CommandOption[];
+}
 
 export interface PrefixLogger {
   error(message: string, meta?: unknown): void;
@@ -77,20 +87,16 @@ function createSyntheticInteraction(
   let deferred = false;
   let replyMessage: Message | undefined;
 
-  const optionType = (option: { type?: number; toJSON?(): { type?: number } }): number | undefined =>
-    option.type ?? option.toJSON?.().type;
-  const topOptions: Array<{ type?: number; name: string; options?: unknown[] }> =
-    command.data.options ?? [];
-  const subcommand = topOptions.find((option) => {
-    const type = optionType(option);
-    return (type === 1 || type === 2) && option.name === args[0];
-  });
-  const definitions: Array<{ name: string }> = subcommand
-    ? ((subcommand.options ?? []) as Array<{ name: string }>)
-    : topOptions.filter((option) => {
-        const type = optionType(option);
-        return type !== 1 && type !== 2;
-      });
+
+
+  const topOptions: CommandOption[] = command.data.toJSON().options ?? [];
+  const subcommand = topOptions.find(
+    (option) =>
+      (option.type === 1 || option.type === 2) && option.name === args[0],
+  );
+  const definitions: readonly CommandOption[] = subcommand
+    ? (subcommand.options ?? [])
+    : topOptions.filter((option) => option.type !== 1 && option.type !== 2);
   const rest = subcommand ? args.slice(1) : args;
   const values = new Map<string, string>();
   const positional: string[] = [];
@@ -264,7 +270,35 @@ export async function handlePrefixMessage(
       }
     }
 
-    const defaultPermissions = command.data.default_member_permissions;
+    if (
+      command.requiredPermit &&
+      !(await hasPermitAccess(
+        {
+          guildId: message.guild.id,
+          userId: message.author.id,
+          roleIds: roleIdsFrom(message.member, message.guild.id),
+          channelId: message.channelId,
+          guildOwnerId: message.guild.ownerId,
+          client: context.client,
+          permits: context.services.permits,
+        },
+        command.requiredPermit,
+      ))
+    ) {
+      await replyError(
+        message,
+        "Missing Permit",
+        `You need the **${command.requiredPermit}** permit on this server.`,
+      );
+      return;
+    }
+
+
+
+    const defaultPermissions =
+      "default_member_permissions" in command.data
+        ? command.data.default_member_permissions
+        : null;
     if (
       defaultPermissions !== null &&
       defaultPermissions !== undefined &&

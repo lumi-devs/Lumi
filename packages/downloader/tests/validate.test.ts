@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { validateAddon } from "../src/validate.js";
 
-// validateAddon relies on Bun.Transpiler, so these cases only run under Bun.
+
 const describeBun = describe.skipIf(typeof Bun === "undefined");
 
 const roots: string[] = [];

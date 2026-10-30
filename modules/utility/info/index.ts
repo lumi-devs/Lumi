@@ -19,7 +19,7 @@ import {
 } from "discord.js";
 import { z } from "zod";
 
-const UtilityConfigSchema = z.object({}, {});
+const UtilityConfigSchema = z.object({});
 
 interface AvatarCardOptions {
   displayName: string;

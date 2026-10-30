@@ -1,6 +1,7 @@
 import type {
   CommandDefinition,
   ListenerDefinition,
+  ModuleServices,
 } from "@lumi/module-kit";
 import {
   type CardReply,
@@ -64,7 +65,7 @@ const CasesPerPage = 10;
 
 async function buildCasesCard(
   client: Client,
-  services: any,
+  services: ModuleServices,
   guildId: string,
   targetId: string,
   targetTag: string,
@@ -88,15 +89,27 @@ async function buildCasesCard(
   }
 
   const offset = (page - 1) * CasesPerPage;
-  const lines = cases.map((c: any, i: number) => {
-    const moderator = client.users.cache.get(c.moderatorId);
-    const reason = (c.reason ?? "No reason provided").slice(0, 80);
-    const timestamp = Math.floor(new Date(c.createdAt).getTime() / 1000);
-    const when = Number.isFinite(timestamp) ? `<t:${timestamp}:R>` : "unknown time";
-    const caseType = c.type ?? c.action ?? "CASE";
-    const caseNumber = c.caseNumber ?? offset + i + 1;
-    return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}`;
-  });
+  const lines = cases.map(
+    (
+      c: {
+        moderatorId: string;
+        reason?: string | null;
+        createdAt: Date | string;
+        type?: string | null;
+        action?: string | null;
+        caseNumber?: number | null;
+      },
+      i: number,
+    ) => {
+      const moderator = client.users.cache.get(c.moderatorId);
+      const reason = (c.reason ?? "No reason provided").slice(0, 80);
+      const timestamp = Math.floor(new Date(c.createdAt).getTime() / 1000);
+      const when = Number.isFinite(timestamp) ? `<t:${timestamp}:R>` : "unknown time";
+      const caseType = c.type ?? c.action ?? "CASE";
+      const caseNumber = c.caseNumber ?? offset + i + 1;
+      return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}`;
+    },
+  );
 
   return makeCard(undefined, `📋 Cases for ${targetTag}`, lines, {
     footer: formatPageFooter(page - 1, totalPages, total),
@@ -135,7 +148,7 @@ export const casesDef: CommandDefinition = {
 
 export const casesPaginationListener: ListenerDefinition = {
   event: "interactionCreate",
-  async handler(interaction: ButtonInteraction, services: any) {
+  async handler(interaction: ButtonInteraction, services: ModuleServices) {
     if (!interaction.isButton()) return;
     if (!interaction.customId.startsWith("mod:cases:")) return;
 

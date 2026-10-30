@@ -4,6 +4,7 @@ import {
   defineModule,
   type ListenerDefinition,
   type ModuleDefinition,
+  type ModuleServices,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import {
@@ -37,19 +38,34 @@ const AfkConfigSchema = z.object({
   nickPrefix: z.string().default("[AFK] "),
   mentionReply: z.boolean().default(true),
   maxReasonLength: z.number().int().min(1).max(500).default(200),
-}, {});
+});
+
+type AfkConfig = z.infer<typeof AfkConfigSchema>;
 
 const AfkConfigKey = "afk";
 
-const getAfkConfig = async (services: any, guildId: string) => {
+const getAfkConfig = async (
+  services: ModuleServices,
+  guildId: string,
+): Promise<AfkConfig> => {
   let stored: unknown = null;
   try {
     stored = await services.config.get(guildId, AfkConfigKey);
-  } catch {
+  } catch (error) {
+    services.observability?.logger?.warn?.("afk config read failed", {
+      guildId,
+      error,
+    });
     stored = null;
   }
   const parsed = AfkConfigSchema.safeParse(stored ?? {});
-  return parsed.success ? parsed.data : AfkConfigSchema.parse({});
+  if (parsed.success) return parsed.data;
+
+  services.observability?.logger?.warn?.(
+    "[afk] invalid configuration, using defaults",
+    { guildId, issues: parsed.error.issues },
+  );
+  return AfkConfigSchema.parse({});
 };
 
 const RemovalCooldownMs = 2000;
@@ -58,7 +74,7 @@ const removalCooldownKey = (guildId: string, userId: string): string =>
   `lumi:afk:cd:removal:${guildId}:${userId}`;
 
 const markRemovalCooldown = async (
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
 ): Promise<void> => {
@@ -70,7 +86,7 @@ const markRemovalCooldown = async (
 };
 
 const isRemovalCooldown = async (
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
 ): Promise<boolean> => {
@@ -167,7 +183,7 @@ const afkDef: CommandDefinition = {
 
 const onMessageListener: ListenerDefinition = {
   event: "messageCreate",
-  async handler(message: Message, services: any) {
+  async handler(message: Message, services: ModuleServices) {
     if (!message.inGuild() || message.author.bot) return;
 
     const guildId = message.guildId;

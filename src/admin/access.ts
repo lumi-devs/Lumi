@@ -1,18 +1,41 @@
 import type { PermitRepository } from "@lumi/permits";
 import { type Client, PermissionFlagsBits } from "discord.js";
 
-interface AdminAccessOptions {
+export interface PermitAccessOptions {
   guildId: string;
   userId: string;
   roleIds: string[];
+  channelId?: string;
   guildOwnerId?: string | null;
-  memberPermissions?: { has(permission: bigint): boolean } | null;
-  /**
-   * Discord client used by the permit evaluator. Kept structural so callers
-   * (and tests) can supply the subset the evaluator reads.
-   */
+
+
+
+
   client?: unknown;
   permits: PermitRepository;
+}
+
+interface AdminAccessOptions extends PermitAccessOptions {
+  memberPermissions?: { has(permission: bigint): boolean } | null;
+}
+
+export async function hasPermitAccess(
+  options: PermitAccessOptions,
+  permitNode: string,
+): Promise<boolean> {
+  const result = await options.permits.explainPermit(
+    {
+      guildId: options.guildId,
+      userId: options.userId,
+      roleIds: options.roleIds,
+      ...(options.channelId ? { channelId: options.channelId } : {}),
+      guildOwnerId: options.guildOwnerId ?? undefined,
+      permitNode,
+    },
+    options.client as Client | undefined,
+  );
+
+  return result.allowed;
 }
 
 interface MemberRoles {
@@ -42,16 +65,5 @@ export async function hasAdminAccess(
     return true;
   }
 
-  const result = await options.permits.explainPermit(
-    {
-      guildId: options.guildId,
-      userId: options.userId,
-      roleIds: options.roleIds,
-      guildOwnerId: options.guildOwnerId ?? undefined,
-      permitNode: "admin.*",
-    },
-    options.client as Client | undefined,
-  );
-
-  return result.allowed;
+  return hasPermitAccess(options, "admin.*");
 }

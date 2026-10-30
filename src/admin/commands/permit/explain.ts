@@ -1,4 +1,4 @@
-import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import { ephemeralCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
 import { roleIdsFrom } from "../../access.js";
@@ -8,7 +8,7 @@ import {
   explanationCard,
 } from "../../permits/explain.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
-import { openPermitsRow } from "./shared.js";
+import { openPermitsRow, replyPermitError } from "./shared.js";
 
 export async function explainPermit(
   interaction: ChatInputCommandInteraction,
@@ -16,10 +16,10 @@ export async function explainPermit(
 ): Promise<void> {
   const guild = interaction.guild;
   if (guild === null) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard("Permit", "This command can only be used in a server."),
-      ),
+    await replyPermitError(
+      interaction,
+      "Permit",
+      "This command can only be used in a server.",
     );
     return;
   }
@@ -27,20 +27,16 @@ export async function explainPermit(
   const user = interaction.options.getUser("user", true);
   const node = interaction.options.getString("node")?.trim();
   if (node !== undefined && !isValidNode(node)) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Invalid Node",
-          "Use a node such as `mod.ban`, `admin.*`, or `*`.",
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Invalid Node",
+      "Use a node such as `mod.ban`, `admin.*`, or `*`.",
     );
     return;
   }
 
   const channel = interaction.options.getChannel("channel");
-  let channelId: string | undefined;
-  if (channel !== null) channelId = channel.id;
+  const channelId = channel?.id;
 
   try {
     const member = await guild.members.fetch(user.id);
@@ -96,13 +92,10 @@ export async function explainPermit(
       ),
     );
   } catch (error: unknown) {
-    await interaction.reply(
-      ephemeralCard(
-        makeErrorCard(
-          "Check Failed",
-          `Could not evaluate the permit: ${errorMessage(error)}`,
-        ),
-      ),
+    await replyPermitError(
+      interaction,
+      "Check Failed",
+      `Could not evaluate the permit: ${errorMessage(error)}`,
     );
   }
 }

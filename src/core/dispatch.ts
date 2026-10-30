@@ -8,7 +8,11 @@ import type {
   Interaction,
   ModalSubmitInteraction,
 } from "discord.js";
-import { hasAdminAccess, roleIdsFrom } from "../admin/access.js";
+import {
+  hasAdminAccess,
+  hasPermitAccess,
+  roleIdsFrom,
+} from "../admin/access.js";
 import { handleHubInteraction } from "../admin/panel/HubPanel.js";
 import type { PermitPanel } from "../admin/panel/PermitPanel.js";
 import type { HubServices } from "../admin/panel/services.js";
@@ -84,6 +88,54 @@ async function requireAdmin(
   return allowed;
 }
 
+async function requirePermit(
+  interaction: Interaction,
+  context: DispatchContext,
+  permitNode: string,
+): Promise<boolean> {
+  if (!interaction.isRepliable()) return false;
+  if (!interaction.guildId || !("member" in interaction)) {
+    await interaction
+      .reply(
+        ui.ephemeralCard(
+          ui.makeErrorCard(
+            "Server Only",
+            "That command can only be used in a server.",
+          ),
+        ),
+      )
+      .catch(() => undefined);
+    return false;
+  }
+
+  const allowed = await hasPermitAccess(
+    {
+      guildId: interaction.guildId,
+      userId: interaction.user.id,
+      roleIds: roleIdsFrom(interaction.member, interaction.guildId),
+      channelId: interaction.channelId ?? undefined,
+      guildOwnerId: interaction.guild?.ownerId,
+      client: context.client,
+      permits: context.services.permits,
+    },
+    permitNode,
+  );
+
+  if (!allowed) {
+    await interaction
+      .reply(
+        ui.ephemeralCard(
+          ui.makeErrorCard(
+            "Missing Permit",
+            `You need the **${permitNode}** permit on this server.`,
+          ),
+        ),
+      )
+      .catch(() => undefined);
+  }
+  return allowed;
+}
+
 async function handleChatInput(
   interaction: Interaction,
   context: DispatchContext,
@@ -141,6 +193,13 @@ async function handleChatInput(
       "You need **Manage Server** or an admin permit to use that command.",
     );
     if (!allowed) return;
+  }
+
+  if (
+    command.requiredPermit &&
+    !(await requirePermit(interaction, context, command.requiredPermit))
+  ) {
+    return;
   }
 
   const services = command.module

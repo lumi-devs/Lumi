@@ -7,10 +7,10 @@ function databaseFromPath(pathname: string): number | undefined {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
-/**
- * Honour REDIS_URL because it is the documented configuration surface; fall
- * back to the discrete variables used by container deployments.
- */
+
+
+
+
 export function redisOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): RedisOptions {
   const url = env.REDIS_URL;
   if (url) {

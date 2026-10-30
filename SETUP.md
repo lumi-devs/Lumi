@@ -16,11 +16,15 @@ Lumi is a single-process Discord bot (gateway + RPC + scheduler) on Bun, Postgre
 ```bash
 mkdir lumi && cd lumi
 docker run --rm -it -v .:/setup ghcr.io/lumi-devs/lumi:latest lumi-setup init /setup
+docker compose up -d postgres redis
+# Apply migrations before the bot starts (bunx prisma migrate deploy against the
+# compose database, or the setup image). The bot process never migrates itself.
 docker compose up -d
 docker logs -f lumi-bot
 ```
 
-This creates `.env` and `compose.yml`, then starts Postgres, Redis, and the bot. Migrations run automatically on startup.
+This creates `.env` and `compose.yml`, then starts Postgres, Redis, and the bot.
+Set `REDIS_PASSWORD` in `.env` before starting: both Redis and the bot read it.
 
 ## Nix / local
 
@@ -29,7 +33,7 @@ git clone https://github.com/lumi-devs/Lumi.git
 cd Lumi
 nix develop
 cp .env.example .env
-# fill in DISCORD_TOKEN, OWNER_IDS, DATABASE_URL, REDIS_URL
+# fill in BOT_TOKEN, OWNER_IDS, DATABASE_URL, REDIS_URL
 bunx prisma migrate deploy
 bunx prisma generate
 bun run dev:bot
@@ -95,7 +99,7 @@ Use WSL2 + Docker (the Docker steps above). Native Windows Redis is not producti
 ## Environment variables
 
 ```env
-DISCORD_TOKEN=your_bot_token
+BOT_TOKEN=your_bot_token
 OWNER_IDS=123456789012345678
 DATABASE_URL="postgresql://lumi:lumi@localhost:5432/lumi"
 REDIS_URL="redis://localhost:6379"

@@ -21,14 +21,20 @@ services:
   redis:
     image: docker.io/redis:8-alpine
     container_name: lumi-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
       - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -41,20 +47,15 @@ services:
     container_name: lumi-bot
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      APPLICATION_ID: ${APPLICATION_ID}
       OWNER_IDS: ${OWNER_IDS}
       POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
       DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOG_FORMAT: ${LOG_FORMAT:-pretty}
-      OTEL_ENABLED: "false"
       METRICS_ENABLED: "true"
       METRICS_PORT: "9090"
-      METRICS_HOST: 0.0.0.0
       RPC_HTTP_HOST: 0.0.0.0
       RPC_HTTP_PORT: "8091"
       RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}

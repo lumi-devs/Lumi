@@ -5,7 +5,8 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 ## Architecture: Built-in Services vs Toggleable Supermodules
 
 **Built-in Services** (always running, non-disableable):
-- `src/core/` — Gateway, sharding, HTTP control server, scheduler, lifecycle
+- `src/core/` — Gateway, lifecycle, interaction/prefix dispatch, built-in
+  commands, RPC control server, service wiring
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
 **Toggleable Supermodules** (enable/disable per guild via `/lumi` → Modules).
@@ -19,7 +20,7 @@ Every module under `modules/` is a **supermodule** that contains independently-t
 
 ### Community
 - `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
-- `community-economy` — Currency, banking, shop, jobs, gambling, balance cards
+- `community-economy` — Currency, banking, rewards, shop, balance cards
 
 ### Moderation
 - `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute)
@@ -108,7 +109,9 @@ a submodule, so the filesystem is the single source of truth.
 }
 ```
 
-- `name` must match the submodule directory name and `^[a-z][a-z0-9-]*$`.
+- `name` must match `^[a-z][a-z0-9-]*$`. Supermodule names match their
+  top-level directory; submodule names are `<supermodule>-<directory>` (for
+  example `utility-afk` in `utility/afk/`).
 - `entry` is relative to the module directory (usually `index.ts`).
 - `capabilities` is descriptive metadata only. The loader validates its shape
   but does not act on it; loading is gated by `dependencies` and `conflicts`.
@@ -124,7 +127,6 @@ export default defineModule({
   description: "Utility tools: AFK, temporary voice, and info commands",
   version: "2.0.0",
   config: z.object({}),
-  configFields: [],
   commands: [],
   listeners: [],
   tasks: [],
@@ -140,7 +142,6 @@ export default defineModule({
   description: "Set AFK status with mention replies and nickname prefix",
   version: "2.0.0",
   config: z.object({ ... }),
-  configFields: [...],
   commands: [afkCommand],
   listeners: [afkMessageListener],
   async onLoad(services) {},
@@ -148,24 +149,27 @@ export default defineModule({
 });
 ```
 
-`configFields` is optional display metadata for the `/lumi` module detail panel.
+`configFields` lives only in `manifest.json`, never in `defineModule`.
+It is optional display metadata for the `/lumi` module detail panel.
 Zod remains the validator; the metadata only chooses the control (`boolean`,
-`number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`, `select`, `multi-string`)
-and supplies labels. Multi-select fields store `string[]` values and render a role or
-channel menu with `minValues: 0`; all other fields open a text modal. Fields may
-declare a `category`; the panel groups settings by category and labels each page
-with it instead of using numbered settings pages. The detail panel renders up to
-four settings per page. Modules without metadata still open in the panel but show
-no editable settings.
+`number`, `string`, `channel`, `role`, `multi-channel`, `multi-role`, `json`,
+`select`, `multi-string`) and supplies labels. A field with `choices` renders a
+string select; channel and role fields render pickers; multi-select fields store
+`string[]` values and render a menu with `minValues: 0`; everything else opens a
+text modal. Fields may declare a `category`; the panel groups settings by category
+and labels each page with it instead of using numbered settings pages. The detail
+panel renders up to four settings per page. Modules without metadata still open in
+the panel but show no editable settings.
 
 A manifest may set `configKey` when its stored settings key differs from its
 module name. The panel reads and writes that key, so module code and the panel
 must use the same key. For example, `community-leveling` stores its settings
 under `leveling`, and `utility-afk` stores them under `afk`.
 
-The loader verifies the definition name matches the manifest and that commands and
-listeners declare the same module name. It also checks command names,
-subcommand names, and autocomplete handlers for uniqueness within the supermodule.
+The loader verifies the definition `name` matches the manifest. The host
+attaches every command to its owning module; a command name that collides with
+an already-registered command is skipped with a warning. Listeners do not
+declare a module name.
 
 ## Loading Order
 

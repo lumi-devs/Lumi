@@ -5,7 +5,7 @@ export function isSnowflake(value: unknown): value is string {
 }
 
 export interface IdListOptions {
-  unique?: boolean;
+  readonly unique?: boolean;
 }
 
 export function asIdList(

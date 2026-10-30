@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lumi-postgres
+  namespace: lumi
+  labels:
+    app: lumi-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lumi-postgres
+  template:
+    metadata:
+      labels:
+        app: lumi-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: docker.io/postgres:18-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              value: "lumi"
+            - name: POSTGRES_DB
+              value: "lumi"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: postgres-password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "lumi", "-d", "lumi"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "lumi", "-d", "lumi"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lumi-postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lumi-postgres
+  namespace: lumi
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lumi-redis
+  namespace: lumi
+  labels:
+    app: lumi-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lumi-redis
+  template:
+    metadata:
+      labels:
+        app: lumi-redis
+    spec:
+      containers:
+        - name: redis
+          image: docker.io/redis:8-alpine
+          ports:
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: lumi-secrets
+                  key: redis-password
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "REDISCLI_AUTH=$REDIS_PASSWORD redis-cli ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "REDISCLI_AUTH=$REDIS_PASSWORD redis-cli ping"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lumi-redis
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lumi-redis
+  namespace: lumi
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

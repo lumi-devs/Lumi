@@ -22,10 +22,10 @@ function hasPrismaCode(error: unknown, code: string): boolean {
   return (error as { code?: unknown }).code === code;
 }
 
-/**
- * Smallest per-guild permit number that is not in use. Deleted numbers are
- * reused, matching the visible label behaviour.
- */
+
+
+
+
 export async function nextPermitNumber(
   db: PermitDelegateSource,
   guildId: string,

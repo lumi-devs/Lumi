@@ -38,15 +38,15 @@ const NoopLogger: AddonLogger = {
 };
 
 export interface AddonManagerOptions {
-  prisma: PrismaClient;
-  redis: Redis;
-  runtime: AddonRuntime;
-  root?: string;
-  logger?: AddonLogger;
-  notify?: AddonNotifier;
+  readonly prisma: PrismaClient;
+  readonly redis: Redis;
+  readonly runtime: AddonRuntime;
+  readonly root?: string;
+  readonly logger?: AddonLogger;
+  readonly notify?: AddonNotifier;
 }
 
-function message(error: unknown): string {
+function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -60,7 +60,6 @@ export class AddonManager {
   private readonly prisma: PrismaClient;
   private readonly redis: Redis;
   private readonly runtime: AddonRuntime;
-  private readonly root: string;
   private readonly storage: AddonStorage;
   private readonly logger: AddonLogger;
   private readonly notify?: AddonNotifier;
@@ -71,8 +70,7 @@ export class AddonManager {
     this.prisma = options.prisma;
     this.redis = options.redis;
     this.runtime = options.runtime;
-    this.root = resolve(options.root ?? process.cwd());
-    this.storage = new AddonStorage(this.root);
+    this.storage = new AddonStorage(resolve(options.root ?? process.cwd()));
     this.logger = options.logger ?? NoopLogger;
     this.notify = options.notify;
   }
@@ -152,7 +150,7 @@ export class AddonManager {
         await rename(staging, dir);
       } catch (error) {
         await rm(staging, { recursive: true, force: true });
-        throw new Error(`Clone failed: ${message(error)}`);
+        throw new Error(`Clone failed: ${errorMessage(error)}`);
       }
 
       const commit = await head(dir);
@@ -184,7 +182,7 @@ export class AddonManager {
     const dir = this.storage.repoDir(name);
     const entries = await readdir(dir, { withFileTypes: true }).catch((error: unknown) => {
       if (!isMissingPath(error)) {
-        this.logger.warn(`Could not list ${dir}: ${message(error)}`);
+        this.logger.warn(`Could not list ${dir}: ${errorMessage(error)}`);
       }
       return [];
     });
@@ -266,7 +264,13 @@ export class AddonManager {
         if (committed) {
           await rm(target, { recursive: true, force: true });
         }
-        await this.prisma.downloaderModule.delete({ where: { name: manifest.name } }).catch(() => undefined);
+        await this.prisma.downloaderModule
+          .delete({ where: { name: manifest.name } })
+          .catch((error: unknown) => {
+            this.logger.warn(
+              `Could not remove the install record for ${manifest.name}: ${errorMessage(error)}`,
+            );
+          });
         throw error;
       }
 
@@ -305,11 +309,17 @@ export class AddonManager {
     return this.run(async () => {
       assertModuleName(moduleName);
       await this.runtime.unmount(moduleName).catch((error) => {
-        this.logger.warn(`Could not unmount ${moduleName}: ${message(error)}`);
+        this.logger.warn(`Could not unmount ${moduleName}: ${errorMessage(error)}`);
       });
       await rm(this.storage.addonDir(moduleName), { recursive: true, force: true });
       await rm(join(this.storage.backupsDir, moduleName), { recursive: true, force: true });
-      await this.prisma.downloaderModule.delete({ where: { name: moduleName } }).catch(() => undefined);
+      await this.prisma.downloaderModule
+        .delete({ where: { name: moduleName } })
+        .catch((error: unknown) => {
+          this.logger.warn(
+            `Could not remove the install record for ${moduleName}: ${errorMessage(error)}`,
+          );
+        });
     });
   }
 
@@ -362,25 +372,25 @@ export class AddonManager {
       }
 
       const modules = await this.prisma.downloaderModule.findMany({ where: { repoId: repo.id } });
-      const tracked = modules.filter((module) => !module.pinned);
-      const pinned = modules.filter((module) => module.pinned).map((module) => module.name);
+      const tracked = modules.filter((entry) => !entry.pinned);
+      const pinned = modules.filter((entry) => entry.pinned).map((entry) => entry.name);
       const failures: UpdateFailure[] = [];
 
       try {
         await checkout(dir, newCommit);
       } catch (error) {
         await this.restoreRepo(dir, oldCommit, repo.url, repo.branch).catch((restoreError) => {
-          this.logger.warn(`Could not restore ${name}: ${message(restoreError)}`);
+          this.logger.warn(`Could not restore ${name}: ${errorMessage(restoreError)}`);
         });
         throw error;
       }
 
-      for (const module of tracked) {
-        const errors = await validateAddon(join(dir, module.name)).catch((error) => [
-          message(error),
+      for (const trackedModule of tracked) {
+        const errors = await validateAddon(join(dir, trackedModule.name)).catch((error) => [
+          errorMessage(error),
         ]);
         if (errors.length > 0) {
-          failures.push({ module: module.name, error: errors.join("; ") });
+          failures.push({ module: trackedModule.name, error: errors.join("; ") });
         }
       }
 
@@ -390,62 +400,80 @@ export class AddonManager {
       }
 
       const applied: Array<{ name: string; version: string | null; commit: string | null }> = [];
-      for (const module of tracked) {
-        const target = this.storage.addonDir(module.name);
-        const backup = join(this.storage.backupsDir, module.name);
+      for (const trackedModule of tracked) {
+        const target = this.storage.addonDir(trackedModule.name);
+        const backup = join(this.storage.backupsDir, trackedModule.name);
         try {
           await mkdir(this.storage.backupsDir, { recursive: true });
           await rm(backup, { recursive: true, force: true });
           await cp(target, backup, { recursive: true, force: true });
         } catch (error) {
-          failures.push({ module: module.name, error: message(error) });
+          failures.push({ module: trackedModule.name, error: errorMessage(error) });
           break;
         }
 
-        applied.push({ name: module.name, version: module.version, commit: module.commit });
+        applied.push({
+          name: trackedModule.name,
+          version: trackedModule.version,
+          commit: trackedModule.commit,
+        });
         let staging: string | null = null;
         try {
-          const source = join(dir, module.name);
+          const source = join(dir, trackedModule.name);
           const manifest = await this.storage.readManifest(source);
           staging = await this.storage.stageModule(source);
           await this.storage.installRequirements(staging, manifest.requirements, manifest.name);
           await this.storage.commitModule(staging, target);
           staging = null;
           await this.prisma.downloaderModule.update({
-            where: { name: module.name },
+            where: { name: trackedModule.name },
             data: { version: manifest.version, commit: newCommit },
           });
-          await this.runtime.reload(module.name);
+          await this.runtime.reload(trackedModule.name);
         } catch (error) {
           if (staging) {
             await rm(staging, { recursive: true, force: true });
           }
-          failures.push({ module: module.name, error: message(error) });
+          failures.push({ module: trackedModule.name, error: errorMessage(error) });
           break;
         }
       }
 
       if (failures.length > 0) {
-        for (const module of applied) {
-          const target = this.storage.addonDir(module.name);
+        for (const appliedModule of applied) {
+          const target = this.storage.addonDir(appliedModule.name);
           await rm(target, { recursive: true, force: true });
-          await cp(join(this.storage.backupsDir, module.name), target, { recursive: true, force: true });
+          await cp(
+            join(this.storage.backupsDir, appliedModule.name),
+            target,
+            { recursive: true, force: true },
+          );
           await this.prisma.downloaderModule.update({
-            where: { name: module.name },
-            data: { version: module.version, commit: module.commit },
+            where: { name: appliedModule.name },
+            data: { version: appliedModule.version, commit: appliedModule.commit },
           });
-          await this.runtime.reload(module.name).catch(() => undefined);
+          await this.runtime.reload(appliedModule.name).catch((error: unknown) => {
+            this.logger.warn(
+              `Could not reload the restored copy of ${appliedModule.name}: ${errorMessage(error)}`,
+            );
+          });
         }
         await this.restoreRepo(dir, oldCommit, repo.url, repo.branch);
-        for (const module of applied) {
-          await rm(join(this.storage.backupsDir, module.name), { recursive: true, force: true });
+        for (const appliedModule of applied) {
+          await rm(join(this.storage.backupsDir, appliedModule.name), {
+            recursive: true,
+            force: true,
+          });
         }
         return { repo: name, oldCommit, newCommit, changed: false, updated: [], pinned, failures };
       }
 
       await this.prisma.downloaderRepo.update({ where: { id: repo.id }, data: { commit: newCommit } });
-      for (const module of applied) {
-        await rm(join(this.storage.backupsDir, module.name), { recursive: true, force: true });
+      for (const appliedModule of applied) {
+        await rm(join(this.storage.backupsDir, appliedModule.name), {
+          recursive: true,
+          force: true,
+        });
       }
 
       return {
@@ -453,7 +481,7 @@ export class AddonManager {
         oldCommit,
         newCommit,
         changed: true,
-        updated: applied.map((module) => module.name),
+        updated: applied.map((appliedModule) => appliedModule.name),
         pinned,
         failures,
       };
@@ -468,7 +496,7 @@ export class AddonManager {
       if (!parsed || typeof parsed !== "object") return { ...DefaultAutoUpdate };
       return { ...DefaultAutoUpdate, ...parsed };
     } catch (error) {
-      this.logger.warn(`Ignoring unreadable auto-update state: ${message(error)}`);
+      this.logger.warn(`Ignoring unreadable auto-update state: ${errorMessage(error)}`);
       return { ...DefaultAutoUpdate };
     }
   }
@@ -507,7 +535,7 @@ export class AddonManager {
     for (const repo of repos) {
       try {
         const report = await this.updateRepo(repo.name);
-        updated.push(...report.updated.map((module) => `${repo.name}/${module}`));
+        updated.push(...report.updated.map((moduleName) => `${repo.name}/${moduleName}`));
         failures.push(
           ...report.failures.map((failure) => ({
             module: `${repo.name}/${failure.module}`,
@@ -515,7 +543,7 @@ export class AddonManager {
           })),
         );
       } catch (error) {
-        failures.push({ module: repo.name, error: message(error) });
+        failures.push({ module: repo.name, error: errorMessage(error) });
       }
     }
 
@@ -527,7 +555,7 @@ export class AddonManager {
     const report = { checked: repos.length, updated, failures };
     if (this.notify && (report.updated.length > 0 || report.failures.length > 0)) {
       await this.notify(report).catch((error) =>
-        this.logger.warn(`Failed to send auto-update report: ${message(error)}`),
+        this.logger.warn(`Failed to send auto-update report: ${errorMessage(error)}`),
       );
     }
     return report;

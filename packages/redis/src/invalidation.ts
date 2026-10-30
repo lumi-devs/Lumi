@@ -1,9 +1,9 @@
 import type Redis from "ioredis";
 
 export interface InvalidationMessage {
-  namespace: string;
-  keys: string[];
-  timestamp: number;
+  readonly namespace: string;
+  readonly keys: string[];
+  readonly timestamp: number;
 }
 
 function isInvalidationMessage(value: unknown): value is InvalidationMessage {
@@ -30,9 +30,9 @@ export class InvalidationBus {
   private hasConnected = false;
 
   constructor(redis: Redis) {
-    // The publisher is the shared cache client; only the subscriber needs its
-    // own connection because ioredis puts a subscribed connection into
-    // subscriber mode.
+
+
+
     this.publisher = redis;
     this.subscriber = redis.duplicate();
     this.setupSubscriber();
@@ -40,9 +40,9 @@ export class InvalidationBus {
 
   private setupSubscriber(): void {
     this.subscriber.on("ready", () => {
-      // The first ready is the initial connect (ioredis re-subscribes
-      // automatically on reconnect); a later ready means local L1 state may
-      // have missed messages while the connection was down.
+
+
+
       if (this.hasConnected) this.signalResync();
       else this.hasConnected = true;
     });
@@ -73,7 +73,7 @@ export class InvalidationBus {
   private handleInvalidation(msg: InvalidationMessage): void {
     const listeners = new Set<(keys: string[]) => void>([
       ...(this.localListeners.get(msg.namespace) ?? []),
-      // Global listeners (e.g. the L1 cache) observe every namespace.
+
       ...(this.localListeners.get("") ?? []),
     ]);
     for (const listener of listeners) {
@@ -101,8 +101,8 @@ export class InvalidationBus {
       timestamp: Date.now(),
     };
 
-    // Notify local listeners first so the writer's L1 never serves the value
-    // it just invalidated.
+
+
     this.handleInvalidation(message);
 
     await this.publisher.publish(this.channel, JSON.stringify(message));
@@ -116,7 +116,7 @@ export class InvalidationBus {
 
   async close(): Promise<void> {
     await this.subscriber.unsubscribe(this.channel);
-    // The publisher is owned by the caller; only the subscriber is ours.
+
     await this.subscriber.quit();
   }
 }

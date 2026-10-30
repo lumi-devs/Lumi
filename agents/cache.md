@@ -51,12 +51,14 @@ loudly; fix the value shape rather than falling back to `JSON.stringify`.
 ## Invalidation contract
 
 `InvalidationBus` (`packages/redis/src/invalidation.ts`) notifies local listeners
-first, then `DEL`s Redis, then publishes. Subscribers drop matching L1 entries and
+first, then publishes. `Cache.delete(...keys)` drops local entries, `DEL`s the
+Redis keys, then calls `invalidate`; subscribers drop matching L1 entries and
 discard flights. On reconnect, `onResync` clears all local entries.
 
 ## Metrics
 
-`lumi_cache_hits_total`, `cache_misses_total`, `cache_negative_hits_total`,
-`cache_writes_total`, `cache_evictions_total`, `cache_invalidations_total`,
-`cache_fill_duration_seconds`, `cache_stale_writes_total`, all labelled
+`lumi_cache_hits_total`, `lumi_cache_misses_total`,
+`lumi_cache_negative_hits_total`, `lumi_cache_writes_total`,
+`lumi_cache_evictions_total`, `lumi_cache_invalidations_total`,
+`lumi_cache_fill_duration_seconds`, `lumi_cache_stale_writes_total`, all labelled
 `cache="<namespace>"`.

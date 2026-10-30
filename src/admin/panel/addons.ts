@@ -1,54 +1,35 @@
 import type { InstalledAddon } from "@lumi/downloader";
 import { isBotOwner } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import type {
-  AnySelectMenuInteraction,
-  ButtonInteraction,
-  ModalSubmitInteraction,
-} from "discord.js";
 import { errorMessage } from "../../core/errors.js";
 import {
   type AddonView,
   addRepoModal,
-  intervalLabel,
+  formatCommit,
+  formatInterval,
   renderAddonPanel,
-  short,
 } from "./addonViews.js";
-import { cut } from "./common.js";
+import {
+  cut,
+  type PanelInteraction,
+  replyEphemeralError,
+  showPanel,
+} from "./common.js";
 import type { HubServices } from "./services.js";
 
-type AddonInteraction =
-  | ButtonInteraction
-  | AnySelectMenuInteraction
-  | ModalSubmitInteraction;
-
 async function show(
-  interaction: AddonInteraction,
+  interaction: PanelInteraction,
   services: HubServices,
   view: AddonView,
   notice?: string,
 ): Promise<void> {
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferUpdate();
-  }
-  await interaction.editReply(await renderAddonPanel(interaction, services, view, notice));
-}
-
-async function fail(
-  interaction: AddonInteraction,
-  title: string,
-  body: string,
-): Promise<void> {
-  const card = ephemeralCard(makeErrorCard(title, body));
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(card);
-  } else {
-    await interaction.reply(card);
-  }
+  await showPanel(interaction, () =>
+    renderAddonPanel(interaction, services, view, notice),
+  );
 }
 
 export async function handleAddonInteraction(
-  interaction: ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction,
+  interaction: PanelInteraction,
   services: HubServices,
 ): Promise<boolean> {
   const id = interaction.customId;
@@ -118,7 +99,11 @@ export async function handleAddonInteraction(
           await services.addons.addRepo(name, url, branch || undefined);
           await show(interaction, services, { kind: "repo", name }, `Repository ${name} added.`);
         } catch (error) {
-          await fail(interaction, "Could Not Add Repository", errorMessage(error));
+          await replyEphemeralError(
+            interaction,
+            "Could Not Add Repository",
+            errorMessage(error),
+          );
         }
         return true;
       }
@@ -130,7 +115,7 @@ export async function handleAddonInteraction(
           ? `Update rolled back: ${report.failures.map((failure) => `${failure.module} (${failure.error})`).join("; ")}`
           : report.changed
             ? report.updated.length > 0
-              ? `Updated ${report.updated.length} add-on(s) to ${short(report.newCommit)}.`
+              ? `Updated ${report.updated.length} add-on(s) to ${formatCommit(report.newCommit)}.`
               : "Repository updated; no unpinned add-ons to reload."
             : "Already up to date.";
         await show(interaction, services, { kind: "repo", name: target }, cut(notice, 500));
@@ -169,7 +154,11 @@ export async function handleAddonInteraction(
           await services.addons.listInstalled()
         ).find((entry) => entry.name === target);
         if (!addon) {
-          await fail(interaction, "Not Installed", `${target} is not installed.`);
+          await replyEphemeralError(
+            interaction,
+            "Not Installed",
+            `${target} is not installed.`,
+          );
           return true;
         }
         await services.addons.setPinned(target, !addon.pinned);
@@ -202,7 +191,7 @@ export async function handleAddonInteraction(
           interaction,
           services,
           { kind: "auto" },
-          `Interval set to ${intervalLabel(minutes)}.`,
+          `Interval set to ${formatInterval(minutes)}.`,
         );
         return true;
       }
@@ -210,7 +199,7 @@ export async function handleAddonInteraction(
         return false;
     }
   } catch (error) {
-    await fail(interaction, "Add-on Action Failed", errorMessage(error));
+    await replyEphemeralError(interaction, "Add-on Action Failed", errorMessage(error));
     return true;
   }
 }

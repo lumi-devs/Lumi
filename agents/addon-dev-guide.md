@@ -23,10 +23,9 @@ entry file, and one or more submodule directories.
 my-addon/
 ├── manifest.json          # supermodule
 ├── index.ts               # supermodule definition (defineModule)
-├── commands/
-│   └── status.ts          # submodule: my-addon-status
-│   └── manifest.json
-└── README.md
+└── status/                # submodule: my-addon-status
+    ├── manifest.json
+    └── index.ts
 ```
 
 The root module and each submodule use the same `defineModule` shape as bundled
@@ -84,9 +83,10 @@ Allowed runtime imports:
 ## Services
 
 Add-ons receive the same `services` object as bundled modules, including
-`client`, `prisma`, `redis`, `cache`, `config`, `modules`, `moduleLoader`,
-`moduleManager`, `scheduler`, `rpc`, `ui`, `permits`, and `addons`. Treat the
-database as shared: prefix tables with your add-on name.
+`client`, `redis`, `db` (`{ prisma, permits }`), `prisma`, `permits`, `config`,
+`configService`, `modules`, `moduleLoader`, `moduleManager`, `scheduler`, `rpc`,
+`ui`, `addons`, `discord`, and `observability` (`{ healthMonitor, logger }`).
+Treat the database as shared: prefix tables with your add-on name.
 
 ## Local development
 
@@ -118,10 +118,10 @@ validation or reload rolls the update back and reports the error to bot owners.
 
 ## Checklist
 
-- [ ] `manifest.json` matches the directory name
+- [ ] Supermodule `manifest.json` name matches its directory; submodule names follow `<supermodule>-<directory>`
 - [ ] Entry file exists and default-exports `defineModule(...)`
 - [ ] Submodule names are prefixed and unique
 - [ ] No internal `@lumi/*` imports
 - [ ] npm dependencies are declared in `requirements`
 - [ ] Commands and listeners check `services.modules.isEnabled(guildId, name)`
-- [ ] Config fields are declared in `configFields`
+- [ ] Config fields are declared in the manifest's `configFields`

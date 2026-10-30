@@ -1,17 +1,21 @@
 import { registry } from "./metrics.js";
 
 export interface Logger {
-  info: (msg: string, meta?: unknown) => void;
-  warn: (msg: string, meta?: unknown) => void;
-  error: (msg: string, meta?: unknown) => void;
-  debug: (msg: string, meta?: unknown) => void;
+  info: (message: string, meta?: unknown) => void;
+  warn: (message: string, meta?: unknown) => void;
+  error: (message: string, meta?: unknown) => void;
+  debug: (message: string, meta?: unknown) => void;
 }
 
 export interface MetricsServer {
   stop(): void;
 }
 
-export function startMetricsServer(port: number, ready: () => boolean, logger: Logger): MetricsServer {
+export function startMetricsServer(
+  port: number,
+  isReady: () => boolean,
+  logger: Logger,
+): MetricsServer {
   const server = Bun.serve({
     port,
     fetch: async (request) => {
@@ -22,8 +26,8 @@ export function startMetricsServer(port: number, ready: () => boolean, logger: L
         });
       }
       if (url.pathname === "/healthz") {
-        const ok = ready();
-        return Response.json({ ok }, { status: ok ? 200 : 503 });
+        const ready = isReady();
+        return Response.json({ ok: ready }, { status: ready ? 200 : 503 });
       }
       return new Response("not found", { status: 404 });
     },

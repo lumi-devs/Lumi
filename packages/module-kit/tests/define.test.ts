@@ -21,7 +21,7 @@ describe("Module Kit", () => {
         async onLoad(_services) { return []; },
         async onUnload(_services) {},
       });
-      
+
       expect(mod.name).toBe("test-module");
       expect(mod.displayName).toBe("Test Module");
       expect(mod.emoji).toBe("🧪");
@@ -30,7 +30,7 @@ describe("Module Kit", () => {
       expect(mod.commands).toEqual([]);
       expect(mod.listeners).toEqual([]);
     });
-    
+
     it("should infer config type from Zod schema", () => {
       const mod = defineModule({
         name: "typed-module",
@@ -51,8 +51,8 @@ describe("Module Kit", () => {
         async onLoad(_services) { return []; },
         async onUnload(_services) {},
       });
-      
-      // Type inference test - if this compiles, types are correct
+
+
       const config = mod.config.parse({
         stringSetting: "test",
         numberSetting: 42,
@@ -60,14 +60,14 @@ describe("Module Kit", () => {
         arraySetting: ["a", "b"],
         objectSetting: { key: "value" },
       });
-      
+
       expect(config.stringSetting).toBe("test");
       expect(config.numberSetting).toBe(42);
       expect(config.booleanSetting).toBe(false);
       expect(config.arraySetting).toEqual(["a", "b"]);
       expect(config.objectSetting).toEqual({ key: "value" });
     });
-    
+
     it("should apply defaults for missing config", () => {
       const mod = defineModule({
         name: "defaults-module",
@@ -85,13 +85,13 @@ describe("Module Kit", () => {
         async onLoad(_services) { return []; },
         async onUnload(_services) {},
       });
-      
+
       const config = mod.config.parse({});
       expect(config.withDefault).toBe("default-value");
       expect(config.withoutDefault).toBeUndefined();
     });
   });
-  
+
   describe("CommandDefinition", () => {
     it("should accept valid command definition", () => {
       const cmd: CommandDefinition = {
@@ -99,19 +99,19 @@ describe("Module Kit", () => {
         requiredPermit: "test.cmd",
         async execute(_interaction, _services) {},
       };
-      
+
       expect(cmd.data.name).toBe("test");
       expect(cmd.requiredPermit).toBe("test.cmd");
     });
   });
-  
+
   describe("ListenerDefinition", () => {
     it("should accept valid listener definition", () => {
       const listener: ListenerDefinition = {
         event: "MessageCreate",
         handler: async (_message, _services) => {},
       };
-      
+
       expect(listener.event).toBe("MessageCreate");
     });
   });

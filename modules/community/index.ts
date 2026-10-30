@@ -7,7 +7,7 @@ const CommunitySupermodule = defineModule({
   emoji: "👥",
   description: "Community features: leveling and economy",
   version: "2.0.0",
-  config: z.object({}, {}),
+  config: z.object({}),
   commands: [],
   listeners: [],
   tasks: [],

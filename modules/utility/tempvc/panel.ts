@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import { type CardReply, makeWarningCard } from "@lumi/ui";
 import {
   ChannelType,
@@ -13,7 +14,7 @@ export const TempVcGeneratorSchema = z.object({
   channelId: z.string(),
   templateName: z.string().optional(),
   userLimit: z.number().int().min(0).max(99).optional(),
-}, {});
+});
 
 export const TempVcConfigSchema = z.object({
   categoryId: z.string().nullable().optional(),
@@ -26,7 +27,7 @@ export const TempVcConfigSchema = z.object({
   createCooldownMs: z.number().int().min(0).max(300000).default(10000),
   ownerLeaveDelete: z.boolean().default(true),
   generators: z.array(TempVcGeneratorSchema).default([]),
-}, {});
+});
 
 export type TempVcConfig = z.infer<typeof TempVcConfigSchema>;
 export type TempVcGenerator = z.infer<typeof TempVcGeneratorSchema>;
@@ -43,7 +44,7 @@ export interface ManagedChannel {
   channel: VoiceChannel;
 }
 
-const prisma = (services: any): any => services?.db?.prisma;
+const prisma = (services: ModuleServices): any => services?.db?.prisma;
 
 const localCreateCooldowns = new Map<string, number>();
 
@@ -52,7 +53,7 @@ type CreateCooldown =
   | { acquired: false; waitMs: number };
 
 async function acquireCreateCooldown(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   userId: string,
   cooldownMs: number,
@@ -109,7 +110,7 @@ async function notifyCreateCooldown(
 }
 
 export async function findTempChannel(
-  services: any,
+  services: ModuleServices,
   channelId: string,
 ): Promise<TempVcRecord | null> {
   const model = prisma(services)?.tempVcChannel;
@@ -128,7 +129,7 @@ export async function findTempChannel(
 }
 
 async function listOwnedTempChannels(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   ownerId: string,
 ): Promise<TempVcRecord[]> {
@@ -153,7 +154,7 @@ async function listOwnedTempChannels(
 }
 
 async function createTempRecord(
-  services: any,
+  services: ModuleServices,
   data: {
     guildId: string;
     channelId: string;
@@ -172,7 +173,7 @@ async function createTempRecord(
 }
 
 export async function updateTempRecord(
-  services: any,
+  services: ModuleServices,
   channelId: string,
   data: Record<string, unknown>,
 ): Promise<boolean> {
@@ -187,7 +188,7 @@ export async function updateTempRecord(
 }
 
 async function deleteTempRecord(
-  services: any,
+  services: ModuleServices,
   channelId: string,
 ): Promise<void> {
   const model = prisma(services)?.tempVcChannel;
@@ -200,7 +201,7 @@ async function deleteTempRecord(
 }
 
 async function countTempChannels(
-  services: any,
+  services: ModuleServices,
   where: Record<string, unknown>,
 ): Promise<number | null> {
   const model = prisma(services)?.tempVcChannel;
@@ -214,7 +215,7 @@ async function countTempChannels(
 }
 
 async function listExpiredTempChannels(
-  services: any,
+  services: ModuleServices,
 ): Promise<TempVcRecord[]> {
   const model = prisma(services)?.tempVcChannel;
   if (!model || typeof model.findMany !== "function") return [];
@@ -229,7 +230,7 @@ async function listExpiredTempChannels(
 }
 
 export async function resolveGuildVoiceChannel(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   channelId: string,
 ): Promise<VoiceChannel | null> {
@@ -239,7 +240,7 @@ export async function resolveGuildVoiceChannel(
   const channel =
     cached ?? (await guild.channels.fetch(channelId).catch(() => null));
   if (!channel || channel.type !== ChannelType.GuildVoice) return null;
-  return channel as VoiceChannel;
+  return channel;
 }
 
 export function controlState(
@@ -269,7 +270,7 @@ export function buildControlPanel(
 }
 
 export async function buildControlPanelForChannel(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   channelId: string,
 ): Promise<CardReply | null> {
@@ -281,7 +282,7 @@ export async function buildControlPanelForChannel(
 }
 
 export async function createTempVoiceChannel(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   member: GuildMember,
   config: TempVcConfig,
@@ -383,18 +384,19 @@ export async function createTempVoiceChannel(
     return null;
   }
 
+  const expiresAt = new Date(Date.now() + config.emptyTimeoutMs);
   const record: TempVcRecord = {
     guildId,
     channelId: channel.id,
     ownerId: member.id,
-    expiresAt: new Date(Date.now() + config.emptyTimeoutMs),
+    expiresAt,
   };
 
   const persisted = await createTempRecord(services, {
     guildId,
     channelId: channel.id,
     ownerId: member.id,
-    expiresAt: record.expiresAt as Date,
+    expiresAt,
   });
   if (!persisted) {
     await channel.delete().catch(() => undefined);
@@ -416,7 +418,7 @@ export async function createTempVoiceChannel(
 }
 
 export async function deleteTempVoiceChannel(
-  services: any,
+  services: ModuleServices,
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
@@ -435,7 +437,7 @@ export async function deleteTempVoiceChannel(
   return true;
 }
 
-export async function sweepExpiredTempChannels(services: any): Promise<void> {
+export async function sweepExpiredTempChannels(services: ModuleServices): Promise<void> {
   const rows = await listExpiredTempChannels(services);
   if (rows.length === 0) return;
   const now = Date.now();
@@ -450,7 +452,7 @@ export async function sweepExpiredTempChannels(services: any): Promise<void> {
     if (
       channel &&
       channel.type === ChannelType.GuildVoice &&
-      (channel as VoiceChannel).members.size > 0
+      channel.members.size > 0
     ) {
       continue;
     }

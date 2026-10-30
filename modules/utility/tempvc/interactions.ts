@@ -2,14 +2,18 @@ import {
   requireGuildId as guildIdOf,
   isSnowflake,
 } from "@lumi/foundation";
+import type { ModuleServices } from "@lumi/module-kit";
 import {
   ActionRowBuilder,
   type GuildMember,
+  type Interaction,
+  type MessageComponentInteraction,
   type ModalActionRowComponentBuilder,
   ModalBuilder,
   PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
+  type VoiceChannel,
 } from "discord.js";
 import { handleAdminInteraction } from "./admin.js";
 import { isModuleEnabled } from "./config.js";
@@ -27,12 +31,13 @@ import {
   updateTempRecord,
 } from "./panel.js";
 import { replyError, replySuccess, showCard } from "./reply.js";
+import type { TempVcInteraction } from "./types.js";
 import { deleteConfirmCard, memberActionCard } from "./ui.js";
 
 
 async function loadManaged(
-  interaction: any,
-  services: any,
+  interaction: TempVcInteraction,
+  services: ModuleServices,
   channelId: string,
 ): Promise<ManagedChannel | null> {
   const record = await findTempChannel(services, channelId);
@@ -61,7 +66,7 @@ async function loadManaged(
 }
 
 async function assertOwnerOrManage(
-  interaction: any,
+  interaction: TempVcInteraction,
   managed: ManagedChannel,
 ): Promise<boolean> {
   if (managed.record.ownerId === interaction.user.id) return true;
@@ -77,7 +82,7 @@ async function assertOwnerOrManage(
 }
 
 async function refreshNotice(
-  interaction: any,
+  interaction: TempVcInteraction,
   managed: ManagedChannel,
   notice?: string,
 ): Promise<void> {
@@ -88,7 +93,7 @@ async function refreshNotice(
 }
 
 async function openRenameModal(
-  interaction: any,
+  interaction: MessageComponentInteraction,
   channelId: string,
   current: string,
 ): Promise<void> {
@@ -110,7 +115,7 @@ async function openRenameModal(
 }
 
 async function openLimitModal(
-  interaction: any,
+  interaction: MessageComponentInteraction,
   channelId: string,
   current: number,
 ): Promise<void> {
@@ -132,7 +137,7 @@ async function openLimitModal(
 }
 
 async function handlePanelAction(
-  interaction: any,
+  interaction: MessageComponentInteraction,
   managed: ManagedChannel,
   action: string,
 ): Promise<void> {
@@ -194,8 +199,8 @@ async function handlePanelAction(
 }
 
 async function handleMemberPick(
-  interaction: any,
-  services: any,
+  interaction: TempVcInteraction,
+  services: ModuleServices,
   action: string,
   channelId: string,
 ): Promise<void> {
@@ -227,7 +232,7 @@ async function handleMemberPick(
   if (action === "kick") {
     const target =
       channel.members.get(targetId) ??
-      (await interaction.guild.members.fetch(targetId).catch(() => null));
+      (await channel.guild.members.fetch(targetId).catch(() => null));
     if (!target || target.voice.channelId !== channel.id) {
       await replyError(
         interaction,
@@ -246,7 +251,7 @@ async function handleMemberPick(
   if (action === "transfer") {
     const target =
       channel.members.get(targetId) ??
-      (await interaction.guild.members.fetch(targetId).catch(() => null));
+      (await channel.guild.members.fetch(targetId).catch(() => null));
     if (!target || target.voice.channelId !== channel.id) {
       await replyError(
         interaction,
@@ -337,7 +342,10 @@ async function handleMemberPick(
   await refreshNotice(interaction, managed, "That action is not available.");
 }
 
-async function grantOwner(channel: any, userId: string): Promise<void> {
+async function grantOwner(
+  channel: VoiceChannel,
+  userId: string,
+): Promise<void> {
   await channel.permissionOverwrites
     .edit(userId, {
       ViewChannel: true,
@@ -353,7 +361,10 @@ async function grantOwner(channel: any, userId: string): Promise<void> {
     .catch(() => undefined);
 }
 
-async function revokeOwner(channel: any, userId: string): Promise<void> {
+async function revokeOwner(
+  channel: VoiceChannel,
+  userId: string,
+): Promise<void> {
   await channel.permissionOverwrites
     .edit(userId, {
       ManageChannels: false,
@@ -365,8 +376,8 @@ async function revokeOwner(channel: any, userId: string): Promise<void> {
 }
 
 async function handlePanelInteraction(
-  interaction: any,
-  services: any,
+  interaction: TempVcInteraction,
+  services: ModuleServices,
   customId: string,
 ): Promise<void> {
   const claimId = stripPrefix(customId, TempVcPrefixes.claim);
@@ -424,7 +435,7 @@ async function handlePanelInteraction(
     const name = managed.channel.name;
     const deleted = await deleteTempVoiceChannel(
       services,
-      interaction.guildId,
+      managed.record.guildId,
       managed.channel.id,
     );
     if (deleted) {
@@ -441,7 +452,7 @@ async function handlePanelInteraction(
     if (!managed) return;
     if (!(await assertOwnerOrManage(interaction, managed))) return;
     const value = String(
-      interaction.fields.getTextInputValue("value") ?? "",
+      interaction.fields?.getTextInputValue("value") ?? "",
     ).trim();
     if (value.length === 0) {
       await replyError(interaction, "Invalid Name", "The channel name cannot be empty.");
@@ -461,7 +472,7 @@ async function handlePanelInteraction(
     const managed = await loadManaged(interaction, services, limitId);
     if (!managed) return;
     if (!(await assertOwnerOrManage(interaction, managed))) return;
-    const raw = String(interaction.fields.getTextInputValue("value") ?? "").trim();
+    const raw = String(interaction.fields?.getTextInputValue("value") ?? "").trim();
     const limit = Number.parseInt(raw, 10);
     if (!Number.isInteger(limit) || limit < 0 || limit > 99) {
       await replyError(interaction, "Invalid Limit", "Enter a number from 0 to 99.");
@@ -494,6 +505,7 @@ async function handlePanelInteraction(
     if (!(await assertOwnerOrManage(interaction, managed))) return;
     const action = interaction.values?.[0];
     if (typeof action === "string") {
+      if (!interaction.isMessageComponent()) return;
       await handlePanelAction(interaction, managed, action);
       return;
     }
@@ -507,14 +519,18 @@ async function handlePanelInteraction(
 }
 
 export async function handleTempVcInteraction(
-  interaction: any,
-  services: any,
+  interaction: Interaction,
+  services: ModuleServices,
 ): Promise<boolean> {
-  const customId = interaction?.customId;
-  if (typeof customId !== "string" || !customId.startsWith("tempvc:")) {
+  if (!interaction.isMessageComponent() && !interaction.isModalSubmit()) {
     return false;
   }
-  if (!guildIdOf(interaction.guildId)) {
+  const customId = interaction.customId;
+  if (!customId.startsWith("tempvc:")) {
+    return false;
+  }
+  const guildId = guildIdOf(interaction.guildId);
+  if (!guildId) {
     await replyError(
       interaction,
       "Server Only",
@@ -522,7 +538,7 @@ export async function handleTempVcInteraction(
     );
     return true;
   }
-  if (!isModuleEnabled(services, interaction.guildId)) {
+  if (!isModuleEnabled(services, guildId)) {
     await replyError(
       interaction,
       "Module Disabled",

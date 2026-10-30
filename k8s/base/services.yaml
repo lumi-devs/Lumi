@@ -9,15 +9,12 @@ spec:
   selector:
     app: lumi-bot
   ports:
-    - name: http
-      port: 8080
-      targetPort: 8080
-    - name: grpc
-      port: 8081
-      targetPort: 8081
+    - name: rpc
+      port: 8091
+      targetPort: 8091
     - name: metrics
-      port: 8082
-      targetPort: 8082
+      port: 9090
+      targetPort: 9090
   type: ClusterIP
 ---
 apiVersion: v1

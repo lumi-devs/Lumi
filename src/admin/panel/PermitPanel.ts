@@ -5,15 +5,13 @@ import {
   type PermitRepository,
 } from "@lumi/permits";
 import type { CardReply } from "@lumi/ui";
-import type {
-  AssignFlow,
-  CreateFlow,
-  ExplainFlow,
-  PermitFlow,
-} from "../permits/flows.js";
 import {
+  type AssignFlow,
+  type CreateFlow,
   clearPermitFlow,
+  type ExplainFlow,
   getPermitFlow,
+  type PermitFlow,
   permitFlowKey,
   setPermitFlow,
 } from "../permits/flows.js";
@@ -150,8 +148,8 @@ export class PermitPanel implements PermitHost {
   }
 
   flowKey(): string {
-    // Modals have no message; the create-name modal carries its key in the
-    // custom id instead, so this fallback only applies to component clicks.
+
+
     const messageId = this.interaction.message?.id ?? this.interaction.customId;
     return permitFlowKey(messageId, this.interaction.user.id);
   }
