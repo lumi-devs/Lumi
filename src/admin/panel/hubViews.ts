@@ -82,7 +82,10 @@ export async function renderSettings(
   const guildId = interaction.guildId!;
   const settings = await services.configService.getAll(guildId);
   const prefix = currentPrefix(settings);
-  const otherKeys = Object.keys(settings).filter((key) => key !== "prefix");
+  const enforcePermits = settings.enforcePermits === true;
+  const otherKeys = Object.keys(settings).filter(
+    (key) => key !== "prefix" && key !== "enforcePermits",
+  );
 
   const sections = [
     settingRow(
@@ -95,6 +98,17 @@ export async function renderSettings(
         label: "Edit",
         emoji: "✏️",
         style: ButtonStyle.Primary,
+      },
+    ),
+    settingRow(
+      [
+        `🛡️ **Enforce Permits** — ${enforcePermits ? "On" : "Off"}`,
+        "-# When on, Administrator and Manage Server no longer bypass permits.",
+      ],
+      {
+        customId: "lumi:toggleenforce",
+        label: enforcePermits ? "On" : "Off",
+        style: enforcePermits ? ButtonStyle.Success : ButtonStyle.Secondary,
       },
     ),
   ];

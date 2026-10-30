@@ -124,6 +124,21 @@ export async function handleHubInteraction(
       });
       return true;
     }
+    case "toggleenforce": {
+      await showPanel(interaction, async () => {
+        const current = await services.configService.get(
+          guildId,
+          "enforcePermits",
+        );
+        await services.configService.set(
+          guildId,
+          "enforcePermits",
+          current !== true,
+        );
+        return renderSettings(interaction, services);
+      });
+      return true;
+    }
     default: {
       if (
         await handleModuleAction(
