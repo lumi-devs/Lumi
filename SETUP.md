@@ -104,6 +104,7 @@ OWNER_IDS=123456789012345678
 DATABASE_URL="postgresql://lumi:lumi@localhost:5432/lumi"
 REDIS_URL="redis://localhost:6379"
 GIT_TOKEN=ghp_xxx        # optional, for private addon repos
+WEB_BASE_URL=https://lumi.example.com  # optional, for web verification links
 LOG_LEVEL=info
 ```
 
