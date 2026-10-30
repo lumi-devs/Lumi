@@ -1,0 +1,58 @@
+{
+  "apiVersion": 2,
+  "name": "custom-commands",
+  "displayName": "Custom Commands",
+  "emoji": "🧩",
+  "description": "Guild-authored commands with safe templates, triggers, schedules, and per-user KV storage",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "customCommands",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Custom Commands Enabled",
+      "type": "boolean",
+      "description": "Allow custom command triggers to run",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "prefixEnabled",
+      "label": "Prefix Triggers Enabled",
+      "type": "boolean",
+      "description": "Allow message prefix triggers in addition to slash and component triggers",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "prefix",
+      "label": "Fallback Prefix",
+      "type": "string",
+      "description": "Used when the server prefix is not configured",
+      "default": "!",
+      "category": "General"
+    },
+    {
+      "key": "responseTimeoutMs",
+      "label": "Response Timeout (ms)",
+      "type": "number",
+      "description": "Maximum time for rendering and sending one response",
+      "default": 5000,
+      "min": 500,
+      "max": 15000,
+      "category": "Execution"
+    },
+    {
+      "key": "scheduleChannelId",
+      "label": "Schedule Output Channel",
+      "type": "channel",
+      "description": "Channel where cron and interval command output is sent",
+      "channelTypes": [0, 5],
+      "category": "Execution"
+    }
+  ]
+}
