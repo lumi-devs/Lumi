@@ -27,6 +27,9 @@ const BuiltinNodes = [
   "logging.claim",
   "tempvc.*",
   "tempvc.admin",
+  "security.antinuke.bypass",
+  "security.automod.bypass",
+  "automod.bypass",
 ];
 
 export const GlobalPermitNamespace = "global";

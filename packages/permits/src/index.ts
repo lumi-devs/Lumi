@@ -4,6 +4,22 @@ export type {
   PermitAuditLogQuery,
 } from "./audit.js";
 export {
+  BuiltinAssignmentTargetTypes,
+  BuiltinPermitByName,
+  BuiltinPermitByNumber,
+  BuiltinPermitNames,
+  BuiltinPermits,
+  type BuiltinPermitDefinition,
+  isImmunePermit,
+  isWhitelistScope,
+  matchesWhitelistScope,
+  MinCustomPermitNumber,
+  ReservedPermitNumbers,
+  type WhitelistScope,
+  WhitelistScopes,
+  whitelistScopeLabel,
+} from "./constants.js";
+export {
   matchesCron,
   type ParsedCron,
   parseCron,

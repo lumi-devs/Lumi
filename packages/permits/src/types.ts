@@ -17,6 +17,7 @@ export interface Permit {
   readonly schedule: unknown;
   readonly timezone: string | null;
   readonly conditions: unknown;
+  readonly whitelistScopes: readonly string[];
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -56,6 +57,7 @@ export interface EvaluatePermitOptions {
   readonly guildOwnerId?: string | null;
   readonly permitNode: string;
   readonly at?: Date;
+  readonly managerBypass?: boolean;
 }
 
 export interface PermitChainTarget {
@@ -68,6 +70,8 @@ export interface PermitChainResult {
     readonly custom: {
       readonly grant: readonly string[];
       readonly deny: readonly string[];
+      readonly scopes?: readonly string[];
+      readonly denyScopes?: readonly string[];
     };
   }[];
   readonly isQuarantined: boolean;

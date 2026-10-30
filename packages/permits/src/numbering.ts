@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { MinCustomPermitNumber } from "./constants.js";
 
 export type PermitDelegateSource = Pick<PrismaClient, "permit">;
 
@@ -25,6 +26,7 @@ function hasPrismaCode(error: unknown, code: string): boolean {
 export async function nextPermitNumber(
   db: PermitDelegateSource,
   guildId: string,
+  minimum = 1,
 ): Promise<number> {
   const permits = await db.permit.findMany({
     where: { guildId },
@@ -32,10 +34,17 @@ export async function nextPermitNumber(
     orderBy: { number: "asc" },
   });
 
-  let number = 1;
+  let number = minimum;
   for (const permit of permits) {
     if (permit.number === number) number += 1;
     else if (permit.number > number) break;
   }
   return number;
+}
+
+export async function nextCustomPermitNumber(
+  db: PermitDelegateSource,
+  guildId: string,
+): Promise<number> {
+  return nextPermitNumber(db, guildId, MinCustomPermitNumber);
 }

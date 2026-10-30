@@ -1,6 +1,10 @@
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type { ModalSubmitInteraction } from "discord.js";
-import { hasAdminAccess, roleIdsFrom } from "../access.js";
+import {
+  hasAdminAccess,
+  permitEnforcementEnabled,
+  roleIdsFrom,
+} from "../access.js";
 import { handleAddonInteraction } from "./addons.js";
 import {
   type MessageModalSubmit,
@@ -40,6 +44,10 @@ export async function handleHubInteraction(
     roleIds: roleIdsFrom(interaction.member, guildId),
     guildOwnerId: interaction.guild?.ownerId,
     memberPermissions: interaction.memberPermissions,
+    enforcePermits: await permitEnforcementEnabled(
+      services.configService,
+      guildId,
+    ),
     client: interaction.client,
     permits: services.permits,
   });

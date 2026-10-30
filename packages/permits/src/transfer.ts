@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { createAuditLog } from "./audit.js";
-import { nextPermitNumber } from "./numbering.js";
+import { MinCustomPermitNumber } from "./constants.js";
+import { nextCustomPermitNumber } from "./numbering.js";
 import type { PermitTargetType, Polarity } from "./types.js";
 
 export interface ExportedPermit {
@@ -16,6 +17,7 @@ export interface ExportedPermit {
   readonly schedule: unknown;
   readonly timezone: string | null;
   readonly conditions: unknown;
+  readonly whitelistScopes?: readonly string[];
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -92,6 +94,7 @@ export async function exportPermits(
       schedule: permit.schedule,
       timezone: permit.timezone,
       conditions: permit.conditions,
+      whitelistScopes: permit.whitelistScopes,
       createdAt: permit.createdAt.toISOString(),
       updatedAt: permit.updatedAt.toISOString(),
     });
@@ -180,9 +183,10 @@ export async function importPermits(
         }
 
         const number =
-          typeof permitData.number === "number"
+          typeof permitData.number === "number" &&
+          permitData.number >= MinCustomPermitNumber
             ? permitData.number
-            : await nextPermitNumber(tx, guildId);
+            : await nextCustomPermitNumber(tx, guildId);
 
         const permit = await tx.permit.create({
           data: {
@@ -199,6 +203,11 @@ export async function importPermits(
             schedule: toJsonInput(permitData.schedule),
             timezone: permitData.timezone,
             conditions: toJsonInput(permitData.conditions),
+            whitelistScopes: Array.isArray(permitData.whitelistScopes)
+              ? permitData.whitelistScopes.filter(
+                  (scope): scope is string => typeof scope === "string",
+                )
+              : [],
             createdAt: new Date(permitData.createdAt),
             updatedAt: new Date(permitData.updatedAt),
           },

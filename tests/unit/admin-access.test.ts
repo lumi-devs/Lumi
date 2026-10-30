@@ -111,6 +111,25 @@ describe("hasPermitAccess", () => {
       ),
     ).resolves.toBe(false);
   });
+
+  it("disables the manager bypass when permits are enforced", async () => {
+    const repo = permits(false);
+    await hasPermitAccess(
+      {
+        guildId: "guild",
+        userId: "manager",
+        roleIds: [],
+        enforcePermits: true,
+        permits: repo,
+      },
+      "mod.ban",
+    );
+
+    expect(repo.explainPermit).toHaveBeenCalledWith(
+      expect.objectContaining({ managerBypass: false }),
+      undefined,
+    );
+  });
 });
 
 describe("roleIdsFrom", () => {
