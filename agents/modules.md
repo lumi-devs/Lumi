@@ -24,6 +24,16 @@ Every module under `modules/` is a **supermodule** that contains independently-t
 
 - `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
 - `community-economy` — Currency, banking, rewards, shop, balance cards
+- `custom-commands` — Guild-authored Mustache-style commands with triggers, KV, cron/interval schedules, and card responses
+- `tickets` — Private-thread ticket panels, categories, claims, priorities, notes, tags, feedback, and HTML transcripts
+- `role-menus` — Button, select, and reaction role menus with single/multiple modes and temporary roles
+- `reminders` — Durable DM-first reminders with snooze, recurring schedules, and retention cleanup
+
+### Roles
+
+- `roles-autorole` — Join autoroles with delays and filters
+- `roles-voiceroles` — Per voice/stage channel roles with grace periods
+- `roles-bulkrole` — Resumable bulk add/remove role jobs with filters and dry runs
 
 ### Moderation
 

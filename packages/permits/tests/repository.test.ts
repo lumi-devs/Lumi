@@ -207,6 +207,59 @@ describe("PermitRepository.movePermit", () => {
   });
 });
 
+describe("PermitRepository.seedBuiltinPermits", () => {
+  it("renumbers existing built-ins before creating missing ones", async () => {
+    const findMany = vi.fn(async () => [
+      { id: 5, name: "Extra Owner", number: 1 },
+      { id: 6, name: "Trusted Admin", number: 2 },
+    ]);
+    const update = vi.fn(async () => ({}));
+    const create = vi.fn(async ({ data }: any) => ({
+      id: 7,
+      ...data,
+      assignments: [],
+    }));
+    const transaction = vi.fn(async (callback: any) =>
+      callback({ permit: { update } }),
+    );
+    const repo = new PermitRepository(
+      {
+        permit: { findMany, update, create },
+        $transaction: transaction,
+      } as any,
+      {} as any,
+    );
+
+    await repo.seedBuiltinPermits("guild");
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenNthCalledWith(1, {
+      where: { id: 5 },
+      data: { number: -5 },
+    });
+    expect(update).toHaveBeenNthCalledWith(2, {
+      where: { id: 6 },
+      data: { number: -6 },
+    });
+    expect(update).toHaveBeenNthCalledWith(3, {
+      where: { id: 5 },
+      data: { number: 5 },
+    });
+    expect(update).toHaveBeenNthCalledWith(4, {
+      where: { id: 6 },
+      data: { number: 4 },
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: "Regular",
+        number: 1,
+        builtin: true,
+      }),
+      include: { assignments: true },
+    });
+  });
+});
+
 describe("PermitRepository.hasGrantNode", () => {
   const makeRepo = () =>
     new PermitRepository({} as any, { get: vi.fn(async () => null) } as any);
