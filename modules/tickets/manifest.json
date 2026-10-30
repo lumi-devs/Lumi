@@ -1,0 +1,76 @@
+{
+  "apiVersion": 2,
+  "name": "tickets",
+  "displayName": "Tickets",
+  "emoji": "🎫",
+  "description": "Private support ticket threads with categories, claims, priorities, notes, tags, transcripts, and feedback",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "tickets",
+  "dependencies": {},
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "configFields": [
+    {
+      "key": "transcriptChannelId",
+      "label": "Transcript Channel",
+      "type": "channel",
+      "description": "Channel that receives the HTML transcript when a ticket closes. Transcripts do not expire.",
+      "category": "Transcripts",
+      "channelTypes": [0]
+    },
+    {
+      "key": "staffRoleIds",
+      "label": "Additional Staff Roles",
+      "type": "multi-role",
+      "description": "Roles treated as ticket staff in addition to category staff roles and permits",
+      "default": [],
+      "category": "Access"
+    },
+    {
+      "key": "autoCloseEnabled",
+      "label": "Auto-Close Inactive Tickets",
+      "type": "boolean",
+      "description": "Close open tickets whose last activity is older than the inactivity window",
+      "default": true,
+      "category": "Auto-Close"
+    },
+    {
+      "key": "autoCloseMinutes",
+      "label": "Inactivity Window (minutes)",
+      "type": "number",
+      "description": "Minutes of inactivity before an open ticket is closed automatically",
+      "default": 1440,
+      "min": 5,
+      "max": 525600,
+      "category": "Auto-Close"
+    },
+    {
+      "key": "feedbackEnabled",
+      "label": "Feedback Prompt",
+      "type": "boolean",
+      "description": "Ask the ticket opener for a 1-5 rating after the ticket closes",
+      "default": true,
+      "category": "Feedback"
+    },
+    {
+      "key": "maxOpenPerUser",
+      "label": "Max Open Tickets Per User",
+      "type": "number",
+      "description": "Maximum number of simultaneously open tickets one member may have",
+      "default": 3,
+      "min": 1,
+      "max": 25,
+      "category": "Limits"
+    },
+    {
+      "key": "mentionStaffOnOpen",
+      "label": "Ping Staff On Open",
+      "type": "boolean",
+      "description": "Ping the category ping roles when a ticket is opened",
+      "default": true,
+      "category": "Limits"
+    }
+  ]
+}
