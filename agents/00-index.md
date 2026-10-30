@@ -10,6 +10,14 @@
 | [downloader.md](./downloader.md)             | You are changing addon install/update/validation flows.                          |
 | [commands.md](./commands.md)                 | You are adding a built-in command or changing dispatch.                          |
 | [permissions.md](./permissions.md)           | You are changing permits, access tiers, the permission panel, or command gating. |
+| [custom-commands.md](./custom-commands.md)   | You are changing custom command triggers, templating, KV, or schedules.          |
+| [tickets.md](./tickets.md)                   | You are changing ticket panels, threads, categories, or transcripts.             |
+| [role-menus.md](./role-menus.md)             | You are changing reaction/button/select role menus or temporary roles.           |
+| [role-automation.md](./role-automation.md)   | You are changing autorole, voice roles, or bulk role jobs.                       |
+| [reminders.md](./reminders.md)               | You are changing reminder parsing, delivery, or retention.                       |
+| [stats.md](./stats.md)                       | You are changing message/voice stats, cards, tracking, or retention.             |
+| [dashboard.md](./dashboard.md)               | You are changing the web dashboard, OAuth, sessions, or verification page.       |
+| [verification-web.md](./verification-web.md) | You are changing web verification tokens or the Discord-side flow.               |
 | [ui.md](./ui.md)                             | You are changing user-facing cards or message layout.                            |
 | [testing.md](./testing.md)                   | You are writing tests or running integration checks.                             |
 | [conventions.md](./conventions.md)           | You need style, naming, error handling, or logging rules.                        |
