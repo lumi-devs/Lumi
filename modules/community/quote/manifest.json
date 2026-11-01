@@ -1,0 +1,83 @@
+{
+  "apiVersion": 2,
+  "name": "community-quote",
+  "displayName": "Quotes",
+  "emoji": "💬",
+  "description": "Turn messages and text into \"Make it a Quote\" images",
+  "version": "1.0.0",
+  "entry": "index.ts",
+  "configKey": "quote",
+  "dependencies": {
+    "community": "^2.0.0"
+  },
+  "requirements": ["makeitaquote@^12.1.6"],
+  "conflicts": [],
+  "capabilities": [
+    {
+      "name": "community-quote",
+      "version": "1.0.0",
+      "provides": ["quote.render"]
+    }
+  ],
+  "configFields": [
+    {
+      "key": "channelId",
+      "label": "Quote Channel",
+      "type": "channel",
+      "description": "Channel where generated quotes are posted. Leave empty to post quotes in the channel where the command is used.",
+      "category": "Delivery",
+      "channelTypes": [0, 5]
+    },
+    {
+      "key": "theme",
+      "label": "Theme",
+      "type": "select",
+      "description": "Dark desaturates the avatar. Color keeps the avatar in full color.",
+      "default": "dark",
+      "choices": ["dark", "color"],
+      "category": "Appearance"
+    },
+    {
+      "key": "watermark",
+      "label": "Watermark",
+      "type": "string",
+      "description": "Text shown in the corner of the quote image. Leave empty to hide it.",
+      "default": "Make it a Quote",
+      "category": "Appearance"
+    },
+    {
+      "key": "nameSource",
+      "label": "Name Source",
+      "type": "select",
+      "description": "Use the server nickname or the account's global name.",
+      "default": "nickname",
+      "choices": ["nickname", "global"],
+      "category": "Appearance"
+    },
+    {
+      "key": "avatarSource",
+      "label": "Avatar Source",
+      "type": "select",
+      "description": "Use the per-server avatar or the account's global avatar.",
+      "default": "guild",
+      "choices": ["guild", "global"],
+      "category": "Appearance"
+    },
+    {
+      "key": "stripMarkdown",
+      "label": "Strip Markdown",
+      "type": "boolean",
+      "description": "Remove Discord markdown from quoted text instead of quoting it exactly as written.",
+      "default": false,
+      "category": "Text"
+    },
+    {
+      "key": "resolveMentions",
+      "label": "Resolve Mentions",
+      "type": "boolean",
+      "description": "Turn user, role, channel, and timestamp tokens into readable text.",
+      "default": true,
+      "category": "Text"
+    }
+  ]
+}
