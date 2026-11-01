@@ -115,8 +115,7 @@ async function openTicketModal(
   }
   const category = await findCategory(services, guildId, categoryId);
   if (
-    !category ||
-    !category.enabled ||
+    !category?.enabled ||
     !panel.categoryIds.includes(category.id)
   ) {
     await replyError(
@@ -204,8 +203,7 @@ async function createTicketFromModal(
   }
   const category = await findCategory(services, guildId, categoryId);
   if (
-    !category ||
-    !category.enabled ||
+    !category?.enabled ||
     !panel.categoryIds.includes(category.id)
   ) {
     await replyError(
@@ -251,10 +249,9 @@ async function createTicketFromModal(
 
   const parent = await guild.channels.fetch(panel.channelId).catch(() => null);
   if (
-    !parent ||
-    !parent.isTextBased() ||
+    !parent?.isTextBased() ||
     !("threads" in parent) ||
-    parent.isThread()
+    parent?.isThread()
   ) {
     await replyError(
       interaction,
