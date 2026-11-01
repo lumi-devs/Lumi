@@ -1,5 +1,7 @@
 <script lang="ts">
   import { formatDate } from "$lib/format";
+  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
+  import NodePicker from "$lib/components/NodePicker.svelte";
   let { data } = $props();
 
   function lines(value: unknown): string {
@@ -98,9 +100,12 @@
       </div>
       <div class="field full">
         <label for="{uid}-permissions">Permission nodes</label>
-        <textarea id="{uid}-permissions" name="permissionNodes"
-          >{lines(command?.permissionNodes ?? [])}</textarea
-        >
+        <NodePicker
+          id="{uid}-permissions"
+          name="permissionNodes"
+          nodes={data.nodes}
+          selected={[...(command?.permissionNodes ?? [])]}
+        />
       </div>
     </div>
     <div class="actions" style="margin-top:0.8rem">
@@ -345,15 +350,15 @@
               </td>
               <td>
                 <div class="actions">
-                  <form method="POST" action="?/deleteCommand">
-                    <input
-                      type="hidden"
-                      name="_csrf"
-                      value={data.csrfToken ?? ""}
-                    />
-                    <input type="hidden" name="id" value={command.id} />
-                    <button class="danger small" type="submit">Delete</button>
-                  </form>
+                  <ConfirmForm
+                    action="?/deleteCommand"
+                    csrfToken={data.csrfToken ?? ""}
+                    buttonLabel="Delete"
+                    confirmLabel="Confirm"
+                    message="Delete this custom command?"
+                    hidden={[{ name: "id", value: command.id }]}
+                    small
+                  />
                 </div>
               </td>
             </tr>
@@ -392,11 +397,15 @@
               options
             </div>
           </div>
-          <form method="POST" action="?/deleteMenu">
-            <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
-            <input type="hidden" name="id" value={menu.id} />
-            <button class="danger small" type="submit">Delete menu</button>
-          </form>
+          <ConfirmForm
+            action="?/deleteMenu"
+            csrfToken={data.csrfToken ?? ""}
+            buttonLabel="Delete menu"
+            confirmLabel="Confirm"
+            message="Delete this role menu and its options?"
+            hidden={[{ name: "id", value: menu.id }]}
+            small
+          />
         </div>
 
         {#if menu.options.length > 0}
@@ -412,21 +421,15 @@
                     <td>{option.label}</td>
                     <td>{option.emoji ?? "—"}</td>
                     <td>
-                      <form method="POST" action="?/deleteOption">
-                        <input
-                          type="hidden"
-                          name="_csrf"
-                          value={data.csrfToken ?? ""}
-                        />
-                        <input
-                          type="hidden"
-                          name="optionId"
-                          value={option.id}
-                        />
-                        <button class="secondary small" type="submit"
-                          >Remove</button
-                        >
-                      </form>
+                      <ConfirmForm
+                        action="?/deleteOption"
+                        csrfToken={data.csrfToken ?? ""}
+                        buttonLabel="Remove"
+                        confirmLabel="Confirm"
+                        message="Remove this role menu option?"
+                        hidden={[{ name: "optionId", value: option.id }]}
+                        small
+                      />
                     </td>
                   </tr>
                 {/each}
@@ -527,11 +530,15 @@
               {category.defaultPriority}
             </div>
           </div>
-          <form method="POST" action="?/deleteCategory">
-            <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
-            <input type="hidden" name="id" value={category.id} />
-            <button class="danger small" type="submit">Delete category</button>
-          </form>
+          <ConfirmForm
+            action="?/deleteCategory"
+            csrfToken={data.csrfToken ?? ""}
+            buttonLabel="Delete category"
+            confirmLabel="Confirm"
+            message="Delete this ticket category?"
+            hidden={[{ name: "id", value: category.id }]}
+            small
+          />
         </div>
         <details style="margin-top:0.6rem">
           <summary>Edit category</summary>
@@ -563,15 +570,15 @@
               <td><code>{panel.channelId}</code></td>
               <td>{panel.categoryIds.length}</td>
               <td>
-                <form method="POST" action="?/deletePanel">
-                  <input
-                    type="hidden"
-                    name="_csrf"
-                    value={data.csrfToken ?? ""}
-                  />
-                  <input type="hidden" name="id" value={panel.id} />
-                  <button class="danger small" type="submit">Delete</button>
-                </form>
+                <ConfirmForm
+                  action="?/deletePanel"
+                  csrfToken={data.csrfToken ?? ""}
+                  buttonLabel="Delete"
+                  confirmLabel="Confirm"
+                  message="Delete this ticket panel?"
+                  hidden={[{ name: "id", value: panel.id }]}
+                  small
+                />
               </td>
             </tr>
           {/each}

@@ -14,13 +14,12 @@ disables that bypass, so managers need a real permit like everyone else.
 
 Built-in permits are created with fixed guild numbers:
 
-| #   | Name          | Nodes       | Security whitelist                                        |
-| --- | ------------- | ----------- | --------------------------------------------------------- |
-| 1   | Regular       | `utility.*` | none                                                      |
-| 4   | Trusted Admin | `admin.*`   | `security.total`, `security.antinuke`, `security.automod` |
-| 5   | Extra Owner   | `*`         | `security.total`, `security.antinuke`, `security.automod` |
+| #   | Name          | Nodes     | Security whitelist                                        |
+| --- | ------------- | --------- | --------------------------------------------------------- |
+| 1   | Extra Owner   | `*`       | `security.total`, `security.antinuke`, `security.automod` |
+| 2   | Trusted Admin | `admin.*` | `security.total`, `security.antinuke`, `security.automod` |
 
-Custom permits always receive number 6 or higher. Only bot owners can create,
+Custom permits always receive number 3 or higher. Only bot owners can create,
 edit, assign, or delete a permit containing `*`; guild Extra Owner holders cannot
 create another Extra Owner. Built-in permits cannot be edited, deleted, moved, or
 assigned to roles/channels (users only).

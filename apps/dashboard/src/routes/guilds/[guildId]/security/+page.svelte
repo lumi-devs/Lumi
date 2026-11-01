@@ -1,6 +1,24 @@
 <script lang="ts">
   import { formatDate } from "$lib/format";
+  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
   let { data } = $props();
+
+  function statsSummary(stats: any): string {
+    if (!stats) return "—";
+    const parts = [
+      `${stats.roles} roles`,
+      `${stats.channels} channels`,
+      `${stats.categories} cat.`,
+      `${stats.text} text`,
+    ];
+    if (stats.voice) parts.push(`${stats.voice} voice`);
+    if (stats.stages) parts.push(`${stats.stages} stage`);
+    if (stats.forums) parts.push(`${stats.forums} forum`);
+    if (stats.media) parts.push(`${stats.media} media`);
+    if (stats.announcements) parts.push(`${stats.announcements} ann.`);
+    parts.push(`${stats.overwrites} overwrites`);
+    return parts.join(" · ");
+  }
 </script>
 
 <h2>Security</h2>
@@ -441,29 +459,146 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>ID</th><th>Reason</th><th>Created</th><th></th></tr>
+          <tr>
+            <th>ID</th>
+            <th>Reason</th>
+            <th>Contents</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
         </thead>
         <tbody>
           {#each data.backups as backup (backup.id)}
             <tr>
               <td><code>{backup.id}</code></td>
               <td>{backup.reason}</td>
+              <td class="hint">{statsSummary(backup.stats)}</td>
               <td>{formatDate(backup.createdAt)}</td>
               <td>
-                <form method="POST" action="?/deleteBackup">
-                  <input
-                    type="hidden"
-                    name="_csrf"
-                    value={data.csrfToken ?? ""}
+                <div class="actions">
+                  <form method="POST" action="?/previewBackup">
+                    <input
+                      type="hidden"
+                      name="_csrf"
+                      value={data.csrfToken ?? ""}
+                    />
+                    <input type="hidden" name="id" value={backup.id} />
+                    <button class="secondary small" type="submit">
+                      Preview restore
+                    </button>
+                  </form>
+                  <ConfirmForm
+                    action="?/deleteBackup"
+                    csrfToken={data.csrfToken ?? ""}
+                    buttonLabel="Delete"
+                    confirmLabel="Confirm"
+                    message="Delete this security backup?"
+                    hidden={[{ name: "id", value: backup.id }]}
+                    small
                   />
-                  <input type="hidden" name="id" value={backup.id} />
-                  <button class="danger small" type="submit">Delete</button>
-                </form>
+                </div>
               </td>
             </tr>
           {/each}
         </tbody>
       </table>
+    </div>
+  {/if}
+
+  {#if data.form?.backupPreview}
+    {@const preview = data.form.backupPreview}
+    <div class="panel" style="margin-top:1.5rem">
+      <h3>Restore preview</h3>
+      <p class="muted">
+        Backup <code>{preview.backup.id}</code> from
+        {formatDate(preview.backup.createdAt)} ({preview.backup.reason})
+      </p>
+      <p class="hint">{statsSummary(preview.backup.stats)}</p>
+
+      <div class="form-grid">
+        <div class="field">
+          <strong>Roles</strong>
+          <p class="hint">
+            {preview.diff.roles.filter((c: any) => c.action === "create")
+              .length} create ·
+            {preview.diff.roles.filter((c: any) => c.action === "update")
+              .length} update ·
+            {preview.diff.unchangedRoles} unchanged
+          </p>
+          {#if preview.diff.roles.length === 0}
+            <p class="hint">No role changes.</p>
+          {:else}
+            <ul>
+              {#each preview.diff.roles as change (change.id)}
+                <li>
+                  <strong
+                    >{change.action === "create" ? "Create" : "Update"}</strong
+                  >
+                  {change.name}
+                  {#if change.fields.length > 0}
+                    <span class="hint">({change.fields.join(", ")})</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+        <div class="field">
+          <strong>Channels</strong>
+          <p class="hint">
+            {preview.diff.channels.filter((c: any) => c.action === "create")
+              .length} create ·
+            {preview.diff.channels.filter((c: any) => c.action === "update")
+              .length} update ·
+            {preview.diff.unchangedChannels} unchanged
+          </p>
+          {#if preview.diff.channels.length === 0}
+            <p class="hint">No channel changes.</p>
+          {:else}
+            <ul>
+              {#each preview.diff.channels as change (change.id)}
+                <li>
+                  <strong
+                    >{change.action === "create" ? "Create" : "Update"}</strong
+                  >
+                  {change.name}
+                  {#if change.fields.length > 0}
+                    <span class="hint">({change.fields.join(", ")})</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+
+      {#if preview.diff.warnings.length > 0}
+        <div class="notice warn">
+          <p><strong>Warnings</strong></p>
+          <ul>
+            {#each preview.diff.warnings as warning}
+              <li>{warning}</li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+
+      <p class="hint">
+        Existing roles and channels are updated in place. Nothing is deleted.
+      </p>
+
+      <div class="actions">
+        <form method="POST" action="?/restoreBackup">
+          <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
+          <input type="hidden" name="id" value={preview.backup.id} />
+          <button class="danger" type="submit">Confirm Restore</button>
+        </form>
+        <form method="POST" action="?/cancelRestore">
+          <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
+          <input type="hidden" name="id" value={preview.backup.id} />
+          <button class="secondary" type="submit">Reject</button>
+        </form>
+      </div>
     </div>
   {/if}
 </div>

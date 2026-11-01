@@ -9,5 +9,14 @@
   "configFields": [],
   "dependencies": {
     "utility": "^2.0.0"
-  }
+  },
+  "capabilities": [
+    {
+      "name": "utility-info",
+      "version": "2.0.0",
+      "provides": ["utility.info"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

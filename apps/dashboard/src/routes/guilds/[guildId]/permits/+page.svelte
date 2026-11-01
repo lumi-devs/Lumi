@@ -1,6 +1,10 @@
 <script lang="ts">
   import { formatDate } from "$lib/format";
+  import NodePicker from "$lib/components/NodePicker.svelte";
+  import TimezoneSelect from "$lib/components/TimezoneSelect.svelte";
   let { data } = $props();
+
+  let selectedNodes = $state<string[]>([]);
 </script>
 
 <h2>Permits</h2>
@@ -96,22 +100,16 @@
       </div>
       <div class="field">
         <label for="permit-timezone">Timezone (optional)</label>
-        <input
-          id="permit-timezone"
-          name="timezone"
-          type="text"
-          maxlength="64"
-          placeholder="Europe/London"
-        />
+        <TimezoneSelect id="permit-timezone" name="timezone" />
       </div>
       <div class="field full">
         <label for="permit-nodes">Nodes</label>
-        <textarea
+        <NodePicker
           id="permit-nodes"
           name="nodes"
-          required
-          placeholder="admin.config&#10;moderation.ban"></textarea>
-        <span class="hint">One node per line or comma-separated.</span>
+          nodes={data.nodes}
+          bind:selected={selectedNodes}
+        />
       </div>
       <div class="field full">
         <label for="permit-scopes">Whitelist scopes (optional)</label>
@@ -122,7 +120,9 @@
       </div>
     </div>
     <div class="actions" style="margin-top:1rem">
-      <button type="submit">Create permit</button>
+      <button type="submit" disabled={selectedNodes.length === 0}
+        >Create permit</button
+      >
     </div>
   </form>
 </div>

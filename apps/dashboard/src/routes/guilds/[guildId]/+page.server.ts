@@ -2,7 +2,9 @@ import type { PageServerLoad } from "./$types";
 import { requireGuildAccess } from "$lib/server/auth";
 import { fetchBotGuild } from "$lib/server/discord";
 import { moduleCatalog } from "$lib/server/modules";
+import { configFor, effectiveModuleEnabled } from "$lib/server/moduleConfig";
 import { getPrisma } from "$lib/server/prisma";
+import { readGuildSettings } from "$lib/server/settings";
 
 export const load: PageServerLoad = async (event) => {
   const guildId = event.params.guildId ?? "";
@@ -10,15 +12,19 @@ export const load: PageServerLoad = async (event) => {
   const prisma = getPrisma();
 
   const [
-    enabledModules,
+    disabledModules,
     permitCount,
     openTickets,
     recentAudit,
     latestSnapshot,
     latestBackup,
     catalog,
+    settings,
   ] = await Promise.all([
-    prisma.guildModule.count({ where: { guildId, enabled: true } }),
+    prisma.guildModule.findMany({
+      where: { guildId, enabled: false },
+      select: { module: true },
+    }),
     prisma.permit.count({ where: { guildId } }),
     prisma.ticket.count({ where: { guildId, status: "open" } }),
     prisma.auditLog.findMany({
@@ -36,6 +42,7 @@ export const load: PageServerLoad = async (event) => {
       select: { id: true, reason: true, createdAt: true },
     }),
     moduleCatalog(),
+    readGuildSettings(guildId),
   ]);
 
   let botPresent = false;
@@ -45,11 +52,25 @@ export const load: PageServerLoad = async (event) => {
     console.warn("[dashboard] bot guild lookup failed", error);
   }
 
+  const disabled = new Set(disabledModules.map((row) => row.module));
+  const enabledModules = catalog.filter(
+    (module) =>
+      module.isSubmodule &&
+      effectiveModuleEnabled(
+        module.configFields,
+        configFor(settings, module.configKey),
+        !disabled.has(module.name),
+      ),
+  ).length;
+  const availableModules = catalog.filter(
+    (module) => module.isSubmodule,
+  ).length;
+
   return {
     botPresent,
     modules: {
       enabled: enabledModules,
-      available: catalog.length,
+      available: availableModules,
     },
     permitCount,
     openTickets,

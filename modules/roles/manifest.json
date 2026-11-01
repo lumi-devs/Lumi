@@ -4,11 +4,5 @@
   "displayName": "Roles",
   "emoji": "🎭",
   "description": "Role automation: join autoroles, voice channel roles, and bulk role jobs",
-  "version": "2.0.0",
-  "entry": "index.ts",
-  "dependencies": {},
-  "requirements": [],
-  "conflicts": [],
-  "capabilities": [],
-  "configFields": []
+  "version": "2.0.0"
 }

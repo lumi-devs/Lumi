@@ -1,6 +1,7 @@
 # Reminders
 
-Module: `modules/reminders/` (`reminders`, config key `reminders`). Guild-only.
+Module: `modules/utility/reminders/` (`utility-reminders`, config key
+`reminders`). Guild-only.
 
 ## Commands
 
@@ -78,7 +79,7 @@ the bot needs View Channel and Send Messages in any fallback channel.
 
 ## Tests
 
-Focused tests live in `modules/reminders/tests/` and avoid Discord and the
+Focused tests live in `modules/utility/reminders/tests/` and avoid Discord and the
 database:
 
 - `duration.test.ts` — duration parsing, formatting, and the one-year cap

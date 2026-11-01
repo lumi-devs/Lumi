@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireGuildAccess } from "$lib/server/auth";
 import { recordAudit } from "$lib/server/audit";
 import { getPrisma } from "$lib/server/prisma";
+import { fetchPermitNodes } from "$lib/server/rpc.js";
 import { describeError, isPrismaCode } from "$lib/server/prismaErrors";
 import {
   assertCsrf,
@@ -64,10 +65,14 @@ export const load: PageServerLoad = async (event) => {
   const parsedId = IdParam.safeParse(event.params.permitId);
   if (!parsedId.success) throw error(404, "Permit not found.");
 
-  const permit = await loadPermit(guildId, parsedId.data);
+  const [permit, nodes] = await Promise.all([
+    loadPermit(guildId, parsedId.data),
+    fetchPermitNodes(guildId),
+  ]);
   if (!permit) throw error(404, "Permit not found.");
 
   return {
+    nodes,
     permit: {
       id: permit.id,
       guildId: permit.guildId,
@@ -209,6 +214,11 @@ export const actions: Actions = {
       expiresAt: formString(data, "expiresAt"),
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
+    if (permit.builtin && parsed.data.targetType !== "USER") {
+      return fail(400, {
+        error: "Built-in permits can only be assigned to users.",
+      });
+    }
 
     try {
       await getPrisma().permitAssignment.create({

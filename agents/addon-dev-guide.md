@@ -16,21 +16,21 @@ bundled modules, are installed from git repositories, and run in-process.
 
 ## Structure
 
-Every add-on is a supermodule: a directory with a root `manifest.json`, an
-entry file, and one or more submodule directories.
+Every add-on is a supermodule: a directory with a thin root `manifest.json` and
+one or more submodule directories. The root manifest is group metadata only; it
+has no `entry` and no code.
 
 ```
 my-addon/
-├── manifest.json          # supermodule
-├── index.ts               # supermodule definition (defineModule)
+├── manifest.json          # supermodule metadata only
 └── status/                # submodule: my-addon-status
     ├── manifest.json
     └── index.ts
 ```
 
-The root module and each submodule use the same `defineModule` shape as bundled
-modules. Submodule manifests use prefixed names (for example `my-addon-status`)
-and declare `dependencies: { "my-addon": "^1.0.0" }`.
+Each submodule uses the same `defineModule` shape and manifest contract as
+bundled modules. Submodule manifests use prefixed names (for example
+`my-addon-status`) and declare `dependencies: { "my-addon": "^1.0.0" }`.
 
 ## Manifest
 
@@ -41,15 +41,14 @@ and declare `dependencies: { "my-addon": "^1.0.0" }`.
   "displayName": "My Add-on",
   "emoji": "🔌",
   "description": "What the add-on does",
-  "version": "1.0.0",
-  "entry": "index.ts",
-  "dependencies": {},
-  "requirements": ["lodash@^4.17.21"],
-  "conflicts": [],
-  "configFields": []
+  "version": "1.0.0"
 }
 ```
 
+- The root manifest contains only `apiVersion`, `name`, `displayName`, `emoji`,
+  `description`, and `version`.
+- Submodule manifests declare `entry`, `dependencies`, `requirements`,
+  `conflicts`, `capabilities`, and `configFields`.
 - `entry` is loaded directly by Bun; ship TypeScript, not compiled JS.
 - `requirements` are npm registry specs installed with
   `bun add --production --ignore-scripts --no-save`.
@@ -71,7 +70,7 @@ Rejected by validation:
   `requirements`
 - Vendored `node_modules`, `.npmrc`, or `bunfig.toml`
 - A manifest name that does not match the directory name
-- A missing entry file or invalid requirement spec
+- An invalid requirement spec
 
 Allowed runtime imports:
 
@@ -118,10 +117,11 @@ validation or reload rolls the update back and reports the error to bot owners.
 
 ## Checklist
 
-- [ ] Supermodule `manifest.json` name matches its directory; submodule names follow `<supermodule>-<directory>`
-- [ ] Entry file exists and default-exports `defineModule(...)`
+- [ ] Supermodule `manifest.json` is metadata-only and its name matches the directory
+- [ ] Submodule names follow `<supermodule>-<directory>`
+- [ ] Each submodule entry file exists and default-exports `defineModule(...)`
 - [ ] Submodule names are prefixed and unique
 - [ ] No internal `@lumi/*` imports
-- [ ] npm dependencies are declared in `requirements`
+- [ ] npm dependencies are declared in each submodule's `requirements`
 - [ ] Commands and listeners check `services.modules.isEnabled(guildId, name)`
-- [ ] Config fields are declared in the manifest's `configFields`
+- [ ] Config fields are declared in the submodule manifest's `configFields`

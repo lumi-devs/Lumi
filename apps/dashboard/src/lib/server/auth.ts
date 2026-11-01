@@ -66,6 +66,18 @@ export async function manageableGuilds(
   try {
     guilds = await fetchUserGuilds(token);
   } catch (fetchError) {
+    if (fetchError instanceof DiscordError) {
+      console.error("[dashboard] fetchUserGuilds failed:", {
+        status: fetchError.status,
+        message: fetchError.message,
+        body: fetchError.body,
+      });
+    } else {
+      console.error(
+        "[dashboard] fetchUserGuilds unexpected error:",
+        fetchError,
+      );
+    }
     if (
       fetchError instanceof DiscordError &&
       (fetchError.status === 401 || fetchError.status === 403)

@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@discordjs/builders": "^1.14.1",
-    "canvas": "^3.2.3",
     "discord.js": "^14.27.0"
   },
   "devDependencies": {

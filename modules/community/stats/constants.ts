@@ -1,4 +1,4 @@
-export const StatsModuleName = "stats";
+export const StatsModuleName = "community-stats";
 export const StatsConfigKey = "stats";
 export const StatsPermitNode = "stats.view";
 

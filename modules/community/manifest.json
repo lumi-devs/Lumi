@@ -3,7 +3,6 @@
   "name": "community",
   "displayName": "Community",
   "emoji": "👥",
-  "description": "Community features: leveling and economy",
-  "version": "2.0.0",
-  "entry": "index.ts"
+  "description": "Community features: leveling, economy, stats, quotes, and tickets",
+  "version": "2.0.0"
 }

@@ -3,12 +3,18 @@ import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { requireGuildAccess } from "$lib/server/auth";
+import { storedBackupStats } from "$lib/server/backups";
 import { recordAudit } from "$lib/server/audit";
 import { fetchGuildRoles, type DiscordRole } from "$lib/server/discord";
 import { publicWebBaseUrl } from "$lib/server/env";
 import { getPrisma } from "$lib/server/prisma";
 import { getRedis } from "$lib/server/redis";
-import { readGuildSettings, setGuildSetting } from "$lib/server/settings";
+import { fetchBackupPreview, restoreBackupViaRpc } from "$lib/server/rpc";
+import {
+  ensureGuild,
+  readGuildSettings,
+  setGuildSetting,
+} from "$lib/server/settings";
 import {
   assertCsrf,
   checkbox,
@@ -20,6 +26,8 @@ import {
 } from "$lib/server/validation";
 
 const NullableIdLoad = z.string().nullable().default(null);
+
+const BackupId = z.string().trim().min(1).max(128);
 
 const SecurityLoad = z.object({
   logChannelId: NullableIdLoad,
@@ -139,7 +147,7 @@ export const load: PageServerLoad = async (event) => {
       where: { guildId },
       orderBy: { createdAt: "desc" },
       take: 25,
-      select: { id: true, reason: true, createdAt: true },
+      select: { id: true, reason: true, createdAt: true, data: true },
     }),
     prisma.verificationToken.findMany({
       where: { guildId },
@@ -166,7 +174,7 @@ export const load: PageServerLoad = async (event) => {
   }
 
   return {
-    security: parseOr(SecurityLoad, settings.security, {
+    security: parseOr(SecurityLoad, settings["security-core"], {
       logChannelId: null,
       quarantineRoleId: null,
       trustedRoleIds: [],
@@ -201,8 +209,10 @@ export const load: PageServerLoad = async (event) => {
         }
       : null,
     backups: backups.map((backup) => ({
-      ...backup,
+      id: backup.id,
+      reason: backup.reason,
       createdAt: backup.createdAt.toISOString(),
+      stats: storedBackupStats(backup.data),
     })),
     tokens: tokens.map((token) => ({
       ...token,
@@ -231,13 +241,13 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    await setGuildSetting(guildId, "security", parsed.data);
+    await setGuildSetting(guildId, "security-core", parsed.data);
     await recordAudit({
       guildId,
       userId,
       action: "dashboard.security.config",
       targetType: "guild_settings",
-      changes: { key: "security" },
+      changes: { key: "security-core" },
     });
     return { success: "Security settings saved." };
   },
@@ -293,6 +303,74 @@ export const actions: Actions = {
     return { success: "Backup settings saved." };
   },
 
+  previewBackup: async (event) => {
+    const guildId = event.params.guildId ?? "";
+    await requireGuildAccess(event, guildId);
+    const data = await event.request.formData();
+    assertCsrf(event, data);
+
+    const parsed = parseInput(BackupId, formString(data, "id"));
+    if (!parsed.ok) return fail(400, { error: parsed.message });
+
+    const preview = await fetchBackupPreview(guildId, parsed.data);
+    if (!preview) {
+      return fail(502, {
+        error:
+          "Could not build a restore preview. Make sure the bot is online and RPC is configured.",
+      });
+    }
+
+    return { backupPreview: preview };
+  },
+
+  restoreBackup: async (event) => {
+    const guildId = event.params.guildId ?? "";
+    await requireGuildAccess(event, guildId);
+    const data = await event.request.formData();
+    const userId = assertCsrf(event, data);
+
+    const parsed = parseInput(BackupId, formString(data, "id"));
+    if (!parsed.ok) return fail(400, { error: parsed.message });
+
+    const exists = await getPrisma().securityBackup.findFirst({
+      where: { id: parsed.data, guildId },
+      select: { id: true },
+    });
+    if (!exists) return fail(404, { error: "Backup not found." });
+
+    const restored = await restoreBackupViaRpc(guildId, parsed.data);
+    if (!restored.ok) return fail(502, { error: restored.error });
+
+    const result = restored.result;
+    await recordAudit({
+      guildId,
+      userId,
+      action: "dashboard.security.backup.restore",
+      targetId: parsed.data,
+      targetType: "security_backup",
+      changes: {
+        rolesCreated: result.rolesCreated,
+        rolesUpdated: result.rolesUpdated,
+        channelsCreated: result.channelsCreated,
+        channelsUpdated: result.channelsUpdated,
+        warningCount: result.warnings.length,
+      },
+    });
+
+    return {
+      success: `Backup restored: ${result.rolesCreated} roles and ${result.channelsCreated} channels created, ${result.rolesUpdated} roles and ${result.channelsUpdated} channels updated.`,
+      backupRestore: result,
+    };
+  },
+
+  cancelRestore: async (event) => {
+    const guildId = event.params.guildId ?? "";
+    await requireGuildAccess(event, guildId);
+    const data = await event.request.formData();
+    assertCsrf(event, data);
+    return { success: "Restore rejected. Nothing was changed." };
+  },
+
   saveVerification: async (event) => {
     const guildId = event.params.guildId ?? "";
     await requireGuildAccess(event, guildId);
@@ -310,7 +388,34 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    await setGuildSetting(guildId, "security-verification", parsed.data);
+    const existing = await readGuildSettings(guildId);
+    const current = parseOr(
+      VerificationLoad,
+      existing["security-verification"],
+      {
+        enabled: false,
+        verifiedRoleId: null,
+        pendingRoleId: null,
+        timeoutMinutes: 10,
+        kickOnTimeout: false,
+        mode: "emoji",
+        target: "everyone",
+      },
+    );
+    await setGuildSetting(guildId, "security-verification", {
+      ...current,
+      ...parsed.data,
+    });
+    await ensureGuild(guildId);
+    await getPrisma().guildModule.upsert({
+      where: { guildId_module: { guildId, module: "security-verification" } },
+      update: { enabled: parsed.data.enabled },
+      create: {
+        guildId,
+        module: "security-verification",
+        enabled: parsed.data.enabled,
+      },
+    });
     await recordAudit({
       guildId,
       userId,

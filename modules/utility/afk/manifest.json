@@ -39,5 +39,14 @@
   ],
   "dependencies": {
     "utility": "^2.0.0"
-  }
+  },
+  "capabilities": [
+    {
+      "name": "utility-afk",
+      "version": "2.0.0",
+      "provides": ["utility.afk"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

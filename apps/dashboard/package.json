@@ -23,6 +23,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@types/node": "26.6.5",
     "@types/pg": "^8.23.1",
+    "dotenv": "^18.0.9",
     "svelte": "^5.57.3",
     "svelte-check": "^4.3.4",
     "typescript": "^7.0.2",

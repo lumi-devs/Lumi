@@ -5,4 +5,8 @@ export {
   type ModuleSummary,
 } from "./loader.js";
 export type { ConfigField, ModuleManifest } from "./manifest.js";
-export { ModuleManifestSchema, validateManifest } from "./manifest.js";
+export {
+  ModuleManifestSchema,
+  supermoduleManifestFields,
+  validateManifest,
+} from "./manifest.js";

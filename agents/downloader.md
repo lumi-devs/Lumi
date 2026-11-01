@@ -71,7 +71,8 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
 
 - Parses `manifest.json` with `validateManifest` and requires `name` to match
   the directory.
-- Requires the `entry` file to exist.
+- Accepts a rudimentary supermodule root manifest with no `entry`; submodule
+  entry files are validated by the loader when mounted.
 - Requires every `requirements` entry to be a registry package spec.
 - Rejects vendored `node_modules`, `.npmrc`, and `bunfig.toml`.
 - Scans every `.ts`/`.tsx` file with `Bun.Transpiler.scanImports`:

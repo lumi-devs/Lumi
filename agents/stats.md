@@ -1,6 +1,7 @@
 # Server Stats
 
-Module: `modules/stats/` (`stats`, config key `stats`). Guild-only. It owns
+Module: `modules/community/stats/` (`community-stats`, config key `stats`).
+Guild-only. It owns
 message, voice, member, status, and boost statistics and renders Statbot-style
 PNG cards with Lumi branding through `canvas`.
 
@@ -80,13 +81,13 @@ Config key `stats`:
 - `ignoredChannels` — channels excluded from tracking.
 - `ignoredRoles` — members with any listed role excluded from tracking.
 
-When `public` is off, `/stats` and its buttons require the `stats.view` permit
-(`/permit create` can add it as a custom node). Discord managers, guild owners,
-and bot owners still pass through normal permit evaluation.
+When `public` is off, `/stats` and its buttons require the `stats.view` permit.
+The node is registered in the permit catalog (as `stats.view` plus `stats.*`),
+so it can be assigned directly in the panel.
 
 ## Tests
 
-Unit tests live in `modules/stats/tests/stats.test.ts` and cover duration
+Unit tests live in `modules/community/stats/tests/stats.test.ts` and cover duration
 parsing, bucket flooring, minute splitting, range aggregation, averages,
 sampling, retention cutoff, top ordering, ranks, and formatting. They do not
 touch Discord or the database.

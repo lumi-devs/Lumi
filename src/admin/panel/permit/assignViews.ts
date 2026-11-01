@@ -1,7 +1,6 @@
 import {
   buildSafeActionRows,
   type CardReply,
-  createActionButton,
   createChannelSelectMenu,
   createRoleSelectMenu,
   createStringSelectMenu,
@@ -9,7 +8,6 @@ import {
   makeCard,
   row,
 } from "@lumi/ui";
-import { ButtonStyle } from "discord.js";
 import type { AssignFlow, ExplainFlow } from "../../permits/flows.js";
 import {
   polarityIcon,
@@ -30,16 +28,7 @@ export function explainCard(flow: ExplainFlow): CardReply {
         maxValues: 1,
       }),
     ),
-    row(
-      createActionButton({
-        customId: "permit_explain_run",
-        label: "Run Check",
-        style: ButtonStyle.Primary,
-        emoji: "🔍",
-        disabled: flow.userId === undefined,
-      }),
-      backButton("permit_back_main", "Back to List"),
-    ),
+    row(backButton("permit_back_main", "Back to List")),
   ]);
 
   return makeCard(

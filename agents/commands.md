@@ -70,7 +70,7 @@ Interaction dispatch is in `src/core/dispatch.ts`:
 1. Look up the slash command.
 2. Reject unknown commands with an ephemeral error card.
 3. For module commands, check `moduleLoader.isActive(guildId, module)` (the
-   module and its supermodule must both be enabled).
+   submodule's own effective enabled state; supermodules are not gates).
 4. For `requiresAdmin` commands, check **Manage Server** or an `admin.*`/`*`
    permit.
 5. Run `execute`, then record command metrics.

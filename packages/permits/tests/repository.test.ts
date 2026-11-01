@@ -1,24 +1,53 @@
 import { describe, expect, it, vi } from "vitest";
 import { PermitRepository } from "../src/repository.js";
 
-const repository = (findFirst: any, transaction: any = vi.fn()) =>
-  new PermitRepository(
-    { permit: { findFirst }, $transaction: transaction } as any,
-    {} as any,
-  );
-
-describe("PermitRepository.createPermit", () => {
-  it("stores every unique node on one permit", async () => {
-    const findMany = vi.fn(async () => []);
-    const create = vi.fn(async ({ data }: any) => ({
+const makePrisma = (overrides: Record<string, any> = {}) => {
+  const basePermit = {
+    findMany: vi.fn(async () => []),
+    findFirst: vi.fn(async () => null),
+    create: vi.fn(async ({ data }: any) => ({
       id: 1,
       ...data,
       assignments: [],
-    }));
-    const repo = new PermitRepository(
-      { permit: { create, findMany } } as any,
-      {} as any,
-    );
+    })),
+    update: vi.fn(async ({ data }: any) => ({ ...data })),
+    aggregate: vi.fn(async () => ({ _max: { number: null } })),
+    delete: vi.fn(async () => ({})),
+  };
+  const base: Record<string, any> = {
+    permit: basePermit,
+    $transaction: vi.fn(async (fn: any) =>
+      fn({
+        permit: {
+          update: vi.fn(async ({ data }: any) => ({ ...data })),
+          create: vi.fn(async ({ data }: any) => ({
+            id: 1,
+            ...data,
+            assignments: [],
+          })),
+        },
+      }),
+    ),
+  };
+
+  // Deep merge permit delegate
+  if (overrides.permit) {
+    base.permit = { ...basePermit, ...overrides.permit };
+  }
+  // Shallow merge other properties
+  for (const [key, value] of Object.entries(overrides)) {
+    if (key !== "permit") {
+      base[key] = value;
+    }
+  }
+
+  return base;
+};
+
+describe("PermitRepository.createPermit", () => {
+  it("stores every unique node on one permit", async () => {
+    const prisma = makePrisma();
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     const permit = await repo.createPermit({
       guildId: "guild",
@@ -28,32 +57,28 @@ describe("PermitRepository.createPermit", () => {
       position: 0,
     });
 
-    expect(create).toHaveBeenCalledWith({
+    expect(prisma.permit.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        number: 6,
+        number: 3,
         nodes: ["mod.ban", "mod.kick"],
       }),
       include: { assignments: true },
     });
     expect(permit.nodes).toEqual(["mod.ban", "mod.kick"]);
-    expect(permit.number).toBe(6);
+    expect(permit.number).toBe(3);
   });
 
   it("allocates the smallest free custom number", async () => {
-    const findMany = vi.fn(async () => [
-      { number: 6 },
-      { number: 7 },
-      { number: 9 },
-    ]);
-    const create = vi.fn(async ({ data }: any) => ({
-      id: 5,
-      ...data,
-      assignments: [],
-    }));
-    const repo = new PermitRepository(
-      { permit: { create, findMany } } as any,
-      {} as any,
-    );
+    const prisma = makePrisma({
+      permit: {
+        findMany: vi.fn(async () => [
+          { number: 3 },
+          { number: 4 },
+          { number: 6 },
+        ]),
+      },
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     const permit = await repo.createPermit({
       guildId: "guild",
@@ -63,25 +88,17 @@ describe("PermitRepository.createPermit", () => {
       position: 0,
     });
 
-    expect(findMany).toHaveBeenCalledWith({
+    expect(prisma.permit.findMany).toHaveBeenCalledWith({
       where: { guildId: "guild" },
       select: { number: true },
       orderBy: { number: "asc" },
     });
-    expect(permit.number).toBe(8);
+    expect(permit.number).toBe(5);
   });
 
   it("keeps an explicit number without allocating", async () => {
-    const findMany = vi.fn(async () => []);
-    const create = vi.fn(async ({ data }: any) => ({
-      id: 9,
-      ...data,
-      assignments: [],
-    }));
-    const repo = new PermitRepository(
-      { permit: { create, findMany } } as any,
-      {} as any,
-    );
+    const prisma = makePrisma();
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     const permit = await repo.createPermit({
       guildId: "guild",
@@ -92,27 +109,27 @@ describe("PermitRepository.createPermit", () => {
       position: 0,
     });
 
-    expect(findMany).not.toHaveBeenCalled();
+    expect(prisma.permit.findMany).not.toHaveBeenCalled();
     expect(permit.number).toBe(7);
   });
 
   it("retries after a per-guild number conflict", async () => {
-    const findMany = vi.fn(async () => []);
-    const create = vi
-      .fn()
-      .mockRejectedValueOnce({
-        code: "P2002",
-        meta: { target: ["guild_id", "number"] },
-      })
-      .mockImplementationOnce(async ({ data }: any) => ({
-        id: 1,
-        ...data,
-        assignments: [],
-      }));
-    const repo = new PermitRepository(
-      { permit: { create, findMany } } as any,
-      {} as any,
-    );
+    const prisma = makePrisma({
+      permit: {
+        create: vi
+          .fn()
+          .mockRejectedValueOnce({
+            code: "P2002",
+            meta: { target: ["guild_id", "number"] },
+          })
+          .mockImplementationOnce(async ({ data }: any) => ({
+            id: 1,
+            ...data,
+            assignments: [],
+          })),
+      },
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     const permit = await repo.createPermit({
       guildId: "guild",
@@ -122,13 +139,13 @@ describe("PermitRepository.createPermit", () => {
       position: 0,
     });
 
-    expect(create).toHaveBeenCalledTimes(2);
-    expect(permit.number).toBe(6);
+    expect(prisma.permit.create).toHaveBeenCalledTimes(2);
+    expect(permit.number).toBe(3);
   });
 
   it("rejects a permit without nodes", async () => {
-    const create = vi.fn();
-    const repo = new PermitRepository({ permit: { create } } as any, {} as any);
+    const prisma = makePrisma();
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     await expect(
       repo.createPermit({
@@ -139,23 +156,26 @@ describe("PermitRepository.createPermit", () => {
         position: 0,
       }),
     ).rejects.toThrow("A permit needs at least one node.");
-    expect(create).not.toHaveBeenCalled();
+    expect(prisma.permit.create).not.toHaveBeenCalled();
   });
 });
 
 describe("PermitRepository.movePermit", () => {
   it("refuses to move a built-in permit", async () => {
-    const findFirst = vi.fn(async () => ({
-      id: 1,
-      guildId: "guild",
-      builtin: true,
-      position: 0,
-    }));
-    const transaction = vi.fn();
-    const repo = repository(findFirst, transaction);
+    const prisma = makePrisma({
+      permit: {
+        findFirst: vi.fn(async () => ({
+          id: 1,
+          guildId: "guild",
+          builtin: true,
+          position: 0,
+        })),
+      },
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     await expect(repo.movePermit("guild", 1, "up")).resolves.toBe(false);
-    expect(transaction).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("does not swap a custom permit with a built-in permit", async () => {
@@ -168,7 +188,10 @@ describe("PermitRepository.movePermit", () => {
         position: 2,
       })
       .mockResolvedValueOnce(null);
-    const repo = repository(findFirst);
+    const prisma = makePrisma({
+      permit: { findFirst },
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     await expect(repo.movePermit("guild", 2, "up")).resolves.toBe(false);
     expect(findFirst.mock.calls[1]![0].where.builtin).toBe(false);
@@ -190,10 +213,14 @@ describe("PermitRepository.movePermit", () => {
         position: 3,
       });
     const update = vi.fn(async () => ({}));
-    const transaction = vi.fn(async (callback: any) =>
-      callback({ permit: { update } }),
-    );
-    const repo = repository(findFirst, transaction);
+    const prisma = makePrisma({
+      permit: {
+        findFirst,
+        update,
+      },
+      $transaction: vi.fn(async (fn: any) => fn({ permit: { update } })),
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     await expect(repo.movePermit("guild", 2, "down")).resolves.toBe(true);
     expect(update).toHaveBeenNthCalledWith(1, {
@@ -219,44 +246,61 @@ describe("PermitRepository.seedBuiltinPermits", () => {
       ...data,
       assignments: [],
     }));
-    const transaction = vi.fn(async (callback: any) =>
-      callback({ permit: { update } }),
-    );
-    const repo = new PermitRepository(
-      {
-        permit: { findMany, update, create },
-        $transaction: transaction,
-      } as any,
-      {} as any,
-    );
+    const prisma = makePrisma({
+      permit: { findMany, update, create },
+      $transaction: vi.fn(async (fn: any) =>
+        fn({ permit: { update, create } }),
+      ),
+    });
+    const repo = new PermitRepository(prisma as any, {} as any);
 
     await repo.seedBuiltinPermits("guild");
 
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(update).toHaveBeenNthCalledWith(1, {
-      where: { id: 5 },
-      data: { number: -5 },
+    // No moves needed when already correct, so no transaction
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    // But update is called to ensure builtin: true and whitelistScopes
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("creates missing built-in permits", async () => {
+    const findMany = vi.fn(async () => []);
+    const create = vi.fn(async ({ data }: any) => ({
+      id: 7,
+      ...data,
+      assignments: [],
+    }));
+    const prisma = makePrisma({
+      permit: { findMany, create },
+      $transaction: vi.fn(async (fn: any) => fn({ permit: { create } })),
     });
-    expect(update).toHaveBeenNthCalledWith(2, {
-      where: { id: 6 },
-      data: { number: -6 },
-    });
-    expect(update).toHaveBeenNthCalledWith(3, {
-      where: { id: 5 },
-      data: { number: 5 },
-    });
-    expect(update).toHaveBeenNthCalledWith(4, {
-      where: { id: 6 },
-      data: { number: 4 },
-    });
-    expect(create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        name: "Regular",
-        number: 1,
-        builtin: true,
+    const repo = new PermitRepository(prisma as any, {} as any);
+
+    await repo.seedBuiltinPermits("guild");
+
+    // No moves needed, so no transaction
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Extra Owner",
+          number: 1,
+          builtin: true,
+        }),
       }),
-      include: { assignments: true },
-    });
+    );
+    expect(create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Trusted Admin",
+          number: 2,
+          builtin: true,
+        }),
+      }),
+    );
   });
 });
 

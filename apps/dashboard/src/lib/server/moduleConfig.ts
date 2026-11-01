@@ -18,6 +18,26 @@ export function configFor(
     : {};
 }
 
+export function enabledConfigField(
+  fields: ConfigField[],
+): ConfigField | undefined {
+  return fields.find(
+    (field) => field.key === "enabled" && field.type === "boolean",
+  );
+}
+
+export function effectiveModuleEnabled(
+  fields: ConfigField[],
+  config: ConfigValues,
+  moduleEnabled: boolean,
+): boolean {
+  if (!moduleEnabled) return false;
+  const field = enabledConfigField(fields);
+  if (!field) return true;
+  const displayed = displayValues([field], config);
+  return displayed[field.key] === true;
+}
+
 export function displayValues(
   fields: ConfigField[],
   config: ConfigValues,

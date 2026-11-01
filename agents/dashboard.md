@@ -1,138 +1,151 @@
-# Dashboard
+# Web Dashboard Architecture
 
-`apps/dashboard` is the Lumi v2 web dashboard: a separate SvelteKit
-(`adapter-node`) service written in TypeScript. It is a Bun workspace member but
-has its own dependency graph and typecheck.
+## Overview
 
-## Setup
+The dashboard (`apps/dashboard/`) is a standalone SvelteKit application that runs
+as a **separate process** from the bot. It serves the web UI for guild
+configuration and communicates with the bot exclusively via the **internal RPC
+control server**.
 
-```sh
-nix develop --command bun install
-nix develop --command bun run db:generate
-cp apps/dashboard/.env.example apps/dashboard/.env
-nix develop --command bun run dashboard:dev     # http://localhost:4173
-nix develop --command bun run dashboard:build   # apps/dashboard/build
+## Responsibilities
+
+- Discord OAuth2 login flow
+- Guild selector (guilds the user manages where the bot is present)
+- Per-guild configuration panels:
+  - Permits (create, edit, assign, explain)
+  - Module enable/disable
+  - Feature configs (moderation, security, economy, etc.)
+  - Audit log / cases
+  - Security settings (antinuke, automod, verification)
+  - Stats & insights
+- Web verification (emoji or button verification with role assignment)
+
+## Non-Responsibilities
+
+- **No Discord gateway connection** — the dashboard never connects to Discord
+  WebSocket/gateway
+- **No live state queries to PostgreSQL** — the database is only used for
+  durable config the dashboard itself writes (OAuth sessions, audit entries,
+  permits/assignments). Live state (guild cache, members, loaded modules,
+  command registrations) comes from the bot via RPC.
+
+## Communication: Bot RPC
+
+All live data is fetched from the bot's internal HTTP server (`RPC_HTTP_HOST`,
+`RPC_HTTP_PORT`, default `127.0.0.1:8091`).
+
+### Authentication
+
+`RPC_INTERNAL_TOKEN` (optional) is sent as `Authorization: Bearer <token>`.
+When unset, endpoints are open (dev only).
+
+### Endpoints Used
+
+| Method | Path                               | Purpose                                        |
+| ------ | ---------------------------------- | ---------------------------------------------- |
+| `GET`  | `/healthz`                         | Health check (shows in dashboard footer)       |
+| `GET`  | `/api/v1/status`                   | Bot tag, guild count, loaded modules list      |
+| `GET`  | `/api/v1/permits/nodes?guild_id=X` | Dynamic permission node catalog                |
+| `GET`  | `/api/v1/guilds/X`                 | Live guild info (name, icon, member count)     |
+| `POST` | `/api/v1/guilds/X/modules/Y/state` | Apply module enable/disable to the running bot |
+
+Module toggles persist to the database first, then push the new state to the bot
+over RPC so commands and listeners react immediately without a restart. If the
+bot is unreachable, the dashboard reports a warning and the change applies on the
+next bot startup sync.
+
+### Node Catalog (`/api/v1/permits/nodes`)
+
+This is the key dynamic endpoint. The bot builds the catalog by combining:
+
+1. **Built-in permit nodes** — from `@lumi/permits` constants (`*`, `admin.*`, etc.)
+2. **Module command nodes** — every loaded module's commands with `requiredPermit`
+   set; also adds namespace wildcards (`mod.*` for `mod.ban`)
+3. **Custom permit nodes** — existing permits in DB for that guild (via
+   `PermitRepository.listPermits`)
+
+The dashboard renders this as a searchable multi-select. No hardcoded node lists
+in dashboard code.
+
+### Guild Info (`/api/v1/guilds/:id`)
+
+Returns live guild data from the bot's `client.guilds.cache`:
+
+- `id`, `name`, `icon` (hash), `memberCount`
+
+Used for the guild selector and panel headers.
+
+## Dashboard Data Flow Example: Permits Page
+
+```
+User visits /guilds/123/permits
+    │
+    ▼
++page.server.ts load()
+    │
+    ├─► Prisma: SELECT * FROM permit WHERE guild_id = 123 (existing permits)
+    │
+    └─► fetchPermitNodes("123")
+            │
+            ▼
+    GET http://127.0.0.1:8091/api/v1/permits/nodes?guild_id=123
+            │
+            ▼
+Bot: createPermitNodesHandler
+    │
+    ├─► BuiltinPermits.flatMap(p => p.nodes)  → ["*", "admin.*"]
+    │
+    ├─► moduleLoader.listAll().flatMap(m => m.definition.commands)
+    │       .map(c => c.requiredPermit).filter(...)
+    │       → ["mod.ban", "mod.kick", "economy.*", ...]
+    │
+    └─► permitRepo.listPermits("123").flatMap(p => p.nodes)
+            → ["mod.note", "admin.config"]
+            │
+            ▼
+    Merge, dedupe, sort → JSON { nodes: ["*", "admin.*", "mod.*", ...] }
+            │
+            ▼
+Dashboard renders <select multiple> with all nodes
 ```
 
-Run the production build with Node or Bun:
+## Configuration
 
-```sh
-cd apps/dashboard
-node build
-# or
-bun build/index.js
+Environment variables in `apps/dashboard/.env`:
+
+```env
+# Required for Discord OAuth
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+DISCORD_OAUTH_REDIRECT_URI=http://localhost:4173/auth/callback
+
+# Session
+SESSION_SECRET=long-random-secret
+
+# Database (same as bot)
+DATABASE_URL=postgresql://lumi:lumi@127.0.0.1:5432/lumi
+REDIS_URL=redis://localhost:6379/0
+
+# Bot token — ONLY for role changes during web verification
+BOT_TOKEN=
+
+# Bot RPC — for ALL live data
+RPC_URL=http://127.0.0.1:8091
+RPC_INTERNAL_TOKEN=optional-shared-secret
 ```
 
-The dashboard talks directly to the same Postgres schema and Redis instance as
-the bot. It constructs `@prisma/client` with `@prisma/adapter-pg` (`pg.Pool`)
-and uses `ioredis`. It never imports bot internals such as `@lumi/db`,
-`src/admin`, or module code.
+## Security Model
 
-## Environment
+- Dashboard authenticates users via Discord OAuth (guilds scope)
+- User's accessible guilds = intersection of (user's managed guilds) ∩ (bot's guilds)
+- All RPC calls include `RPC_INTERNAL_TOKEN` — only trusted dashboard instances can query
+- Bot token is only used for role assignment in web verification; never exposed to dashboard frontend
 
-| Variable                     | Purpose                                                                 |
-| ---------------------------- | ----------------------------------------------------------------------- |
-| `DISCORD_CLIENT_ID`          | Discord OAuth2 application client id.                                   |
-| `DISCORD_CLIENT_SECRET`      | Discord OAuth2 client secret. Never sent to the browser.                |
-| `DISCORD_OAUTH_REDIRECT_URI` | Exact OAuth callback URL. Defaults to `${WEB_BASE_URL}/auth/callback`.  |
-| `WEB_BASE_URL`               | Public origin used for verification links and the default callback URL. |
-| `SESSION_SECRET`             | Random secret (16+ chars) for signed session cookies and Redis keys.    |
-| `SESSION_TTL_SECONDS`        | Session lifetime. Default `604800` (7 days).                            |
-| `DATABASE_URL`               | Postgres URL. Falls back to `DIRECT_POSTGRES_URL`, `POSTGRES_URL`.      |
-| `REDIS_URL`                  | Redis URL; takes precedence over the discrete variables.                |
-| `REDIS_HOST`/`REDIS_PORT`    | Redis endpoint when `REDIS_URL` is unset. Defaults `localhost:6379`.    |
-| `REDIS_PASSWORD`/`REDIS_DB`  | Optional Redis auth/database when `REDIS_URL` is unset.                 |
-| `BOT_TOKEN`                  | Bot token for guild/user/role summaries and verification role changes.  |
-| `LUMI_MODULES_DIR`           | Optional bundled-module directory override for the config UI.           |
-| `LUMI_DATA_DIR`              | Optional data directory override for addon repo candidate discovery.    |
-| `DASHBOARD_INSECURE_COOKIES` | Set `1` only for local HTTP production testing.                         |
+## Adding New Live Data Endpoints
 
-`BOT_TOKEN` is required. The bot must be in the server with Manage Roles and a
-role hierarchy that lets it assign the configured verified/pending roles.
+1. Add handler in `src/core/rpcRoutes.ts` (`createXxxHandler`)
+2. Wire it in `src/index.ts` RPC handler
+3. Add client function in `apps/dashboard/src/lib/server/rpc.ts`
+4. Call from dashboard `+page.server.ts` load function
 
-## OAuth2
-
-- `GET /auth/login` creates a random `state` and PKCE verifier/challenge
-  (`S256`), stores the verifier in Redis for 10 minutes, sets a scoped
-  `lumi_oauth_state` cookie, then redirects to Discord with `identify guilds`.
-- `GET /auth/callback` compares `state` to the cookie, consumes the Redis entry,
-  exchanges the code with the client secret and PKCE verifier, and creates a
-  Redis-backed session.
-- The browser receives only an opaque, HMAC-signed session id in an `HttpOnly`,
-  `SameSite=Lax` cookie. Access/refresh tokens, CSRF token, and profile data stay
-  in Redis under `lumi:dashboard:session:*`.
-- Sessions slide on access, expire after `SESSION_TTL_SECONDS`, and are removed
-  on `POST /auth/logout`.
-- Guild access means `owner === true` or the OAuth guild permissions include
-  `ManageGuild` (or `Administrator`). Every guild load and form action calls
-  `requireGuildAccess`, so a client cannot select a guild id it cannot manage.
-
-## Routes
-
-| Route                           | Purpose                                                        |
-| ------------------------------- | -------------------------------------------------------------- |
-| `/`                             | Sign-in landing page.                                          |
-| `/auth/login`, `/auth/callback` | OAuth start/callback.                                          |
-| `/auth/logout`                  | CSRF-protected session logout.                                 |
-| `/guilds`                       | Guild picker limited to Manage Server.                         |
-| `/guilds/[guildId]`             | Overview, bot presence, recent audit, backup summary.          |
-| `.../modules`                   | Module list and enable/disable.                                |
-| `.../modules/[module]`          | Manifest-driven config editing and reset.                      |
-| `.../permits`                   | Permit list and create.                                        |
-| `.../permits/[permitId]`        | Permit edit/delete, assignment create/remove.                  |
-| `.../settings`                  | Prefix, locale, log channels, enforce-permits.                 |
-| `.../cases`                     | Read-only audit/case viewer with filters.                      |
-| `.../security`                  | Security config, panic start/end, backups, verification links. |
-| `.../features`                  | Custom commands, role menus, ticket categories/panels/tickets. |
-| `.../stats`                     | Read-only stats snapshots/events/aggregates.                   |
-| `.../addons`                    | Addon repo/module registry (database records only).            |
-| `/verify/[token]`               | Public web verification page with math captcha.                |
-
-## Security
-
-- Every mutation checks a per-session CSRF token (`_csrf`) and SvelteKit's origin
-  check. The public verification form is captcha- and rate-limited.
-- Every route/action re-authorizes the guild from the Redis session and Discord
-  guild list; the guild id in the URL is never trusted on its own.
-- All user input is validated with zod. Module config fields are validated by
-  their manifest type (`number`, `channel`, `role`, `multi-*`, `json`, `select`).
-- Output is escaped by Svelte; no `{@html}` is used. Secrets are never returned
-  from loads or rendered.
-- Notices, tables, forms, and navigation are responsive and keyboard accessible.
-  No gradients, no client-side framework code beyond Svelte hydration.
-- Addon pages only create/update `DownloaderRepo`/`DownloaderModule` rows. They
-  never execute git, bun, or arbitrary shell commands. The bot's add-on manager
-  materializes files and loads modules.
-
-## Verification contract
-
-The dashboard consumes tokens created by the bot or by its own security page.
-Contract:
-
-1. Generate a URL-safe random token (32 random bytes, base64url recommended).
-2. Store only `sha256(token)` as lowercase hex in
-   `VerificationToken.tokenHash`, plus `guildId`, `userId`, `expiresAt`.
-3. Send the member a link: `${WEB_BASE_URL}/verify/${token}`.
-
-`GET /verify/[token]` hashes the URL token and looks up `tokenHash`. It rejects
-unknown, used (`usedAt`), and expired tokens. It reads `verifiedRoleId` and
-`pendingRoleId` from `Guild.settings` key `security-verification`, shows the
-guild/user summary, and issues a single-use math captcha stored in Redis for ten
-minutes.
-
-`POST` revalidates the token, consumes the captcha, checks a per-IP rate limit,
-grants `verifiedRoleId` with the bot token, removes `pendingRoleId` when set, and
-then sets `usedAt`. Failures are explicit: invalid link, already used, expired,
-missing verified role, wrong captcha, or a Discord role-assignment failure with
-a permissions/hierarchy hint. The old module Redis pending marker is cleared so
-the timeout sweep does not act on a freshly verified member. The token hash is
-never shown or returned.
-
-## Limitations
-
-- Addon install/update changes registry rows only; the bot process owns checkout,
-  dependency installation, mounting, and reloads.
-- The bundled module config UI discovers manifests from the repository (or
-  `LUMI_MODULES_DIR`); a production deploy should ship `modules/` alongside the
-  dashboard or set the override.
-- Dashboard audit entries are written as `dashboard.*` actions in `AuditLog`.
+Never add Prisma queries in dashboard for data the bot owns live.

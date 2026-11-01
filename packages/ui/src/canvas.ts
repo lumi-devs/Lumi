@@ -1,7 +1,13 @@
-import type { CanvasRenderingContext2D } from "canvas";
+export interface CanvasContext2D {
+  beginPath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  closePath(): void;
+}
 
 export function roundRect(
-  ctx: CanvasRenderingContext2D,
+  ctx: CanvasContext2D,
   x: number,
   y: number,
   width: number,

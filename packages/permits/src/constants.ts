@@ -6,21 +6,14 @@ export interface BuiltinPermitDefinition {
   readonly whitelistScopes: readonly string[];
 }
 
-export const MinCustomPermitNumber = 6;
+export const MinCustomPermitNumber = 3;
 
 export const BuiltinPermits: readonly BuiltinPermitDefinition[] = [
   {
-    name: "Regular",
+    name: "Extra Owner",
     number: 1,
     position: 1,
-    nodes: ["utility.*"],
-    whitelistScopes: [],
-  },
-  {
-    name: "Trusted Admin",
-    number: 4,
-    position: 4,
-    nodes: ["admin.*"],
+    nodes: ["*"],
     whitelistScopes: [
       "security.total",
       "security.antinuke",
@@ -28,10 +21,10 @@ export const BuiltinPermits: readonly BuiltinPermitDefinition[] = [
     ],
   },
   {
-    name: "Extra Owner",
-    number: 5,
-    position: 5,
-    nodes: ["*"],
+    name: "Trusted Admin",
+    number: 2,
+    position: 2,
+    nodes: ["admin.*"],
     whitelistScopes: [
       "security.total",
       "security.antinuke",
@@ -85,7 +78,7 @@ export function isImmunePermit(permit: {
   readonly builtin: boolean;
   readonly number: number;
 }): boolean {
-  return permit.builtin && (permit.number === 4 || permit.number === 5);
+  return permit.builtin && (permit.number === 1 || permit.number === 2);
 }
 
 export function matchesWhitelistScope(

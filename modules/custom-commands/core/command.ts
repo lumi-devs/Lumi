@@ -38,7 +38,7 @@ import {
 } from "./store.js";
 import { buildExport, importCommands } from "./transfer.js";
 import { splitArgs } from "./trigger.js";
-import { Limits, TriggerTypes, type TriggerType } from "./types.js";
+import { Limits, ModuleName, TriggerTypes, type TriggerType } from "./types.js";
 
 function memberOf(
   interaction: ChatInputCommandInteraction,
@@ -722,7 +722,7 @@ export const customCommandCommand: CommandDefinition = {
 
     const guild = interaction.guild;
     const guildId = interaction.guildId;
-    if (!services.modules.isEnabled(guildId, "custom-commands")) {
+    if (!services.modules.isEnabled(guildId, ModuleName)) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard(

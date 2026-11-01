@@ -6,6 +6,7 @@ import { recordAudit } from "$lib/server/audit";
 import { getPrisma } from "$lib/server/prisma";
 import { isPrismaCode, describeError } from "$lib/server/prismaErrors";
 import { ensureGuild } from "$lib/server/settings";
+import { fetchPermitNodes } from "$lib/server/rpc.js";
 import {
   assertCsrf,
   DateInputSchema,
@@ -27,11 +28,14 @@ const PermitCreateSchema = z.object({
 export const load: PageServerLoad = async (event) => {
   const guildId = event.params.guildId ?? "";
   await requireGuildAccess(event, guildId);
-  const permits = await getPrisma().permit.findMany({
-    where: { guildId },
-    orderBy: { position: "asc" },
-    include: { _count: { select: { assignments: true } } },
-  });
+  const [permits, nodes] = await Promise.all([
+    getPrisma().permit.findMany({
+      where: { guildId },
+      orderBy: { position: "asc" },
+      include: { _count: { select: { assignments: true } } },
+    }),
+    fetchPermitNodes(guildId),
+  ]);
 
   return {
     permits: permits.map((permit) => ({
@@ -45,6 +49,7 @@ export const load: PageServerLoad = async (event) => {
       expiresAt: permit.expiresAt?.toISOString() ?? null,
       assignments: permit._count.assignments,
     })),
+    nodes,
   };
 };
 

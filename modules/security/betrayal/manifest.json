@@ -41,6 +41,16 @@
     }
   ],
   "dependencies": {
-    "security": "^2.0.0"
-  }
+    "security": "^2.0.0",
+    "security-core": "^2.0.0"
+  },
+  "capabilities": [
+    {
+      "name": "security-betrayal",
+      "version": "2.0.0",
+      "provides": ["security.betrayal"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

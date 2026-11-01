@@ -9,7 +9,7 @@ src/                      deployable process: entry, composition root, dispatch,
                           built-in commands, RPC control server, service wiring
   admin/                  module management, config, /lumi panel
 modules/                  bundled feature modules (toggleable)
-  <supermodule>/          manifest.json + index.ts
+  <supermodule>/          manifest.json (group metadata only)
     <submodule>/          manifest.json + entry + feature files
 packages/permits/         Built-in: permit evaluation, time-based, conditions
 packages/cache/           L1 LRU + Redis L2 cache, codec, single-flight
@@ -28,9 +28,11 @@ packages/scheduler/       distributed cron with Redis locks
 
 - `src/` — the process. It wires dependencies, owns the lifecycle, and is never
   imported by anything else.
-- `modules/*` — first-party product features (toggleable). They are ordinary
-  modules loaded by the module runtime at boot, exactly like addons, and may not
-  import the app.
+- `modules/*` — first-party product features (toggleable submodules grouped by
+  rudimentary supermodule directories). Submodules are ordinary modules loaded
+  by the module runtime at boot, exactly like addons, and may not import the app.
+  Supermodules contain no code and no config; the loader synthesizes display-only
+  containers for them.
 - `packages/*` — reusable libraries with narrow, declared dependencies. They
   never import the app or bundled modules.
 
@@ -43,19 +45,24 @@ packages/scheduler/       distributed cron with Redis locks
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
-Every module under `modules/` is a supermodule; its submodules toggle
-independently:
+Every submodule under `modules/<supermodule>/<submodule>/` toggles independently.
+The supermodule directory is only a grouping label; it has no code, config, or
+enable state.
 
 - `community` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
-  `economy` (currency, banking, rewards, shop)
+  `economy` (currency, banking, rewards, shop), `stats` (message/voice/member
+  tracking and cards), `tickets` (private-thread ticket panels)
+- `custom-commands` — `core` (guild-authored commands, schedules, KV)
+- `logging` — `logs` (message, edit, delete, voice, moderation logging)
 - `moderation` — `mod` (case-backed ban, kick, timeout, warn, purge, notes,
   lockdown, quarantine, softban, voice mute)
-- `logging` — `logs` (message, edit, delete, voice, moderation logging)
-- `security` — `antinuke`, `join-gate`, `verification`, `panic`, `backups`,
-  `betrayal`, `autorecovery`, `automod`
+- `role-menus` — `menu` (button/select/reaction role menus)
+- `roles` — `autorole`, `bulkrole`, `voiceroles`
+- `security` — `core` (shared security settings), `antinuke`, `automod`,
+  `autorecovery`, `backups`, `betrayal`, `join-gate`, `panic`, `verification`
 - `utility` — `afk` (AFK status + mention replies), `nick` (nickname changes
   with hierarchy checks), `tempvc` (join-to-create voice channels), `info`
-  (avatar, banner, whois, serverinfo)
+  (avatar, banner, whois, serverinfo), `reminders`
 
 ## Dependency direction
 
@@ -80,7 +87,8 @@ Rules:
 - Only `src` constructs services and owns the process lifecycle.
 - Built-in services live in `src/` and are non-disableable.
 - Toggleable modules live in `modules/<supermodule>/<submodule>/` and are
-  ordinary modules: discovered, validated, toggleable, reloadable.
+  ordinary modules: discovered, validated, toggleable, reloadable. Supermodule
+  directories contain only a thin manifest and are not loaded as code.
 
 ## Boot order
 
@@ -119,6 +127,58 @@ in-flight loads stale. No process-local assumption is required for correctness.
 - Worker processes: handle assigned shards, connect to Discord gateway
 - Shared state: Redis (cache, pub/sub, locks), PostgreSQL (source of truth)
 - Internal control server: token-guarded HTTP health and status endpoints
+
+## Dashboard ↔ Bot Communication (RPC)
+
+The web dashboard (`apps/dashboard`) is a **separate SvelteKit process** that does not
+connect to Discord and does not query the database for live data. It communicates
+exclusively through the bot's **internal RPC control server** (default `127.0.0.1:8091`).
+
+### Why RPC instead of direct DB access
+
+- **Single source of truth for live state**: The bot holds guild cache, member
+  state, loaded modules, and command registrations in memory. The database is
+  only for durable config; live state lives in the bot process.
+- **Dynamic node catalog**: Permit nodes come from loaded module commands
+  (`requiredPermit`), built-in permits, and custom permits. Only the bot knows
+  which modules are loaded and what nodes they expose.
+- **Decoupled deployments**: Dashboard can be updated/restarted independently.
+  Bot can run without dashboard; dashboard can run without bot (with cached data).
+- **Security**: `RPC_INTERNAL_TOKEN` guards all mutating/reading endpoints. The
+  dashboard never needs the Discord bot token.
+
+### RPC Endpoints
+
+| Endpoint                                        | Auth   | Purpose                                                                            |
+| ----------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| `GET /healthz`                                  | —      | Liveness + dependency checks                                                       |
+| `GET /ready`                                    | —      | Readiness (Discord gateway ready)                                                  |
+| `GET /api/v1/status`                            | Bearer | Bot identity, guild count, loaded modules                                          |
+| `GET /api/v1/permits/nodes?guild_id=`           | Bearer | Dynamic node catalog (built-ins + module commands + custom)                        |
+| `GET /api/v1/guilds/:id`                        | Bearer | Live guild info (name, icon, member count)                                         |
+| `POST /api/v1/guilds/:id/modules/:module/state` | Bearer | Apply a module enable/disable change to the running bot (`{ "enabled": boolean }`) |
+
+### Dashboard Data Flow
+
+1. User visits `/guilds/:id/permits` on dashboard
+2. Dashboard `load()` calls `fetchPermitNodes(guildId)` → `GET /api/v1/permits/nodes?guild_id=...`
+3. Bot's `createPermitNodesHandler` calls `permitNodeCatalog(permits, moduleLoader, guildId)`:
+   - Built-in permit nodes (from `@lumi/permits` constants)
+   - All loaded module command `requiredPermit` nodes + namespace wildcards
+   - Existing custom permit nodes from DB (via `PermitRepository.listPermits`)
+4. Dashboard renders multi-select with all available nodes
+5. On create, dashboard POSTs selected nodes to its own action → Prisma → DB
+6. Bot's `PermitRepository` invalidates cache via Redis pub/sub; next check sees new permit
+
+### Dashboard DB Usage
+
+The dashboard **only** uses the database for:
+
+- Persistent config it owns: OAuth sessions, audit log entries it writes
+- Writing new permits/assignments (POST actions)
+- Guild list for the guild selector (from `guild` table)
+
+The dashboard **never** reads live bot state from the database.
 
 ## What was removed from v1
 

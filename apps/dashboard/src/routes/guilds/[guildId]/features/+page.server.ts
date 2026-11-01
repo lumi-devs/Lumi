@@ -5,6 +5,7 @@ import { requireGuildAccess } from "$lib/server/auth";
 import { recordAudit } from "$lib/server/audit";
 import { getPrisma } from "$lib/server/prisma";
 import { isPrismaCode } from "$lib/server/prismaErrors";
+import { fetchPermitNodes } from "$lib/server/rpc.js";
 import {
   assertCsrf,
   checkbox,
@@ -105,32 +106,34 @@ export const load: PageServerLoad = async (event) => {
   await requireGuildAccess(event, guildId);
   const prisma = getPrisma();
 
-  const [commands, groups, categories, panels, tickets] = await Promise.all([
-    prisma.customCommand.findMany({
-      where: { guildId },
-      orderBy: { name: "asc" },
-      include: { schedule: true },
-    }),
-    prisma.roleMenuGroup.findMany({
-      where: { guildId },
-      orderBy: { name: "asc" },
-      include: { options: { orderBy: { position: "asc" } } },
-    }),
-    prisma.ticketCategory.findMany({
-      where: { guildId },
-      orderBy: { position: "asc" },
-    }),
-    prisma.ticketPanel.findMany({
-      where: { guildId },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.ticket.findMany({
-      where: { guildId },
-      orderBy: { lastActivityAt: "desc" },
-      take: 50,
-      include: { category: { select: { name: true } } },
-    }),
-  ]);
+  const [commands, groups, categories, panels, tickets, nodes] =
+    await Promise.all([
+      prisma.customCommand.findMany({
+        where: { guildId },
+        orderBy: { name: "asc" },
+        include: { schedule: true },
+      }),
+      prisma.roleMenuGroup.findMany({
+        where: { guildId },
+        orderBy: { name: "asc" },
+        include: { options: { orderBy: { position: "asc" } } },
+      }),
+      prisma.ticketCategory.findMany({
+        where: { guildId },
+        orderBy: { position: "asc" },
+      }),
+      prisma.ticketPanel.findMany({
+        where: { guildId },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.ticket.findMany({
+        where: { guildId },
+        orderBy: { lastActivityAt: "desc" },
+        take: 50,
+        include: { category: { select: { name: true } } },
+      }),
+      fetchPermitNodes(guildId),
+    ]);
 
   const groupsForCommand = await prisma.customCommandGroup.findMany({
     where: { guildId },
@@ -139,6 +142,7 @@ export const load: PageServerLoad = async (event) => {
   });
 
   return {
+    nodes,
     commands: commands.map((command) => ({
       ...command,
       createdAt: command.createdAt.toISOString(),

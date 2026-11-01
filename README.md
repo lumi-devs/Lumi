@@ -12,7 +12,7 @@ insights, written in TypeScript and running on Bun.
   whitelist scopes, and an optional manager-bypass enforcement mode.
 - **Security** — anti-nuke, heat-based automod, join gate, verification (emoji
   or web), panic mode, backups, auto-recovery, and betrayal monitoring.
-- **Community** — leveling, economy, temp voice, AFK, and nick tools.
+- **Community** — leveling, economy, stats, quote images, temp voice, AFK, and nick tools.
 - **Custom commands** — guild-only Mustache-style commands with triggers, KV
   storage, cron/interval schedules, and Components V2 responses.
 - **Tickets** — private-thread tickets with categories, staff roles, claims,

@@ -25,7 +25,6 @@ async function makeAddon(
       emoji: "🧪",
       description: "Test addon",
       version: "1.0.0",
-      entry: "index.ts",
       ...JSON.parse(files["manifest.json"] ?? "{}"),
     }),
   );
@@ -55,6 +54,50 @@ describeBun("validateAddon", () => {
     await expect(validateAddon(dir)).resolves.toEqual([]);
   });
 
+  it("accepts a rudimentary supermodule without a root entry", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "lumi-addon-"));
+    roots.push(parent);
+    const dir = join(parent, "test-addon");
+    await mkdir(join(dir, "status"), { recursive: true });
+    await writeFile(
+      join(dir, "manifest.json"),
+      JSON.stringify({
+        apiVersion: 2,
+        name: "test-addon",
+        displayName: "Test addon",
+        emoji: "🧪",
+        description: "Test addon",
+        version: "1.0.0",
+      }),
+    );
+    await writeFile(
+      join(dir, "status", "manifest.json"),
+      JSON.stringify({
+        apiVersion: 2,
+        name: "test-addon-status",
+        displayName: "Status",
+        emoji: "📊",
+        description: "Status submodule",
+        version: "1.0.0",
+        entry: "index.ts",
+      }),
+    );
+    await writeFile(join(dir, "status", "index.ts"), "export default {};\n");
+    await expect(validateAddon(dir)).resolves.toEqual([]);
+  });
+
+  it("rejects a supermodule manifest with an entry or config", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({
+        entry: "index.ts",
+        configFields: [{ key: "x", label: "X", type: "string" }],
+      }),
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("supermodule manifest must be metadata-only"),
+    );
+  });
+
   it("rejects symbolic links", async () => {
     const dir = await makeAddon({});
     await symlink(join(dir, "index.ts"), join(dir, "linked.ts"));
@@ -81,6 +124,28 @@ describeBun("validateAddon", () => {
     const dir = await makeAddon({ "index.ts": 'import "lodash";\n' });
     await expect(validateAddon(dir)).resolves.toContainEqual(
       expect.stringContaining("not a host runtime package"),
+    );
+  });
+
+  it("accepts declared external npm requirements", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({
+        requirements: ["lodash@^4.17.21"],
+      }),
+      "index.ts":
+        'import { debounce } from "lodash";\nexport default debounce;\n',
+    });
+    await expect(validateAddon(dir)).resolves.toEqual([]);
+  });
+
+  it("rejects requirements that are not registry package specs", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({
+        requirements: ["../local-package"],
+      }),
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("is not a registry package spec"),
     );
   });
 

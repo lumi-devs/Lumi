@@ -47,7 +47,7 @@ export const ModuleManifestSchema = z.object({
     .string()
     .max(32)
     .regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/),
-  entry: EntryPathSchema,
+  entry: EntryPathSchema.optional(),
   configKey: z.string().min(1).optional(),
   dependencies: z.record(z.string(), z.string()).default({}),
   requirements: z.array(z.string()).default([]),
@@ -66,6 +66,17 @@ export const ModuleManifestSchema = z.object({
 
 export type ModuleManifest = z.infer<typeof ModuleManifestSchema>;
 export type ConfigField = z.infer<typeof ConfigFieldSchema>;
+
+export function supermoduleManifestFields(manifest: ModuleManifest): string[] {
+  return [
+    manifest.entry ? "entry" : null,
+    manifest.configKey ? "configKey" : null,
+    manifest.configFields.length > 0 ? "configFields" : null,
+    Object.keys(manifest.dependencies).length > 0 ? "dependencies" : null,
+    manifest.conflicts.length > 0 ? "conflicts" : null,
+    manifest.capabilities.length > 0 ? "capabilities" : null,
+  ].filter((field): field is string => field !== null);
+}
 
 export function validateManifest(data: unknown): ModuleManifest {
   return ModuleManifestSchema.parse(data);

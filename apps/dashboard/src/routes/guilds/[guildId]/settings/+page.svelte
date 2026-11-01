@@ -32,19 +32,6 @@
         <span class="hint">1–5 characters, no whitespace.</span>
       </div>
       <div class="field">
-        <label for="locale">Locale</label>
-        <input
-          id="locale"
-          name="locale"
-          type="text"
-          maxlength="24"
-          value={data.settings.locale}
-          placeholder="en-US"
-        />
-        <span class="hint">Stored for tooling; the bot UI is English only.</span
-        >
-      </div>
-      <div class="field">
         <label for="messageLogChannel">Message log channel</label>
         <input
           id="messageLogChannel"

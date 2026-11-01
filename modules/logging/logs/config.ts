@@ -11,12 +11,12 @@ export const LoggingConfigSchema = z.object({
 
 export type LoggingConfig = z.infer<typeof LoggingConfigSchema>;
 
-export const LoggingConfigKey = "logging";
+export const LoggingConfigKey = "logging-logs";
 
 export const isLoggingEnabled = (
   services: ModuleServices,
   guildId: string,
-): boolean => services.modules.isEnabled(guildId, LoggingConfigKey);
+): boolean => services.modules.isEnabled(guildId, "logging-logs");
 
 export async function getLoggingConfig(
   services: ModuleServices,

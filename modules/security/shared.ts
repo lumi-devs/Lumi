@@ -8,7 +8,7 @@ import {
 import type { Guild, GuildMember } from "discord.js";
 import type { Redis } from "ioredis";
 import type { z } from "zod";
-import { getSecurityConfig, type SecurityConfig } from "./config.js";
+import { getSecurityConfig, type SecurityConfig } from "./core/config.js";
 
 export type SecurityResponse = "log" | "quarantine" | "ban";
 export type JoinAction = "log" | "kick" | "timeout" | "quarantine";

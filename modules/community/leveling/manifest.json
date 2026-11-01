@@ -173,5 +173,14 @@
   ],
   "dependencies": {
     "community": "^2.0.0"
-  }
+  },
+  "capabilities": [
+    {
+      "name": "community-leveling",
+      "version": "2.1.0",
+      "provides": ["leveling.xp", "leveling.rewards"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

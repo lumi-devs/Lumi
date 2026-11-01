@@ -301,20 +301,19 @@ config: z.object({
 | ------------- | ----------------------------------------------- |
 | Bot Owner     | `OWNER_IDS` environment variable (global)       |
 | Server Owner  | Implicit (guild owner bypass)                   |
-| Regular       | Built-in `Regular` permit (#1, `utility.*`)     |
-| Extra Owner   | Built-in `Extra Owner` permit (#5, `*`)         |
-| Trusted Admin | Built-in `Trusted Admin` permit (#4, `admin.*`) |
+| Extra Owner   | Built-in `Extra Owner` permit (#1, `*`)         |
+| Trusted Admin | Built-in `Trusted Admin` permit (#2, `admin.*`) |
 | Admin Role    | `admin.*` permit assigned to role               |
 | Mod Role      | `mod.*` permit assigned to role                 |
 | DJ Role       | `music.*` permit assigned to role               |
-| Custom        | Custom permits with node patterns (number 6+)   |
+| Custom        | Custom permits with node patterns (number 3+)   |
 
 ### Migration Script
 
 ```ts
 // scripts/migrate-permits.ts
 async function migratePermits(guildId: string) {
-  // 1. Seed built-in permits (#1 Regular, #4 Trusted Admin, #5 Extra Owner)
+  // 1. Seed built-in permits (#1 Extra Owner, #2 Trusted Admin)
   await permitRepo.seedBuiltinPermits(guildId);
 
   // 2. Migrate admin role

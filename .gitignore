@@ -3,6 +3,7 @@ node_modules
 coverage
 dist
 data
+.makeitaquote
 packages/db/generated
 *.log
 .DS_Store

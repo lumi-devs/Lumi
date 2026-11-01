@@ -4,6 +4,7 @@ export const ModulesPerPage = 4;
 
 interface SupermoduleItem extends ModuleSummary {
   enabled: boolean;
+  enabledCount: number;
   submoduleCount: number;
 }
 
@@ -17,13 +18,20 @@ export function supermoduleItems(
 ): SupermoduleItem[] {
   return modules
     .filter((module) => !module.isSubmodule)
-    .map((module) => ({
-      ...module,
-      enabled: isEnabled(module.name),
-      submoduleCount: modules.filter(
+    .map((module) => {
+      const children = modules.filter(
         (child) => child.isSubmodule && child.supermodule === module.name,
-      ).length,
-    }));
+      );
+      const enabledCount = children.filter((child) =>
+        isEnabled(child.name),
+      ).length;
+      return {
+        ...module,
+        enabled: enabledCount > 0,
+        enabledCount,
+        submoduleCount: children.length,
+      };
+    });
 }
 
 export function submoduleItems(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MaxTempDurationSeconds } from "../../modules/role-menus/config.ts";
+import { MaxTempDurationSeconds } from "../../modules/role-menus/menu/config.ts";
 import {
   isTempRoleExpired,
   planForcedRemoval,

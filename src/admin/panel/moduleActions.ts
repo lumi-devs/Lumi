@@ -7,10 +7,12 @@ import type {
 import { type MessageModalSubmit, showPanel } from "./common.js";
 import { renderModules, renderSubmodules } from "./moduleList.js";
 import {
+  enabledConfigField,
   fieldModal,
   fieldValue,
   findField,
   isMulti,
+  isModuleFeatureEnabled,
   isPickerField,
   isSelectField,
   parseFieldInput,
@@ -31,7 +33,19 @@ async function toggleModule(
   guildId: string,
   moduleName: string,
 ): Promise<boolean> {
-  const wasEnabled = services.moduleLoader.isEnabled(guildId, moduleName);
+  const loaded = services.moduleLoader.getModule(moduleName);
+  if (!loaded?.isSubmodule) return false;
+  const wasEnabled = await isModuleFeatureEnabled(
+    services,
+    guildId,
+    moduleName,
+  );
+  const field = enabledConfigField(services, moduleName);
+  if (field) {
+    const config = await readModuleConfig(services, guildId, moduleName);
+    config[field.key] = !wasEnabled;
+    await writeModuleConfig(services, guildId, moduleName, config);
+  }
   if (wasEnabled) await services.moduleManager.disable(guildId, moduleName);
   else await services.moduleManager.enable(guildId, moduleName);
   return wasEnabled;
@@ -134,8 +148,13 @@ export async function handleModuleAction(
       if (!field) return true;
       await showPanel(interaction, async () => {
         const config = await readModuleConfig(services, guildId, target);
-        config[field.key] = !fieldValue(field, config);
+        const next = !fieldValue(field, config);
+        config[field.key] = next;
         await writeModuleConfig(services, guildId, target, config);
+        if (field.key === "enabled" && field.type === "boolean") {
+          if (next) await services.moduleManager.enable(guildId, target);
+          else await services.moduleManager.disable(guildId, target);
+        }
         return renderModuleDetail(
           interaction,
           services,

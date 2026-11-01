@@ -11,7 +11,13 @@
   },
   "requirements": [],
   "conflicts": [],
-  "capabilities": [],
+  "capabilities": [
+    {
+      "name": "roles-autorole",
+      "version": "2.0.0",
+      "provides": ["roles.autorole"]
+    }
+  ],
   "configFields": [
     {
       "key": "enabled",

@@ -18,7 +18,7 @@ import {
   getRoleMenusConfig,
   MaxTempDurationSeconds,
   type RoleMenusConfig,
-} from "../config.js";
+} from "./config.js";
 import {
   deleteRoleMenuMessage,
   missingChannelCard,

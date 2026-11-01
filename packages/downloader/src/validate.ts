@@ -1,7 +1,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { ModuleManifest } from "@lumi/module-runtime";
-import { validateManifest } from "@lumi/module-runtime";
+import {
+  supermoduleManifestFields,
+  validateManifest,
+} from "@lumi/module-runtime";
 import { pathExists } from "./fs.js";
 
 export const RequirementRe = /^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/\-^~>=<*]*$/;
@@ -123,13 +126,11 @@ export async function validateAddon(dir: string): Promise<string[]> {
     );
   }
 
-  const entryPath = resolve(root, manifest.entry);
-  if (entryPath === root || !entryPath.startsWith(root + sep)) {
+  const thickFields = supermoduleManifestFields(manifest);
+  if (thickFields.length > 0) {
     errors.push(
-      `entry "${manifest.entry}" must stay inside the add-on directory.`,
+      `supermodule manifest must be metadata-only; remove ${thickFields.join(", ")}.`,
     );
-  } else if (!(await pathExists(entryPath))) {
-    errors.push(`entry "${manifest.entry}" does not exist.`);
   }
 
   for (const requirement of manifest.requirements) {

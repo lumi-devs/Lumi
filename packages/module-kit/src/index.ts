@@ -16,6 +16,7 @@ export interface ModuleDefinition {
   commands: readonly CommandDefinition[];
   listeners: readonly ListenerDefinition[];
   tasks: readonly TaskDefinition[];
+  permitNodes?: readonly string[];
   onLoad: (services: ModuleServices) => Promise<Disposer[]>;
   onUnload: (services: ModuleServices) => Promise<void>;
   dependencies?: Readonly<Record<string, string>>;

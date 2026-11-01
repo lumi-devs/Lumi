@@ -89,6 +89,7 @@ function createSyntheticInteraction(
   message: Message,
   command: RegisteredCommand,
   args: string[],
+  prefix: string,
 ) {
   const guild = message.guild!;
   const member = message.member;
@@ -173,6 +174,8 @@ function createSyntheticInteraction(
     channelId: channel.id,
     client: message.client,
     createdTimestamp: message.createdTimestamp,
+    sourceMessage: message,
+    prefix,
     isChatInputCommand: () => true,
     isRepliable: () => true,
     replied: () => replied,
@@ -366,6 +369,7 @@ export async function handlePrefixMessage(
       message,
       command,
       args,
+      prefix,
     );
     const services = command.module
       ? servicesForModule(context.services, command.module)

@@ -2,7 +2,11 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import type { ModuleDefinition, ModuleServices } from "@lumi/module-kit";
-import { type ModuleManifest, validateManifest } from "./manifest.js";
+import {
+  type ModuleManifest,
+  supermoduleManifestFields,
+  validateManifest,
+} from "./manifest.js";
 
 export type ModuleSummary = Pick<
   ModuleManifest,
@@ -241,6 +245,10 @@ export class ModuleLoader {
     dir: string,
     manifest: ModuleManifest,
   ): Promise<ModuleDefinition | null> {
+    if (!manifest.entry) {
+      console.error(`Module ${manifest.name} has no entry file.`);
+      return null;
+    }
     const entryPath = this.entryPath(dir, manifest.entry);
     if (!entryPath) {
       console.error(
@@ -282,23 +290,37 @@ export class ModuleLoader {
     }
   }
 
+  private containerDefinition(manifest: ModuleManifest): ModuleDefinition {
+    return {
+      name: manifest.name,
+      displayName: manifest.displayName,
+      emoji: manifest.emoji,
+      description: manifest.description,
+      version: manifest.version,
+      config: {},
+      commands: [],
+      listeners: [],
+      tasks: [],
+      async onLoad() {
+        return [];
+      },
+      async onUnload() {},
+    };
+  }
+
   private async discoverSupermodule(
     modulePath: string,
     manifest: ModuleManifest,
     origin: "bundled" | "addon",
     discovered: LoadedModule[],
   ): Promise<void> {
-    const definition = await this.loadDefinition(modulePath, manifest);
-    if (!definition) return;
-
-    discovered.push({
-      manifest,
-      definition,
-      path: modulePath,
-      origin,
-      isSubmodule: false,
-      guildsDisabled: new Set(),
-    });
+    const thickFields = supermoduleManifestFields(manifest);
+    if (thickFields.length > 0) {
+      console.error(
+        `Supermodule ${manifest.name} must use a thin manifest; remove ${thickFields.join(", ")}.`,
+      );
+      return;
+    }
 
     let entries: Dirent[];
     try {
@@ -310,6 +332,7 @@ export class ModuleLoader {
       return;
     }
 
+    const submodules: LoadedModule[] = [];
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
       if (entry.name === "node_modules") continue;
@@ -326,10 +349,15 @@ export class ModuleLoader {
         continue;
       }
 
+      if (!subManifest.entry) {
+        console.error(`Submodule ${subManifest.name} has no entry file.`);
+        continue;
+      }
+
       const subDefinition = await this.loadDefinition(subPath, subManifest);
       if (!subDefinition) continue;
 
-      discovered.push({
+      submodules.push({
         manifest: subManifest,
         definition: subDefinition,
         path: subPath,
@@ -339,6 +367,23 @@ export class ModuleLoader {
         guildsDisabled: new Set(),
       });
     }
+
+    if (submodules.length === 0) {
+      console.error(
+        `Module ${manifest.name} is standalone; a module must live inside a supermodule with at least one submodule.`,
+      );
+      return;
+    }
+
+    discovered.push({
+      manifest,
+      definition: this.containerDefinition(manifest),
+      path: modulePath,
+      origin,
+      isSubmodule: false,
+      guildsDisabled: new Set(),
+    });
+    discovered.push(...submodules);
   }
 
   async loadAll(
@@ -477,12 +522,7 @@ export class ModuleLoader {
   }
 
   isActive(guildId: string, moduleName: string): boolean {
-    const module = this.modules.get(moduleName);
-    if (!module) return false;
-    if (module.guildsDisabled.has(guildId)) return false;
-    return module.supermodule
-      ? this.isEnabled(guildId, module.supermodule)
-      : true;
+    return this.isEnabled(guildId, moduleName);
   }
 
   async reload(moduleName: string): Promise<void> {

@@ -66,7 +66,7 @@ async function recover(
   const result = await restoreBackup(services, guild, latest.data);
   return {
     ok: true,
-    message: `Restored ${result.roles} roles and ${result.channels} channels from \`${latest.id}\`.`,
+    message: `Restored ${result.rolesCreated + result.rolesUpdated} roles and ${result.channelsCreated + result.channelsUpdated} channels from \`${latest.id}\`.`,
   };
 }
 

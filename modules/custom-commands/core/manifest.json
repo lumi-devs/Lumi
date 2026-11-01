@@ -1,16 +1,24 @@
 {
   "apiVersion": 2,
-  "name": "custom-commands",
+  "name": "custom-commands-core",
   "displayName": "Custom Commands",
   "emoji": "🧩",
   "description": "Guild-authored commands with safe templates, triggers, schedules, and per-user KV storage",
   "version": "2.0.0",
   "entry": "index.ts",
   "configKey": "customCommands",
-  "dependencies": {},
+  "dependencies": {
+    "custom-commands": "^2.0.0"
+  },
   "requirements": [],
   "conflicts": [],
-  "capabilities": [],
+  "capabilities": [
+    {
+      "name": "custom-commands-core",
+      "version": "2.0.0",
+      "provides": ["custom-commands.engine", "custom-commands.scheduler"]
+    }
+  ],
   "configFields": [
     {
       "key": "enabled",

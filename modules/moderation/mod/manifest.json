@@ -44,5 +44,14 @@
       "default": {},
       "category": "Warn Escalation"
     }
-  ]
+  ],
+  "capabilities": [
+    {
+      "name": "moderation-mod",
+      "version": "2.0.0",
+      "provides": ["moderation.cases"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

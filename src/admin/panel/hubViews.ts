@@ -18,7 +18,7 @@ import {
   navigationRow,
   panelOptions,
 } from "./common.js";
-import { renderModules } from "./moduleList.js";
+import { moduleStates, renderModules } from "./moduleList.js";
 import type { HubServices } from "./services.js";
 
 const DefaultPrefix = ",";
@@ -35,9 +35,11 @@ async function renderHome(
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const client = interaction.client;
-  const modules = services.moduleLoader.listGlobal();
-  const enabled = modules.filter((module) =>
-    services.moduleLoader.isEnabled(guildId, module.name),
+  const allModules = services.moduleLoader.listGlobal();
+  const modules = allModules.filter((module) => module.isSubmodule);
+  const states = await moduleStates(services, guildId, modules);
+  const enabled = modules.filter(
+    (module) => states.get(module.name) ?? false,
   ).length;
   const settings = await services.configService.getAll(guildId);
   const prefix = currentPrefix(settings);

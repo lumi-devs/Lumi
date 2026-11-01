@@ -1,10 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { serverConfig } from "./env";
+import { getRedis, dashboardKey } from "./redis";
 
 const ApiBase = "https://discord.com/api/v10";
 const OAuthBase = "https://discord.com/oauth2/authorize";
 const TokenUrl = `${ApiBase}/oauth2/token`;
+
+const USER_GUILDS_CACHE_TTL = 45;
 
 export const ManageGuildPermission = 1n << 5n;
 export const AdministratorPermission = 1n << 3n;
@@ -64,6 +67,19 @@ const RoleSchema = z.object({
 });
 
 export type DiscordRole = z.infer<typeof RoleSchema>;
+
+const ChannelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.number(),
+  position: z.number().optional(),
+  parent_id: z.string().nullable().optional(),
+});
+
+export type DiscordChannel = z.infer<typeof ChannelSchema>;
+
+export const VoiceChannelTypes = [2, 13] as const;
+export const CategoryChannelType = 4;
 
 export class DiscordError extends Error {
   readonly status: number;
@@ -195,6 +211,77 @@ export function fetchOAuthUser(accessToken: string): Promise<OAuthUser> {
 
 export async function fetchUserGuilds(
   accessToken: string,
+  opts?: { forceRefresh?: boolean },
+): Promise<GuildSummary[]> {
+  const userId = await getUserIdFromToken(accessToken);
+  if (!userId) {
+    return fetchUserGuildsUncached(accessToken);
+  }
+
+  const cacheKey = dashboardKey("user", userId, "guilds");
+  const lockKey = dashboardKey("lock", "user", userId, "guilds");
+  const redis = getRedis();
+
+  if (!opts?.forceRefresh) {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log("[dashboard] fetchUserGuilds: cache hit for user", userId);
+      return JSON.parse(cached);
+    }
+  }
+
+  // Acquire lock to prevent thundering herd
+  const lockAcquired = await redis.set(lockKey, "1", "EX", 10, "NX");
+  if (!lockAcquired) {
+    // Wait for lock holder to populate cache
+    console.log("[dashboard] fetchUserGuilds: waiting for lock, user", userId);
+    for (let i = 0; i < 50; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        console.log(
+          "[dashboard] fetchUserGuilds: cache populated while waiting, user",
+          userId,
+        );
+        return JSON.parse(cached);
+      }
+    }
+    // Fallback: try to fetch anyway
+    console.log(
+      "[dashboard] fetchUserGuilds: lock wait timeout, fetching anyway, user",
+      userId,
+    );
+  }
+
+  try {
+    console.log(
+      "[dashboard] fetchUserGuilds: cache miss, fetching from Discord (lock held)...",
+      userId,
+    );
+    const guilds = await fetchUserGuildsUncached(accessToken);
+    await redis.set(
+      cacheKey,
+      JSON.stringify(guilds),
+      "EX",
+      USER_GUILDS_CACHE_TTL,
+    );
+    return guilds;
+  } finally {
+    await redis.del(lockKey);
+  }
+}
+
+async function getUserIdFromToken(accessToken: string): Promise<string | null> {
+  try {
+    const user = await fetchOAuthUser(accessToken);
+    return user.id;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchUserGuildsUncached(
+  accessToken: string,
 ): Promise<GuildSummary[]> {
   const response = await fetch(`${ApiBase}/users/@me/guilds`, {
     headers: { authorization: `Bearer ${accessToken}` },
@@ -202,10 +289,15 @@ export async function fetchUserGuilds(
   });
 
   if (!response.ok) {
+    const body = (await response.text()).slice(0, 500);
+    console.error("[dashboard] fetchUserGuildsUncached: Discord error:", {
+      status: response.status,
+      body,
+    });
     throw new DiscordError(
       "Could not load your Discord servers.",
       response.status,
-      (await response.text()).slice(0, 500),
+      body,
     );
   }
 
@@ -213,6 +305,11 @@ export async function fetchUserGuilds(
   if (!parsed.success) {
     throw new DiscordError("Discord returned an invalid guild list.", 502);
   }
+  console.log(
+    "[dashboard] fetchUserGuildsUncached: success, got",
+    parsed.data.length,
+    "guilds",
+  );
   return parsed.data;
 }
 
@@ -284,6 +381,17 @@ export async function fetchGuildRoles(guildId: string): Promise<DiscordRole[]> {
     z.array(RoleSchema),
   );
   return roles ?? [];
+}
+
+export async function fetchGuildChannels(
+  guildId: string,
+): Promise<DiscordChannel[]> {
+  const channels = await botRequest(
+    `/guilds/${encodeURIComponent(guildId)}/channels`,
+    {},
+    z.array(ChannelSchema),
+  );
+  return channels ?? [];
 }
 
 function auditReason(reason: string | undefined): Record<string, string> {

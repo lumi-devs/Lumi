@@ -98,9 +98,9 @@ small,
 }
 
 main {
-  width: min(1180px, 100% - 2rem);
+  width: min(1760px, 100% - 3rem);
   margin: 0 auto;
-  padding: 1.25rem 0 4rem;
+  padding: 1.5rem 0 4rem;
 }
 
 .skip-link {
@@ -124,7 +124,7 @@ main {
 }
 
 .topbar-inner {
-  width: min(1180px, 100% - 2rem);
+  width: min(1760px, 100% - 3rem);
   margin: 0 auto;
   min-height: 60px;
   display: flex;
@@ -224,9 +224,9 @@ main {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 1.25rem 1.35rem;
   box-shadow: var(--shadow);
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .panel > :last-child {
@@ -266,7 +266,7 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.55rem 0.5rem;
+  padding: 0.7rem 0.65rem;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
 }

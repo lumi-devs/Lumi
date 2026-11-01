@@ -37,7 +37,15 @@ export interface CatalogModule {
   version: string;
   configKey: string;
   configFields: ConfigField[];
-  source: "bundled" | "addon" | "registry";
+  isAddon: boolean;
+  supermodule: string | null;
+  isSubmodule: boolean;
+}
+
+interface CollectedManifest {
+  path: string;
+  manifest: RawManifest;
+  parent: string | null;
 }
 
 interface RawManifest {
@@ -146,8 +154,9 @@ async function dataRoot(): Promise<string | null> {
 async function collectManifests(
   root: string,
   depth: number,
-): Promise<Array<{ path: string; manifest: RawManifest }>> {
-  const found: Array<{ path: string; manifest: RawManifest }> = [];
+  parent: string | null = null,
+): Promise<CollectedManifest[]> {
+  const found: CollectedManifest[] = [];
   let entries: Dirent[];
   try {
     entries = await readdir(root, { withFileTypes: true });
@@ -166,17 +175,20 @@ async function collectManifests(
     }
     const dir = join(root, entry.name);
     const manifestPath = join(dir, "manifest.json");
+    let childParent = parent;
     try {
       const manifest = JSON.parse(
         await readFile(manifestPath, "utf-8"),
       ) as RawManifest;
-      if (typeof manifest.name === "string")
-        found.push({ path: dir, manifest });
+      if (typeof manifest.name === "string") {
+        found.push({ path: dir, manifest, parent });
+        childParent = manifest.name;
+      }
     } catch {
       // Not every directory is a module.
     }
     if (depth > 1) {
-      found.push(...(await collectManifests(dir, depth - 1)));
+      found.push(...(await collectManifests(dir, depth - 1, childParent)));
     }
   }
   return found;
@@ -184,7 +196,8 @@ async function collectManifests(
 
 function toCatalogModule(
   raw: RawManifest,
-  source: CatalogModule["source"],
+  parent: string | null,
+  isAddon: boolean,
 ): CatalogModule | null {
   if (typeof raw.name !== "string" || !/^[a-z][a-z0-9-]*$/.test(raw.name)) {
     return null;
@@ -197,7 +210,9 @@ function toCatalogModule(
     version: asString(raw.version, "0.0.0"),
     configKey: asString(raw.configKey, raw.name),
     configFields: parseFields(raw.configFields),
-    source,
+    isAddon,
+    supermodule: parent,
+    isSubmodule: parent !== null,
   };
 }
 
@@ -211,8 +226,8 @@ export async function moduleCatalog(): Promise<CatalogModule[]> {
   const map = new Map<string, CatalogModule>();
   const bundledRoot = await modulesRoot();
   if (bundledRoot) {
-    for (const { manifest } of await collectManifests(bundledRoot, 3)) {
-      const module = toCatalogModule(manifest, "bundled");
+    for (const { manifest, parent } of await collectManifests(bundledRoot, 3)) {
+      const module = toCatalogModule(manifest, parent, false);
       if (module && !map.has(module.name)) map.set(module.name, module);
     }
   }
@@ -220,8 +235,8 @@ export async function moduleCatalog(): Promise<CatalogModule[]> {
   const addonRoot = await dataRoot();
   if (addonRoot) {
     const addonsDir = join(addonRoot, "addons");
-    for (const { manifest } of await collectManifests(addonsDir, 2)) {
-      const module = toCatalogModule(manifest, "addon");
+    for (const { manifest, parent } of await collectManifests(addonsDir, 2)) {
+      const module = toCatalogModule(manifest, parent, true);
       if (module && !map.has(module.name)) map.set(module.name, module);
     }
   }
@@ -239,7 +254,9 @@ export async function moduleCatalog(): Promise<CatalogModule[]> {
       version: row.version ?? "0.0.0",
       configKey: row.name,
       configFields: [],
-      source: "registry",
+      isAddon: true,
+      supermodule: null,
+      isSubmodule: false,
     });
   }
 

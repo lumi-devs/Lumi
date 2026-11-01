@@ -28,14 +28,6 @@ const SettingsSchema = z.object({
     .refine((value) => !/\s/.test(value), {
       message: "The prefix cannot contain whitespace.",
     }),
-  locale: z
-    .string()
-    .trim()
-    .min(2)
-    .max(24)
-    .regex(/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,8})*$/, {
-      message: "Use a locale such as en-US.",
-    }),
   enforcePermits: z.boolean(),
   messageLogChannel: OptionalSnowflake,
   moderationLogChannel: OptionalSnowflake,
@@ -72,7 +64,6 @@ export const load: PageServerLoad = async (event) => {
   return {
     settings: {
       prefix: typeof settings.prefix === "string" ? settings.prefix : ",",
-      locale: typeof settings.locale === "string" ? settings.locale : "en-US",
       enforcePermits: Boolean(settings.enforcePermits),
       logChannels: channels,
     },
@@ -89,7 +80,6 @@ export const actions: Actions = {
 
     const parsed = parseInput(SettingsSchema, {
       prefix: formString(data, "prefix"),
-      locale: formString(data, "locale", "en-US"),
       enforcePermits: checkbox(data, "enforcePermits"),
       messageLogChannel: formString(data, "messageLogChannel"),
       moderationLogChannel: formString(data, "moderationLogChannel"),
@@ -110,7 +100,6 @@ export const actions: Actions = {
 
     await setGuildSettings(guildId, {
       prefix: parsed.data.prefix,
-      locale: parsed.data.locale,
       enforcePermits: parsed.data.enforcePermits,
       logChannels: channels,
     });
@@ -121,7 +110,6 @@ export const actions: Actions = {
       targetType: "guild_settings",
       changes: {
         prefix: parsed.data.prefix,
-        locale: parsed.data.locale,
         enforcePermits: parsed.data.enforcePermits,
         logChannelCount: Object.keys(channels).length,
       },

@@ -129,6 +129,27 @@ function moduleByName(services: HubServices, name: string) {
     .find((module) => module.manifest.name === name);
 }
 
+export function enabledConfigField(
+  services: HubServices,
+  moduleName: string,
+): ConfigField | undefined {
+  return moduleByName(services, moduleName)?.manifest.configFields?.find(
+    (field) => field.key === "enabled" && field.type === "boolean",
+  );
+}
+
+export async function isModuleFeatureEnabled(
+  services: HubServices,
+  guildId: string,
+  moduleName: string,
+): Promise<boolean> {
+  if (!services.moduleLoader.isEnabled(guildId, moduleName)) return false;
+  const field = enabledConfigField(services, moduleName);
+  if (!field) return true;
+  const config = await readModuleConfig(services, guildId, moduleName);
+  return Boolean(fieldValue(field, config));
+}
+
 export function findField(
   services: HubServices,
   moduleName: string,
@@ -163,6 +184,13 @@ export async function renderModuleDetail(
       panelOptions(interaction, "modules", ["Hub", "Modules"]),
     );
   }
+  if (!loaded.isSubmodule) {
+    return makeErrorCard(
+      "Supermodule",
+      `**${loaded.manifest.displayName}** is a group. Configure one of its submodules instead.`,
+      panelOptions(interaction, "modules", ["Hub", "Modules"]),
+    );
+  }
 
   const meta = loaded.manifest;
   const fields = meta.configFields ?? [];
@@ -172,7 +200,8 @@ export async function renderModuleDetail(
   const page = pages[safePage] ?? { label: "General", fields: [] };
   const current = page.fields;
   const config = await readModuleConfig(services, guildId, moduleName);
-  const enabled = services.moduleLoader.isEnabled(guildId, moduleName);
+  const hasEnabledField = Boolean(enabledConfigField(services, moduleName));
+  const enabled = await isModuleFeatureEnabled(services, guildId, moduleName);
 
   const sections = current.map((field) => {
     const value = fieldValue(field, config);
@@ -213,12 +242,16 @@ export async function renderModuleDetail(
 
   rows.push(
     row(
-      createActionButton({
-        customId: `lumi:modtoggle:${moduleName}:${safePage}`,
-        label: enabled ? "Disable" : "Enable",
-        emoji: enabled ? "⛔" : "✅",
-        style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
-      }),
+      ...(hasEnabledField
+        ? []
+        : [
+            createActionButton({
+              customId: `lumi:modtoggle:${moduleName}:${safePage}`,
+              label: enabled ? "Disable" : "Enable",
+              emoji: enabled ? "⛔" : "✅",
+              style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
+            }),
+          ]),
       createActionButton({
         customId: `lumi:modreset:${moduleName}:${safePage}`,
         label: "Reset",
@@ -231,10 +264,10 @@ export async function renderModuleDetail(
 
   const body: string[] = [];
   if (notice) body.push(`**${notice}**`);
-  body.push(
-    `**Status:** ${enabled ? "✅ Enabled" : "⛔ Disabled"}`,
-    meta.description || "No description provided.",
-  );
+  if (!hasEnabledField) {
+    body.push(`**Status:** ${enabled ? "✅ Enabled" : "⛔ Disabled"}`);
+  }
+  body.push(meta.description || "No description provided.");
   if (pages.length > 1) body.push(`-# ${page.label}`);
 
   return makeCard(

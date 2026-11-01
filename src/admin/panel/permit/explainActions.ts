@@ -12,21 +12,8 @@ import type { ExplainFlow } from "../../permits/flows.js";
 import { backButton } from "../common.js";
 import type { PermitHost } from "./host.js";
 
-export async function handleExplainAction(
-  host: PermitHost,
-  customId: string,
-): Promise<boolean> {
+async function runExplain(host: PermitHost): Promise<boolean> {
   const interaction = host.interaction;
-
-  if (customId === "permit_explain") {
-    const flow: ExplainFlow = { kind: "explain", userId: undefined };
-    host.setFlow(flow);
-    await interaction.update(await host.explainCard(flow));
-    return true;
-  }
-
-  if (customId !== "permit_explain_run") return false;
-
   const flow = host.getFlow();
   if (flow?.kind !== "explain" || flow.userId === undefined) {
     await interaction.update(
@@ -84,6 +71,20 @@ export async function handleExplainAction(
   return true;
 }
 
+export async function handleExplainAction(
+  host: PermitHost,
+  customId: string,
+): Promise<boolean> {
+  const interaction = host.interaction;
+
+  if (customId !== "permit_explain") return false;
+
+  const flow: ExplainFlow = { kind: "explain", userId: undefined };
+  host.setFlow(flow);
+  await interaction.update(await host.explainCard(flow));
+  return true;
+}
+
 export async function handleExplainSelect(
   host: PermitHost,
   customId: string,
@@ -101,6 +102,5 @@ export async function handleExplainSelect(
   if (value === undefined) return true;
   flow.userId = value;
   host.setFlow(flow);
-  await interaction.update(await host.explainCard(flow));
-  return true;
+  return runExplain(host);
 }

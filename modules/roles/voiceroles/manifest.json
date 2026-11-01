@@ -11,7 +11,13 @@
   },
   "requirements": [],
   "conflicts": [],
-  "capabilities": [],
+  "capabilities": [
+    {
+      "name": "roles-voiceroles",
+      "version": "2.0.0",
+      "provides": ["roles.voice"]
+    }
+  ],
   "configFields": [
     {
       "key": "enabled",

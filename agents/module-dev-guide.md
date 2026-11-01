@@ -4,22 +4,25 @@ This guide covers creating, testing, and publishing first-party modules for Lumi
 
 ## Quick Start
 
+Submodules live inside a supermodule group. Create the supermodule directory
+first if the group does not exist yet; its manifest is metadata only.
+
 ```bash
-# 1. Create module directory
-mkdir modules/my-module
-cd modules/my-module
+# 1. Create the submodule directory inside its supermodule
+mkdir -p modules/my-supermodule/my-module
+cd modules/my-supermodule/my-module
 
 # 2. Create manifest.json
 cat > manifest.json << 'EOF'
 {
   "apiVersion": 2,
-  "name": "my-module",
+  "name": "my-supermodule-my-module",
   "displayName": "My Module",
   "emoji": "✨",
   "description": "A short description",
   "version": "0.1.0",
   "entry": "index.ts",
-  "dependencies": {},
+  "dependencies": { "my-supermodule": "^2.0.0" },
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
@@ -36,7 +39,7 @@ import { defineModule, type ModuleDefinition } from "@lumi/module-kit";
 import { z } from "zod";
 
 export default defineModule({
-  name: "my-module",
+  name: "my-supermodule-my-module",
   displayName: "My Module",
   emoji: "✨",
   description: "A short description",
@@ -49,6 +52,7 @@ export default defineModule({
   commands: [],      // Add commands here
   listeners: [],     // Add listeners here
   tasks: [],         // Reserved; see "Tasks" below
+  // permitNodes: ["my-module.view"], // Optional nodes used by buttons/UI only
   async onLoad(services) {
     console.log("[my-module] Loaded");
     return []; // return disposers if needed
@@ -62,20 +66,43 @@ EOF
 
 ---
 
+## Supermodules are groups
+
+A supermodule is a rudimentary display container, not a module. Its
+`manifest.json` contains only `apiVersion`, `name`, `displayName`, `emoji`,
+`description`, and `version`:
+
+```json
+{
+  "apiVersion": 2,
+  "name": "my-supermodule",
+  "displayName": "My Supermodule",
+  "emoji": "📦",
+  "description": "Groups related feature modules",
+  "version": "2.0.0"
+}
+```
+
+Do not add `entry`, `index.ts`, `configKey`, `configFields`, or enable/disable
+state to a supermodule. The loader synthesizes a no-op definition for grouping
+and never runs code from the supermodule directory.
+
 ## Module Anatomy
 
 ```
-modules/my-module/
-├── manifest.json       # Required: metadata, deps, entry point
-├── index.ts            # Required: module definition export
-├── commands/           # Optional: command files
-│   └── my-command.ts
-├── listeners/          # Optional: event listeners
-│   └── my-listener.ts
-├── services/           # Optional: internal services
-│   └── my-service.ts
-└── tests/              # Optional: vitest tests
-    └── my-module.test.ts
+modules/<supermodule>/
+├── manifest.json       # Required: group metadata only
+└── <submodule>/
+    ├── manifest.json   # Required: metadata, deps, entry point, config UI
+    ├── index.ts        # Required: module definition export
+    ├── commands/       # Optional: command files
+    │   └── my-command.ts
+    ├── listeners/      # Optional: event listeners
+    │   └── my-listener.ts
+    ├── services/       # Optional: internal services
+    │   └── my-service.ts
+    └── tests/          # Optional: vitest tests
+        └── my-module.test.ts
 ```
 
 ---
@@ -90,7 +117,7 @@ modules/my-module/
 | `emoji`        | ✅       | Single emoji for UI                                         |
 | `description`  | ✅       | One-line description                                        |
 | `version`      | ✅       | Semver (e.g., `0.1.0`)                                      |
-| `entry`        | ✅       | Relative path to definition file                            |
+| `entry`        | ✅       | Submodule entry, relative to the submodule directory        |
 | `dependencies` | ❌       | Other modules: `{ "supermodule-name": "^2.0.0" }`           |
 | `requirements` | ❌       | NPM packages: `["lodash@^4.17.21"]`                         |
 | `conflicts`    | ❌       | Module names that cannot co-exist                           |
@@ -98,12 +125,32 @@ modules/my-module/
 | `configKey`    | ❌       | Stored settings key when it differs from `name`             |
 | `configFields` | ❌       | `/lumi` settings metadata; defaults to `[]`                 |
 
+Supermodule manifests use only the first six fields.
+
+### Dependency policy
+
+Bundled modules share the root `package.json` dependency set, matching Redbot's
+central cogs and its `requirements/base.txt`. Do not add a bundled module's npm
+packages to `manifest.requirements`; keep shared runtime dependencies at the
+root so the bot remains a single install. `requirements` is for downloadable
+add-ons, whose downloader installs them into the add-on directory. Declare
+module-to-module dependencies in `dependencies` and incompatible module names in
+`conflicts`.
+
+`community-quote` is the exception used as a live example of the field: it
+declares `makeitaquote@^12.1.6` in `manifest.requirements` without adding it to
+the root package. Install it for local development with
+`bun add --no-save --ignore-scripts makeitaquote@^12.1.6`; add-on installs run
+that command automatically from the declared requirements. The renderer is
+local, so quote generation does not depend on an external image API.
+
 ---
 
 ## Configuration Schema
 
 Use **Zod** for validation. The parsed `config` shape is stored per guild in
-`Guild.settings`; the Zod schema itself is not persisted.
+`Guild.settings`; the Zod schema itself is not persisted. Configuration belongs
+to submodules only; supermodules have no config.
 
 ```ts
 import { z } from "zod";
@@ -191,8 +238,8 @@ export const myCommand: CommandDefinition = {
       opt.setName("target").setDescription("Target user").setRequired(false),
     ),
 
-  // Optional: permit node this command maps to. It feeds the permit catalog
-  // and Explain Check; dispatch does not gate on it today.
+  // Optional: permit node this command maps to. Dispatch blocks the command
+  // unless the member has this node, and it feeds the permit catalog.
   requiredPermit: "my-module.my-command",
 
   // Optional: autocomplete handler
@@ -255,8 +302,8 @@ export const myCommand: CommandDefinition = {
 
 1. **Always check `services.modules.isEnabled(guildId, name)`** at the start of `execute`
 2. **Use `requiredPermit`** to attach the command to a permit node in the panel;
-   dispatch does not enforce it, so check `services.permits` in `execute` when
-   the command needs a runtime gate.
+   dispatch enforces it before `execute` runs. Use `permitNodes` on the module
+   definition for nodes that gate buttons/UI but no command (e.g. `stats.view`).
 3. **Use `ephemeralCard(card)`** for non-public responses
 4. **Use `@lumi/ui` cards** — never raw `EmbedBuilder` and never `embeds:`
 5. **Validate inputs** — Discord validates required options, but check business logic
@@ -434,14 +481,15 @@ bunx vitest run modules/my-module/tests/my-module.test.ts
 
 ## Module Checklist (Pre-Ship)
 
-- [ ] `manifest.json` validates (apiVersion: 2, name matches dir, entry exists)
+- [ ] Manifest validates (apiVersion: 2, name matches `<supermodule>-<dir>`, entry exists)
+- [ ] Supermodule manifest is metadata-only (no entry, code, config, or toggle state)
 - [ ] Zod config schema covers all settings with defaults
 - [ ] Manifest `configFields` metadata matches schema types
 - [ ] All commands have `requiredPermit` or check `isEnabled`
 - [ ] All listeners check `isEnabled` at start
 - [ ] No `EmbedBuilder` usage — use `@lumi/ui` cards
 - [ ] No direct imports of `src`, `modules/*`, or internal packages
-- [ ] Dependencies declared in manifest (both modules + npm)
+- [ ] Dependencies declared in manifest (both modules + npm, including the parent supermodule)
 - [ ] No dependency cycles
 - [ ] Tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run typecheck`)
@@ -451,7 +499,7 @@ bunx vitest run modules/my-module/tests/my-module.test.ts
 
 ## Publishing (First-Party)
 
-1. Module lives in `modules/<name>/`
+1. Submodule lives in `modules/<supermodule>/<submodule>/`
 2. Version bump in `manifest.json` and `index.ts`
 3. PR merged to main
 4. Released as part of Lumi v2 release

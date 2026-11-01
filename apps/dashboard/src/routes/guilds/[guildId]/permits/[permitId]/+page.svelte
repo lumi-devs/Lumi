@@ -1,5 +1,8 @@
 <script lang="ts">
   import { formatDate } from "$lib/format";
+  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
+  import NodePicker from "$lib/components/NodePicker.svelte";
+  import TimezoneSelect from "$lib/components/TimezoneSelect.svelte";
   let { data } = $props();
 
   function jsonValue(value: unknown): string {
@@ -97,19 +100,20 @@
         </div>
         <div class="field">
           <label for="p-timezone">Timezone (optional)</label>
-          <input
+          <TimezoneSelect
             id="p-timezone"
             name="timezone"
-            type="text"
-            maxlength="64"
             value={data.permit.timezone ?? ""}
           />
         </div>
         <div class="field full">
           <label for="p-nodes">Nodes</label>
-          <textarea id="p-nodes" name="nodes" required
-            >{data.permit.nodes.join("\n")}</textarea
-          >
+          <NodePicker
+            id="p-nodes"
+            name="nodes"
+            nodes={data.nodes}
+            selected={[...data.permit.nodes]}
+          />
         </div>
         <div class="field full">
           <label for="p-scopes">Whitelist scopes (optional)</label>
@@ -138,10 +142,15 @@
     </fieldset>
   </form>
   {#if !data.permit.builtin}
-    <form method="POST" action="?/delete" style="margin-top:0.8rem">
-      <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
-      <button class="danger" type="submit">Delete permit</button>
-    </form>
+    <div style="margin-top:0.8rem">
+      <ConfirmForm
+        action="?/delete"
+        csrfToken={data.csrfToken ?? ""}
+        buttonLabel="Delete permit"
+        confirmLabel="Yes, delete permit"
+        message="Delete this permit and all of its assignments? This cannot be undone."
+      />
+    </div>
   {/if}
 </div>
 
@@ -200,16 +209,28 @@
   <form method="POST" action="?/assign">
     <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
     <div class="form-grid">
+      {#if data.permit.builtin}
+        <input type="hidden" name="targetType" value="USER" />
+        <div class="field">
+          <label>Target type</label>
+          <p class="muted" style="margin:0.35rem 0 0">
+            Users only — built-in permits cannot be assigned to roles or
+            channels.
+          </p>
+        </div>
+      {:else}
+        <div class="field">
+          <label for="a-type">Target type</label>
+          <select id="a-type" name="targetType">
+            <option value="USER">User</option>
+            <option value="ROLE">Role</option>
+            <option value="CHANNEL">Channel</option>
+          </select>
+        </div>
+      {/if}
       <div class="field">
-        <label for="a-type">Target type</label>
-        <select id="a-type" name="targetType">
-          <option value="USER">User</option>
-          <option value="ROLE">Role</option>
-          <option value="CHANNEL">Channel</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="a-id">Target ID</label>
+        <label for="a-id">{data.permit.builtin ? "User ID" : "Target ID"}</label
+        >
         <input
           id="a-id"
           name="targetId"

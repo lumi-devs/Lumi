@@ -4,48 +4,5 @@
   "displayName": "Logging",
   "emoji": "📝",
   "description": "Message, edit, delete, and voice logging",
-  "version": "2.0.0",
-  "entry": "index.ts",
-  "configFields": [
-    {
-      "key": "messageLogChannel",
-      "label": "Message Log Channel",
-      "type": "channel",
-      "description": "Log message edits/deletes",
-      "default": null,
-      "category": "Message Events"
-    },
-    {
-      "key": "editLogChannel",
-      "label": "Edit Log Channel",
-      "type": "channel",
-      "description": "Log message edits",
-      "default": null,
-      "category": "Message Events"
-    },
-    {
-      "key": "deleteLogChannel",
-      "label": "Delete Log Channel",
-      "type": "channel",
-      "description": "Log message deletes",
-      "default": null,
-      "category": "Message Events"
-    },
-    {
-      "key": "voiceLogChannel",
-      "label": "Voice Log Channel",
-      "type": "channel",
-      "description": "Log voice state changes",
-      "default": null,
-      "category": "Voice & Moderation"
-    },
-    {
-      "key": "ignoredChannels",
-      "label": "Ignored Channels",
-      "type": "multi-channel",
-      "description": "Channels to exclude from logging",
-      "default": [],
-      "category": "Filters"
-    }
-  ]
+  "version": "2.0.0"
 }

@@ -6,11 +6,74 @@
   "description": "Create and post self-service role menus with optional temporary roles",
   "version": "2.0.0",
   "entry": "index.ts",
+  "configKey": "role-menus-menu",
   "dependencies": {
     "role-menus": "^2.0.0"
   },
   "requirements": [],
   "conflicts": [],
-  "capabilities": [],
-  "configFields": []
+  "capabilities": [
+    {
+      "name": "role-menus-menu",
+      "version": "2.0.0",
+      "provides": ["role-menus.menu", "role-menus.temp-roles"]
+    }
+  ],
+  "configFields": [
+    {
+      "key": "defaultMode",
+      "label": "Default Selection Mode",
+      "type": "select",
+      "description": "Whether new role menus allow one or multiple choices",
+      "choices": ["single", "multiple"],
+      "default": "multiple",
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultRequireOne",
+      "label": "Require One Role",
+      "type": "boolean",
+      "description": "Require members to keep at least one role from the menu",
+      "default": false,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultAutoToggle",
+      "label": "Auto Toggle",
+      "type": "boolean",
+      "description": "Remove a role when the member selects it again",
+      "default": true,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultMaxSelections",
+      "label": "Max Selections",
+      "type": "number",
+      "description": "Maximum roles a member can pick (0 means no limit)",
+      "default": 0,
+      "min": 0,
+      "max": 25,
+      "category": "Defaults"
+    },
+    {
+      "key": "defaultTempDurationSeconds",
+      "label": "Default Temp Role Duration",
+      "type": "number",
+      "description": "Default temporary role duration in seconds (0 means permanent)",
+      "default": 0,
+      "min": 0,
+      "max": 2592000,
+      "category": "Defaults"
+    },
+    {
+      "key": "maxOptionsPerGroup",
+      "label": "Max Options Per Group",
+      "type": "number",
+      "description": "Maximum role options allowed in one menu group",
+      "default": 25,
+      "min": 1,
+      "max": 25,
+      "category": "Limits"
+    }
+  ]
 }

@@ -31,7 +31,13 @@ import { createAddonNotifier } from "./core/addonNotify.js";
 import { createCommandSync } from "./core/commandSync.js";
 import { createGuildSync } from "./core/guildSync.js";
 import { CommandRegistry, ModuleHost } from "./core/modules.js";
-import { createStatusHandler } from "./core/rpcRoutes.js";
+import {
+  createBackupHandler,
+  createGuildHandler,
+  createModuleStateHandler,
+  createPermitNodesHandler,
+  createStatusHandler,
+} from "./core/rpcRoutes.js";
 
 const GuildBatchSize = 10;
 
@@ -80,12 +86,69 @@ async function main(): Promise<void> {
   const rpc = createRpcServer({
     port: rpcPort,
     host: process.env.RPC_HTTP_HOST ?? "0.0.0.0",
-    handler: createStatusHandler({
-      client,
-      healthMonitor,
-      moduleLoader,
-      token: process.env.RPC_INTERNAL_TOKEN,
-    }),
+    handler: async (req, res) => {
+      const statusHandler = createStatusHandler({
+        client,
+        healthMonitor,
+        moduleLoader,
+        token: process.env.RPC_INTERNAL_TOKEN,
+      });
+      const nodesHandler = createPermitNodesHandler({
+        moduleLoader,
+        permits: permitRepo,
+        token: process.env.RPC_INTERNAL_TOKEN,
+      });
+      const guildHandler = createGuildHandler({
+        client,
+        token: process.env.RPC_INTERNAL_TOKEN,
+      });
+      const moduleStateHandler = createModuleStateHandler({
+        moduleLoader,
+        token: process.env.RPC_INTERNAL_TOKEN,
+      });
+      const backupHandler = createBackupHandler({
+        client,
+        prisma,
+        services: {
+          db: { prisma },
+          observability: { logger },
+        },
+        token: process.env.RPC_INTERNAL_TOKEN,
+      });
+
+      const url = new URL(
+        req.url ?? "/",
+        `http://${req.headers.host ?? "localhost"}`,
+      );
+
+      if (url.pathname === "/api/v1/permits/nodes") {
+        await nodesHandler(req, res);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/v1/guilds/") &&
+        url.pathname.includes("/backups/")
+      ) {
+        await backupHandler(req, res);
+        return;
+      }
+
+      if (
+        url.pathname.startsWith("/api/v1/guilds/") &&
+        url.pathname.includes("/modules/")
+      ) {
+        await moduleStateHandler(req, res);
+        return;
+      }
+
+      if (url.pathname.startsWith("/api/v1/guilds/")) {
+        await guildHandler(req, res);
+        return;
+      }
+
+      await statusHandler(req, res);
+    },
   });
   await rpc.start();
   logger.info("RPC server listening", { port: rpcPort });

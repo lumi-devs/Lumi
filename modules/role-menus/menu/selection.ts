@@ -1,4 +1,4 @@
-import { MaxTempDurationSeconds } from "../config.js";
+import { MaxTempDurationSeconds } from "./config.js";
 
 export type RoleMenuMode = "single" | "multiple";
 

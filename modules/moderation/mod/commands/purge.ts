@@ -40,7 +40,7 @@ export const purgeDef: CommandDefinition = {
         .setDescription("Only delete bot messages")
         .setRequired(false),
     ),
-  requiredPermit: "utility.purge",
+  requiredPermit: "mod.purge",
   async execute(interaction) {
     const amount = interaction.options.getInteger("amount", true);
     const channel = interaction.channel!;

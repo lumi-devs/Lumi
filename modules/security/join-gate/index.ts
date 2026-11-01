@@ -8,7 +8,7 @@ import {
 import { ephemeralCard, makeErrorCard, makeInfoCard } from "@lumi/ui";
 import { type GuildMember, SlashCommandBuilder } from "discord.js";
 import { z } from "zod";
-import { getSecurityConfig } from "../config.js";
+import { getSecurityConfig } from "../core/config.js";
 import {
   applyJoinAction,
   incrementWindow,

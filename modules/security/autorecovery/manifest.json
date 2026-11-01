@@ -31,6 +31,16 @@
   ],
   "dependencies": {
     "security": "^2.0.0",
-    "security-backups": "^2.0.0"
-  }
+    "security-backups": "^2.0.0",
+    "security-core": "^2.0.0"
+  },
+  "capabilities": [
+    {
+      "name": "security-autorecovery",
+      "version": "2.0.0",
+      "provides": ["security.autorecovery"]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
 }

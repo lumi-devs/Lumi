@@ -1,36 +1,6 @@
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository, Polarity } from "@lumi/permits";
-
-const BuiltinNodes = [
-  "*",
-  "admin.*",
-  "admin.config",
-  "mod.*",
-  "mod.ban",
-  "mod.unban",
-  "mod.kick",
-  "mod.timeout",
-  "mod.warn",
-  "mod.note",
-  "mod.case",
-  "mod.lock",
-  "mod.lockdown",
-  "mod.quarantine",
-  "mod.vcmute",
-  "mod.nick",
-  "utility.*",
-  "utility.purge",
-  "economy.*",
-  "economy.admin",
-  "leveling.*",
-  "logging.*",
-  "logging.claim",
-  "tempvc.*",
-  "tempvc.admin",
-  "security.antinuke.bypass",
-  "security.automod.bypass",
-  "automod.bypass",
-];
+import { BuiltinPermits } from "@lumi/permits";
 
 export const GlobalPermitNamespace = "global";
 
@@ -50,17 +20,24 @@ export function collectPermitNodes(
   moduleLoader: ModuleLoader,
   extra: string[],
 ): string[] {
-  const nodes = new Set<string>(BuiltinNodes);
+  const builtinNodes = BuiltinPermits.flatMap((p) => p.nodes);
+  const nodes = new Set<string>(builtinNodes);
+  const addNode = (node: string): void => {
+    if (node.length === 0) return;
+    nodes.add(node);
+    const namespace = namespaceForNode(node);
+    if (namespace !== node && namespace !== GlobalPermitNamespace) {
+      nodes.add(`${namespace}.*`);
+    }
+  };
   for (const module of moduleLoader.listAll()) {
+    for (const node of module.definition.permitNodes ?? []) {
+      addNode(node);
+    }
     for (const command of module.definition.commands ?? []) {
       const node = command.requiredPermit;
       if (node === undefined) continue;
-      if (node.length === 0) continue;
-      nodes.add(node);
-      const namespace = namespaceForNode(node);
-      if (namespace !== node && namespace !== GlobalPermitNamespace) {
-        nodes.add(`${namespace}.*`);
-      }
+      addNode(node);
     }
   }
   for (const node of extra) {

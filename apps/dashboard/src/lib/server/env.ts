@@ -30,6 +30,8 @@ export interface ServerConfig {
   redisDb: number;
   dataDir: string;
   modulesDir: string | null;
+  rpcUrl: string | null;
+  rpcInternalToken: string | null;
 }
 
 let cached: ServerConfig | null = null;
@@ -72,6 +74,8 @@ export function serverConfig(): ServerConfig {
     redisDb: Number.isFinite(db) ? db : 0,
     dataDir: Trim(process.env.LUMI_DATA_DIR) ?? "data",
     modulesDir: Trim(process.env.LUMI_MODULES_DIR),
+    rpcUrl: Trim(process.env.RPC_URL),
+    rpcInternalToken: Trim(process.env.RPC_INTERNAL_TOKEN),
   };
 
   return cached;

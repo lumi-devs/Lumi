@@ -1,4 +1,4 @@
-export const ModuleName = "custom-commands";
+export const ModuleName = "custom-commands-core";
 export const ConfigKey = "customCommands";
 
 export const TriggerTypes = [

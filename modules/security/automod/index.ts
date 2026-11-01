@@ -20,7 +20,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { z } from "zod";
-import { getSecurityConfig } from "../config.js";
+import { getSecurityConfig } from "../core/config.js";
 import { startPanic } from "../panic/state.js";
 import {
   applyResponse,
