@@ -1,7 +1,7 @@
 import { type RequestHandler, redirect } from "@sveltejs/kit";
-import { authorizeUrl, createPkce, randomState } from "$lib/server/discord";
-import { serverConfig } from "$lib/server/env";
-import { dashboardKey, getRedis } from "$lib/server/redis";
+import { authorizeUrl, createPkce, randomState } from "#lib/server/discord.js";
+import { serverConfig } from "#lib/server/env.js";
+import { dashboardKey, getRedis } from "#lib/server/redis.js";
 
 const OAuthStateCookie = "lumi_oauth_state";
 
@@ -36,5 +36,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
     maxAge: 600,
   });
 
-  throw redirect(303, authorizeUrl(state, challenge));
+  throw redirect(303, authorizeUrl(state, challenge), {
+    external: ["https://discord.com"],
+  });
 };

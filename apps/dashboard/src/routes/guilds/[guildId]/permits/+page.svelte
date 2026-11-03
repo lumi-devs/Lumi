@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { formatDate } from "$lib/format";
-  import NodePicker from "$lib/components/NodePicker.svelte";
-  import TimezoneSelect from "$lib/components/TimezoneSelect.svelte";
+  import { formatDate } from "#lib/format.js";
+  import NodePicker from "#lib/components/NodePicker.svelte";
+  import TimezoneSelect from "#lib/components/TimezoneSelect.svelte";
   let { data } = $props();
 
   let selectedNodes = $state<string[]>([]);

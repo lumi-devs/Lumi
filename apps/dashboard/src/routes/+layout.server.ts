@@ -1,4 +1,4 @@
-import { userAvatarUrl } from "$lib/server/discord";
+import { userAvatarUrl } from "#lib/server/discord.js";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async ({ locals }) => {

@@ -1,21 +1,21 @@
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildForm, requireGuildId } from "$lib/server/auth";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
 import {
   configFor,
   effectiveModuleEnabled,
   enabledConfigField,
-} from "$lib/server/moduleConfig";
-import { moduleCatalog } from "$lib/server/modules";
-import { getPrisma } from "$lib/server/prisma";
-import { setModuleStateViaRpc } from "$lib/server/rpc";
+} from "#lib/server/moduleConfig.js";
+import { moduleCatalog } from "#lib/server/modules.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { setModuleStateViaRpc } from "#lib/server/rpc.js";
 import {
   ensureGuild,
   readGuildSettings,
   setGuildSetting,
-} from "$lib/server/settings";
-import { checkbox, formString, parseInput } from "$lib/server/validation";
+} from "#lib/server/settings.js";
+import { checkbox, formString, parseInput } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const ToggleSchema = z.object({

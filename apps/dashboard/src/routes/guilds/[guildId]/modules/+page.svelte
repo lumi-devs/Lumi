@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
+  import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   let { data } = $props();
 
   let expandedGroups = $state<string[]>([]);

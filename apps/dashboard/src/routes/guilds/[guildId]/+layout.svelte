@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   let { data, children } = $props();
 
   const links = [
@@ -15,7 +15,7 @@
   ];
 
   const base = $derived(`/guilds/${data.guild.id}`);
-  const currentPath = $derived($page.url.pathname);
+  const currentPath = $derived(page.url.pathname);
 
   function isActive(href: string): boolean {
     const target = `${base}${href}`;

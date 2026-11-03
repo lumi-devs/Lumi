@@ -1,6 +1,6 @@
+import type { Handle } from "@sveltejs/kit/hooks";
 import "dotenv/config";
-import type { Handle } from "@sveltejs/kit";
-import { readSession, SessionCookie } from "$lib/server/session";
+import { readSession, SessionCookie } from "#lib/server/session.js";
 
 export const handle: Handle = async ({ event, resolve }) => {
   const cookie = event.cookies.get(SessionCookie);

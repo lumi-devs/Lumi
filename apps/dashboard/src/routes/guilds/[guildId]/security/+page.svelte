@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { formatDate } from "$lib/format";
-  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
+  import { formatDate } from "#lib/format.js";
+  import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   let { data } = $props();
 
   function statsSummary(stats: any): string {

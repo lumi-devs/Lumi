@@ -1,19 +1,19 @@
 import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildForm, requireGuildId } from "$lib/server/auth";
-import { storedBackupStats } from "$lib/server/backups";
-import { type DiscordRole, fetchGuildRoles } from "$lib/server/discord";
-import { publicWebBaseUrl } from "$lib/server/env";
-import { getPrisma } from "$lib/server/prisma";
-import { getRedis } from "$lib/server/redis";
-import { fetchBackupPreview, restoreBackupViaRpc } from "$lib/server/rpc";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { storedBackupStats } from "#lib/server/backups.js";
+import { type DiscordRole, fetchGuildRoles } from "#lib/server/discord.js";
+import { publicWebBaseUrl } from "#lib/server/env.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { getRedis } from "#lib/server/redis.js";
+import { fetchBackupPreview, restoreBackupViaRpc } from "#lib/server/rpc.js";
 import {
   ensureGuild,
   readGuildSettings,
   setGuildSetting,
-} from "$lib/server/settings";
+} from "#lib/server/settings.js";
 import {
   checkbox,
   formString,
@@ -21,7 +21,7 @@ import {
   OptionalIdSchema,
   parseInput,
   splitList,
-} from "$lib/server/validation";
+} from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const NullableIdLoad = z.string().nullable().default(null);

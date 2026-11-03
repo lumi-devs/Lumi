@@ -1,5 +1,5 @@
-import type { SessionRecord } from "$lib/server/session";
-import type { GuildAccess } from "$lib/server/types";
+import type { SessionRecord } from "#lib/server/session.js";
+import type { GuildAccess } from "#lib/server/types.js";
 
 declare global {
   namespace App {

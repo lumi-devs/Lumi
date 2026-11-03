@@ -1,9 +1,9 @@
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildForm, requireGuildId } from "$lib/server/auth";
-import { readGuildSettings, setGuildSettings } from "$lib/server/settings";
-import { checkbox, formString, parseInput } from "$lib/server/validation";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { readGuildSettings, setGuildSettings } from "#lib/server/settings.js";
+import { checkbox, formString, parseInput } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const OptionalSnowflake = z

@@ -1,5 +1,5 @@
 import { type RequestHandler, redirect } from "@sveltejs/kit";
-import { clearSessionCookie, destroySession } from "$lib/server/session";
+import { clearSessionCookie, destroySession } from "#lib/server/session.js";
 
 export const POST: RequestHandler = async ({ locals, cookies, request }) => {
   const session = locals.session;

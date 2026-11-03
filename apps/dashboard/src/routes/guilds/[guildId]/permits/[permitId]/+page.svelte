@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { formatDate } from "$lib/format";
-  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
-  import NodePicker from "$lib/components/NodePicker.svelte";
-  import TimezoneSelect from "$lib/components/TimezoneSelect.svelte";
+  import { formatDate } from "#lib/format.js";
+  import ConfirmForm from "#lib/components/ConfirmForm.svelte";
+  import NodePicker from "#lib/components/NodePicker.svelte";
+  import TimezoneSelect from "#lib/components/TimezoneSelect.svelte";
   let { data } = $props();
 
   function jsonValue(value: unknown): string {

@@ -3,16 +3,16 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
+import { recordAudit } from "#lib/server/audit.js";
 import {
   requireBotOwner,
   requireGuildForm,
   requireGuildId,
-} from "$lib/server/auth";
-import { serverConfig } from "$lib/server/env";
-import { getPrisma } from "$lib/server/prisma";
-import { isPrismaCode } from "$lib/server/prismaErrors";
-import { formString, parseInput } from "$lib/server/validation";
+} from "#lib/server/auth.js";
+import { serverConfig } from "#lib/server/env.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { isPrismaCode } from "#lib/server/prismaErrors.js";
+import { formString, parseInput } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const RepoSchema = z.object({

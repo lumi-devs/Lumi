@@ -1,8 +1,8 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import ConfigFieldInput from "$lib/components/ConfigFieldInput.svelte";
-  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
-  import EscalationInput from "$lib/components/EscalationInput.svelte";
+  import ConfigFieldInput from "#lib/components/ConfigFieldInput.svelte";
+  import ConfirmForm from "#lib/components/ConfirmForm.svelte";
+  import EscalationInput from "#lib/components/EscalationInput.svelte";
   let { data } = $props();
 
   const configuredGenerators = $derived(

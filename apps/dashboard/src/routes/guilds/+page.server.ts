@@ -1,5 +1,5 @@
-import { manageableGuilds, requireSession } from "$lib/server/auth";
-import { guildIconUrl } from "$lib/server/discord";
+import { manageableGuilds, requireSession } from "#lib/server/auth.js";
+import { guildIconUrl } from "#lib/server/discord.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {

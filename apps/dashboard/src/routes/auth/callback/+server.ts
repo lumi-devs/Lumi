@@ -5,10 +5,10 @@ import {
   fetchOAuthUser,
   type OAuthToken,
   type OAuthUser,
-} from "$lib/server/discord";
-import { serverConfig } from "$lib/server/env";
-import { dashboardKey, getRedis } from "$lib/server/redis";
-import { createSession, setSessionCookie } from "$lib/server/session";
+} from "#lib/server/discord.js";
+import { serverConfig } from "#lib/server/env.js";
+import { dashboardKey, getRedis } from "#lib/server/redis.js";
+import { createSession, setSessionCookie } from "#lib/server/session.js";
 
 const OAuthStateCookie = "lumi_oauth_state";
 

@@ -1,5 +1,5 @@
-import { requireGuildId } from "$lib/server/auth";
-import { getPrisma } from "$lib/server/prisma";
+import { requireGuildId } from "#lib/server/auth.js";
+import { getPrisma } from "#lib/server/prisma.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {

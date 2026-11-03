@@ -1,18 +1,18 @@
 import type { Prisma } from "@prisma/client";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildForm, requireGuildId } from "$lib/server/auth";
-import { getPrisma } from "$lib/server/prisma";
-import { isPrismaCode } from "$lib/server/prismaErrors";
-import { fetchPermitNodes } from "$lib/server/rpc.js";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { isPrismaCode } from "#lib/server/prismaErrors.js";
+import { fetchPermitNodes } from "#lib/server/rpc.js";
 import {
   checkbox,
   formString,
   IdSchema,
   parseInput,
   splitList,
-} from "$lib/server/validation";
+} from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const OptionalInt = (min: number, max: number) =>

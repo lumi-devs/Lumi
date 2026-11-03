@@ -1,6 +1,6 @@
-import { requireGuildAccess } from "$lib/server/auth";
-import { guildIconUrl } from "$lib/server/discord";
-import { getPrisma } from "$lib/server/prisma";
+import { requireGuildAccess } from "#lib/server/auth.js";
+import { guildIconUrl } from "#lib/server/discord.js";
+import { getPrisma } from "#lib/server/prisma.js";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async (event) => {

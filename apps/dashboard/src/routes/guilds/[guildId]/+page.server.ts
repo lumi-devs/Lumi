@@ -1,9 +1,9 @@
-import { requireGuildId } from "$lib/server/auth";
-import { fetchBotGuild } from "$lib/server/discord";
-import { configFor, effectiveModuleEnabled } from "$lib/server/moduleConfig";
-import { moduleCatalog } from "$lib/server/modules";
-import { getPrisma } from "$lib/server/prisma";
-import { readGuildSettings } from "$lib/server/settings";
+import { requireGuildId } from "#lib/server/auth.js";
+import { fetchBotGuild } from "#lib/server/discord.js";
+import { configFor, effectiveModuleEnabled } from "#lib/server/moduleConfig.js";
+import { moduleCatalog } from "#lib/server/modules.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { readGuildSettings } from "#lib/server/settings.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {

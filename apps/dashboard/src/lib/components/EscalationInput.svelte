@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ConfigField } from "$lib/server/modules";
+  import type { ConfigField } from "#lib/server/modules.js";
 
   interface Entry {
     id: number;

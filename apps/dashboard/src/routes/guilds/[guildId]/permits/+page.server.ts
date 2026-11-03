@@ -1,19 +1,19 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildForm, requireGuildId } from "$lib/server/auth";
-import { serverConfig } from "$lib/server/env";
-import { canManageOwnerOnlyPermit } from "$lib/server/permissions";
-import { getPrisma } from "$lib/server/prisma";
-import { describeError, isPrismaCode } from "$lib/server/prismaErrors";
-import { fetchPermitNodes } from "$lib/server/rpc.js";
-import { ensureGuild } from "$lib/server/settings";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { serverConfig } from "#lib/server/env.js";
+import { canManageOwnerOnlyPermit } from "#lib/server/permissions.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { describeError, isPrismaCode } from "#lib/server/prismaErrors.js";
+import { fetchPermitNodes } from "#lib/server/rpc.js";
+import { ensureGuild } from "#lib/server/settings.js";
 import {
   DateInputSchema,
   formString,
   parseInput,
   splitList,
-} from "$lib/server/validation";
+} from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const PermitCreateSchema = z.object({

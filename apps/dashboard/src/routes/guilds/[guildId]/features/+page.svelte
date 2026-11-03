@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { formatDate } from "$lib/format";
-  import ConfirmForm from "$lib/components/ConfirmForm.svelte";
-  import NodePicker from "$lib/components/NodePicker.svelte";
+  import { formatDate } from "#lib/format.js";
+  import ConfirmForm from "#lib/components/ConfirmForm.svelte";
+  import NodePicker from "#lib/components/NodePicker.svelte";
   let { data } = $props();
 
   function lines(value: unknown): string {
@@ -312,17 +312,20 @@
         <textarea id="{uid}-required-roles" name="requiredRoleIds"
           >{lines(category?.requiredRoleIds ?? [])}</textarea
         >
-        <span class="hint">Roles a member needs before opening this category.</span>
+        <span class="hint"
+          >Roles a member needs before opening this category.</span
+        >
       </div>
       <div class="field full">
         <label for="{uid}-opening-message">Opening message</label>
         <textarea
           id="{uid}-opening-message"
           name="openingMessage"
-          maxlength="2000"
-          >{category?.openingMessage ?? ""}</textarea
+          maxlength="2000">{category?.openingMessage ?? ""}</textarea
         >
-        <span class="hint">Shown at the top of every new ticket in this category.</span>
+        <span class="hint"
+          >Shown at the top of every new ticket in this category.</span
+        >
       </div>
       <div class="field">
         <label for="{uid}-cooldown">Cooldown (seconds)</label>
@@ -357,7 +360,9 @@
           max="500"
           value={category?.totalLimit ?? 0}
         />
-        <span class="hint">0 means unlimited open tickets in this category.</span>
+        <span class="hint"
+          >0 means unlimited open tickets in this category.</span
+        >
       </div>
       <div class="field">
         <label style="display:flex;gap:0.5rem;align-items:center">

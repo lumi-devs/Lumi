@@ -1,28 +1,28 @@
 import { error, fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
-import { requireGuildId } from "$lib/server/auth";
+import { recordAudit } from "#lib/server/audit.js";
+import { requireGuildId } from "#lib/server/auth.js";
 import {
   type DiscordChannel,
   fetchGuildChannels,
   VoiceChannelTypes,
-} from "$lib/server/discord";
+} from "#lib/server/discord.js";
 import {
   configFor,
   displayValues,
   enabledConfigField,
   parseConfigForm,
-} from "$lib/server/moduleConfig";
-import { type CatalogModule, findModule } from "$lib/server/modules";
-import { getPrisma } from "$lib/server/prisma";
-import { setModuleStateViaRpc } from "$lib/server/rpc";
+} from "#lib/server/moduleConfig.js";
+import { type CatalogModule, findModule } from "#lib/server/modules.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { setModuleStateViaRpc } from "#lib/server/rpc.js";
 import {
   deleteGuildSetting,
   ensureGuild,
   readGuildSettings,
   setGuildSetting,
-} from "$lib/server/settings";
-import { assertCsrf, formString } from "$lib/server/validation";
+} from "#lib/server/settings.js";
+import { assertCsrf, formString } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const TempVcModuleName = "utility-tempvc";

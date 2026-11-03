@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { recordAudit } from "$lib/server/audit";
+import { recordAudit } from "#lib/server/audit.js";
 import {
   addMemberRole,
   type DiscordRole,
@@ -10,10 +10,10 @@ import {
   guildIconUrl,
   removeMemberRole,
   userAvatarUrl,
-} from "$lib/server/discord";
-import { getPrisma } from "$lib/server/prisma";
-import { dashboardKey, getRedis } from "$lib/server/redis";
-import { readGuildSettings } from "$lib/server/settings";
+} from "#lib/server/discord.js";
+import { getPrisma } from "#lib/server/prisma.js";
+import { dashboardKey, getRedis } from "#lib/server/redis.js";
+import { readGuildSettings } from "#lib/server/settings.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const TokenRe = /^[A-Za-z0-9_-]{20,200}$/;
