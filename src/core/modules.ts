@@ -24,7 +24,9 @@ export function commandPayloadForGuild(
   return registry
     .all()
     .filter(
-      (command) => !command.module || loader.isActive(guildId, command.module),
+      (command) =>
+        !command.prefixOnly &&
+        (!command.module || loader.isActive(guildId, command.module)),
     )
     .map((command) => command.data.toJSON());
 }
@@ -78,7 +80,9 @@ export class CommandRegistry {
   }
 
   payload(): RESTPostAPIApplicationCommandsJSONBody[] {
-    return this.all().map((command) => command.data.toJSON());
+    return this.all()
+      .filter((command) => !command.prefixOnly)
+      .map((command) => command.data.toJSON());
   }
 
   get size(): number {

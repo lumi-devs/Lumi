@@ -1,7 +1,7 @@
 import { error, fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildId } from "$lib/server/auth";
 import {
   type DiscordChannel,
   fetchGuildChannels,
@@ -81,8 +81,7 @@ async function readModuleConfig(
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const module = await findModule(event.params.module ?? "");
   if (!module) throw error(404, "Module not found.");
   if (!module.isSubmodule) {
@@ -118,8 +117,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   save: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
+    const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module) return fail(404, { error: "Module not found." });
     if (!module.isSubmodule) {
@@ -173,8 +171,7 @@ export const actions: Actions = {
   },
 
   reset: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
+    const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module) return fail(404, { error: "Module not found." });
     if (!module.isSubmodule) {
@@ -199,8 +196,7 @@ export const actions: Actions = {
   },
 
   addGenerator: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
+    const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module || module.name !== TempVcModuleName) {
       return fail(404, { error: "Module not found." });
@@ -267,8 +263,7 @@ export const actions: Actions = {
   },
 
   removeGenerator: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
+    const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module || module.name !== TempVcModuleName) {
       return fail(404, { error: "Module not found." });

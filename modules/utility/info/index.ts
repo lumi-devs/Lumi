@@ -15,6 +15,7 @@ import {
 import {
   type ButtonInteraction,
   ButtonStyle,
+  type ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
 import { z } from "zod";
@@ -197,145 +198,170 @@ const serverinfoDef: CommandDefinition = {
   },
 };
 
-const roleinfoDef: CommandDefinition = {
-  data: new SlashCommandBuilder()
-    .setName("roleinfo")
-    .setDescription("Get information about a role")
-    .addRoleOption((o) =>
-      o.setName("role").setDescription("Role to lookup").setRequired(true),
-    ),
-  async execute(interaction) {
-    const role = interaction.options.getRole("role", true);
+async function showRoleInfo(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const role = interaction.options.getRole("role", true);
 
-    if (
-      !role ||
-      !("members" in role) ||
-      !("hexColor" in role) ||
-      !("position" in role)
-    ) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Invalid", "Role not found in this server"),
-        ),
-      );
-      return;
-    }
-
-    const color =
-      role.hexColor === "#000000"
-        ? undefined
-        : parseInt(role.hexColor.slice(1), 16);
-
+  if (
+    !role ||
+    !("members" in role) ||
+    !("hexColor" in role) ||
+    !("position" in role)
+  ) {
     await interaction.reply(
-      makeCard(color, `🎭 Role Info: ${role.name}`, [
-        `**ID**\n\`${role.id}\``,
-        `**Color**\n#${role.hexColor}`,
-        `**Position**\n${role.position}`,
-        `**Members**\n${role.members.size}`,
-        `**Hoisted**\n${role.hoist ? "Yes" : "No"}`,
-        `**Mentionable**\n${role.mentionable ? "Yes" : "No"}`,
-        `**Managed**\n${role.managed ? "Yes" : "No"}`,
-        `**Created**\n<t:${Math.floor(role.createdTimestamp / 1000)}:F>`,
-      ]),
+      ephemeralCard(makeErrorCard("Invalid", "Role not found in this server")),
     );
-  },
-};
+    return;
+  }
 
-const channelinfoDef: CommandDefinition = {
-  data: new SlashCommandBuilder()
-    .setName("channelinfo")
-    .setDescription("Get information about a channel")
-    .addChannelOption((o) =>
-      o
-        .setName("channel")
-        .setDescription("Channel to lookup")
-        .setRequired(false),
-    ),
-  async execute(interaction) {
-    const channel =
-      interaction.options.getChannel("channel") ?? interaction.channel!;
+  const color =
+    role.hexColor === "#000000"
+      ? undefined
+      : parseInt(role.hexColor.slice(1), 16);
 
-    if (!channel || !("guildId" in channel) || !channel.name) {
-      await interaction.reply(
-        ephemeralCard(makeErrorCard("Invalid", "Channel not found")),
-      );
-      return;
-    }
+  await interaction.reply(
+    makeCard(color, `🎭 Role Info: ${role.name}`, [
+      `**ID**\n\`${role.id}\``,
+      `**Color**\n#${role.hexColor}`,
+      `**Position**\n${role.position}`,
+      `**Members**\n${role.members.size}`,
+      `**Hoisted**\n${role.hoist ? "Yes" : "No"}`,
+      `**Mentionable**\n${role.mentionable ? "Yes" : "No"}`,
+      `**Managed**\n${role.managed ? "Yes" : "No"}`,
+      `**Created**\n<t:${Math.floor(role.createdTimestamp / 1000)}:F>`,
+    ]),
+  );
+}
 
-    const lines = [
-      `**Name**\n${channel.name}`,
-      `**ID**\n\`${channel.id}\``,
-      `**Type**\n${channel.type.toString()}`,
-    ];
+async function showChannelInfo(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const channel =
+    interaction.options.getChannel("channel") ?? interaction.channel!;
 
-    if ("isTextBased" in channel && channel.isTextBased()) {
-      lines.push(
-        `**NSFW**\n${"nsfw" in channel && channel.nsfw ? "Yes" : "No"}`,
-        `**Topic**\n${"topic" in channel ? (channel.topic ?? "None") : "N/A"}`,
-      );
-    }
-    if ("isVoiceBased" in channel && channel.isVoiceBased()) {
-      lines.push(
-        `**Bitrate**\n${"bitrate" in channel ? `${channel.bitrate / 1000}kbps` : "N/A"}`,
-        `**User Limit**\n${"userLimit" in channel ? (channel.userLimit === 0 ? "Unlimited" : channel.userLimit.toString()) : "N/A"}`,
-      );
-    }
-
-    await interaction.reply(makeCard(undefined, "📺 Channel Info", lines));
-  },
-};
-
-const emojiinfoDef: CommandDefinition = {
-  data: new SlashCommandBuilder()
-    .setName("emojiinfo")
-    .setDescription("Get information about an emoji")
-    .addStringOption((o) =>
-      o
-        .setName("emoji")
-        .setDescription("Emoji to lookup (custom emoji)")
-        .setRequired(true),
-    ),
-  async execute(interaction) {
-    const emojiInput = interaction.options.getString("emoji", true);
-    const match = emojiInput.match(/<a?:(\w+):(\d+)>/);
-
-    if (!match) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Invalid",
-            "Please provide a custom emoji (e.g. :emoji:)",
-          ),
-        ),
-      );
-      return;
-    }
-
-    const emoji = interaction.guild?.emojis.cache.get(match[2]);
-    if (!emoji) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Not found", "Emoji not found in this server"),
-        ),
-      );
-      return;
-    }
-
+  if (!channel || !("guildId" in channel) || !channel.name) {
     await interaction.reply(
-      makeCard(
-        undefined,
-        `😀 Emoji Info: ${emoji.name}`,
-        [
-          `**ID**\n\`${emoji.id}\``,
-          `**Animated**\n${emoji.animated ? "Yes" : "No"}`,
-          `**Managed**\n${emoji.managed ? "Yes" : "No"}`,
-          `**Requires Colons**\n${emoji.requiresColons ? "Yes" : "No"}`,
-          `**Created**\n<t:${Math.floor(emoji.createdTimestamp / 1000)}:F>`,
-          `**URL**\n[Link](${emoji.url})`,
-        ],
-        { thumbnailUrl: emoji.url },
+      ephemeralCard(makeErrorCard("Invalid", "Channel not found")),
+    );
+    return;
+  }
+
+  const lines = [
+    `**Name**\n${channel.name}`,
+    `**ID**\n\`${channel.id}\``,
+    `**Type**\n${channel.type.toString()}`,
+  ];
+
+  if ("isTextBased" in channel && channel.isTextBased()) {
+    lines.push(
+      `**NSFW**\n${"nsfw" in channel && channel.nsfw ? "Yes" : "No"}`,
+      `**Topic**\n${"topic" in channel ? (channel.topic ?? "None") : "N/A"}`,
+    );
+  }
+  if ("isVoiceBased" in channel && channel.isVoiceBased()) {
+    lines.push(
+      `**Bitrate**\n${"bitrate" in channel ? `${channel.bitrate / 1000}kbps` : "N/A"}`,
+      `**User Limit**\n${"userLimit" in channel ? (channel.userLimit === 0 ? "Unlimited" : channel.userLimit.toString()) : "N/A"}`,
+    );
+  }
+
+  await interaction.reply(makeCard(undefined, "📺 Channel Info", lines));
+}
+
+async function showEmojiInfo(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
+  const emojiInput = interaction.options.getString("emoji", true);
+  const match = emojiInput.match(/<a?:(\w+):(\d+)>/);
+
+  if (!match) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Invalid",
+          "Please provide a custom emoji (e.g. :emoji:)",
+        ),
       ),
     );
+    return;
+  }
+
+  const emoji = interaction.guild?.emojis.cache.get(match[2]);
+  if (!emoji) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Not found", "Emoji not found in this server"),
+      ),
+    );
+    return;
+  }
+
+  await interaction.reply(
+    makeCard(
+      undefined,
+      `😀 Emoji Info: ${emoji.name}`,
+      [
+        `**ID**\n\`${emoji.id}\``,
+        `**Animated**\n${emoji.animated ? "Yes" : "No"}`,
+        `**Managed**\n${emoji.managed ? "Yes" : "No"}`,
+        `**Requires Colons**\n${emoji.requiresColons ? "Yes" : "No"}`,
+        `**Created**\n<t:${Math.floor(emoji.createdTimestamp / 1000)}:F>`,
+        `**URL**\n[Link](${emoji.url})`,
+      ],
+      { thumbnailUrl: emoji.url },
+    ),
+  );
+}
+
+const infoDef: CommandDefinition = {
+  data: new SlashCommandBuilder()
+    .setName("info")
+    .setDescription("Show information about a channel, role, or emoji")
+    .addSubcommand((sub) =>
+      sub
+        .setName("channel")
+        .setDescription("Show information about a channel")
+        .addChannelOption((o) =>
+          o
+            .setName("channel")
+            .setDescription("Channel to lookup")
+            .setRequired(false),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("role")
+        .setDescription("Show information about a role")
+        .addRoleOption((o) =>
+          o
+            .setName("role")
+            .setDescription("Role to lookup")
+            .setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("emoji")
+        .setDescription("Show information about a custom emoji")
+        .addStringOption((o) =>
+          o
+            .setName("emoji")
+            .setDescription("Custom emoji to lookup")
+            .setRequired(true),
+        ),
+    ),
+  async execute(interaction) {
+    const subcommand = interaction.options.getSubcommand(true);
+    if (subcommand === "role") {
+      await showRoleInfo(interaction);
+      return;
+    }
+    if (subcommand === "emoji") {
+      await showEmojiInfo(interaction);
+      return;
+    }
+    await showChannelInfo(interaction);
   },
 };
 
@@ -382,7 +408,7 @@ const utilityModule: ModuleDefinition = defineModule({
   name: "utility-info",
   displayName: "Utility",
   emoji: "🔧",
-  description: "Avatar, banner, whois, serverinfo, and info commands",
+  description: "Avatar, banner, whois, serverinfo, and consolidated info command",
   version: "2.0.0",
   config: UtilityConfigSchema,
   commands: [
@@ -390,9 +416,7 @@ const utilityModule: ModuleDefinition = defineModule({
     bannerDef,
     whoisDef,
     serverinfoDef,
-    roleinfoDef,
-    channelinfoDef,
-    emojiinfoDef,
+    infoDef,
   ],
   listeners: [avatarViewListener],
   tasks: [],

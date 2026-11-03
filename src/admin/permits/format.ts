@@ -1,8 +1,10 @@
 import type { PermitTargetType, Polarity } from "@lumi/permits";
+import { formatTimestamp as formatDiscordTimestamp } from "@lumi/ui";
+import { channelMention, roleMention, userMention } from "discord.js";
 import { GlobalPermitNamespace, permitNamespaces } from "./nodes.js";
 
 export const formatTimestamp = (value: Date | string): string =>
-  `<t:${Math.floor(new Date(value).getTime() / 1000)}:F>`;
+  formatDiscordTimestamp(value, "F");
 
 export const targetTypeLabel = (targetType: PermitTargetType): string => {
   if (targetType === "USER") return "User";
@@ -14,9 +16,9 @@ export const targetMention = (
   targetType: PermitTargetType,
   targetId: string,
 ): string => {
-  if (targetType === "USER") return `<@${targetId}>`;
-  if (targetType === "ROLE") return `<@&${targetId}>`;
-  return `<#${targetId}>`;
+  if (targetType === "USER") return userMention(targetId);
+  if (targetType === "ROLE") return roleMention(targetId);
+  return channelMention(targetId);
 };
 
 export const polarityIcon = (polarity: Polarity): string =>

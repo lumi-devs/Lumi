@@ -1,20 +1,16 @@
 import { requireGuildId as guildIdOf, isSnowflake } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
-  ActionRowBuilder,
   type GuildMember,
   type Interaction,
   type MessageComponentInteraction,
-  type ModalActionRowComponentBuilder,
-  ModalBuilder,
   PermissionFlagsBits,
-  TextInputBuilder,
-  TextInputStyle,
   type VoiceChannel,
 } from "discord.js";
 import { handleAdminInteraction } from "./admin.js";
 import { isModuleEnabled } from "./config.js";
-import { stripPrefix, TempVcPrefixes } from "./ids.js";
+import { stripPrefix, TempVcIds, TempVcPrefixes } from "./ids.js";
+import { showTextModal } from "./modals.js";
 import {
   buildControlPanel,
   controlState,
@@ -27,6 +23,36 @@ import {
 import { replyError, replySuccess, showCard } from "./reply.js";
 import type { TempVcInteraction } from "./types.js";
 import { deleteConfirmCard, memberActionCard } from "./ui.js";
+
+const TrustPermissions = {
+  ViewChannel: true,
+  Connect: true,
+  Speak: true,
+  Stream: true,
+  UseVAD: true,
+} as const;
+
+const ClearTrustPermissions = {
+  ViewChannel: null,
+  Connect: null,
+  Speak: null,
+  Stream: null,
+  UseVAD: null,
+} as const;
+
+const ClearAccessPermissions = {
+  ViewChannel: null,
+  Connect: null,
+  Speak: null,
+  Stream: null,
+} as const;
+
+const BlockPermissions = {
+  ViewChannel: false,
+  Connect: false,
+  Speak: false,
+  Stream: false,
+} as const;
 
 async function loadManaged(
   interaction: TempVcInteraction,
@@ -90,21 +116,13 @@ async function openRenameModal(
   channelId: string,
   current: string,
 ): Promise<void> {
-  const modal = new ModalBuilder()
-    .setCustomId(`tempvc:modal:rename:${channelId}`)
-    .setTitle("Rename Channel")
-    .addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("value")
-          .setLabel("Channel name")
-          .setStyle(TextInputStyle.Short)
-          .setMaxLength(100)
-          .setRequired(true)
-          .setValue(current.slice(0, 100)),
-      ),
-    );
-  await interaction.showModal(modal).catch(() => undefined);
+  await showTextModal(interaction, {
+    customId: TempVcIds.modalRename(channelId),
+    title: "Rename Channel",
+    label: "Channel name",
+    maxLength: 100,
+    value: current,
+  });
 }
 
 async function openLimitModal(
@@ -112,21 +130,13 @@ async function openLimitModal(
   channelId: string,
   current: number,
 ): Promise<void> {
-  const modal = new ModalBuilder()
-    .setCustomId(`tempvc:modal:limit:${channelId}`)
-    .setTitle("Set User Limit")
-    .addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("value")
-          .setLabel("User limit (0 = unlimited)")
-          .setStyle(TextInputStyle.Short)
-          .setMaxLength(2)
-          .setRequired(true)
-          .setValue(String(current)),
-      ),
-    );
-  await interaction.showModal(modal).catch(() => undefined);
+  await showTextModal(interaction, {
+    customId: TempVcIds.modalLimit(channelId),
+    title: "Set User Limit",
+    label: "User limit (0 = unlimited)",
+    maxLength: 2,
+    value: String(current),
+  });
 }
 
 async function handlePanelAction(
@@ -226,7 +236,7 @@ async function handleMemberPick(
     return;
   }
 
-  if (action === "kick") {
+  if (action === "kick" || action === "transfer") {
     const target =
       channel.members.get(targetId) ??
       (await channel.guild.members.fetch(targetId).catch(() => null));
@@ -234,27 +244,17 @@ async function handleMemberPick(
       await replyError(
         interaction,
         "Not Connected",
-        "That member is not connected to this channel.",
+        action === "kick"
+          ? "That member is not connected to this channel."
+          : "The new owner must be connected to this channel.",
       );
       return;
     }
-    await target.voice
-      .disconnect("Removed by the temporary channel owner")
-      .catch(() => undefined);
-    await refreshNotice(interaction, managed, `👢 Kicked <@${targetId}>.`);
-    return;
-  }
-
-  if (action === "transfer") {
-    const target =
-      channel.members.get(targetId) ??
-      (await channel.guild.members.fetch(targetId).catch(() => null));
-    if (!target || target.voice.channelId !== channel.id) {
-      await replyError(
-        interaction,
-        "Not Connected",
-        "The new owner must be connected to this channel.",
-      );
+    if (action === "kick") {
+      await target.voice
+        .disconnect("Removed by the temporary channel owner")
+        .catch(() => undefined);
+      await refreshNotice(interaction, managed, `👢 Kicked <@${targetId}>.`);
       return;
     }
     const updated = await updateTempRecord(services, channel.id, {
@@ -282,13 +282,7 @@ async function handleMemberPick(
 
   if (action === "trust") {
     await channel.permissionOverwrites
-      .edit(targetId, {
-        ViewChannel: true,
-        Connect: true,
-        Speak: true,
-        Stream: true,
-        UseVAD: true,
-      })
+      .edit(targetId, TrustPermissions)
       .catch(() => undefined);
     await refreshNotice(interaction, managed, `✅ Trusted <@${targetId}>.`);
     return;
@@ -296,13 +290,7 @@ async function handleMemberPick(
 
   if (action === "untrust") {
     await channel.permissionOverwrites
-      .edit(targetId, {
-        ViewChannel: null,
-        Connect: null,
-        Speak: null,
-        Stream: null,
-        UseVAD: null,
-      })
+      .edit(targetId, ClearTrustPermissions)
       .catch(() => undefined);
     await refreshNotice(interaction, managed, `❌ Untrusted <@${targetId}>.`);
     return;
@@ -310,12 +298,7 @@ async function handleMemberPick(
 
   if (action === "block") {
     await channel.permissionOverwrites
-      .edit(targetId, {
-        ViewChannel: false,
-        Connect: false,
-        Speak: false,
-        Stream: false,
-      })
+      .edit(targetId, BlockPermissions)
       .catch(() => undefined);
     const target = channel.members.get(targetId);
     if (target) {
@@ -329,12 +312,7 @@ async function handleMemberPick(
 
   if (action === "unblock") {
     await channel.permissionOverwrites
-      .edit(targetId, {
-        ViewChannel: null,
-        Connect: null,
-        Speak: null,
-        Stream: null,
-      })
+      .edit(targetId, ClearAccessPermissions)
       .catch(() => undefined);
     await refreshNotice(interaction, managed, `♻️ Unblocked <@${targetId}>.`);
     return;
@@ -349,11 +327,7 @@ async function grantOwner(
 ): Promise<void> {
   await channel.permissionOverwrites
     .edit(userId, {
-      ViewChannel: true,
-      Connect: true,
-      Speak: true,
-      Stream: true,
-      UseVAD: true,
+      ...TrustPermissions,
       ManageChannels: true,
       MoveMembers: true,
       MuteMembers: true,

@@ -2,7 +2,7 @@
 
 **Branch:** `v2/develop`  
 **Working directory:** `/home/rebiz/opt/workdir/lumi-v2`  
-**Last sync:** 2026-11-02 (all typechecks pass, 319 tests pass / 10 skipped)
+**Last sync:** 2026-11-03 (typecheck, lint, 389 tests pass / 10 skipped; bot registers 51 guild commands)
 
 ---
 
@@ -93,7 +93,26 @@
 - Owner operations also cover server list/leave, guild/user blacklists, config
   export/import, and error trace lookup.
 
-### 11. Documentation Updates
+### 11. Discord Role Management Panels + `/config`
+
+- New `/config module:<submodule>` command (admin/permit-gated, ephemeral) with
+  submodule autocomplete; opens the shared module detail panel.
+- `/autorole`, `/voiceroles`, and `/rolemenu` are no longer registered as slash
+  commands. Their definitions are `prefixOnly`, so the prefix commands still
+  work; `/bulkrole` remains a slash command.
+- Full ephemeral management panels:
+  - Autorole: role picker, delay, filters (min account age, required/ignored
+    roles, ignore bots, only-on-join), run/pause/cancel queue, queue member.
+  - Voice roles: paginated mapping list, add (channel → optional category →
+    role), enable/disable, grace, category change, remove.
+  - Role menus: paginated groups, create/edit, add/remove options, toggles,
+    buttons/select/reaction posting, refresh, delete.
+- `ModuleServices` now includes `helpers`; admin `HubServices` includes `client`
+  and `helpers`.
+- Slash sync payload filters `prefixOnly` commands via
+  `commandPayloadForGuild`/`commandPayloads`.
+
+### 12. Documentation Updates
 
 - `agents/db.md` — helper tree, module access rules, migration commands
 - `agents/cache.md` — `services.helpers.cache` contract
@@ -115,6 +134,9 @@
 | Dashboard module list (collapsible, enhance) | `apps/dashboard/src/routes/guilds/[guildId]/modules/+page.svelte`          |
 | Dashboard module list (server)               | `apps/dashboard/src/routes/guilds/[guildId]/modules/+page.server.ts`       |
 | Dashboard module detail (enhance)            | `apps/dashboard/src/routes/guilds/[guildId]/modules/[module]/+page.svelte` |
+| `/config` + slash filtering                  | `src/admin/commands/index.ts`, `src/core/modules.ts`                       |
+| Role management panels                       | `src/admin/panel/roles.ts`, `HubPanel.ts`, `moduleSettings.ts`, `moduleActions.ts` |
+| Prefix-only command flags                    | `modules/roles/**`, `modules/role-menus/menu/commands.ts`, `packages/module-kit` |
 | Discord hub module list                      | `src/admin/panel/moduleList.ts`                                            |
 | Permit explain (auto-run)                    | `src/admin/panel/permit/explainActions.ts`, `assignViews.ts`               |
 | Downloader validation tests                  | `packages/downloader/tests/validate.test.ts`                               |

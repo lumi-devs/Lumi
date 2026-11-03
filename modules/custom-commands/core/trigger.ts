@@ -181,11 +181,6 @@ export function matchMessageTrigger(
   return null;
 }
 
-export function normalizeEmoji(emoji: ReactionEmojiLike): string {
-  if (emoji.id) return emoji.id;
-  return emoji.name ?? "";
-}
-
 export function emojiMatches(
   trigger: string,
   emoji: ReactionEmojiLike,

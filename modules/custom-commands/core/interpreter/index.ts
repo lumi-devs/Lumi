@@ -16,7 +16,6 @@ export type {
 export type { InterpretContext, InterpretLimits } from "./evaluate.js";
 export { renderTemplate, stringifyValue, TemplateError } from "./evaluate.js";
 export {
-  parseExpression,
   parseExpressionList,
   parseTemplate,
   parseValueExpression,

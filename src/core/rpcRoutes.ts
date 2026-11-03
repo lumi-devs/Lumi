@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PrismaClient } from "@lumi/db";
 import type { ModuleLoader } from "@lumi/module-runtime";
@@ -35,6 +36,7 @@ export interface GuildRouteOptions {
 
 export interface ModuleStateRouteOptions {
   moduleLoader: Pick<ModuleLoader, "listGlobal" | "setEnabled">;
+  syncCommands?: (guildId: string) => Promise<void>;
   token: string | undefined;
 }
 
@@ -51,10 +53,25 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+function isAuthorized(
+  req: IncomingMessage,
+  token: string | undefined,
+): boolean {
+  if (!token) return true;
+  const prefix = "Bearer ";
+  const header = req.headers.authorization;
+  if (!header?.startsWith(prefix)) return false;
+  const provided = Buffer.from(header.slice(prefix.length), "utf8");
+  const expected = Buffer.from(token, "utf8");
+  return (
+    provided.length === expected.length && timingSafeEqual(provided, expected)
+  );
+}
+
 export function createModuleStateHandler(
   options: ModuleStateRouteOptions,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-  const { moduleLoader, token } = options;
+  const { moduleLoader, syncCommands, token } = options;
 
   return async function handleModuleStateRequest(
     req: IncomingMessage,
@@ -80,7 +97,7 @@ export function createModuleStateHandler(
       res.end(JSON.stringify(body));
     };
 
-    if (token && req.headers.authorization !== `Bearer ${token}`) {
+    if (!isAuthorized(req, token)) {
       finish(401, { error: "unauthorized" });
       return;
     }
@@ -121,6 +138,7 @@ export function createModuleStateHandler(
     }
 
     await moduleLoader.setEnabled(moduleName, guildId, enabled);
+    await syncCommands?.(guildId);
     finish(200, { module: moduleName, enabled });
   };
 }
@@ -161,7 +179,7 @@ export function createPermitNodesHandler(
     };
 
     if (route === "/api/v1/permits/nodes") {
-      if (token && req.headers.authorization !== `Bearer ${token}`) {
+      if (!isAuthorized(req, token)) {
         finish(401, { error: "unauthorized" });
         return;
       }
@@ -216,7 +234,7 @@ export function createGuildHandler(
 
     const match = route.match(/^\/api\/v1\/guilds\/([0-9]+)$/);
     if (match) {
-      if (token && req.headers.authorization !== `Bearer ${token}`) {
+      if (!isAuthorized(req, token)) {
         finish(401, { error: "unauthorized" });
         return;
       }
@@ -277,7 +295,7 @@ export function createBackupHandler(
       res.end(JSON.stringify(body));
     };
 
-    if (token && req.headers.authorization !== `Bearer ${token}`) {
+    if (!isAuthorized(req, token)) {
       finish(401, { error: "unauthorized" });
       return;
     }
@@ -391,7 +409,7 @@ export function createStatusHandler(
     }
 
     if (route === "/api/v1/status") {
-      if (token && req.headers.authorization !== `Bearer ${token}`) {
+      if (!isAuthorized(req, token)) {
         finish(401, { error: "unauthorized" });
         return;
       }

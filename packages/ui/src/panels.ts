@@ -1,13 +1,14 @@
 import {
   ActionRowBuilder,
   type AnyComponentBuilder,
+  type APIMessageComponentEmoji,
   ButtonBuilder,
+  ButtonStyle,
   type MessageActionRowComponentBuilder,
   SectionBuilder,
   type StringSelectMenuBuilder,
   TextDisplayBuilder,
-} from "@discordjs/builders";
-import { type APIMessageComponentEmoji, ButtonStyle } from "discord.js";
+} from "discord.js";
 import { componentEmoji, setEmojiIfPresent } from "./emoji.js";
 import { createStringSelectMenu } from "./selects.js";
 
@@ -57,6 +58,12 @@ export function createActionButton(
       "createActionButton: customId and url are mutually exclusive.",
     );
   }
+  if (!options.customId && !options.url) {
+    throw new Error("createActionButton: customId or url is required.");
+  }
+  if (!options.label && !options.emoji) {
+    throw new Error("createActionButton: a label or emoji is required.");
+  }
   const button = new ButtonBuilder();
   if (options.customId) button.setCustomId(options.customId);
   if (options.url) button.setURL(options.url);
@@ -73,12 +80,16 @@ export function createPaginationRow(
   options: CreatePaginationRowOptions,
 ): ActionRowBuilder<ButtonBuilder> {
   const { customIdPrefix, currentPage, totalPages, disabled = false } = options;
-  const safeTotalPages = Math.max(1, totalPages);
-  const isFirstPage = currentPage <= 0;
-  const isLastPage = currentPage >= safeTotalPages - 1;
+  const safeTotalPages = Math.max(1, Math.trunc(totalPages) || 1);
+  const safeCurrentPage = Math.min(
+    Math.max(0, Math.trunc(currentPage) || 0),
+    safeTotalPages - 1,
+  );
+  const isFirstPage = safeCurrentPage <= 0;
+  const isLastPage = safeCurrentPage >= safeTotalPages - 1;
 
   const prevBtn = new ButtonBuilder()
-    .setCustomId(`${customIdPrefix}:prev:${Math.max(0, currentPage - 1)}`)
+    .setCustomId(`${customIdPrefix}:prev:${Math.max(0, safeCurrentPage - 1)}`)
     .setLabel("Prev")
     .setEmoji(componentEmoji("⬅️"))
     .setStyle(ButtonStyle.Secondary)
@@ -86,12 +97,12 @@ export function createPaginationRow(
 
   const indicatorBtn = new ButtonBuilder()
     .setCustomId(`${customIdPrefix}:indicator`)
-    .setLabel(`${currentPage + 1} / ${safeTotalPages}`)
+    .setLabel(`${safeCurrentPage + 1} / ${safeTotalPages}`)
     .setStyle(ButtonStyle.Secondary)
     .setDisabled(true);
 
   const nextBtn = new ButtonBuilder()
-    .setCustomId(`${customIdPrefix}:next:${currentPage + 1}`)
+    .setCustomId(`${customIdPrefix}:next:${safeCurrentPage + 1}`)
     .setLabel("Next")
     .setEmoji(componentEmoji("➡️"))
     .setStyle(ButtonStyle.Secondary)

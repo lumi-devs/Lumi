@@ -1,4 +1,4 @@
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildId } from "$lib/server/auth";
 import { fetchBotGuild } from "$lib/server/discord";
 import { configFor, effectiveModuleEnabled } from "$lib/server/moduleConfig";
 import { moduleCatalog } from "$lib/server/modules";
@@ -7,8 +7,7 @@ import { readGuildSettings } from "$lib/server/settings";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const prisma = getPrisma();
 
   const [

@@ -83,6 +83,33 @@ function fieldSchema(field: ConfigField): z.ZodType<unknown> {
               return z.NEVER;
             }
           });
+      case "escalation":
+        return z
+          .string()
+          .max(50_000)
+          .transform((value, ctx) => {
+            try {
+              const parsed = JSON.parse(value) as unknown;
+              if (
+                typeof parsed !== "object" ||
+                parsed === null ||
+                Array.isArray(parsed)
+              ) {
+                ctx.addIssue({
+                  code: "custom",
+                  message: "Expected escalation rules.",
+                });
+                return z.NEVER;
+              }
+              return parsed;
+            } catch {
+              ctx.addIssue({
+                code: "custom",
+                message: "Expected escalation rules.",
+              });
+              return z.NEVER;
+            }
+          });
       case "select":
         return field.choices && field.choices.length > 0
           ? z.enum(field.choices as [string, ...string[]])

@@ -68,21 +68,6 @@ export async function debitWallet(
   });
 }
 
-export async function creditWallet(
-  services: ModuleServices,
-  guildId: string,
-  userId: string,
-  amount: bigint,
-  options: WalletOptions = {},
-): Promise<void> {
-  await services.helpers.economy.credit(guildId, userId, amount, {
-    trackEarned: options.trackEarned ?? true,
-    ledger: options.type
-      ? { type: options.type, description: options.description }
-      : undefined,
-  });
-}
-
 export async function refundWallet(
   services: ModuleServices,
   guildId: string,

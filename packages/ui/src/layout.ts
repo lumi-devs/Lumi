@@ -45,6 +45,17 @@ export function formatBreadcrumbs(
     .join(separator);
 }
 
+export type TimestampStyle = "t" | "T" | "d" | "D" | "f" | "F" | "R";
+
+export function formatTimestamp(
+  value: Date | string,
+  style: TimestampStyle = "f",
+): string {
+  const time = value instanceof Date ? value.getTime() : Date.parse(value);
+  if (!Number.isFinite(time)) return "—";
+  return `<t:${Math.floor(time / 1000)}:${style}>`;
+}
+
 export function formatPageFooter(
   pageIndex: number,
   totalPages: number,

@@ -162,7 +162,7 @@ function groupSummary(
 
 export const rolemenuCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
-    .setName("rolemenu")
+    .setName("role-menu")
     .setDescription("Create and publish self-service role menus")
     .addSubcommand((sub) =>
       sub
@@ -386,6 +386,8 @@ export const rolemenuCommand: CommandDefinition = {
             .setAutocomplete(true),
         ),
     ),
+  aliases: ["rolemenu"],
+  prefixOnly: true,
   requiredPermit: PermitNode,
 
   async autocomplete(interaction, services) {

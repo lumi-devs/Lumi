@@ -202,18 +202,20 @@ export interface RoleChangeResult {
   failed: string[];
 }
 
-export async function addMemberRoles(
+async function changeMemberRoles(
   services: ModuleServices,
   guild: Guild,
   member: GuildMember,
   roleIds: readonly string[],
   reason: string,
+  mode: "add" | "remove",
 ): Promise<RoleChangeResult> {
   const bot = await botMember(guild);
   const changed: string[] = [];
   const failed: string[] = [];
   for (const roleId of roleIds) {
-    if (member.roles.cache.has(roleId)) continue;
+    const hasRole = member.roles.cache.has(roleId);
+    if (mode === "add" ? hasRole : !hasRole) continue;
     const role = roleFromGuild(guild, roleId);
     if (!role) {
       failed.push(roleId);
@@ -224,58 +226,37 @@ export async function addMemberRoles(
       failed.push(roleId);
       continue;
     }
-    const added = await member.roles
-      .add(role, reason)
+    const ok = await member.roles[mode](role, reason)
       .then(() => true)
       .catch((error: unknown) => {
-        services.observability?.logger?.warn?.("[roles] failed to add role", {
-          guildId: guild.id,
-          userId: member.id,
-          roleId,
-          error,
-        });
+        services.observability?.logger?.warn?.(
+          `[roles] failed to ${mode} role`,
+          { guildId: guild.id, userId: member.id, roleId, error },
+        );
         return false;
       });
-    if (added) changed.push(roleId);
+    if (ok) changed.push(roleId);
     else failed.push(roleId);
   }
   return { changed, failed };
 }
 
-export async function removeMemberRoles(
+export function addMemberRoles(
   services: ModuleServices,
   guild: Guild,
   member: GuildMember,
   roleIds: readonly string[],
   reason: string,
 ): Promise<RoleChangeResult> {
-  const bot = await botMember(guild);
-  const changed: string[] = [];
-  const failed: string[] = [];
-  for (const roleId of roleIds) {
-    if (!member.roles.cache.has(roleId)) continue;
-    const role = roleFromGuild(guild, roleId);
-    if (!role) {
-      failed.push(roleId);
-      continue;
-    }
-    const decision = canBotManageGuildRole(guild, bot, role);
-    if (!decision.allowed) {
-      failed.push(roleId);
-      continue;
-    }
-    const removed = await member.roles
-      .remove(role, reason)
-      .then(() => true)
-      .catch((error: unknown) => {
-        services.observability?.logger?.warn?.(
-          "[roles] failed to remove role",
-          { guildId: guild.id, userId: member.id, roleId, error },
-        );
-        return false;
-      });
-    if (removed) changed.push(roleId);
-    else failed.push(roleId);
-  }
-  return { changed, failed };
+  return changeMemberRoles(services, guild, member, roleIds, reason, "add");
+}
+
+export function removeMemberRoles(
+  services: ModuleServices,
+  guild: Guild,
+  member: GuildMember,
+  roleIds: readonly string[],
+  reason: string,
+): Promise<RoleChangeResult> {
+  return changeMemberRoles(services, guild, member, roleIds, reason, "remove");
 }

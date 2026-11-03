@@ -79,7 +79,6 @@ const ChannelSchema = z.object({
 export type DiscordChannel = z.infer<typeof ChannelSchema>;
 
 export const VoiceChannelTypes = [2, 13] as const;
-export const CategoryChannelType = 4;
 
 export class DiscordError extends Error {
   readonly status: number;

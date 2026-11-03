@@ -39,9 +39,17 @@ export async function handleAssignAction(
   }
 
   if (customId.startsWith("permit_unassign:")) {
-    await interaction.update(
-      await host.unassignCard(Number(customId.split(":")[1])),
-    );
+    const permitId = Number(customId.split(":")[1]);
+    const permit = await host.permitRepo.getPermit(host.guildId, permitId);
+    if (!permit) {
+      await interaction.update(missingPermitCard());
+      return true;
+    }
+    if (!host.canManageExtraOwnerPermit(permit)) {
+      await interaction.update(host.extraOwnerError());
+      return true;
+    }
+    await interaction.update(await host.unassignCard(permitId));
     return true;
   }
 
@@ -66,6 +74,15 @@ export async function handleAssignSelect(
 
   if (customId.startsWith("permit_unassign_select:")) {
     const permitId = Number(customId.split(":")[1]);
+    const permit = await host.permitRepo.getPermit(host.guildId, permitId);
+    if (!permit) {
+      await interaction.update(missingPermitCard());
+      return true;
+    }
+    if (!host.canManageExtraOwnerPermit(permit)) {
+      await interaction.update(host.extraOwnerError());
+      return true;
+    }
     const value = interaction.values[0];
     if (value === undefined) return true;
     const separator = value.indexOf(":");

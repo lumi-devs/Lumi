@@ -473,7 +473,7 @@ const bulkRoleCommand: CommandDefinition = {
 };
 
 const workerListener: ListenerDefinition = {
-  event: "ready",
+  event: "clientReady",
   async handler(services: ModuleServices) {
     void processBulkRoleJobs(services).catch((error) =>
       services.observability?.logger?.warn?.(

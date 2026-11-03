@@ -128,11 +128,6 @@ export function createCustomCommandHelpers(ctx: DbContext) {
         where: { guildId_name: { guildId, name } },
         include: { group: true, schedule: true },
       }),
-    findCommandById: (guildId: string, id: string) =>
-      prisma.customCommand.findFirst({
-        where: { guildId, id },
-        include: { group: true, schedule: true },
-      }),
     countCommands: (guildId: string) =>
       prisma.customCommand.count({ where: { guildId } }),
     createCommand: (data: CustomCommandCreateInput) =>

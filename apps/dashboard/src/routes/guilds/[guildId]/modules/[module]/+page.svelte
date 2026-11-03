@@ -2,6 +2,7 @@
   import { enhance } from "$app/forms";
   import ConfigFieldInput from "$lib/components/ConfigFieldInput.svelte";
   import ConfirmForm from "$lib/components/ConfirmForm.svelte";
+  import EscalationInput from "$lib/components/EscalationInput.svelte";
   let { data } = $props();
 
   const configuredGenerators = $derived(
@@ -154,7 +155,11 @@
       <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
       <div class="form-grid">
         {#each data.module.configFields as field (field.key)}
-          <ConfigFieldInput {field} value={data.config[field.key]} />
+          {#if field.type === "escalation"}
+            <EscalationInput {field} value={data.config[field.key]} />
+          {:else}
+            <ConfigFieldInput {field} value={data.config[field.key]} />
+          {/if}
         {/each}
       </div>
       <div class="actions" style="margin-top:1rem">

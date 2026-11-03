@@ -42,29 +42,6 @@ export async function fetchPermitNodes(guildId: string): Promise<string[]> {
   }
 }
 
-export async function fetchGuildInfo(
-  guildId: string,
-): Promise<{ name: string; icon: string | null; memberCount: number } | null> {
-  const config = serverConfig();
-  if (!config.rpcUrl) return null;
-
-  const url = new URL(`/api/v1/guilds/${guildId}`, config.rpcUrl);
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (config.rpcInternalToken)
-    headers.Authorization = `Bearer ${config.rpcInternalToken}`;
-
-  try {
-    const response = await fetch(url.toString(), {
-      headers,
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
 export interface BackupStats {
   roles: number;
   channels: number;

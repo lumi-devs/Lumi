@@ -235,17 +235,6 @@ class ExpressionParser {
     return expressions;
   }
 
-  parseSingle(): Expression {
-    const expression = this.parseOr();
-    if (this.peek().kind !== "eof") {
-      throw new TemplateError(
-        "trailing-tokens",
-        `Unexpected token "${this.peek().value}" in expression.`,
-      );
-    }
-    return expression;
-  }
-
   private parseFilters(value: Expression): Expression {
     const filters: FilterExpression[] = [];
     while (this.peek().kind === "operator" && this.peek().value === "|") {
@@ -429,10 +418,6 @@ class ExpressionParser {
 
     return { type: "path", root, segments };
   }
-}
-
-export function parseExpression(input: string): Expression {
-  return new ExpressionParser(input).parseSingle();
 }
 
 export function parseValueExpression(input: string): Expression {

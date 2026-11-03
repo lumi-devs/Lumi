@@ -3,7 +3,6 @@ import {
   QuoteAvatarSources,
   QuoteConfigKey,
   QuoteDefaultWatermark,
-  QuoteModuleName,
   QuoteNameSources,
   QuoteThemes,
 } from "./constants.js";
@@ -49,13 +48,4 @@ export async function getQuoteConfig(
     { guildId, issues: parsed.error.issues },
   );
   return QuoteConfigSchema.parse({});
-}
-
-export function isQuoteModuleEnabled(
-  services: {
-    modules: { isEnabled: (guildId: string, moduleName: string) => boolean };
-  },
-  guildId: string,
-): boolean {
-  return services.modules.isEnabled(guildId, QuoteModuleName);
 }

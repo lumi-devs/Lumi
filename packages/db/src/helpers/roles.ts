@@ -287,10 +287,6 @@ export function createRoleHelpers(ctx: DbContext) {
           orderBy: { graceUntil: "asc" },
           take: limit,
         }),
-      deleteSessionsForChannel: (guildId: string, channelId: string) =>
-        prisma.voiceRoleSession
-          .deleteMany({ where: { guildId, channelId } })
-          .catch(() => undefined),
     },
   };
 }

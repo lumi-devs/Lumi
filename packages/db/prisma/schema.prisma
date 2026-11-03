@@ -352,9 +352,16 @@ model TicketCategory {
   description     String?
   staffRoleIds    String[] @default([]) @map("staff_role_ids")
   pingRoleIds     String[] @default([]) @map("ping_role_ids")
+  requiredRoleIds String[] @default([]) @map("required_role_ids")
   questions       Json     @default("[]")
   namingTemplate  String   @default("ticket-{user}") @map("naming_template")
   defaultPriority String   @default("normal") @map("default_priority")
+  openingMessage  String?  @map("opening_message")
+  cooldownSeconds Int      @default(0) @map("cooldown_seconds")
+  memberLimit     Int      @default(0) @map("member_limit")
+  totalLimit      Int      @default(0) @map("total_limit")
+  claimingEnabled Boolean  @default(true) @map("claiming_enabled")
+  feedbackEnabled Boolean  @default(true) @map("feedback_enabled")
   position        Int      @default(0)
   enabled         Boolean  @default(true)
   createdAt       DateTime @default(now()) @map("created_at")
@@ -382,31 +389,37 @@ model TicketPanel {
 }
 
 model Ticket {
-  id              String          @id @default(cuid())
-  guildId         String          @map("guild_id")
-  categoryId      String?         @map("category_id")
-  category        TicketCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  channelId       String          @unique @map("channel_id")
-  userId          String          @map("user_id")
-  status          String          @default("open")
-  claimedBy       String?         @map("claimed_by")
-  priority        String          @default("normal")
+  id              String                 @id @default(cuid())
+  guildId         String                 @map("guild_id")
+  categoryId      String?                @map("category_id")
+  category        TicketCategory?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  channelId       String                 @unique @map("channel_id")
+  userId          String                 @map("user_id")
+  status          String                 @default("open")
+  claimedBy       String?                @map("claimed_by")
+  claimedAt       DateTime?              @map("claimed_at")
+  firstResponseAt DateTime?              @map("first_response_at")
+  firstResponseBy String?                @map("first_response_by")
+  priority        String                 @default("normal")
   subject         String?
-  closeReason     String?         @map("close_reason")
-  closedBy        String?         @map("closed_by")
-  closedAt        DateTime?       @map("closed_at")
-  transcriptUrl   String?         @map("transcript_url")
+  closeReason     String?                @map("close_reason")
+  closedBy        String?                @map("closed_by")
+  closedAt        DateTime?              @map("closed_at")
+  transcriptUrl   String?                @map("transcript_url")
   feedback        Int?
-  feedbackComment String?         @map("feedback_comment")
-  lastActivityAt  DateTime        @default(now()) @map("last_activity_at")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  feedbackComment String?                @map("feedback_comment")
+  lastActivityAt  DateTime               @default(now()) @map("last_activity_at")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
   messages        TicketMessage[]
   notes           TicketNote[]
+  tagApplications TicketTagApplication[]
 
   @@index([guildId, status])
+  @@index([guildId, status, closedAt])
   @@index([guildId, userId])
   @@index([guildId, lastActivityAt])
+  @@index([guildId, firstResponseBy])
   @@map("tickets")
 }
 
@@ -451,16 +464,33 @@ model TicketBlacklist {
 }
 
 model TicketTag {
-  id        String   @id @default(cuid())
-  guildId   String   @map("guild_id")
-  name      String
-  content   String
-  createdBy String   @map("created_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String                 @id @default(cuid())
+  guildId      String                 @map("guild_id")
+  name         String
+  content      String
+  regex        String?
+  autoTag      Boolean                @default(false) @map("auto_tag")
+  createdBy    String                 @map("created_by")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  applications TicketTagApplication[]
 
   @@unique([guildId, name])
   @@index([guildId])
   @@map("ticket_tags")
+}
+
+model TicketTagApplication {
+  id        String    @id @default(cuid())
+  ticketId  String    @map("ticket_id")
+  ticket    Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  tagId     String    @map("tag_id")
+  tag       TicketTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([ticketId, tagId])
+  @@index([ticketId])
+  @@map("ticket_tag_applications")
 }
 
 // Role menus

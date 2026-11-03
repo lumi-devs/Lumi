@@ -1,6 +1,5 @@
 import type { Client } from "discord.js";
 
-export type PermitKind = "CUSTOM";
 export type Polarity = "Grant" | "Deny";
 export type PermitTargetType = "USER" | "ROLE" | "CHANNEL";
 

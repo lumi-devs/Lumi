@@ -1,5 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
-import type { Client, Guild, GuildMember } from "discord.js";
+import type { Client, Guild } from "discord.js";
 import { SnapshotIntervalMinutes, StatsModuleName } from "./constants.js";
 import { bucketStart } from "./ranges.js";
 
@@ -99,12 +99,4 @@ export async function captureAllSnapshots(
     }
   }
   return captured;
-}
-
-export function memberPresence(member: GuildMember): string {
-  const status = member.presence?.status;
-  if (status === "online" || status === "idle" || status === "dnd") {
-    return status;
-  }
-  return "offline";
 }

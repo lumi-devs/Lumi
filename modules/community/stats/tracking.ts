@@ -116,10 +116,6 @@ export async function flushVoiceSessions(
   }
 }
 
-export function clearVoiceSessions(): void {
-  voiceSessions.clear();
-}
-
 async function recordEvent(
   services: ModuleServices,
   guildId: string,

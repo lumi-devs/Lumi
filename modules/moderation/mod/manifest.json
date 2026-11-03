@@ -38,10 +38,11 @@
     },
     {
       "key": "warnThresholds",
-      "label": "Warn Thresholds",
-      "type": "json",
-      "description": "JSON object: warn count -> {action: timeout|kick|ban, duration}",
+      "label": "Warn Escalation",
+      "type": "escalation",
+      "description": "Choose how many active warnings trigger a timeout, kick, ban, or quarantine.",
       "default": {},
+      "choices": ["timeout", "kick", "ban", "quarantine"],
       "category": "Warn Escalation"
     }
   ],

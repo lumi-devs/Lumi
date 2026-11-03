@@ -7,6 +7,14 @@
   function lines(value: unknown): string {
     return Array.isArray(value) ? value.join("\n") : "";
   }
+
+  function questionsText(value: unknown): string {
+    if (!Array.isArray(value) || value.length === 0) return "";
+    if (value.every((entry) => typeof entry === "string")) {
+      return value.join("\n");
+    }
+    return JSON.stringify(value, null, 2);
+  }
 </script>
 
 {#snippet commandForm(command: any)}
@@ -299,12 +307,84 @@
           >{lines(category?.pingRoleIds ?? [])}</textarea
         >
       </div>
+      <div class="field">
+        <label for="{uid}-required-roles">Required role IDs</label>
+        <textarea id="{uid}-required-roles" name="requiredRoleIds"
+          >{lines(category?.requiredRoleIds ?? [])}</textarea
+        >
+        <span class="hint">Roles a member needs before opening this category.</span>
+      </div>
+      <div class="field full">
+        <label for="{uid}-opening-message">Opening message</label>
+        <textarea
+          id="{uid}-opening-message"
+          name="openingMessage"
+          maxlength="2000"
+          >{category?.openingMessage ?? ""}</textarea
+        >
+        <span class="hint">Shown at the top of every new ticket in this category.</span>
+      </div>
+      <div class="field">
+        <label for="{uid}-cooldown">Cooldown (seconds)</label>
+        <input
+          id="{uid}-cooldown"
+          name="cooldownSeconds"
+          type="number"
+          min="0"
+          max="86400"
+          value={category?.cooldownSeconds ?? 0}
+        />
+      </div>
+      <div class="field">
+        <label for="{uid}-member-limit">Per-user open limit</label>
+        <input
+          id="{uid}-member-limit"
+          name="memberLimit"
+          type="number"
+          min="0"
+          max="25"
+          value={category?.memberLimit ?? 0}
+        />
+        <span class="hint">0 uses the guild-wide limit only.</span>
+      </div>
+      <div class="field">
+        <label for="{uid}-total-limit">Category open limit</label>
+        <input
+          id="{uid}-total-limit"
+          name="totalLimit"
+          type="number"
+          min="0"
+          max="500"
+          value={category?.totalLimit ?? 0}
+        />
+        <span class="hint">0 means unlimited open tickets in this category.</span>
+      </div>
+      <div class="field">
+        <label style="display:flex;gap:0.5rem;align-items:center">
+          <input
+            type="checkbox"
+            name="claimingEnabled"
+            checked={category ? category.claimingEnabled : true}
+          />
+          Claiming enabled
+        </label>
+        <label style="display:flex;gap:0.5rem;align-items:center">
+          <input
+            type="checkbox"
+            name="feedbackEnabled"
+            checked={category ? category.feedbackEnabled : true}
+          />
+          Feedback enabled
+        </label>
+      </div>
       <div class="field full">
         <label for="{uid}-questions">Questions</label>
         <textarea id="{uid}-questions" name="questions"
-          >{lines(category?.questions ?? [])}</textarea
+          >{questionsText(category?.questions ?? [])}</textarea
         >
-        <span class="hint">One question per line.</span>
+        <span class="hint"
+          >One text question per line, or paste a JSON array for menu questions.</span
+        >
       </div>
     </div>
     <div class="actions" style="margin-top:0.8rem">

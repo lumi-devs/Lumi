@@ -38,8 +38,6 @@ export function createKeys(namespace = "lumi") {
   };
 }
 
-export type RedisKeys = ReturnType<typeof createKeys>;
-
 export const TTL = {
   guild: 300,
   config: 120,

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { ModuleServices } from "@lumi/module-kit";
 import { cardCreateOptions, makeInfoCard } from "@lumi/ui";
@@ -33,6 +33,15 @@ export function transcriptAbsolutePath(
   ticketId: string,
 ): string {
   return resolve(process.cwd(), transcriptRelativePath(guildId, ticketId));
+}
+
+export async function deleteTranscriptFile(
+  guildId: string,
+  ticketId: string,
+): Promise<void> {
+  await unlink(transcriptAbsolutePath(guildId, ticketId)).catch(
+    () => undefined,
+  );
 }
 
 export async function writeTranscriptFile(

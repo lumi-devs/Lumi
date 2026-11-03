@@ -1,11 +1,13 @@
 export { createLogger, type Logger, logger } from "@lumi/foundation";
 export { createAboutCommand } from "./about.js";
+export { createAddonNotifier } from "./addonNotify.js";
 export { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 export { createPingCommand, handlePingButton } from "./commands.js";
 export { createDataLifecycleService } from "./dataLifecycle.js";
 export type { BotInteraction } from "./dispatch.js";
 export { handleInteraction } from "./dispatch.js";
 export { createErrorStore } from "./errorStore.js";
+export { createGuildSync } from "./guildSync.js";
 export { commandErrorCard, errorMessage } from "./errors.js";
 export { createClient } from "./gateway.js";
 export { createHelpCommand } from "./help.js";

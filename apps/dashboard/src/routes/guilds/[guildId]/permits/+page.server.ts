@@ -1,13 +1,14 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
+import { serverConfig } from "$lib/server/env";
+import { canManageOwnerOnlyPermit } from "$lib/server/permissions";
 import { getPrisma } from "$lib/server/prisma";
 import { describeError, isPrismaCode } from "$lib/server/prismaErrors";
 import { fetchPermitNodes } from "$lib/server/rpc.js";
 import { ensureGuild } from "$lib/server/settings";
 import {
-  assertCsrf,
   DateInputSchema,
   formString,
   parseInput,
@@ -26,8 +27,7 @@ const PermitCreateSchema = z.object({
 });
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const [permits, nodes] = await Promise.all([
     getPrisma().permit.findMany({
       where: { guildId },
@@ -55,10 +55,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   create: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(PermitCreateSchema, {
       name: formString(data, "name"),
@@ -70,6 +67,17 @@ export const actions: Actions = {
       whitelistScopes: splitList(formString(data, "whitelistScopes")),
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
+    if (
+      !canManageOwnerOnlyPermit(
+        userId,
+        parsed.data.nodes,
+        serverConfig().ownerIds,
+      )
+    ) {
+      return fail(403, {
+        error: "Only bot owners can create permits containing *.",
+      });
+    }
 
     await ensureGuild(guildId);
     const prisma = getPrisma();

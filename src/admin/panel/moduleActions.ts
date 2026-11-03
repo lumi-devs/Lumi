@@ -1,3 +1,4 @@
+import type { ConfigField } from "@lumi/module-runtime";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type {
   AnySelectMenuInteraction,
@@ -5,6 +6,18 @@ import type {
   ModalSubmitInteraction,
 } from "discord.js";
 import { type MessageModalSubmit, showPanel } from "./common.js";
+import {
+  escalationActions,
+  escalationEntries,
+  escalationModal,
+  escalationRemoveModal,
+  nextEscalationCount,
+  parseEscalationCount,
+  parseEscalationDraft,
+  renderEscalationEditor,
+  serializeEscalation,
+  upsertEscalation,
+} from "./escalation.js";
 import { renderModules, renderSubmodules } from "./moduleList.js";
 import {
   enabledConfigField,
@@ -22,7 +35,9 @@ import {
   writeModuleConfig,
 } from "./moduleSettings.js";
 import { parseSubmoduleTogglePages } from "./modules.js";
+import { handleRolesModuleAction } from "./roles.js";
 import type { HubServices } from "./services.js";
+import { handleTempVcModuleAction } from "./tempvc.js";
 
 function pageNumber(raw: string | undefined): number {
   return Number(raw) || 0;
@@ -60,6 +75,31 @@ export async function handleModuleAction(
   extra: string,
   extra2: string,
 ): Promise<boolean> {
+  if (
+    await handleRolesModuleAction(
+      interaction,
+      services,
+      guildId,
+      action,
+      target,
+      extra,
+      extra2,
+    )
+  ) {
+    return true;
+  }
+  if (
+    await handleTempVcModuleAction(
+      interaction,
+      services,
+      guildId,
+      action,
+      target,
+      extra,
+    )
+  ) {
+    return true;
+  }
   switch (action) {
     case "mods": {
       await showPanel(interaction, () =>
@@ -121,6 +161,15 @@ export async function handleModuleAction(
     case "modreset": {
       await showPanel(interaction, async () => {
         await writeModuleConfig(services, guildId, target, {});
+        if (enabledConfigField(services, target)) {
+          const enabled = await isModuleFeatureEnabled(
+            services,
+            guildId,
+            target,
+          );
+          if (enabled) await services.moduleManager.enable(guildId, target);
+          else await services.moduleManager.disable(guildId, target);
+        }
         return renderModuleDetail(
           interaction,
           services,
@@ -168,7 +217,11 @@ export async function handleModuleAction(
       const field = findField(services, target, extra);
       if (!field) return true;
       const pageIndex = pageNumber(extra2);
-      if (isPickerField(field) || isSelectField(field)) {
+      if (
+        field.type === "escalation" ||
+        isPickerField(field) ||
+        isSelectField(field)
+      ) {
         await showPanel(interaction, () =>
           renderFieldEditor(interaction, services, target, extra, pageIndex),
         );
@@ -236,6 +289,55 @@ export async function handleModuleAction(
       });
       return true;
     }
+    case "escedit": {
+      if (!interaction.isStringSelectMenu()) return true;
+      const field = findField(services, target, extra);
+      if (field?.type !== "escalation") return true;
+      const config = await readModuleConfig(services, guildId, target);
+      const entries = escalationEntries(
+        fieldValue(field, config),
+        escalationActions(field),
+      );
+      const entry = entries.find(
+        (item) => String(item.count) === interaction.values[0],
+      );
+      await interaction.showModal(
+        escalationModal(field, target, pageNumber(extra2), entry),
+      );
+      return true;
+    }
+    case "escnew": {
+      const field = findField(services, target, extra);
+      if (field?.type !== "escalation") return true;
+      const config = await readModuleConfig(services, guildId, target);
+      const entries = escalationEntries(
+        fieldValue(field, config),
+        escalationActions(field),
+      );
+      await interaction.showModal(
+        escalationModal(
+          field,
+          target,
+          pageNumber(extra2),
+          undefined,
+          nextEscalationCount(entries),
+        ),
+      );
+      return true;
+    }
+    case "escremove": {
+      const field = findField(services, target, extra);
+      if (field?.type !== "escalation") return true;
+      const config = await readModuleConfig(services, guildId, target);
+      const entries = escalationEntries(
+        fieldValue(field, config),
+        escalationActions(field),
+      );
+      await interaction.showModal(
+        escalationRemoveModal(field, target, pageNumber(extra2), entries),
+      );
+      return true;
+    }
     default:
       return false;
   }
@@ -289,4 +391,149 @@ export async function handleModuleModal(
   } else {
     await interaction.reply(card);
   }
+}
+
+async function replyEscalationError(
+  interaction: ModalSubmitInteraction,
+  message: string,
+): Promise<void> {
+  await interaction.reply(
+    ephemeralCard(makeErrorCard("Invalid Escalation", message)),
+  );
+}
+
+async function renderEscalationAfterChange(
+  interaction: ModalSubmitInteraction,
+  field: ConfigField,
+  moduleName: string,
+  pageIndex: string,
+  value: unknown,
+  notice: string,
+): Promise<void> {
+  const card = renderEscalationEditor(
+    interaction,
+    field,
+    moduleName,
+    pageNumber(pageIndex),
+    value,
+    notice,
+  );
+  if (interaction.isFromMessage()) {
+    await (interaction as MessageModalSubmit).update(card);
+  } else {
+    await interaction.reply(ephemeralCard(card));
+  }
+}
+
+export async function handleEscalationSave(
+  interaction: ModalSubmitInteraction,
+  services: HubServices,
+  guildId: string,
+  moduleName: string,
+  fieldKey: string,
+  pageIndex: string,
+  originalCount: string,
+): Promise<void> {
+  const field = findField(services, moduleName, fieldKey);
+  if (field?.type !== "escalation") {
+    await replyEscalationError(
+      interaction,
+      "That escalation setting no longer exists.",
+    );
+    return;
+  }
+
+  const actions = escalationActions(field);
+  let draft: ReturnType<typeof parseEscalationDraft>;
+  try {
+    draft = parseEscalationDraft(
+      interaction.fields.getTextInputValue("count"),
+      interaction.fields.getTextInputValue("action"),
+      interaction.fields.getTextInputValue("duration"),
+      actions,
+    );
+  } catch (error) {
+    await replyEscalationError(
+      interaction,
+      error instanceof Error ? error.message : "Enter a valid rule.",
+    );
+    return;
+  }
+
+  const config = await readModuleConfig(services, guildId, moduleName);
+  const entries = escalationEntries(fieldValue(field, config), actions);
+  const previous = originalCount === "new" ? null : Number(originalCount);
+  const base =
+    previous !== null && Number.isInteger(previous)
+      ? entries.filter((entry) => entry.count !== previous)
+      : entries;
+  const next = upsertEscalation(base, draft);
+  config[fieldKey] = serializeEscalation(next, actions);
+  await writeModuleConfig(services, guildId, moduleName, config);
+  const quarantineMissing =
+    draft.action === "quarantine" &&
+    (typeof config.quarantineRoleId !== "string" ||
+      config.quarantineRoleId.length === 0);
+  await renderEscalationAfterChange(
+    interaction,
+    field,
+    moduleName,
+    pageIndex,
+    config[fieldKey],
+    quarantineMissing
+      ? `Saved the ${draft.count}-warning rule. Quarantine Role is not set - set it in Moderation settings.`
+      : `Saved the ${draft.count}-warning rule.`,
+  );
+}
+
+export async function handleEscalationRemove(
+  interaction: ModalSubmitInteraction,
+  services: HubServices,
+  guildId: string,
+  moduleName: string,
+  fieldKey: string,
+  pageIndex: string,
+): Promise<void> {
+  const field = findField(services, moduleName, fieldKey);
+  if (field?.type !== "escalation") {
+    await replyEscalationError(
+      interaction,
+      "That escalation setting no longer exists.",
+    );
+    return;
+  }
+
+  let count: number;
+  try {
+    count = parseEscalationCount(interaction.fields.getTextInputValue("count"));
+  } catch (error) {
+    await replyEscalationError(
+      interaction,
+      error instanceof Error ? error.message : "Enter a valid warning count.",
+    );
+    return;
+  }
+
+  const actions = escalationActions(field);
+  const config = await readModuleConfig(services, guildId, moduleName);
+  const entries = escalationEntries(fieldValue(field, config), actions);
+  if (!entries.some((entry) => entry.count === count)) {
+    await replyEscalationError(
+      interaction,
+      `No escalation rule exists for ${count} warnings.`,
+    );
+    return;
+  }
+
+  const next = entries.filter((entry) => entry.count !== count);
+  config[fieldKey] = serializeEscalation(next, actions);
+  await writeModuleConfig(services, guildId, moduleName, config);
+  await renderEscalationAfterChange(
+    interaction,
+    field,
+    moduleName,
+    pageIndex,
+    config[fieldKey],
+    `Removed the ${count}-warning rule.`,
+  );
 }

@@ -54,17 +54,6 @@ export async function getCommandByName(
   )) as CustomCommandRow | null;
 }
 
-export async function getCommandById(
-  services: ModuleServices,
-  guildId: string,
-  id: string,
-): Promise<CustomCommandRow | null> {
-  return (await services.helpers.customCommands.findCommandById(
-    guildId,
-    id,
-  )) as CustomCommandRow | null;
-}
-
 export async function countCommands(
   services: ModuleServices,
   guildId: string,

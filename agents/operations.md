@@ -7,9 +7,14 @@ Use the flake:
 ```sh
 nix develop
 bun install
+bun run setup
 bun run typecheck
 bun run test
 ```
+
+`bun run setup` is the guided pre-run path: it writes `.env`, generates Compose
+secrets, checks PostgreSQL/Redis, and runs Prisma generate/migrate. Use
+`bun run setup:check` to validate without writing.
 
 Bun is 1.4.2 from nixpkgs. Do not use `Bun.SQL` (1.4.2 has pipeline/transaction
 bugs fixed in 1.4.3). Prisma + `pg` is the supported database path.
@@ -43,11 +48,15 @@ See `.env.example`.
 ## Local services
 
 ```sh
+bun run setup
 docker compose up -d
 bunx prisma migrate deploy
 bun run db:generate
 bun run dev:bot
 ```
+
+`docker compose` requires `REDIS_PASSWORD` and `RPC_INTERNAL_TOKEN`; setup
+generates them when they are missing.
 
 ## Database
 
@@ -80,5 +89,8 @@ Metrics: `GET /metrics` on `METRICS_PORT`.
 - SIGINT/SIGTERM: stop the metrics server, RPC server, and scheduler,
   `host.unloadAll()`, shut down Discord, close the invalidation bus, disconnect
   Prisma and the pg pool, then quit Redis.
+- The scheduler starts on `clientReady` after guild sync and runs the
+  `addons-autoupdate` job every minute; auto-update still respects the
+  configured interval in Redis.
 - One process today. Cache invalidation is pub/sub based, so multiple replicas can
   be added without changing cache keys.

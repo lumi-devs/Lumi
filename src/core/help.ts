@@ -52,6 +52,7 @@ export function createHelpCommand(options: HelpOptions): CommandDefinition {
         ) {
           continue;
         }
+        if (command.prefixOnly) continue;
         if (command.ownerOnly && !isBotOwner(interaction.user.id)) continue;
         if (
           command.requiresAdmin &&

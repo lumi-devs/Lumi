@@ -1,5 +1,4 @@
-import { DistributedLock } from "@lumi/redis";
-import type { Redis } from "ioredis";
+import { DistributedLock, type Redis } from "@lumi/redis";
 
 export interface ScheduledJob {
   readonly name: string;
@@ -96,8 +95,4 @@ export class DistributedScheduler {
     }
     return 60_000;
   }
-}
-
-export function createScheduler(redis: Redis): DistributedScheduler {
-  return new DistributedScheduler(redis);
 }

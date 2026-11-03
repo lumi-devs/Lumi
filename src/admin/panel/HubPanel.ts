@@ -12,9 +12,16 @@ import {
   showPanel,
 } from "./common.js";
 import { renderHubPanel, renderSettings } from "./hubViews.js";
-import { handleModuleAction, handleModuleModal } from "./moduleActions.js";
+import {
+  handleEscalationRemove,
+  handleEscalationSave,
+  handleModuleAction,
+  handleModuleModal,
+} from "./moduleActions.js";
 import { prefixModal } from "./moduleSettings.js";
 import { PermitPanel } from "./PermitPanel.js";
+import { handleRolesModuleModal } from "./roles.js";
+import { handleTempVcGeneratorModal } from "./tempvc.js";
 import type { HubServices } from "./services.js";
 
 export async function handleHubInteraction(
@@ -169,6 +176,10 @@ async function handleHubModal(
   const parts = interaction.customId.split(":");
   const action = parts[1];
 
+  if (await handleRolesModuleModal(interaction, services, guildId, parts)) {
+    return;
+  }
+
   if (action === "setprefixmodal") {
     const prefix = interaction.fields.getTextInputValue("prefix").trim();
     if (!prefix || /\s/.test(prefix)) {
@@ -192,9 +203,49 @@ async function handleHubModal(
     return;
   }
 
+  if (action === "tempvcgenrename" || action === "tempvcgenlimit") {
+    const [, , generatorId, pageIndex] = parts;
+    await handleTempVcGeneratorModal(
+      interaction,
+      services,
+      guildId,
+      action,
+      generatorId,
+      Number(pageIndex) || 0,
+    );
+    return;
+  }
+
   if (action === "modinput") {
     const [, , moduleName, fieldKey, pageIndex] = parts;
     await handleModuleModal(
+      interaction,
+      services,
+      guildId,
+      moduleName,
+      fieldKey,
+      pageIndex,
+    );
+    return;
+  }
+
+  if (action === "escsave") {
+    const [, , moduleName, fieldKey, pageIndex, original] = parts;
+    await handleEscalationSave(
+      interaction,
+      services,
+      guildId,
+      moduleName,
+      fieldKey,
+      pageIndex,
+      original,
+    );
+    return;
+  }
+
+  if (action === "escremove") {
+    const [, , moduleName, fieldKey, pageIndex] = parts;
+    await handleEscalationRemove(
       interaction,
       services,
       guildId,

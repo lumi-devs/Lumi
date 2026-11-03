@@ -6,8 +6,11 @@ import {
   type GuildSummary,
   refreshOAuthToken,
 } from "./discord";
+import { serverConfig } from "./env";
+import { isBotOwner } from "./permissions";
 import { type SessionRecord, saveSession } from "./session";
 import type { GuildAccess } from "./types";
+import { assertCsrf } from "./validation";
 
 export function requireSession(event: RequestEvent): SessionRecord {
   if (!event.locals.session) {
@@ -15,6 +18,14 @@ export function requireSession(event: RequestEvent): SessionRecord {
     throw redirect(303, `/auth/login?returnTo=${next}`);
   }
   return event.locals.session;
+}
+
+export function requireBotOwner(event: RequestEvent): SessionRecord {
+  const session = requireSession(event);
+  if (!isBotOwner(session.userId, serverConfig().ownerIds)) {
+    throw error(403, "Only bot owners can manage add-ons.");
+  }
+  return session;
 }
 
 export function guildAccessFromSummary(guild: GuildSummary): GuildAccess {
@@ -115,4 +126,19 @@ export async function requireGuildAccess(
     );
   }
   return guild;
+}
+
+export async function requireGuildId(event: RequestEvent): Promise<string> {
+  const guildId = event.params.guildId ?? "";
+  await requireGuildAccess(event, guildId);
+  return guildId;
+}
+
+export async function requireGuildForm(
+  event: RequestEvent,
+): Promise<{ guildId: string; userId: string; data: FormData }> {
+  const guildId = await requireGuildId(event);
+  const data = await event.request.formData();
+  const userId = assertCsrf(event, data);
+  return { guildId, userId, data };
 }

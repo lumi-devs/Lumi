@@ -1,5 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
-import type { TicketQuestion } from "./config.js";
+import { normalizeQuestions, type TicketQuestion } from "./config.js";
 import { escapeHtml } from "./html.js";
 
 export interface TicketCategoryRecord {
@@ -10,9 +10,16 @@ export interface TicketCategoryRecord {
   description: string | null;
   staffRoleIds: string[];
   pingRoleIds: string[];
+  requiredRoleIds: string[];
   questions: unknown;
   namingTemplate: string;
   defaultPriority: string;
+  openingMessage: string | null;
+  cooldownSeconds: number;
+  memberLimit: number;
+  totalLimit: number;
+  claimingEnabled: boolean;
+  feedbackEnabled: boolean;
   position: number;
   enabled: boolean;
   createdAt: Date | string;
@@ -28,6 +35,9 @@ export interface TicketRecord {
   userId: string;
   status: string;
   claimedBy: string | null;
+  claimedAt: Date | string | null;
+  firstResponseAt: Date | string | null;
+  firstResponseBy: string | null;
   priority: string;
   subject: string | null;
   closeReason: string | null;
@@ -182,6 +192,55 @@ export async function countOpenTickets(
   }
 }
 
+export async function countOpenTicketsForCategory(
+  services: ModuleServices,
+  guildId: string,
+  userId: string,
+  categoryId: string,
+): Promise<number> {
+  try {
+    return await services.helpers.tickets.countOpenTicketsForCategory(
+      guildId,
+      userId,
+      categoryId,
+    );
+  } catch {
+    return 0;
+  }
+}
+
+export async function countOpenTicketsInCategory(
+  services: ModuleServices,
+  guildId: string,
+  categoryId: string,
+): Promise<number> {
+  try {
+    return await services.helpers.tickets.countOpenTicketsInCategory(
+      guildId,
+      categoryId,
+    );
+  } catch {
+    return 0;
+  }
+}
+
+export async function findLatestTicketForUserCategory(
+  services: ModuleServices,
+  guildId: string,
+  userId: string,
+  categoryId: string,
+): Promise<{ id: string; createdAt: Date | string } | null> {
+  try {
+    return (await services.helpers.tickets.findLatestTicketForUserCategory(
+      guildId,
+      userId,
+      categoryId,
+    )) as { id: string; createdAt: Date | string } | null;
+  } catch {
+    return null;
+  }
+}
+
 export async function countGuildTickets(
   services: ModuleServices,
   guildId: string,
@@ -272,25 +331,5 @@ export async function archiveMessage(
 }
 
 export function questionsOf(category: TicketCategoryRecord): TicketQuestion[] {
-  if (!Array.isArray(category.questions)) return [];
-  return category.questions.flatMap((entry) => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const question = entry as Partial<TicketQuestion>;
-    if (typeof question.label !== "string" || !question.label.trim()) return [];
-    return [
-      {
-        label: question.label.trim().slice(0, 45),
-        placeholder:
-          typeof question.placeholder === "string"
-            ? question.placeholder.slice(0, 100)
-            : undefined,
-        required: question.required === true,
-        style: question.style === "long" ? "long" : "short",
-        maxLength:
-          typeof question.maxLength === "number"
-            ? question.maxLength
-            : undefined,
-      } satisfies TicketQuestion,
-    ];
-  });
+  return normalizeQuestions(category.questions);
 }

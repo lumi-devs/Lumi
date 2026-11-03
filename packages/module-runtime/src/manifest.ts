@@ -14,6 +14,7 @@ const ConfigFieldSchema = z.object({
     "json",
     "select",
     "multi-string",
+    "escalation",
   ]),
   description: z.string().optional(),
   required: z.boolean().optional(),

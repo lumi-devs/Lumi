@@ -16,7 +16,6 @@ export {
   guildsTotal,
   httpRequestDuration,
   httpRequests,
-  noopCacheMetrics,
   pgPoolSize,
   pgPoolUsed,
   pgPoolWaiting,

@@ -1,15 +1,22 @@
 import type { ConfigService, GuildSettings } from "@lumi/admin";
-import type { PrismaClient } from "@lumi/db";
+import type { DbHelpers, PrismaClient } from "@lumi/db";
 import type { CommandDefinition } from "@lumi/module-kit";
 import * as ui from "@lumi/ui";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
+import {
+  clearGuildBlacklisted,
+  clearUserBlacklisted,
+  setGuildBlacklisted,
+  setUserBlacklisted,
+} from "./blacklist.js";
 import type { DataLifecycleService } from "./dataLifecycle.js";
 import type { ErrorStore } from "./errorStore.js";
 
 interface OwnerCommandOptions {
   client: Client;
   prisma: PrismaClient;
+  cache: DbHelpers["cache"];
   configService: ConfigService;
   dataLifecycle: DataLifecycleService;
   errorStore: ErrorStore;
@@ -35,7 +42,8 @@ async function replyJson(
 export function createOwnerCommands(
   options: OwnerCommandOptions,
 ): CommandDefinition[] {
-  const { client, prisma, configService, dataLifecycle, errorStore } = options;
+  const { client, prisma, cache, configService, dataLifecycle, errorStore } =
+    options;
 
   return [
     {
@@ -288,17 +296,13 @@ export function createOwnerCommands(
           case "blacklist_guild_add": {
             const guildId = interaction.options.getString("guild_id", true);
             const reason = interaction.options.getString("reason");
-            await prisma.guildBlacklist.upsert({
-              where: { guildId },
-              update: { reason },
-              create: { guildId, reason },
-            });
+            await setGuildBlacklisted(prisma, cache, guildId, reason);
             await reply("Guild Blocked", `\`${guildId}\` is now blocked.`);
             return;
           }
           case "blacklist_guild_remove": {
             const guildId = interaction.options.getString("guild_id", true);
-            await prisma.guildBlacklist.deleteMany({ where: { guildId } });
+            await clearGuildBlacklisted(prisma, cache, guildId);
             await reply(
               "Guild Unblocked",
               `\`${guildId}\` is no longer blocked.`,
@@ -324,19 +328,13 @@ export function createOwnerCommands(
           case "blacklist_user_add": {
             const user = interaction.options.getUser("user", true);
             const reason = interaction.options.getString("reason");
-            await prisma.userBlacklist.upsert({
-              where: { userId: user.id },
-              update: { reason },
-              create: { userId: user.id, reason },
-            });
+            await setUserBlacklisted(prisma, cache, user.id, reason);
             await reply("User Blocked", `${user.tag} is now blocked.`);
             return;
           }
           case "blacklist_user_remove": {
             const user = interaction.options.getUser("user", true);
-            await prisma.userBlacklist.deleteMany({
-              where: { userId: user.id },
-            });
+            await clearUserBlacklisted(prisma, cache, user.id);
             await reply("User Unblocked", `${user.tag} is no longer blocked.`);
             return;
           }

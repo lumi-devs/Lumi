@@ -49,12 +49,6 @@ export function parseResponseInput(input: string): ResponseSpec[] {
   return parseResponses(Array.isArray(parsed) ? parsed : [parsed]);
 }
 
-export function isCardResponse(
-  response: ResponseSpec,
-): response is Exclude<ResponseSpec, string> {
-  return typeof response !== "string";
-}
-
 export function accentColor(accent: AccentKey | undefined): number | undefined {
   return accent ? AccentColors[accent] : undefined;
 }

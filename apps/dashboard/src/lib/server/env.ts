@@ -1,3 +1,5 @@
+import { parseOwnerIds } from "./permissions";
+
 const Trim = (value: string | undefined): string | null => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -32,6 +34,7 @@ export interface ServerConfig {
   modulesDir: string | null;
   rpcUrl: string | null;
   rpcInternalToken: string | null;
+  ownerIds: string[];
 }
 
 let cached: ServerConfig | null = null;
@@ -76,6 +79,7 @@ export function serverConfig(): ServerConfig {
     modulesDir: Trim(process.env.LUMI_MODULES_DIR),
     rpcUrl: Trim(process.env.RPC_URL),
     rpcInternalToken: Trim(process.env.RPC_INTERNAL_TOKEN),
+    ownerIds: parseOwnerIds(process.env.OWNER_IDS),
   };
 
   return cached;

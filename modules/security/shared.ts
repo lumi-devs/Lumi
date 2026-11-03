@@ -1,10 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
-import {
-  type CardReply,
-  cardCreateOptions,
-  makeCard,
-  makeWarningCard,
-} from "@lumi/ui";
+import { type CardReply, cardCreateOptions, makeCard } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
 import type { z } from "zod";
 import { getSecurityConfig, type SecurityConfig } from "./core/config.js";
@@ -114,6 +109,8 @@ export async function hasPermit(
   channelId?: string,
 ): Promise<boolean> {
   try {
+    const enforcePermits =
+      (await services.config.get(guild.id, "enforcePermits")) === true;
     const result = await services.permits.explainPermit(
       {
         guildId: guild.id,
@@ -122,6 +119,7 @@ export async function hasPermit(
         ...(channelId ? { channelId } : {}),
         guildOwnerId: guild.ownerId,
         permitNode: node,
+        ...(enforcePermits ? { managerBypass: false } : {}),
       },
       services.client,
     );
@@ -259,8 +257,4 @@ export function securityCard(
   opts?: { footer?: string },
 ): CardReply {
   return makeCard(undefined, title, lines, opts);
-}
-
-export function warningCard(title: string, lines: string[]): CardReply {
-  return makeWarningCard(title, lines);
 }

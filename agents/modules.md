@@ -198,10 +198,12 @@ definition from their thin manifest.
 `defineModule` or in a supermodule manifest. It is optional display metadata for
 the `/lumi` submodule detail panel. Zod remains the validator; the metadata only
 chooses the control (`boolean`, `number`, `string`, `channel`, `role`,
-`multi-channel`, `multi-role`, `json`, `select`, `multi-string`) and supplies
-labels. A field with `choices` renders a string select; channel and role fields
-render pickers; multi-select fields store `string[]` values and render a menu
-with `minValues: 0`; everything else opens a text modal. Fields may declare a
+`multi-channel`, `multi-role`, `json`, `select`, `multi-string`, `escalation`)
+and supplies labels. A field with `choices` renders a string select; channel and
+role fields render pickers; multi-select fields store `string[]` values and
+render a menu with `minValues: 0`; `escalation` renders warning-count rules with
+an action picker and optional timeout duration in the `/lumi` panel and
+dashboard; everything else opens a text modal. Fields may declare a
 `category`; the panel groups settings by category and labels each page with it
 instead of using numbered settings pages. The detail panel renders up to four
 settings per page. Submodules without metadata still open in the panel but show

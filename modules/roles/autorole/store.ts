@@ -52,14 +52,6 @@ export async function enqueueAutorole(
   });
 }
 
-export async function listPendingAutoroles(
-  services: ModuleServices,
-  nowMs: number,
-  limit = 200,
-): Promise<PendingAutorole[]> {
-  return services.helpers.roles.autorole.listDue(nowMs, limit);
-}
-
 export async function countPendingAutoroles(
   services: ModuleServices,
   guildId: string,

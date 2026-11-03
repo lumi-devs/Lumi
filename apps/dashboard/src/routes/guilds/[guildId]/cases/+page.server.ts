@@ -1,12 +1,11 @@
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildId } from "$lib/server/auth";
 import { getPrisma } from "$lib/server/prisma";
 import type { PageServerLoad } from "./$types";
 
 const PageSize = 50;
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
 
   const action = (event.url.searchParams.get("action") ?? "")
     .trim()

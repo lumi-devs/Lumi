@@ -1,12 +1,12 @@
+import type { Prisma } from "@prisma/client";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
 import { getPrisma } from "$lib/server/prisma";
 import { isPrismaCode } from "$lib/server/prismaErrors";
 import { fetchPermitNodes } from "$lib/server/rpc.js";
 import {
-  assertCsrf,
   checkbox,
   formString,
   IdSchema,
@@ -67,9 +67,16 @@ const TicketCategorySchema = z.object({
   description: z.string().trim().max(500),
   staffRoleIds: z.array(IdSchema).max(50),
   pingRoleIds: z.array(IdSchema).max(50),
-  questions: z.array(z.string().min(1).max(500)).max(30),
+  requiredRoleIds: z.array(IdSchema).max(50),
+  questions: z.array(z.unknown()).max(5),
   namingTemplate: z.string().trim().min(1).max(100),
   defaultPriority: z.enum(["low", "normal", "high", "urgent"]),
+  openingMessage: z.string().trim().max(2000),
+  cooldownSeconds: z.coerce.number().int().min(0).max(86_400),
+  memberLimit: z.coerce.number().int().min(0).max(25),
+  totalLimit: z.coerce.number().int().min(0).max(500),
+  claimingEnabled: z.boolean(),
+  feedbackEnabled: z.boolean(),
   position: z.coerce.number().int().min(0).max(10_000),
   enabled: z.boolean(),
 });
@@ -102,8 +109,7 @@ async function categoryBelongsTo(guildId: string, id: string | undefined) {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const prisma = getPrisma();
 
   const [commands, groups, categories, panels, tickets, nodes] =
@@ -189,10 +195,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   saveCommand: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(CommandSchema, {
       id: optionalText(data, "id") ?? undefined,
@@ -266,10 +269,7 @@ export const actions: Actions = {
   },
 
   deleteCommand: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().customCommand.deleteMany({
@@ -289,10 +289,7 @@ export const actions: Actions = {
   },
 
   saveMenu: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(RoleMenuGroupSchema, {
       id: optionalText(data, "id") ?? undefined,
@@ -355,10 +352,7 @@ export const actions: Actions = {
   },
 
   deleteMenu: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().roleMenuGroup.deleteMany({
@@ -378,10 +372,7 @@ export const actions: Actions = {
   },
 
   addOption: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(RoleMenuOptionSchema, {
       groupId: formString(data, "groupId"),
@@ -431,10 +422,7 @@ export const actions: Actions = {
   },
 
   deleteOption: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const optionId = formString(data, "optionId");
     const option = await getPrisma().roleMenuOption.findFirst({
@@ -454,10 +442,27 @@ export const actions: Actions = {
   },
 
   saveCategory: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+
+    const rawQuestions = formString(data, "questions");
+    let questions: unknown[];
+    if (rawQuestions.trim().startsWith("[")) {
+      try {
+        const parsedQuestions: unknown = JSON.parse(rawQuestions);
+        if (!Array.isArray(parsedQuestions)) {
+          return fail(400, { error: "Questions JSON must be an array." });
+        }
+        questions = parsedQuestions;
+      } catch {
+        return fail(400, { error: "Questions JSON is invalid." });
+      }
+    } else {
+      questions = splitList(rawQuestions).map((label) => ({
+        type: "text",
+        label,
+        required: false,
+      }));
+    }
 
     const parsed = parseInput(TicketCategorySchema, {
       id: optionalText(data, "id") ?? undefined,
@@ -466,9 +471,16 @@ export const actions: Actions = {
       description: formString(data, "description"),
       staffRoleIds: splitList(formString(data, "staffRoleIds")),
       pingRoleIds: splitList(formString(data, "pingRoleIds")),
-      questions: splitList(formString(data, "questions")),
+      requiredRoleIds: splitList(formString(data, "requiredRoleIds")),
+      questions,
       namingTemplate: formString(data, "namingTemplate", "ticket-{user}"),
       defaultPriority: formString(data, "defaultPriority", "normal"),
+      openingMessage: formString(data, "openingMessage"),
+      cooldownSeconds: formString(data, "cooldownSeconds", "0"),
+      memberLimit: formString(data, "memberLimit", "0"),
+      totalLimit: formString(data, "totalLimit", "0"),
+      claimingEnabled: checkbox(data, "claimingEnabled"),
+      feedbackEnabled: checkbox(data, "feedbackEnabled"),
       position: formString(data, "position", "0"),
       enabled: checkbox(data, "enabled"),
     });
@@ -485,9 +497,16 @@ export const actions: Actions = {
       description: parsed.data.description || null,
       staffRoleIds: parsed.data.staffRoleIds,
       pingRoleIds: parsed.data.pingRoleIds,
-      questions: parsed.data.questions,
+      requiredRoleIds: parsed.data.requiredRoleIds,
+      questions: parsed.data.questions as Prisma.InputJsonValue,
       namingTemplate: parsed.data.namingTemplate,
       defaultPriority: parsed.data.defaultPriority,
+      openingMessage: parsed.data.openingMessage || null,
+      cooldownSeconds: parsed.data.cooldownSeconds,
+      memberLimit: parsed.data.memberLimit,
+      totalLimit: parsed.data.totalLimit,
+      claimingEnabled: parsed.data.claimingEnabled,
+      feedbackEnabled: parsed.data.feedbackEnabled,
       position: parsed.data.position,
       enabled: parsed.data.enabled,
     };
@@ -530,10 +549,7 @@ export const actions: Actions = {
   },
 
   deleteCategory: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().ticketCategory.deleteMany({
@@ -553,10 +569,7 @@ export const actions: Actions = {
   },
 
   savePanel: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(TicketPanelSchema, {
       channelId: formString(data, "channelId"),
@@ -595,10 +608,7 @@ export const actions: Actions = {
   },
 
   deletePanel: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().ticketPanel.deleteMany({

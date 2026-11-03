@@ -1,11 +1,13 @@
-import { ModuleManager, PermitPanel } from "@lumi/admin";
+import { ModuleManager, moduleCommands, PermitPanel } from "@lumi/admin";
 import {
   boot,
   createAboutCommand,
+  createAddonNotifier,
   createClient,
   createCoreServices,
   createDataLifecycleService,
   createErrorStore,
+  createGuildSync,
   createHelpCommand,
   createOwnerCommands,
   createPingCommand,
@@ -19,8 +21,9 @@ import {
   redisOptionsFromEnv,
   shutdown,
 } from "@lumi/core";
-import { connectDatabase, prisma } from "@lumi/db";
+import { connectDatabase, disconnectDatabase, prisma } from "@lumi/db";
 import { AddonManager } from "@lumi/downloader";
+import type { CommandDefinition } from "@lumi/module-kit";
 import { createModuleLoader } from "@lumi/module-runtime";
 import { type MetricsServer, startMetricsServer } from "@lumi/observability";
 import { createRedisClient } from "@lumi/redis";
@@ -90,6 +93,8 @@ async function main(): Promise<void> {
   moduleLoader.addRoot("modules", "bundled");
   moduleLoader.addRoot("data/addons", "addon");
 
+  let syncGuildCommands: ((guildId: string) => Promise<void>) | undefined;
+
   const rpcPort = Number.parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
   const rpc = createRpcServer({
     port: rpcPort,
@@ -112,6 +117,8 @@ async function main(): Promise<void> {
       });
       const moduleStateHandler = createModuleStateHandler({
         moduleLoader,
+        syncCommands: (guildId) =>
+          syncGuildCommands?.(guildId) ?? Promise.resolve(),
         token: process.env.RPC_INTERNAL_TOKEN,
       });
       const backupHandler = createBackupHandler({
@@ -177,11 +184,18 @@ async function main(): Promise<void> {
     moduleLoader,
     logger,
   });
+  syncGuildCommands = commandSync.syncGuild;
   const moduleManager = new ModuleManager(
     moduleLoader,
     prisma,
     commandSync.syncGuild,
   );
+  const guildSync = createGuildSync({
+    prisma,
+    permits: permitRepo,
+    moduleLoader,
+    logger,
+  });
 
   let addonManager: AddonManager | undefined;
 
@@ -241,9 +255,18 @@ async function main(): Promise<void> {
     redis,
     runtime: host,
     logger,
+    notify: createAddonNotifier(client),
+  });
+  scheduler.register({
+    name: "addons-autoupdate",
+    cron: "* * * * *",
+    handler: async () => {
+      await addonManager?.autoUpdate();
+    },
   });
 
   host.addStatic([
+    ...(moduleCommands as unknown as CommandDefinition[]),
     createAboutCommand({ client, prisma, redis }),
     createPingCommand({ client, prisma }),
     createHelpCommand({
@@ -256,6 +279,7 @@ async function main(): Promise<void> {
     ...createOwnerCommands({
       client,
       prisma,
+      cache: helpers.cache,
       configService,
       dataLifecycle,
       errorStore,
@@ -263,8 +287,6 @@ async function main(): Promise<void> {
   ]);
 
   await host.load(await moduleLoader.discover());
-
-  await commandSync.syncAll();
 
   client.on("interactionCreate", async (interaction) => {
     await handleInteraction(interaction, {
@@ -288,16 +310,13 @@ async function main(): Promise<void> {
     ) {
       return;
     }
-    const prefix = await configService.get(message.guildId, "prefix");
-    if (typeof prefix === "string" && message.content.startsWith(prefix)) {
-      await handlePrefixMessage(message, {
-        client,
-        registry,
-        moduleLoader,
-        logger,
-        services,
-      });
-    }
+    await handlePrefixMessage(message, {
+      client,
+      registry,
+      moduleLoader,
+      logger,
+      services,
+    });
   });
 
   client.on("guildCreate", async (guild) => {
@@ -305,25 +324,56 @@ async function main(): Promise<void> {
       await guild.leave().catch(() => undefined);
       return;
     }
+    await guildSync.syncRecord(guild);
     await host.load(await moduleLoader.discover());
-    await commandSync.syncAll();
+    await guildSync.syncModules(guild.id);
+    await commandSync.syncGuild(guild.id);
   });
 
   client.on("guildDelete", async (guild) => {
-    await moduleManager.disable(guild.id, "community");
     await commandSync.syncGuild(guild.id);
+  });
+
+  client.once("clientReady", async () => {
+    for (const guild of client.guilds.cache.values()) {
+      await guildSync.syncRecord(guild);
+      await guildSync.syncModules(guild.id);
+    }
+    await commandSync.syncAll();
+    await scheduler.start();
   });
 
   await boot({ token: process.env.BOT_TOKEN ?? "", client });
   logger.info("Lumi v2 is ready!");
 
   const shutdownSignals = ["SIGINT", "SIGTERM"] as const;
+  const runShutdownStep = async (
+    name: string,
+    action: () => unknown | Promise<unknown>,
+  ): Promise<void> => {
+    try {
+      await action();
+    } catch (error) {
+      logger.error("Shutdown step failed", { step: name, error });
+    }
+  };
   for (const signal of shutdownSignals) {
     process.on(signal, async () => {
       logger.info(`Received ${signal}, shutting down...`);
-      if (metricsServer) metricsServer.stop();
-      await shutdown(client);
-      process.exit(0);
+      try {
+        await runShutdownStep("metrics", () => metricsServer?.stop());
+        await runShutdownStep("scheduler", () => scheduler.stop());
+        await runShutdownStep("rpc", () => rpc.stop());
+        await runShutdownStep("modules", () => host.unloadAll());
+        await runShutdownStep("discord", () => shutdown(client));
+        await runShutdownStep("invalidation", () =>
+          coreServices.invalidation.close(),
+        );
+        await runShutdownStep("database", () => disconnectDatabase());
+        await runShutdownStep("redis", () => redis.quit());
+      } finally {
+        process.exit(0);
+      }
     });
   }
 }

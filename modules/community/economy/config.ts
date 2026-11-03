@@ -32,7 +32,6 @@ export const EconomyConfigSchema = z.object({
 });
 
 export type EconomyConfig = z.infer<typeof EconomyConfigSchema>;
-export type ShopItem = z.infer<typeof ShopItemSchema>;
 
 export function bankGuard(config: EconomyConfig): EconomyGuard {
   return {

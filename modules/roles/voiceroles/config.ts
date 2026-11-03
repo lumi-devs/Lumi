@@ -1,6 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
-import { readConfig, saveConfig } from "../shared.js";
+import { readConfig } from "../shared.js";
 
 export const VoiceRolesModuleName = "roles-voiceroles";
 export const VoiceRolesConfigKey = VoiceRolesModuleName;
@@ -23,12 +23,4 @@ export function getVoiceRolesConfig(
     VoiceRolesConfigSchema,
     VoiceRolesModuleName,
   );
-}
-
-export function saveVoiceRolesConfig(
-  services: ModuleServices,
-  guildId: string,
-  config: VoiceRolesConfig,
-): Promise<boolean> {
-  return saveConfig(services, guildId, VoiceRolesConfigKey, config);
 }

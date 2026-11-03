@@ -33,6 +33,25 @@ describe("commandPayloadForGuild", () => {
     ).toEqual(["ping", "rank"]);
   });
 
+  it("excludes prefix-only commands from the slash payload", () => {
+    const registry = new CommandRegistry();
+    registry.add({
+      ...command("autorole", "roles-autorole"),
+      prefixOnly: true,
+    });
+    registry.add(command("bulkrole", "roles-bulkrole"));
+    const loader = { isActive: () => true };
+
+    expect(
+      commandPayloadForGuild(registry, loader, "guild").map(
+        (entry) => entry.name,
+      ),
+    ).toEqual(["bulkrole"]);
+    expect(registry.payload().map((entry) => entry.name)).toEqual([
+      "bulkrole",
+    ]);
+  });
+
   it("includes every command for guilds with all modules active", () => {
     const registry = new CommandRegistry();
     registry.add(command("ping", null));

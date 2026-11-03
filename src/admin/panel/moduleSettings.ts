@@ -27,6 +27,7 @@ import {
   panelOptions,
 } from "./common.js";
 import { fieldPages } from "./configFields.js";
+import { escalationSummary, renderEscalationEditor } from "./escalation.js";
 import type { HubServices } from "./services.js";
 
 const FieldsPerPage = 4;
@@ -68,6 +69,8 @@ function formatValue(field: ConfigField, value: FieldValue): string {
     }
     case "number":
       return `\`${value}\``;
+    case "escalation":
+      return escalationSummary(value);
     case "json":
       return `\`${cut(JSON.stringify(value), 100)}\``;
     default:
@@ -252,6 +255,46 @@ export async function renderModuleDetail(
               style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
             }),
           ]),
+      ...(moduleName === "utility-tempvc"
+        ? [
+            createActionButton({
+              customId: `lumi:tempvcgens:${safePage}`,
+              label: "Generators",
+              emoji: "🔊",
+              style: ButtonStyle.Secondary,
+            }),
+          ]
+        : []),
+      ...(moduleName === "roles-autorole"
+        ? [
+            createActionButton({
+              customId: `lumi:autorole:${safePage}`,
+              label: "Manage",
+              emoji: "🚪",
+              style: ButtonStyle.Primary,
+            }),
+          ]
+        : []),
+      ...(moduleName === "roles-voiceroles"
+        ? [
+            createActionButton({
+              customId: `lumi:voiceroles:${safePage}`,
+              label: "Mappings",
+              emoji: "🔊",
+              style: ButtonStyle.Primary,
+            }),
+          ]
+        : []),
+      ...(moduleName === "role-menus-menu"
+        ? [
+            createActionButton({
+              customId: `lumi:rolemenus:${safePage}`,
+              label: "Manage Menus",
+              emoji: "🎭",
+              style: ButtonStyle.Primary,
+            }),
+          ]
+        : []),
       createActionButton({
         customId: `lumi:modreset:${moduleName}:${safePage}`,
         label: "Reset",
@@ -268,7 +311,6 @@ export async function renderModuleDetail(
     body.push(`**Status:** ${enabled ? "✅ Enabled" : "⛔ Disabled"}`);
   }
   body.push(meta.description || "No description provided.");
-  if (pages.length > 1) body.push(`-# ${page.label}`);
 
   return makeCard(
     enabled ? undefined : AccentColors.warning,
@@ -327,6 +369,15 @@ export async function renderFieldEditor(
 
   const config = await readModuleConfig(services, guildId, moduleName);
   const value = fieldValue(field, config);
+  if (field.type === "escalation") {
+    return renderEscalationEditor(
+      interaction,
+      field,
+      moduleName,
+      pageIndex,
+      value,
+    );
+  }
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
 
   if (isSelectField(field)) {

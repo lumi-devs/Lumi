@@ -1,7 +1,6 @@
-import { createKeys } from "@lumi/redis";
+import { createKeys, type Redis } from "@lumi/redis";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import type { Client } from "discord.js";
-import type Redis from "ioredis";
 import type {
   PermitAuditLogEntry,
   PermitAuditLogInput,

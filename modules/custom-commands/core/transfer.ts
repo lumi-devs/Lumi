@@ -7,12 +7,7 @@ import {
   validateCronExpression,
 } from "./duration.js";
 import { parseResponses, ResponsesSchema } from "./responses.js";
-import {
-  getGroupByName,
-  invalidateGuild,
-  listCommands,
-  listGroups,
-} from "./store.js";
+import { invalidateGuild, listCommands, listGroups } from "./store.js";
 import {
   normalizeCommandName,
   validateCommandName,
@@ -340,14 +335,4 @@ export function parseIntervalInput(input: string): number {
   }
   if (duration < 10) throw new Error("Intervals must be at least 10 seconds.");
   return duration;
-}
-
-export async function groupExists(
-  services: ModuleServices,
-  guildId: string,
-  name: string,
-): Promise<boolean> {
-  return Boolean(
-    await getGroupByName(services, guildId, normalizeCommandName(name)),
-  );
 }

@@ -31,8 +31,8 @@ const PermitNode = "roles.voiceroles";
 
 const voiceRolesCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
-    .setName("voiceroles")
-    .setDescription("Manage voice channel role automation")
+    .setName("voice-roles")
+    .setDescription("Manage roles assigned while members are in voice channels")
     .addSubcommand((sub) =>
       sub
         .setName("add")
@@ -102,6 +102,8 @@ const voiceRolesCommand: CommandDefinition = {
             .setRequired(true),
         ),
     ),
+  aliases: ["voiceroles"],
+  prefixOnly: true,
   requiredPermit: PermitNode,
   async execute(interaction, services) {
     const guild = interaction.guild;

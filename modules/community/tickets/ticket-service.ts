@@ -10,6 +10,7 @@ import { getTicketsConfig } from "./config.js";
 import { TicketIds, TicketsModuleName } from "./constants.js";
 import { renderTranscript } from "./html.js";
 import { selectInactiveTickets } from "./inactivity.js";
+import { feedbackEnabledFor } from "./policy.js";
 import {
   archiveMessage,
   listTicketMessages,
@@ -18,6 +19,7 @@ import {
 } from "./repository.js";
 import {
   buildTranscriptData,
+  deleteTranscriptFile,
   transcriptRelativePath,
   uploadTranscript,
   writeTranscriptFile,
@@ -169,7 +171,7 @@ export async function closeTicket(
     },
   )) as TicketRecord;
 
-  if (config.feedbackEnabled) {
+  if (feedbackEnabledFor(config, updated.category)) {
     await sendFeedbackPrompt(thread, updated);
   }
 
@@ -179,6 +181,44 @@ export async function closeTicket(
   }
 
   return { ticket: updated, transcriptPath, transcriptUrl };
+}
+
+export async function sweepExpiredClosedTickets(
+  services: ModuleServices,
+  now = new Date(),
+): Promise<number> {
+  const guilds = (await services.helpers.tickets
+    .listClosedTicketGuildIds()
+    .catch(() => [])) as Array<{ guildId: string }>;
+
+  let deleted = 0;
+  for (const { guildId } of guilds) {
+    if (!services.modules.isEnabled(guildId, TicketsModuleName)) continue;
+    const config = await getTicketsConfig(services, guildId);
+    if (config.retentionDays <= 0) continue;
+
+    const before = new Date(
+      now.getTime() - config.retentionDays * 24 * 60 * 60_000,
+    );
+    const rows = (await services.helpers.tickets
+      .listExpiredClosedTickets(guildId, before)
+      .catch(() => [])) as Array<{ id: string }>;
+    if (rows.length === 0) continue;
+
+    for (const row of rows) {
+      await deleteTranscriptFile(guildId, row.id);
+    }
+    await services.helpers.tickets
+      .deleteTickets(rows.map((row) => row.id))
+      .catch((error) => {
+        services.observability?.logger?.warn?.(
+          "tickets retention delete failed",
+          { guildId, error },
+        );
+      });
+    deleted += rows.length;
+  }
+  return deleted;
 }
 
 export async function sweepInactiveTickets(

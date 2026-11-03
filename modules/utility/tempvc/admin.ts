@@ -1,16 +1,10 @@
 import { isSnowflake } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
-import {
-  ActionRowBuilder,
-  type MessageComponentInteraction,
-  type ModalActionRowComponentBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-} from "discord.js";
+import type { MessageComponentInteraction } from "discord.js";
 import { canUseTempVcAdmin } from "./access.js";
 import { getTempVcConfig, saveTempVcConfig } from "./config.js";
 import { stripPrefix, TempVcIds, TempVcPrefixes } from "./ids.js";
+import { showTextModal } from "./modals.js";
 import {
   type TempVcConfig,
   TempVcConfigSchema,
@@ -78,6 +72,18 @@ async function showGeneratorPanel(
       notice,
     ),
   );
+}
+
+async function saveConfigOrReply(
+  interaction: TempVcInteraction,
+  services: ModuleServices,
+  guildId: string,
+  config: TempVcConfig,
+  failure: string,
+): Promise<boolean> {
+  const saved = await saveTempVcConfig(services, guildId, config);
+  if (!saved) await replyError(interaction, "Save Failed", failure);
+  return saved;
 }
 
 const configFieldMeta: Record<
@@ -153,21 +159,13 @@ async function openConfigModal(
     return;
   }
   const current = (config as Record<string, unknown>)[key];
-  const modal = new ModalBuilder()
-    .setCustomId(TempVcIds.cfgModal(key))
-    .setTitle(meta.title)
-    .addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("value")
-          .setLabel(meta.label)
-          .setStyle(TextInputStyle.Short)
-          .setMaxLength(meta.maxLength)
-          .setRequired(true)
-          .setValue(String(current ?? "").slice(0, meta.maxLength)),
-      ),
-    );
-  await interaction.showModal(modal).catch(() => undefined);
+  await showTextModal(interaction, {
+    customId: TempVcIds.cfgModal(key),
+    title: meta.title,
+    label: meta.label,
+    maxLength: meta.maxLength,
+    value: String(current ?? ""),
+  });
 }
 
 async function generatorModal(
@@ -188,33 +186,19 @@ async function generatorModal(
     return;
   }
   const rename = kind === "rename";
-  const modal = new ModalBuilder()
-    .setCustomId(
-      rename
-        ? TempVcIds.adminModalRename(generator.channelId)
-        : TempVcIds.adminModalLimit(generator.channelId),
-    )
-    .setTitle(rename ? "Rename Generator Template" : "Set Generator User Limit")
-    .addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        new TextInputBuilder()
-          .setCustomId("value")
-          .setLabel(
-            rename
-              ? "Channel name template ({user} = member)"
-              : "User limit (0 = unlimited)",
-          )
-          .setStyle(TextInputStyle.Short)
-          .setMaxLength(rename ? 100 : 2)
-          .setRequired(true)
-          .setValue(
-            rename
-              ? (generator.templateName ?? config.templateName).slice(0, 100)
-              : String(generator.userLimit ?? config.defaultUserLimit),
-          ),
-      ),
-    );
-  await interaction.showModal(modal).catch(() => undefined);
+  await showTextModal(interaction, {
+    customId: rename
+      ? TempVcIds.adminModalRename(generator.channelId)
+      : TempVcIds.adminModalLimit(generator.channelId),
+    title: rename ? "Rename Generator Template" : "Set Generator User Limit",
+    label: rename
+      ? "Channel name template ({user} = member)"
+      : "User limit (0 = unlimited)",
+    maxLength: rename ? 100 : 2,
+    value: rename
+      ? (generator.templateName ?? config.templateName)
+      : String(generator.userLimit ?? config.defaultUserLimit),
+  });
 }
 
 export async function handleAdminInteraction(
@@ -264,13 +248,15 @@ export async function handleAdminInteraction(
         },
       ],
     };
-    const saved = await saveTempVcConfig(services, guildId, next);
-    if (!saved) {
-      await replyError(
+    if (
+      !(await saveConfigOrReply(
         interaction,
-        "Save Failed",
+        services,
+        guildId,
+        next,
         "Could not save the generator.",
-      );
+      ))
+    ) {
       return;
     }
     await showAdminPanel(
@@ -319,13 +305,15 @@ export async function handleAdminInteraction(
       return;
     }
     generator.templateName = value.slice(0, 100);
-    const saved = await saveTempVcConfig(services, guildId, config);
-    if (!saved) {
-      await replyError(
+    if (
+      !(await saveConfigOrReply(
         interaction,
-        "Save Failed",
+        services,
+        guildId,
+        config,
         "Could not save the template.",
-      );
+      ))
+    ) {
       return;
     }
     await showGeneratorPanel(
@@ -355,9 +343,15 @@ export async function handleAdminInteraction(
       return;
     }
     generator.userLimit = limit;
-    const saved = await saveTempVcConfig(services, guildId, config);
-    if (!saved) {
-      await replyError(interaction, "Save Failed", "Could not save the limit.");
+    if (
+      !(await saveConfigOrReply(
+        interaction,
+        services,
+        guildId,
+        config,
+        "Could not save the limit.",
+      ))
+    ) {
       return;
     }
     await showGeneratorPanel(
@@ -389,13 +383,15 @@ export async function handleAdminInteraction(
       );
       return;
     }
-    const saved = await saveTempVcConfig(services, guildId, next);
-    if (!saved) {
-      await replyError(
+    if (
+      !(await saveConfigOrReply(
         interaction,
-        "Save Failed",
+        services,
+        guildId,
+        next,
         "Could not remove the generator.",
-      );
+      ))
+    ) {
       return;
     }
     await showAdminPanel(
@@ -449,24 +445,21 @@ export async function handleAdminInteraction(
       return;
     }
     const config = await getTempVcConfig(services, guildId);
-    const saved = await saveTempVcConfig(services, guildId, {
-      ...config,
-      categoryId: channelId,
-    });
-    if (!saved) {
-      await replyError(
+    const next = { ...config, categoryId: channelId };
+    if (
+      !(await saveConfigOrReply(
         interaction,
-        "Save Failed",
+        services,
+        guildId,
+        next,
         "Could not save the category.",
-      );
+      ))
+    ) {
       return;
     }
     await showCard(
       interaction,
-      configPanelCard(
-        { ...config, categoryId: channelId },
-        `✅ Category set to <#${channelId}>.`,
-      ),
+      configPanelCard(next, `✅ Category set to <#${channelId}>.`),
     );
     return;
   }
@@ -479,22 +472,22 @@ export async function handleAdminInteraction(
     }
     const config = await getTempVcConfig(services, guildId);
     if (key === "ownerLeaveDelete") {
-      const saved = await saveTempVcConfig(services, guildId, {
-        ...config,
-        ownerLeaveDelete: !config.ownerLeaveDelete,
-      });
-      if (!saved) {
-        await replyError(
+      const next = { ...config, ownerLeaveDelete: !config.ownerLeaveDelete };
+      if (
+        !(await saveConfigOrReply(
           interaction,
-          "Save Failed",
+          services,
+          guildId,
+          next,
           "Could not save the setting.",
-        );
+        ))
+      ) {
         return;
       }
       await showCard(
         interaction,
         configPanelCard(
-          { ...config, ownerLeaveDelete: !config.ownerLeaveDelete },
+          next,
           `🚪 Delete on owner leave ${config.ownerLeaveDelete ? "disabled" : "enabled"}.`,
         ),
       );
@@ -545,13 +538,15 @@ export async function handleAdminInteraction(
       ...config,
       [cfgModal]: value,
     });
-    const saved = await saveTempVcConfig(services, guildId, next);
-    if (!saved) {
-      await replyError(
+    if (
+      !(await saveConfigOrReply(
         interaction,
-        "Save Failed",
+        services,
+        guildId,
+        next,
         "Could not save the setting.",
-      );
+      ))
+    ) {
       return;
     }
     await showCard(

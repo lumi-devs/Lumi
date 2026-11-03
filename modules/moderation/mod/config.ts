@@ -1,7 +1,7 @@
 import { asIdList, isSnowflake } from "@lumi/foundation";
 import { ModerationConfigKey } from "./constants.js";
 
-type WarnAction = "timeout" | "kick" | "ban";
+type WarnAction = "timeout" | "kick" | "ban" | "quarantine";
 
 interface WarnThreshold {
   action: WarnAction;
@@ -37,7 +37,12 @@ function asThresholds(value: unknown): Record<string, WarnThreshold> {
       action?: unknown;
       duration?: unknown;
     };
-    if (action !== "timeout" && action !== "kick" && action !== "ban") {
+    if (
+      action !== "timeout" &&
+      action !== "kick" &&
+      action !== "ban" &&
+      action !== "quarantine"
+    ) {
       continue;
     }
     const seconds =

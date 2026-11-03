@@ -4,11 +4,15 @@ import { join, resolve } from "node:path";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import {
+  requireBotOwner,
+  requireGuildForm,
+  requireGuildId,
+} from "$lib/server/auth";
 import { serverConfig } from "$lib/server/env";
 import { getPrisma } from "$lib/server/prisma";
 import { isPrismaCode } from "$lib/server/prismaErrors";
-import { assertCsrf, formString, parseInput } from "$lib/server/validation";
+import { formString, parseInput } from "$lib/server/validation";
 import type { Actions, PageServerLoad } from "./$types";
 
 const RepoSchema = z.object({
@@ -119,8 +123,8 @@ async function repoCandidates(
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  await requireGuildId(event);
+  requireBotOwner(event);
   const prisma = getPrisma();
 
   const [repos, installed] = await Promise.all([
@@ -167,10 +171,8 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   addRepo: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+    requireBotOwner(event);
 
     const parsed = parseInput(RepoSchema, {
       name: formString(data, "name"),
@@ -211,10 +213,8 @@ export const actions: Actions = {
   },
 
   updateRepo: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+    requireBotOwner(event);
 
     const parsed = parseInput(RepoSchema, {
       id: formString(data, "id"),
@@ -257,10 +257,8 @@ export const actions: Actions = {
   },
 
   install: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+    requireBotOwner(event);
 
     const parsed = parseInput(InstallSchema, {
       repoId: formString(data, "repoId"),
@@ -307,10 +305,8 @@ export const actions: Actions = {
   },
 
   update: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+    requireBotOwner(event);
 
     const parsed = parseInput(UpdateSchema, {
       name: formString(data, "name"),
@@ -341,10 +337,8 @@ export const actions: Actions = {
   },
 
   pin: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
+    requireBotOwner(event);
 
     const parsed = parseInput(PinSchema, {
       name: formString(data, "name"),

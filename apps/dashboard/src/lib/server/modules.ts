@@ -14,7 +14,8 @@ export type ConfigFieldType =
   | "multi-role"
   | "json"
   | "select"
-  | "multi-string";
+  | "multi-string"
+  | "escalation";
 
 export interface ConfigField {
   key: string;
@@ -69,6 +70,7 @@ const FieldTypes = new Set<ConfigFieldType>([
   "json",
   "select",
   "multi-string",
+  "escalation",
 ]);
 
 function asString(value: unknown, fallback: string): string {

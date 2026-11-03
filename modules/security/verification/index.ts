@@ -374,12 +374,13 @@ const onInteractionListener: ListenerDefinition = {
       services,
       pendingKey(guildId, userId),
     );
-    if (!pending) {
+    if (!pending || pending.expiresAt <= Date.now()) {
+      if (pending) await clearPending(services, guildId, userId);
       await interaction.reply(
         ephemeralCard(
           makeInfoCard(
-            "Already Verified",
-            "You have already completed verification.",
+            "Verification Expired",
+            "This verification prompt has expired. Ask a staff member to restart it.",
           ),
         ),
       );

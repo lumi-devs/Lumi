@@ -11,7 +11,10 @@ import { TicketsConfigSchema } from "./config.js";
 import { TicketsModuleName } from "./constants.js";
 import { handleTicketInteraction } from "./interactions.js";
 import { ticketMessageListener } from "./listeners.js";
-import { sweepInactiveTickets } from "./ticket-service.js";
+import {
+  sweepExpiredClosedTickets,
+  sweepInactiveTickets,
+} from "./ticket-service.js";
 
 const ticketInteractionListener: ListenerDefinition = {
   event: "interactionCreate",
@@ -26,6 +29,15 @@ const autoCloseTask: TaskDefinition = {
   timezone: "UTC",
   async handler(services) {
     await sweepInactiveTickets(services);
+  },
+};
+
+const retentionTask: TaskDefinition = {
+  name: "retention-cleanup",
+  cron: "23 3 * * *",
+  timezone: "UTC",
+  async handler(services) {
+    await sweepExpiredClosedTickets(services);
   },
 };
 
@@ -47,7 +59,7 @@ const ticketsModule: ModuleDefinition = defineModule({
   },
   commands: [ticketCommand],
   listeners: [ticketMessageListener, ticketInteractionListener],
-  tasks: [autoCloseTask],
+  tasks: [autoCloseTask, retentionTask],
   async onLoad(_services) {
     console.log("[tickets] Module loaded");
     return [];

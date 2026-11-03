@@ -1,7 +1,7 @@
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
 import {
   configFor,
   effectiveModuleEnabled,
@@ -15,12 +15,7 @@ import {
   readGuildSettings,
   setGuildSetting,
 } from "$lib/server/settings";
-import {
-  assertCsrf,
-  checkbox,
-  formString,
-  parseInput,
-} from "$lib/server/validation";
+import { checkbox, formString, parseInput } from "$lib/server/validation";
 import type { Actions, PageServerLoad } from "./$types";
 
 const ToggleSchema = z.object({
@@ -28,8 +23,7 @@ const ToggleSchema = z.object({
 });
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const [catalog, rows, settings] = await Promise.all([
     moduleCatalog(),
     getPrisma().guildModule.findMany({ where: { guildId } }),
@@ -75,10 +69,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   toggle: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(ToggleSchema, {
       module: formString(data, "module"),
@@ -138,10 +129,7 @@ export const actions: Actions = {
   },
 
   removeUnknown: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(ToggleSchema, {
       module: formString(data, "module"),

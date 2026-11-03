@@ -5,7 +5,6 @@ export const QuoteAttachmentName = "quote.png";
 export const QuoteDefaultWatermark = "Make it a Quote";
 
 export const QuoteThemes = ["dark", "color"] as const;
-export type QuoteTheme = (typeof QuoteThemes)[number];
 
 export const QuoteNameSources = ["nickname", "global"] as const;
 export type QuoteNameSource = (typeof QuoteNameSources)[number];

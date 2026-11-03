@@ -157,6 +157,7 @@ const autoroleCommand: CommandDefinition = {
         .setName("status")
         .setDescription("Show autorole configuration and queue"),
     ),
+  prefixOnly: true,
   requiredPermit: PermitNode,
   async execute(interaction, services) {
     const guild = interaction.guild;

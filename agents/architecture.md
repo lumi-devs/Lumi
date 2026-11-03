@@ -109,11 +109,10 @@ Rules:
 5. `loader.discover()` reads manifests; `host.load()` resolves dependencies,
    imports entries, runs `onLoad`, attaches listeners, registers commands, and
    resyncs guild commands.
-6. The `addons-autoupdate` job is registered on the scheduler and the scheduler
-   starts.
+6. The `addons-autoupdate` job is registered on the scheduler.
 7. Discord event handlers are wired, then `client.login()` runs.
 8. On ready: every guild's record and module state are synced, slash commands are
-   registered **per guild**, and the global command set is cleared.
+   registered **per guild**, and the scheduler starts.
 
 ## Process model
 

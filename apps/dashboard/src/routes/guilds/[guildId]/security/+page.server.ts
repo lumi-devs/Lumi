@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
 import { storedBackupStats } from "$lib/server/backups";
 import { type DiscordRole, fetchGuildRoles } from "$lib/server/discord";
 import { publicWebBaseUrl } from "$lib/server/env";
@@ -15,7 +15,6 @@ import {
   setGuildSetting,
 } from "$lib/server/settings";
 import {
-  assertCsrf,
   checkbox,
   formString,
   IdSchema,
@@ -137,8 +136,7 @@ async function currentPanic(guildId: string) {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const settings = await readGuildSettings(guildId);
   const prisma = getPrisma();
 
@@ -229,10 +227,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   saveSecurity: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(SecuritySave, {
       logChannelId: formString(data, "logChannelId"),
@@ -253,10 +248,7 @@ export const actions: Actions = {
   },
 
   savePanic: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(PanicSave, {
       enabled: checkbox(data, "enabled"),
@@ -280,10 +272,7 @@ export const actions: Actions = {
   },
 
   saveBackups: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(BackupsSave, {
       enabled: checkbox(data, "enabled"),
@@ -304,10 +293,7 @@ export const actions: Actions = {
   },
 
   previewBackup: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    assertCsrf(event, data);
+    const { guildId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(BackupId, formString(data, "id"));
     if (!parsed.ok) return fail(400, { error: parsed.message });
@@ -324,10 +310,7 @@ export const actions: Actions = {
   },
 
   restoreBackup: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(BackupId, formString(data, "id"));
     if (!parsed.ok) return fail(400, { error: parsed.message });
@@ -364,18 +347,12 @@ export const actions: Actions = {
   },
 
   cancelRestore: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    assertCsrf(event, data);
+    await requireGuildForm(event);
     return { success: "Restore rejected. Nothing was changed." };
   },
 
   saveVerification: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(VerificationSave, {
       enabled: checkbox(data, "enabled"),
@@ -427,10 +404,7 @@ export const actions: Actions = {
   },
 
   startPanic: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(PanicAction, {
       minutes: formString(data, "minutes", "30"),
@@ -468,10 +442,7 @@ export const actions: Actions = {
   },
 
   endPanic: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId } = await requireGuildForm(event);
 
     await getRedis().del(panicKey(guildId));
     await getRedis().del(moduleLockKey(guildId));
@@ -485,10 +456,7 @@ export const actions: Actions = {
   },
 
   createVerification: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(VerificationCreate, {
       userId: formString(data, "userId"),
@@ -545,10 +513,7 @@ export const actions: Actions = {
   },
 
   revokeVerification: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().verificationToken.deleteMany({
@@ -568,10 +533,7 @@ export const actions: Actions = {
   },
 
   deleteBackup: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const id = formString(data, "id");
     const removed = await getPrisma().securityBackup.deleteMany({

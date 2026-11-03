@@ -32,6 +32,7 @@ import {
 import { Priorities, PriorityEmoji, TicketsModuleName } from "./constants.js";
 import { escapeHtml } from "./html.js";
 import { panelCard, ticketInfoCard } from "./panel.js";
+import { claimingEnabledFor, feedbackEnabledFor } from "./policy.js";
 import {
   findTicketByChannel,
   findTicketById,
@@ -206,7 +207,11 @@ function formatCategories(
     const pings = category.pingRoleIds.length
       ? category.pingRoleIds.map((id) => `<@&${id}>`).join(", ")
       : "none";
-    return `${category.emoji ? `${category.emoji} ` : ""}**${category.name}**${category.enabled ? "" : " *(disabled)*"} — ${category.description ?? "No description"}\n-# Staff: ${roles} · Ping: ${pings} · Priority: ${category.defaultPriority} · Questions: ${questionsOf(category).length} · Template: \`${category.namingTemplate}\``;
+    const required = category.requiredRoleIds.length
+      ? category.requiredRoleIds.map((id) => `<@&${id}>`).join(", ")
+      : "none";
+    const limits = `Cooldown: ${category.cooldownSeconds}s · User limit: ${category.memberLimit || "∞"} · Category limit: ${category.totalLimit || "∞"} · Claiming: ${category.claimingEnabled ? "on" : "off"} · Feedback: ${category.feedbackEnabled ? "on" : "off"}`;
+    return `${category.emoji ? `${category.emoji} ` : ""}**${category.name}**${category.enabled ? "" : " *(disabled)*"} — ${category.description ?? "No description"}\n-# Staff: ${roles} · Ping: ${pings} · Required: ${required} · Priority: ${category.defaultPriority} · Questions: ${questionsOf(category).length} · Template: \`${category.namingTemplate}\`\n-# ${limits}`;
   });
 }
 
@@ -354,11 +359,24 @@ async function categoryAdd(
         interaction.options.getString("description")?.slice(0, 500) ?? null,
       staffRoleIds: parseIdList(interaction.options.getString("staff_roles")),
       pingRoleIds: parseIdList(interaction.options.getString("ping_roles")),
+      requiredRoleIds: parseIdList(
+        interaction.options.getString("required_roles"),
+      ),
       questions,
       namingTemplate:
         interaction.options.getString("naming_template")?.slice(0, 100) ??
         "ticket-{user}",
       defaultPriority: isPriority(defaultPriority) ? defaultPriority : "normal",
+      openingMessage:
+        interaction.options.getString("opening_message")?.slice(0, 2000) ?? null,
+      cooldownSeconds:
+        interaction.options.getInteger("cooldown_seconds") ?? 0,
+      memberLimit: interaction.options.getInteger("member_limit") ?? 0,
+      totalLimit: interaction.options.getInteger("total_limit") ?? 0,
+      claimingEnabled:
+        interaction.options.getBoolean("claiming_enabled") ?? true,
+      feedbackEnabled:
+        interaction.options.getBoolean("feedback_enabled") ?? true,
       position,
     });
     await replyCard(
@@ -420,11 +438,30 @@ async function categoryEdit(
   if (staffRoles !== null) data.staffRoleIds = parseIdList(staffRoles);
   const pingRoles = interaction.options.getString("ping_roles");
   if (pingRoles !== null) data.pingRoleIds = parseIdList(pingRoles);
+  const requiredRoles = interaction.options.getString("required_roles");
+  if (requiredRoles !== null)
+    data.requiredRoleIds = parseIdList(requiredRoles);
   const namingTemplate = interaction.options.getString("naming_template");
   if (namingTemplate !== null)
     data.namingTemplate = namingTemplate.slice(0, 100);
   const defaultPriority = interaction.options.getString("default_priority");
   if (isPriority(defaultPriority)) data.defaultPriority = defaultPriority;
+  const openingMessage = clearable(
+    interaction.options.getString("opening_message"),
+  );
+  if (openingMessage !== undefined) {
+    data.openingMessage = openingMessage?.slice(0, 2000) ?? null;
+  }
+  const cooldownSeconds = interaction.options.getInteger("cooldown_seconds");
+  if (cooldownSeconds !== null) data.cooldownSeconds = cooldownSeconds;
+  const memberLimit = interaction.options.getInteger("member_limit");
+  if (memberLimit !== null) data.memberLimit = memberLimit;
+  const totalLimit = interaction.options.getInteger("total_limit");
+  if (totalLimit !== null) data.totalLimit = totalLimit;
+  const claimingEnabled = interaction.options.getBoolean("claiming_enabled");
+  if (claimingEnabled !== null) data.claimingEnabled = claimingEnabled;
+  const feedbackEnabled = interaction.options.getBoolean("feedback_enabled");
+  if (feedbackEnabled !== null) data.feedbackEnabled = feedbackEnabled;
   const enabled = interaction.options.getBoolean("enabled");
   if (enabled !== null) data.enabled = enabled;
   const rawQuestions = interaction.options.getString("questions");
@@ -634,10 +671,20 @@ async function claimTicket(
     }
     await services.helpers.tickets.updateTicket(context.ticket.id, {
       claimedBy: null,
+      claimedAt: null,
     });
     await replyCard(
       interaction,
       makeSuccessCard("Ticket Unclaimed", "This ticket is now unclaimed."),
+    );
+    return;
+  }
+
+  if (!claimingEnabledFor(context.ticket.category)) {
+    await replyError(
+      interaction,
+      "Claiming Disabled",
+      "Claiming is disabled for this category.",
     );
     return;
   }
@@ -659,6 +706,7 @@ async function claimTicket(
   }
   await services.helpers.tickets.updateTicket(context.ticket.id, {
     claimedBy: interaction.user.id,
+    claimedAt: new Date(),
   });
   await replyCard(
     interaction,
@@ -863,6 +911,8 @@ async function tagCommand(
   if (action === "add") {
     const name = interaction.options.getString("name", true).trim();
     const content = interaction.options.getString("content", true).trim();
+    const rawRegex = interaction.options.getString("regex")?.trim() ?? null;
+    const autoTag = interaction.options.getBoolean("auto_tag") ?? false;
     if (!name || !content) {
       await replyError(
         interaction,
@@ -871,11 +921,33 @@ async function tagCommand(
       );
       return;
     }
+    if (rawRegex) {
+      try {
+        new RegExp(rawRegex, "i");
+      } catch {
+        await replyError(
+          interaction,
+          "Invalid Regex",
+          "The auto-tag pattern is not a valid regular expression.",
+        );
+        return;
+      }
+    }
+    if (autoTag && !rawRegex) {
+      await replyError(
+        interaction,
+        "Regex Required",
+        "Auto-tagging needs a regex pattern to match messages.",
+      );
+      return;
+    }
     try {
       await services.helpers.tickets.createTag({
         guildId,
         name: name.slice(0, 50),
         content: content.slice(0, 2000),
+        regex: rawRegex?.slice(0, 200) ?? null,
+        autoTag,
         createdBy: interaction.user.id,
       });
       await replyCard(
@@ -887,6 +959,74 @@ async function tagCommand(
         interaction,
         "Tag Not Created",
         "A tag with that name may already exist.",
+      );
+    }
+    return;
+  }
+
+  if (action === "edit") {
+    const name = interaction.options.getString("name", true).trim();
+    const data: {
+      content?: string;
+      regex?: string | null;
+      autoTag?: boolean;
+    } = {};
+    const content = interaction.options.getString("content");
+    if (content !== null) data.content = content.trim().slice(0, 2000);
+    const regex = clearable(interaction.options.getString("regex"));
+    if (regex !== undefined) {
+      if (regex) {
+        try {
+          new RegExp(regex, "i");
+        } catch {
+          await replyError(
+            interaction,
+            "Invalid Regex",
+            "The auto-tag pattern is not a valid regular expression.",
+          );
+          return;
+        }
+      }
+      data.regex = regex?.slice(0, 200) ?? null;
+    }
+    const autoTag = interaction.options.getBoolean("auto_tag");
+    if (autoTag !== null) data.autoTag = autoTag;
+    if (Object.keys(data).length === 0) {
+      await replyCard(
+        interaction,
+        makeWarningCard("Nothing To Change", "Provide at least one field to edit."),
+      );
+      return;
+    }
+    const existing = await services.helpers.tickets
+      .findTag(guildId, name)
+      .catch(() => null);
+    if (!existing) {
+      await replyCard(
+        interaction,
+        makeInfoCard("Tag Missing", `No tag named **${name}** exists.`),
+      );
+      return;
+    }
+    if (data.autoTag === true && !(data.regex ?? existing.regex)) {
+      await replyError(
+        interaction,
+        "Regex Required",
+        "Auto-tagging needs a regex pattern to match messages.",
+      );
+      return;
+    }
+    try {
+      await services.helpers.tickets.updateTag(guildId, name, data);
+      await replyCard(
+        interaction,
+        makeSuccessCard("Tag Updated", `Tag **${name}** has been updated.`),
+      );
+    } catch {
+      await replyError(
+        interaction,
+        "Tag Not Updated",
+        "The tag could not be updated.",
       );
     }
     return;
@@ -917,6 +1057,8 @@ async function tagCommand(
       .catch(() => [])) as Array<{
       name: string;
       content: string;
+      regex: string | null;
+      autoTag: boolean;
       createdBy: string;
     }>;
     if (tags.length === 0) {
@@ -930,7 +1072,10 @@ async function tagCommand(
       interaction,
       makeListCard(
         "Ticket Tags",
-        tags.map((tag) => `**${tag.name}** — ${tag.content.slice(0, 120)}`),
+        tags.map(
+          (tag) =>
+            `**${tag.name}**${tag.autoTag ? ` *(auto: \`${tag.regex ?? "—"}\`)*` : ""} — ${tag.content.slice(0, 120)}`,
+        ),
       ),
     );
     return;
@@ -981,6 +1126,12 @@ async function tagCommand(
       attachments: [],
     })
     .catch(() => undefined);
+  await services.helpers.tickets
+    .recordFirstResponse(context.ticket.id, interaction.user.id, new Date())
+    .catch(() => undefined);
+  await services.helpers.tickets
+    .updateTicket(context.ticket.id, { lastActivityAt: new Date() })
+    .catch(() => undefined);
   await replyCard(
     interaction,
     makeSuccessCard("Tag Sent", `Posted **${name}** in the ticket thread.`),
@@ -1011,7 +1162,7 @@ async function feedbackCommand(
     ticket,
     interaction.user.id,
     rating,
-    config.feedbackEnabled,
+    feedbackEnabledFor(config, ticket.category),
   );
   if (!validation.ok) {
     await replyError(interaction, "Feedback Not Accepted", validation.reason);
@@ -1192,6 +1343,55 @@ const Command = new SlashCommandBuilder()
           )
           .addStringOption((option) =>
             option
+              .setName("required_roles")
+              .setDescription("Roles required to open this category")
+              .setRequired(false),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("opening_message")
+              .setDescription("Message shown at the top of new tickets")
+              .setRequired(false)
+              .setMaxLength(2000),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("cooldown_seconds")
+              .setDescription("Per-user cooldown between tickets (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(86400),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("member_limit")
+              .setDescription("Max open tickets per user in this category (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(25),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("total_limit")
+              .setDescription("Max open tickets in this category (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(500),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("claiming_enabled")
+              .setDescription("Whether staff can claim tickets")
+              .setRequired(false),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("feedback_enabled")
+              .setDescription("Whether feedback is collected on close")
+              .setRequired(false),
+          )
+          .addStringOption((option) =>
+            option
               .setName("naming_template")
               .setDescription(
                 "Thread name template: {user}, {username}, {id}, {category}, {number}",
@@ -1261,6 +1461,55 @@ const Command = new SlashCommandBuilder()
             option
               .setName("ping_roles")
               .setDescription("Comma-separated ping role IDs, or - to clear")
+              .setRequired(false),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("required_roles")
+              .setDescription("Roles required to open, or - to clear")
+              .setRequired(false),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("opening_message")
+              .setDescription("Opening message, or - to clear")
+              .setRequired(false)
+              .setMaxLength(2000),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("cooldown_seconds")
+              .setDescription("Per-user cooldown between tickets (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(86400),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("member_limit")
+              .setDescription("Max open tickets per user in this category (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(25),
+          )
+          .addIntegerOption((option) =>
+            option
+              .setName("total_limit")
+              .setDescription("Max open tickets in this category (0 disables)")
+              .setRequired(false)
+              .setMinValue(0)
+              .setMaxValue(500),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("claiming_enabled")
+              .setDescription("Whether staff can claim tickets")
+              .setRequired(false),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("feedback_enabled")
+              .setDescription("Whether feedback is collected on close")
               .setRequired(false),
           )
           .addStringOption((option) =>
@@ -1439,6 +1688,51 @@ const Command = new SlashCommandBuilder()
               .setDescription("Reply content")
               .setRequired(true)
               .setMaxLength(2000),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("regex")
+              .setDescription("Regex that triggers this auto-tag reply")
+              .setRequired(false)
+              .setMaxLength(200),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("auto_tag")
+              .setDescription("Reply automatically when a message matches the regex")
+              .setRequired(false),
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("edit")
+          .setDescription("Edit a canned reply")
+          .addStringOption((option) =>
+            option
+              .setName("name")
+              .setDescription("Tag name")
+              .setRequired(true)
+              .setMaxLength(50),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("content")
+              .setDescription("New reply content")
+              .setRequired(false)
+              .setMaxLength(2000),
+          )
+          .addStringOption((option) =>
+            option
+              .setName("regex")
+              .setDescription("Auto-tag regex, or - to clear")
+              .setRequired(false)
+              .setMaxLength(200),
+          )
+          .addBooleanOption((option) =>
+            option
+              .setName("auto_tag")
+              .setDescription("Reply automatically when a message matches the regex")
+              .setRequired(false),
           ),
       )
       .addSubcommand((sub) =>

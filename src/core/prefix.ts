@@ -92,17 +92,28 @@ function createSyntheticInteraction(
   let replyMessage: Message | undefined;
 
   const commandJson = command.data.toJSON();
-  const topOptions =
-    "options" in commandJson ? (commandJson.options ?? []) : [];
-  const subcommand = topOptions.find(
-    (option) =>
-      (option.type === 1 || option.type === 2) && option.name === args[0],
+  interface CommandOption {
+    readonly name: string;
+    readonly type: number;
+    readonly options?: readonly CommandOption[];
+  }
+  const topOptions = (("options" in commandJson ? commandJson.options : []) ??
+    []) as readonly CommandOption[];
+  const group = topOptions.find(
+    (option) => option.type === 2 && option.name === args[0],
   );
-  const definitions =
-    subcommand && (subcommand.type === 1 || subcommand.type === 2)
+  const groupOptions = group?.options ?? [];
+  const subcommand = group
+    ? groupOptions.find(
+        (option) => option.type === 1 && option.name === args[1],
+      )
+    : topOptions.find((option) => option.type === 1 && option.name === args[0]);
+  const definitions = group
+    ? (subcommand?.options ?? [])
+    : subcommand
       ? (subcommand.options ?? [])
       : topOptions.filter((option) => option.type !== 1 && option.type !== 2);
-  const rest = subcommand ? args.slice(1) : args;
+  const rest = group ? args.slice(2) : subcommand ? args.slice(1) : args;
   const values = new Map<string, string>();
   const positional: string[] = [];
 
@@ -177,7 +188,7 @@ function createSyntheticInteraction(
     deferred: () => deferred,
     options: {
       getSubcommand: () => subcommand?.name ?? null,
-      getSubcommandGroup: () => null,
+      getSubcommandGroup: () => group?.name ?? null,
       getString: raw,
       getInteger: (name: string) => {
         const value = raw(name);

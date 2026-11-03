@@ -9,9 +9,14 @@ submodules:
 | `roles-voiceroles` | `modules/roles/voiceroles` | `roles.voiceroles` |
 | `roles-bulkrole`   | `modules/roles/bulkrole`   | `roles.bulkrole`   |
 
-All three require **Manage Server** or their permit node. Commands are Components
+All three require **Manage Server** or their permit node. Replies are Components
 V2 cards only. Shared access, config, and hierarchy helpers live in
 `modules/roles/shared.ts`.
+
+`/config roles-autorole` and `/config roles-voiceroles` open ephemeral management
+panels (also reachable from `/lumi` → Modules). The `autorole` and `voiceroles`
+command definitions are **prefix-only** and are not registered as slash
+commands; `/bulkrole` remains a slash command.
 
 ## Autorole
 
@@ -56,16 +61,23 @@ row per guild and member with the pending role IDs and `assign_at`.
 The bot must own a role higher than every target role. Managed roles and
 `@everyone` cannot be assigned. Guild owner status bypasses the position check.
 
-### Commands
+### Management
 
-- `/autorole set roles:<mentions/ids> [delay]`
-- `/autorole filters [min_age_hours] [required_roles] [ignored_roles] [ignore_bots] [only_on_join]`
-- `/autorole delay seconds:<n>`
-- `/autorole run [user]` — process due rows now; with `user`, queue that member
+- `/config roles-autorole` (or `/lumi` → Modules → Autorole) opens an ephemeral
+  panel with the role picker, delay modal, filters (minimum account age,
+  required/ignored roles, ignore bots, only-on-join), run/pause/cancel queue
+  actions, and a member picker to queue one member immediately.
+
+The prefix-only command remains available:
+
+- `,autorole set roles:<mentions/ids> [delay]`
+- `,autorole filters [min_age_hours] [required_roles] [ignored_roles] [ignore_bots] [only_on_join]`
+- `,autorole delay seconds:<n>`
+- `,autorole run [user]` — process due rows now; with `user`, queue that member
   using the filters. `only_on_join` rejects a manual member run.
-- `/autorole resume` — clear `paused`.
-- `/autorole cancel [user]` — delete all or one member's pending rows.
-- `/autorole status` — show config and pending count.
+- `,autorole resume` — clear `paused`.
+- `,autorole cancel [user]` — delete all or one member's pending rows.
+- `,autorole status` — show config and pending count.
 
 ## Voice Roles
 
@@ -106,12 +118,19 @@ Active memberships are durable in `voice_role_sessions` (`VoiceRoleSession`):
 
 Role add and remove use the same hierarchy checks as autorole.
 
-### Commands
+### Management
 
-- `/voiceroles add channel:<voice/stage> role:<role> [grace] [category]`
-- `/voiceroles remove channel:<channel>`
-- `/voiceroles list`
-- `/voiceroles toggle channel:<channel>`
+- `/config roles-voiceroles` (or `/lumi` → Modules → Voice Roles) opens an
+  ephemeral panel listing mappings with pagination. Adding a mapping asks for a
+  voice/stage channel, then an optional category and the role. Each mapping can
+  be enabled/disabled, given a grace period, re-categorised, or removed.
+
+The prefix-only command remains available:
+
+- `,voiceroles add channel:<voice/stage> role:<role> [grace] [category]`
+- `,voiceroles remove channel:<channel>`
+- `,voiceroles list`
+- `,voiceroles toggle channel:<channel>`
 
 Removing a mapping also deletes its sessions.
 

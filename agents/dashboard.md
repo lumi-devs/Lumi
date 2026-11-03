@@ -132,6 +132,9 @@ BOT_TOKEN=
 # Bot RPC — for ALL live data
 RPC_URL=http://127.0.0.1:8091
 RPC_INTERNAL_TOKEN=optional-shared-secret
+
+# Bot owners allowed to manage add-ons and wildcard permits
+OWNER_IDS=
 ```
 
 ## Security Model
@@ -140,6 +143,9 @@ RPC_INTERNAL_TOKEN=optional-shared-secret
 - User's accessible guilds = intersection of (user's managed guilds) ∩ (bot's guilds)
 - All RPC calls include `RPC_INTERNAL_TOKEN` — only trusted dashboard instances can query
 - Bot token is only used for role assignment in web verification; never exposed to dashboard frontend
+- Add-on management requires `OWNER_IDS`; guild managers cannot install or update global code
+- Creating, editing, assigning, or deleting a permit containing `*` requires
+  `OWNER_IDS`; guild `Extra Owner` holders cannot mint another wildcard permit
 
 ## Adding New Live Data Endpoints
 

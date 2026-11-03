@@ -1,7 +1,11 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
-import type { ModuleDefinition, ModuleServices } from "@lumi/module-kit";
+import type {
+  Disposer,
+  ModuleDefinition,
+  ModuleServices,
+} from "@lumi/module-kit";
 import {
   type ModuleManifest,
   supermoduleManifestFields,
@@ -170,8 +174,22 @@ export function submoduleManifestName(
 export class ModuleLoader {
   private modules = new Map<string, LoadedModule>();
   private moduleServices = new Map<string, ModuleServices>();
+  private moduleDisposers = new Map<string, Disposer[]>();
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
   private services = {} as ModuleServices;
+
+  private async runDisposers(moduleName: string): Promise<void> {
+    const disposers = this.moduleDisposers.get(moduleName);
+    if (!disposers) return;
+    this.moduleDisposers.delete(moduleName);
+    for (const dispose of disposers) {
+      try {
+        await dispose();
+      } catch (error) {
+        console.error(`Failed to dispose module ${moduleName}:`, error);
+      }
+    }
+  }
 
   addRoot(path: string, origin: "bundled" | "addon"): void {
     this.roots.push({ path: resolve(path), origin });
@@ -436,8 +454,9 @@ export class ModuleLoader {
         ...services,
         moduleName: name,
       } as unknown as ModuleServices;
+      let disposers: Disposer[] = [];
       try {
-        await module.definition.onLoad(moduleServices);
+        disposers = await module.definition.onLoad(moduleServices);
       } catch (error) {
         console.error(`Failed to initialize module ${name}:`, error);
         continue;
@@ -445,6 +464,7 @@ export class ModuleLoader {
 
       this.moduleServices.set(name, moduleServices);
       this.modules.set(name, module);
+      this.moduleDisposers.set(name, Array.isArray(disposers) ? disposers : []);
     }
 
     return Array.from(this.modules.values());
@@ -528,12 +548,17 @@ export class ModuleLoader {
   async reload(moduleName: string): Promise<void> {
     const module = this.modules.get(moduleName);
     if (!module) return;
+    if (!module.isSubmodule) return;
 
     const services =
       this.moduleServices.get(moduleName) ??
       ({ ...this.services, moduleName: moduleName } as ModuleServices);
 
-    await module.definition.onUnload(services);
+    try {
+      await module.definition.onUnload(services);
+    } finally {
+      await this.runDisposers(moduleName);
+    }
 
     const definition = await this.loadDefinition(module.path, module.manifest);
     if (!definition) {
@@ -541,7 +566,11 @@ export class ModuleLoader {
     }
 
     module.definition = definition;
-    await definition.onLoad(services);
+    const disposers = await definition.onLoad(services);
+    this.moduleDisposers.set(
+      moduleName,
+      Array.isArray(disposers) ? disposers : [],
+    );
   }
 
   async unload(moduleName: string): Promise<LoadedModule[]> {
@@ -559,6 +588,7 @@ export class ModuleLoader {
       } catch (error) {
         console.error(`Failed to unload module ${name}:`, error);
       }
+      await this.runDisposers(name);
       this.modules.delete(name);
       this.moduleServices.delete(name);
     }

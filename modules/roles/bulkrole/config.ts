@@ -1,6 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
-import { readConfig, saveConfig } from "../shared.js";
+import { readConfig } from "../shared.js";
 
 export const BulkRoleModuleName = "roles-bulkrole";
 export const BulkRoleConfigKey = BulkRoleModuleName;
@@ -23,12 +23,4 @@ export function getBulkRoleConfig(
     BulkRoleConfigSchema,
     BulkRoleModuleName,
   );
-}
-
-export function saveBulkRoleConfig(
-  services: ModuleServices,
-  guildId: string,
-  config: BulkRoleConfig,
-): Promise<boolean> {
-  return saveConfig(services, guildId, BulkRoleConfigKey, config);
 }

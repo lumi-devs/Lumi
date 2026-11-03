@@ -80,6 +80,7 @@ export interface CommandDefinition {
     services: ModuleServices,
   ) => Promise<void>;
   aliases?: readonly string[];
+  prefixOnly?: boolean;
   requiredPermit?: string;
   requiresAdmin?: boolean;
   ownerOnly?: boolean;

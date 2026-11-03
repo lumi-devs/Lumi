@@ -1,13 +1,11 @@
+import { timingSafeEqual } from "node:crypto";
 import { error, type RequestEvent } from "@sveltejs/kit";
 import { type ZodType, z } from "zod";
 
 function safeEqual(left: string, right: string): boolean {
-  if (left.length !== right.length) return false;
-  let diff = 0;
-  for (let i = 0; i < left.length; i += 1) {
-    diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
-  }
-  return diff === 0;
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 export function assertCsrf(event: RequestEvent, data: FormData): string {
@@ -33,14 +31,6 @@ export function formString(
 ): string {
   const value = data.get(name);
   return typeof value === "string" ? value : fallback;
-}
-
-export function optionalFormString(
-  data: FormData,
-  name: string,
-): string | null {
-  const value = formString(data, name).trim();
-  return value === "" ? null : value;
 }
 
 export function checkbox(data: FormData, name: string): boolean {

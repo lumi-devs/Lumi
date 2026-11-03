@@ -2,17 +2,15 @@ import {
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
+  type MessageCreateOptions,
+  type MessageEditOptions,
+  MessageFlags,
+  type MessageMentionOptions,
+  type MessageReplyOptions,
   SectionBuilder,
   TextDisplayBuilder,
   ThumbnailBuilder,
-} from "@discordjs/builders";
-import type {
-  MessageCreateOptions,
-  MessageEditOptions,
-  MessageMentionOptions,
-  MessageReplyOptions,
 } from "discord.js";
-import { MessageFlags } from "discord.js";
 import {
   formatBreadcrumbs,
   formatStatusBadge,

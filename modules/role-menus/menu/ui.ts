@@ -3,7 +3,6 @@ import {
   createActionButton,
   createStringSelectMenu,
   makeCard,
-  makeInfoCard,
   makeListCard,
   makeSuccessCard,
   makeWarningCard,
@@ -189,13 +188,4 @@ export function roleMenuListCard(lines: readonly string[]): CardReply {
   return makeListCard("🎭 Role Menus", [...lines], {
     footer: "Use /rolemenu post to publish a menu",
   });
-}
-
-export function roleMenuInfoCard(
-  title: string,
-  lines: string | readonly string[],
-): CardReply {
-  return makeInfoCard(`🎭 ${title}`, [
-    ...(typeof lines === "string" ? [lines] : lines),
-  ]);
 }

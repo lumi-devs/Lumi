@@ -1,13 +1,20 @@
 import {
+  type APIMessageComponentEmoji,
   ChannelSelectMenuBuilder,
+  type ChannelType,
   MentionableSelectMenuBuilder,
   RoleSelectMenuBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
   UserSelectMenuBuilder,
-} from "@discordjs/builders";
-import type { APIMessageComponentEmoji, ChannelType } from "discord.js";
+} from "discord.js";
 import { setEmojiIfPresent } from "./emoji.js";
+
+export const SelectOptionLimit = 25;
+export const SelectTextLimit = 100;
+
+const clipText = (text: string, limit: number): string =>
+  text.length > limit ? text.slice(0, limit) : text;
 
 function applySelectMenuOptions(
   menu:
@@ -17,11 +24,27 @@ function applySelectMenuOptions(
     | MentionableSelectMenuBuilder
     | StringSelectMenuBuilder,
   opts: SelectMenuOptions,
+  optionCount?: number,
 ): void {
-  if (opts.placeholder) menu.setPlaceholder(opts.placeholder);
-  if (opts.minValues !== undefined) menu.setMinValues(opts.minValues);
-  if (opts.maxValues !== undefined) menu.setMaxValues(opts.maxValues);
+  if (opts.placeholder) {
+    menu.setPlaceholder(clipText(opts.placeholder, SelectTextLimit));
+  }
   if (opts.disabled !== undefined) menu.setDisabled(opts.disabled);
+
+  const limit = optionCount ?? SelectOptionLimit;
+  const min =
+    opts.minValues === undefined
+      ? undefined
+      : Math.max(0, Math.min(limit, Math.trunc(opts.minValues)));
+  const max =
+    opts.maxValues === undefined
+      ? undefined
+      : Math.max(0, Math.min(limit, Math.trunc(opts.maxValues)));
+  if (min !== undefined) menu.setMinValues(min);
+  if (max !== undefined) menu.setMaxValues(max);
+  if (min !== undefined && max !== undefined && min > max) {
+    menu.setMinValues(max);
+  }
 }
 
 export interface SelectMenuOptions {
@@ -89,25 +112,59 @@ export function createMentionableSelectMenu(
   return menu;
 }
 
+function normalizeStringOption(
+  input: StringSelectOptionInput | StringSelectMenuOptionBuilder,
+): StringSelectMenuOptionBuilder | null {
+  const data =
+    input instanceof StringSelectMenuOptionBuilder
+      ? input.data
+      : {
+          label: input.label,
+          value: input.value,
+          description: input.description,
+          emoji: input.emoji,
+          default: input.default,
+        };
+  const label =
+    data.label === undefined ? "" : clipText(data.label, SelectTextLimit);
+  const value =
+    data.value === undefined ? "" : clipText(data.value, SelectTextLimit);
+  if (label.length === 0 || value.length === 0) return null;
+
+  const option = new StringSelectMenuOptionBuilder()
+    .setLabel(label)
+    .setValue(value);
+  if (data.description) {
+    option.setDescription(clipText(data.description, SelectTextLimit));
+  }
+  if (data.emoji) {
+    setEmojiIfPresent(option, data.emoji as string | APIMessageComponentEmoji);
+  }
+  if (data.default !== undefined) option.setDefault(data.default);
+  return option;
+}
+
 export function createStringSelectMenu(
   options: CreateStringSelectMenuOptions,
 ): StringSelectMenuBuilder {
   const menu = new StringSelectMenuBuilder().setCustomId(options.customId);
-  applySelectMenuOptions(menu, options);
-  if (options.options && options.options.length > 0) {
-    const formattedOptions = options.options.map((opt) => {
-      if (opt instanceof StringSelectMenuOptionBuilder) {
-        return opt;
-      }
-      const optionBuilder = new StringSelectMenuOptionBuilder()
-        .setLabel(opt.label)
-        .setValue(opt.value);
-      if (opt.description) optionBuilder.setDescription(opt.description);
-      setEmojiIfPresent(optionBuilder, opt.emoji);
-      if (opt.default !== undefined) optionBuilder.setDefault(opt.default);
-      return optionBuilder;
-    });
+  const formattedOptions: StringSelectMenuOptionBuilder[] = [];
+  const seenValues = new Set<string>();
+
+  for (const input of options.options ?? []) {
+    const option = normalizeStringOption(input);
+    const value = option?.data.value;
+    if (!option || !value || seenValues.has(value)) continue;
+    seenValues.add(value);
+    formattedOptions.push(option);
+    if (formattedOptions.length === SelectOptionLimit) break;
+  }
+
+  if (formattedOptions.length > 0) {
     menu.addOptions(formattedOptions);
+    applySelectMenuOptions(menu, options, formattedOptions.length);
+  } else {
+    applySelectMenuOptions(menu, options);
   }
 
   return menu;

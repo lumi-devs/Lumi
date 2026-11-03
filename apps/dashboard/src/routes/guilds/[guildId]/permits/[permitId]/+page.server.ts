@@ -2,12 +2,13 @@ import { Prisma } from "@prisma/client";
 import { error, fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
+import { serverConfig } from "$lib/server/env";
+import { canManageOwnerOnlyPermit } from "$lib/server/permissions";
 import { getPrisma } from "$lib/server/prisma";
 import { describeError, isPrismaCode } from "$lib/server/prismaErrors";
 import { fetchPermitNodes } from "$lib/server/rpc.js";
 import {
-  assertCsrf,
   DateInputSchema,
   formString,
   IdSchema,
@@ -60,8 +61,7 @@ async function loadPermit(guildId: string, permitId: number) {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const parsedId = IdParam.safeParse(event.params.permitId);
   if (!parsedId.success) throw error(404, "Permit not found.");
 
@@ -103,10 +103,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   update: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsedId = IdParam.safeParse(event.params.permitId);
     if (!parsedId.success) return fail(404, { error: "Permit not found." });
@@ -128,6 +125,15 @@ export const actions: Actions = {
       conditions: formString(data, "conditions"),
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
+    const ownerIds = serverConfig().ownerIds;
+    if (
+      !canManageOwnerOnlyPermit(userId, permit.nodes, ownerIds) ||
+      !canManageOwnerOnlyPermit(userId, parsed.data.nodes, ownerIds)
+    ) {
+      return fail(403, {
+        error: "Only bot owners can edit permits containing *.",
+      });
+    }
 
     try {
       await getPrisma().permit.update({
@@ -172,10 +178,7 @@ export const actions: Actions = {
   },
 
   delete: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId } = await requireGuildForm(event);
 
     const parsedId = IdParam.safeParse(event.params.permitId);
     if (!parsedId.success) return fail(404, { error: "Permit not found." });
@@ -183,6 +186,13 @@ export const actions: Actions = {
     if (!permit) return fail(404, { error: "Permit not found." });
     if (permit.builtin) {
       return fail(403, { error: "Built-in permits cannot be deleted." });
+    }
+    if (
+      !canManageOwnerOnlyPermit(userId, permit.nodes, serverConfig().ownerIds)
+    ) {
+      return fail(403, {
+        error: "Only bot owners can delete permits containing *.",
+      });
     }
 
     await getPrisma().permit.delete({ where: { id: permit.id } });
@@ -198,15 +208,19 @@ export const actions: Actions = {
   },
 
   assign: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsedId = IdParam.safeParse(event.params.permitId);
     if (!parsedId.success) return fail(404, { error: "Permit not found." });
     const permit = await loadPermit(guildId, parsedId.data);
     if (!permit) return fail(404, { error: "Permit not found." });
+    if (
+      !canManageOwnerOnlyPermit(userId, permit.nodes, serverConfig().ownerIds)
+    ) {
+      return fail(403, {
+        error: "Only bot owners can assign permits containing *.",
+      });
+    }
 
     const parsed = parseInput(AssignSchema, {
       targetType: formString(data, "targetType"),
@@ -253,15 +267,19 @@ export const actions: Actions = {
   },
 
   unassign: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsedId = IdParam.safeParse(event.params.permitId);
     if (!parsedId.success) return fail(404, { error: "Permit not found." });
     const permit = await loadPermit(guildId, parsedId.data);
     if (!permit) return fail(404, { error: "Permit not found." });
+    if (
+      !canManageOwnerOnlyPermit(userId, permit.nodes, serverConfig().ownerIds)
+    ) {
+      return fail(403, {
+        error: "Only bot owners can unassign permits containing *.",
+      });
+    }
 
     const assignmentId = z.coerce
       .number()

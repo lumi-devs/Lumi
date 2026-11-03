@@ -9,8 +9,10 @@ Commands come from two sources:
 
 Slash and prefix commands share the same definitions. The default prefix is `,`
 and each guild can override it in `/lumi` → Settings. Mentioning the bot also
-works as a prefix. Administrative actions still live inside panels rather than
-one command per action; `/permit` exists for scripted create/explain flows.
+works as a prefix. Set `prefixOnly: true` on a command definition to keep it
+usable from the prefix dispatcher while excluding it from slash registration and
+the slash command sync payload. Administrative actions live inside panels rather
+than one command per action; `/permit` exists for scripted create/explain flows.
 
 ## Built-in vs module
 
@@ -41,9 +43,17 @@ on one permit; its node option autocompletes from built-in, module, and existing
 custom nodes. `/permit explain` checks every node when its node option is
 omitted. `/permit` requires **Manage Server** or an `admin.*`/`*` permit.
 
+`/config module:<submodule>` opens a submodule's settings panel ephemerally from
+any server. The module option autocompletes loaded submodules. It requires
+**Manage Server** or an `admin.*`/`*` permit. Use it for modules whose settings
+have no prefix command (for example `moderation-mod` locks), and for the full
+autorole, voice-role, and role-menu management panels.
+
 `/tempvc` opens the control panel for the caller's temporary voice channel. Staff
 generator management and module defaults are reachable through the `panel`
-option (`Admin generators`, `Module settings`).
+option (`Admin generators`, `Module settings`). Generator channels can also be
+added, renamed, limited, and removed from `/lumi` → Modules → Temporary Voice →
+Generators.
 
 ## Definition
 

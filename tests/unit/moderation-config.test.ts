@@ -46,6 +46,7 @@ describe("getModerationConfig", () => {
           "3": { action: "timeout", duration: 30 },
           "5": { action: "kick" },
           "7": { action: "ban", duration: 120 },
+          "8": { action: "quarantine" },
           "0": { action: "ban" },
           nope: { action: "kick" },
           "9": { action: "delete" },
@@ -58,6 +59,7 @@ describe("getModerationConfig", () => {
       "3": { action: "timeout", duration: 60 },
       "5": { action: "kick", duration: null },
       "7": { action: "ban", duration: null },
+      "8": { action: "quarantine", duration: null },
     });
   });
 });

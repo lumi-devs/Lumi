@@ -51,8 +51,15 @@ and never pass `ephemeral: true` directly. Use `ephemeralCard`.
 - `tabRow`, `settingRow`, `confirmRow`, `navRow`, `backRow`, `row`
 - `buildSafeActionRows` enforces five rows and five components per row
 - `formatPageFooter`, `formatStatusBadge`, `formatSubtitle`, `formatBreadcrumbs`,
-  `componentEmoji`
+  `formatTimestamp`, `componentEmoji`
 - `AccentColors`, `resolveCardColor`
+
+`formatTimestamp(value, style)` renders Discord timestamps and returns `—` for
+invalid dates. `createStringSelectMenu` caps options at 25, clips labels,
+values, descriptions, and placeholders to 100 characters, removes empty or
+duplicate values, and clamps `minValues`/`maxValues` to the available options.
+`createActionButton` requires either `customId` or `url`, plus a visible
+`label` or `emoji`.
 
 ## Rules
 

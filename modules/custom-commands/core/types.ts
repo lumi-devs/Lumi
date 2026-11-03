@@ -19,21 +19,6 @@ export const TriggerTypes = [
 
 export type TriggerType = (typeof TriggerTypes)[number];
 
-export const MessageTriggerTypes: readonly TriggerType[] = [
-  "command",
-  "prefix",
-  "exact",
-  "startsWith",
-  "contains",
-  "regex",
-];
-
-export const InteractionTriggerTypes: readonly TriggerType[] = [
-  "button",
-  "select",
-  "modal",
-];
-
 export const ScheduleTriggerTypes: readonly TriggerType[] = [
   "interval",
   "cron",
@@ -171,16 +156,6 @@ export interface ExecutionReplyTarget {
   interaction?: unknown;
   message?: unknown;
   channel?: unknown;
-}
-
-export interface ExecutionInput {
-  guildId: string;
-  actorId: string;
-  args: string[];
-  trigger: TriggerSnapshot;
-  modalFields?: Record<string, string>;
-  selectValues?: string[];
-  reply: ExecutionReplyTarget;
 }
 
 export interface KvAdapter {

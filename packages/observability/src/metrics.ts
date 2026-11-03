@@ -189,14 +189,3 @@ export const prometheusCacheMetrics: CacheMetrics = {
   recordStaleWrite: (namespace) =>
     void cacheStaleWrites.inc({ cache: namespace }),
 };
-
-export const noopCacheMetrics: CacheMetrics = {
-  recordHit: () => undefined,
-  recordMiss: () => undefined,
-  recordNegativeHit: () => undefined,
-  recordWrite: () => undefined,
-  recordEviction: () => undefined,
-  recordInvalidation: () => undefined,
-  recordFillDuration: () => undefined,
-  recordStaleWrite: () => undefined,
-};

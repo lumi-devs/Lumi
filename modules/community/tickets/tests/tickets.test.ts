@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import {
+  normalizeQuestions,
+  parseQuestionsInput,
+  type TicketMenuQuestion,
+} from "../config.ts";
 import { escapeHtml, renderTranscript } from "../html.ts";
 import { selectInactiveTickets } from "../inactivity.ts";
 import {
@@ -76,6 +81,46 @@ describe("ticket HTML", () => {
     expect(html).not.toContain("<script>steal()</script>");
     expect(html).not.toContain("<img src=x");
     expect(html).not.toContain("<note & stuff>");
+  });
+});
+
+describe("ticket questions", () => {
+  it("normalizes legacy text questions and clamps lengths", () => {
+    const questions = normalizeQuestions([
+      { label: "  Describe the issue  ", style: "short", maxLength: 500 },
+    ]);
+    expect(questions).toEqual([
+      {
+        type: "text",
+        label: "Describe the issue",
+        required: false,
+        style: "short",
+        maxLength: 200,
+      },
+    ]);
+  });
+
+  it("normalizes menu bounds against the option count", () => {
+    const [question] = normalizeQuestions([
+      {
+        type: "menu",
+        label: "Which service?",
+        minValues: 2,
+        maxValues: 9,
+        options: [{ label: "Billing" }, { label: "Technical" }],
+      },
+    ]);
+    const menu = question as TicketMenuQuestion;
+    expect(menu.type).toBe("menu");
+    expect(menu.minValues).toBe(2);
+    expect(menu.maxValues).toBe(2);
+  });
+
+  it("rejects malformed question JSON", () => {
+    expect(() => parseQuestionsInput("not json")).toThrow(/JSON array/);
+    expect(() => parseQuestionsInput('[{"label":""}]')).toThrow(
+      /Invalid questions JSON/,
+    );
   });
 });
 

@@ -8,17 +8,6 @@ export interface BulkJobProgress {
   readonly failed: number;
 }
 
-export function isBulkJobStatus(value: unknown): value is BulkRoleJobStatus {
-  return (
-    value === "pending" ||
-    value === "running" ||
-    value === "paused" ||
-    value === "completed" ||
-    value === "cancelled" ||
-    value === "failed"
-  );
-}
-
 export function isRunnableJob(status: BulkRoleJobStatus): boolean {
   return status === "pending" || status === "running";
 }

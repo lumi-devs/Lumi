@@ -113,14 +113,3 @@ export async function listExpiredVoiceSessions(
 ): Promise<VoiceSession[]> {
   return services.helpers.roles.voiceRole.listExpiredSessions(nowMs, limit);
 }
-
-export async function deleteVoiceSessionsForChannel(
-  services: ModuleServices,
-  guildId: string,
-  channelId: string,
-): Promise<void> {
-  await services.helpers.roles.voiceRole.deleteSessionsForChannel(
-    guildId,
-    channelId,
-  );
-}

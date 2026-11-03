@@ -17,8 +17,8 @@ export const RoleMenuIds = {
   },
   parse(customId: string): RoleMenuComponent | null {
     if (!customId.startsWith(`${RoleMenuCustomIdPrefix}:`)) return null;
-    const [prefix, kind, groupId, optionId] = customId.split(":");
-    if (prefix !== "lumi" || !groupId) return null;
+    const [namespace, feature, kind, groupId, optionId] = customId.split(":");
+    if (namespace !== "lumi" || feature !== "rolemenu" || !groupId) return null;
     if (kind === "button" && optionId) {
       return { kind, groupId, optionId };
     }

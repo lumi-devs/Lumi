@@ -206,6 +206,7 @@ Declare these in `manifest.json` `configFields`; they are not part of
 | `select`        | `z.string()` + `choices`   | String select                         |
 | `multi-string`  | `z.string()`               | Text modal (stored as one string)     |
 | `json`          | `z.object()` / `z.array()` | JSON modal                            |
+| `escalation`    | `z.record(...)`            | Warning-count → action rule editor    |
 
 ---
 

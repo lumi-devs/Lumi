@@ -16,7 +16,10 @@ for every private thread it opens.
 | `manifest.json`     | Module metadata and `/lumi` config controls                   |
 | `index.ts`          | Module definition, command/listener registration, sweep timer |
 | `commands.ts`       | `/ticket` command group and all subcommands                   |
-| `interactions.ts`   | Panel buttons/selects, open modal, feedback buttons           |
+| `interactions.ts`   | Panel buttons/selects, menu/text open flow, feedback buttons   |
+| `sessions.ts`       | Short-lived open-session state shared through cache           |
+| `policy.ts`         | Opening policy checks and category claiming/feedback rules     |
+| `autotags.ts`       | Regex auto-tag matching and automatic replies                 |
 | `panel.ts`          | Components V2 panel, opened-ticket, and info cards            |
 | `config.ts`         | Zod config and question/id parsing                            |
 | `access.ts`         | Manager, permit, and category staff-role checks               |
@@ -32,31 +35,36 @@ for every private thread it opens.
 ## Flow
 
 1. An admin runs `/ticket category add` to create at least one enabled category.
-   Categories hold staff roles, ping roles, up to five modal questions, a thread
-   naming template, and a default priority.
+   Categories hold staff/ping/required roles, up to five text or menu questions,
+   an opening message, cooldown and open-ticket limits, claiming/feedback
+   toggles, a thread naming template, and a default priority.
 2. `/ticket setup panel` posts a Components V2 card in a text/announcement
    channel. The card has a category string select and an **Open Ticket** button;
    `TicketPanel` stores the channel, message ID, title, description, and category
    IDs.
 3. Selecting a category (or pressing Open Ticket for the panel's first category)
-   checks module state, blacklist, and the per-user open limit, then opens a
-   modal with the category's questions. Categories without questions receive a
-   default "Briefly describe your issue" question.
-4. On modal submit the module creates a private thread in the panel channel,
-   adds the opener, creates a `Ticket`, archives an initial question/answer
-   summary, and posts an opened-ticket card that pings the category ping and
-   staff roles. The opener receives an ephemeral link to the thread.
+   checks module state, blacklist, required roles, per-user/category limits, and
+   cooldown. Text-only categories open a modal; categories with menu questions
+   start a short-lived session and show one select per menu question (optional
+   questions get a Skip button), followed by a modal for any text questions.
+4. When the flow completes the module re-checks policy and creates a private
+   thread in the panel channel, adds the opener, creates a `Ticket`, archives an
+   initial question/answer summary, and posts an opened-ticket card with the
+   category opening message that pings the category ping roles. The opener
+   receives an ephemeral link to the thread.
 5. Every message in an open ticket thread is archived to `TicketMessage` with
    HTML-escaped content and attachment metadata. Non-bot messages refresh
-   `Ticket.lastActivityAt`.
+   `Ticket.lastActivityAt`; the first non-opener message records
+   `firstResponseAt`/`firstResponseBy`. Messages matching an auto-tag regex
+   receive a single canned reply per tag per ticket.
 6. Staff claim/unclaim, set priority, add notes, add/remove members, send tags,
-   and manage tags/blacklist from inside the thread. The opener or staff can
-   close.
+   and manage tags/blacklist from inside the thread. Claiming respects the
+   category toggle and records `claimedAt`. The opener or staff can close.
 7. Closing fetches any messages missing from the archive, renders a complete
    escaped HTML transcript, writes it to disk, uploads it to the configured
    transcript channel, stores the URL/path in `Ticket.transcriptUrl`, sets
-   `closedAt`/`closedBy`/`closeReason`, sends a 1-5 feedback prompt, then locks
-   and archives the thread.
+   `closedAt`/`closedBy`/`closeReason`, sends a 1-5 feedback prompt when enabled
+   globally and for the category, then locks and archives the thread.
 8. Feedback can be submitted once by the opener through the prompt buttons or
    `/ticket feedback`.
 
@@ -66,6 +74,10 @@ A five-minute scheduler task (`auto-close`) closes open tickets whose
 normal close/transcript path, and records `closedBy = "system"`. The shared
 scheduler holds a distributed lock per tick, so replicas do not double-close.
 
+A daily `retention-cleanup` task deletes closed ticket rows (and their local
+HTML transcripts) older than the guild's `retentionDays` when it is greater than
+zero. Uploaded transcript-channel messages are not deleted.
+
 ## Commands
 
 All commands live under `/ticket`.
@@ -74,7 +86,7 @@ All commands live under `/ticket`.
 | --------------------------------------------- | --------------- | ---------------------------------------------------------------------------- |
 | `/ticket setup panel`                         | Admin           | Post a ticket panel                                                          |
 | `/ticket category add`                        | Admin           | Create a category                                                            |
-| `/ticket category edit`                       | Admin           | Edit name, emoji, description, roles, template, priority, questions, enabled |
+| `/ticket category edit`                       | Admin           | Edit roles, policy, opening message, questions, template, priority, enabled  |
 | `/ticket category remove`                     | Admin           | Delete a category and detach it from panels                                  |
 | `/ticket category list`                       | Admin           | List categories and their settings                                           |
 | `/ticket close`                               | Opener or staff | Close, transcript, lock/archive                                              |
@@ -83,7 +95,7 @@ All commands live under `/ticket`.
 | `/ticket note`                                | Staff           | Add an internal note included in the transcript                              |
 | `/ticket add` / `remove`                      | Staff           | Add/remove a thread member                                                   |
 | `/ticket blacklist add` / `remove` / `list`   | Staff           | Manage members barred from opening                                           |
-| `/ticket tag add` / `remove` / `list` / `use` | Staff           | Manage and post canned replies                                               |
+| `/ticket tag add` / `edit` / `remove` / `list` / `use` | Staff   | Manage canned replies, regex auto-tags, and posting                          |
 | `/ticket feedback`                            | Opener          | Rate a closed ticket once                                                    |
 | `/ticket info`                                | Opener or staff | Show ticket metadata, notes, feedback                                        |
 | `/ticket list`                                | Staff           | List open, closed, or all tickets                                            |
@@ -103,6 +115,24 @@ Category questions are supplied as a JSON array:
     "required": false,
     "maxLength": 1024
   }
+]
+```
+
+Menu questions use `type: "menu"`, one to 25 `options`, and optional
+`minValues`/`maxValues` (default 1):
+
+```json
+[
+  {
+    "type": "menu",
+    "label": "Which service?",
+    "required": true,
+    "options": [
+      { "label": "Billing", "description": "Invoices and payments" },
+      { "label": "Technical", "description": "Bugs and outages" }
+    ]
+  },
+  { "type": "text", "label": "Anything else?", "style": "long" }
 ]
 ```
 
@@ -127,8 +157,11 @@ characters and capped at 100 characters.
 
 - Files are written to `data/transcripts/<guildId>/<ticketId>.html`.
 - The same HTML is uploaded to `transcriptChannelId` as
-  `ticket-<ticketId>.html`; there is no expiry. If no channel is configured the
-  local relative path is stored in `transcriptUrl`.
+  `ticket-<ticketId>.html`; uploaded messages are not removed by retention. If
+  no channel is configured the local relative path is stored in
+  `transcriptUrl`.
+- Local transcript files are removed when `retentionDays` prunes a closed
+  ticket.
 - Message content is stored HTML-escaped in `TicketMessage.content`. The
   renderer escapes ticket metadata, category, subject, note text, author names,
   attachment names/URLs, and message content before writing HTML (archived
@@ -142,24 +175,28 @@ characters and capped at 100 characters.
 | Key                   | Type    | Default | Meaning                                      |
 | --------------------- | ------- | ------- | -------------------------------------------- |
 | `transcriptChannelId` | channel | `null`  | Upload target for HTML transcripts           |
+| `retentionDays`       | number  | `0`     | Delete closed tickets/transcripts after days |
 | `staffRoleIds`        | role[]  | `[]`    | Extra roles treated as ticket staff          |
 | `autoCloseEnabled`    | boolean | `true`  | Enable inactivity closing                    |
 | `autoCloseMinutes`    | number  | `1440`  | Inactivity window in minutes                 |
 | `feedbackEnabled`     | boolean | `true`  | Send the post-close feedback prompt          |
 | `maxOpenPerUser`      | number  | `3`     | Maximum simultaneous open tickets per member |
 | `mentionStaffOnOpen`  | boolean | `true`  | Ping category ping/staff roles on open       |
+| `autoTagEnabled`      | boolean | `true`  | Send regex-triggered canned replies          |
 
 ## Database tables
 
 - `TicketPanel` — panel channel, message, title, description, category IDs.
-- `TicketCategory` — staff/ping roles, questions JSON, naming template, default
-  priority, position, enabled.
-- `Ticket` — channel/thread ID, opener, status, claim, priority, subject, close
-  metadata, transcript URL, feedback, last activity.
+- `TicketCategory` — staff/ping/required roles, questions JSON, opening message,
+  cooldown/limits, claiming/feedback toggles, naming template, default priority,
+  position, enabled.
+- `Ticket` — channel/thread ID, opener, status, claim/claim time, first response,
+  priority, subject, close metadata, transcript URL, feedback, last activity.
 - `TicketMessage` — escaped message archive with attachment metadata.
 - `TicketNote` — internal staff notes included in transcripts.
 - `TicketBlacklist` — guild/user blacklist with reason and creator.
-- `TicketTag` — guild canned replies used by `/ticket tag use`.
+- `TicketTag` — guild canned replies with optional auto-tag regex.
+- `TicketTagApplication` — records which auto-tags were applied to a ticket.
 
 The schema and migration are owned by the database package; the module does not
 alter them.

@@ -33,22 +33,6 @@ export const BuiltinPermits: readonly BuiltinPermitDefinition[] = [
   },
 ];
 
-export const BuiltinPermitNames = BuiltinPermits.map((permit) => permit.name);
-
-export const BuiltinPermitByName = new Map(
-  BuiltinPermits.map((permit) => [permit.name, permit]),
-);
-
-export const BuiltinPermitByNumber = new Map(
-  BuiltinPermits.map((permit) => [permit.number, permit]),
-);
-
-export const ReservedPermitNumbers = new Set(
-  BuiltinPermits.map((permit) => permit.number),
-);
-
-export const BuiltinAssignmentTargetTypes = ["USER"] as const;
-
 export const WhitelistScopes = [
   "security.total",
   "security.antinuke",
@@ -72,13 +56,6 @@ export function whitelistScopeLabel(scope: string): string {
     default:
       return scope;
   }
-}
-
-export function isImmunePermit(permit: {
-  readonly builtin: boolean;
-  readonly number: number;
-}): boolean {
-  return permit.builtin && (permit.number === 1 || permit.number === 2);
 }
 
 export function matchesWhitelistScope(

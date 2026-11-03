@@ -24,9 +24,19 @@
       "key": "transcriptChannelId",
       "label": "Transcript Channel",
       "type": "channel",
-      "description": "Channel that receives the HTML transcript when a ticket closes. Transcripts do not expire.",
+      "description": "Channel that receives the HTML transcript when a ticket closes. Local transcript files follow the retention policy.",
       "category": "Transcripts",
       "channelTypes": [0]
+    },
+    {
+      "key": "retentionDays",
+      "label": "Closed Ticket Retention (days)",
+      "type": "number",
+      "description": "Delete closed ticket records and local transcripts after this many days. Set 0 to keep them.",
+      "default": 0,
+      "min": 0,
+      "max": 3650,
+      "category": "Transcripts"
     },
     {
       "key": "staffRoleIds",
@@ -61,6 +71,14 @@
       "description": "Ask the ticket opener for a 1-5 rating after the ticket closes",
       "default": true,
       "category": "Feedback"
+    },
+    {
+      "key": "autoTagEnabled",
+      "label": "Automatic Tag Replies",
+      "type": "boolean",
+      "description": "Send canned replies automatically when a ticket message matches an auto-tag regex",
+      "default": true,
+      "category": "Tags"
     },
     {
       "key": "maxOpenPerUser",

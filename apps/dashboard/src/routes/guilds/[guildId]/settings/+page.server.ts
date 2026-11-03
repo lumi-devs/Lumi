@@ -1,14 +1,9 @@
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
-import { requireGuildAccess } from "$lib/server/auth";
+import { requireGuildForm, requireGuildId } from "$lib/server/auth";
 import { readGuildSettings, setGuildSettings } from "$lib/server/settings";
-import {
-  assertCsrf,
-  checkbox,
-  formString,
-  parseInput,
-} from "$lib/server/validation";
+import { checkbox, formString, parseInput } from "$lib/server/validation";
 import type { Actions, PageServerLoad } from "./$types";
 
 const OptionalSnowflake = z
@@ -57,8 +52,7 @@ function logChannels(settings: Record<string, unknown>): {
 }
 
 export const load: PageServerLoad = async (event) => {
-  const guildId = event.params.guildId ?? "";
-  await requireGuildAccess(event, guildId);
+  const guildId = await requireGuildId(event);
   const settings = await readGuildSettings(guildId);
   const channels = logChannels(settings);
   return {
@@ -73,10 +67,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   save: async (event) => {
-    const guildId = event.params.guildId ?? "";
-    await requireGuildAccess(event, guildId);
-    const data = await event.request.formData();
-    const userId = assertCsrf(event, data);
+    const { guildId, userId, data } = await requireGuildForm(event);
 
     const parsed = parseInput(SettingsSchema, {
       prefix: formString(data, "prefix"),

@@ -2,19 +2,20 @@ import {
   type CardReply,
   createActionButton,
   createStringSelectMenu,
+  formatTimestamp,
   makeCard,
   makeInfoCard,
   makeSuccessCard,
   row,
 } from "@lumi/ui";
 import { ButtonStyle } from "discord.js";
+import type { TicketQuestion } from "./config.js";
 import { type Priority, PriorityEmoji, TicketIds } from "./constants.js";
 import type {
   TicketCategoryRecord,
   TicketPanelRecord,
   TicketRecord,
 } from "./repository.js";
-import { questionsOf } from "./repository.js";
 
 const clip = (value: string, max: number): string =>
   value.length > max ? `${value.slice(0, max - 1)}…` : value;
@@ -90,10 +91,10 @@ export function ticketOpenedCard(
   ticket: TicketRecord,
   category: TicketCategoryRecord | null,
   answers: readonly string[],
+  questions: readonly TicketQuestion[],
   openerId: string,
   pingRoleIds: readonly string[] = [],
 ): CardReply {
-  const questions = category ? questionsOf(category) : [];
   const answerLines = questions.map(
     (question, index) =>
       `**${clip(question.label, 80)}**\n${answers[index]?.trim() || "No answer provided"}`,
@@ -103,8 +104,12 @@ export function ticketOpenedCard(
     `**Category** ${category?.name ?? "None"}`,
     `**Priority** ${PriorityEmoji[ticket.priority as Priority] ?? "🔵"} ${ticket.priority}`,
     ...(ticket.subject ? [`**Subject** ${clip(ticket.subject, 200)}`] : []),
+    ...(ticket.claimedBy ? [`**Claimed by** <@${ticket.claimedBy}>`] : []),
     ...(pingRoleIds.length > 0
       ? [`**Staff** ${pingRoleIds.map((roleId) => `<@&${roleId}>`).join(" ")}`]
+      : []),
+    ...(category?.openingMessage
+      ? ["", category.openingMessage.slice(0, 2000)]
       : []),
     ...(answerLines.length > 0 ? ["", ...answerLines] : []),
     "",
@@ -129,15 +134,15 @@ export function ticketInfoCard(
     `**Claimed by** ${ticket.claimedBy ? `<@${ticket.claimedBy}>` : "Unclaimed"}`,
     `**Priority** ${priority} ${ticket.priority}`,
     `**Subject** ${ticket.subject ?? "No subject"}`,
-    `**Created** <t:${Math.floor(new Date(ticket.createdAt).getTime() / 1000)}:F>`,
-    `**Last activity** <t:${Math.floor(new Date(ticket.lastActivityAt).getTime() / 1000)}:R>`,
+    `**Created** ${formatTimestamp(ticket.createdAt, "F")}`,
+    `**Last activity** ${formatTimestamp(ticket.lastActivityAt, "R")}`,
     `**Staff notes** ${notesCount}`,
     `**Feedback** ${ticket.feedback ? `${ticket.feedback}/5` : "Not submitted"}${
       ticket.feedbackComment ? ` — ${clip(ticket.feedbackComment, 200)}` : ""
     }`,
     ...(ticket.closedAt
       ? [
-          `**Closed** <t:${Math.floor(new Date(ticket.closedAt).getTime() / 1000)}:F>`,
+          `**Closed** ${formatTimestamp(ticket.closedAt, "F")}`,
           `**Close reason** ${ticket.closeReason ?? "No reason provided"}`,
         ]
       : []),

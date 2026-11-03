@@ -63,29 +63,67 @@ export const warnDef: CommandDefinition = {
 
     if (member && threshold) {
       try {
-        if (threshold.action === "timeout") {
-          await member.timeout(
-            (threshold.duration ?? 60) * 1000,
-            `Warn threshold (${warnCount} warnings)`,
-          );
-        } else if (threshold.action === "kick") {
-          await member.kick(`Warn threshold (${warnCount} warnings)`);
+        if (threshold.action === "quarantine") {
+          const roleId = config.quarantineRoleId;
+          if (!roleId) {
+            autoAction =
+              "quarantine skipped - set the Quarantine Role in /lumi → Moderation";
+          } else {
+            const role =
+              guild.roles.cache.get(roleId) ??
+              (await guild.roles.fetch(roleId).catch(() => null));
+            if (!role) {
+              autoAction =
+                "quarantine skipped - the configured Quarantine Role no longer exists";
+            } else if (!member.manageable) {
+              autoAction = "quarantine failed - my role is too low";
+            } else {
+              const oldRoles = member.roles.cache
+                .filter(
+                  (item) => item.id !== guild.id && item.id !== role.id,
+                )
+                .map((item) => item.id);
+              await member.roles.set(
+                [role],
+                `Warn threshold (${warnCount} warnings)`,
+              );
+              await services.helpers.moderation.create({
+                guildId: guild.id,
+                kind: "quarantine",
+                targetId: target.id,
+                moderatorId: interaction.client.user!.id,
+                reason: `Automatic action after ${warnCount} warnings`,
+                ...getCaseLink(interaction),
+                metadata: { automatic: true, warnCount, oldRoles },
+              });
+              autoAction = "quarantine";
+            }
+          }
         } else {
-          await guild.members.ban(member, {
-            reason: `Warn threshold (${warnCount} warnings)`,
-          });
-        }
+          if (threshold.action === "timeout") {
+            await member.timeout(
+              (threshold.duration ?? 60) * 1000,
+              `Warn threshold (${warnCount} warnings)`,
+            );
+          } else if (threshold.action === "kick") {
+            await member.kick(`Warn threshold (${warnCount} warnings)`);
+          } else {
+            await guild.members.ban(member, {
+              reason: `Warn threshold (${warnCount} warnings)`,
+            });
+          }
 
-        await services.helpers.moderation.create({
-          guildId: guild.id,
-          kind: threshold.action,
-          targetId: target.id,
-          moderatorId: interaction.client.user!.id,
-          reason: `Automatic action after ${warnCount} warnings`,
-          ...getCaseLink(interaction),
-          metadata: { automatic: true, warnCount },
-        });
-        autoAction = threshold.action;
+          await services.helpers.moderation.create({
+            guildId: guild.id,
+            kind: threshold.action,
+            targetId: target.id,
+            moderatorId: interaction.client.user!.id,
+            reason: `Automatic action after ${warnCount} warnings`,
+            ...getCaseLink(interaction),
+            metadata: { automatic: true, warnCount },
+          });
+          autoAction = threshold.action;
+        }
       } catch (error) {
         autoAction = `failed: ${describeError(error)}`;
       }

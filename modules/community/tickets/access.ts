@@ -33,20 +33,6 @@ export function roleIdsOf(member: AnyMember): string[] {
   return cache ? [...cache.keys()] : [];
 }
 
-export function hasDiscordManager(
-  member: AnyMember,
-  ownerId?: string | null,
-  userId?: string,
-): boolean {
-  if (ownerId && userId && ownerId === userId) return true;
-  const permissions = member?.permissions;
-  if (!permissions || typeof permissions === "string") return false;
-  return (
-    permissions.has(PermissionFlagsBits.Administrator) ||
-    permissions.has(PermissionFlagsBits.ManageGuild)
-  );
-}
-
 async function hasPermit(
   services: ModuleServices,
   context: AccessContext,
@@ -103,20 +89,6 @@ export function accessContextFromInteraction(interaction: {
     roleIds: roleIdsOf(member),
     channelId: interaction.channelId ?? null,
     permissions: permissionNames,
-  };
-}
-
-export function createAccessContext(
-  guild: Guild,
-  member: GuildMember,
-  channelId?: string | null,
-): AccessContext {
-  return {
-    guildId: guild.id,
-    guildOwnerId: guild.ownerId,
-    userId: member.id,
-    roleIds: roleIdsOf(member),
-    channelId: channelId ?? null,
   };
 }
 

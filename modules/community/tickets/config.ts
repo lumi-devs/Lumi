@@ -3,14 +3,46 @@ import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
 import { TicketsConfigKey, TicketsModuleName } from "./constants.js";
 
-export const TicketQuestionSchema = z.object({
+const TicketQuestionBaseSchema = z.object({
   label: z.string().trim().min(1).max(45),
   placeholder: z.string().trim().max(100).optional(),
   required: z.boolean().default(false),
+});
+
+export const TicketMenuOptionSchema = z.object({
+  label: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(100).optional(),
+  value: z.string().trim().max(100).optional(),
+});
+
+export const TicketTextQuestionSchema = TicketQuestionBaseSchema.extend({
+  type: z.literal("text").default("text"),
   style: z.enum(["short", "long"]).default("short"),
   maxLength: z.number().int().min(1).max(1024).optional(),
 });
 
+export const TicketMenuQuestionSchema = TicketQuestionBaseSchema.extend({
+  type: z.literal("menu"),
+  minValues: z.number().int().min(1).max(25).default(1),
+  maxValues: z.number().int().min(1).max(25).default(1),
+  options: z.array(TicketMenuOptionSchema).min(1).max(25),
+}).superRefine((question, ctx) => {
+  if (question.maxValues < question.minValues) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["maxValues"],
+      message: "maxValues must be greater than or equal to minValues.",
+    });
+  }
+});
+
+export const TicketQuestionSchema = z.union([
+  TicketMenuQuestionSchema,
+  TicketTextQuestionSchema,
+]);
+
+export type TicketMenuQuestion = z.infer<typeof TicketMenuQuestionSchema>;
+export type TicketTextQuestion = z.infer<typeof TicketTextQuestionSchema>;
 export type TicketQuestion = z.infer<typeof TicketQuestionSchema>;
 
 export const TicketQuestionsSchema = z
@@ -26,6 +58,8 @@ export const TicketsConfigSchema = z.object({
   feedbackEnabled: z.boolean().default(true),
   maxOpenPerUser: z.number().int().min(1).max(25).default(3),
   mentionStaffOnOpen: z.boolean().default(true),
+  autoTagEnabled: z.boolean().default(true),
+  retentionDays: z.number().int().min(0).max(3650).default(0),
 });
 
 export type TicketsConfig = z.infer<typeof TicketsConfigSchema>;
@@ -34,16 +68,35 @@ export const defaultTicketsConfig: TicketsConfig = TicketsConfigSchema.parse(
   {},
 );
 
+function normalizeQuestion(question: TicketQuestion): TicketQuestion {
+  if (question.type === "menu") {
+    return {
+      ...question,
+      options: question.options.map((option) => ({
+        label: option.label.slice(0, 100),
+        ...(option.description
+          ? { description: option.description.slice(0, 100) }
+          : {}),
+        ...(option.value ? { value: option.value.slice(0, 100) } : {}),
+      })),
+      minValues: Math.min(question.minValues, question.options.length),
+      maxValues: Math.min(
+        Math.max(question.maxValues, question.minValues),
+        question.options.length,
+      ),
+    };
+  }
+  const maxLength =
+    question.style === "long"
+      ? Math.min(question.maxLength ?? 1024, 1024)
+      : Math.min(question.maxLength ?? 200, 200);
+  return { ...question, maxLength };
+}
+
 export function normalizeQuestions(value: unknown): TicketQuestion[] {
   const parsed = TicketQuestionsSchema.safeParse(value);
   if (!parsed.success) return [];
-  return parsed.data.map((question) => {
-    const maxLength =
-      question.style === "long"
-        ? Math.min(question.maxLength ?? 1024, 1024)
-        : Math.min(question.maxLength ?? 200, 200);
-    return { ...question, maxLength };
-  });
+  return parsed.data.map(normalizeQuestion);
 }
 
 export function parseQuestionsInput(raw: string): TicketQuestion[] {
@@ -52,13 +105,13 @@ export function parseQuestionsInput(raw: string): TicketQuestion[] {
     parsed = JSON.parse(raw);
   } catch {
     throw new Error(
-      'Questions must be a JSON array of objects: [{"label":"...","style":"short"}].',
+      'Questions must be a JSON array of text or menu question objects, for example [{"label":"Describe the issue","style":"short"}].',
     );
   }
   const result = TicketQuestionsSchema.safeParse(parsed);
   if (!result.success) {
     throw new Error(
-      "Invalid questions JSON. Each question needs a label of 1-45 characters and may set style, placeholder, required, and maxLength.",
+      "Invalid questions JSON. Each question needs a label of 1-45 characters. Text questions accept style, placeholder, required, and maxLength. Menu questions need type \"menu\" and 1-25 options.",
     );
   }
   return normalizeQuestions(result.data);

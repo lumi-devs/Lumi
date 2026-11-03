@@ -4,7 +4,7 @@ import Redis from "ioredis";
 export { Redis } from "ioredis";
 
 export { InvalidationBus, type InvalidationMessage } from "./invalidation.js";
-export { createKeys, type RedisKeys, TTL } from "./keys.js";
+export { createKeys, TTL } from "./keys.js";
 export {
   createLock,
   DistributedLock,

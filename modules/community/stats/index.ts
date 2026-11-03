@@ -3,7 +3,10 @@ import {
   type ModuleDefinition,
   type TaskDefinition,
 } from "@lumi/module-kit";
-import { statsCommand } from "./commands.js";
+import {
+  statsListeners as statsButtonListeners,
+  statsCommand,
+} from "./commands.js";
 import { StatsConfigSchema } from "./config.js";
 import { StatsModuleName, StatsPermitNode } from "./constants.js";
 import { purgeOldStats } from "./retention.js";
@@ -65,7 +68,7 @@ const statsModule: ModuleDefinition = defineModule({
   },
   commands: [statsCommand],
   permitNodes: [StatsPermitNode],
-  listeners: trackingListeners,
+  listeners: [...trackingListeners, ...statsButtonListeners],
   tasks: [snapshotTask, retentionTask],
   async onLoad(_services) {
     console.log("[stats] Module loaded");
