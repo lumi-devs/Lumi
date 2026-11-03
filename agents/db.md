@@ -13,8 +13,7 @@ Package: `@lumi/db` (`packages/db`). Postgres + Prisma 7 + `@prisma/adapter-pg`.
 - `packages/db/prisma/schema.prisma` — models.
 - `packages/db/prisma/migrations/` — versioned SQL migrations.
 - `prisma.config.ts` (repo root) — points the Prisma CLI at the schema and
-  migrations and resolves the URL from `DATABASE_URL`, `DIRECT_POSTGRES_URL`, or
-  `POSTGRES_URL` (local fallback `postgresql://lumi:lumi@127.0.0.1:5432/lumi`).
+  migrations and reads the connection URL from `DATABASE_URL`.
 
 There is no `client.ts`, `createDatabase()`, or `DatabaseService`. The generated
 client is the default `@prisma/client` output.

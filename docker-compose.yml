@@ -48,8 +48,7 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       OWNER_IDS: ${OWNER_IDS}
-      POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
-      DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}

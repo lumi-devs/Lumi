@@ -300,12 +300,7 @@ export function validateRedisUrl(value: string): string | null {
 }
 
 export function databaseUrlFrom(values: ReadonlyMap<string, string>): string {
-  return (
-    values.get("DATABASE_URL") ??
-    values.get("DIRECT_POSTGRES_URL") ??
-    values.get("POSTGRES_URL") ??
-    ""
-  );
+  return values.get("DATABASE_URL") ?? "";
 }
 
 export function redisUrlFrom(values: ReadonlyMap<string, string>): string {
@@ -383,12 +378,6 @@ export function applyDefaults(
   if (isPlaceholder(databaseUrl)) {
     databaseUrl = DefaultDatabaseUrl;
     updates.DATABASE_URL = databaseUrl;
-  }
-  if (
-    isPlaceholder(values.get("POSTGRES_URL")) &&
-    validateDatabaseUrl(databaseUrl) === null
-  ) {
-    updates.POSTGRES_URL = databaseUrl;
   }
 
   let redisUrl = redisUrlFrom(values);

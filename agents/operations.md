@@ -27,9 +27,7 @@ See `.env.example`.
 | --------------------- | ----------------------------------------------------------------- |
 | `BOT_TOKEN`           | Discord bot token (required; boot exits without it).              |
 | `OWNER_IDS`           | Comma-separated user IDs allowed to run owner commands.           |
-| `DATABASE_URL`        | Postgres connection string; first choice for Prisma and the app.  |
-| `DIRECT_POSTGRES_URL` | Fallback Postgres URL when `DATABASE_URL` is unset.               |
-| `POSTGRES_URL`        | Last-resort Postgres URL; also used by `docker-compose.yml`.      |
+| `DATABASE_URL`        | Postgres connection string (required by bot, Prisma, and dashboard). |
 | `REDIS_URL`           | Full Redis URL; takes precedence over the discrete vars below.    |
 | `REDIS_HOST`          | Redis host when `REDIS_URL` is unset. Default `localhost`.        |
 | `REDIS_PORT`          | Redis port when `REDIS_URL` is unset. Default `6379`.             |
@@ -61,7 +59,7 @@ generates them when they are missing.
 ## Database
 
 - `prisma.config.ts` supplies the schema path, migrations path, and URL
-  (`DATABASE_URL` → `DIRECT_POSTGRES_URL` → `POSTGRES_URL`).
+  (`DATABASE_URL`).
 - `bun run db:generate` after schema edits.
 - `bun run db:migrate` in development.
 - `bunx prisma migrate deploy` in production/CI.

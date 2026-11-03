@@ -4,11 +4,11 @@ try {
   process.loadEnvFile();
 } catch {}
 
-const datasourceUrl =
-  process.env.DATABASE_URL ??
-  process.env.DIRECT_POSTGRES_URL ??
-  process.env.POSTGRES_URL ??
-  "postgresql://lumi:lumi@127.0.0.1:5432/lumi";
+const datasourceUrl = process.env.DATABASE_URL;
+
+if (!datasourceUrl) {
+  throw new Error("DATABASE_URL is not set.");
+}
 
 export default defineConfig({
   schema: "packages/db/prisma/schema.prisma",

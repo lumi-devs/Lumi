@@ -143,7 +143,6 @@ describe("applyDefaults", () => {
     const updates = applyDefaults(new Map(), { compose: false });
 
     expect(updates.DATABASE_URL).toBe(validDatabase);
-    expect(updates.POSTGRES_URL).toBe(validDatabase);
     expect(updates.REDIS_URL).toBe(validRedis);
     expect(updates.LOG_LEVEL).toBe("info");
     expect(updates.METRICS_PORT).toBe("9090");
@@ -196,7 +195,6 @@ describe("applyDefaults", () => {
 
   it("is idempotent for a complete environment", () => {
     const values = validValues();
-    values.set("POSTGRES_URL", validDatabase);
     values.set("REDIS_URL", "redis://:password@localhost:6379/0");
     values.set("REDIS_PASSWORD", "password");
     values.set("RPC_INTERNAL_TOKEN", "token");
@@ -270,9 +268,12 @@ describe("helpers", () => {
     expect(isPlaceholder("MTIzNDU2Nzg5.GaBcDe.fGhIjKl")).toBe(false);
   });
 
-  it("falls back between database and Redis environment names", () => {
-    expect(databaseUrlFrom(new Map([["POSTGRES_URL", validDatabase]]))).toBe(
+  it("reads the database URL only from DATABASE_URL", () => {
+    expect(databaseUrlFrom(new Map([["DATABASE_URL", validDatabase]]))).toBe(
       validDatabase,
+    );
+    expect(databaseUrlFrom(new Map([["POSTGRES_URL", validDatabase]]))).toBe(
+      "",
     );
     expect(
       redisUrlFrom(

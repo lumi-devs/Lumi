@@ -16,11 +16,11 @@ import { createTicketsHelpers } from "./helpers/tickets.js";
 import { createUtilityHelpers } from "./helpers/utility.js";
 import { createVerificationHelpers } from "./helpers/verification.js";
 
-const connectionString =
-  process.env.DATABASE_URL ??
-  process.env.DIRECT_POSTGRES_URL ??
-  process.env.POSTGRES_URL ??
-  "postgresql://lumi:lumi@127.0.0.1:5432/lumi";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set.");
+}
 
 const pool = new Pool({ connectionString });
 

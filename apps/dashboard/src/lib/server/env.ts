@@ -60,11 +60,7 @@ export function serverConfig(): ServerConfig {
       `${webBaseUrl.replace(/\/$/, "")}/auth/callback`,
     sessionSecret,
     sessionTtlSeconds: Number.isFinite(ttl) && ttl > 60 ? ttl : 604_800,
-    databaseUrl:
-      Trim(process.env.DATABASE_URL) ??
-      Trim(process.env.DIRECT_POSTGRES_URL) ??
-      Trim(process.env.POSTGRES_URL) ??
-      "postgresql://lumi:lumi@127.0.0.1:5432/lumi",
+    databaseUrl: required("DATABASE_URL"),
     botToken: required("BOT_TOKEN"),
     webBaseUrl: webBaseUrl.replace(/\/$/, ""),
     cookieSecure:
