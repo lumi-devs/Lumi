@@ -18,6 +18,7 @@ import {
   pageRow,
   panelOptions,
 } from "./common.js";
+import { isModuleFeatureEnabled } from "./moduleSettings.js";
 import {
   ModulesPerPage,
   moduleListRowId,
@@ -25,7 +26,6 @@ import {
   supermoduleItems,
 } from "./modules.js";
 import { paginate } from "./pages.js";
-import { isModuleFeatureEnabled } from "./moduleSettings.js";
 import type { HubServices } from "./services.js";
 
 const SubmodulesPerPage = 3;

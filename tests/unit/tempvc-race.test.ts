@@ -4,6 +4,7 @@ import {
   createTempVoiceChannel,
   TempVcConfigSchema,
 } from "../../modules/utility/tempvc/panel.ts";
+import { createCacheFacade } from "../../packages/db/src/cache.ts";
 
 const makeChannel = (
   guild: any,
@@ -145,14 +146,64 @@ const makeFixture = (guildId: string, userId: string) => {
     send,
   };
 
+  const cache = createCacheFacade(redis as any);
+
   const services = {
     client: {
       guilds: {
         cache: new Map([[guildId, guild]]),
       },
     },
-    db: { prisma: { tempVcChannel } },
-    redis,
+    helpers: {
+      utility: {
+        tempvc: {
+          findChannel: (channelId: string) =>
+            tempVcChannel.findUnique({ where: { channelId } }),
+          listOwned: (ownerGuildId: string, ownerId: string) =>
+            tempVcChannel.findMany({
+              where: { guildId: ownerGuildId, ownerId },
+              orderBy: { createdAt: "desc" },
+            }),
+          create: async (data: Record<string, unknown>) => {
+            try {
+              await tempVcChannel.create({ data });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          update: async (channelId: string, data: Record<string, unknown>) => {
+            try {
+              await tempVcChannel.update({ where: { channelId }, data });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          delete: async (channelId: string) => {
+            try {
+              await tempVcChannel.delete({ where: { channelId } });
+            } catch {
+              return;
+            }
+          },
+          count: async (where: Record<string, unknown>) => {
+            try {
+              return await tempVcChannel.count({ where });
+            } catch {
+              return null;
+            }
+          },
+          listExpired: async () =>
+            [...rows.values()].filter(
+              (row) =>
+                row.expiresAt !== null && row.expiresAt.getTime() <= Date.now(),
+            ),
+          claimCreateCooldown: (key: string, cooldownMs: number) =>
+            cache.setNx(key, "1", cooldownMs),
+        },
+      },
+    },
     modules: { isEnabled: () => true },
   };
 

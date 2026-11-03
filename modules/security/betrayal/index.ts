@@ -26,7 +26,6 @@ import {
   incrementWindow,
   isTrusted,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -109,20 +108,17 @@ const onAuditLogListener: ListenerDefinition = {
     const member = await fetchMember(guild, executorId);
     if (!member) return;
     if (!isTrusted(member, guild, security)) return;
-    if (
-      await getStoredJson(redisOf(services), betrayerKey(guild.id, executorId))
-    ) {
+    if (await getStoredJson(services, betrayerKey(guild.id, executorId))) {
       return;
     }
 
-    const redis = redisOf(services);
     const minuteCount = await incrementWindow(
-      redis,
+      services,
       securityKey("betrayal", "minute", guild.id, executorId, action),
       60,
     );
     const hourCount = await incrementWindow(
-      redis,
+      services,
       securityKey("betrayal", "hour", guild.id, executorId, action),
       3600,
     );
@@ -135,8 +131,13 @@ const onAuditLogListener: ListenerDefinition = {
       hourCount,
       at: Date.now(),
     };
-    await setStoredJson(redis, betrayerKey(guild.id, executorId), state, 3600);
-    if (redis) await redis.sadd(betrayerSetKey(guild.id), executorId);
+    await setStoredJson(
+      services,
+      betrayerKey(guild.id, executorId),
+      state,
+      3600,
+    );
+    await services.helpers.cache.sAdd(betrayerSetKey(guild.id), executorId);
 
     const revoked = security.trustedRoleIds.filter((roleId) =>
       member.roles.cache.has(roleId),
@@ -207,11 +208,8 @@ const betrayalCommand: CommandDefinition = {
 
     if (sub === "reset") {
       const user = interaction.options.getUser("user", true);
-      await deleteStored(
-        redisOf(services),
-        betrayerKey(interaction.guildId, user.id),
-      );
-      await redisOf(services)?.srem(
+      await deleteStored(services, betrayerKey(interaction.guildId, user.id));
+      await services.helpers.cache.sRem(
         betrayerSetKey(interaction.guildId),
         user.id,
       );
@@ -226,10 +224,9 @@ const betrayalCommand: CommandDefinition = {
       return;
     }
 
-    const ids =
-      (await redisOf(services)?.smembers(
-        betrayerSetKey(interaction.guildId),
-      )) ?? [];
+    const ids: string[] = await services.helpers.cache.sMembers(
+      betrayerSetKey(interaction.guildId),
+    );
     await interaction.reply(
       ephemeralCard(
         makeInfoCard("🔍 Betrayal Guard", [

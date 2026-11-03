@@ -1,3 +1,4 @@
+import { findInvites, findLinks } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -15,7 +16,6 @@ import {
   isTrusted,
   type JoinAction,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -55,8 +55,6 @@ const JoinGateConfigSchema = z.object({
     .default("kick"),
 });
 
-const InvitePattern =
-  /(?:discord\.gg|discord(?:app)?\.com\/invite)\/|https?:\/\//i;
 const ActionRank: Record<JoinAction, number> = {
   log: 0,
   timeout: 1,
@@ -71,7 +69,8 @@ function accountAgeHours(member: GuildMember): number {
 function isSuspicious(member: GuildMember, minAgeHours: number): boolean {
   if (!member.user.avatar) return true;
   if (accountAgeHours(member) < Math.max(minAgeHours, 24)) return true;
-  return InvitePattern.test(member.user.username);
+  const username = member.user.username;
+  return findInvites(username).length > 0 || findLinks(username).length > 0;
 }
 
 function stronger(current: JoinAction, next: JoinAction): JoinAction {
@@ -103,9 +102,8 @@ const onMemberAddListener: ListenerDefinition = {
     const security = await getSecurityConfig(services, guild.id);
     if (isTrusted(member, guild, security)) return;
 
-    const redis = redisOf(services);
     const joins = await incrementWindow(
-      redis,
+      services,
       securityKey("join-gate", "raid", guild.id),
       config.raidWindowSeconds,
     );
@@ -153,7 +151,8 @@ const onMemberAddListener: ListenerDefinition = {
 
     if (
       config.filterAdvertisingEnabled &&
-      InvitePattern.test(member.user.username)
+      (findInvites(member.user.username).length > 0 ||
+        findLinks(member.user.username).length > 0)
     ) {
       action = stronger(action, config.filterAdvertisingAction);
       reasons.push("advertising");

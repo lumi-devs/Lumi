@@ -1,10 +1,10 @@
-import type { PageServerLoad } from "./$types";
 import { requireGuildAccess } from "$lib/server/auth";
 import { fetchBotGuild } from "$lib/server/discord";
-import { moduleCatalog } from "$lib/server/modules";
 import { configFor, effectiveModuleEnabled } from "$lib/server/moduleConfig";
+import { moduleCatalog } from "$lib/server/modules";
 import { getPrisma } from "$lib/server/prisma";
 import { readGuildSettings } from "$lib/server/settings";
+import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
   const guildId = event.params.guildId ?? "";

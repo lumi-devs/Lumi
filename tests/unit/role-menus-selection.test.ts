@@ -4,8 +4,8 @@ import {
   isTempRoleExpired,
   planForcedRemoval,
   planSelection,
-  tempRoleExpiry,
   type RoleMenuRules,
+  tempRoleExpiry,
 } from "../../modules/role-menus/menu/selection.ts";
 
 function rules(overrides: Partial<RoleMenuRules> = {}): RoleMenuRules {

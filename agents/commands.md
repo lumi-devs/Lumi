@@ -2,8 +2,8 @@
 
 Commands come from two sources:
 
-- Built-ins: `pingCommand` and `aboutCommand` in `src/core/`, and
-  the `moduleCommands` registry (`/lumi`, `/permit`) in
+- Built-ins: `createPingCommand()` and `createAboutCommand()` in `src/core/`,
+  and the `moduleCommands` registry (`/lumi`, `/permit`) in
   `src/admin/commands/index.ts`.
 - Module commands: the `commands` array returned by `defineModule` in each module.
 
@@ -92,7 +92,11 @@ custom IDs it does not own.
 ## Module services
 
 `services` is assembled in `src/index.ts` and passed to every command and
-listener. It includes `client`, `redis`, `db` (`{ prisma, permits }`), `prisma`,
-`permits`, `moduleLoader`, `moduleManager`, `modules.isEnabled`, `scheduler`,
-`addons`, `config`, `configService`, `rpc`, `ui`, `discord`, and
-`observability` (`{ healthMonitor, logger }`).
+listener. Module-facing code uses `client`, `permits`, `moduleLoader`,
+`moduleManager`, `modules.isEnabled`, `scheduler`, `addons`, `config`,
+`moduleConfig`, `configService`, `rpc`, `ui`, `discord`, `observability`
+(`{ healthMonitor, logger }`), and `helpers` (the `@lumi/db` helper tree).
+Database and cache access goes through `services.helpers`; modules do not
+receive `prisma`, `redis`, or the raw cache client. Static core commands that
+need process handles are factories closed over them, e.g.
+`createAboutCommand({ client, prisma, redis })`.

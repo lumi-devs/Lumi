@@ -32,9 +32,10 @@ export const caseDef: CommandDefinition = {
     const caseId = interaction.options.getInteger("id", true);
     const guildId = interaction.guildId!;
 
-    const modCase = await services.db.prisma.moderationCase.findFirst({
-      where: { guildId, caseNumber: caseId },
-    });
+    const modCase = await services.helpers.moderation.findByNumber(
+      guildId,
+      caseId,
+    );
 
     if (!modCase) {
       await replyError(
@@ -50,7 +51,14 @@ export const caseDef: CommandDefinition = {
       interaction.client.users.fetch(modCase.targetId).catch(() => null),
     ]);
     const createdAt = Math.floor(new Date(modCase.createdAt).getTime() / 1000);
-    const caseType = modCase.type ?? modCase.action ?? "CASE";
+    const updatedAt = Math.floor(new Date(modCase.updatedAt).getTime() / 1000);
+    const caseType = modCase.type || "CASE";
+    let messageLine: string | null = null;
+    if (modCase.messageId && modCase.channelId) {
+      messageLine = `**Message**\nhttps://discord.com/channels/${guildId}/${modCase.channelId}/${modCase.messageId}`;
+    } else if (modCase.channelId) {
+      messageLine = `**Channel**\n<#${modCase.channelId}>`;
+    }
 
     await interaction.reply(
       ephemeralCard(
@@ -60,13 +68,17 @@ export const caseDef: CommandDefinition = {
             `**Target**\n${target?.tag ?? "Unknown"} (\`${modCase.targetId}\`)`,
             `**Moderator**\n${moderator?.tag ?? "Unknown"} (\`${modCase.moderatorId}\`)`,
             `**Reason**\n${modCase.reason ?? "No reason provided"}`,
+            ...(messageLine ? [messageLine] : []),
           ],
           {
             statusBadge: {
               status: modCase.active === false ? "inactive" : "active",
               label: modCase.active === false ? "CLOSED" : "ACTIVE",
             },
-            footer: `Created <t:${createdAt}:F>`,
+            footer:
+              updatedAt > createdAt
+                ? `Created <t:${createdAt}:F> · Updated <t:${updatedAt}:R>`
+                : `Created <t:${createdAt}:F>`,
           },
         ),
       ),
@@ -84,18 +96,19 @@ async function buildCasesCard(
   targetTag: string,
   pageIndex: number,
 ): Promise<CardReply> {
-  const total = await services.db.prisma.moderationCase.count({
-    where: { guildId, targetId },
-  });
+  const total = await services.helpers.moderation.countForTarget(
+    guildId,
+    targetId,
+  );
   const totalPages = Math.max(1, Math.ceil(total / CasesPerPage));
   const page = Math.min(Math.max(1, pageIndex + 1), totalPages);
 
-  const cases = await services.db.prisma.moderationCase.findMany({
-    where: { guildId, targetId },
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * CasesPerPage,
-    take: CasesPerPage,
-  });
+  const cases = await services.helpers.moderation.listForTarget(
+    guildId,
+    targetId,
+    (page - 1) * CasesPerPage,
+    CasesPerPage,
+  );
 
   if (cases.length === 0) {
     return makeInfoCard(
@@ -115,8 +128,9 @@ async function buildCasesCard(
         reason?: string | null;
         createdAt: Date | string;
         type?: string | null;
-        action?: string | null;
         caseNumber?: number | null;
+        messageId?: string | null;
+        channelId?: string | null;
       },
       i: number,
     ) => {
@@ -126,9 +140,13 @@ async function buildCasesCard(
       const when = Number.isFinite(timestamp)
         ? `<t:${timestamp}:R>`
         : "unknown time";
-      const caseType = c.type ?? c.action ?? "CASE";
+      const caseType = c.type ?? "CASE";
       const caseNumber = c.caseNumber ?? offset + i + 1;
-      return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}`;
+      const link =
+        c.messageId && c.channelId
+          ? ` · [message](https://discord.com/channels/${guildId}/${c.channelId}/${c.messageId})`
+          : "";
+      return `\`#${caseNumber}\` **${caseType}** — ${reason} · ${moderator?.tag ?? c.moderatorId} · ${when}${link}`;
     },
   );
 

@@ -37,6 +37,14 @@ const ticketsModule: ModuleDefinition = defineModule({
     "Private support ticket threads with categories, claims, priorities, notes, tags, transcripts, and feedback",
   version: "2.0.0",
   config: TicketsConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.tickets.listTicketsForUser(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      return services.helpers.tickets.anonymiseUserData(guildId, userId);
+    },
+  },
   commands: [ticketCommand],
   listeners: [ticketMessageListener, ticketInteractionListener],
   tasks: [autoCloseTask],

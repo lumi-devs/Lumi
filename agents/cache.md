@@ -46,6 +46,24 @@ Rules:
   (Date, BigInt, Map, Set are supported).
 - Do not add a cache for a key nobody invalidates.
 
+## Module cache access
+
+Modules and add-ons use `services.helpers.cache`, a Redis-backed
+`CacheFacade` from `@lumi/db`, not `@lumi/cache` and not a raw Redis client:
+
+```ts
+const key = "my-module:state:" + guildId;
+await services.helpers.cache.set(key, value, 60_000);
+const value = await services.helpers.cache.get<MyState>(key);
+await services.helpers.cache.del(key);
+```
+
+Available primitives: `get`, `getString`, `set`, `setString`, `del`,
+`getOrLoad`, `setNx`, `incr`, `incrBy`, `sAdd`, `sRem`, `sMembers`, `sCard`,
+`takeLock`. The facade uses JSON, has per-process single-flight for
+`getOrLoad`, and returns null/no-op when Redis is absent. `@lumi/cache` remains
+the guild-config L1+L2 cache used by `ConfigService`; helpers never bypass it.
+
 ## Codec
 
 `devalue` (`packages/cache/src/codec.ts`). It preserves `Date`, `BigInt`, `Map`,

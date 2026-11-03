@@ -39,7 +39,6 @@ import {
   findTicketById,
   isBlacklisted,
   listCategories,
-  prismaOf,
   questionsOf,
   type TicketCategoryRecord,
   type TicketPanelRecord,
@@ -114,10 +113,7 @@ async function openTicketModal(
     return;
   }
   const category = await findCategory(services, guildId, categoryId);
-  if (
-    !category?.enabled ||
-    !panel.categoryIds.includes(category.id)
-  ) {
+  if (!category?.enabled || !panel.categoryIds.includes(category.id)) {
     await replyError(
       interaction,
       "Category Unavailable",
@@ -202,10 +198,7 @@ async function createTicketFromModal(
     return;
   }
   const category = await findCategory(services, guildId, categoryId);
-  if (
-    !category?.enabled ||
-    !panel.categoryIds.includes(category.id)
-  ) {
+  if (!category?.enabled || !panel.categoryIds.includes(category.id)) {
     await replyError(
       interaction,
       "Category Unavailable",
@@ -248,11 +241,7 @@ async function createTicketFromModal(
   const subject = answers[0]?.slice(0, 200) || null;
 
   const parent = await guild.channels.fetch(panel.channelId).catch(() => null);
-  if (
-    !parent?.isTextBased() ||
-    !("threads" in parent) ||
-    parent?.isThread()
-  ) {
+  if (!parent?.isTextBased() || !("threads" in parent) || parent?.isThread()) {
     await replyError(
       interaction,
       "Panel Channel Missing",
@@ -298,22 +287,18 @@ async function createTicketFromModal(
     return;
   }
 
-  const prisma = prismaOf(services);
   let ticket: TicketRecord;
   try {
-    ticket = await prisma.ticket.create({
-      data: {
-        guildId,
-        categoryId: category.id,
-        channelId: thread.id,
-        userId: interaction.user.id,
-        status: "open",
-        priority: isPriority(category.defaultPriority)
-          ? category.defaultPriority
-          : "normal",
-        subject,
-      },
-      include: { category: true },
+    ticket = await services.helpers.tickets.createTicket({
+      guildId,
+      categoryId: category.id,
+      channelId: thread.id,
+      userId: interaction.user.id,
+      status: "open",
+      priority: isPriority(category.defaultPriority)
+        ? category.defaultPriority
+        : "normal",
+      subject,
     });
   } catch (error) {
     services.observability?.logger?.warn?.("tickets row create failed", {
@@ -340,15 +325,13 @@ async function createTicketFromModal(
           `${question.label}: ${answers[index] || "No answer provided"}`,
       ),
   ].join("\n");
-  await prisma.ticketMessage
-    .create({
-      data: {
-        ticketId: ticket.id,
-        authorId: interaction.user.id,
-        authorName: displayName,
-        content: escapeHtml(summary),
-        attachments: [],
-      },
+  await services.helpers.tickets
+    .createMessage({
+      ticketId: ticket.id,
+      authorId: interaction.user.id,
+      authorName: displayName,
+      content: escapeHtml(summary),
+      attachments: [],
     })
     .catch(() => undefined);
 
@@ -406,12 +389,8 @@ async function handleFeedback(
     return;
   }
 
-  const prisma = prismaOf(services);
-  await prisma.ticket.update({
-    where: { id: ticket.id },
-    data: {
-      feedback: rating,
-    },
+  await services.helpers.tickets.updateTicket(ticket.id, {
+    feedback: rating,
   });
   await replySuccess(
     interaction,

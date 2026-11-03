@@ -21,9 +21,9 @@ import {
   findMenuMessage,
 } from "./service.js";
 import {
+  type MenuOption,
   selectionErrorCard,
   selectionSuccessCard,
-  type MenuOption,
 } from "./ui.js";
 
 const ModuleName = "role-menus-menu";

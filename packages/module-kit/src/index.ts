@@ -1,7 +1,14 @@
+export type {
+  EconomyFailureReason,
+  EconomyGuard,
+  EconomyOperationResult,
+} from "@lumi/db";
+
 import type {
   CommandDefinition,
   ListenerDefinition,
   ModuleCapability,
+  ModuleDataLifecycle,
   ModuleServices,
   TaskDefinition,
 } from "./types.js";
@@ -13,6 +20,9 @@ export interface ModuleDefinition {
   description: string;
   version: string;
   config: unknown;
+  configVersion?: number;
+  configMigrations?: Readonly<Record<number, (config: unknown) => unknown>>;
+  dataLifecycle?: ModuleDataLifecycle;
   commands: readonly CommandDefinition[];
   listeners: readonly ListenerDefinition[];
   tasks: readonly TaskDefinition[];

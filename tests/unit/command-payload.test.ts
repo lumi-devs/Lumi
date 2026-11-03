@@ -1,3 +1,4 @@
+import { SlashCommandBuilder } from "discord.js";
 import { describe, expect, it } from "vitest";
 import {
   CommandRegistry,
@@ -6,7 +7,9 @@ import {
 
 function command(name: string, module: string | null) {
   return {
-    data: { name, toJSON: () => ({ name }) },
+    data: new SlashCommandBuilder()
+      .setName(name)
+      .setDescription("test command"),
     execute: async () => {},
     module,
   };
@@ -23,10 +26,11 @@ describe("commandPayloadForGuild", () => {
         guildId !== "guild" || name !== "utility-afk",
     };
 
-    expect(commandPayloadForGuild(registry, loader, "guild")).toEqual([
-      { name: "ping" },
-      { name: "rank" },
-    ]);
+    expect(
+      commandPayloadForGuild(registry, loader, "guild").map(
+        (entry) => entry.name,
+      ),
+    ).toEqual(["ping", "rank"]);
   });
 
   it("includes every command for guilds with all modules active", () => {
@@ -35,9 +39,10 @@ describe("commandPayloadForGuild", () => {
     registry.add(command("afk", "utility-afk"));
     const loader = { isActive: () => true };
 
-    expect(commandPayloadForGuild(registry, loader, "guild")).toEqual([
-      { name: "ping" },
-      { name: "afk" },
-    ]);
+    expect(
+      commandPayloadForGuild(registry, loader, "guild").map(
+        (entry) => entry.name,
+      ),
+    ).toEqual(["ping", "afk"]);
   });
 });

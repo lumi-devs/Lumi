@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  type AutoroleFilterSettings,
   choosePendingAssignAt,
   evaluateAutoroleCandidate,
   isPendingDue,
@@ -7,7 +8,6 @@ import {
   resolveAssignAt,
   selectDuePending,
   selectRolesToAssign,
-  type AutoroleFilterSettings,
 } from "../logic.js";
 
 const base: AutoroleFilterSettings = {

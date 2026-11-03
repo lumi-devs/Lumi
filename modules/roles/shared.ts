@@ -44,7 +44,11 @@ export async function readConfig<T>(
 ): Promise<T> {
   let stored: unknown = null;
   try {
-    stored = await services.config.get(guildId, key);
+    stored = await services.moduleConfig.read(
+      guildId,
+      services.moduleName ?? key,
+      key,
+    );
   } catch (error) {
     services.observability?.logger?.warn?.(`[${label}] config read failed`, {
       guildId,

@@ -57,6 +57,54 @@
       "category": "Bank"
     },
     {
+      "key": "bankMin",
+      "label": "Minimum Bank Amount",
+      "type": "number",
+      "description": "Minimum deposit or withdrawal",
+      "default": 1,
+      "category": "Bank"
+    },
+    {
+      "key": "bankMax",
+      "label": "Maximum Bank Amount",
+      "type": "number",
+      "description": "Maximum deposit or withdrawal (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "bankDailyCap",
+      "label": "Daily Bank Cap",
+      "type": "number",
+      "description": "Maximum deposited or withdrawn per direction per day (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "transferMin",
+      "label": "Minimum Transfer",
+      "type": "number",
+      "description": "Minimum amount for /pay",
+      "default": 1,
+      "category": "Bank"
+    },
+    {
+      "key": "transferMax",
+      "label": "Maximum Transfer",
+      "type": "number",
+      "description": "Maximum amount for /pay (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "transferDailyCap",
+      "label": "Daily Transfer Cap",
+      "type": "number",
+      "description": "Maximum transferred per day (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
       "key": "workCooldown",
       "label": "Work Cooldown (seconds)",
       "type": "number",

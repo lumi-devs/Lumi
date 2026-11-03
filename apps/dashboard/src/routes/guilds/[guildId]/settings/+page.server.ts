@@ -1,8 +1,7 @@
-import type { PageServerLoad, Actions } from "./$types";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
-import { requireGuildAccess } from "$lib/server/auth";
 import { recordAudit } from "$lib/server/audit";
+import { requireGuildAccess } from "$lib/server/auth";
 import { readGuildSettings, setGuildSettings } from "$lib/server/settings";
 import {
   assertCsrf,
@@ -10,6 +9,7 @@ import {
   formString,
   parseInput,
 } from "$lib/server/validation";
+import type { Actions, PageServerLoad } from "./$types";
 
 const OptionalSnowflake = z
   .string()

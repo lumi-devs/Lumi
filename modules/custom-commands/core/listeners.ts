@@ -16,8 +16,8 @@ import { listEnabledCommands } from "./store.js";
 import {
   emojiMatches,
   isMessageTrigger,
-  matchMessageTrigger,
   matchesCustomId,
+  matchMessageTrigger,
 } from "./trigger.js";
 import type {
   CustomCommandRow,

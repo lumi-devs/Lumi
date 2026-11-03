@@ -24,44 +24,31 @@ export interface EnqueueAutoroleInput {
   readonly nowMs?: number;
 }
 
-function prismaOf(services: ModuleServices): any {
-  return services.db.prisma;
-}
-
 export async function enqueueAutorole(
   services: ModuleServices,
   input: EnqueueAutoroleInput,
 ): Promise<PendingAutorole | null> {
   if (input.roleIds.length === 0) return null;
-  const prisma = prismaOf(services);
   const nowMs = input.nowMs ?? Date.now();
   const assignAt = resolveAssignAt(nowMs, input.delaySeconds);
-  const existing = await prisma.autorolePending
-    .findUnique({
-      where: {
-        guildId_userId: { guildId: input.guildId, userId: input.userId },
-      },
-    })
-    .catch(() => null);
+  const existing = await services.helpers.roles.autorole.findByUser(
+    input.guildId,
+    input.userId,
+  );
 
   if (existing) {
     const roleIds = mergePendingRoleIds(existing.roleIds ?? [], input.roleIds);
-    return prisma.autorolePending.update({
-      where: { id: existing.id },
-      data: {
-        roleIds,
-        assignAt: choosePendingAssignAt(new Date(existing.assignAt), assignAt),
-      },
+    return services.helpers.roles.autorole.updatePending(existing.id, {
+      roleIds,
+      assignAt: choosePendingAssignAt(new Date(existing.assignAt), assignAt),
     });
   }
 
-  return prisma.autorolePending.create({
-    data: {
-      guildId: input.guildId,
-      userId: input.userId,
-      roleIds: [...new Set(input.roleIds)],
-      assignAt,
-    },
+  return services.helpers.roles.autorole.createPending({
+    guildId: input.guildId,
+    userId: input.userId,
+    roleIds: [...new Set(input.roleIds)],
+    assignAt,
   });
 }
 
@@ -70,18 +57,14 @@ export async function listPendingAutoroles(
   nowMs: number,
   limit = 200,
 ): Promise<PendingAutorole[]> {
-  return prismaOf(services).autorolePending.findMany({
-    where: { assignAt: { lte: new Date(nowMs) } },
-    orderBy: { assignAt: "asc" },
-    take: limit,
-  });
+  return services.helpers.roles.autorole.listDue(nowMs, limit);
 }
 
 export async function countPendingAutoroles(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  return prismaOf(services).autorolePending.count({ where: { guildId } });
+  return services.helpers.roles.autorole.count(guildId);
 }
 
 export async function cancelPendingAutoroles(
@@ -89,10 +72,7 @@ export async function cancelPendingAutoroles(
   guildId: string,
   userId?: string,
 ): Promise<number> {
-  const result = await prismaOf(services).autorolePending.deleteMany({
-    where: { guildId, ...(userId ? { userId } : {}) },
-  });
-  return result.count;
+  return services.helpers.roles.autorole.cancel(guildId, userId);
 }
 
 export interface ProcessAutoroleOptions {
@@ -113,16 +93,11 @@ export async function processPendingAutoroles(
   options: ProcessAutoroleOptions = {},
 ): Promise<ProcessAutoroleResult> {
   const nowMs = options.nowMs ?? Date.now();
-  const prisma = prismaOf(services);
-  const pending: PendingAutorole[] = await prisma.autorolePending.findMany({
-    where: {
-      assignAt: { lte: new Date(nowMs) },
-      ...(options.guildId ? { guildId: options.guildId } : {}),
-      ...(options.userId ? { userId: options.userId } : {}),
-    },
-    orderBy: { assignAt: "asc" },
-    take: options.limit ?? 200,
-  });
+  const pending: PendingAutorole[] =
+    await services.helpers.roles.autorole.listDue(nowMs, options.limit ?? 200, {
+      guildId: options.guildId,
+      userId: options.userId,
+    });
 
   let processed = 0;
   let failed = 0;
@@ -133,9 +108,7 @@ export async function processPendingAutoroles(
 
     const guild = services.client.guilds.cache.get(row.guildId);
     if (!guild) {
-      await prisma.autorolePending
-        .delete({ where: { id: row.id } })
-        .catch(() => undefined);
+      await services.helpers.roles.autorole.deletePending(row.id);
       failed += 1;
       continue;
     }
@@ -150,9 +123,7 @@ export async function processPendingAutoroles(
 
     const member = await fetchMember(guild, row.userId);
     if (!member) {
-      await prisma.autorolePending
-        .delete({ where: { id: row.id } })
-        .catch(() => undefined);
+      await services.helpers.roles.autorole.deletePending(row.id);
       failed += 1;
       continue;
     }
@@ -161,9 +132,7 @@ export async function processPendingAutoroles(
       ...member.roles.cache.keys(),
     ]);
     if (roleIds.length === 0) {
-      await prisma.autorolePending
-        .delete({ where: { id: row.id } })
-        .catch(() => undefined);
+      await services.helpers.roles.autorole.deletePending(row.id);
       continue;
     }
 
@@ -175,9 +144,7 @@ export async function processPendingAutoroles(
       "Autorole",
     );
     if (result.failed.length === 0) {
-      await prisma.autorolePending
-        .delete({ where: { id: row.id } })
-        .catch(() => undefined);
+      await services.helpers.roles.autorole.deletePending(row.id);
       processed += 1;
     } else {
       failed += 1;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyProgress,
+  type BulkJobProgress,
   cancelJobStatus,
   isRunnableJob,
   isTerminalJob,
@@ -9,7 +10,6 @@ import {
   progressBar,
   progressPercent,
   resumeJobStatus,
-  type BulkJobProgress,
 } from "../worker-logic.js";
 
 const job: BulkJobProgress = {

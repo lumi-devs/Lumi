@@ -38,8 +38,8 @@ export interface ModuleHostLogger {
 export function servicesForModule<T extends object>(
   services: T,
   moduleName: string,
-): T & { __moduleName: string } {
-  return { ...services, __moduleName: moduleName };
+): T & { moduleName: string } {
+  return { ...services, moduleName: moduleName };
 }
 
 export class CommandRegistry {
@@ -113,6 +113,17 @@ function guildIdFrom(args: unknown[]): string | null {
 
 export class ModuleHost implements AddonRuntime {
   private readonly disposers = new Map<string, Array<() => void>>();
+  private readonly eventListeners = new Map<
+    string,
+    Array<{
+      once: boolean;
+      handler: (...args: unknown[]) => void;
+    }>
+  >();
+  private readonly eventDispatchers = new Map<
+    string,
+    (...args: unknown[]) => void
+  >();
   private readonly options: ModuleHostOptions;
 
   constructor(options: ModuleHostOptions) {
@@ -227,11 +238,14 @@ export class ModuleHost implements AddonRuntime {
         );
       };
       if (listener.once) {
-        this.options.client.once(event, wrapped);
+        const binding = { once: true, handler: wrapped };
+        this.addEventListener(event, binding);
+        disposers.push(() => this.removeEventListener(event, binding));
       } else {
-        this.options.client.on(event, wrapped);
+        const binding = { once: false, handler: wrapped };
+        this.addEventListener(event, binding);
+        disposers.push(() => this.removeEventListener(event, binding));
       }
-      disposers.push(() => this.options.client.off(event, wrapped));
     }
     this.disposers.set(moduleName, disposers);
 
@@ -256,6 +270,50 @@ export class ModuleHost implements AddonRuntime {
         );
       }
     }
+  }
+
+  private addEventListener(
+    event: string,
+    binding: {
+      once: boolean;
+      handler: (...args: unknown[]) => void;
+    },
+  ): void {
+    const listeners = this.eventListeners.get(event) ?? [];
+    listeners.push(binding);
+    this.eventListeners.set(event, listeners);
+
+    if (this.eventDispatchers.has(event)) return;
+    const dispatcher = (...args: unknown[]) => {
+      const current = this.eventListeners.get(event);
+      if (!current) return;
+      for (const entry of [...current]) {
+        if (entry.once) this.removeEventListener(event, entry);
+        entry.handler(...args);
+      }
+    };
+    this.eventDispatchers.set(event, dispatcher);
+    this.options.client.on(event, dispatcher);
+  }
+
+  private removeEventListener(
+    event: string,
+    binding: {
+      once: boolean;
+      handler: (...args: unknown[]) => void;
+    },
+  ): void {
+    const listeners = this.eventListeners.get(event);
+    if (!listeners) return;
+    const index = listeners.indexOf(binding);
+    if (index >= 0) listeners.splice(index, 1);
+    if (listeners.length > 0) return;
+
+    this.eventListeners.delete(event);
+    const dispatcher = this.eventDispatchers.get(event);
+    if (!dispatcher) return;
+    this.eventDispatchers.delete(event);
+    this.options.client.off(event, dispatcher);
   }
 
   private detach(name: string): void {

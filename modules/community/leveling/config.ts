@@ -147,14 +147,22 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+interface ConfigServices {
+  moduleConfig: {
+    read(guildId: string, moduleName: string, key?: string): Promise<unknown>;
+  };
+  moduleName?: string;
+}
+
 export async function getLevelingConfig(
-  services: {
-    config: { get(guildId: string, name: string): Promise<unknown> };
-  },
+  services: ConfigServices,
   guildId: string,
 ): Promise<LevelingConfig> {
-  const stored = ((await services.config.get(guildId, LevelingConfigKey)) ??
-    {}) as Record<string, unknown>;
+  const stored = ((await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? LevelingConfigKey,
+    LevelingConfigKey,
+  )) ?? {}) as Record<string, unknown>;
 
   const announceChannel = stored.announceChannel;
   return {

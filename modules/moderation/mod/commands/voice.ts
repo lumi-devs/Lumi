@@ -2,7 +2,7 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { getReason, isImmune, replyError } from "../helpers.js";
+import { getCaseLink, getReason, isImmune, replyError } from "../helpers.js";
 
 export const vcmuteDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -66,15 +66,17 @@ export const vcmuteDef: CommandDefinition = {
       );
     }
 
-    await services.db.prisma.moderationCase.create({
-      data: {
-        guildId: guild.id,
-        type: "VOICE_MUTE",
-        targetId: target.id,
-        moderatorId: interaction.user.id,
-        reason,
-        metadata: { duration },
-      },
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "voice",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
+      duration: duration > 0 ? duration * 60 : null,
+      expiresAt:
+        duration > 0 ? new Date(Date.now() + duration * 60 * 1000) : null,
+      metadata: { duration },
     });
 
     await interaction.reply(
@@ -114,14 +116,13 @@ export const vcmuteRemoveDef: CommandDefinition = {
 
     await member.voice.setMute(false, reason);
 
-    await services.db.prisma.moderationCase.create({
-      data: {
-        guildId: guild.id,
-        type: "UNVOICE_MUTE",
-        targetId: target.id,
-        moderatorId: interaction.user.id,
-        reason,
-      },
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "unvoice",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
     });
 
     await interaction.reply(

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { handlePingButton, pingCommand } from "../../src/core/commands.ts";
+import {
+  createPingCommand,
+  handlePingButton,
+} from "../../src/core/commands.ts";
 
 const makeServices = (
   options: {
@@ -61,7 +64,7 @@ const shardHeaders = (card: any): string[] =>
 describe("ping panel", () => {
   it("renders the target layout with no accent color", async () => {
     const { interaction, cards } = makeInteraction();
-    await pingCommand.execute(interaction as any, makeServices() as any);
+    await createPingCommand(makeServices() as any).execute(interaction as any);
 
     expect(cards).toHaveLength(1);
     const card = cards[0];
@@ -108,7 +111,7 @@ describe("ping panel", () => {
 
   it("uses parseable custom IDs and disables both arrows for one page", async () => {
     const { interaction, cards } = makeInteraction();
-    await pingCommand.execute(interaction as any, makeServices() as any);
+    await createPingCommand(makeServices() as any).execute(interaction as any);
 
     const buttons = buttonsOf(cards[0]);
     expect(buttons.map((button: any) => button.custom_id)).toEqual([
@@ -132,7 +135,7 @@ describe("ping panel", () => {
       shardPings: Array.from({ length: 15 }, (_, id) => 40 + id),
     });
     const { interaction, cards } = makeInteraction("u2");
-    await pingCommand.execute(interaction as any, services as any);
+    await createPingCommand(services as any).execute(interaction as any);
 
     expect(shardHeaders(cards[0]!)).toHaveLength(10);
     expect(shardHeaders(cards[0]!)[0]).toBe("__🟢 **Shard [0]:** __");
@@ -162,7 +165,7 @@ describe("ping panel", () => {
 
   it("blocks other users from paginating", async () => {
     const { interaction, cards } = makeInteraction("owner");
-    await pingCommand.execute(interaction as any, makeServices() as any);
+    await createPingCommand(makeServices() as any).execute(interaction as any);
 
     const denied = await handlePingButton(
       {

@@ -10,16 +10,21 @@ export const StatsConfigSchema = z.object({
 export type StatsConfig = z.infer<typeof StatsConfigSchema>;
 
 interface ConfigServices {
-  config: {
-    get(guildId: string, key: string): Promise<unknown>;
+  moduleConfig: {
+    read(guildId: string, moduleName: string, key?: string): Promise<unknown>;
   };
+  moduleName?: string;
 }
 
 export async function getStatsConfig(
   services: ConfigServices,
   guildId: string,
 ): Promise<StatsConfig> {
-  const stored = await services.config.get(guildId, StatsConfigKey);
+  const stored = await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? StatsConfigKey,
+    StatsConfigKey,
+  );
   const parsed = StatsConfigSchema.safeParse(stored ?? {});
   return parsed.success ? parsed.data : StatsConfigSchema.parse({});
 }

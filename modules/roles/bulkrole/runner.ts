@@ -6,17 +6,17 @@ import {
   canBotManageGuildRole,
   removeMemberRoles,
 } from "../shared.js";
+import { BulkRoleModuleName, getBulkRoleConfig } from "./config.js";
 import {
   type BulkCandidate,
   type BulkRoleAction,
   normalizeBulkFilter,
   selectBulkRoleChanges,
 } from "./filter.js";
-import { BulkRoleModuleName, getBulkRoleConfig } from "./config.js";
 import {
+  type BulkRoleJob,
   incrementBulkRoleJob,
   listRunnableBulkRoleJobs,
-  type BulkRoleJob,
   updateBulkRoleJob,
 } from "./store.js";
 import { isRunnableJob, nextBatch, nextJobStatus } from "./worker-logic.js";

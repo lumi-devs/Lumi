@@ -8,6 +8,7 @@ import type {
   PermitAuditLogQuery,
 } from "./audit.js";
 import { createAuditLog, getAuditLogs } from "./audit.js";
+import { BuiltinPermits, matchesWhitelistScope } from "./constants.js";
 import {
   buildPermitChain,
   evaluateNodeMatch,
@@ -16,7 +17,6 @@ import {
   isPermitValid,
   matchesConditions,
 } from "./evaluator.js";
-import { BuiltinPermits, matchesWhitelistScope } from "./constants.js";
 import {
   isPermitNumberConflict,
   isRecordNotFoundError,

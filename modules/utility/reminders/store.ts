@@ -20,23 +20,10 @@ export interface ReminderRecord {
   createdAt: Date;
 }
 
-type ReminderClient = {
-  findMany(args: unknown): Promise<ReminderRecord[]>;
-  findFirst(args: unknown): Promise<ReminderRecord | null>;
-  create(args: unknown): Promise<ReminderRecord>;
-  updateMany(args: unknown): Promise<{ count: number }>;
-  deleteMany(args: unknown): Promise<{ count: number }>;
-  count(args: unknown): Promise<number>;
-};
-
 export type ResolveReminderResult =
   | { kind: "ok"; reminder: ReminderRecord }
   | { kind: "missing" }
   | { kind: "ambiguous" };
-
-export function reminderModel(services: ModuleServices): ReminderClient {
-  return services.db.prisma.reminder as ReminderClient;
-}
 
 export async function listActiveReminders(
   services: ModuleServices,
@@ -44,15 +31,7 @@ export async function listActiveReminders(
   userId: string,
   limit = 25,
 ): Promise<ReminderRecord[]> {
-  return reminderModel(services).findMany({
-    where: {
-      guildId,
-      userId,
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-    orderBy: { remindAt: "asc" },
-    take: limit,
-  });
+  return services.helpers.utility.reminders.listActive(guildId, userId, limit);
 }
 
 export async function countActiveReminders(
@@ -60,13 +39,7 @@ export async function countActiveReminders(
   guildId: string,
   userId: string,
 ): Promise<number> {
-  return reminderModel(services).count({
-    where: {
-      guildId,
-      userId,
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-  });
+  return services.helpers.utility.reminders.countActive(guildId, userId);
 }
 
 export async function resolveUserReminder(
@@ -75,13 +48,14 @@ export async function resolveUserReminder(
   userId: string,
   rawId: string,
 ): Promise<ResolveReminderResult> {
-  const model = reminderModel(services);
   const id = rawId.trim();
   if (id.length === 0) return { kind: "missing" };
 
-  const exact = await model.findFirst({
-    where: { id, guildId, userId },
-  });
+  const exact = await services.helpers.utility.reminders.findExact(
+    id,
+    guildId,
+    userId,
+  );
   if (exact) {
     return isTerminalStatus(exact.status)
       ? { kind: "missing" }
@@ -90,16 +64,11 @@ export async function resolveUserReminder(
 
   if (id.length < 4) return { kind: "missing" };
 
-  const matches = await model.findMany({
-    where: {
-      guildId,
-      userId,
-      id: { startsWith: id },
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-    orderBy: { remindAt: "asc" },
-    take: 2,
-  });
+  const matches = await services.helpers.utility.reminders.findPrefixMatches(
+    guildId,
+    userId,
+    id,
+  );
   if (matches.length === 0) return { kind: "missing" };
   if (matches.length > 1) return { kind: "ambiguous" };
   return { kind: "ok", reminder: matches[0]! };
@@ -116,32 +85,14 @@ export async function createReminder(
     recurringCron: string | null;
   },
 ): Promise<ReminderRecord> {
-  return reminderModel(services).create({
-    data: {
-      guildId: input.guildId,
-      userId: input.userId,
-      channelId: input.channelId,
-      message: input.message,
-      remindAt: input.remindAt,
-      recurringCron: input.recurringCron,
-      status: "pending",
-    },
-  });
+  return services.helpers.utility.reminders.create(input);
 }
 
 export async function cancelUserReminder(
   services: ModuleServices,
   reminder: ReminderRecord,
 ): Promise<boolean> {
-  const result = await reminderModel(services).updateMany({
-    where: {
-      id: reminder.id,
-      guildId: reminder.guildId,
-      userId: reminder.userId,
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-    data: { status: "cancelled" },
-  });
+  const result = await services.helpers.utility.reminders.cancel(reminder);
   return result.count > 0;
 }
 
@@ -150,14 +101,10 @@ export async function clearUserReminders(
   guildId: string,
   userId: string,
 ): Promise<number> {
-  const result = await reminderModel(services).updateMany({
-    where: {
-      guildId,
-      userId,
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-    data: { status: "cancelled" },
-  });
+  const result = await services.helpers.utility.reminders.clear(
+    guildId,
+    userId,
+  );
   return result.count;
 }
 
@@ -166,15 +113,10 @@ export async function snoozeUserReminder(
   reminder: ReminderRecord,
   remindAt: Date,
 ): Promise<boolean> {
-  const result = await reminderModel(services).updateMany({
-    where: {
-      id: reminder.id,
-      guildId: reminder.guildId,
-      userId: reminder.userId,
-      status: { notIn: ["delivered", "cancelled", "failed"] },
-    },
-    data: { remindAt, status: "pending" },
-  });
+  const result = await services.helpers.utility.reminders.snooze(
+    reminder,
+    remindAt,
+  );
   return result.count > 0;
 }
 
@@ -182,13 +124,9 @@ export async function reclaimStaleClaims(
   services: ModuleServices,
   now: Date,
 ): Promise<number> {
-  const result = await reminderModel(services).updateMany({
-    where: {
-      status: "processing",
-      remindAt: { lte: staleClaimBefore(now) },
-    },
-    data: { status: "pending" },
-  });
+  const result = await services.helpers.utility.reminders.reclaimStale(
+    staleClaimBefore(now),
+  );
   return result.count;
 }
 
@@ -197,21 +135,17 @@ export async function findDueReminders(
   now: Date,
   limit = 100,
 ): Promise<ReminderRecord[]> {
-  return reminderModel(services).findMany({
-    where: buildDueWhere(now),
-    orderBy: { remindAt: "asc" },
-    take: limit,
-  });
+  return services.helpers.utility.reminders.findDue(buildDueWhere(now), limit);
 }
 
 export async function claimReminder(
   services: ModuleServices,
   reminder: ReminderRecord,
 ): Promise<boolean> {
-  const result = await reminderModel(services).updateMany({
-    where: { id: reminder.id, status: reminder.status },
-    data: { status: "processing" },
-  });
+  const result = await services.helpers.utility.reminders.claim(
+    reminder.id,
+    reminder.status,
+  );
   return result.count === 1;
 }
 
@@ -221,15 +155,11 @@ export async function markDelivered(
   deliveredAt: Date,
   nextRemindAt?: Date | null,
 ): Promise<void> {
-  const recurring = nextRemindAt !== null && nextRemindAt !== undefined;
-  await reminderModel(services).updateMany({
-    where: { id: reminder.id, status: "processing" },
-    data: {
-      status: recurring ? "pending" : "delivered",
-      deliveredAt,
-      ...(recurring ? { remindAt: nextRemindAt } : {}),
-    },
-  });
+  await services.helpers.utility.reminders.markDelivered(
+    reminder.id,
+    deliveredAt,
+    nextRemindAt,
+  );
 }
 
 export async function markRetry(
@@ -242,12 +172,10 @@ export async function markRetry(
     ? reminder.remindAt
     : new Date(now.getTime() + retryDelayMs(plan.attempt));
 
-  await reminderModel(services).updateMany({
-    where: { id: reminder.id, status: "processing" },
-    data: plan.failed
-      ? { status: plan.status }
-      : { status: plan.status, remindAt },
-  });
+  await services.helpers.utility.reminders.markRetry(
+    reminder.id,
+    plan.failed ? { status: plan.status } : { status: plan.status, remindAt },
+  );
 
   return { failed: plan.failed, attempt: plan.attempt, status: plan.status };
 }

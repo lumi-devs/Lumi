@@ -30,7 +30,6 @@ import {
   fetchMember,
   getStoredJson,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -83,28 +82,6 @@ function pendingKey(guildId: string, userId: string): string {
 
 function pendingSetKey(guildId: string): string {
   return securityKey("verification", "pending-set", guildId);
-}
-
-interface VerificationTokenClient {
-  create(args: {
-    data: {
-      guildId: string;
-      userId: string;
-      tokenHash: string;
-      expiresAt: Date;
-    };
-  }): Promise<unknown>;
-  deleteMany(args: {
-    where: { expiresAt: { lt: Date } };
-  }): Promise<{ count: number }>;
-}
-
-function tokenClient(services: ModuleServices): VerificationTokenClient | null {
-  const prisma = services.db?.prisma as
-    { verificationToken?: Partial<VerificationTokenClient> } | undefined;
-  const model = prisma?.verificationToken;
-  if (!model?.create || !model.deleteMany) return null;
-  return model as VerificationTokenClient;
 }
 
 function isSuspicious(member: GuildMember): boolean {
@@ -194,8 +171,8 @@ async function createWebVerificationUrl(
   config: VerificationConfig,
   baseUrl: string,
 ): Promise<string | null> {
-  const client = tokenClient(services);
-  if (!client) {
+  const tokens = services.helpers.verification;
+  if (!tokens.available) {
     services.observability?.logger?.warn?.(
       "web verification database unavailable, falling back to emoji verification",
       { guildId: member.guild.id, userId: member.id },
@@ -206,13 +183,11 @@ async function createWebVerificationUrl(
   const token = generateVerificationToken();
   const expiresAt = new Date(Date.now() + config.timeoutMinutes * 60_000);
   try {
-    await client.create({
-      data: {
-        guildId: member.guild.id,
-        userId: member.id,
-        tokenHash: hashVerificationToken(token),
-        expiresAt,
-      },
+    await tokens.createToken({
+      guildId: member.guild.id,
+      userId: member.id,
+      tokenHash: hashVerificationToken(token),
+      expiresAt,
     });
   } catch (error) {
     services.observability?.logger?.warn?.(
@@ -267,15 +242,14 @@ async function addPending(
   member: GuildMember,
   config: VerificationConfig,
 ): Promise<void> {
-  const redis = redisOf(services);
   const expiresAt = Date.now() + config.timeoutMinutes * 60_000;
   await setStoredJson(
-    redis,
+    services,
     pendingKey(member.guild.id, member.id),
     { userId: member.id, expiresAt } satisfies PendingEntry,
     config.timeoutMinutes * 60 + 3600,
   );
-  if (redis) await redis.sadd(pendingSetKey(member.guild.id), member.id);
+  await services.helpers.cache.sAdd(pendingSetKey(member.guild.id), member.id);
 }
 
 async function clearPending(
@@ -283,9 +257,8 @@ async function clearPending(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  const redis = redisOf(services);
-  await deleteStored(redis, pendingKey(guildId, userId));
-  if (redis) await redis.srem(pendingSetKey(guildId), userId);
+  await deleteStored(services, pendingKey(guildId, userId));
+  await services.helpers.cache.sRem(pendingSetKey(guildId), userId);
 }
 
 async function grantVerified(
@@ -398,7 +371,7 @@ const onInteractionListener: ListenerDefinition = {
     }
 
     const pending = await getStoredJson<PendingEntry>(
-      redisOf(services),
+      services,
       pendingKey(guildId, userId),
     );
     if (!pending) {
@@ -466,9 +439,6 @@ const verificationSweep: TaskDefinition = {
   name: "verification-sweep",
   cron: "*/1 * * * *",
   async handler(services) {
-    const redis = redisOf(services);
-    if (!redis) return;
-
     for (const guild of services.client.guilds.cache.values()) {
       if (!services.modules.isEnabled(guild.id, ModuleName)) continue;
       const config = await readModuleConfig(
@@ -480,10 +450,12 @@ const verificationSweep: TaskDefinition = {
       );
       if (!config.enabled) continue;
 
-      const members = await redis.smembers(pendingSetKey(guild.id));
+      const members = await services.helpers.cache.sMembers(
+        pendingSetKey(guild.id),
+      );
       for (const userId of members) {
         const pending = await getStoredJson<PendingEntry>(
-          redis,
+          services,
           pendingKey(guild.id, userId),
         );
         if (!pending || pending.expiresAt > Date.now()) continue;
@@ -519,13 +491,11 @@ const verificationTokenCleanup: TaskDefinition = {
   name: "verification-token-cleanup",
   cron: "0 * * * *",
   async handler(services) {
-    const client = tokenClient(services);
-    if (!client) return;
+    const tokens = services.helpers.verification;
+    if (!tokens.available) return;
 
     try {
-      const { count } = await client.deleteMany({
-        where: { expiresAt: { lt: new Date() } },
-      });
+      const count = await tokens.deleteExpiredTokens(new Date());
       if (count > 0) {
         services.observability?.logger?.info?.(
           "expired verification tokens cleaned",
@@ -579,7 +549,7 @@ const verificationCommand: CommandDefinition = {
     const sub = interaction.options.getSubcommand();
 
     if (sub === "status") {
-      const pending = await redisOf(services)?.scard(
+      const pending = await services.helpers.cache.sCard(
         pendingSetKey(interaction.guildId),
       );
       await interaction.reply(
@@ -588,7 +558,7 @@ const verificationCommand: CommandDefinition = {
             `**Status**\n${config.enabled ? "Enabled" : "Disabled"}`,
             `**Mode**\n${config.mode}`,
             `**Target**\n${config.target}`,
-            `**Pending members**\n${pending ?? 0}`,
+            `**Pending members**\n${pending}`,
             `**Verified role**\n${config.verifiedRoleId ? `<@&${config.verifiedRoleId}>` : "Not configured"}`,
             `**Timeout**\n${config.timeoutMinutes}m (${config.kickOnTimeout ? "kick" : "remove role"})`,
           ]),
@@ -632,6 +602,23 @@ const verificationModule: ModuleDefinition = defineModule({
     "Member verification with emoji captcha, pending/verified roles, and timeout sweep",
   version: "2.0.0",
   config: VerificationConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      const [tokens, pending] = await Promise.all([
+        services.helpers.verification.listTokensForUser(guildId, userId),
+        services.helpers.cache.get<PendingEntry>(pendingKey(guildId, userId)),
+      ]);
+      return { tokens, pending };
+    },
+    async deleteUserData(services, guildId, userId) {
+      const [deleted, pending] = await Promise.all([
+        services.helpers.verification.deleteTokensForUser(guildId, userId),
+        services.helpers.cache.get<PendingEntry>(pendingKey(guildId, userId)),
+      ]);
+      await clearPending(services, guildId, userId);
+      return { deleted: deleted + (pending ? 1 : 0) };
+    },
+  },
   commands: [verificationCommand],
   listeners: [
     onMemberAddListener,

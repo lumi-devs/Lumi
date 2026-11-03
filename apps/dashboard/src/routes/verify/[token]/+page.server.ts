@@ -1,20 +1,20 @@
-import type { PageServerLoad, Actions } from "./$types";
 import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "$lib/server/audit";
 import {
   addMemberRole,
+  type DiscordRole,
   fetchBotUser,
   fetchGuildRoles,
   guildIconUrl,
   removeMemberRole,
   userAvatarUrl,
-  type DiscordRole,
 } from "$lib/server/discord";
 import { getPrisma } from "$lib/server/prisma";
 import { dashboardKey, getRedis } from "$lib/server/redis";
 import { readGuildSettings } from "$lib/server/settings";
+import type { Actions, PageServerLoad } from "./$types";
 
 const TokenRe = /^[A-Za-z0-9_-]{20,200}$/;
 const CaptchaTtlSeconds = 600;

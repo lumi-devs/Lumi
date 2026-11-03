@@ -10,10 +10,6 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: any }).prisma;
-}
-
 export function invalidateGuild(guildId: string): void {
   cache.delete(guildId);
 }
@@ -26,11 +22,9 @@ export async function listCommands(
   services: ModuleServices,
   guildId: string,
 ): Promise<CustomCommandRow[]> {
-  const rows = (await prismaOf(services).customCommand.findMany({
-    where: { guildId },
-    include: { group: true, schedule: true },
-    orderBy: [{ name: "asc" }],
-  })) as CustomCommandRow[];
+  const rows = (await services.helpers.customCommands.listCommands(
+    guildId,
+  )) as CustomCommandRow[];
   return rows;
 }
 
@@ -42,11 +36,9 @@ export async function listEnabledCommands(
   const cached = cache.get(guildId);
   if (cached && cached.expiresAt > now) return cached.commands;
 
-  const rows = (await prismaOf(services).customCommand.findMany({
-    where: { guildId, enabled: true },
-    include: { group: true, schedule: true },
-    orderBy: [{ name: "asc" }],
-  })) as CustomCommandRow[];
+  const rows = (await services.helpers.customCommands.listEnabledCommands(
+    guildId,
+  )) as CustomCommandRow[];
   cache.set(guildId, { expiresAt: now + CacheTtlMs, commands: rows });
   return rows;
 }
@@ -56,10 +48,10 @@ export async function getCommandByName(
   guildId: string,
   name: string,
 ): Promise<CustomCommandRow | null> {
-  return (await prismaOf(services).customCommand.findUnique({
-    where: { guildId_name: { guildId, name } },
-    include: { group: true, schedule: true },
-  })) as CustomCommandRow | null;
+  return (await services.helpers.customCommands.findCommandByName(
+    guildId,
+    name,
+  )) as CustomCommandRow | null;
 }
 
 export async function getCommandById(
@@ -67,27 +59,26 @@ export async function getCommandById(
   guildId: string,
   id: string,
 ): Promise<CustomCommandRow | null> {
-  return (await prismaOf(services).customCommand.findFirst({
-    where: { guildId, id },
-    include: { group: true, schedule: true },
-  })) as CustomCommandRow | null;
+  return (await services.helpers.customCommands.findCommandById(
+    guildId,
+    id,
+  )) as CustomCommandRow | null;
 }
 
 export async function countCommands(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  return prismaOf(services).customCommand.count({ where: { guildId } });
+  return services.helpers.customCommands.countCommands(guildId);
 }
 
 export async function listGroups(
   services: ModuleServices,
   guildId: string,
 ): Promise<CustomCommandGroupRow[]> {
-  return (await prismaOf(services).customCommandGroup.findMany({
-    where: { guildId },
-    orderBy: [{ position: "asc" }, { name: "asc" }],
-  })) as CustomCommandGroupRow[];
+  return (await services.helpers.customCommands.listGroups(
+    guildId,
+  )) as CustomCommandGroupRow[];
 }
 
 export async function getGroupByName(
@@ -95,14 +86,15 @@ export async function getGroupByName(
   guildId: string,
   name: string,
 ): Promise<CustomCommandGroupRow | null> {
-  return (await prismaOf(services).customCommandGroup.findUnique({
-    where: { guildId_name: { guildId, name } },
-  })) as CustomCommandGroupRow | null;
+  return (await services.helpers.customCommands.findGroupByName(
+    guildId,
+    name,
+  )) as CustomCommandGroupRow | null;
 }
 
 export async function countGroups(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  return prismaOf(services).customCommandGroup.count({ where: { guildId } });
+  return services.helpers.customCommands.countGroups(guildId);
 }

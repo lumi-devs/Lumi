@@ -8,7 +8,7 @@ import {
   type InteractionEditReplyOptions,
   type InteractionReplyOptions,
 } from "discord.js";
-import { DefaultLookback, LookbackValues, type Lookback } from "./constants.js";
+import { DefaultLookback, type Lookback, LookbackValues } from "./constants.js";
 import {
   loadGuildTotals,
   loadMessageStats,
@@ -19,6 +19,7 @@ import {
   type TopType,
 } from "./queries.js";
 import { parseLookback } from "./ranges.js";
+import { generateStatsCard, type StatsCardPayload } from "./statsCard.js";
 import {
   buildChannelsPayload,
   buildMembersPayload,
@@ -30,7 +31,6 @@ import {
   buildVoicePayload,
   type ViewData,
 } from "./views.js";
-import { generateStatsCard, type StatsCardPayload } from "./statsCard.js";
 
 export const StatsSubcommands = [
   "server",

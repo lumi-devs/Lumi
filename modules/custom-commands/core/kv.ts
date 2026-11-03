@@ -1,9 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
-import { Limits, type CustomCommandKvRow, type KvAdapter } from "./types.js";
-
-function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: any }).prisma;
-}
+import { type CustomCommandKvRow, type KvAdapter, Limits } from "./types.js";
 
 function validateKey(key: string): string {
   const trimmed = key.trim();
@@ -53,15 +49,15 @@ export async function getKv(
   userId: string,
   key: string,
 ): Promise<unknown> {
-  const prisma = prismaOf(services);
-  const row = (await prisma.customCommandKv.findUnique({
-    where: { guildId_userId_key: { guildId, userId, key: validateKey(key) } },
-  })) as CustomCommandKvRow | null;
+  const normalizedKey = validateKey(key);
+  const row = (await services.helpers.customCommands.findKv(
+    guildId,
+    userId,
+    normalizedKey,
+  )) as CustomCommandKvRow | null;
   if (!row) return null;
   if (isExpired(row)) {
-    await prisma.customCommandKv.deleteMany({
-      where: { guildId, userId, key: row.key },
-    });
+    await services.helpers.customCommands.deleteKv(guildId, userId, row.key);
     return null;
   }
   return row.value;
@@ -75,16 +71,17 @@ async function writeKv(
   value: unknown,
   expiresAt: Date | null,
 ): Promise<void> {
-  const prisma = prismaOf(services);
-  const existing = (await prisma.customCommandKv.findUnique({
-    where: { guildId_userId_key: { guildId, userId, key } },
-    select: { id: true },
-  })) as { id: string } | null;
+  const existing = (await services.helpers.customCommands.findKvId(
+    guildId,
+    userId,
+    key,
+  )) as { id: string } | null;
 
   if (!existing) {
-    const count = await prisma.customCommandKv.count({
-      where: { guildId, userId },
-    });
+    const count = await services.helpers.customCommands.countKv(
+      guildId,
+      userId,
+    );
     if (count >= Limits.kvKeysPerUser) {
       throw new Error(
         `A user may store at most ${Limits.kvKeysPerUser} KV keys.`,
@@ -92,11 +89,13 @@ async function writeKv(
     }
   }
 
-  await prisma.customCommandKv.upsert({
-    where: { guildId_userId_key: { guildId, userId, key } },
-    update: { value, expiresAt },
-    create: { guildId, userId, key, value, expiresAt },
-  });
+  await services.helpers.customCommands.upsertKv(
+    guildId,
+    userId,
+    key,
+    value,
+    expiresAt,
+  );
 }
 
 export async function setKv(
@@ -127,21 +126,16 @@ export async function incrKv(
   key: string,
   by = 1,
 ): Promise<number> {
-  const prisma = prismaOf(services);
   const normalizedKey = validateKey(key);
   const normalizedBy = Number(by);
   if (!Number.isFinite(normalizedBy))
     throw new Error("KV increment must be a number.");
 
-  const row = (await prisma.customCommandKv.findUnique({
-    where: {
-      guildId_userId_key: {
-        guildId,
-        userId,
-        key: normalizedKey,
-      },
-    },
-  })) as CustomCommandKvRow | null;
+  const row = (await services.helpers.customCommands.findKv(
+    guildId,
+    userId,
+    normalizedKey,
+  )) as CustomCommandKvRow | null;
 
   const current =
     row && !isExpired(row) && typeof row.value === "number"
@@ -169,10 +163,11 @@ export async function delKv(
   userId: string,
   key: string,
 ): Promise<boolean> {
-  const prisma = prismaOf(services);
-  const result = await prisma.customCommandKv.deleteMany({
-    where: { guildId, userId, key: validateKey(key) },
-  });
+  const result = await services.helpers.customCommands.deleteKv(
+    guildId,
+    userId,
+    validateKey(key),
+  );
   return result.count > 0;
 }
 
@@ -189,16 +184,11 @@ export async function listKv(
   userId: string,
   limit = 50,
 ): Promise<KvListEntry[]> {
-  const prisma = prismaOf(services);
-  const rows = (await prisma.customCommandKv.findMany({
-    where: {
-      guildId,
-      userId,
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-    },
-    orderBy: { updatedAt: "desc" },
-    take: Math.min(Math.max(1, limit), 100),
-  })) as CustomCommandKvRow[];
+  const rows = (await services.helpers.customCommands.listKv(
+    guildId,
+    userId,
+    Math.min(Math.max(1, limit), 100),
+  )) as CustomCommandKvRow[];
   return rows.map((row) => ({
     key: row.key,
     value: row.value,
@@ -211,10 +201,7 @@ export async function clearExpiredKv(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  const prisma = prismaOf(services);
-  const result = await prisma.customCommandKv.deleteMany({
-    where: { guildId, expiresAt: { lte: new Date() } },
-  });
+  const result = await services.helpers.customCommands.clearExpiredKv(guildId);
   return result.count;
 }
 

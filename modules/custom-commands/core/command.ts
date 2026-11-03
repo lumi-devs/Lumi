@@ -1,5 +1,12 @@
 import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
 import {
+  ephemeralCard,
+  makeErrorCard,
+  makeInfoCard,
+  makeListCard,
+  makeSuccessCard,
+} from "@lumi/ui";
+import {
   AttachmentBuilder,
   type ChatInputCommandInteraction,
   type Guild,
@@ -7,15 +14,8 @@ import {
   GuildMember,
   SlashCommandBuilder,
 } from "discord.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeListCard,
-  makeSuccessCard,
-} from "@lumi/ui";
-import { canManage, executeCustomCommand, notifyProblem } from "./engine.js";
 import { getCustomCommandsConfig } from "./config.js";
+import { canManage, executeCustomCommand, notifyProblem } from "./engine.js";
 import { delKv, getKv, incrKv, listKv, setKv } from "./kv.js";
 import {
   createCustomCommand,
@@ -23,12 +23,12 @@ import {
   diagnoseCommands,
   editCustomCommand,
   errorCard,
+  type GroupAction,
   listCustomCommands,
   manageGroup,
   manageSchedule,
-  showCustomCommand,
-  type GroupAction,
   type ScheduleAction,
+  showCustomCommand,
 } from "./management.js";
 import {
   getCommandByName,
@@ -38,7 +38,7 @@ import {
 } from "./store.js";
 import { buildExport, importCommands } from "./transfer.js";
 import { splitArgs } from "./trigger.js";
-import { Limits, ModuleName, TriggerTypes, type TriggerType } from "./types.js";
+import { Limits, ModuleName, type TriggerType, TriggerTypes } from "./types.js";
 
 function memberOf(
   interaction: ChatInputCommandInteraction,

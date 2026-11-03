@@ -1,3 +1,4 @@
+import { type KvAdapter, Limits } from "../types.js";
 import type {
   Expression,
   FilterExpression,
@@ -5,7 +6,6 @@ import type {
   TemplateNode,
 } from "./ast.js";
 import { parseTemplate, TemplateError } from "./parser.js";
-import { Limits, type KvAdapter } from "../types.js";
 
 export interface InterpretLimits {
   maxOutputBytes: number;

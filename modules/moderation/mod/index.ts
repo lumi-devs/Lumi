@@ -25,6 +25,23 @@ const modModule: ModuleDefinition = defineModule({
     immuneRoleIds: [],
     warnThresholds: {},
   },
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.moderation.exportForUser(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const anonymised = await services.helpers.moderation.anonymiseUser(
+        guildId,
+        userId,
+      );
+      return {
+        anonymised,
+        notes: [
+          `Anonymised ${anonymised} moderation case record(s) for ${userId}`,
+        ],
+      };
+    },
+  },
   commands: [
     banAdd,
     banRemove,

@@ -4,14 +4,10 @@ import { getCustomCommandsConfig } from "./config.js";
 import { nextRunAt } from "./duration.js";
 import { executeCustomCommand } from "./engine.js";
 import {
-  ModuleName,
   type CustomCommandRow,
+  ModuleName,
   type TriggerType,
 } from "./types.js";
-
-function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: any }).prisma;
-}
 
 interface DueSchedule {
   id: string;
@@ -26,12 +22,9 @@ interface DueSchedule {
 
 export async function runDueSchedules(services: ModuleServices): Promise<void> {
   const now = new Date();
-  const due = (await prismaOf(services).customCommandSchedule.findMany({
-    where: { nextRunAt: { lte: now } },
-    include: { command: true },
-    orderBy: { nextRunAt: "asc" },
-    take: 50,
-  })) as DueSchedule[];
+  const due = (await services.helpers.customCommands.dueSchedules(
+    now,
+  )) as DueSchedule[];
 
   for (const schedule of due) {
     const current = new Date();
@@ -43,11 +36,8 @@ export async function runDueSchedules(services: ModuleServices): Promise<void> {
     });
     const nextRun = next ?? new Date(current.getTime() + 24 * 60 * 60 * 1_000);
 
-    await prismaOf(services)
-      .customCommandSchedule.update({
-        where: { id: schedule.id },
-        data: { nextRunAt: nextRun, lastRunAt: current },
-      })
+    await services.helpers.customCommands
+      .advanceSchedule(schedule.id, nextRun, current)
       .catch((error: unknown) => {
         services.observability?.logger?.warn?.(
           "[custom-commands] failed to advance schedule",

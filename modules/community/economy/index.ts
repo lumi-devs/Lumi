@@ -15,6 +15,14 @@ const economyModule: ModuleDefinition = defineModule({
   description: "Currency, banking, rewards, and shop",
   version: "2.0.0",
   config: EconomyConfigSchema,
+  dataLifecycle: {
+    exportUserData(services, guildId, userId) {
+      return services.helpers.economy.exportUserData(guildId, userId);
+    },
+    deleteUserData(services, guildId, userId) {
+      return services.helpers.economy.deleteUserData(guildId, userId);
+    },
+  },
   commands: [
     balanceDef,
     dailyDef,

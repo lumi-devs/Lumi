@@ -1,13 +1,13 @@
-import { error, redirect, type RequestEvent } from "@sveltejs/kit";
-import type { GuildAccess } from "./types";
+import { error, type RequestEvent, redirect } from "@sveltejs/kit";
 import {
   canManageGuild,
   DiscordError,
   fetchUserGuilds,
-  refreshOAuthToken,
   type GuildSummary,
+  refreshOAuthToken,
 } from "./discord";
-import { saveSession, type SessionRecord } from "./session";
+import { type SessionRecord, saveSession } from "./session";
+import type { GuildAccess } from "./types";
 
 export function requireSession(event: RequestEvent): SessionRecord {
   if (!event.locals.session) {

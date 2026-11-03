@@ -1,6 +1,6 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import { describe, expect, it } from "vitest";
 import { createKvAdapter } from "../kv.js";
-import type { ModuleServices } from "@lumi/module-kit";
 
 const services = {} as ModuleServices;
 

@@ -1,4 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
+import type { PermitChainTarget } from "@lumi/permits";
 import type {
   APIInteractionGuildMember,
   ChatInputCommandInteraction,
@@ -48,28 +49,31 @@ export async function canUseTempVcAdmin(
     return true;
   }
 
-  const repo = services.db.permits;
+  const repo = services.permits;
   if (!repo || typeof repo.getPermitChain !== "function") return false;
 
   const roleIds = roleIdsOf(member);
 
   try {
+    const chainTargets: PermitChainTarget[] = [
+      { targetType: "USER", targetId: interaction.user.id },
+      ...(interaction.channelId
+        ? [{ targetType: "CHANNEL", targetId: interaction.channelId } as const]
+        : []),
+      ...roleIds.map(
+        (roleId) => ({ targetType: "ROLE", targetId: roleId }) as const,
+      ),
+    ];
     const chain = await repo.getPermitChain(
       interaction.guildId,
       interaction.user.id,
-      [
-        { targetType: "USER", targetId: interaction.user.id },
-        ...(interaction.channelId
-          ? [{ targetType: "CHANNEL", targetId: interaction.channelId }]
-          : []),
-        ...roleIds.map((roleId) => ({ targetType: "ROLE", targetId: roleId })),
-      ],
+      chainTargets,
     );
     if (chain?.isQuarantined) return false;
     for (const tier of chain?.tiers ?? []) {
-      const deny: string[] = tier?.custom?.deny ?? [];
+      const deny: readonly string[] = tier?.custom?.deny ?? [];
       if (deny.some((node) => nodeMatches(node, "tempvc.admin"))) return false;
-      const grant: string[] = tier?.custom?.grant ?? [];
+      const grant: readonly string[] = tier?.custom?.grant ?? [];
       if (grant.some((node) => nodeMatches(node, "tempvc.admin"))) return true;
     }
   } catch (error) {

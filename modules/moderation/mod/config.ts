@@ -53,14 +53,22 @@ function asThresholds(value: unknown): Record<string, WarnThreshold> {
   return thresholds;
 }
 
+interface ConfigServices {
+  moduleConfig: {
+    read(guildId: string, moduleName: string, key?: string): Promise<unknown>;
+  };
+  moduleName?: string;
+}
+
 export async function getModerationConfig(
-  services: {
-    config: { get(guildId: string, name: string): Promise<unknown> };
-  },
+  services: ConfigServices,
   guildId: string,
 ): Promise<ModerationConfig> {
-  const stored = ((await services.config.get(guildId, ModerationConfigKey)) ??
-    {}) as Record<string, unknown>;
+  const stored = ((await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? ModerationConfigKey,
+    ModerationConfigKey,
+  )) ?? {}) as Record<string, unknown>;
   const quarantineRoleId = stored.quarantineRoleId;
   const maxTargets = stored.maxTargets;
 

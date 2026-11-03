@@ -82,10 +82,13 @@ Allowed runtime imports:
 ## Services
 
 Add-ons receive the same `services` object as bundled modules, including
-`client`, `redis`, `db` (`{ prisma, permits }`), `prisma`, `permits`, `config`,
-`configService`, `modules`, `moduleLoader`, `moduleManager`, `scheduler`, `rpc`,
-`ui`, `addons`, `discord`, and `observability` (`{ healthMonitor, logger }`).
-Treat the database as shared: prefix tables with your add-on name.
+`client`, `permits`, `config`, `moduleConfig`, `configService`, `modules`,
+`moduleLoader`, `moduleManager`, `scheduler`, `rpc`, `ui`, `addons`, `discord`,
+`observability` (`{ healthMonitor, logger }`), and `helpers`. Database and cache
+access goes through the `helpers` namespaces (`economy`, `leveling`, `stats`,
+`tickets`, `roleMenus`, `customCommands`, `roles`, `security`, `verification`,
+`utility`, `cache`). `prisma`, `redis`, and the raw cache client are not part of
+the add-on services contract.
 
 ## Local development
 

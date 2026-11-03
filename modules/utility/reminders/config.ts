@@ -21,7 +21,11 @@ export async function readReminderConfig(
 ): Promise<ReminderConfig> {
   let stored: unknown = null;
   try {
-    stored = await services.config.get(guildId, ConfigKey);
+    stored = await services.moduleConfig.read(
+      guildId,
+      services.moduleName ?? ConfigKey,
+      ConfigKey,
+    );
   } catch (error) {
     services.observability?.logger?.warn?.("reminders config read failed", {
       guildId,

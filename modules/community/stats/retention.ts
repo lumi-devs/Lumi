@@ -1,8 +1,9 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import { RetentionDays } from "./constants.js";
 import { retentionCutoff } from "./ranges.js";
 
 interface RetentionServices {
-  db: { prisma: any };
+  helpers: Pick<ModuleServices["helpers"], "stats">;
 }
 
 export interface RetentionResult {
@@ -17,25 +18,5 @@ export async function purgeOldStats(
   now: number = Date.now(),
 ): Promise<RetentionResult> {
   const cutoff = retentionCutoff(now, RetentionDays);
-  const [snapshots, messageBuckets, voiceBuckets, events] = await Promise.all([
-    services.db.prisma.statsSnapshot.deleteMany({
-      where: { capturedAt: { lt: cutoff } },
-    }),
-    services.db.prisma.statsMessageBucket.deleteMany({
-      where: { bucketStart: { lt: cutoff } },
-    }),
-    services.db.prisma.statsVoiceBucket.deleteMany({
-      where: { bucketStart: { lt: cutoff } },
-    }),
-    services.db.prisma.statsEvent.deleteMany({
-      where: { createdAt: { lt: cutoff } },
-    }),
-  ]);
-
-  return {
-    snapshots: snapshots.count,
-    messageBuckets: messageBuckets.count,
-    voiceBuckets: voiceBuckets.count,
-    events: events.count,
-  };
+  return services.helpers.stats.purgeBefore(cutoff);
 }

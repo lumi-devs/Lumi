@@ -14,7 +14,6 @@ import {
   archiveMessage,
   listTicketMessages,
   listTicketNotes,
-  prismaOf,
   type TicketRecord,
 } from "./repository.js";
 import {
@@ -125,7 +124,6 @@ export async function closeTicket(
   actorId: string,
   rawReason: string | null | undefined,
 ): Promise<CloseTicketResult> {
-  const prisma = prismaOf(services);
   const config = await getTicketsConfig(services, ticket.guildId);
   const reason = validateCloseReason(rawReason);
   const thread = await resolveThread(services, guild, ticket.channelId);
@@ -160,17 +158,16 @@ export async function closeTicket(
   const transcriptUrl =
     uploadedUrl ?? transcriptRelativePath(ticket.guildId, ticket.id);
 
-  const updated = (await prisma.ticket.update({
-    where: { id: ticket.id },
-    data: {
+  const updated = (await services.helpers.tickets.updateTicketWithCategory(
+    ticket.id,
+    {
       status: "closed",
       closedBy: actorId,
       closedAt,
       closeReason: reason,
       transcriptUrl,
     },
-    include: { category: true },
-  })) as TicketRecord;
+  )) as TicketRecord;
 
   if (config.feedbackEnabled) {
     await sendFeedbackPrompt(thread, updated);
@@ -188,15 +185,8 @@ export async function sweepInactiveTickets(
   services: ModuleServices,
   now = new Date(),
 ): Promise<number> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticket || !prisma?.guild) return 0;
-
-  const guilds = (await prisma.ticket
-    .findMany({
-      where: { status: "open" },
-      select: { guildId: true },
-      distinct: ["guildId"],
-    })
+  const guilds = (await services.helpers.tickets
+    .listOpenTicketGuildIds()
     .catch(() => [])) as Array<{ guildId: string }>;
 
   let closed = 0;
@@ -205,8 +195,8 @@ export async function sweepInactiveTickets(
     const config = await getTicketsConfig(services, guildId);
     if (!config.autoCloseEnabled) continue;
 
-    const rows = (await prisma.ticket
-      .findMany({ where: { guildId, status: "open" } })
+    const rows = (await services.helpers.tickets
+      .listOpenTickets(guildId)
       .catch(() => [])) as TicketRecord[];
     const inactive = selectInactiveTickets(
       rows,

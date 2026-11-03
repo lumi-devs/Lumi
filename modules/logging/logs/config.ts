@@ -22,7 +22,11 @@ export async function getLoggingConfig(
   services: ModuleServices,
   guildId: string,
 ): Promise<LoggingConfig> {
-  const stored = await services.config.get(guildId, LoggingConfigKey);
+  const stored = await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? LoggingConfigKey,
+    LoggingConfigKey,
+  );
   const parsed = LoggingConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 

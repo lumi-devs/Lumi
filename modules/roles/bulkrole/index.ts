@@ -33,9 +33,9 @@ import {
 } from "./filter.js";
 import { processBulkRoleJobs } from "./runner.js";
 import {
+  type BulkRoleJob,
   createBulkRoleJob,
   getBulkRoleJob,
-  type BulkRoleJob,
   listGuildBulkRoleJobs,
   setBulkRoleJobStatus,
 } from "./store.js";
@@ -492,6 +492,18 @@ const bulkRoleModule: ModuleDefinition = defineModule({
     "Durable bulk add or remove role jobs with filters, dry-run previews, and resumable progress",
   version: "2.0.0",
   config: BulkRoleConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.roles.bulkRole.listByCreator(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.roles.bulkRole.anonymiseCreator(
+        guildId,
+        userId,
+      );
+      return { anonymised: result.count };
+    },
+  },
   commands: [bulkRoleCommand],
   listeners: [workerListener],
   tasks: [

@@ -28,5 +28,28 @@
         "noNonNullAssertion": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["modules/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@prisma/client": "Use services.helpers for database access.",
+                  "@lumi/db": "Use services.helpers for database access.",
+                  "@lumi/cache": "Use services.helpers.cache for cache access.",
+                  "@lumi/redis": "Use services.helpers.cache for cache access.",
+                  "ioredis": "Use services.helpers.cache for cache access."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

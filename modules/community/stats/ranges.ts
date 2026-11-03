@@ -1,7 +1,7 @@
 import {
   DefaultLookback,
-  LookbackValues,
   type Lookback,
+  LookbackValues,
   MaxLookbackDays,
   RetentionDays,
 } from "./constants.js";

@@ -12,11 +12,7 @@ interface TempRoleRow {
 async function sweepGuild(services: ModuleServices, now: Date): Promise<void> {
   let rows: TempRoleRow[];
   try {
-    rows = await services.db.prisma.roleMenuTempRole.findMany({
-      where: { expiresAt: { lte: now } },
-      orderBy: { expiresAt: "asc" },
-      take: 100,
-    });
+    rows = await services.helpers.roleMenus.listExpiredTempRoles(now);
   } catch (error) {
     services.observability?.logger?.warn?.("role menu temp role sweep failed", {
       error,
@@ -25,10 +21,8 @@ async function sweepGuild(services: ModuleServices, now: Date): Promise<void> {
   }
 
   for (const row of rows) {
-    const claimed = await services.db.prisma.roleMenuTempRole
-      .deleteMany({
-        where: { id: row.id, expiresAt: { lte: now } },
-      })
+    const claimed = await services.helpers.roleMenus
+      .claimExpiredTempRole(row.id, now)
       .catch(() => ({ count: 0 }));
     if (claimed.count === 0) continue;
 

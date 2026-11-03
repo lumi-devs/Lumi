@@ -3,8 +3,8 @@ import { getLevelingConfig } from "../../modules/community/leveling/config.ts";
 
 function services(stored: unknown) {
   return {
-    config: {
-      get: async () => stored,
+    moduleConfig: {
+      read: async () => stored,
     },
   };
 }

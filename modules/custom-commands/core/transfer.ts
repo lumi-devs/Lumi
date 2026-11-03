@@ -19,17 +19,13 @@ import {
   validateTrigger,
 } from "./trigger.js";
 import {
-  Limits,
-  TriggerTypes,
   type CommandExport,
   type CustomCommandRow,
+  Limits,
   type ResponseSpec,
   type TriggerType,
+  TriggerTypes,
 } from "./types.js";
-
-function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: any }).prisma;
-}
 
 const ExportGroupSchema = z
   .object({
@@ -235,16 +231,9 @@ export async function importCommands(
     groupNames.add(name);
   }
 
-  const prisma = prismaOf(services);
   const [existingCommands, existingGroups] = await Promise.all([
-    prisma.customCommand.findMany({
-      where: { guildId },
-      select: { name: true },
-    }) as Promise<Array<{ name: string }>>,
-    prisma.customCommandGroup.findMany({
-      where: { guildId },
-      select: { name: true },
-    }) as Promise<Array<{ name: string }>>,
+    services.helpers.customCommands.listCommandNames(guildId),
+    services.helpers.customCommands.listGroupNames(guildId),
   ]);
   const existingCommandNames = new Set(existingCommands.map((row) => row.name));
   const existingGroupNames = new Set(existingGroups.map((row) => row.name));
@@ -288,133 +277,60 @@ export async function importCommands(
     }
   }
 
-  let importedGroups = 0;
-  let importedCommands = 0;
+  const importGroups = data.groups.map((group) => ({
+    name: normalizeCommandName(group.name),
+    description: group.description ?? null,
+    ...(group.position !== undefined ? { position: group.position } : {}),
+  }));
 
-  await prisma.$transaction(async (tx: any) => {
-    const groupIdByName = new Map<string, string>();
-
-    for (const group of data.groups) {
-      const name = normalizeCommandName(group.name);
-      const existing = (await tx.customCommandGroup.findUnique({
-        where: { guildId_name: { guildId, name } },
-      })) as { id: string } | null;
-      if (existing) {
-        groupIdByName.set(name, existing.id);
-        if (options.overwrite) {
-          await tx.customCommandGroup.update({
-            where: { id: existing.id },
-            data: {
-              description: group.description ?? null,
-              ...(group.position !== undefined
-                ? { position: group.position }
-                : {}),
-            },
-          });
-        }
-        continue;
-      }
-      const created = (await tx.customCommandGroup.create({
-        data: {
-          guildId,
-          name,
-          description: group.description ?? null,
-          position: group.position ?? 0,
-        },
-      })) as { id: string };
-      groupIdByName.set(name, created.id);
-      importedGroups += 1;
-    }
-
-    for (const [name, id] of await loadExistingGroups(tx, guildId)) {
-      groupIdByName.set(name, id);
-    }
-
-    for (const command of data.commands) {
-      const name = normalizeCommandName(command.name);
-      const groupId = command.group
-        ? (groupIdByName.get(normalizeCommandName(command.group)) ?? null)
-        : null;
-      const existing = (await tx.customCommand.findUnique({
-        where: { guildId_name: { guildId, name } },
-      })) as { id: string } | null;
-
-      const dataPayload = {
-        description: command.description ?? null,
-        triggerType: command.triggerType,
-        trigger: command.trigger,
-        responses: command.responses,
-        enabled: command.enabled ?? true,
-        cooldownSeconds: command.cooldownSeconds ?? 0,
-        permissionNodes: command.permissionNodes ?? [],
-        groupId,
+  const importCommands = data.commands.map((command) => {
+    const name = normalizeCommandName(command.name);
+    const schedule = command.schedule;
+    let importSchedule: {
+      cron: string | null;
+      intervalSeconds: number | null;
+      timezone: string;
+      nextRunAt: Date;
+    } | null = null;
+    if (schedule) {
+      const timezone = schedule.timezone ?? "UTC";
+      const next = nextRunAt({
+        cron: schedule.cron ?? null,
+        intervalSeconds: schedule.intervalSeconds ?? null,
+        timezone,
+      });
+      if (!next) throw new Error(`Could not compute a schedule for "${name}".`);
+      importSchedule = {
+        cron: schedule.cron ?? null,
+        intervalSeconds: schedule.intervalSeconds ?? null,
+        timezone,
+        nextRunAt: next,
       };
-
-      let commandId: string;
-      if (existing) {
-        await tx.customCommand.update({
-          where: { id: existing.id },
-          data: dataPayload,
-        });
-        commandId = existing.id;
-      } else {
-        const created = (await tx.customCommand.create({
-          data: {
-            guildId,
-            name,
-            createdBy: options.userId,
-            ...dataPayload,
-          },
-        })) as { id: string };
-        commandId = created.id;
-        importedCommands += 1;
-      }
-
-      if (command.schedule) {
-        const schedule = command.schedule;
-        const timezone = schedule.timezone ?? "UTC";
-        const next = nextRunAt({
-          cron: schedule.cron ?? null,
-          intervalSeconds: schedule.intervalSeconds ?? null,
-          timezone,
-        });
-        if (!next)
-          throw new Error(`Could not compute a schedule for "${name}".`);
-        await tx.customCommandSchedule.upsert({
-          where: { commandId },
-          update: {
-            cron: schedule.cron ?? null,
-            intervalSeconds: schedule.intervalSeconds ?? null,
-            timezone,
-            nextRunAt: next,
-          },
-          create: {
-            commandId,
-            cron: schedule.cron ?? null,
-            intervalSeconds: schedule.intervalSeconds ?? null,
-            timezone,
-            nextRunAt: next,
-          },
-        });
-      } else if (existing) {
-        await tx.customCommandSchedule.deleteMany({ where: { commandId } });
-      }
     }
+    return {
+      name,
+      description: command.description ?? null,
+      triggerType: command.triggerType,
+      trigger: command.trigger,
+      responses: command.responses,
+      enabled: command.enabled ?? true,
+      cooldownSeconds: command.cooldownSeconds ?? 0,
+      permissionNodes: command.permissionNodes ?? [],
+      groupName: command.group ? normalizeCommandName(command.group) : null,
+      schedule: importSchedule,
+    };
+  });
+
+  const result = await services.helpers.customCommands.importCommands({
+    guildId,
+    userId: options.userId,
+    overwrite: options.overwrite,
+    groups: importGroups,
+    commands: importCommands,
   });
 
   invalidateGuild(guildId);
-  return { groups: importedGroups, commands: importedCommands };
-}
-
-async function loadExistingGroups(
-  tx: any,
-  guildId: string,
-): Promise<Map<string, string>> {
-  const rows = (await tx.customCommandGroup.findMany({
-    where: { guildId },
-    select: { id: true, name: true },
-  })) as Array<{ id: string; name: string }>;
-  return new Map(rows.map((row) => [row.name, row.id]));
+  return result;
 }
 
 export function parseIntervalInput(input: string): number {

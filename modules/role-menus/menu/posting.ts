@@ -1,20 +1,20 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import {
+  type CardReply,
   cardCreateOptions,
   cardMessage,
   makeErrorCard,
   makeSuccessCard,
-  type CardReply,
 } from "@lumi/ui";
 import type { Guild, Message } from "discord.js";
+import { MaxReactionOptions, reactionMatchesEmoji } from "./reactions.js";
 import {
   buildRoleMenuCard,
-  reactionEmojis,
   type MenuGroup,
   type MenuOption,
   type RoleMenuStyle,
+  reactionEmojis,
 } from "./ui.js";
-import { MaxReactionOptions, reactionMatchesEmoji } from "./reactions.js";
 
 export interface PostedMenu {
   readonly channelId: string;
@@ -110,14 +110,12 @@ export async function postRoleMenu(
   }
 
   try {
-    await services.db.prisma.roleMenuMessage.create({
-      data: {
-        guildId: guild.id,
-        groupId: group.id,
-        channelId: channel.id,
-        messageId: message.id,
-        style,
-      },
+    await services.helpers.roleMenus.createMenuMessage({
+      guildId: guild.id,
+      groupId: group.id,
+      channelId: channel.id,
+      messageId: message.id,
+      style,
     });
   } catch (error) {
     services.observability?.logger?.warn?.("role menu message record failed", {
@@ -149,9 +147,7 @@ export async function refreshRoleMenuMessage(
     .fetch(record.channelId)
     .catch(() => null);
   if (!isReadable(channel)) {
-    await services.db.prisma.roleMenuMessage.delete({
-      where: { id: record.id },
-    });
+    await services.helpers.roleMenus.deleteMenuMessage(record.id);
     return "deleted";
   }
 
@@ -159,9 +155,7 @@ export async function refreshRoleMenuMessage(
     .fetch(record.messageId)
     .catch(() => null);
   if (!message) {
-    await services.db.prisma.roleMenuMessage.delete({
-      where: { id: record.id },
-    });
+    await services.helpers.roleMenus.deleteMenuMessage(record.id);
     return "deleted";
   }
 

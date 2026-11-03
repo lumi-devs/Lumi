@@ -8,8 +8,8 @@ import {
 } from "@lumi/ui";
 import {
   type APIInteractionGuildMember,
-  type ChatInputCommandInteraction,
   ChannelType,
+  type ChatInputCommandInteraction,
   type GuildMember,
   PermissionFlagsBits,
   SlashCommandBuilder,
@@ -29,7 +29,7 @@ import {
 } from "./posting.js";
 import { formatTempDuration, type RoleMenuMode } from "./selection.js";
 import { findGroup, type GroupRecord } from "./service.js";
-import { groupMode, roleMenuListCard, type RoleMenuStyle } from "./ui.js";
+import { groupMode, type RoleMenuStyle, roleMenuListCard } from "./ui.js";
 
 const ModuleName = "role-menus-menu";
 const PermitNode = "rolemenu.manage";
@@ -144,7 +144,11 @@ function validationForMax(value: number | null): string | null {
   return null;
 }
 
-function groupSummary(group: GroupRecord): string {
+function groupSummary(
+  group: Omit<GroupRecord, "options"> & {
+    readonly options: readonly unknown[];
+  },
+): string {
   const options = group.options.length;
   const temp = formatTempDuration(group.tempDurationSeconds);
   const limit =
@@ -402,16 +406,8 @@ export const rolemenuCommand: CommandDefinition = {
       await interaction.respond([]);
       return;
     }
-    const rows = await services.db.prisma.roleMenuGroup
-      .findMany({
-        where: {
-          guildId: interaction.guildId,
-          name: { contains: focused.value, mode: "insensitive" },
-        },
-        orderBy: { name: "asc" },
-        take: 25,
-        select: { name: true },
-      })
+    const rows = await services.helpers.roleMenus
+      .searchGroupNames(interaction.guildId, focused.value)
       .catch(() => []);
     await interaction.respond(
       rows.map((row: { name: string }) => ({
@@ -524,10 +520,10 @@ async function createGroup(
     return;
   }
 
-  const existing = await services.db.prisma.roleMenuGroup.findFirst({
-    where: { guildId, name },
-    select: { id: true },
-  });
+  const existing = await services.helpers.roleMenus.findGroupNameConflict(
+    guildId,
+    name,
+  );
   if (existing) {
     await interaction.reply(
       ephemeralCard(
@@ -542,17 +538,15 @@ async function createGroup(
 
   let group: { name: string };
   try {
-    group = await services.db.prisma.roleMenuGroup.create({
-      data: {
-        guildId,
-        name,
-        description: interaction.options.getString("description"),
-        mode,
-        requireOne,
-        autoToggle,
-        maxSelections,
-        tempDurationSeconds,
-      },
+    group = await services.helpers.roleMenus.createGroup({
+      guildId,
+      name,
+      description: interaction.options.getString("description"),
+      mode,
+      requireOne,
+      autoToggle,
+      maxSelections,
+      tempDurationSeconds,
     });
   } catch (error) {
     services.observability?.logger?.warn?.("role menu create failed", {
@@ -601,10 +595,11 @@ async function editGroup(
       );
       return;
     }
-    const existing = await services.db.prisma.roleMenuGroup.findFirst({
-      where: { guildId: group.guildId, name, id: { not: group.id } },
-      select: { id: true },
-    });
+    const existing = await services.helpers.roleMenus.findGroupNameConflict(
+      group.guildId,
+      name,
+      group.id,
+    );
     if (existing) {
       await interaction.reply(
         ephemeralCard(
@@ -669,10 +664,7 @@ async function editGroup(
     return;
   }
 
-  const updated = await services.db.prisma.roleMenuGroup.update({
-    where: { id: group.id },
-    data,
-  });
+  const updated = await services.helpers.roleMenus.updateGroup(group.id, data);
   await interaction.reply(
     ephemeralCard(
       makeSuccessCard(`🎭 ${updated.name}`, [
@@ -688,22 +680,19 @@ async function deleteGroup(
   services: ModuleServices,
   group: GroupRecord,
 ): Promise<void> {
-  const messages = await services.db.prisma.roleMenuMessage.findMany({
-    where: { groupId: group.id },
-    select: { channelId: true, messageId: true },
-  });
+  const messages = await services.helpers.roleMenus.listGroupMessageLocations(
+    group.id,
+  );
   for (const message of messages) {
     await deleteRoleMenuMessage(services, message);
   }
   const roleIds = group.options.map((option) => option.roleId);
   if (roleIds.length > 0) {
-    await services.db.prisma.roleMenuTempRole
-      .deleteMany({
-        where: { guildId: group.guildId, roleId: { in: roleIds } },
-      })
+    await services.helpers.roleMenus
+      .deleteTempRolesForRoleIds(group.guildId, roleIds)
       .catch(() => undefined);
   }
-  await services.db.prisma.roleMenuGroup.delete({ where: { id: group.id } });
+  await services.helpers.roleMenus.deleteGroup(group.id);
   await interaction.reply(
     ephemeralCard(
       makeSuccessCard(
@@ -810,15 +799,13 @@ async function addOption(
       -1,
     ) + 1;
 
-  await services.db.prisma.roleMenuOption.create({
-    data: {
-      groupId: group.id,
-      roleId: role.id,
-      label: label.slice(0, 80),
-      emoji,
-      description,
-      position,
-    },
+  await services.helpers.roleMenus.createOption({
+    groupId: group.id,
+    roleId: role.id,
+    label: label.slice(0, 80),
+    emoji,
+    description,
+    position,
   });
 
   await interaction.reply(
@@ -850,11 +837,9 @@ async function removeOption(
     return;
   }
 
-  await services.db.prisma.roleMenuOption.delete({ where: { id: option.id } });
-  await services.db.prisma.roleMenuTempRole
-    .deleteMany({
-      where: { guildId: group.guildId, roleId: option.roleId },
-    })
+  await services.helpers.roleMenus.deleteOption(option.id);
+  await services.helpers.roleMenus
+    .deleteTempRolesForRole(group.guildId, option.roleId)
     .catch(() => undefined);
 
   await interaction.reply(
@@ -932,9 +917,7 @@ async function refreshGroup(
   services: ModuleServices,
   group: GroupRecord,
 ): Promise<void> {
-  const messages = await services.db.prisma.roleMenuMessage.findMany({
-    where: { groupId: group.id },
-  });
+  const messages = await services.helpers.roleMenus.listGroupMessages(group.id);
   if (messages.length === 0) {
     await interaction.reply(
       ephemeralCard(
@@ -978,11 +961,9 @@ async function listGroups(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,
 ): Promise<void> {
-  const groups = await services.db.prisma.roleMenuGroup.findMany({
-    where: { guildId: interaction.guildId! },
-    include: { options: { select: { id: true } } },
-    orderBy: { name: "asc" },
-  });
+  const groups = await services.helpers.roleMenus.listGroups(
+    interaction.guildId!,
+  );
 
   if (groups.length === 0) {
     await interaction.reply(
@@ -996,6 +977,6 @@ async function listGroups(
     return;
   }
 
-  const lines = groups.map((group: GroupRecord) => groupSummary(group));
+  const lines = groups.map((group) => groupSummary(group));
   await interaction.reply(ephemeralCard(roleMenuListCard(lines)));
 }

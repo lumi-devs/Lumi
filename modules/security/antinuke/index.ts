@@ -21,7 +21,6 @@ import {
   incrementWindow,
   isTrusted,
   readModuleConfig,
-  redisOf,
   type SecurityResponse,
   securityCard,
   securityKey,
@@ -180,14 +179,17 @@ const onAuditLogListener: ListenerDefinition = {
     );
     if (!guard) return;
 
-    const redis = redisOf(services);
     const windowKey = securityKey(
       "antinuke",
       guild.id,
       guard.action,
       executorId,
     );
-    const count = await incrementWindow(redis, windowKey, config.windowSeconds);
+    const count = await incrementWindow(
+      services,
+      windowKey,
+      config.windowSeconds,
+    );
     if (count <= guard.max) return;
 
     const triggeredKey = securityKey(
@@ -198,8 +200,11 @@ const onAuditLogListener: ListenerDefinition = {
       "triggered",
     );
     if (
-      redis &&
-      !(await redis.set(triggeredKey, "1", "EX", config.windowSeconds, "NX"))
+      !(await services.helpers.cache.setNx(
+        triggeredKey,
+        "1",
+        config.windowSeconds * 1000,
+      ))
     ) {
       return;
     }
@@ -214,7 +219,7 @@ const onAuditLogListener: ListenerDefinition = {
     );
 
     await setStoredJson(
-      redis,
+      services,
       securityKey("recovery", guild.id),
       { reason: "nuke", at: Date.now() },
       config.windowSeconds * 10,

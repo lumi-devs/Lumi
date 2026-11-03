@@ -79,7 +79,11 @@ export async function getTicketsConfig(
 ): Promise<TicketsConfig> {
   let stored: unknown;
   try {
-    stored = await services.config.get(guildId, TicketsConfigKey);
+    stored = await services.moduleConfig.read(
+      guildId,
+      services.moduleName ?? TicketsConfigKey,
+      TicketsConfigKey,
+    );
   } catch (error) {
     services.observability?.logger?.warn?.("tickets config read failed", {
       guildId,

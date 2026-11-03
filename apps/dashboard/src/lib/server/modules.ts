@@ -1,8 +1,8 @@
 import type { Dirent } from "node:fs";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { getPrisma } from "./prisma";
 import { serverConfig } from "./env";
+import { getPrisma } from "./prisma";
 
 export type ConfigFieldType =
   | "boolean"

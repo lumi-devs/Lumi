@@ -268,10 +268,11 @@ export const myCommand: CommandDefinition = {
     const config = await services.config.get(guildId, "my-module");
     void config;
 
-    // Use database
-    const row = await services.db.prisma.myTable.findUnique({
-      where: { guildId },
-    });
+    // Use helpers for every database/cache read or write
+    const row = await services.helpers.leveling.findUser(
+      guildId,
+      interaction.user.id,
+    );
     void row;
 
     // Use permits
@@ -337,13 +338,12 @@ export const myListener: ListenerDefinition = {
     if (!config?.someFeature) return;
 
     // Do work...
-    await services.db.prisma.myLog.create({
-      data: {
-        guildId: message.guildId,
-        userId: message.author.id,
-        content: message.content,
-      },
-    });
+    await services.helpers.stats.createEvent(
+      message.guildId,
+      "my-module.message",
+      message.author.id,
+      { channelId: message.channelId },
+    );
   },
 };
 ```
@@ -363,7 +363,7 @@ Import from `discord.js` Events:
 
 1. **Early returns** — check guild, bot, enabled, config early
 2. **Don't block** — listeners run synchronously in the event loop; defer heavy work
-3. **Use services** — `services.db`, `services.config`, `services.redis`, `services.permits`
+3. **Use services** — `services.helpers` for database/cache, `services.config`, `services.permits`
 4. **No side-effect imports** — listeners are called via the loader, not imported directly
 
 ---
@@ -400,34 +400,29 @@ fixed-interval expressions (`*/N * * * *`) are scheduled exactly.
 ```ts
 interface ModuleServices {
   client: Client; // Discord client
-  redis: Redis; // ioredis instance
-  db: {
-    // Database access
-    prisma: PrismaClient;
-    permits: PermitRepository;
-  };
-  prisma: PrismaClient; // Same client, top-level shorthand
   permits: PermitRepository; // Permit evaluation
   modules: {
     // Module state
     isEnabled: (guildId: string, module: string) => boolean;
   };
-  moduleLoader: ModuleLoader;
-  moduleManager: ModuleManager;
-  addons: AddonManager; // Throws if used before wiring
+  moduleConfig: ModuleConfigService; // Per-module config read/save
+  helpers: DbHelpers; // Database + cache access
+  rpc: unknown;
   scheduler: DistributedScheduler; // Cron jobs
-  config: ConfigService; // Guild config get/set
-  configService: ConfigService; // Same instance
-  rpc: RpcServer; // Internal HTTP control server
+  config: ModuleConfigAccess; // Guild config get/set
   ui: typeof import("@lumi/ui"); // Import @lumi/ui directly
   discord: { PermissionFlagsBits }; // Discord.js constants
   observability: { healthMonitor: HealthMonitor; logger: Logger };
-  __moduleName: string; // Set per module
+  moduleName?: string; // Set per module
 }
 ```
 
-The runtime bag is authoritative; `@lumi/module-kit` declares a loose subset of
-these fields.
+`DbHelpers` exposes `leveling`, `economy`, `stats`, `tickets`, `roleMenus`,
+`customCommands`, `roles`, `security`, `verification`, `utility`, and `cache`.
+Modules must not import `@prisma/client`, `@lumi/db`, `@lumi/cache`,
+`@lumi/redis`, or `ioredis`; Biome blocks those imports under `modules/**`.
+Runtime-only fields (`moduleLoader`, `moduleManager`, `addons`, etc.) exist on
+the host bag but are not part of the module contract unless listed above.
 
 ---
 
@@ -447,8 +442,10 @@ describe("my-module", () => {
     services = {
       modules: { isEnabled: vi.fn().mockReturnValue(true) },
       config: { get: vi.fn().mockResolvedValue({}) },
-      db: { prisma: { myTable: { findUnique: vi.fn() } } },
-      prisma: { myTable: { findUnique: vi.fn() } },
+      helpers: {
+        leveling: { findUser: vi.fn().mockResolvedValue(null) },
+        cache: { get: vi.fn(), set: vi.fn(), del: vi.fn() },
+      },
       permits: {
         explainPermit: vi.fn().mockResolvedValue({ allowed: true, rows: [] }),
       },

@@ -1,13 +1,11 @@
 import type { AddonNotifier } from "@lumi/downloader";
 import type { Client } from "discord.js";
+import { ownerIds } from "./owner.js";
 
 export function createAddonNotifier(client: Client): AddonNotifier {
   return async (report) => {
-    const ownerIds = (process.env.OWNER_IDS ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean);
-    if (ownerIds.length === 0) return;
+    const owners = ownerIds();
+    if (owners.length === 0) return;
 
     const lines = [
       "**Add-on auto-update**",
@@ -16,7 +14,7 @@ export function createAddonNotifier(client: Client): AddonNotifier {
         (failure) => `❌ ${failure.module}: ${failure.error}`,
       ),
     ];
-    for (const ownerId of ownerIds) {
+    for (const ownerId of owners) {
       const user = await client.users.fetch(ownerId).catch(() => null);
       await user?.send(lines.join("\n")).catch(() => undefined);
     }

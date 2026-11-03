@@ -4,8 +4,8 @@ import { PermissionFlagsBits } from "discord.js";
 import {
   planForcedRemoval,
   planSelection,
-  tempRoleExpiry,
   type RoleMenuRules,
+  tempRoleExpiry,
 } from "./selection.js";
 import { groupMode, type MenuGroup, type MenuOption } from "./ui.js";
 
@@ -41,10 +41,7 @@ export async function findGroup(
   guildId: string,
   reference: string,
 ): Promise<GroupRecord | null> {
-  return services.db.prisma.roleMenuGroup.findFirst({
-    where: { guildId, OR: [{ id: reference }, { name: reference }] },
-    include: { options: { orderBy: { position: "asc" } } },
-  });
+  return services.helpers.roleMenus.findGroup(guildId, reference);
 }
 
 export async function findGroupById(
@@ -52,19 +49,14 @@ export async function findGroupById(
   guildId: string,
   groupId: string,
 ): Promise<GroupRecord | null> {
-  return services.db.prisma.roleMenuGroup.findFirst({
-    where: { id: groupId, guildId },
-    include: { options: { orderBy: { position: "asc" } } },
-  });
+  return services.helpers.roleMenus.findGroupById(guildId, groupId);
 }
 
 export async function findMenuMessage(
   services: ModuleServices,
   messageId: string,
 ): Promise<MessageRecord | null> {
-  return services.db.prisma.roleMenuMessage.findUnique({
-    where: { messageId },
-  });
+  return services.helpers.roleMenus.findMenuMessage(messageId);
 }
 
 export function rulesFor(
@@ -150,32 +142,15 @@ async function recordTempRole(
 ): Promise<void> {
   const duration = group.tempDurationSeconds;
   if (!duration || duration <= 0) {
-    await services.db.prisma.roleMenuTempRole
-      .deleteMany({
-        where: { guildId: group.guildId, userId, roleId },
-      })
+    await services.helpers.roleMenus
+      .deleteTempRole(group.guildId, userId, roleId)
       .catch(() => undefined);
     return;
   }
   const expiresAt = tempRoleExpiry(new Date(), duration);
   if (!expiresAt) return;
-  await services.db.prisma.roleMenuTempRole
-    .upsert({
-      where: {
-        guildId_userId_roleId: {
-          guildId: group.guildId,
-          userId,
-          roleId,
-        },
-      },
-      update: { expiresAt },
-      create: {
-        guildId: group.guildId,
-        userId,
-        roleId,
-        expiresAt,
-      },
-    })
+  await services.helpers.roleMenus
+    .upsertTempRole(group.guildId, userId, roleId, expiresAt)
     .catch((error: unknown) => {
       services.observability?.logger?.warn?.(
         "role menu temp role record failed",
@@ -190,8 +165,8 @@ async function clearTempRole(
   userId: string,
   roleId: string,
 ): Promise<void> {
-  await services.db.prisma.roleMenuTempRole
-    .deleteMany({ where: { guildId, userId, roleId } })
+  await services.helpers.roleMenus
+    .deleteTempRole(guildId, userId, roleId)
     .catch(() => undefined);
 }
 

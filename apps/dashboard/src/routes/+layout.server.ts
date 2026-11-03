@@ -1,5 +1,5 @@
-import type { LayoutServerLoad } from "./$types";
 import { userAvatarUrl } from "$lib/server/discord";
+import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async ({ locals }) => {
   const session = locals.session;

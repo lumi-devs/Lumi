@@ -45,7 +45,7 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
 function fakeServices(config: unknown = {}) {
   return {
     modules: { isEnabled: vi.fn(() => true) },
-    config: { get: vi.fn(async () => config) },
+    moduleConfig: { read: vi.fn(async () => config) },
     observability: { logger: { warn: vi.fn(), error: vi.fn() } },
   } as unknown as ModuleServices;
 }

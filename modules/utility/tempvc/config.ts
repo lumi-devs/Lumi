@@ -15,7 +15,12 @@ export async function getTempVcConfig(
 ): Promise<TempVcConfig> {
   let raw: unknown = {};
   try {
-    raw = (await services.config.get(guildId, TempVcConfigKey)) ?? {};
+    raw =
+      (await services.moduleConfig.read(
+        guildId,
+        services.moduleName ?? TempVcConfigKey,
+        TempVcConfigKey,
+      )) ?? {};
   } catch (error) {
     services.observability?.logger?.warn?.("tempvc config read failed", {
       guildId,

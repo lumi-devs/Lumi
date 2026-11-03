@@ -19,7 +19,6 @@ import {
   deleteStored,
   getStoredJson,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -86,17 +85,17 @@ const recoveryTask: TaskDefinition = {
       if (!config.enabled) continue;
 
       const flag = await getStoredJson<RecoveryFlag>(
-        redisOf(services),
+        services,
         recoveryKey(guild.id),
       );
       if (!flag) continue;
       if (!allowed(config, flag.reason)) {
-        await deleteStored(redisOf(services), recoveryKey(guild.id));
+        await deleteStored(services, recoveryKey(guild.id));
         continue;
       }
 
       const result = await recover(services, guild.id);
-      await deleteStored(redisOf(services), recoveryKey(guild.id));
+      await deleteStored(services, recoveryKey(guild.id));
       await sendSecurityLog(
         services,
         guild.id,
@@ -153,7 +152,7 @@ const recoveryCommand: CommandDefinition = {
 
     if (sub === "status") {
       const flag = await getStoredJson<RecoveryFlag>(
-        redisOf(services),
+        services,
         recoveryKey(interaction.guildId),
       );
       await interaction.reply(

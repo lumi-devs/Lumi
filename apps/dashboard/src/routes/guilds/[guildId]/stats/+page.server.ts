@@ -1,6 +1,6 @@
-import type { PageServerLoad } from "./$types";
 import { requireGuildAccess } from "$lib/server/auth";
 import { getPrisma } from "$lib/server/prisma";
+import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
   const guildId = event.params.guildId ?? "";

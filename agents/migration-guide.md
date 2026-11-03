@@ -108,7 +108,7 @@ export default defineModule({
 
 **v1:** Custom migration runner, idempotent DDL, raw SQL repositories
 
-**v2:** Prisma Client, versioned migrations, typed repositories
+**v2:** Prisma Client, versioned migrations, typed helper namespaces
 
 **Migration:**
 
@@ -117,10 +117,8 @@ export default defineModule({
 # 2. Run v2 migrations
 bun run db:migrate
 
-# 3. Use Prisma Client
-const user = await services.db.prisma.economyUser.findUnique({
-  where: { guildId_userId: { guildId, userId } },
-});
+# 3. Use helpers, not Prisma directly
+const user = await services.helpers.economy.findUser(guildId, userId);
 ```
 
 ### 5. Cache: Two-Tier with Invalidation

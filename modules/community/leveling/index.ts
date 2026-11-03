@@ -67,9 +67,7 @@ const rankDef: CommandDefinition = {
     const guildId = await requireGuildId(interaction);
     if (!guildId) return;
 
-    const user = await services.db.prisma.levelingUser.findUnique({
-      where: { guildId_userId: { guildId, userId: target.id } },
-    });
+    const user = await services.helpers.leveling.findUser(guildId, target.id);
 
     if (!user) {
       await interaction.reply(
@@ -87,10 +85,8 @@ const rankDef: CommandDefinition = {
     const config = await getLevelingConfig(services, guildId);
 
     const [ahead, totalUsers] = await Promise.all([
-      services.db.prisma.levelingUser.count({
-        where: { guildId, totalXp: { gt: user.totalXp } },
-      }),
-      services.db.prisma.levelingUser.count({ where: { guildId } }),
+      services.helpers.leveling.rank(guildId, user.totalXp),
+      services.helpers.leveling.count(guildId),
     ]);
     const rank = ahead + 1;
 
@@ -178,24 +174,18 @@ async function renderLeaderboard(
 ): Promise<CardReply> {
   const perPage = 10;
 
-  const orderBy =
-    boardType === "voice"
-      ? { voiceMinutes: "desc" as const }
-      : { totalXp: "desc" as const };
+  const isVoice = boardType === "voice";
 
-  const total = await services.db.prisma.levelingUser.count({
-    where: { guildId },
-  });
+  const total = await services.helpers.leveling.count(guildId);
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const page = Math.min(Math.max(1, requestedPage), totalPages);
 
-  const users = await services.db.prisma.levelingUser.findMany({
-    where: { guildId },
-    orderBy,
-    skip: (page - 1) * perPage,
-    take: perPage,
-  });
-
+  const users = await services.helpers.leveling.leaderboard(
+    guildId,
+    isVoice ? "voiceMinutes" : "xp",
+    perPage,
+    (page - 1) * perPage,
+  );
   if (users.length === 0) {
     return makeEmptyCard(
       "No XP yet",
@@ -360,9 +350,10 @@ const onMessageListener: ListenerDefinition = {
     }
 
     const now = Date.now();
-    const user = await services.db.prisma.levelingUser.findUnique({
-      where: { guildId_userId: { guildId, userId: message.author.id } },
-    });
+    const user = await services.helpers.leveling.findUser(
+      guildId,
+      message.author.id,
+    );
 
     if (
       user?.lastXpAt &&
@@ -431,8 +422,8 @@ const onMemberRemoveListener: ListenerDefinition = {
     const config = await getLevelingConfig(services, guildId);
     if (config.keepXpOnLeave) return;
 
-    await services.db.prisma.levelingUser
-      .deleteMany({ where: { guildId, userId: member.id } })
+    await services.helpers.leveling
+      .deleteUser(guildId, member.id)
       .catch((error: unknown) =>
         services.observability?.logger?.warn?.(
           "[leveling] failed to clear member XP on leave",
@@ -448,10 +439,7 @@ const onMemberAddListener: ListenerDefinition = {
     const guildId = member.guild.id;
     const config = await getLevelingConfig(services, guildId);
     if (!config.keepXpOnLeave) return;
-
-    const user = await services.db.prisma.levelingUser.findUnique({
-      where: { guildId_userId: { guildId, userId: member.id } },
-    });
+    const user = await services.helpers.leveling.findUser(guildId, member.id);
     if (!user) return;
 
     const { level } = levelForTotalXp(
@@ -472,6 +460,30 @@ const levelingModule: ModuleDefinition = defineModule({
     "XP, levels, role rewards, and leaderboards with voice XP support",
   version: "2.1.0",
   config: {},
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      const user = await services.helpers.leveling.findUser(guildId, userId);
+      if (!user) return null;
+      return {
+        guildId: user.guildId,
+        userId: user.userId,
+        xp: Number(user.xp),
+        level: user.level,
+        totalXp: Number(user.totalXp),
+        voiceMinutes: user.voiceMinutes,
+        messageCount: user.messageCount,
+        lastXpAt: user.lastXpAt,
+        updatedAt: user.updatedAt,
+      };
+    },
+    async deleteUserData(services, guildId, userId) {
+      const deleted = await services.helpers.leveling.deleteUser(
+        guildId,
+        userId,
+      );
+      return { deleted };
+    },
+  },
   commands: [rankDef, leaderboardDef],
   listeners: [
     onMessageListener,

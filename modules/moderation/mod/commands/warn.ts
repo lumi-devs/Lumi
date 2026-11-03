@@ -2,7 +2,13 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { describeError, getReason, isImmune, replyError } from "../helpers.js";
+import {
+  describeError,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+} from "../helpers.js";
 
 export const warnDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -18,6 +24,12 @@ export const warnDef: CommandDefinition = {
         .setDescription("Reason for warning")
         .setRequired(false)
         .setAutocomplete(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("message_id")
+        .setDescription("Message ID to link to this case")
+        .setRequired(false),
     ),
   requiredPermit: "mod.warn",
   async execute(interaction, services) {
@@ -32,24 +44,20 @@ export const warnDef: CommandDefinition = {
       return;
     }
 
-    await services.db.prisma.moderationCase.create({
-      data: {
-        guildId: guild.id,
-        type: "WARN",
-        targetId: target.id,
-        moderatorId: interaction.user.id,
-        reason,
-      },
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "warn",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
     });
 
-    const warnCount = await services.db.prisma.moderationCase.count({
-      where: {
-        guildId: guild.id,
-        targetId: target.id,
-        type: "WARN",
-        active: true,
-      },
-    });
+    const warnCount = await services.helpers.moderation.countActive(
+      guild.id,
+      "warn",
+      target.id,
+    );
     const threshold = config.warnThresholds[String(warnCount)];
     let autoAction: string | null = null;
 
@@ -68,15 +76,14 @@ export const warnDef: CommandDefinition = {
           });
         }
 
-        await services.db.prisma.moderationCase.create({
-          data: {
-            guildId: guild.id,
-            type: threshold.action.toUpperCase(),
-            targetId: target.id,
-            moderatorId: interaction.client.user!.id,
-            reason: `Automatic action after ${warnCount} warnings`,
-            metadata: { automatic: true, warnCount },
-          },
+        await services.helpers.moderation.create({
+          guildId: guild.id,
+          kind: threshold.action,
+          targetId: target.id,
+          moderatorId: interaction.client.user!.id,
+          reason: `Automatic action after ${warnCount} warnings`,
+          ...getCaseLink(interaction),
+          metadata: { automatic: true, warnCount },
         });
         autoAction = threshold.action;
       } catch (error) {

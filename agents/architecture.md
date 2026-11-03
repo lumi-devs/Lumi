@@ -96,9 +96,9 @@ Rules:
    it, then connects the database, then creates the Discord client. (The logger
    is created when `@lumi/core` is imported, before boot.)
 2. `createCoreServices()` builds the invalidation bus, the cache namespaces, the
-   `ConfigService`, the `PermitRepository`, the distributed scheduler, and the
-   health monitor. Redis and Discord readiness checks are registered on the
-   monitor.
+   `ConfigService`, the `PermitRepository`, the distributed scheduler, the
+   health monitor, and the `@lumi/db` helper tree. Redis and Discord readiness
+   checks are registered on the monitor.
 3. The module loader gets the bundled (`modules`) and add-on (`data/addons`)
    roots. The RPC control server starts (`/healthz`, `/ready`,
    `/api/v1/status`); the metrics server starts on `METRICS_PORT` unless

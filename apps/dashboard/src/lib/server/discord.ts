@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { serverConfig } from "./env";
-import { getRedis, dashboardKey } from "./redis";
+import { dashboardKey, getRedis } from "./redis";
 
 const ApiBase = "https://discord.com/api/v10";
 const OAuthBase = "https://discord.com/oauth2/authorize";

@@ -2,7 +2,13 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { describeError, getReason, isImmune, replyError } from "../helpers.js";
+import {
+  describeError,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+} from "../helpers.js";
 
 export const timeoutDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -26,6 +32,12 @@ export const timeoutDef: CommandDefinition = {
         .setDescription("Reason for timeout")
         .setRequired(false)
         .setAutocomplete(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("message_id")
+        .setDescription("Message ID to link to this case")
+        .setRequired(false),
     ),
   requiredPermit: "mod.timeout",
   async execute(interaction, services) {
@@ -63,15 +75,16 @@ export const timeoutDef: CommandDefinition = {
       }
       await member.timeout(duration * 60 * 1000, reason);
 
-      await services.db.prisma.moderationCase.create({
-        data: {
-          guildId: guild.id,
-          type: "TIMEOUT",
-          targetId: target.id,
-          moderatorId: interaction.user.id,
-          reason,
-          metadata: { duration },
-        },
+      await services.helpers.moderation.create({
+        guildId: guild.id,
+        kind: "timeout",
+        targetId: target.id,
+        moderatorId: interaction.user.id,
+        reason,
+        ...getCaseLink(interaction),
+        duration: duration * 60,
+        expiresAt: new Date(Date.now() + duration * 60 * 1000),
+        metadata: { duration },
       });
 
       await interaction.reply(

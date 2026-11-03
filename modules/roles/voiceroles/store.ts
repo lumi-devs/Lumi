@@ -1,10 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import type { VoiceRoleMapping } from "./logic.js";
 
-function prismaOf(services: ModuleServices): any {
-  return services.db.prisma;
-}
-
 export interface UpsertVoiceRoleInput {
   readonly guildId: string;
   readonly channelId: string;
@@ -17,10 +13,7 @@ export async function listVoiceRoleMappings(
   services: ModuleServices,
   guildId: string,
 ): Promise<VoiceRoleMapping[]> {
-  return prismaOf(services).voiceRole.findMany({
-    where: { guildId },
-    orderBy: { channelId: "asc" },
-  });
+  return services.helpers.roles.voiceRole.listMappings(guildId);
 }
 
 export async function getVoiceRoleMapping(
@@ -28,36 +21,14 @@ export async function getVoiceRoleMapping(
   guildId: string,
   channelId: string,
 ): Promise<VoiceRoleMapping | null> {
-  return prismaOf(services).voiceRole.findUnique({
-    where: { guildId_channelId: { guildId, channelId } },
-  });
+  return services.helpers.roles.voiceRole.findMapping(guildId, channelId);
 }
 
 export async function upsertVoiceRoleMapping(
   services: ModuleServices,
   input: UpsertVoiceRoleInput,
 ): Promise<VoiceRoleMapping> {
-  return prismaOf(services).voiceRole.upsert({
-    where: {
-      guildId_channelId: {
-        guildId: input.guildId,
-        channelId: input.channelId,
-      },
-    },
-    update: {
-      categoryId: input.categoryId,
-      roleId: input.roleId,
-      graceSeconds: input.graceSeconds,
-      enabled: true,
-    },
-    create: {
-      guildId: input.guildId,
-      channelId: input.channelId,
-      categoryId: input.categoryId,
-      roleId: input.roleId,
-      graceSeconds: input.graceSeconds,
-    },
-  });
+  return services.helpers.roles.voiceRole.upsertMapping(input);
 }
 
 export async function deleteVoiceRoleMapping(
@@ -65,14 +36,7 @@ export async function deleteVoiceRoleMapping(
   guildId: string,
   channelId: string,
 ): Promise<boolean> {
-  const prisma = prismaOf(services);
-  await prisma.voiceRoleSession
-    .deleteMany({ where: { guildId, channelId } })
-    .catch(() => undefined);
-  const result = await prisma.voiceRole.deleteMany({
-    where: { guildId, channelId },
-  });
-  return result.count > 0;
+  return services.helpers.roles.voiceRole.deleteMapping(guildId, channelId);
 }
 
 export async function setVoiceRoleEnabled(
@@ -81,12 +45,11 @@ export async function setVoiceRoleEnabled(
   channelId: string,
   enabled: boolean,
 ): Promise<VoiceRoleMapping | null> {
-  const existing = await getVoiceRoleMapping(services, guildId, channelId);
-  if (!existing) return null;
-  return prismaOf(services).voiceRole.update({
-    where: { id: (existing as unknown as { id: string }).id },
-    data: { enabled },
-  });
+  return services.helpers.roles.voiceRole.setEnabled(
+    guildId,
+    channelId,
+    enabled,
+  );
 }
 
 export interface VoiceSession {
@@ -109,24 +72,7 @@ export async function upsertVoiceSession(
     nowMs: number;
   },
 ): Promise<VoiceSession> {
-  return prismaOf(services).voiceRoleSession.upsert({
-    where: {
-      guildId_userId_channelId_roleId: {
-        guildId: input.guildId,
-        userId: input.userId,
-        channelId: input.channelId,
-        roleId: input.roleId,
-      },
-    },
-    update: { graceUntil: null, joinedAt: new Date(input.nowMs) },
-    create: {
-      guildId: input.guildId,
-      userId: input.userId,
-      channelId: input.channelId,
-      roleId: input.roleId,
-      joinedAt: new Date(input.nowMs),
-    },
-  });
+  return services.helpers.roles.voiceRole.upsertSession(input);
 }
 
 export async function findVoiceSessions(
@@ -135,9 +81,11 @@ export async function findVoiceSessions(
   userId: string,
   channelId: string,
 ): Promise<VoiceSession[]> {
-  return prismaOf(services).voiceRoleSession.findMany({
-    where: { guildId, userId, channelId },
-  });
+  return services.helpers.roles.voiceRole.findSessions(
+    guildId,
+    userId,
+    channelId,
+  );
 }
 
 export async function markVoiceSessionGrace(
@@ -145,19 +93,17 @@ export async function markVoiceSessionGrace(
   sessionId: string,
   graceUntil: Date,
 ): Promise<void> {
-  await prismaOf(services).voiceRoleSession.update({
-    where: { id: sessionId },
-    data: { graceUntil },
-  });
+  await services.helpers.roles.voiceRole.markSessionGrace(
+    sessionId,
+    graceUntil,
+  );
 }
 
 export async function deleteVoiceSession(
   services: ModuleServices,
   sessionId: string,
 ): Promise<void> {
-  await prismaOf(services)
-    .voiceRoleSession.delete({ where: { id: sessionId } })
-    .catch(() => undefined);
+  await services.helpers.roles.voiceRole.deleteSession(sessionId);
 }
 
 export async function listExpiredVoiceSessions(
@@ -165,11 +111,7 @@ export async function listExpiredVoiceSessions(
   nowMs: number,
   limit = 200,
 ): Promise<VoiceSession[]> {
-  return prismaOf(services).voiceRoleSession.findMany({
-    where: { graceUntil: { not: null, lte: new Date(nowMs) } },
-    orderBy: { graceUntil: "asc" },
-    take: limit,
-  });
+  return services.helpers.roles.voiceRole.listExpiredSessions(nowMs, limit);
 }
 
 export async function deleteVoiceSessionsForChannel(
@@ -177,7 +119,8 @@ export async function deleteVoiceSessionsForChannel(
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  await prismaOf(services)
-    .voiceRoleSession.deleteMany({ where: { guildId, channelId } })
-    .catch(() => undefined);
+  await services.helpers.roles.voiceRole.deleteSessionsForChannel(
+    guildId,
+    channelId,
+  );
 }

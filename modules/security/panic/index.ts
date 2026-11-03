@@ -24,7 +24,6 @@ import {
   getStoredJson,
   incrementWindow,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -83,7 +82,7 @@ async function triggerPanic(
     config.lockModCommands,
   );
   await setStoredJson(
-    redisOf(services),
+    services,
     securityKey("recovery", guild.id),
     { reason: "panic", at: Date.now() },
     config.durationMinutes * 60,
@@ -125,7 +124,7 @@ const onAuditLogListener: ListenerDefinition = {
     if (!config.enabled) return;
 
     const count = await incrementWindow(
-      redisOf(services),
+      services,
       securityKey("panic", "burst", guild.id),
       config.burstWindowSeconds,
     );
@@ -148,7 +147,7 @@ const panicExpiryTask: TaskDefinition = {
     for (const guild of services.client.guilds.cache.values()) {
       if (!services.modules.isEnabled(guild.id, ModuleName)) continue;
       const state = await getStoredJson<{ until: number }>(
-        redisOf(services),
+        services,
         panicKey(guild.id),
       );
       if (!state || state.until > Date.now()) continue;
@@ -268,7 +267,7 @@ const panicCommand: CommandDefinition = {
       `<@${interaction.user.id}>`,
     );
     const remaining = await getStoredJson<{ until: number }>(
-      redisOf(services),
+      services,
       panicKey(guild.id),
     );
     await interaction.reply(

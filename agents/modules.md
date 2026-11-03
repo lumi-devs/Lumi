@@ -112,6 +112,9 @@ directory itself has no entry file and no code.
   cycle marks the involved modules broken and skips them; other modules still
   load.
 - Modules never import another module. Shared code goes into a package.
+- Modules reach persistence and cache only through `services.helpers`; direct
+  imports of `@prisma/client`, `@lumi/db`, `@lumi/cache`, `@lumi/redis`, or
+  `ioredis` are rejected for `modules/**`.
 
 ## Supermodule Manifest
 

@@ -76,8 +76,8 @@ function services(
 ) {
   return {
     client: {},
-    config: {
-      get: async () => options.config ?? {},
+    moduleConfig: {
+      read: async () => options.config ?? {},
     },
     permits: {
       explainPermit: async () => ({ allowed: options.permitAllowed ?? true }),

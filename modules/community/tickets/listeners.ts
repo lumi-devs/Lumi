@@ -1,7 +1,7 @@
 import type { ListenerDefinition, ModuleServices } from "@lumi/module-kit";
 import { Events, type Message } from "discord.js";
 import { isTicketsModuleEnabled } from "./config.js";
-import { archiveMessage, findTicketByChannel, prismaOf } from "./repository.js";
+import { archiveMessage, findTicketByChannel } from "./repository.js";
 
 export const ticketMessageListener: ListenerDefinition = {
   event: Events.MessageCreate,
@@ -24,12 +24,8 @@ export const ticketMessageListener: ListenerDefinition = {
     });
 
     if (!message.author.bot) {
-      const prisma = prismaOf(services);
-      await prisma.ticket
-        .update({
-          where: { id: ticket.id },
-          data: { lastActivityAt: new Date() },
-        })
+      await services.helpers.tickets
+        .updateTicket(ticket.id, { lastActivityAt: new Date() })
         .catch(() => undefined);
     }
   },

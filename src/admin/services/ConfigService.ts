@@ -4,11 +4,20 @@ import type { Prisma, PrismaClient } from "@lumi/db";
 export type GuildSettings = Record<string, unknown>;
 
 const ConfigTtlMs = 60_000;
+const MaxConfigAttempts = 5;
 
 const asSettings = (value: unknown): GuildSettings =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as GuildSettings)
     : {};
+
+function isRetryableConfigConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return false;
+  }
+  const { code } = error as { code?: unknown };
+  return code === "P2002" || code === "P2034";
+}
 
 export class ConfigService {
   constructor(
@@ -33,14 +42,41 @@ export class ConfigService {
     return settings ? structuredClone(settings) : {};
   }
 
-  private async write(guildId: string, settings: GuildSettings): Promise<void> {
-    const value = settings as Prisma.InputJsonValue;
-    await this.prisma.guild.upsert({
-      where: { id: guildId },
-      update: { settings: value },
-      create: { id: guildId, settings: value },
-    });
-    await this.cache?.delete(guildId);
+  private async mutate(
+    guildId: string,
+    mutate: (settings: GuildSettings) => GuildSettings,
+  ): Promise<GuildSettings> {
+    for (let attempt = 1; attempt <= MaxConfigAttempts; attempt++) {
+      try {
+        const settings = await this.prisma.$transaction(
+          async (tx) => {
+            const guild = await tx.guild.findUnique({
+              where: { id: guildId },
+              select: { settings: true },
+            });
+            const next = mutate(asSettings(guild?.settings));
+            const value = next as Prisma.InputJsonValue;
+            await tx.guild.upsert({
+              where: { id: guildId },
+              update: { settings: value },
+              create: { id: guildId, settings: value },
+            });
+            return next;
+          },
+          { isolationLevel: "Serializable" },
+        );
+        await this.cache?.delete(guildId);
+        return settings;
+      } catch (error) {
+        if (
+          attempt === MaxConfigAttempts ||
+          !isRetryableConfigConflict(error)
+        ) {
+          throw error;
+        }
+      }
+    }
+    throw new Error("Failed to update guild configuration");
   }
 
   async getAll(guildId: string): Promise<GuildSettings> {
@@ -53,14 +89,29 @@ export class ConfigService {
   }
 
   async set(guildId: string, key: string, value: unknown): Promise<void> {
-    const settings = await this.read(guildId);
-    settings[key] = value;
-    await this.write(guildId, settings);
+    await this.update(guildId, key, () => value);
+  }
+
+  async update(
+    guildId: string,
+    key: string,
+    updater: (value: unknown) => unknown,
+  ): Promise<unknown> {
+    const settings = await this.mutate(guildId, (current) => {
+      current[key] = updater(current[key]);
+      return current;
+    });
+    return settings[key];
   }
 
   async reset(guildId: string, key: string): Promise<void> {
-    const settings = await this.read(guildId);
-    delete settings[key];
-    await this.write(guildId, settings);
+    await this.mutate(guildId, (settings) => {
+      delete settings[key];
+      return settings;
+    });
+  }
+
+  async replaceAll(guildId: string, settings: GuildSettings): Promise<void> {
+    await this.mutate(guildId, () => structuredClone(settings));
   }
 }

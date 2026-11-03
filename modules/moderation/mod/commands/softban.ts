@@ -2,7 +2,13 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { describeError, getReason, isImmune, replyError } from "../helpers.js";
+import {
+  describeError,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+} from "../helpers.js";
 
 export const softbanDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -44,14 +50,13 @@ export const softbanDef: CommandDefinition = {
       await guild.members.ban(target, { reason, deleteMessageSeconds: 86400 });
       await guild.bans.remove(target.id, `Softban: ${reason}`);
 
-      await services.db.prisma.moderationCase.create({
-        data: {
-          guildId: guild.id,
-          type: "SOFTBAN",
-          targetId: target.id,
-          moderatorId: interaction.user.id,
-          reason,
-        },
+      await services.helpers.moderation.create({
+        guildId: guild.id,
+        kind: "softban",
+        targetId: target.id,
+        moderatorId: interaction.user.id,
+        reason,
+        ...getCaseLink(interaction),
       });
 
       await interaction.reply(

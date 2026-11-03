@@ -37,7 +37,6 @@ import {
   findTicketById,
   listCategories,
   listTicketNotes,
-  prismaOf,
   questionsOf,
   type TicketCategoryRecord,
   type TicketPanelRecord,
@@ -261,7 +260,6 @@ async function setupPanel(
     return;
   }
 
-  const prisma = prismaOf(services);
   const title = (
     interaction.options.getString("title") ?? "Support Tickets"
   ).slice(0, 100);
@@ -271,14 +269,12 @@ async function setupPanel(
   ).slice(0, 2000);
   let panel: TicketPanelRecord;
   try {
-    panel = await prisma.ticketPanel.create({
-      data: {
-        guildId,
-        channelId: channel.id,
-        title,
-        description,
-        categoryIds: selected.map((category) => category.id),
-      },
+    panel = await services.helpers.tickets.createPanel({
+      guildId,
+      channelId: channel.id,
+      title,
+      description,
+      categoryIds: selected.map((category) => category.id),
     });
   } catch (error) {
     services.observability?.logger?.warn?.("tickets panel create failed", {
@@ -296,9 +292,7 @@ async function setupPanel(
   const card = panelCard(panel, selected);
   const message = await channel.send(cardCreateOptions(card)).catch(() => null);
   if (!message) {
-    await prisma.ticketPanel
-      .delete({ where: { id: panel.id } })
-      .catch(() => undefined);
+    await services.helpers.tickets.deletePanel(panel.id).catch(() => undefined);
     await replyError(
       interaction,
       "Panel Not Posted",
@@ -306,8 +300,8 @@ async function setupPanel(
     );
     return;
   }
-  await prisma.ticketPanel
-    .update({ where: { id: panel.id }, data: { messageId: message.id } })
+  await services.helpers.tickets
+    .updatePanel(panel.id, { messageId: message.id })
     .catch(() => undefined);
 
   await replyCard(
@@ -348,29 +342,24 @@ async function categoryAdd(
     return;
   }
   const defaultPriority = interaction.options.getString("default_priority");
-  const prisma = prismaOf(services);
-  const position = (await prisma.ticketCategory
-    .count({ where: { guildId } })
-    .catch(() => 0)) as number;
+  const position = await services.helpers.tickets
+    .countCategories(guildId)
+    .catch(() => 0);
   try {
-    const category = await prisma.ticketCategory.create({
-      data: {
-        guildId,
-        name,
-        emoji: interaction.options.getString("emoji")?.slice(0, 64) ?? null,
-        description:
-          interaction.options.getString("description")?.slice(0, 500) ?? null,
-        staffRoleIds: parseIdList(interaction.options.getString("staff_roles")),
-        pingRoleIds: parseIdList(interaction.options.getString("ping_roles")),
-        questions,
-        namingTemplate:
-          interaction.options.getString("naming_template")?.slice(0, 100) ??
-          "ticket-{user}",
-        defaultPriority: isPriority(defaultPriority)
-          ? defaultPriority
-          : "normal",
-        position,
-      },
+    const category = await services.helpers.tickets.createCategory({
+      guildId,
+      name,
+      emoji: interaction.options.getString("emoji")?.slice(0, 64) ?? null,
+      description:
+        interaction.options.getString("description")?.slice(0, 500) ?? null,
+      staffRoleIds: parseIdList(interaction.options.getString("staff_roles")),
+      pingRoleIds: parseIdList(interaction.options.getString("ping_roles")),
+      questions,
+      namingTemplate:
+        interaction.options.getString("naming_template")?.slice(0, 100) ??
+        "ticket-{user}",
+      defaultPriority: isPriority(defaultPriority) ? defaultPriority : "normal",
+      position,
     });
     await replyCard(
       interaction,
@@ -404,7 +393,6 @@ async function categoryEdit(
 ): Promise<void> {
   const guildId = requireGuildId(interaction.guildId);
   if (!guildId || !(await requireAdmin(interaction, services))) return;
-  const prisma = prismaOf(services);
   const current = await findCategoryByName(
     services,
     guildId,
@@ -465,10 +453,10 @@ async function categoryEdit(
   }
 
   try {
-    const updated = await prisma.ticketCategory.update({
-      where: { id: current.id },
+    const updated = await services.helpers.tickets.updateCategory(
+      current.id,
       data,
-    });
+    );
     await replyCard(
       interaction,
       makeSuccessCard("Category Updated", [
@@ -494,11 +482,11 @@ async function findCategoryByName(
   guildId: string,
   name: string,
 ): Promise<TicketCategoryRecord | null> {
-  const prisma = prismaOf(services);
   try {
-    return (await prisma.ticketCategory.findUnique({
-      where: { guildId_name: { guildId, name } },
-    })) as TicketCategoryRecord | null;
+    return (await services.helpers.tickets.findCategoryByName(
+      guildId,
+      name,
+    )) as TicketCategoryRecord | null;
   } catch {
     return null;
   }
@@ -510,7 +498,6 @@ async function categoryRemove(
 ): Promise<void> {
   const guildId = requireGuildId(interaction.guildId);
   if (!guildId || !(await requireAdmin(interaction, services))) return;
-  const prisma = prismaOf(services);
   const category = await findCategoryByName(
     services,
     guildId,
@@ -525,17 +512,14 @@ async function categoryRemove(
     return;
   }
 
-  const panels = (await prisma.ticketPanel
-    .findMany({ where: { guildId, categoryIds: { has: category.id } } })
+  const panels = (await services.helpers.tickets
+    .listPanelsByCategory(guildId, category.id)
     .catch(() => [])) as Array<{ id: string; categoryIds: string[] }>;
-  await prisma.ticketCategory.delete({ where: { id: category.id } });
+  await services.helpers.tickets.deleteCategory(category.id);
   for (const panel of panels) {
-    await prisma.ticketPanel
-      .update({
-        where: { id: panel.id },
-        data: {
-          categoryIds: panel.categoryIds.filter((id) => id !== category.id),
-        },
+    await services.helpers.tickets
+      .updatePanel(panel.id, {
+        categoryIds: panel.categoryIds.filter((id) => id !== category.id),
       })
       .catch(() => undefined);
   }
@@ -648,9 +632,8 @@ async function claimTicket(
       );
       return;
     }
-    await prismaOf(services).ticket.update({
-      where: { id: context.ticket.id },
-      data: { claimedBy: null },
+    await services.helpers.tickets.updateTicket(context.ticket.id, {
+      claimedBy: null,
     });
     await replyCard(
       interaction,
@@ -674,9 +657,8 @@ async function claimTicket(
     );
     return;
   }
-  await prismaOf(services).ticket.update({
-    where: { id: context.ticket.id },
-    data: { claimedBy: interaction.user.id },
+  await services.helpers.tickets.updateTicket(context.ticket.id, {
+    claimedBy: interaction.user.id,
   });
   await replyCard(
     interaction,
@@ -702,9 +684,8 @@ async function setPriority(
     );
     return;
   }
-  await prismaOf(services).ticket.update({
-    where: { id: context.ticket.id },
-    data: { priority: value },
+  await services.helpers.tickets.updateTicket(context.ticket.id, {
+    priority: value,
   });
   await replyCard(
     interaction,
@@ -732,12 +713,10 @@ async function addNote(
     );
     return;
   }
-  await prismaOf(services).ticketNote.create({
-    data: {
-      ticketId: context.ticket.id,
-      authorId: interaction.user.id,
-      content: content.slice(0, 2000),
-    },
+  await services.helpers.tickets.createNote({
+    ticketId: context.ticket.id,
+    authorId: interaction.user.id,
+    content: content.slice(0, 2000),
   });
   await replyCard(
     interaction,
@@ -800,21 +779,14 @@ async function blacklistCommand(
   if (!guildId) return;
   const config = await getTicketsConfig(services, guildId);
   if (!(await requireStaff(interaction, services, config))) return;
-  const prisma = prismaOf(services);
 
   if (action === "add") {
     const user = interaction.options.getUser("user", true);
     const reason =
       interaction.options.getString("reason")?.slice(0, 500) ?? null;
-    await prisma.ticketBlacklist.upsert({
-      where: { guildId_userId: { guildId, userId: user.id } },
-      update: { reason, createdBy: interaction.user.id },
-      create: {
-        guildId,
-        userId: user.id,
-        reason,
-        createdBy: interaction.user.id,
-      },
+    await services.helpers.tickets.upsertBlacklist(guildId, user.id, {
+      reason,
+      createdBy: interaction.user.id,
     });
     await replyCard(
       interaction,
@@ -828,10 +800,8 @@ async function blacklistCommand(
 
   if (action === "remove") {
     const user = interaction.options.getUser("user", true);
-    const deleted = await prisma.ticketBlacklist
-      .delete({
-        where: { guildId_userId: { guildId, userId: user.id } },
-      })
+    const deleted = await services.helpers.tickets
+      .removeBlacklist(guildId, user.id)
       .catch(() => null);
     if (!deleted) {
       await replyCard(
@@ -853,12 +823,8 @@ async function blacklistCommand(
     return;
   }
 
-  const rows = (await prisma.ticketBlacklist
-    .findMany({
-      where: { guildId },
-      orderBy: { createdAt: "desc" },
-      take: 25,
-    })
+  const rows = (await services.helpers.tickets
+    .listBlacklist(guildId, 25)
     .catch(() => [])) as Array<{
     userId: string;
     reason: string | null;
@@ -893,7 +859,6 @@ async function tagCommand(
   if (!guildId) return;
   const config = await getTicketsConfig(services, guildId);
   if (!(await requireStaff(interaction, services, config))) return;
-  const prisma = prismaOf(services);
 
   if (action === "add") {
     const name = interaction.options.getString("name", true).trim();
@@ -907,13 +872,11 @@ async function tagCommand(
       return;
     }
     try {
-      await prisma.ticketTag.create({
-        data: {
-          guildId,
-          name: name.slice(0, 50),
-          content: content.slice(0, 2000),
-          createdBy: interaction.user.id,
-        },
+      await services.helpers.tickets.createTag({
+        guildId,
+        name: name.slice(0, 50),
+        content: content.slice(0, 2000),
+        createdBy: interaction.user.id,
       });
       await replyCard(
         interaction,
@@ -931,8 +894,8 @@ async function tagCommand(
 
   if (action === "remove") {
     const name = interaction.options.getString("name", true).trim();
-    const deleted = await prisma.ticketTag
-      .delete({ where: { guildId_name: { guildId, name } } })
+    const deleted = await services.helpers.tickets
+      .deleteTag(guildId, name)
       .catch(() => null);
     if (!deleted) {
       await replyCard(
@@ -949,8 +912,8 @@ async function tagCommand(
   }
 
   if (action === "list") {
-    const tags = (await prisma.ticketTag
-      .findMany({ where: { guildId }, orderBy: { name: "asc" }, take: 25 })
+    const tags = (await services.helpers.tickets
+      .listTags(guildId, 25)
       .catch(() => [])) as Array<{
       name: string;
       content: string;
@@ -979,8 +942,8 @@ async function tagCommand(
   });
   if (!context) return;
   const name = interaction.options.getString("name", true).trim();
-  const tag = (await prisma.ticketTag
-    .findUnique({ where: { guildId_name: { guildId, name } } })
+  const tag = (await services.helpers.tickets
+    .findTag(guildId, name)
     .catch(() => null)) as { content: string } | null;
   if (!tag) {
     await replyError(
@@ -1008,16 +971,14 @@ async function tagCommand(
     footer: `Sent by ${interaction.user.tag}`,
   });
   const message = await thread.send(cardCreateOptions(card)).catch(() => null);
-  await prisma.ticketMessage
-    .create({
-      data: {
-        ticketId: context.ticket.id,
-        messageId: message?.id ?? null,
-        authorId: interaction.user.id,
-        authorName: interaction.user.tag,
-        content: escapeHtml(tag.content),
-        attachments: [],
-      },
+  await services.helpers.tickets
+    .createMessage({
+      ticketId: context.ticket.id,
+      messageId: message?.id ?? null,
+      authorId: interaction.user.id,
+      authorName: interaction.user.tag,
+      content: escapeHtml(tag.content),
+      attachments: [],
     })
     .catch(() => undefined);
   await replyCard(
@@ -1058,9 +1019,9 @@ async function feedbackCommand(
   }
   const comment =
     interaction.options.getString("comment")?.slice(0, 1000) ?? null;
-  await prismaOf(services).ticket.update({
-    where: { id: ticket.id },
-    data: { feedback: rating, feedbackComment: comment },
+  await services.helpers.tickets.updateTicket(ticket.id, {
+    feedback: rating,
+    feedbackComment: comment,
   });
   await replyCard(
     interaction,
@@ -1119,17 +1080,8 @@ async function listCommand(
   const config = await getTicketsConfig(services, guildId);
   if (!(await requireStaff(interaction, services, config))) return;
   const status = interaction.options.getString("status") ?? "open";
-  const prisma = prismaOf(services);
-  const rows = (await prisma.ticket
-    .findMany({
-      where: {
-        guildId,
-        ...(status === "all" ? {} : { status }),
-      },
-      include: { category: true },
-      orderBy: { createdAt: "desc" },
-      take: 25,
-    })
+  const rows = (await services.helpers.tickets
+    .listTickets(guildId, status, 25)
     .catch(() => [])) as TicketRecord[];
   if (rows.length === 0) {
     await replyCard(

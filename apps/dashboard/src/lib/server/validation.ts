@@ -1,5 +1,5 @@
 import { error, type RequestEvent } from "@sveltejs/kit";
-import { z, type ZodType } from "zod";
+import { type ZodType, z } from "zod";
 
 function safeEqual(left: string, right: string): boolean {
   if (left.length !== right.length) return false;

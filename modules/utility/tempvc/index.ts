@@ -145,6 +145,18 @@ const tempvcModule: ModuleDefinition = defineModule({
     "Join-to-create temporary voice channels with ownership controls",
   version: "2.0.0",
   config: TempVcConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.utility.tempvc.listOwned(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.utility.tempvc.deleteByOwner(
+        guildId,
+        userId,
+      );
+      return { deleted: result.count };
+    },
+  },
   commands: [tempvcCommand],
   listeners: [onVoiceStateListener, onInteractionListener],
   tasks: [],

@@ -17,9 +17,9 @@ import {
   topEntries,
 } from "./ranges.js";
 import {
+  ChartColors,
   type ChartPanel,
   type ChartSeries,
-  ChartColors,
   type ListItem,
   type ListPanel,
   type StatBox,

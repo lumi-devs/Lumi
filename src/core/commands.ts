@@ -209,23 +209,25 @@ function ownershipDenied(): CardReply {
   );
 }
 
-export const pingCommand = {
-  data: new SlashCommandBuilder()
-    .setName("ping")
-    .setDescription("Check bot latency and gateway heartbeat"),
-  async execute(
-    interaction: ChatInputCommandInteraction,
-    services: { prisma: PrismaClient; client: Client },
-  ): Promise<void> {
-    const userId = interaction.user.id;
-    const dbLatency = await getDbLatency(services.prisma);
+export function createPingCommand(services: {
+  prisma: PrismaClient;
+  client: Client;
+}) {
+  return {
+    data: new SlashCommandBuilder()
+      .setName("ping")
+      .setDescription("Check bot latency and gateway heartbeat"),
+    async execute(interaction: ChatInputCommandInteraction): Promise<void> {
+      const userId = interaction.user.id;
+      const dbLatency = await getDbLatency(services.prisma);
 
-    setPingPage(userId, 0);
-    await interaction.reply(
-      await buildPingComponents(services.client, dbLatency, 0, userId),
-    );
-  },
-};
+      setPingPage(userId, 0);
+      await interaction.reply(
+        await buildPingComponents(services.client, dbLatency, 0, userId),
+      );
+    },
+  };
+}
 
 export async function handlePingButton(
   interaction: ButtonInteraction,

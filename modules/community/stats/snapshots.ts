@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import type { Client, Guild, GuildMember } from "discord.js";
 import { SnapshotIntervalMinutes, StatsModuleName } from "./constants.js";
 import { bucketStart } from "./ranges.js";
@@ -5,7 +6,7 @@ import { bucketStart } from "./ranges.js";
 interface SnapshotServices {
   client: Client;
   modules: { isEnabled(guildId: string, moduleName: string): boolean };
-  db: { prisma: any };
+  helpers: Pick<ModuleServices["helpers"], "stats">;
 }
 
 export interface SnapshotCounts {
@@ -73,11 +74,7 @@ export async function captureGuildSnapshot(
 ): Promise<void> {
   const capturedAt = bucketStart(now, SnapshotIntervalMinutes);
   const counts = countGuildSnapshot(guild);
-  await services.db.prisma.statsSnapshot.upsert({
-    where: { guildId_capturedAt: { guildId: guild.id, capturedAt } },
-    create: { guildId: guild.id, capturedAt, ...counts },
-    update: counts,
-  });
+  await services.helpers.stats.upsertSnapshot(guild.id, capturedAt, counts);
 }
 
 export async function captureAllSnapshots(

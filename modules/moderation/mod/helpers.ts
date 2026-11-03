@@ -74,6 +74,22 @@ export function getReason(interaction: ChatInputCommandInteraction): string {
   return interaction.options.getString("reason") ?? "No reason provided";
 }
 
+export function getCaseLink(interaction: ChatInputCommandInteraction): {
+  channelId?: string;
+  messageId?: string;
+} {
+  const messageOption = interaction.options.data.find(
+    (option) => option.name === "message_id",
+  );
+  const messageValue =
+    typeof messageOption?.value === "string" ? messageOption.value : null;
+  return {
+    channelId: interaction.channelId || undefined,
+    messageId:
+      messageValue && isSnowflake(messageValue) ? messageValue : undefined,
+  };
+}
+
 export function getDeleteDays(
   interaction: ChatInputCommandInteraction,
 ): number {

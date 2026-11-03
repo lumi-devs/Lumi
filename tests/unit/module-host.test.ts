@@ -138,6 +138,28 @@ describe("ModuleHost", () => {
     expect(syncCommands).toHaveBeenCalledOnce();
   });
 
+  it("shares one client listener across modules for the same event", async () => {
+    const first = loadedModule("first", { listeners: ["messageCreate"] });
+    const second = loadedModule("second", { listeners: ["messageCreate"] });
+    const firstHandler = vi.fn(async () => {});
+    const secondHandler = vi.fn(async () => {});
+    first.definition.listeners[0].handler = firstHandler;
+    second.definition.listeners[0].handler = secondHandler;
+    const { host, client } = setup([first, second]);
+
+    await host.load([first, second]);
+
+    const listeners = client.on.mock.calls.filter(
+      ([event]) => event === "messageCreate",
+    );
+    expect(listeners).toHaveLength(1);
+    (listeners[0]![1] as (message: { guildId: string }) => void)({
+      guildId: "guild",
+    });
+    expect(firstHandler).toHaveBeenCalledOnce();
+    expect(secondHandler).toHaveBeenCalledOnce();
+  });
+
   it("mounts a supermodule together with its submodules", async () => {
     const parent = loadedModule("utility", { commands: ["utility"] });
     const child = loadedModule("utility-afk", { commands: ["afk"] }, "utility");

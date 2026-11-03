@@ -153,30 +153,13 @@ export function backupStats(data: GuildBackupData): BackupStats {
   return stats;
 }
 
-interface BackupClient {
-  securityBackup: {
-    create(args: unknown): Promise<BackupRecord>;
-    findFirst(args: unknown): Promise<BackupRecord | null>;
-    findMany(args: unknown): Promise<BackupRecord[]>;
-    deleteMany(args: unknown): Promise<{ count: number }>;
-  };
-}
-
 interface RestoreServices {
-  db?: { prisma?: unknown } | undefined;
   observability?: {
     logger?: {
       warn?: (message: string, meta?: unknown) => void;
       info?: (message: string, meta?: unknown) => void;
     };
   };
-}
-
-function backupClient(services: ModuleServices): BackupClient | null {
-  const prisma = services.db?.prisma as
-    { securityBackup?: BackupClient["securityBackup"] } | undefined;
-  if (!prisma?.securityBackup) return null;
-  return prisma as unknown as BackupClient;
 }
 
 function loggerOf(services: RestoreServices) {
@@ -285,24 +268,21 @@ export async function createBackup(
   guild: Guild,
   reason: string,
 ): Promise<BackupRecord | null> {
-  const client = backupClient(services);
-  if (!client) return null;
   const data = snapshotGuild(guild);
-  return client.securityBackup.create({
-    data: { guildId: guild.id, reason, data },
+  const record = await services.helpers.security.createBackup({
+    guildId: guild.id,
+    reason,
+    data,
   });
+  return record as BackupRecord | null;
 }
 
 export async function latestBackup(
   services: ModuleServices,
   guildId: string,
 ): Promise<BackupRecord | null> {
-  const client = backupClient(services);
-  if (!client) return null;
-  return client.securityBackup.findFirst({
-    where: { guildId },
-    orderBy: { createdAt: "desc" },
-  });
+  const record = await services.helpers.security.latestBackup(guildId);
+  return record as BackupRecord | null;
 }
 
 export async function backupById(
@@ -310,11 +290,8 @@ export async function backupById(
   guildId: string,
   backupId: string,
 ): Promise<BackupRecord | null> {
-  const client = backupClient(services);
-  if (!client) return null;
-  return client.securityBackup.findFirst({
-    where: { id: backupId, guildId },
-  });
+  const record = await services.helpers.security.backupById(guildId, backupId);
+  return record as BackupRecord | null;
 }
 
 export async function listBackups(
@@ -322,13 +299,8 @@ export async function listBackups(
   guildId: string,
   take = 10,
 ): Promise<BackupRecord[]> {
-  const client = backupClient(services);
-  if (!client) return [];
-  return client.securityBackup.findMany({
-    where: { guildId },
-    orderBy: { createdAt: "desc" },
-    take,
-  });
+  const records = await services.helpers.security.listBackups(guildId, take);
+  return records as BackupRecord[];
 }
 
 export async function pruneBackups(
@@ -336,19 +308,7 @@ export async function pruneBackups(
   guildId: string,
   keepCount: number,
 ): Promise<number> {
-  const client = backupClient(services);
-  if (!client) return 0;
-  const keep = await client.securityBackup.findMany({
-    where: { guildId },
-    orderBy: { createdAt: "desc" },
-    take: keepCount,
-    select: { id: true },
-  });
-  const keepIds = keep.map((entry) => entry.id);
-  const result = await client.securityBackup.deleteMany({
-    where: { guildId, id: { notIn: keepIds } },
-  });
-  return result.count;
+  return services.helpers.security.pruneBackups(guildId, keepCount);
 }
 
 function findRole(guild: Guild, role: BackupRole): Role | undefined {

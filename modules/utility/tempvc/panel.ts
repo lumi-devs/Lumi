@@ -44,8 +44,6 @@ export interface ManagedChannel {
   channel: VoiceChannel;
 }
 
-const prisma = (services: ModuleServices): any => services?.db?.prisma;
-
 const localCreateCooldowns = new Map<string, number>();
 
 type CreateCooldown =
@@ -70,29 +68,15 @@ async function acquireCreateCooldown(
     }
   }
   localCreateCooldowns.set(key, now + cooldownMs);
-  const redis = services?.redis;
-  if (!redis || typeof redis.set !== "function") {
-    return { acquired: true, key };
+  const acquired = await services.helpers.utility.tempvc.claimCreateCooldown(
+    key,
+    cooldownMs,
+  );
+  if (!acquired) {
+    localCreateCooldowns.delete(key);
+    return { acquired: false, waitMs: cooldownMs };
   }
-  try {
-    const result = await redis.set(key, "1", "PX", cooldownMs, "NX");
-    if (result !== "OK") {
-      localCreateCooldowns.delete(key);
-      let waitMs = cooldownMs;
-      if (typeof redis.pttl === "function") {
-        try {
-          const ttl = await redis.pttl(key);
-          if (typeof ttl === "number" && ttl > 0) waitMs = ttl;
-        } catch {
-          waitMs = cooldownMs;
-        }
-      }
-      return { acquired: false, waitMs };
-    }
-    return { acquired: true, key };
-  } catch {
-    return { acquired: true, key };
-  }
+  return { acquired: true, key };
 }
 
 async function notifyCreateCooldown(
@@ -112,63 +96,7 @@ export async function findTempChannel(
   services: ModuleServices,
   channelId: string,
 ): Promise<TempVcRecord | null> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model) return null;
-  try {
-    if (typeof model.findUnique === "function") {
-      return (await model.findUnique({ where: { channelId } })) ?? null;
-    }
-    if (typeof model.findFirst === "function") {
-      return (await model.findFirst({ where: { channelId } })) ?? null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-async function listOwnedTempChannels(
-  services: ModuleServices,
-  guildId: string,
-  ownerId: string,
-): Promise<TempVcRecord[]> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model) return [];
-  try {
-    if (typeof model.findMany === "function") {
-      const rows = await model.findMany({
-        where: { guildId, ownerId },
-        orderBy: { createdAt: "desc" },
-      });
-      return Array.isArray(rows) ? rows : [];
-    }
-    if (typeof model.findFirst === "function") {
-      const row = await model.findFirst({ where: { guildId, ownerId } });
-      return row ? [row] : [];
-    }
-  } catch {
-    return [];
-  }
-  return [];
-}
-
-async function createTempRecord(
-  services: ModuleServices,
-  data: {
-    guildId: string;
-    channelId: string;
-    ownerId: string;
-    expiresAt: Date;
-  },
-): Promise<boolean> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model || typeof model.create !== "function") return false;
-  try {
-    await model.create({ data });
-    return true;
-  } catch {
-    return false;
-  }
+  return services.helpers.utility.tempvc.findChannel(channelId);
 }
 
 export async function updateTempRecord(
@@ -176,56 +104,7 @@ export async function updateTempRecord(
   channelId: string,
   data: Record<string, unknown>,
 ): Promise<boolean> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model || typeof model.update !== "function") return false;
-  try {
-    await model.update({ where: { channelId }, data });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function deleteTempRecord(
-  services: ModuleServices,
-  channelId: string,
-): Promise<void> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model || typeof model.delete !== "function") return;
-  try {
-    await model.delete({ where: { channelId } });
-  } catch {
-    return;
-  }
-}
-
-async function countTempChannels(
-  services: ModuleServices,
-  where: Record<string, unknown>,
-): Promise<number | null> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model || typeof model.count !== "function") return null;
-  try {
-    const count = await model.count({ where });
-    return typeof count === "number" ? count : null;
-  } catch {
-    return null;
-  }
-}
-
-async function listExpiredTempChannels(
-  services: ModuleServices,
-): Promise<TempVcRecord[]> {
-  const model = prisma(services)?.tempVcChannel;
-  if (!model || typeof model.findMany !== "function") return [];
-  try {
-    const rows = await model.findMany({
-      where: { expiresAt: { not: null, lte: new Date() } },
-    });
-    return Array.isArray(rows) ? rows : [];
-  } catch {
-    return [];
-  }
+  return services.helpers.utility.tempvc.update(channelId, data);
 }
 
 export async function resolveGuildVoiceChannel(
@@ -292,8 +171,7 @@ export async function createTempVoiceChannel(
     services?.client?.guilds?.cache?.get(guildId);
   if (!guild || member.user.bot) return null;
 
-  const ownedChannels = await listOwnedTempChannels(
-    services,
+  const ownedChannels = await services.helpers.utility.tempvc.listOwned(
     guildId,
     member.id,
   );
@@ -304,7 +182,7 @@ export async function createTempVoiceChannel(
       owned.channelId,
     );
     if (!existing) {
-      await deleteTempRecord(services, owned.channelId);
+      await services.helpers.utility.tempvc.delete(owned.channelId);
       continue;
     }
     const moved = await member.voice
@@ -329,8 +207,8 @@ export async function createTempVoiceChannel(
   }
 
   const [owned, total] = await Promise.all([
-    countTempChannels(services, { guildId, ownerId: member.id }),
-    countTempChannels(services, { guildId }),
+    services.helpers.utility.tempvc.count({ guildId, ownerId: member.id }),
+    services.helpers.utility.tempvc.count({ guildId }),
   ]);
   if (owned !== null && owned >= config.maxPerUser) return null;
   if (total !== null && total >= config.maxChannels) return null;
@@ -389,7 +267,7 @@ export async function createTempVoiceChannel(
     expiresAt,
   };
 
-  const persisted = await createTempRecord(services, {
+  const persisted = await services.helpers.utility.tempvc.create({
     guildId,
     channelId: channel.id,
     ownerId: member.id,
@@ -406,7 +284,7 @@ export async function createTempVoiceChannel(
     .catch(() => false);
   if (!moved) {
     await channel.delete().catch(() => undefined);
-    await deleteTempRecord(services, channel.id);
+    await services.helpers.utility.tempvc.delete(channel.id);
     return null;
   }
 
@@ -431,14 +309,14 @@ export async function deleteTempVoiceChannel(
       .catch(() => false);
     if (!deleted) return false;
   }
-  await deleteTempRecord(services, channelId);
+  await services.helpers.utility.tempvc.delete(channelId);
   return true;
 }
 
 export async function sweepExpiredTempChannels(
   services: ModuleServices,
 ): Promise<void> {
-  const rows = await listExpiredTempChannels(services);
+  const rows = await services.helpers.utility.tempvc.listExpired();
   if (rows.length === 0) return;
   const now = Date.now();
   for (const row of rows) {

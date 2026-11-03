@@ -20,6 +20,7 @@ import {
   StatsModuleName,
   StatsPermitNode,
 } from "./constants.js";
+import { parseLookback } from "./ranges.js";
 import {
   defaultState,
   editStats,
@@ -28,7 +29,6 @@ import {
   type StatsState,
   TopTypes,
 } from "./render.js";
-import { parseLookback } from "./ranges.js";
 
 function addLookbackOption(
   subcommand: SlashCommandSubcommandBuilder,

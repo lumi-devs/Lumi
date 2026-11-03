@@ -16,7 +16,11 @@ export async function getCustomCommandsConfig(
   services: ModuleServices,
   guildId: string,
 ): Promise<CustomCommandsConfig> {
-  const stored = await services.config.get(guildId, ConfigKey);
+  const stored = await services.moduleConfig.read(
+    guildId,
+    ModuleName,
+    ConfigKey,
+  );
   const parsed = CustomCommandsConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 

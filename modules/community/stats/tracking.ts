@@ -1,5 +1,5 @@
-import type { GuildMember, Message, VoiceState } from "discord.js";
 import type { ListenerDefinition, ModuleServices } from "@lumi/module-kit";
+import type { GuildMember, Message, VoiceState } from "discord.js";
 import {
   getStatsConfig,
   isIgnoredChannel,
@@ -41,24 +41,13 @@ async function closeVoiceSession(
 
   await Promise.all(
     slices.map((slice) =>
-      services.db.prisma.statsVoiceBucket.upsert({
-        where: {
-          guildId_channelId_userId_bucketStart: {
-            guildId: session.guildId,
-            channelId: session.channelId,
-            userId: session.userId,
-            bucketStart: slice.bucketStart,
-          },
-        },
-        create: {
-          guildId: session.guildId,
-          channelId: session.channelId,
-          userId: session.userId,
-          bucketStart: slice.bucketStart,
-          seconds: slice.seconds,
-        },
-        update: { seconds: { increment: slice.seconds } },
-      }),
+      services.helpers.stats.upsertVoiceBucket(
+        session.guildId,
+        session.channelId,
+        session.userId,
+        slice.bucketStart,
+        slice.seconds,
+      ),
     ),
   );
 }
@@ -136,16 +125,9 @@ async function recordEvent(
   guildId: string,
   type: string,
   userId?: string,
-  metadata?: Record<string, unknown>,
+  metadata?: unknown,
 ): Promise<void> {
-  await services.db.prisma.statsEvent.create({
-    data: {
-      guildId,
-      type,
-      userId: userId ?? null,
-      metadata: metadata ?? {},
-    },
-  });
+  await services.helpers.stats.createEvent(guildId, type, userId, metadata);
 }
 
 const messageListener: ListenerDefinition = {
@@ -159,24 +141,12 @@ const messageListener: ListenerDefinition = {
     if (message.member && isIgnoredMember(config, message.member)) return;
 
     const bucket = bucketStart(new Date(), MessageBucketMinutes);
-    await services.db.prisma.statsMessageBucket.upsert({
-      where: {
-        guildId_channelId_userId_bucketStart: {
-          guildId: message.guildId,
-          channelId: message.channelId,
-          userId: message.author.id,
-          bucketStart: bucket,
-        },
-      },
-      create: {
-        guildId: message.guildId,
-        channelId: message.channelId,
-        userId: message.author.id,
-        bucketStart: bucket,
-        count: 1,
-      },
-      update: { count: { increment: 1 } },
-    });
+    await services.helpers.stats.upsertMessageBucket(
+      message.guildId,
+      message.channelId,
+      message.author.id,
+      bucket,
+    );
   },
 };
 

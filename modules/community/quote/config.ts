@@ -21,9 +21,10 @@ export const QuoteConfigSchema = z.object({
 export type QuoteConfig = z.infer<typeof QuoteConfigSchema>;
 
 interface ConfigServices {
-  config: {
-    get(guildId: string, key: string): Promise<unknown>;
+  moduleConfig: {
+    read(guildId: string, moduleName: string, key?: string): Promise<unknown>;
   };
+  moduleName?: string;
   observability?: {
     logger?: {
       warn?: (message: string, meta?: unknown) => void;
@@ -35,7 +36,11 @@ export async function getQuoteConfig(
   services: ConfigServices,
   guildId: string,
 ): Promise<QuoteConfig> {
-  const stored = await services.config.get(guildId, QuoteConfigKey);
+  const stored = await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? QuoteConfigKey,
+    QuoteConfigKey,
+  );
   const parsed = QuoteConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 

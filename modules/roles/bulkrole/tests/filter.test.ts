@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  type BulkCandidate,
+  type BulkRoleFilter,
   countBulkMatches,
   countBulkRoleChanges,
   matchesBulkFilter,
@@ -7,8 +9,6 @@ import {
   planBulkRoleChange,
   selectBulkMatches,
   selectBulkRoleChanges,
-  type BulkCandidate,
-  type BulkRoleFilter,
 } from "../filter.js";
 
 const candidates: BulkCandidate[] = [

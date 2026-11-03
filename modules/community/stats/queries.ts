@@ -134,143 +134,13 @@ function asNumber(value: unknown): number {
   return 0;
 }
 
-function prismaOf(services: ModuleServices): any {
-  return services.db.prisma;
-}
-
-interface RawSeriesRow {
-  bucket: Date | string;
-  total: bigint | number | string;
-}
-
-async function messageSeries(
-  prisma: any,
-  guildId: string,
-  since: Date,
-  bucketSeconds: number,
-  filter?: { column: "user_id" | "channel_id"; value: string },
-): Promise<RawSeriesRow[]> {
-  if (filter?.column === "user_id") {
-    return prisma.$queryRaw`
-      SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-             SUM(count)::bigint AS total
-      FROM stats_message_buckets
-      WHERE guild_id = ${guildId} AND bucket_start >= ${since} AND user_id = ${filter.value}
-      GROUP BY 1 ORDER BY 1`;
-  }
-  if (filter?.column === "channel_id") {
-    return prisma.$queryRaw`
-      SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-             SUM(count)::bigint AS total
-      FROM stats_message_buckets
-      WHERE guild_id = ${guildId} AND bucket_start >= ${since} AND channel_id = ${filter.value}
-      GROUP BY 1 ORDER BY 1`;
-  }
-  return prisma.$queryRaw`
-    SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-           SUM(count)::bigint AS total
-    FROM stats_message_buckets
-    WHERE guild_id = ${guildId} AND bucket_start >= ${since}
-    GROUP BY 1 ORDER BY 1`;
-}
-
-async function voiceSeries(
-  prisma: any,
-  guildId: string,
-  since: Date,
-  bucketSeconds: number,
-  filter?: { column: "user_id" | "channel_id"; value: string },
-): Promise<RawSeriesRow[]> {
-  if (filter?.column === "user_id") {
-    return prisma.$queryRaw`
-      SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-             SUM(seconds)::bigint AS total
-      FROM stats_voice_buckets
-      WHERE guild_id = ${guildId} AND bucket_start >= ${since} AND user_id = ${filter.value}
-      GROUP BY 1 ORDER BY 1`;
-  }
-  if (filter?.column === "channel_id") {
-    return prisma.$queryRaw`
-      SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-             SUM(seconds)::bigint AS total
-      FROM stats_voice_buckets
-      WHERE guild_id = ${guildId} AND bucket_start >= ${since} AND channel_id = ${filter.value}
-      GROUP BY 1 ORDER BY 1`;
-  }
-  return prisma.$queryRaw`
-    SELECT to_timestamp(floor(extract(epoch FROM bucket_start) / ${bucketSeconds}::numeric) * ${bucketSeconds}::numeric) AS bucket,
-           SUM(seconds)::bigint AS total
-    FROM stats_voice_buckets
-    WHERE guild_id = ${guildId} AND bucket_start >= ${since}
-    GROUP BY 1 ORDER BY 1`;
-}
-
 function seriesFromRows(
-  rows: RawSeriesRow[],
+  rows: ReadonlyArray<{ bucketStart: number; value: number }>,
   startMs: number,
   endMs: number,
   bucketMs: number,
 ): number[] {
-  return aggregateSeries(
-    rows.map((row) => ({
-      bucketStart: new Date(row.bucket).getTime(),
-      value: asNumber(row.total),
-    })),
-    startMs,
-    endMs,
-    bucketMs,
-  );
-}
-
-function mapFromGroups(
-  groups: ReadonlyArray<Record<string, unknown>>,
-  key: string,
-  sumField: "count" | "seconds",
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const group of groups) {
-    const id = group[key];
-    if (typeof id !== "string") continue;
-    const sum = group._sum as Record<string, unknown> | undefined;
-    map.set(id, asNumber(sum?.[sumField] ?? 0));
-  }
-  return map;
-}
-
-async function sumMessage(
-  prisma: any,
-  guildId: string,
-  since: Date,
-): Promise<number> {
-  const result = await prisma.statsMessageBucket.aggregate({
-    where: { guildId, bucketStart: { gte: since } },
-    _sum: { count: true },
-  });
-  return asNumber(result?._sum?.count);
-}
-
-async function sumVoice(
-  prisma: any,
-  guildId: string,
-  since: Date,
-): Promise<number> {
-  const result = await prisma.statsVoiceBucket.aggregate({
-    where: { guildId, bucketStart: { gte: since } },
-    _sum: { seconds: true },
-  });
-  return asNumber(result?._sum?.seconds);
-}
-
-async function countContributors(
-  prisma: any,
-  guildId: string,
-  since: Date,
-): Promise<number> {
-  const groups = await prisma.statsMessageBucket.groupBy({
-    by: ["userId"],
-    where: { guildId, bucketStart: { gte: since } },
-  });
-  return Array.isArray(groups) ? groups.length : 0;
+  return aggregateSeries(rows, startMs, endMs, bucketMs);
 }
 
 export async function loadGuildTotals(
@@ -278,7 +148,7 @@ export async function loadGuildTotals(
   guildId: string,
   nowMs: number = Date.now(),
 ): Promise<GuildTotals> {
-  const prisma = prismaOf(services);
+  const { stats } = services.helpers;
   const totals: GuildTotals = {
     messages: emptyTotals(),
     voice: emptyTotals(),
@@ -289,22 +159,19 @@ export async function loadGuildTotals(
     unboosts: emptyTotals(),
   };
 
-  const eventRows = await prisma.statsEvent.findMany({
-    where: { guildId, createdAt: { gte: rangeStart("60d", nowMs) } },
-    select: { type: true, createdAt: true },
-  });
+  const eventRows = await stats.listEvents(guildId, rangeStart("60d", nowMs));
 
   await Promise.all(
     LookbackValues.map(async (lookback) => {
       const since = rangeStart(lookback, nowMs);
       const [messages, voice, contributors] = await Promise.all([
-        sumMessage(prisma, guildId, since),
-        sumVoice(prisma, guildId, since),
-        countContributors(prisma, guildId, since),
+        stats.sumMessages(guildId, since),
+        stats.sumVoiceSeconds(guildId, since),
+        stats.messageTotalsByUser(guildId, since),
       ]);
       totals.messages[lookback] = messages;
       totals.voice[lookback] = voice;
-      totals.contributors[lookback] = contributors;
+      totals.contributors[lookback] = contributors.size;
 
       const startMs = since.getTime();
       const endMs = nowMs;
@@ -328,31 +195,23 @@ export async function loadMessageStats(
   lookback: Lookback,
   nowMs: number = Date.now(),
 ): Promise<MessageStats> {
-  const prisma = prismaOf(services);
+  const { stats } = services.helpers;
   const start = rangeStart(lookback, nowMs);
   const end = new Date(nowMs);
   const bucketMs = chartBucketMs(lookback);
   const bucketSeconds = Math.floor(bucketMs / 1000);
 
-  const [total, userGroups, channelGroups, rows] = await Promise.all([
-    sumMessage(prisma, guildId, start),
-    prisma.statsMessageBucket.groupBy({
-      by: ["userId"],
-      where: { guildId, bucketStart: { gte: start } },
-      _sum: { count: true },
-    }),
-    prisma.statsMessageBucket.groupBy({
-      by: ["channelId"],
-      where: { guildId, bucketStart: { gte: start } },
-      _sum: { count: true },
-    }),
-    messageSeries(prisma, guildId, start, bucketSeconds),
+  const [total, byUser, byChannel, rows] = await Promise.all([
+    stats.sumMessages(guildId, start),
+    stats.messageTotalsByUser(guildId, start),
+    stats.messageTotalsByChannel(guildId, start),
+    stats.messageSeries(guildId, start, bucketSeconds),
   ]);
 
   return {
     total,
-    byUser: mapFromGroups(userGroups, "userId", "count"),
-    byChannel: mapFromGroups(channelGroups, "channelId", "count"),
+    byUser,
+    byChannel,
     series: seriesFromRows(rows, start.getTime(), nowMs, bucketMs),
     bucketMs,
     start,
@@ -366,31 +225,23 @@ export async function loadVoiceStats(
   lookback: Lookback,
   nowMs: number = Date.now(),
 ): Promise<VoiceStats> {
-  const prisma = prismaOf(services);
+  const { stats } = services.helpers;
   const start = rangeStart(lookback, nowMs);
   const end = new Date(nowMs);
   const bucketMs = chartBucketMs(lookback);
   const bucketSeconds = Math.floor(bucketMs / 1000);
 
-  const [totalSeconds, userGroups, channelGroups, rows] = await Promise.all([
-    sumVoice(prisma, guildId, start),
-    prisma.statsVoiceBucket.groupBy({
-      by: ["userId"],
-      where: { guildId, bucketStart: { gte: start } },
-      _sum: { seconds: true },
-    }),
-    prisma.statsVoiceBucket.groupBy({
-      by: ["channelId"],
-      where: { guildId, bucketStart: { gte: start } },
-      _sum: { seconds: true },
-    }),
-    voiceSeries(prisma, guildId, start, bucketSeconds),
+  const [totalSeconds, byUser, byChannel, rows] = await Promise.all([
+    stats.sumVoiceSeconds(guildId, start),
+    stats.voiceTotalsByUser(guildId, start),
+    stats.voiceTotalsByChannel(guildId, start),
+    stats.voiceSeries(guildId, start, bucketSeconds),
   ]);
 
   return {
     totalSeconds,
-    byUser: mapFromGroups(userGroups, "userId", "seconds"),
-    byChannel: mapFromGroups(channelGroups, "channelId", "seconds"),
+    byUser,
+    byChannel,
     series: seriesFromRows(rows, start.getTime(), nowMs, bucketMs),
     bucketMs,
     start,
@@ -421,31 +272,15 @@ export async function loadSnapshotStats(
   lookback: Lookback,
   nowMs: number = Date.now(),
 ): Promise<SnapshotStats> {
-  const prisma = prismaOf(services);
+  const { stats } = services.helpers;
   const start = rangeStart(lookback, nowMs);
   const end = new Date(nowMs);
   const bucketMs = chartBucketMs(lookback);
 
   const [latest, rows, allRows] = await Promise.all([
-    prisma.statsSnapshot.findFirst({
-      where: { guildId },
-      orderBy: { capturedAt: "desc" },
-    }),
-    prisma.statsSnapshot.findMany({
-      where: { guildId, capturedAt: { gte: start } },
-      orderBy: { capturedAt: "asc" },
-    }),
-    prisma.statsSnapshot.findMany({
-      where: { guildId, capturedAt: { gte: rangeStart("60d", nowMs) } },
-      select: {
-        capturedAt: true,
-        memberCount: true,
-        onlineCount: true,
-        voiceCount: true,
-        channelCount: true,
-        boostCount: true,
-      },
-    }),
+    stats.findLatestSnapshot(guildId),
+    stats.findSnapshotsSince(guildId, start),
+    stats.findSnapshotSummarySince(guildId, rangeStart("60d", nowMs)),
   ]);
 
   const series = (key: string): number[] =>
@@ -573,110 +408,54 @@ export async function loadUserStats(
   lookback: Lookback,
   nowMs: number = Date.now(),
 ): Promise<UserStats> {
-  const prisma = prismaOf(services);
+  const { stats } = services.helpers;
   const start60 = rangeStart("60d", nowMs);
   const start = rangeStart(lookback, nowMs);
   const bucketMs = chartBucketMs(lookback);
 
-  const [messageRows, voiceRows, messageGroups, voiceGroups] =
-    await Promise.all([
-      prisma.statsMessageBucket.findMany({
-        where: { guildId, userId, bucketStart: { gte: start60 } },
-        select: { bucketStart: true, channelId: true, count: true },
-      }),
-      prisma.statsVoiceBucket.findMany({
-        where: { guildId, userId, bucketStart: { gte: start60 } },
-        select: { bucketStart: true, channelId: true, seconds: true },
-      }),
-      prisma.statsMessageBucket.groupBy({
-        by: ["userId"],
-        where: { guildId, bucketStart: { gte: start60 } },
-        _sum: { count: true },
-      }),
-      prisma.statsVoiceBucket.groupBy({
-        by: ["userId"],
-        where: { guildId, bucketStart: { gte: start60 } },
-        _sum: { seconds: true },
-      }),
-    ]);
+  const [messageRows, voiceRows, messageRanks, voiceRanks] = await Promise.all([
+    stats.findMessageBucketsForUser(guildId, userId, start60),
+    stats.findVoiceBucketsForUser(guildId, userId, start60),
+    stats.messageTotalsByUser(guildId, start60),
+    stats.voiceTotalsByUser(guildId, start60),
+  ]);
 
-  const messagesForTotals = messageRows.map(
-    (row: { bucketStart: Date; count: number }) => ({
-      bucketStart: new Date(row.bucketStart).getTime(),
-      value: row.count,
-    }),
-  );
-  const voiceForTotals = voiceRows.map(
-    (row: { bucketStart: Date; seconds: number }) => ({
-      bucketStart: new Date(row.bucketStart).getTime(),
-      value: row.seconds,
-    }),
-  );
-  const messagesForSeries = messageRows.map(
-    (row: { bucketStart: Date; count: number }) => ({
-      bucketStart: new Date(row.bucketStart).getTime(),
-      value: row.count,
-    }),
-  );
-  const voiceForSeries = voiceRows.map(
-    (row: { bucketStart: Date; seconds: number }) => ({
-      bucketStart: new Date(row.bucketStart).getTime(),
-      value: row.seconds,
-    }),
-  );
-
+  const messages = messageRows.map((row) => ({
+    bucketStart: new Date(row.bucketStart).getTime(),
+    value: row.count,
+  }));
+  const voices = voiceRows.map((row) => ({
+    bucketStart: new Date(row.bucketStart).getTime(),
+    value: row.seconds,
+  }));
   const messageChannels = channelTotalsInWindow(
-    messageRows.map(
-      (row: { bucketStart: Date; channelId: string; count: number }) => ({
-        bucketStart: new Date(row.bucketStart).getTime(),
-        channelId: row.channelId,
-        value: row.count,
-      }),
-    ),
+    messageRows.map((row) => ({
+      bucketStart: new Date(row.bucketStart).getTime(),
+      channelId: row.channelId,
+      value: row.count,
+    })),
     start.getTime(),
     nowMs,
   );
   const voiceChannels = channelTotalsInWindow(
-    voiceRows.map(
-      (row: { bucketStart: Date; channelId: string; seconds: number }) => ({
-        bucketStart: new Date(row.bucketStart).getTime(),
-        channelId: row.channelId,
-        value: row.seconds,
-      }),
-    ),
+    voiceRows.map((row) => ({
+      bucketStart: new Date(row.bucketStart).getTime(),
+      channelId: row.channelId,
+      value: row.seconds,
+    })),
     start.getTime(),
     nowMs,
   );
 
-  const messageRanks = new Map<string, number>();
-  for (const group of messageGroups) {
-    const sum = group._sum as { count?: unknown } | undefined;
-    messageRanks.set(group.userId, asNumber(sum?.count));
-  }
-  const voiceRanks = new Map<string, number>();
-  for (const group of voiceGroups) {
-    const sum = group._sum as { seconds?: unknown } | undefined;
-    voiceRanks.set(group.userId, asNumber(sum?.seconds));
-  }
   const messageRank = rankOf(messageRanks, userId);
   const voiceRank = rankOf(voiceRanks, userId);
 
   return {
     userId,
-    messages: totalsByLookback(messagesForTotals, nowMs),
-    voice: totalsByLookback(voiceForTotals, nowMs),
-    messageSeries: aggregateSeries(
-      messagesForSeries,
-      start.getTime(),
-      nowMs,
-      bucketMs,
-    ),
-    voiceSeries: aggregateSeries(
-      voiceForSeries,
-      start.getTime(),
-      nowMs,
-      bucketMs,
-    ),
+    messages: totalsByLookback(messages, nowMs),
+    voice: totalsByLookback(voices, nowMs),
+    messageSeries: aggregateSeries(messages, start.getTime(), nowMs, bucketMs),
+    voiceSeries: aggregateSeries(voices, start.getTime(), nowMs, bucketMs),
     topMessageChannels: messageChannels,
     topVoiceChannels: voiceChannels,
     messageRank: messageRank.rank,
@@ -730,5 +509,4 @@ export async function loadTopStats(
   };
 }
 
-export { sampleSeries };
-export { timedValues };
+export { sampleSeries, timedValues };

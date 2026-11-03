@@ -703,3 +703,46 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+// Moderation
+model ModerationCase {
+  id          String    @id @default(cuid())
+  guildId     String    @map("guild_id")
+  caseNumber  Int       @map("case_number")
+  type        String
+  targetId    String    @map("target_id")
+  moderatorId String    @map("moderator_id")
+  messageId   String?   @map("message_id")
+  channelId   String?   @map("channel_id")
+  reason      String?
+  active      Boolean   @default(true)
+  duration    Int?
+  expiresAt   DateTime? @map("expires_at")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([guildId, caseNumber])
+  @@index([guildId, targetId])
+  @@index([guildId, createdAt])
+  @@index([guildId, type])
+  @@index([guildId, channelId])
+  @@map("moderation_cases")
+}
+
+// Owner blacklists
+model GuildBlacklist {
+  guildId   String   @id @map("guild_id")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("guild_blacklist")
+}
+
+model UserBlacklist {
+  userId    String   @id @map("user_id")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("user_blacklist")
+}

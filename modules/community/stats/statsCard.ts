@@ -1,7 +1,7 @@
 import { roundRect } from "@lumi/ui";
 import {
-  createCanvas,
   type CanvasRenderingContext2D,
+  createCanvas,
   type Image,
   loadImage,
 } from "canvas";

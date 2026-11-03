@@ -39,6 +39,30 @@ const statsModule: ModuleDefinition = defineModule({
     "Server statistics with message, voice, member, status, and boost tracking",
   version: "1.0.0",
   config: StatsConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      const epoch = new Date(0);
+      const [messageBuckets, voiceBuckets, events] = await Promise.all([
+        services.helpers.stats.findMessageBucketsForUser(
+          guildId,
+          userId,
+          epoch,
+        ),
+        services.helpers.stats.findVoiceBucketsForUser(guildId, userId, epoch),
+        services.helpers.stats.listEventsForUser(guildId, userId),
+      ]);
+      return { messageBuckets, voiceBuckets, events };
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.stats.deleteUserData(
+        guildId,
+        userId,
+      );
+      return {
+        deleted: result.messageBuckets + result.voiceBuckets + result.events,
+      };
+    },
+  },
   commands: [statsCommand],
   permitNodes: [StatsPermitNode],
   listeners: trackingListeners,

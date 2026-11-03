@@ -1,6 +1,6 @@
-import type { PageServerLoad } from "./$types";
-import { requireSession, manageableGuilds } from "$lib/server/auth";
+import { manageableGuilds, requireSession } from "$lib/server/auth";
 import { guildIconUrl } from "$lib/server/discord";
+import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
   requireSession(event);

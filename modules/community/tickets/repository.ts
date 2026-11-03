@@ -79,10 +79,6 @@ export interface AttachmentMetadata {
   contentType: string | null;
 }
 
-export function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: unknown }).prisma;
-}
-
 export function attachmentMetadata(attachments: unknown): AttachmentMetadata[] {
   const collection = attachments as {
     values?: () => Iterable<{
@@ -108,13 +104,10 @@ export async function findTicketByChannel(
   services: ModuleServices,
   channelId: string,
 ): Promise<TicketRecord | null> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticket) return null;
   try {
-    return (await prisma.ticket.findUnique({
-      where: { channelId },
-      include: { category: true },
-    })) as TicketRecord | null;
+    return (await services.helpers.tickets.findTicketByChannel(
+      channelId,
+    )) as TicketRecord | null;
   } catch {
     return null;
   }
@@ -124,13 +117,10 @@ export async function findTicketById(
   services: ModuleServices,
   ticketId: string,
 ): Promise<TicketRecord | null> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticket) return null;
   try {
-    return (await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      include: { category: true },
-    })) as TicketRecord | null;
+    return (await services.helpers.tickets.findTicketById(
+      ticketId,
+    )) as TicketRecord | null;
   } catch {
     return null;
   }
@@ -140,12 +130,10 @@ export async function findPanel(
   services: ModuleServices,
   panelId: string,
 ): Promise<TicketPanelRecord | null> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketPanel) return null;
   try {
-    return (await prisma.ticketPanel.findUnique({
-      where: { id: panelId },
-    })) as TicketPanelRecord | null;
+    return (await services.helpers.tickets.findPanel(
+      panelId,
+    )) as TicketPanelRecord | null;
   } catch {
     return null;
   }
@@ -156,12 +144,11 @@ export async function findCategory(
   guildId: string,
   categoryId: string,
 ): Promise<TicketCategoryRecord | null> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketCategory) return null;
   try {
-    return (await prisma.ticketCategory.findFirst({
-      where: { id: categoryId, guildId },
-    })) as TicketCategoryRecord | null;
+    return (await services.helpers.tickets.findCategory(
+      guildId,
+      categoryId,
+    )) as TicketCategoryRecord | null;
   } catch {
     return null;
   }
@@ -172,19 +159,11 @@ export async function listCategories(
   guildId: string,
   options: { enabledOnly?: boolean; ids?: readonly string[] } = {},
 ): Promise<TicketCategoryRecord[]> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketCategory) return [];
   try {
-    const rows = (await prisma.ticketCategory.findMany({
-      where: {
-        guildId,
-        ...(options.enabledOnly ? { enabled: true } : {}),
-        ...(options.ids && options.ids.length > 0
-          ? { id: { in: [...options.ids] } }
-          : {}),
-      },
-      orderBy: [{ position: "asc" }, { name: "asc" }],
-    })) as TicketCategoryRecord[];
+    const rows = (await services.helpers.tickets.listCategories(
+      guildId,
+      options,
+    )) as TicketCategoryRecord[];
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
@@ -196,12 +175,8 @@ export async function countOpenTickets(
   guildId: string,
   userId: string,
 ): Promise<number> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticket) return 0;
   try {
-    return (await prisma.ticket.count({
-      where: { guildId, userId, status: "open" },
-    })) as number;
+    return await services.helpers.tickets.countOpenTickets(guildId, userId);
   } catch {
     return 0;
   }
@@ -211,10 +186,8 @@ export async function countGuildTickets(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticket) return 0;
   try {
-    return (await prisma.ticket.count({ where: { guildId } })) as number;
+    return await services.helpers.tickets.countGuildTickets(guildId);
   } catch {
     return 0;
   }
@@ -225,13 +198,8 @@ export async function isBlacklisted(
   guildId: string,
   userId: string,
 ): Promise<boolean> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketBlacklist) return false;
   try {
-    const row = await prisma.ticketBlacklist.findUnique({
-      where: { guildId_userId: { guildId, userId } },
-    });
-    return Boolean(row);
+    return await services.helpers.tickets.isBlacklisted(guildId, userId);
   } catch {
     return false;
   }
@@ -241,13 +209,10 @@ export async function listTicketMessages(
   services: ModuleServices,
   ticketId: string,
 ): Promise<TicketMessageRecord[]> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketMessage) return [];
   try {
-    const rows = (await prisma.ticketMessage.findMany({
-      where: { ticketId },
-      orderBy: { createdAt: "asc" },
-    })) as TicketMessageRecord[];
+    const rows = (await services.helpers.tickets.listMessages(
+      ticketId,
+    )) as TicketMessageRecord[];
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
@@ -258,13 +223,10 @@ export async function listTicketNotes(
   services: ModuleServices,
   ticketId: string,
 ): Promise<TicketNoteRecord[]> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketNote) return [];
   try {
-    const rows = (await prisma.ticketNote.findMany({
-      where: { ticketId },
-      orderBy: { createdAt: "asc" },
-    })) as TicketNoteRecord[];
+    const rows = (await services.helpers.tickets.listNotes(
+      ticketId,
+    )) as TicketNoteRecord[];
     return Array.isArray(rows) ? rows : [];
   } catch {
     return [];
@@ -283,31 +245,25 @@ export async function archiveMessage(
     attachments?: unknown;
   },
 ): Promise<boolean> {
-  const prisma = prismaOf(services);
-  if (!prisma?.ticketMessage) return false;
   const attachments = attachmentMetadata(message.attachments);
   if (!message.content.trim() && attachments.length === 0) return false;
   try {
-    const existing = await prisma.ticketMessage.findFirst({
-      where: { ticketId, messageId: message.id },
-      select: { id: true },
-    });
+    const existing = await services.helpers.tickets.messageExists(
+      ticketId,
+      message.id,
+    );
     if (existing) return false;
-    await prisma.ticketMessage.create({
-      data: {
-        ticketId,
-        messageId: message.id,
-        authorId: message.author.id,
-        authorName:
-          message.member?.displayName ??
-          message.author.globalName ??
-          message.author.username,
-        content: escapeHtml(message.content),
-        attachments,
-        ...(message.createdAt
-          ? { createdAt: new Date(message.createdAt) }
-          : {}),
-      },
+    await services.helpers.tickets.createMessage({
+      ticketId,
+      messageId: message.id,
+      authorId: message.author.id,
+      authorName:
+        message.member?.displayName ??
+        message.author.globalName ??
+        message.author.username,
+      content: escapeHtml(message.content),
+      attachments,
+      ...(message.createdAt ? { createdAt: new Date(message.createdAt) } : {}),
     });
     return true;
   } catch {

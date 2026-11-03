@@ -1,5 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import {
+  type CardReply,
   ephemeralCard,
   formatPageFooter,
   makeEmptyCard,
@@ -8,7 +9,6 @@ import {
   makeListCard,
   makeSuccessCard,
   makeWarningCard,
-  type CardReply,
 } from "@lumi/ui";
 import {
   isValidTimezone,
@@ -26,23 +26,19 @@ import {
   listCommands,
   listGroups,
 } from "./store.js";
+import { parseIntervalInput } from "./transfer.js";
 import {
   normalizeCommandName,
   validateCommandName,
   validateTrigger,
 } from "./trigger.js";
 import {
+  type CustomCommandRow,
   Limits,
   ScheduleTriggerTypes,
-  TriggerTypes,
-  type CustomCommandRow,
   type TriggerType,
+  TriggerTypes,
 } from "./types.js";
-import { parseIntervalInput } from "./transfer.js";
-
-function prismaOf(services: ModuleServices): any {
-  return services.db?.prisma ?? (services as { prisma?: any }).prisma;
-}
 
 function parsePermissionNodes(input: string | null | undefined): string[] {
   if (!input) return [];
@@ -136,22 +132,19 @@ export async function createCustomCommand(
   const existing = await getCommandByName(services, guildId, name);
   if (existing) throw new Error(`Command "${name}" already exists.`);
 
-  const row = (await prismaOf(services).customCommand.create({
-    data: {
-      guildId,
-      name,
-      description: options.description?.trim() || null,
-      triggerType,
-      trigger,
-      responses,
-      enabled: options.enabled ?? true,
-      cooldownSeconds: cooldown,
-      permissionNodes: parsePermissionNodes(options.permissions),
-      groupId,
-      createdBy: userId,
-    },
-    include: { group: true, schedule: true },
-  })) as CustomCommandRow;
+  const row = (await services.helpers.customCommands.createCommand({
+    guildId,
+    name,
+    description: options.description?.trim() || null,
+    triggerType,
+    trigger,
+    responses,
+    enabled: options.enabled ?? true,
+    cooldownSeconds: cooldown,
+    permissionNodes: parsePermissionNodes(options.permissions),
+    groupId,
+    createdBy: userId,
+  })) as unknown as CustomCommandRow;
 
   invalidateGuild(guildId);
   return makeSuccessCard(
@@ -182,7 +175,9 @@ export async function editCustomCommand(
   const command = await getCommandByName(services, guildId, name);
   if (!command) throw new Error(`Command "${name}" was not found.`);
 
-  const data: Record<string, unknown> = {};
+  const data: Parameters<
+    ModuleServices["helpers"]["customCommands"]["updateCommand"]
+  >[1] = {};
 
   if (options.triggerType !== undefined && options.triggerType !== null) {
     const type = triggerTypeOf(options.triggerType);
@@ -243,11 +238,10 @@ export async function editCustomCommand(
     throw new Error("Provide at least one field to edit.");
   }
 
-  const updated = (await prismaOf(services).customCommand.update({
-    where: { id: command.id },
+  const updated = (await services.helpers.customCommands.updateCommand(
+    command.id,
     data,
-    include: { group: true, schedule: true },
-  })) as CustomCommandRow;
+  )) as unknown as CustomCommandRow;
 
   invalidateGuild(guildId);
   return makeSuccessCard("Custom Command Updated", [
@@ -265,7 +259,7 @@ export async function deleteCustomCommand(
   const command = await getCommandByName(services, guildId, normalized);
   if (!command) throw new Error(`Command "${normalized}" was not found.`);
 
-  await prismaOf(services).customCommand.delete({ where: { id: command.id } });
+  await services.helpers.customCommands.deleteCommand(command.id);
   invalidateGuild(guildId);
   return makeSuccessCard(
     "Custom Command Deleted",
@@ -393,13 +387,11 @@ export async function manageGroup(
         `This server already has the maximum of ${Limits.groupsPerGuild} groups.`,
       );
     }
-    const group = await prismaOf(services).customCommandGroup.create({
-      data: {
-        guildId,
-        name: normalized,
-        description: description?.trim() || null,
-        position: count,
-      },
+    const group = await services.helpers.customCommands.createGroup({
+      guildId,
+      name: normalized,
+      description: description?.trim() || null,
+      position: count,
     });
     invalidateGuild(guildId);
     return makeSuccessCard("Group Created", `Created group **${group.name}**.`);
@@ -410,9 +402,7 @@ export async function manageGroup(
   if (!group) throw new Error(`Group "${normalized}" was not found.`);
 
   if (action === "delete") {
-    await prismaOf(services).customCommandGroup.delete({
-      where: { id: group.id },
-    });
+    await services.helpers.customCommands.deleteGroup(group.id);
     invalidateGuild(guildId);
     return makeSuccessCard(
       "Group Deleted",
@@ -430,14 +420,11 @@ export async function manageGroup(
   if (conflict && conflict.id !== group.id) {
     throw new Error(`Group "${renamed}" already exists.`);
   }
-  const updated = await prismaOf(services).customCommandGroup.update({
-    where: { id: group.id },
-    data: {
-      name: renamed,
-      ...(description !== undefined && description !== null
-        ? { description: description.trim() || null }
-        : {}),
-    },
+  const updated = await services.helpers.customCommands.updateGroup(group.id, {
+    name: renamed,
+    ...(description !== undefined && description !== null
+      ? { description: description.trim() || null }
+      : {}),
   });
   invalidateGuild(guildId);
   return makeSuccessCard(
@@ -458,12 +445,9 @@ export async function manageSchedule(
   timezone?: string | null,
 ): Promise<CardReply> {
   if (action === "list") {
-    const rows = (await prismaOf(services).customCommandSchedule.findMany({
-      where: { command: { guildId } },
-      include: { command: true },
-      orderBy: { nextRunAt: "asc" },
-      take: 50,
-    })) as Array<{
+    const rows = (await services.helpers.customCommands.listSchedules(
+      guildId,
+    )) as Array<{
       cron: string | null;
       intervalSeconds: number | null;
       timezone: string | null;
@@ -500,9 +484,7 @@ export async function manageSchedule(
   if (!command) throw new Error(`Command "${name}" was not found.`);
 
   if (action === "clear") {
-    await prismaOf(services).customCommandSchedule.deleteMany({
-      where: { commandId: command.id },
-    });
+    await services.helpers.customCommands.deleteSchedules(command.id);
     invalidateGuild(guildId);
     return makeSuccessCard(
       "Schedule Cleared",
@@ -536,21 +518,11 @@ export async function manageSchedule(
   });
   if (!next) throw new Error("Could not compute the next run time.");
 
-  await prismaOf(services).customCommandSchedule.upsert({
-    where: { commandId: command.id },
-    update: {
-      cron: cronValue,
-      intervalSeconds,
-      timezone: zone,
-      nextRunAt: next,
-    },
-    create: {
-      commandId: command.id,
-      cron: cronValue,
-      intervalSeconds,
-      timezone: zone,
-      nextRunAt: next,
-    },
+  await services.helpers.customCommands.upsertSchedule(command.id, {
+    cron: cronValue,
+    intervalSeconds,
+    timezone: zone,
+    nextRunAt: next,
   });
 
   invalidateGuild(guildId);

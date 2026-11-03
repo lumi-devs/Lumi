@@ -1,10 +1,10 @@
-import { redirect, type RequestHandler } from "@sveltejs/kit";
+import { type RequestHandler, redirect } from "@sveltejs/kit";
 import {
+  DiscordError,
   exchangeCode,
   fetchOAuthUser,
   type OAuthToken,
   type OAuthUser,
-  DiscordError,
 } from "$lib/server/discord";
 import { serverConfig } from "$lib/server/env";
 import { dashboardKey, getRedis } from "$lib/server/redis";

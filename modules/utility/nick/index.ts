@@ -30,7 +30,11 @@ const getNickConfig = async (
   guildId: string,
 ): Promise<NickConfig> =>
   NickConfigSchema.parse(
-    (await services.config.get(guildId, NickConfigKey)) ?? {},
+    (await services.moduleConfig.read(
+      guildId,
+      services.moduleName ?? NickConfigKey,
+      NickConfigKey,
+    )) ?? {},
   );
 
 type AnyGuildMember =
@@ -59,13 +63,14 @@ async function hasNickPermit(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,
 ): Promise<boolean> {
+  if (!interaction.guildId) return false;
   try {
     const result = await services.permits.explainPermit(
       {
         guildId: interaction.guildId,
         userId: interaction.user.id,
         roleIds: roleIdsOf(interaction.member),
-        channelId: interaction.channelId,
+        channelId: interaction.channelId ?? undefined,
         guildOwnerId: interaction.guild?.ownerId,
         permitNode: "mod.nick",
       },

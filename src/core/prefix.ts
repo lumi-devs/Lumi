@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";
 import {
@@ -28,23 +29,14 @@ const RoleMention = /^<@&(\d+)>$/;
 const ChannelMention = /^<#(\d+)>$/;
 const Snowflake = /^\d{15,20}$/;
 
-interface CommandOption {
-  readonly name: string;
-  readonly type?: number;
-  readonly options?: readonly CommandOption[];
-}
-
 export interface PrefixLogger {
   error(message: string, meta?: unknown): void;
 }
 
-export interface PrefixServices {
-  config: {
-    get(guildId: string, key: string): Promise<unknown>;
-  };
+export type PrefixServices = ModuleServices & {
   permits: PermitRepository;
   redis?: Redis;
-}
+};
 
 export interface PrefixContext {
   client: Client;
@@ -99,14 +91,17 @@ function createSyntheticInteraction(
   let deferred = false;
   let replyMessage: Message | undefined;
 
-  const topOptions: CommandOption[] = command.data.toJSON().options ?? [];
+  const commandJson = command.data.toJSON();
+  const topOptions =
+    "options" in commandJson ? (commandJson.options ?? []) : [];
   const subcommand = topOptions.find(
     (option) =>
       (option.type === 1 || option.type === 2) && option.name === args[0],
   );
-  const definitions: readonly CommandOption[] = subcommand
-    ? (subcommand.options ?? [])
-    : topOptions.filter((option) => option.type !== 1 && option.type !== 2);
+  const definitions =
+    subcommand && (subcommand.type === 1 || subcommand.type === 2)
+      ? (subcommand.options ?? [])
+      : topOptions.filter((option) => option.type !== 1 && option.type !== 2);
   const rest = subcommand ? args.slice(1) : args;
   const values = new Map<string, string>();
   const positional: string[] = [];

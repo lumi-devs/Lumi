@@ -1,10 +1,10 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import {
+  type CardReply,
   cardCreateOptions,
   cardMessage,
   ephemeralCard,
   makeErrorCard,
-  type CardReply,
 } from "@lumi/ui";
 import type {
   Guild,
@@ -14,11 +14,11 @@ import type {
   User,
 } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
-import { buildContextValues } from "./context.js";
 import {
-  getCustomCommandsConfig,
   type CustomCommandsConfig,
+  getCustomCommandsConfig,
 } from "./config.js";
+import { buildContextValues } from "./context.js";
 import { renderTemplate } from "./interpreter/index.js";
 import { createKvAdapter } from "./kv.js";
 import {
@@ -154,16 +154,16 @@ export async function checkCooldown(
 ): Promise<number> {
   if (seconds <= 0) return 0;
   const key = `lumi:custom-commands:cooldown:${guildId}:${commandId}:${userId}`;
-  const redis = services.redis;
-  if (redis && typeof redis.set === "function") {
-    try {
-      const result = await redis.set(key, "1", "EX", seconds, "NX");
-      if (result === "OK") return 0;
-      const ttl = Number(await redis.ttl(key));
-      return Number.isFinite(ttl) && ttl > 0 ? ttl : 1;
-    } catch {
-      // Fall through to the process-local cooldown.
-    }
+  try {
+    const acquired = await services.helpers.cache.setNx(
+      key,
+      "1",
+      seconds * 1_000,
+    );
+    if (acquired) return 0;
+    return 1;
+  } catch {
+    // Fall through to the process-local cooldown.
   }
 
   const now = Date.now();

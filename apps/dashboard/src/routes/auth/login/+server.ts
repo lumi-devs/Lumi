@@ -1,7 +1,7 @@
-import { redirect, type RequestHandler } from "@sveltejs/kit";
+import { type RequestHandler, redirect } from "@sveltejs/kit";
 import { authorizeUrl, createPkce, randomState } from "$lib/server/discord";
-import { dashboardKey, getRedis } from "$lib/server/redis";
 import { serverConfig } from "$lib/server/env";
+import { dashboardKey, getRedis } from "$lib/server/redis";
 
 const OAuthStateCookie = "lumi_oauth_state";
 

@@ -32,28 +32,15 @@ export const leaderboardDef: CommandDefinition = {
     const config = await getEconomyConfig(services, guildId);
     const symbol = config.currencySymbol;
 
-    const [total, allUsers] = await Promise.all([
-      services.db.prisma.economyUser.count({ where: { guildId } }),
-      services.db.prisma.economyUser.findMany({
-        where: { guildId },
-        orderBy: { balance: "desc" },
-        skip: Math.max(0, requestedPage - 1) * PerPage,
-        take: PerPage,
-      }),
-    ]);
-
+    const total = await services.helpers.economy.count(guildId);
     const totalPages = Math.max(1, Math.ceil(total / PerPage));
     const page = Math.min(Math.max(1, requestedPage), totalPages);
 
-    let users = allUsers;
-    if (page !== requestedPage) {
-      users = await services.db.prisma.economyUser.findMany({
-        where: { guildId },
-        orderBy: { balance: "desc" },
-        skip: (page - 1) * PerPage,
-        take: PerPage,
-      });
-    }
+    const users = await services.helpers.economy.leaderboard(
+      guildId,
+      PerPage,
+      (page - 1) * PerPage,
+    );
 
     if (users.length === 0) {
       await interaction.reply(

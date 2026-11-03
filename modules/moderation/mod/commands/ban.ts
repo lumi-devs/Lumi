@@ -6,6 +6,7 @@ import { getModerationConfig } from "../config.js";
 import {
   actionCard,
   describeError,
+  getCaseLink,
   getDeleteDays,
   getReason,
   getTargets,
@@ -81,15 +82,14 @@ export const banAdd: CommandDefinition = {
           reason,
         });
 
-        await services.db.prisma.moderationCase.create({
-          data: {
-            guildId: guild.id,
-            type: "BAN",
-            targetId: target.id,
-            moderatorId: moderator.id,
-            reason,
-            metadata: { deleteDays },
-          },
+        await services.helpers.moderation.create({
+          guildId: guild.id,
+          kind: "ban",
+          targetId: target.id,
+          moderatorId: moderator.id,
+          reason,
+          ...getCaseLink(interaction),
+          metadata: { deleteDays },
         });
 
         lines.push(`✅ ${target.tag} (\`${target.id}\`)`);
@@ -138,14 +138,13 @@ export const banRemove: CommandDefinition = {
     try {
       await guild.bans.remove(userId, reason);
 
-      await services.db.prisma.moderationCase.create({
-        data: {
-          guildId: guild.id,
-          type: "UNBAN",
-          targetId: userId,
-          moderatorId: interaction.user.id,
-          reason,
-        },
+      await services.helpers.moderation.create({
+        guildId: guild.id,
+        kind: "unban",
+        targetId: userId,
+        moderatorId: interaction.user.id,
+        reason,
+        ...getCaseLink(interaction),
       });
 
       await interaction.reply(

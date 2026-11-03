@@ -7,19 +7,19 @@ import {
   type TaskDefinition,
 } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeWarningCard } from "@lumi/ui";
+import type { GuildBasedChannel } from "discord.js";
 import {
   ChannelType,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { GuildBasedChannel } from "discord.js";
 import { cleanupDeliveredReminders } from "./cleanup.js";
+import type { ReminderConfig } from "./config.js";
 import {
   ModuleName,
-  readReminderConfig,
   ReminderConfigSchema,
+  readReminderConfig,
 } from "./config.js";
-import type { ReminderConfig } from "./config.js";
 import { isValidCron } from "./cron.js";
 import { deliverDueReminders } from "./delivery.js";
 import { DurationParseError, parseDuration } from "./duration.js";
@@ -463,6 +463,18 @@ const remindersModule: ModuleDefinition = defineModule({
   description: "Create, list, snooze, and cancel personal reminders",
   version: "2.0.0",
   config: ReminderConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.utility.reminders.listByUser(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.utility.reminders.deleteByUser(
+        guildId,
+        userId,
+      );
+      return { deleted: result.count };
+    },
+  },
   commands: [remindCommand],
   listeners: [],
   tasks: [deliveryTask, cleanupTask],

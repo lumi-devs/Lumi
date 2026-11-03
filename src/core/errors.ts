@@ -44,13 +44,13 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function commandErrorCard(error: unknown): CardReply {
+export function commandErrorCard(error: unknown, traceId?: string): CardReply {
+  const trace = traceId ? `\n\n-# Trace: \`${traceId}\`` : "";
   if (error instanceof DiscordAPIError) {
     return ephemeralCard(
       makeErrorCard(
         "Action Failed",
-        messageForDiscordCode(Number(error.code)) ??
-          "Discord rejected that action.",
+        `${messageForDiscordCode(Number(error.code)) ?? "Discord rejected that action."}${trace}`,
       ),
     );
   }
@@ -58,8 +58,7 @@ export function commandErrorCard(error: unknown): CardReply {
     return ephemeralCard(
       makeErrorCard(
         "Discord Unavailable",
-        messageForHttpStatus(error.status) ??
-          "Discord is having issues. Please try again shortly.",
+        `${messageForHttpStatus(error.status) ?? "Discord is having issues. Please try again shortly."}${trace}`,
       ),
     );
   }
@@ -67,11 +66,11 @@ export function commandErrorCard(error: unknown): CardReply {
     return ephemeralCard(
       makeErrorCard(
         "Timed Out",
-        "That took too long and was cancelled. Please try again.",
+        `That took too long and was cancelled. Please try again.${trace}`,
       ),
     );
   }
   return ephemeralCard(
-    makeErrorCard("Unexpected Error", "An unexpected error occurred."),
+    makeErrorCard("Unexpected Error", `An unexpected error occurred.${trace}`),
   );
 }

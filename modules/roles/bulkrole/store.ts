@@ -2,10 +2,6 @@ import type { ModuleServices } from "@lumi/module-kit";
 import type { BulkRoleFilter } from "./filter.js";
 import type { BulkRoleJobStatus } from "./worker-logic.js";
 
-function prismaOf(services: ModuleServices): any {
-  return services.db.prisma;
-}
-
 export interface BulkRoleJob {
   readonly id: string;
   readonly guildId: string;
@@ -35,28 +31,23 @@ export async function createBulkRoleJob(
   services: ModuleServices,
   input: CreateBulkRoleJobInput,
 ): Promise<BulkRoleJob> {
-  return prismaOf(services).bulkRoleJob.create({
-    data: {
-      guildId: input.guildId,
-      roleId: input.roleId,
-      action: input.action,
-      filter: input.filter as unknown as object,
-      status: "pending",
-      total: input.total,
-      createdBy: input.createdBy,
-    },
-  });
+  return (await services.helpers.roles.bulkRole.create({
+    guildId: input.guildId,
+    roleId: input.roleId,
+    action: input.action,
+    filter: input.filter,
+    total: input.total,
+    createdBy: input.createdBy,
+  })) as unknown as BulkRoleJob;
 }
 
 export async function listRunnableBulkRoleJobs(
   services: ModuleServices,
   limit = 10,
 ): Promise<BulkRoleJob[]> {
-  return prismaOf(services).bulkRoleJob.findMany({
-    where: { status: { in: ["pending", "running"] } },
-    orderBy: { createdAt: "asc" },
-    take: limit,
-  });
+  return (await services.helpers.roles.bulkRole.listRunnable(
+    limit,
+  )) as unknown as BulkRoleJob[];
 }
 
 export async function getBulkRoleJob(
@@ -64,9 +55,10 @@ export async function getBulkRoleJob(
   guildId: string,
   jobId: string,
 ): Promise<BulkRoleJob | null> {
-  return prismaOf(services).bulkRoleJob.findFirst({
-    where: { id: jobId, guildId },
-  });
+  return (await services.helpers.roles.bulkRole.find(
+    guildId,
+    jobId,
+  )) as unknown as BulkRoleJob | null;
 }
 
 export async function listGuildBulkRoleJobs(
@@ -74,11 +66,10 @@ export async function listGuildBulkRoleJobs(
   guildId: string,
   limit = 5,
 ): Promise<BulkRoleJob[]> {
-  return prismaOf(services).bulkRoleJob.findMany({
-    where: { guildId },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
+  return (await services.helpers.roles.bulkRole.listGuild(
+    guildId,
+    limit,
+  )) as unknown as BulkRoleJob[];
 }
 
 export async function updateBulkRoleJob(
@@ -92,16 +83,7 @@ export async function updateBulkRoleJob(
     lastError?: string | null;
   },
 ): Promise<void> {
-  const update: Record<string, unknown> = {};
-  if (data.status !== undefined) update.status = data.status;
-  if (data.processed !== undefined) update.processed = data.processed;
-  if (data.failed !== undefined) update.failed = data.failed;
-  if (data.total !== undefined) update.total = data.total;
-  if (data.lastError !== undefined) update.lastError = data.lastError;
-  if (Object.keys(update).length === 0) return;
-  await prismaOf(services)
-    .bulkRoleJob.update({ where: { id: jobId }, data: update })
-    .catch(() => undefined);
+  await services.helpers.roles.bulkRole.update(jobId, data);
 }
 
 export async function incrementBulkRoleJob(
@@ -114,15 +96,12 @@ export async function incrementBulkRoleJob(
     lastError?: string | null;
   } = {},
 ): Promise<void> {
-  const update: Record<string, unknown> = {};
-  if (succeeded > 0) update.processed = { increment: succeeded };
-  if (failed > 0) update.failed = { increment: failed };
-  if (data.status !== undefined) update.status = data.status;
-  if (data.lastError !== undefined) update.lastError = data.lastError;
-  if (Object.keys(update).length === 0) return;
-  await prismaOf(services)
-    .bulkRoleJob.update({ where: { id: jobId }, data: update })
-    .catch(() => undefined);
+  await services.helpers.roles.bulkRole.increment(
+    jobId,
+    succeeded,
+    failed,
+    data,
+  );
 }
 
 export async function setBulkRoleJobStatus(
@@ -133,9 +112,6 @@ export async function setBulkRoleJobStatus(
 ): Promise<BulkRoleJob | null> {
   const job = await getBulkRoleJob(services, guildId, jobId);
   if (!job) return null;
-  await prismaOf(services).bulkRoleJob.update({
-    where: { id: job.id },
-    data: { status },
-  });
+  await services.helpers.roles.bulkRole.updateStatus(job.id, status);
   return { ...job, status };
 }

@@ -139,43 +139,23 @@ export async function grantXp(
 ): Promise<void> {
   if (input.amount <= 0) return;
 
-  const user = await services.db.prisma.levelingUser.upsert({
-    where: {
-      guildId_userId: { guildId: input.guildId, userId: input.userId },
-    },
-    update: {
-      xp: { increment: input.amount },
-      totalXp: { increment: input.amount },
-      ...(input.messageCount
-        ? { messageCount: { increment: input.messageCount } }
-        : {}),
-      ...(input.voiceMinutes
-        ? { voiceMinutes: { increment: input.voiceMinutes } }
-        : {}),
-      ...(input.lastXpAt ? { lastXpAt: input.lastXpAt } : {}),
-    },
-    create: {
-      guildId: input.guildId,
-      userId: input.userId,
+  const user = await services.helpers.leveling.addXp(
+    input.guildId,
+    input.userId,
+    {
       xp: input.amount,
       totalXp: input.amount,
-      level: 1,
-      messageCount: input.messageCount ?? 0,
-      voiceMinutes: input.voiceMinutes ?? 0,
-      lastXpAt: input.lastXpAt ?? null,
+      messageCount: input.messageCount,
+      voiceMinutes: input.voiceMinutes,
+      lastXpAt: input.lastXpAt,
     },
-  });
+  );
 
   const totalXp = Number(user.totalXp);
   const { level } = levelForTotalXp(config.levelFormula, totalXp);
   if (level <= user.level) return;
 
-  await services.db.prisma.levelingUser.update({
-    where: {
-      guildId_userId: { guildId: input.guildId, userId: input.userId },
-    },
-    data: { level },
-  });
+  await services.helpers.leveling.setLevel(input.guildId, input.userId, level);
 
   const member =
     input.member ??

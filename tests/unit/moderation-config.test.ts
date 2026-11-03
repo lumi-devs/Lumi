@@ -3,8 +3,8 @@ import { getModerationConfig } from "../../modules/moderation/mod/config.ts";
 
 function services(stored: unknown) {
   return {
-    config: {
-      get: async () => stored,
+    moduleConfig: {
+      read: async () => stored,
     },
   };
 }

@@ -1,5 +1,9 @@
 import { createCache, type NamespacedCache } from "@lumi/cache";
-import { prisma as defaultPrisma, type PrismaClient } from "@lumi/db";
+import {
+  createDbHelpers,
+  prisma as defaultPrisma,
+  type PrismaClient,
+} from "@lumi/db";
 import {
   createHealthMonitor,
   type HealthMonitor,
@@ -26,6 +30,7 @@ export interface CoreServices {
   client: Client;
   redis: Redis;
   db: PrismaClient;
+  helpers: ReturnType<typeof createDbHelpers>;
   invalidation: InvalidationBus;
   cache: NamespacedCache<GuildSettings>;
   configCache: NamespacedCache<GuildSettings>;
@@ -46,11 +51,13 @@ export function createCoreServices(options: CoreServicesOptions): CoreServices {
     defaultNegativeTtlMs: 15_000,
   }).namespace(options.cacheNamespace ?? process.env.CACHE_NAMESPACE ?? "lumi");
   const configCache = cache.namespace("config");
+  const helpers = createDbHelpers(options.redis);
 
   return {
     client: options.client,
     redis: options.redis,
     db,
+    helpers,
     invalidation,
     cache,
     configCache,

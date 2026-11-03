@@ -15,12 +15,7 @@ import {
 import { getEconomyConfig } from "../config.js";
 import { formatMoney, requireGuild } from "../format.js";
 import type { ShopCardData, ShopItemData } from "../shopCard.js";
-import {
-  debitWallet,
-  getOrCreateUser,
-  recordTransaction,
-  refundWallet,
-} from "../store.js";
+import { debitWallet, getOrCreateUser, refundWallet } from "../store.js";
 
 const ShopPerPage = 4;
 
@@ -218,6 +213,8 @@ export const buyDef: CommandDefinition = {
       user.balance < price ||
       !(await debitWallet(services, guildId, userId, price, {
         trackSpent: true,
+        type: "shop_purchase",
+        description: `Bought ${item.name}`,
       }))
     ) {
       await interaction.reply(
@@ -253,14 +250,6 @@ export const buyDef: CommandDefinition = {
         return;
       }
     }
-
-    await recordTransaction(services, {
-      guildId,
-      fromUserId: userId,
-      amount: price,
-      type: "shop_purchase",
-      description: `Bought ${item.name}`,
-    });
 
     await interaction.reply(
       ephemeralCard(

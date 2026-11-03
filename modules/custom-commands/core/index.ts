@@ -12,7 +12,7 @@ import {
   reactionRemoveListener,
 } from "./listeners.js";
 import { scheduleTask } from "./schedules.js";
-import { invalidateAll } from "./store.js";
+import { invalidateAll, invalidateGuild } from "./store.js";
 import { ModuleName } from "./types.js";
 
 const customCommandsModule: ModuleDefinition = defineModule({
@@ -23,6 +23,23 @@ const customCommandsModule: ModuleDefinition = defineModule({
     "Guild-authored commands with safe templates, triggers, schedules, and per-user KV storage",
   version: "2.0.0",
   config: CustomCommandsConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      const [commands, kv] = await Promise.all([
+        services.helpers.customCommands.listCommandsCreatedBy(guildId, userId),
+        services.helpers.customCommands.listKvForUser(guildId, userId),
+      ]);
+      return { commands, kv };
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.customCommands.deleteUserData(
+        guildId,
+        userId,
+      );
+      invalidateGuild(guildId);
+      return { deleted: result.commands + result.kv };
+    },
+  },
   commands: [customCommandCommand],
   listeners: [
     messageListener,

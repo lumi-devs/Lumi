@@ -456,6 +456,18 @@ const autoroleModule: ModuleDefinition = defineModule({
     "Multi-role autorole on join with filters, optional delay, and a durable pending queue",
   version: "2.0.0",
   config: AutoroleConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.roles.autorole.findByUser(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const deleted = await services.helpers.roles.autorole.cancel(
+        guildId,
+        userId,
+      );
+      return { deleted };
+    },
+  },
   commands: [autoroleCommand],
   listeners: [onMemberAddListener],
   tasks: [

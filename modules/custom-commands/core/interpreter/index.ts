@@ -13,8 +13,8 @@ export type {
   TextNode,
   UnaryExpression,
 } from "./ast.js";
-export { renderTemplate, stringifyValue, TemplateError } from "./evaluate.js";
 export type { InterpretContext, InterpretLimits } from "./evaluate.js";
+export { renderTemplate, stringifyValue, TemplateError } from "./evaluate.js";
 export {
   parseExpression,
   parseExpressionList,

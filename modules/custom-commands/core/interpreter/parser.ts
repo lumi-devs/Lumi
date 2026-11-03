@@ -1,3 +1,4 @@
+import { Limits } from "../types.js";
 import type {
   BinaryExpression,
   CallExpression,
@@ -6,7 +7,6 @@ import type {
   PathExpression,
   TemplateNode,
 } from "./ast.js";
-import { Limits } from "../types.js";
 
 export class TemplateError extends Error {
   readonly code: string;

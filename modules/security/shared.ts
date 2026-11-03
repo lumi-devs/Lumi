@@ -6,7 +6,6 @@ import {
   makeWarningCard,
 } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
-import type { Redis } from "ioredis";
 import type { z } from "zod";
 import { getSecurityConfig, type SecurityConfig } from "./core/config.js";
 
@@ -19,10 +18,6 @@ export function securityKey(...parts: Array<string | number>): string {
   return [KeyPrefix, ...parts].join(":");
 }
 
-export function redisOf(services: ModuleServices): Redis | null {
-  return services.redis ?? null;
-}
-
 export async function readModuleConfig<T>(
   services: ModuleServices,
   guildId: string,
@@ -30,7 +25,11 @@ export async function readModuleConfig<T>(
   schema: z.ZodType<T>,
   label: string,
 ): Promise<T> {
-  const stored = await services.config.get(guildId, key);
+  const stored = await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? key,
+    key,
+  );
   const parsed = schema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 
@@ -42,55 +41,39 @@ export async function readModuleConfig<T>(
 }
 
 export async function incrementWindow(
-  redis: Redis | null,
+  services: ModuleServices,
   key: string,
   windowSeconds: number,
   amount = 1,
 ): Promise<number> {
-  if (!redis) return 0;
-  const pipeline = redis.multi();
-  pipeline.incrby(key, amount);
-  pipeline.expire(key, windowSeconds);
-  const results = await pipeline.exec();
-  const value = results?.[0]?.[1];
-  return typeof value === "number" ? value : Number(value ?? 0);
+  return services.helpers.cache.incrBy(key, amount, windowSeconds * 1000);
 }
 
 export async function getStoredJson<T>(
-  redis: Redis | null,
+  services: ModuleServices,
   key: string,
 ): Promise<T | null> {
-  if (!redis) return null;
-  const raw = await redis.get(key);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
+  return services.helpers.cache.get<T>(key);
 }
 
 export async function setStoredJson(
-  redis: Redis | null,
+  services: ModuleServices,
   key: string,
   value: unknown,
   ttlSeconds?: number,
 ): Promise<void> {
-  if (!redis) return;
-  const payload = JSON.stringify(value);
-  if (ttlSeconds === undefined) {
-    await redis.set(key, payload);
-    return;
-  }
-  await redis.set(key, payload, "EX", ttlSeconds);
+  await services.helpers.cache.set(
+    key,
+    value,
+    ttlSeconds === undefined ? undefined : ttlSeconds * 1000,
+  );
 }
 
 export async function deleteStored(
-  redis: Redis | null,
+  services: ModuleServices,
   key: string,
 ): Promise<void> {
-  if (!redis) return;
-  await redis.del(key);
+  await services.helpers.cache.del(key);
 }
 
 export function describeError(error: unknown): string {

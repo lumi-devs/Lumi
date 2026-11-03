@@ -1,15 +1,23 @@
-import type { CommandDefinition } from "@lumi/module-kit";
+import type {
+  CommandDefinition,
+  EconomyFailureReason,
+  EconomyOperationResult,
+} from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import { SlashCommandBuilder } from "discord.js";
-import { getEconomyConfig } from "../config.js";
+import { getEconomyConfig, transferGuard } from "../config.js";
 import { formatMoney, requireGuild } from "../format.js";
-import {
-  creditWallet,
-  debitWallet,
-  getOrCreateUser,
-  recordTransaction,
-  refundWallet,
-} from "../store.js";
+import { getOrCreateUser } from "../store.js";
+
+const failureMessages: Record<EconomyFailureReason, string> = {
+  invalid_amount: "That amount is not valid.",
+  invalid_recipient: "That recipient is not valid.",
+  below_minimum: "That amount is below the minimum transfer.",
+  above_maximum: "That amount is above the maximum transfer.",
+  transfer_cap_exceeded: "That amount exceeds the per-transfer limit.",
+  daily_cap_exceeded: "You have reached the daily transfer limit.",
+  insufficient_funds: "Insufficient funds.",
+};
 
 export const transferDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -53,68 +61,59 @@ export const transferDef: CommandDefinition = {
       return;
     }
 
-    const user = await getOrCreateUser(services, guildId, userId, config);
-    const tax =
+    await getOrCreateUser(services, guildId, userId, config);
+    const fee =
       (amount * BigInt(Math.floor(config.taxRate * 10_000))) / 10_000n;
-    const netAmount = amount - tax;
 
-    if (
-      user.balance < amount ||
-      !(await debitWallet(services, guildId, userId, amount, {
-        trackSpent: true,
-      }))
-    ) {
+    let result: EconomyOperationResult;
+    try {
+      result = await services.helpers.economy.transfer({
+        guildId,
+        fromUserId: userId,
+        toUserId: target.id,
+        amount,
+        guard: transferGuard(config, fee),
+        outDescription: `Paid ${target.tag}`,
+        inDescription: `Received from ${interaction.user.tag}`,
+        feeDescription: "Transfer tax",
+      });
+    } catch (error) {
+      services.observability?.logger?.error?.("[economy] transfer failed", {
+        error,
+        guildId,
+        userId,
+        targetId: target.id,
+      });
       await interaction.reply(
         ephemeralCard(
-          makeErrorCard("Insufficient funds", [
-            `**Wallet** — ${formatMoney(symbol, user.balance)}`,
-            `**Needed** — ${formatMoney(symbol, amount)}`,
-          ]),
+          makeErrorCard(
+            "Payment failed",
+            "The transfer could not be completed. No money was moved.",
+          ),
         ),
       );
       return;
     }
 
-    try {
-      await creditWallet(services, guildId, target.id, netAmount, {
-        trackEarned: true,
-      });
-      await recordTransaction(services, {
+    if (!result.ok) {
+      const balance = await services.helpers.economy.getBalance(
         guildId,
-        fromUserId: userId,
-        amount,
-        type: "transfer_out",
-        description: `Paid ${target.tag}`,
-      });
-      await recordTransaction(services, {
-        guildId,
-        toUserId: target.id,
-        amount: netAmount,
-        type: "transfer_in",
-        description: `Received from ${interaction.user.tag}`,
-      });
-      if (tax > 0n) {
-        await recordTransaction(services, {
-          guildId,
-          fromUserId: userId,
-          amount: tax,
-          type: "tax",
-          description: "Transfer tax",
-        });
-      }
-    } catch (error) {
-      await refundWallet(services, guildId, userId, amount).catch(
-        () => undefined,
-      );
-      services.observability?.logger?.error?.(
-        "[economy] transfer failed after debit",
-        { error, guildId, userId, targetId: target.id },
+        userId,
       );
       await interaction.reply(
         ephemeralCard(
           makeErrorCard(
-            "Payment failed",
-            "The transfer could not be completed. Your balance was restored.",
+            result.reason === "insufficient_funds"
+              ? "Insufficient funds"
+              : "Payment blocked",
+            [
+              ...(result.reason === "insufficient_funds"
+                ? [
+                    `**Wallet** — ${formatMoney(symbol, balance?.balance ?? 0n)}`,
+                    `**Needed** — ${formatMoney(symbol, amount)}`,
+                  ]
+                : [failureMessages[result.reason ?? "invalid_amount"]]),
+            ],
           ),
         ),
       );
@@ -126,10 +125,10 @@ export const transferDef: CommandDefinition = {
         makeSuccessCard("Payment sent", [
           `**Recipient** — ${target.tag}`,
           `**Sent** — ${formatMoney(symbol, amount)}`,
-          ...(tax > 0n
+          ...(result.fee > 0n
             ? [
-                `**Tax** — ${formatMoney(symbol, tax)}`,
-                `**Received** — ${formatMoney(symbol, netAmount)}`,
+                `**Tax** — ${formatMoney(symbol, result.fee)}`,
+                `**Received** — ${formatMoney(symbol, result.netAmount)}`,
               ]
             : []),
         ]),

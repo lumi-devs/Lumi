@@ -1,8 +1,9 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { cardCreateOptions } from "@lumi/ui";
-import { nextCronOccurrence } from "./cron.js";
-import { ModuleName, readReminderConfig } from "./config.js";
 import type { ReminderConfig } from "./config.js";
+import { ModuleName, readReminderConfig } from "./config.js";
+import { nextCronOccurrence } from "./cron.js";
+import type { ReminderRecord } from "./store.js";
 import {
   claimReminder,
   findDueReminders,
@@ -10,7 +11,6 @@ import {
   markRetry,
   reclaimStaleClaims,
 } from "./store.js";
-import type { ReminderRecord } from "./store.js";
 import { reminderDeliveryCard } from "./ui.js";
 
 async function sendDirect(

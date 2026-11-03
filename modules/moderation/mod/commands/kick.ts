@@ -5,6 +5,7 @@ import { getModerationConfig } from "../config.js";
 import {
   actionCard,
   describeError,
+  getCaseLink,
   getReason,
   getTargets,
   isImmune,
@@ -71,14 +72,13 @@ export const kickDef: CommandDefinition = {
         }
         await member.kick(reason);
 
-        await services.db.prisma.moderationCase.create({
-          data: {
-            guildId: guild.id,
-            type: "KICK",
-            targetId: target.id,
-            moderatorId: interaction.user.id,
-            reason,
-          },
+        await services.helpers.moderation.create({
+          guildId: guild.id,
+          kind: "kick",
+          targetId: target.id,
+          moderatorId: interaction.user.id,
+          reason,
+          ...getCaseLink(interaction),
         });
 
         lines.push(`✅ ${target.tag} (\`${target.id}\`)`);

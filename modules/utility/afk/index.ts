@@ -50,7 +50,11 @@ const getAfkConfig = async (
 ): Promise<AfkConfig> => {
   let stored: unknown = null;
   try {
-    stored = await services.config.get(guildId, AfkConfigKey);
+    stored = await services.moduleConfig.read(
+      guildId,
+      services.moduleName ?? AfkConfigKey,
+      AfkConfigKey,
+    );
   } catch (error) {
     services.observability?.logger?.warn?.("afk config read failed", {
       guildId,
@@ -69,34 +73,6 @@ const getAfkConfig = async (
 };
 
 const RemovalCooldownMs = 2000;
-
-const removalCooldownKey = (guildId: string, userId: string): string =>
-  `lumi:afk:cd:removal:${guildId}:${userId}`;
-
-const markRemovalCooldown = async (
-  services: ModuleServices,
-  guildId: string,
-  userId: string,
-): Promise<void> => {
-  const redis = services?.redis;
-  if (!redis || typeof redis.set !== "function") return;
-  await redis
-    .set(removalCooldownKey(guildId, userId), "1", "PX", RemovalCooldownMs)
-    .catch(() => undefined);
-};
-
-const isRemovalCooldown = async (
-  services: ModuleServices,
-  guildId: string,
-  userId: string,
-): Promise<boolean> => {
-  const redis = services?.redis;
-  if (!redis || typeof redis.get !== "function") return false;
-  const value = await redis
-    .get(removalCooldownKey(guildId, userId))
-    .catch(() => null);
-  return value !== null && value !== undefined;
-};
 
 const stripPrefix = (name: string, prefix: string): string =>
   prefix.length > 0 && name.startsWith(prefix)
@@ -128,15 +104,16 @@ const afkDef: CommandDefinition = {
     const rawReason = interaction.options.getString("reason") ?? "AFK";
     const reason = sanitizeAfkReason(rawReason, config.maxReasonLength);
 
-    await markRemovalCooldown(services, guildId, interaction.user.id);
+    await services.helpers.utility.afk.setRemovalCooldown(
+      guildId,
+      interaction.user.id,
+      RemovalCooldownMs,
+    );
 
-    const existing = await services.db.prisma.afkEntry
-      .findUnique({
-        where: {
-          guildId_userId: { guildId, userId: interaction.user.id },
-        },
-      })
-      .catch(() => null);
+    const existing = await services.helpers.utility.afk.findEntry(
+      guildId,
+      interaction.user.id,
+    );
 
     const status = existing
       ? existing.reason === reason
@@ -145,13 +122,11 @@ const afkDef: CommandDefinition = {
       : "set";
 
     if (status !== "already") {
-      await services.db.prisma.afkEntry.upsert({
-        where: {
-          guildId_userId: { guildId, userId: interaction.user.id },
-        },
-        update: { reason, createdAt: new Date() },
-        create: { guildId, userId: interaction.user.id, reason },
-      });
+      await services.helpers.utility.afk.upsertEntry(
+        guildId,
+        interaction.user.id,
+        reason,
+      );
     }
 
     const member = interaction.member;
@@ -190,15 +165,14 @@ const onMessageListener: ListenerDefinition = {
     const guildId = message.guildId;
     const config = await getAfkConfig(services, guildId);
 
-    if (!services.db.prisma.afkEntry) return;
-
     const mentioned = [...message.mentions.users.values()].filter(
       (user) => !user.bot && user.id !== message.author.id,
     );
     const userIds = [message.author.id, ...mentioned.map((user) => user.id)];
-    const entries = await services.db.prisma.afkEntry.findMany({
-      where: { guildId, userId: { in: userIds } },
-    });
+    const entries = await services.helpers.utility.afk.listEntries(
+      guildId,
+      userIds,
+    );
     const byUser = new Map<string, { reason: string; createdAt: Date }>(
       entries.map(
         (entry: { userId: string; reason: string; createdAt: Date }) => [
@@ -211,21 +185,23 @@ const onMessageListener: ListenerDefinition = {
 
     if (
       authorAfk &&
-      !(await isRemovalCooldown(services, guildId, message.author.id))
+      !(await services.helpers.utility.afk.isRemovalCooldown(
+        guildId,
+        message.author.id,
+      ))
     ) {
-      await services.db.prisma.afkEntry
-        .delete({
-          where: {
-            guildId_userId: { guildId, userId: message.author.id },
-          },
-        })
-        .catch((error: unknown) =>
-          services.observability?.logger?.warn?.("failed to clear AFK entry", {
-            guildId,
-            userId: message.author.id,
-            error,
-          }),
+      try {
+        await services.helpers.utility.afk.deleteEntry(
+          guildId,
+          message.author.id,
         );
+      } catch (error) {
+        services.observability?.logger?.warn?.("failed to clear AFK entry", {
+          guildId,
+          userId: message.author.id,
+          error,
+        });
+      }
 
       const member = message.member;
       if (
@@ -286,6 +262,18 @@ const afkModule: ModuleDefinition = defineModule({
   description: "Set AFK status with mention replies and nickname prefix",
   version: "2.0.0",
   config: AfkConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.utility.afk.findEntry(guildId, userId);
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result = await services.helpers.utility.afk.deleteByUser(
+        guildId,
+        userId,
+      );
+      return { deleted: result.count };
+    },
+  },
   commands: [afkDef],
   listeners: [onMessageListener],
   tasks: [],

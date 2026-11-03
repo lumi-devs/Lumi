@@ -18,7 +18,6 @@ import {
   VoiceRolesConfigSchema,
   VoiceRolesModuleName,
 } from "./config.js";
-import { expireVoiceGraceSessions, handleVoiceStateUpdate } from "./voice.js";
 import {
   deleteVoiceRoleMapping,
   getVoiceRoleMapping,
@@ -26,6 +25,7 @@ import {
   setVoiceRoleEnabled,
   upsertVoiceRoleMapping,
 } from "./store.js";
+import { expireVoiceGraceSessions, handleVoiceStateUpdate } from "./voice.js";
 
 const PermitNode = "roles.voiceroles";
 
@@ -261,6 +261,22 @@ const voiceRolesModule: ModuleDefinition = defineModule({
     "Per voice and stage channel roles with optional category mapping and grace periods",
   version: "2.0.0",
   config: VoiceRolesConfigSchema,
+  dataLifecycle: {
+    async exportUserData(services, guildId, userId) {
+      return services.helpers.roles.voiceRole.listSessionsForUser(
+        guildId,
+        userId,
+      );
+    },
+    async deleteUserData(services, guildId, userId) {
+      const result =
+        await services.helpers.roles.voiceRole.deleteSessionsForUser(
+          guildId,
+          userId,
+        );
+      return { deleted: result.count };
+    },
+  },
   commands: [voiceRolesCommand],
   listeners: [onVoiceStateListener],
   tasks: [

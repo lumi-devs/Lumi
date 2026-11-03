@@ -434,7 +434,7 @@ export class ModuleLoader {
 
       const moduleServices = {
         ...services,
-        __moduleName: name,
+        moduleName: name,
       } as unknown as ModuleServices;
       try {
         await module.definition.onLoad(moduleServices);
@@ -531,7 +531,7 @@ export class ModuleLoader {
 
     const services =
       this.moduleServices.get(moduleName) ??
-      ({ ...this.services, __moduleName: moduleName } as ModuleServices);
+      ({ ...this.services, moduleName: moduleName } as ModuleServices);
 
     await module.definition.onUnload(services);
 

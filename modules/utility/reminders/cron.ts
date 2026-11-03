@@ -1,5 +1,5 @@
-import { parseCron } from "@lumi/permits";
 import type { ParsedCron } from "@lumi/permits";
+import { parseCron } from "@lumi/permits";
 
 const MaxLookaheadDays = 366;
 

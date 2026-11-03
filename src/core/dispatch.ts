@@ -1,3 +1,4 @@
+import type { ModuleServices } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import { commandsExecuted } from "@lumi/observability";
 import * as ui from "@lumi/ui";
@@ -17,15 +18,19 @@ import {
 import { handleHubInteraction } from "../admin/panel/HubPanel.js";
 import type { PermitPanel } from "../admin/panel/PermitPanel.js";
 import type { HubServices } from "../admin/panel/services.js";
+import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 import { handlePingButton } from "./commands.js";
+import type { ErrorStore } from "./errorStore.js";
 import { commandErrorCard } from "./errors.js";
 import { isModuleLocked } from "./locks.js";
 import { type CommandRegistry, servicesForModule } from "./modules.js";
+import { isBotOwner } from "./owner.js";
 
 export type BotInteraction =
   ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
-export interface DispatchServices extends HubServices {
+export interface DispatchServices
+  extends HubServices, Omit<ModuleServices, "permits"> {
   client: Client;
 }
 
@@ -35,6 +40,7 @@ export interface DispatchContext {
   moduleLoader: ModuleLoader;
   services: DispatchServices;
   logger: { error(message: string, meta?: unknown): void };
+  errorStore: ErrorStore;
   createPermitPanel(guildId: string, interaction: BotInteraction): PermitPanel;
 }
 
@@ -203,6 +209,37 @@ async function handleChatInput(
     }
   }
 
+  if (command.ownerOnly && !isBotOwner(interaction.user.id)) {
+    await interaction
+      .reply(
+        ui.ephemeralCard(
+          ui.makeErrorCard(
+            "Owner Only",
+            "That command is restricted to bot owners.",
+          ),
+        ),
+      )
+      .catch(() => undefined);
+    return;
+  }
+
+  if (
+    (command.guildOnly || command.dmPermission === false) &&
+    !interaction.guildId
+  ) {
+    await interaction
+      .reply(
+        ui.ephemeralCard(
+          ui.makeErrorCard(
+            "Server Only",
+            "That command can only be used in a server.",
+          ),
+        ),
+      )
+      .catch(() => undefined);
+    return;
+  }
+
   if (command.requiresAdmin) {
     if (!interaction.guildId) {
       await interaction
@@ -232,6 +269,48 @@ async function handleChatInput(
     return;
   }
 
+  const scope = `${interaction.guildId ?? "dm"}:${interaction.user.id}:${interaction.commandName}`;
+  if (command.cooldownSeconds && command.cooldownSeconds > 0) {
+    const hits = await context.services.helpers.cache.incr(
+      `command-cooldown:${scope}`,
+      command.cooldownSeconds * 1000,
+    );
+    if (hits > 1) {
+      await interaction
+        .reply(
+          ui.ephemeralCard(
+            ui.makeErrorCard(
+              "Slow Down",
+              `That command is on cooldown for ${command.cooldownSeconds}s.`,
+            ),
+          ),
+        )
+        .catch(() => undefined);
+      return;
+    }
+  }
+
+  const release =
+    command.concurrency === undefined
+      ? null
+      : await context.services.helpers.cache.takeLock(
+          `command-running:${scope}`,
+          60_000,
+        );
+  if (command.concurrency !== undefined && !release) {
+    await interaction
+      .reply(
+        ui.ephemeralCard(
+          ui.makeErrorCard(
+            "Already Running",
+            "That command is already running for you.",
+          ),
+        ),
+      )
+      .catch(() => undefined);
+    return;
+  }
+
   const services = command.module
     ? servicesForModule(context.services, command.module)
     : context.services;
@@ -244,9 +323,17 @@ async function handleChatInput(
       status: "ok",
     });
   } catch (error) {
+    const record = await context.errorStore.record({
+      error,
+      source: "command",
+      guildId: interaction.guildId ?? undefined,
+      userId: interaction.user.id,
+      command: interaction.commandName,
+    });
     context.logger.error("Command failed", {
       command: interaction.commandName,
       guildId: interaction.guildId,
+      traceId: record.id,
       error,
     });
     commandsExecuted.inc({
@@ -254,12 +341,14 @@ async function handleChatInput(
       module: command.module ?? "builtin",
       status: "error",
     });
-    const card = commandErrorCard(error);
+    const card = commandErrorCard(error, record.id);
     if (interaction.deferred || interaction.replied) {
       await interaction.followUp(card).catch(() => undefined);
     } else {
       await interaction.reply(card).catch(() => undefined);
     }
+  } finally {
+    await release?.();
   }
 }
 
@@ -308,6 +397,38 @@ export async function handleInteraction(
   context: DispatchContext,
 ): Promise<void> {
   try {
+    if (!isBotOwner(interaction.user.id)) {
+      const [userBlocked, guildBlocked] = await Promise.all([
+        isUserBlacklisted(
+          context.services.prisma,
+          context.services.helpers.cache,
+          interaction.user.id,
+        ),
+        isGuildBlacklisted(
+          context.services.prisma,
+          context.services.helpers.cache,
+          interaction.guildId,
+        ),
+      ]);
+      if (userBlocked || guildBlocked) {
+        if (interaction.isAutocomplete()) {
+          await interaction.respond([]).catch(() => undefined);
+        } else if (interaction.isRepliable()) {
+          await interaction
+            .reply(
+              ui.ephemeralCard(
+                ui.makeErrorCard(
+                  "Unavailable",
+                  "You cannot use Lumi in this context.",
+                ),
+              ),
+            )
+            .catch(() => undefined);
+        }
+        return;
+      }
+    }
+
     if (interaction.isAutocomplete()) {
       await handleAutocomplete(interaction, context);
       return;
@@ -318,9 +439,16 @@ export async function handleInteraction(
     }
     await handleComponent(interaction, context);
   } catch (error) {
+    const record = await context.errorStore.record({
+      error,
+      source: "interaction",
+      guildId: interaction.guildId ?? undefined,
+      userId: interaction.user.id,
+    });
     context.logger.error("Unhandled interaction error", {
       type: interaction.type,
       customId: "customId" in interaction ? interaction.customId : undefined,
+      traceId: record.id,
       error,
     });
     if (
@@ -328,7 +456,9 @@ export async function handleInteraction(
       !interaction.replied &&
       !interaction.deferred
     ) {
-      await interaction.reply(commandErrorCard(error)).catch(() => undefined);
+      await interaction
+        .reply(commandErrorCard(error, record.id))
+        .catch(() => undefined);
     }
   }
 }

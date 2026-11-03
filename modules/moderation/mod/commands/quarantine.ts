@@ -2,7 +2,7 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { getReason, isImmune, replyError } from "../helpers.js";
+import { getCaseLink, getReason, isImmune, replyError } from "../helpers.js";
 
 export const quarantineDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -67,15 +67,14 @@ export const quarantineDef: CommandDefinition = {
 
     await member.roles.set([quarantineRole], reason);
 
-    await services.db.prisma.moderationCase.create({
-      data: {
-        guildId: guild.id,
-        type: "QUARANTINE",
-        targetId: target.id,
-        moderatorId: interaction.user.id,
-        reason,
-        metadata: { oldRoles },
-      },
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "quarantine",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
+      metadata: { oldRoles },
     });
 
     await interaction.reply(
@@ -124,36 +123,30 @@ export const unquarantineDef: CommandDefinition = {
       return;
     }
 
-    const quarantineCase = await services.db.prisma.moderationCase.findFirst({
-      where: {
-        guildId: guild.id,
-        type: "QUARANTINE",
-        targetId: target.id,
-        active: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const quarantineCase = await services.helpers.moderation.findActive(
+      guild.id,
+      "quarantine",
+      target.id,
+    );
 
-    const oldRoles = (quarantineCase?.metadata?.oldRoles as string[]) ?? [];
+    const oldRoles =
+      ((quarantineCase?.metadata as { oldRoles?: string[] } | null)
+        ?.oldRoles as string[]) ?? [];
     const validRoles = oldRoles.filter((id) => guild.roles.cache.has(id));
 
     await member.roles.set(validRoles, reason);
 
     if (quarantineCase) {
-      await services.db.prisma.moderationCase.update({
-        where: { id: quarantineCase.id },
-        data: { active: false },
-      });
+      await services.helpers.moderation.close(quarantineCase.id);
     }
 
-    await services.db.prisma.moderationCase.create({
-      data: {
-        guildId: guild.id,
-        type: "UNQUARANTINE",
-        targetId: target.id,
-        moderatorId: interaction.user.id,
-        reason,
-      },
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "unquarantine",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
     });
 
     await interaction.reply(

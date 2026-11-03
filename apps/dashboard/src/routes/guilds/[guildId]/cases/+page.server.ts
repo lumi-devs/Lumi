@@ -1,6 +1,6 @@
-import type { PageServerLoad } from "./$types";
 import { requireGuildAccess } from "$lib/server/auth";
 import { getPrisma } from "$lib/server/prisma";
+import type { PageServerLoad } from "./$types";
 
 const PageSize = 50;
 

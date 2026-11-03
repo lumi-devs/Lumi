@@ -1,4 +1,12 @@
 import {
+  countMentions,
+  countZalgo,
+  findInvites,
+  findLinks,
+  isHostAllowed,
+  similarity,
+} from "@lumi/foundation";
+import {
   type CommandDefinition,
   defineModule,
   type ListenerDefinition,
@@ -29,7 +37,6 @@ import {
   hasPermit,
   incrementWindow,
   readModuleConfig,
-  redisOf,
   securityCard,
   securityKey,
   sendSecurityLog,
@@ -83,48 +90,7 @@ interface HeatState {
   at: number;
 }
 
-const InvitePattern =
-  /(?:discord\.gg|discord(?:app)?\.com\/invite)\/([a-z0-9-]+)/gi;
-const LinkPattern = /https?:\/\/[^\s<>]+/gi;
-function countZalgo(text: string): number {
-  let count = 0;
-  for (const character of text) {
-    const code = character.codePointAt(0) ?? 0;
-    const combining =
-      (code >= 0x0300 && code <= 0x036f) ||
-      (code >= 0x0483 && code <= 0x0489) ||
-      (code >= 0x1ab0 && code <= 0x1aff) ||
-      (code >= 0x1dc0 && code <= 0x1dff) ||
-      (code >= 0x20d0 && code <= 0x20ff) ||
-      (code >= 0xfe20 && code <= 0xfe2f);
-    if (combining) count += 1;
-  }
-  return count;
-}
-
 const EmojiPattern = /<a?:\w+:\d+>|[\u{1f300}-\u{1faff}\u{2600}-\u{27bf}]/gu;
-const WordPattern = /[\p{L}\p{N}]+/gu;
-
-function similarity(a: string, b: string): number {
-  const left = new Set(a.toLowerCase().match(WordPattern) ?? []);
-  const right = new Set(b.toLowerCase().match(WordPattern) ?? []);
-  if (left.size === 0 || right.size === 0) return 0;
-  let shared = 0;
-  for (const word of left) if (right.has(word)) shared += 1;
-  return shared / Math.max(left.size, right.size);
-}
-
-function hostAllowed(url: string, allowlist: string[]): boolean {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return allowlist.some((entry) => {
-      const allowed = entry.toLowerCase().replace(/^https?:\/\//, "");
-      return host === allowed || host.endsWith(`.${allowed}`);
-    });
-  } catch {
-    return false;
-  }
-}
 
 function applyFilters(
   message: Message,
@@ -133,10 +99,8 @@ function applyFilters(
   const content = message.content;
   const lower = content.toLowerCase();
   const reasons: string[] = [];
-  let heat =
-    config.perMessage +
-    config.perMention *
-      (message.mentions.users.size + message.mentions.roles.size);
+  const mentions = countMentions(message.mentions);
+  let heat = config.perMessage + config.perMention * mentions;
 
   for (const term of config.terms) {
     if (term.length > 0 && lower.includes(term.toLowerCase())) {
@@ -151,17 +115,15 @@ function applyFilters(
   }
 
   if (config.blockInvites) {
-    const invites = [...content.matchAll(InvitePattern)];
-    const blocked = invites.filter(
-      (match) => !config.inviteAllowlist.includes(match[1] ?? ""),
+    const blocked = findInvites(content).filter(
+      (code) => !config.inviteAllowlist.includes(code),
     );
     if (blocked.length > 0) reasons.push("invite");
   }
 
   if (config.blockLinks) {
-    const links = content.match(LinkPattern) ?? [];
-    const blocked = links.filter(
-      (url) => !hostAllowed(url, config.linkAllowlist),
+    const blocked = findLinks(content).filter(
+      (url) => !isHostAllowed(url, config.linkAllowlist),
     );
     if (blocked.length > 0) {
       reasons.push("link");
@@ -169,7 +131,6 @@ function applyFilters(
     }
   }
 
-  const mentions = message.mentions.users.size + message.mentions.roles.size;
   if (config.maxMentions > 0 && mentions > config.maxMentions) {
     reasons.push("mentions");
   }
@@ -210,16 +171,15 @@ async function heatFor(
   delta: number,
   config: AutomodConfig,
 ): Promise<number> {
-  const redis = redisOf(services);
   const key = securityKey("automod", "heat", guildId, userId);
-  const stored = await getStoredJson<HeatState>(redis, key);
+  const stored = await getStoredJson<HeatState>(services, key);
   const now = Date.now();
   const elapsedMinutes = stored ? Math.floor((now - stored.at) / 60_000) : 0;
   const decayed = stored
     ? Math.max(0, stored.heat - elapsedMinutes * config.decayPerMinute)
     : 0;
   const heat = decayed + delta;
-  await setStoredJson(redis, key, { heat, at: now }, 86_400);
+  await setStoredJson(services, key, { heat, at: now }, 86_400);
   return heat;
 }
 
@@ -316,9 +276,8 @@ const onMessageListener: ListenerDefinition = {
       return;
     }
 
-    const redis = redisOf(services);
     const lastKey = securityKey("automod", "last", guild.id, member.id);
-    const previous = (await redis?.get(lastKey)) ?? "";
+    const previous = (await services.helpers.cache.getString(lastKey)) ?? "";
     const { reasons, heat: filterHeat } = applyFilters(message, config);
 
     let heat = filterHeat;
@@ -333,12 +292,14 @@ const onMessageListener: ListenerDefinition = {
         reasons.push("similar");
       }
     }
-    if (redis) {
-      await redis.set(lastKey, message.content.slice(0, 500), "EX", 600);
-    }
+    await services.helpers.cache.setString(
+      lastKey,
+      message.content.slice(0, 500),
+      600_000,
+    );
 
     const panicActive = Boolean(
-      await getStoredJson(redis, securityKey("panic", guild.id)),
+      await getStoredJson(services, securityKey("panic", guild.id)),
     );
     if (config.multiplierEnabled && panicActive) {
       heat = Math.round(heat * config.multiplierBase);
@@ -347,11 +308,10 @@ const onMessageListener: ListenerDefinition = {
     const total = await heatFor(services, guild.id, member.id, heat, config);
 
     if (config.lockdownMentionThreshold > 0) {
-      const mentions =
-        message.mentions.users.size + message.mentions.roles.size;
+      const mentions = countMentions(message.mentions);
       if (mentions > 0) {
         const count = await incrementWindow(
-          redis,
+          services,
           securityKey("automod", "mentions", guild.id),
           config.lockdownWindowSeconds,
           mentions,
@@ -420,7 +380,7 @@ const onMessageListener: ListenerDefinition = {
 
     const outcome = await punish(services, message, member, config, total);
     await deleteStored(
-      redis,
+      services,
       securityKey("automod", "heat", guild.id, member.id),
     );
     await sendSecurityLog(
@@ -483,7 +443,7 @@ const automodCommand: CommandDefinition = {
 
     if (sub === "reset") {
       await deleteStored(
-        redisOf(services),
+        services,
         securityKey("automod", "heat", interaction.guildId, target.id),
       );
       await interaction.reply(
@@ -495,7 +455,7 @@ const automodCommand: CommandDefinition = {
     }
 
     const stored = await getStoredJson<HeatState>(
-      redisOf(services),
+      services,
       securityKey("automod", "heat", interaction.guildId, target.id),
     );
     await interaction.reply(
