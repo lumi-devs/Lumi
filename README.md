@@ -6,7 +6,7 @@ insights, written in TypeScript and running on Bun.
 ## Features
 
 - **Moderation** — bans, kicks, timeouts, warnings, notes, cases, channel locks,
-  quarantine, purge, and voice moderation.
+  quarantine, purge, voice moderation, and warning escalation rules.
 - **Permits** — Wick-style numbered permits with fixed built-ins, custom
   permits, channel/role/user assignments, schedules, conditions, security
   whitelist scopes, and an optional manager-bypass enforcement mode.
@@ -16,7 +16,8 @@ insights, written in TypeScript and running on Bun.
 - **Custom commands** — guild-only Mustache-style commands with triggers, KV
   storage, cron/interval schedules, and Components V2 responses.
 - **Tickets** — private-thread tickets with categories, staff roles, claims,
-  priorities, tags, feedback, and permanent HTML transcripts.
+  priorities, tags, auto-tag replies, opening policy sessions, feedback, and
+  permanent HTML transcripts.
 - **Role tooling** — role menus (buttons, selects, reactions, temporary roles),
   autorole, voice roles, and resumable bulk role jobs.
 - **Reminders** — durable DM-first reminders with snooze, recurring schedules,
