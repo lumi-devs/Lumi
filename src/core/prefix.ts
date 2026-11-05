@@ -1,6 +1,4 @@
-import type { ModuleServices } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
-import type { PermitRepository } from "@lumi/permits";
 import {
   type CardReply,
   cardMessage,
@@ -8,13 +6,13 @@ import {
   makeErrorCard,
 } from "@lumi/ui";
 import type { Client, Message } from "discord.js";
-import type { Redis } from "ioredis";
 import {
   hasAdminAccess,
   hasPermitAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
 } from "../admin/access.js";
+import type { BotServices } from "./contracts.js";
 import { commandErrorCard } from "./errors.js";
 import { isModuleLocked } from "./locks.js";
 import {
@@ -33,16 +31,11 @@ export interface PrefixLogger {
   error(message: string, meta?: unknown): void;
 }
 
-export type PrefixServices = ModuleServices & {
-  permits: PermitRepository;
-  redis?: Redis;
-};
-
 export interface PrefixContext {
   client: Client;
   registry: CommandRegistry;
   moduleLoader: Pick<ModuleLoader, "isActive">;
-  services: PrefixServices;
+  services: BotServices;
   logger: PrefixLogger;
 }
 
@@ -63,7 +56,7 @@ async function replyError(
 
 async function resolvePrefix(
   client: Client,
-  services: PrefixServices,
+  services: BotServices,
   message: Message,
 ): Promise<string | null> {
   const mention = new RegExp(`^<@!?${client.user?.id}>\\s*`).exec(
@@ -71,7 +64,7 @@ async function resolvePrefix(
   );
   if (mention) return mention[0];
   if (!message.guild) return null;
-  const stored = await services.config.get(message.guild.id, "prefix");
+  const stored = await services.configService.get(message.guild.id, "prefix");
   const prefix =
     typeof stored === "string" && stored.length > 0 ? stored : DefaultPrefix;
   return message.content.startsWith(prefix) ? prefix : null;
@@ -311,7 +304,7 @@ export async function handlePrefixMessage(
         guildOwnerId: message.guild.ownerId,
         memberPermissions: message.member?.permissions,
         enforcePermits: await permitEnforcementEnabled(
-          context.services.config,
+          context.services.configService,
           message.guild.id,
         ),
         client: context.client,
@@ -337,7 +330,7 @@ export async function handlePrefixMessage(
           channelId: message.channelId,
           guildOwnerId: message.guild.ownerId,
           enforcePermits: await permitEnforcementEnabled(
-            context.services.config,
+            context.services.configService,
             message.guild.id,
           ),
           client: context.client,
@@ -377,11 +370,15 @@ export async function handlePrefixMessage(
       args,
       prefix,
     );
-    const services = command.module
-      ? servicesForModule(context.services, command.module)
-      : context.services;
     try {
-      await command.execute(syntheticInteraction as never, services);
+      if (command.module === null) {
+        await command.execute(syntheticInteraction as never, context.services);
+      } else {
+        await command.execute(
+          syntheticInteraction as never,
+          servicesForModule(context.services, command.module),
+        );
+      }
     } catch (error) {
       context.logger.error("Prefix command failed", {
         command: name,

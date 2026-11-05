@@ -29,7 +29,7 @@ export interface CoreServicesOptions {
 export interface CoreServices {
   client: Client;
   redis: Redis;
-  db: PrismaClient;
+  prisma: PrismaClient;
   helpers: ReturnType<typeof createDbHelpers>;
   invalidation: InvalidationBus;
   cache: NamespacedCache<GuildSettings>;
@@ -56,7 +56,7 @@ export function createCoreServices(options: CoreServicesOptions): CoreServices {
   return {
     client: options.client,
     redis: options.redis,
-    db,
+    prisma: db,
     helpers,
     invalidation,
     cache,

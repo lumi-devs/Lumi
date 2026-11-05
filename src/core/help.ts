@@ -1,4 +1,3 @@
-import type { CommandDefinition } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";
 import * as ui from "@lumi/ui";
@@ -11,7 +10,7 @@ import {
   roleIdsFrom,
 } from "../admin/access.js";
 import type { ConfigService } from "../admin/services/ConfigService.js";
-import type { CommandRegistry } from "./modules.js";
+import type { BuiltinCommandDefinition, CommandRegistry } from "./modules.js";
 import { isBotOwner } from "./owner.js";
 
 interface HelpOptions {
@@ -22,7 +21,7 @@ interface HelpOptions {
   client: Client;
 }
 
-export function createHelpCommand(options: HelpOptions): CommandDefinition {
+export function createHelpCommand(options: HelpOptions): BuiltinCommandDefinition {
   const { registry, loader, permits, configService, client } = options;
 
   return {

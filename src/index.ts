@@ -11,34 +11,25 @@ import {
   createHelpCommand,
   createOwnerCommands,
   createPingCommand,
+  createRpcRouter,
   createRpcServer,
-  handleInteraction,
-  handlePrefixMessage,
-  isBotOwner,
-  isGuildBlacklisted,
-  isUserBlacklisted,
   logger,
   redisOptionsFromEnv,
+  registerClientEvents,
+  registerShutdownHandlers,
   shutdown,
 } from "@lumi/core";
-import { connectDatabase, disconnectDatabase, prisma } from "@lumi/db";
+import { connectDatabase, disconnectDatabase } from "@lumi/db";
 import { AddonManager } from "@lumi/downloader";
-import type { CommandDefinition } from "@lumi/module-kit";
 import { createModuleLoader } from "@lumi/module-runtime";
 import { type MetricsServer, startMetricsServer } from "@lumi/observability";
 import { createRedisClient } from "@lumi/redis";
 import * as ui from "@lumi/ui";
 import { PermissionFlagsBits } from "discord.js";
-import { createCommandSync } from "./core/commandSync.js";
+import { createCommandSync, type SyncGuildCommands } from "./core/commandSync.js";
+import type { BotServices } from "./core/contracts.js";
 import { createModuleConfigService } from "./core/moduleConfig.js";
 import { CommandRegistry, ModuleHost } from "./core/modules.js";
-import {
-  createBackupHandler,
-  createGuildHandler,
-  createModuleStateHandler,
-  createPermitNodesHandler,
-  createStatusHandler,
-} from "./core/rpcRoutes.js";
 
 async function main(): Promise<void> {
   logger.info("Starting Lumi v2...");
@@ -55,7 +46,16 @@ async function main(): Promise<void> {
 
   const client = createClient();
   const coreServices = createCoreServices({ client, redis });
+  const {
+    prisma,
+    permits: permitRepo,
+    configService,
+    scheduler,
+    healthMonitor,
+    helpers,
+  } = coreServices;
   const errorStore = createErrorStore(redis);
+
   process.on("unhandledRejection", (error) => {
     logger.error("Unhandled rejection", { error });
     void errorStore.record({ error, source: "unhandledRejection" });
@@ -66,13 +66,6 @@ async function main(): Promise<void> {
       .record({ error, source: "uncaughtException" })
       .finally(() => process.exit(1));
   });
-  const {
-    permits: permitRepo,
-    configService,
-    scheduler,
-    healthMonitor,
-    helpers,
-  } = coreServices;
 
   healthMonitor.register({
     name: "redis",
@@ -93,76 +86,21 @@ async function main(): Promise<void> {
   moduleLoader.addRoot("modules", "bundled");
   moduleLoader.addRoot("data/addons", "addon");
 
-  let syncGuildCommands: ((guildId: string) => Promise<void>) | undefined;
-
+  let syncGuildCommands: SyncGuildCommands | undefined;
   const rpcPort = Number.parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
   const rpc = createRpcServer({
     port: rpcPort,
-    host: process.env.RPC_HTTP_HOST ?? "0.0.0.0",
-    handler: async (req, res) => {
-      const statusHandler = createStatusHandler({
-        client,
-        healthMonitor,
-        moduleLoader,
-        token: process.env.RPC_INTERNAL_TOKEN,
-      });
-      const nodesHandler = createPermitNodesHandler({
-        moduleLoader,
-        permits: permitRepo,
-        token: process.env.RPC_INTERNAL_TOKEN,
-      });
-      const guildHandler = createGuildHandler({
-        client,
-        token: process.env.RPC_INTERNAL_TOKEN,
-      });
-      const moduleStateHandler = createModuleStateHandler({
-        moduleLoader,
-        syncCommands: (guildId) =>
-          syncGuildCommands?.(guildId) ?? Promise.resolve(),
-        token: process.env.RPC_INTERNAL_TOKEN,
-      });
-      const backupHandler = createBackupHandler({
-        client,
-        prisma,
-        services: {
-          observability: { logger },
-        },
-        token: process.env.RPC_INTERNAL_TOKEN,
-      });
-
-      const url = new URL(
-        req.url ?? "/",
-        `http://${req.headers.host ?? "localhost"}`,
-      );
-
-      if (url.pathname === "/api/v1/permits/nodes") {
-        await nodesHandler(req, res);
-        return;
-      }
-
-      if (
-        url.pathname.startsWith("/api/v1/guilds/") &&
-        url.pathname.includes("/backups/")
-      ) {
-        await backupHandler(req, res);
-        return;
-      }
-
-      if (
-        url.pathname.startsWith("/api/v1/guilds/") &&
-        url.pathname.includes("/modules/")
-      ) {
-        await moduleStateHandler(req, res);
-        return;
-      }
-
-      if (url.pathname.startsWith("/api/v1/guilds/")) {
-        await guildHandler(req, res);
-        return;
-      }
-
-      await statusHandler(req, res);
-    },
+    host: process.env.RPC_HTTP_HOST ?? "127.0.0.1",
+    handler: createRpcRouter({
+      client,
+      prisma,
+      healthMonitor,
+      moduleLoader,
+      permits: permitRepo,
+      logger,
+      token: process.env.RPC_INTERNAL_TOKEN,
+      getSyncGuildCommands: () => syncGuildCommands,
+    }),
   });
   await rpc.start();
   logger.info("RPC server listening", { port: rpcPort });
@@ -197,40 +135,39 @@ async function main(): Promise<void> {
     logger,
   });
 
-  let addonManager: AddonManager | undefined;
-
-  const services = {
-    client,
-    configService,
-    redis,
-    db: {
-      prisma,
-      permits: permitRepo,
-    },
+  const runtimeRef: { host?: ModuleHost } = {};
+  const addonManager = new AddonManager({
     prisma,
-    permits: permitRepo,
-    moduleManager,
-    modules: {
-      isEnabled: (guildId: string, moduleName: string) =>
-        moduleLoader.isEnabled(guildId, moduleName),
-    },
-    moduleLoader,
-    scheduler,
-    helpers,
-    get addons(): AddonManager {
-      if (!addonManager) {
-        throw new Error(
-          "services.addons used before the addon manager was wired",
-        );
+    redis,
+    logger,
+    notify: createAddonNotifier(client),
+    runtime: () => {
+      if (!runtimeRef.host) {
+        throw new Error("Add-on runtime requested before the module host exists.");
       }
-      return addonManager;
+      return runtimeRef.host;
     },
-    config: configService,
+  });
+
+  const services: BotServices = {
+    client,
+    redis,
+    prisma,
+    helpers,
+    configService,
+    permits: permitRepo,
+    scheduler,
+    moduleLoader,
+    moduleManager,
+    addons: addonManager,
     moduleConfig: createModuleConfigService({
       loader: moduleLoader,
       config: configService,
     }),
-    rpc,
+    modules: {
+      isEnabled: (guildId, moduleName) =>
+        moduleLoader.isEnabled(guildId, moduleName),
+    },
     ui,
     discord: { PermissionFlagsBits },
     observability: { healthMonitor, logger },
@@ -249,24 +186,18 @@ async function main(): Promise<void> {
     logger,
     syncCommands: () => commandSync.syncAll(),
   });
+  runtimeRef.host = host;
 
-  addonManager = new AddonManager({
-    prisma,
-    redis,
-    runtime: host,
-    logger,
-    notify: createAddonNotifier(client),
-  });
   scheduler.register({
     name: "addons-autoupdate",
     cron: "* * * * *",
     handler: async () => {
-      await addonManager?.autoUpdate();
+      await addonManager.autoUpdate();
     },
   });
 
   host.addStatic([
-    ...(moduleCommands as unknown as CommandDefinition[]),
+    ...moduleCommands,
     createAboutCommand({ client, prisma, redis }),
     createPingCommand({ client, prisma }),
     createHelpCommand({
@@ -288,94 +219,34 @@ async function main(): Promise<void> {
 
   await host.load(await moduleLoader.discover());
 
-  client.on("interactionCreate", async (interaction) => {
-    await handleInteraction(interaction, {
-      client,
-      registry,
-      moduleLoader,
-      services,
-      logger,
-      errorStore,
-      createPermitPanel: (guildId, interaction) =>
-        new PermitPanel({ permitRepo, guildId, interaction, moduleLoader }),
-    });
-  });
-
-  client.on("messageCreate", async (message) => {
-    if (!message.inGuild()) return;
-    if (
-      !isBotOwner(message.author.id) &&
-      ((await isUserBlacklisted(prisma, helpers.cache, message.author.id)) ||
-        (await isGuildBlacklisted(prisma, helpers.cache, message.guildId)))
-    ) {
-      return;
-    }
-    await handlePrefixMessage(message, {
-      client,
-      registry,
-      moduleLoader,
-      logger,
-      services,
-    });
-  });
-
-  client.on("guildCreate", async (guild) => {
-    if (await isGuildBlacklisted(prisma, helpers.cache, guild.id)) {
-      await guild.leave().catch(() => undefined);
-      return;
-    }
-    await guildSync.syncRecord(guild);
-    await host.load(await moduleLoader.discover());
-    await guildSync.syncModules(guild.id);
-    await commandSync.syncGuild(guild.id);
-  });
-
-  client.on("guildDelete", async (guild) => {
-    await commandSync.syncGuild(guild.id);
-  });
-
-  client.once("clientReady", async () => {
-    for (const guild of client.guilds.cache.values()) {
-      await guildSync.syncRecord(guild);
-      await guildSync.syncModules(guild.id);
-    }
-    await commandSync.syncAll();
-    await scheduler.start();
+  registerClientEvents({
+    client,
+    registry,
+    moduleLoader,
+    services,
+    logger,
+    errorStore,
+    host,
+    commandSync,
+    guildSync,
+    scheduler,
+    createPermitPanel: (guildId, interaction) =>
+      new PermitPanel({ permitRepo, guildId, interaction, moduleLoader }),
   });
 
   await boot({ token: process.env.BOT_TOKEN ?? "", client });
   logger.info("Lumi v2 is ready!");
 
-  const shutdownSignals = ["SIGINT", "SIGTERM"] as const;
-  const runShutdownStep = async (
-    name: string,
-    action: () => unknown | Promise<unknown>,
-  ): Promise<void> => {
-    try {
-      await action();
-    } catch (error) {
-      logger.error("Shutdown step failed", { step: name, error });
-    }
-  };
-  for (const signal of shutdownSignals) {
-    process.on(signal, async () => {
-      logger.info(`Received ${signal}, shutting down...`);
-      try {
-        await runShutdownStep("metrics", () => metricsServer?.stop());
-        await runShutdownStep("scheduler", () => scheduler.stop());
-        await runShutdownStep("rpc", () => rpc.stop());
-        await runShutdownStep("modules", () => host.unloadAll());
-        await runShutdownStep("discord", () => shutdown(client));
-        await runShutdownStep("invalidation", () =>
-          coreServices.invalidation.close(),
-        );
-        await runShutdownStep("database", () => disconnectDatabase());
-        await runShutdownStep("redis", () => redis.quit());
-      } finally {
-        process.exit(0);
-      }
-    });
-  }
+  registerShutdownHandlers(logger, [
+    { name: "metrics", action: () => metricsServer?.stop() },
+    { name: "scheduler", action: () => scheduler.stop() },
+    { name: "rpc", action: () => rpc.stop() },
+    { name: "modules", action: () => host.unloadAll() },
+    { name: "discord", action: () => shutdown(client) },
+    { name: "invalidation", action: () => coreServices.invalidation.close() },
+    { name: "database", action: () => disconnectDatabase() },
+    { name: "redis", action: () => redis.quit() },
+  ]);
 }
 
 main().catch((error) => {

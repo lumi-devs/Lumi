@@ -3,6 +3,7 @@ export type {
   AddonLogger,
   AddonNotifier,
   AddonRuntime,
+  AddonRuntimeProvider,
   AutoUpdateReport,
   AutoUpdateState,
   InstalledAddon,

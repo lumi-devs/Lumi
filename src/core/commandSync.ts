@@ -12,9 +12,11 @@ export interface CommandSyncOptions {
   logger: Logger;
 }
 
+export type SyncGuildCommands = (guildId: string) => Promise<void>;
+
 export interface CommandSync {
   registerGuild(guild: Guild): Promise<void>;
-  syncGuild(guildId: string): Promise<void>;
+  syncGuild: SyncGuildCommands;
   syncAll(): Promise<void>;
 }
 

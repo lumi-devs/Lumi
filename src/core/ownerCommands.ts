@@ -1,6 +1,5 @@
 import type { ConfigService, GuildSettings } from "@lumi/admin";
 import type { DbHelpers, PrismaClient } from "@lumi/db";
-import type { CommandDefinition } from "@lumi/module-kit";
 import * as ui from "@lumi/ui";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
@@ -12,6 +11,7 @@ import {
 } from "./blacklist.js";
 import type { DataLifecycleService } from "./dataLifecycle.js";
 import type { ErrorStore } from "./errorStore.js";
+import type { BuiltinCommandDefinition } from "./modules.js";
 
 interface OwnerCommandOptions {
   client: Client;
@@ -41,7 +41,7 @@ async function replyJson(
 
 export function createOwnerCommands(
   options: OwnerCommandOptions,
-): CommandDefinition[] {
+): BuiltinCommandDefinition[] {
   const { client, prisma, cache, configService, dataLifecycle, errorStore } =
     options;
 

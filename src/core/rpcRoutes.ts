@@ -11,7 +11,8 @@ import {
   backupStats,
   previewBackupRestore,
   restoreBackup,
-} from "../../modules/security/backup-store.js";
+  toBackupRecord,
+} from "../../modules/security/backup-store/index.js";
 import { permitNodeCatalog } from "../admin/permits/nodes.js";
 
 export interface StatusRouteOptions {
@@ -53,11 +54,29 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+const LoopbackAddresses = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+function decodePathPart(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function isLoopback(req: IncomingMessage): boolean {
+  return LoopbackAddresses.has(req.socket.remoteAddress ?? "");
+}
+
 function isAuthorized(
   req: IncomingMessage,
   token: string | undefined,
 ): boolean {
-  if (!token) return true;
+  if (!token) {
+    // Without a shared secret, only processes on the same host may use the
+    // control API. Public binds still require RPC_INTERNAL_TOKEN.
+    return isLoopback(req);
+  }
   const prefix = "Bearer ";
   const header = req.headers.authorization;
   if (!header?.startsWith(prefix)) return false;
@@ -115,7 +134,11 @@ export function createModuleStateHandler(
     }
 
     const guildId = match[1]!;
-    const moduleName = decodeURIComponent(match[2] ?? "");
+    const moduleName = decodePathPart(match[2] ?? "");
+    if (!moduleName) {
+      finish(400, { error: "invalid_path" });
+      return;
+    }
 
     let payload: unknown;
     try {
@@ -309,8 +332,12 @@ export function createBackupHandler(
     }
 
     const guildId = match[1];
-    const backupId = decodeURIComponent(match[2] ?? "");
+    const backupId = decodePathPart(match[2] ?? "");
     const action = match[3];
+    if (!backupId) {
+      finish(400, { error: "invalid_path" });
+      return;
+    }
 
     if (action === "restore" && method !== "POST") {
       finish(405, { error: "method_not_allowed" });
@@ -329,9 +356,10 @@ export function createBackupHandler(
 
     let backup: BackupRecord | null = null;
     try {
-      backup = (await prisma.securityBackup.findFirst({
+      const record = await prisma.securityBackup.findFirst({
         where: { id: backupId, guildId },
-      })) as unknown as BackupRecord | null;
+      });
+      backup = record ? toBackupRecord(record) : null;
     } catch {
       finish(500, { error: "internal_error" });
       return;
@@ -395,10 +423,15 @@ export function createStatusHandler(
 
     if (route === "/healthz") {
       const checks = await healthMonitor.runChecks();
+      const authorized = isAuthorized(req, token);
       finish(checks.healthy ? 200 : 503, {
         ok: checks.healthy,
         ready: client.isReady(),
-        checks: checks.results,
+        checks: checks.results.map((result) =>
+          authorized
+            ? result
+            : { name: result.name, healthy: result.healthy },
+        ),
       });
       return;
     }

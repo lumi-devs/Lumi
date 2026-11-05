@@ -71,7 +71,7 @@ describe("ModuleLoader disposers", () => {
       await writeModuleFixture(root);
       const loader = createModuleLoader();
       loader.addRoot(root, "bundled");
-      await loader.loadAll(await loader.discover(), {});
+      await loader.loadAll(await loader.discover(), {} as never);
 
       expect(loader.getModule("loader-test-demo")).toBeDefined();
 

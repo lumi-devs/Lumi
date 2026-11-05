@@ -42,7 +42,6 @@ export interface ModuleConfigService {
 }
 
 export interface ModuleServices {
-  rpc: unknown;
   discord: { PermissionFlagsBits: typeof PermissionFlagsBits };
   permits: PermitRepository;
   config: ModuleConfigAccess;
@@ -68,16 +67,16 @@ export interface CommandDataStub {
   toJSON(): RESTPostAPIApplicationCommandsJSONBody;
 }
 
-export interface CommandDefinition {
+export interface CommandDefinition<S = ModuleServices> {
   data: CommandData;
 
   execute: (
     interaction: ChatInputCommandInteraction,
-    services: ModuleServices,
+    services: S,
   ) => Promise<void>;
   autocomplete?: (
     interaction: AutocompleteInteraction,
-    services: ModuleServices,
+    services: S,
   ) => Promise<void>;
   aliases?: readonly string[];
   prefixOnly?: boolean;

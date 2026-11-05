@@ -176,7 +176,14 @@ export class ModuleLoader {
   private moduleServices = new Map<string, ModuleServices>();
   private moduleDisposers = new Map<string, Disposer[]>();
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
-  private services = {} as ModuleServices;
+  private services: ModuleServices | null = null;
+
+  private requireServices(): ModuleServices {
+    if (!this.services) {
+      throw new Error("ModuleLoader.loadAll must run before module services are used.");
+    }
+    return this.services;
+  }
 
   private async runDisposers(moduleName: string): Promise<void> {
     const disposers = this.moduleDisposers.get(moduleName);
@@ -406,9 +413,9 @@ export class ModuleLoader {
 
   async loadAll(
     discovered: LoadedModule[],
-    services: Record<string, unknown>,
+    services: ModuleServices,
   ): Promise<LoadedModule[]> {
-    this.services = services as unknown as ModuleServices;
+    this.services = services;
     const { ordered, cyclic } = this.sortModules(discovered);
     for (const name of cyclic) {
       console.error(`Module ${name} is part of a dependency cycle; skipping.`);
@@ -450,10 +457,7 @@ export class ModuleLoader {
         continue;
       }
 
-      const moduleServices = {
-        ...services,
-        moduleName: name,
-      } as unknown as ModuleServices;
+      const moduleServices: ModuleServices = { ...services, moduleName: name };
       let disposers: Disposer[] = [];
       try {
         disposers = await module.definition.onLoad(moduleServices);
@@ -551,8 +555,10 @@ export class ModuleLoader {
     if (!module.isSubmodule) return;
 
     const services =
-      this.moduleServices.get(moduleName) ??
-      ({ ...this.services, moduleName: moduleName } as ModuleServices);
+      this.moduleServices.get(moduleName) ?? {
+        ...this.requireServices(),
+        moduleName,
+      };
 
     try {
       await module.definition.onUnload(services);
@@ -582,7 +588,7 @@ export class ModuleLoader {
 
     for (const module of removed) {
       const name = module.manifest.name;
-      const services = this.moduleServices.get(name) ?? this.services;
+      const services = this.moduleServices.get(name) ?? this.requireServices();
       try {
         await module.definition.onUnload(services);
       } catch (error) {

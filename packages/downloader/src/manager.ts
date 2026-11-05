@@ -11,6 +11,7 @@ import type {
   AddonLogger,
   AddonNotifier,
   AddonRuntime,
+  AddonRuntimeProvider,
   AutoUpdateReport,
   AutoUpdateState,
   InstalledAddon,
@@ -40,7 +41,7 @@ const NoopLogger: AddonLogger = {
 export interface AddonManagerOptions {
   readonly prisma: PrismaClient;
   readonly redis: Redis;
-  readonly runtime: AddonRuntime;
+  readonly runtime: AddonRuntimeProvider;
   readonly root?: string;
   readonly logger?: AddonLogger;
   readonly notify?: AddonNotifier;
@@ -59,7 +60,7 @@ function assertModuleName(name: string): void {
 export class AddonManager {
   private readonly prisma: PrismaClient;
   private readonly redis: Redis;
-  private readonly runtime: AddonRuntime;
+  private readonly runtimeProvider: AddonRuntimeProvider;
   private readonly storage: AddonStorage;
   private readonly logger: AddonLogger;
   private readonly notify?: AddonNotifier;
@@ -69,10 +70,14 @@ export class AddonManager {
   constructor(options: AddonManagerOptions) {
     this.prisma = options.prisma;
     this.redis = options.redis;
-    this.runtime = options.runtime;
+    this.runtimeProvider = options.runtime;
     this.storage = new AddonStorage(resolve(options.root ?? process.cwd()));
     this.logger = options.logger ?? NoopLogger;
     this.notify = options.notify;
+  }
+
+  private get runtime(): AddonRuntime {
+    return this.runtimeProvider();
   }
 
   private run<T>(task: () => Promise<T>): Promise<T> {

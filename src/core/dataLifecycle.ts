@@ -1,5 +1,7 @@
-import type { ModuleServices, UserDataDeletionResult } from "@lumi/module-kit";
+import type { UserDataDeletionResult } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
+import type { BotServices } from "./contracts.js";
+import { servicesForModule } from "./modules.js";
 
 export interface UserDataFailure {
   module: string;
@@ -30,7 +32,7 @@ export interface DataLifecycleService {
 
 interface DataLifecycleOptions {
   loader: Pick<ModuleLoader, "listAll">;
-  services: ModuleServices;
+  services: BotServices;
 }
 
 export function createDataLifecycleService(
@@ -48,7 +50,11 @@ export function createDataLifecycleService(
         if (!hooks?.exportUserData) continue;
         const name = module.manifest.name;
         try {
-          modules[name] = await hooks.exportUserData(services, guildId, userId);
+          modules[name] = await hooks.exportUserData(
+            servicesForModule(services, name),
+            guildId,
+            userId,
+          );
         } catch (error) {
           failures.push({
             module: name,
@@ -77,7 +83,11 @@ export function createDataLifecycleService(
         if (!hooks?.deleteUserData) continue;
         const name = module.manifest.name;
         try {
-          const result = await hooks.deleteUserData(services, guildId, userId);
+          const result = await hooks.deleteUserData(
+            servicesForModule(services, name),
+            guildId,
+            userId,
+          );
           modules[name] = result ?? null;
           deleted += result?.deleted ?? 0;
           anonymised += result?.anonymised ?? 0;

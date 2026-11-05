@@ -1,4 +1,3 @@
-import type { ModuleServices } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import { commandsExecuted } from "@lumi/observability";
 import * as ui from "@lumi/ui";
@@ -17,8 +16,8 @@ import {
 } from "../admin/access.js";
 import { handleHubInteraction } from "../admin/panel/HubPanel.js";
 import type { PermitPanel } from "../admin/panel/PermitPanel.js";
-import type { HubServices } from "../admin/panel/services.js";
 import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
+import type { BotServices } from "./contracts.js";
 import { handlePingButton } from "./commands.js";
 import type { ErrorStore } from "./errorStore.js";
 import { commandErrorCard } from "./errors.js";
@@ -29,16 +28,11 @@ import { isBotOwner } from "./owner.js";
 export type BotInteraction =
   ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
 
-export interface DispatchServices
-  extends HubServices, Omit<ModuleServices, "permits"> {
-  client: Client;
-}
-
 export interface DispatchContext {
   client: Client;
   registry: CommandRegistry;
   moduleLoader: ModuleLoader;
-  services: DispatchServices;
+  services: BotServices;
   logger: { error(message: string, meta?: unknown): void };
   errorStore: ErrorStore;
   createPermitPanel(guildId: string, interaction: BotInteraction): PermitPanel;
@@ -56,10 +50,14 @@ async function handleAutocomplete(
       !interaction.guildId ||
       context.moduleLoader.isActive(interaction.guildId, command.module))
   ) {
-    const services = command.module
-      ? servicesForModule(context.services, command.module)
-      : context.services;
-    await command.autocomplete(interaction, services);
+    if (command.module === null) {
+      await command.autocomplete(interaction, context.services);
+    } else {
+      await command.autocomplete(
+        interaction,
+        servicesForModule(context.services, command.module),
+      );
+    }
     return;
   }
   await interaction.respond([]).catch(() => undefined);
@@ -311,12 +309,15 @@ async function handleChatInput(
     return;
   }
 
-  const services = command.module
-    ? servicesForModule(context.services, command.module)
-    : context.services;
-
   try {
-    await command.execute(interaction, services);
+    if (command.module === null) {
+      await command.execute(interaction, context.services);
+    } else {
+      await command.execute(
+        interaction,
+        servicesForModule(context.services, command.module),
+      );
+    }
     commandsExecuted.inc({
       command: interaction.commandName,
       module: command.module ?? "builtin",

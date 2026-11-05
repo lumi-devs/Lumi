@@ -21,7 +21,7 @@ export class RpcServer {
 
   constructor(options: RpcServerOptions) {
     this.port = options.port;
-    this.host = options.host ?? "0.0.0.0";
+    this.host = options.host ?? "127.0.0.1";
     this.handler = options.handler;
 
     this.server = createServer(async (req, res) => {

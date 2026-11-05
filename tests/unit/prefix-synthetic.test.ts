@@ -58,7 +58,7 @@ describe("prefix synthetic interaction", () => {
       },
       moduleLoader: { isActive: () => true },
       services: {
-        config: { get: async () => "," },
+        configService: { get: async () => "," },
         permits: {},
       },
       logger: { error: vi.fn() },

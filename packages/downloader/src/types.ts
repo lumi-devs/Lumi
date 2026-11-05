@@ -59,6 +59,8 @@ export interface AddonRuntime {
   has(moduleName: string): boolean;
 }
 
+export type AddonRuntimeProvider = () => AddonRuntime;
+
 export type AddonNotifier = (report: AutoUpdateReport) => Promise<void>;
 
 export interface AddonLogger {

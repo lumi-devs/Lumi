@@ -66,7 +66,7 @@ describe("prefix dispatch", () => {
       registry,
       moduleLoader: { isActive: () => true },
       services: {
-        config: { get: async () => "," },
+        configService: { get: async () => "," },
         permits: {},
       } as never,
       logger: { error: vi.fn() },

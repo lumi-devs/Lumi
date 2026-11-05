@@ -1,20 +1,27 @@
 import type { AddonRuntime } from "@lumi/downloader";
 import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
 import type { LoadedModule, ModuleLoader } from "@lumi/module-runtime";
-import type { ScheduledJob } from "@lumi/scheduler";
 import type {
   Client,
   RESTPostAPIApplicationCommandsJSONBody,
 } from "discord.js";
+import type { BotServices } from "./contracts.js";
 
-interface SchedulerLike {
-  register(job: ScheduledJob): void;
-  unregister(name: string): void;
+export type BuiltinCommandDefinition = CommandDefinition<BotServices>;
+
+export interface RegisteredModuleCommand
+  extends CommandDefinition<ModuleServices> {
+  module: string;
 }
 
-export interface RegisteredCommand extends CommandDefinition {
-  module: string | null;
+export interface RegisteredBuiltinCommand
+  extends CommandDefinition<BotServices> {
+  module: null;
 }
+
+export type RegisteredCommand =
+  | RegisteredModuleCommand
+  | RegisteredBuiltinCommand;
 
 export function commandPayloadForGuild(
   registry: CommandRegistry,
@@ -26,7 +33,7 @@ export function commandPayloadForGuild(
     .filter(
       (command) =>
         !command.prefixOnly &&
-        (!command.module || loader.isActive(guildId, command.module)),
+        (command.module === null || loader.isActive(guildId, command.module)),
     )
     .map((command) => command.data.toJSON());
 }
@@ -37,11 +44,23 @@ export interface ModuleHostLogger {
   error(message: string, meta?: unknown): void;
 }
 
-export function servicesForModule<T extends object>(
-  services: T,
-  moduleName: string,
-): T & { moduleName: string } {
-  return { ...services, moduleName: moduleName };
+export function servicesForModule(
+  services: BotServices,
+  moduleName?: string | null,
+): ModuleServices {
+  const view: ModuleServices = {
+    client: services.client,
+    permits: services.permits,
+    config: services.configService,
+    moduleConfig: services.moduleConfig,
+    ui: services.ui,
+    scheduler: services.scheduler,
+    observability: services.observability,
+    modules: services.modules,
+    helpers: services.helpers,
+    discord: services.discord,
+  };
+  return moduleName == null ? view : { ...view, moduleName };
 }
 
 export class CommandRegistry {
@@ -98,7 +117,7 @@ export interface ModuleHostOptions {
   client: Client;
   loader: ModuleLoader;
   registry: CommandRegistry;
-  services: Record<string, unknown>;
+  services: BotServices;
   logger: ModuleHostLogger;
   syncCommands: () => Promise<void>;
 }
@@ -134,7 +153,7 @@ export class ModuleHost implements AddonRuntime {
     this.options = options;
   }
 
-  addStatic(commands: CommandDefinition[]): void {
+  addStatic(commands: BuiltinCommandDefinition[]): void {
     for (const command of commands) {
       this.options.registry.add({ ...command, module: null });
     }
@@ -143,7 +162,7 @@ export class ModuleHost implements AddonRuntime {
   async load(discovered: LoadedModule[]): Promise<LoadedModule[]> {
     const loaded = await this.options.loader.loadAll(
       discovered,
-      this.options.services,
+      servicesForModule(this.options.services),
     );
     for (const module of loaded) {
       this.attach(module);
@@ -161,7 +180,10 @@ export class ModuleHost implements AddonRuntime {
       throw new Error(`Add-on "${name}" was not discovered.`);
     }
 
-    await this.options.loader.loadAll(targets, this.options.services);
+    await this.options.loader.loadAll(
+      targets,
+      servicesForModule(this.options.services),
+    );
     for (const target of targets) {
       const loaded = this.options.loader.getModule(target.manifest.name);
       if (loaded) this.attach(loaded);
@@ -253,18 +275,16 @@ export class ModuleHost implements AddonRuntime {
     }
     this.disposers.set(moduleName, disposers);
 
-    const scheduler = this.options.services.scheduler as
-      SchedulerLike | undefined;
+    const scheduler = this.options.services.scheduler;
     for (const task of module.definition.tasks ?? []) {
       const jobName = `${moduleName}:${task.name}`;
-      scheduler?.register({
+      scheduler.register({
         name: jobName,
         cron: task.cron,
         timezone: task.timezone,
-        handler: () =>
-          task.handler(moduleServices as unknown as ModuleServices),
+        handler: () => task.handler(moduleServices),
       });
-      disposers.push(() => scheduler?.unregister(jobName));
+      disposers.push(() => scheduler.unregister(jobName));
     }
 
     for (const command of module.definition.commands ?? []) {

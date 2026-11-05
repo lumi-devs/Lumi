@@ -112,7 +112,7 @@ function setup(initial: LoadedModule[]) {
     client: client as any,
     loader: loader as any,
     registry,
-    services: {},
+    services: {} as never,
     logger,
     syncCommands,
   });

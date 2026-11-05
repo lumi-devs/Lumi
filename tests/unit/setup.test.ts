@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyDefaults,
   databaseUrlFrom,
+  validateDatabaseUrl,
+} from "../../scripts/setup/database.ts";
+import {
+  validateBotToken,
+  validateOwnerIds,
+} from "../../scripts/setup/discord.ts";
+import {
+  applyDefaults,
   formatEnvValue,
-  isPlaceholder,
-  parseArgs,
   parseEnv,
   redactUrl,
-  redisUrlFrom,
   upsertEnv,
-  validateBotToken,
-  validateDatabaseUrl,
   validateEnv,
-  validateOwnerIds,
-  validateRedisUrl,
-} from "../../scripts/setup.ts";
+} from "../../scripts/setup/env.ts";
+import { redisUrlFrom, validateRedisUrl } from "../../scripts/setup/redis.ts";
+import { isPlaceholder, parseArgs } from "../../scripts/setup/shared.ts";
 
 const validToken = "test-token.abc123.not-a-real-token";
 const validOwners = "123456789012345678,987654321098765432";
