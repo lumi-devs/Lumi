@@ -408,12 +408,11 @@ interface ModuleServices {
   };
   moduleConfig: ModuleConfigService; // Per-module config read/save
   helpers: DbHelpers; // Database + cache access
-  rpc: unknown;
   scheduler: DistributedScheduler; // Cron jobs
   config: ModuleConfigAccess; // Guild config get/set
   ui: typeof import("@lumi/ui"); // Import @lumi/ui directly
   discord: { PermissionFlagsBits }; // Discord.js constants
-  observability: { healthMonitor: HealthMonitor; logger: Logger };
+  observability: { healthMonitor?: HealthMonitor; logger: Logger };
   moduleName?: string; // Set per module
 }
 ```
@@ -422,8 +421,10 @@ interface ModuleServices {
 `customCommands`, `roles`, `security`, `verification`, `utility`, and `cache`.
 Modules must not import `@prisma/client`, `@lumi/db`, `@lumi/cache`,
 `@lumi/redis`, or `ioredis`; Biome blocks those imports under `modules/**`.
-Runtime-only fields (`moduleLoader`, `moduleManager`, `addons`, etc.) exist on
-the host bag but are not part of the module contract unless listed above.
+The wide host bag (`prisma`, `redis`, `configService`, `moduleLoader`,
+`moduleManager`, `addons`) is `BotServices` and is only available to built-in
+code under `src/`. `servicesForModule()` is the only projection. See
+[services.md](./services.md).
 
 ---
 

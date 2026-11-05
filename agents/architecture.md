@@ -92,6 +92,9 @@ Rules:
 
 ## Boot order
 
+The exact wiring lives in `src/index.ts`; see [services.md](./services.md) for the
+service contracts and the projection rule. In order:
+
 1. `src/index.ts` creates the Redis client (`redisOptionsFromEnv()`) and connects
    it, then connects the database, then creates the Discord client. (The logger
    is created when `@lumi/core` is imported, before boot.)
@@ -100,19 +103,21 @@ Rules:
    health monitor, and the `@lumi/db` helper tree. Redis and Discord readiness
    checks are registered on the monitor.
 3. The module loader gets the bundled (`modules`) and add-on (`data/addons`)
-   roots. The RPC control server starts (`/healthz`, `/ready`,
-   `/api/v1/status`); the metrics server starts on `METRICS_PORT` unless
-   `METRICS_ENABLED=false` (`/metrics`, `/healthz`).
+   roots. The RPC control server starts from `createRpcRouter()`
+   (`/healthz`, `/ready`, `/api/v1/...`); the metrics server starts on
+   `METRICS_PORT` unless `METRICS_ENABLED=false` (`/metrics`, `/healthz`).
 4. The `ModuleHost`, `CommandRegistry`, `ModuleManager`, `AddonManager`, and the
-   shared `services` bag are constructed. Built-in commands are registered with
-   `module: null`.
+   single `BotServices` object are constructed. Built-in commands are registered
+   with `module: null`.
 5. `loader.discover()` reads manifests; `host.load()` resolves dependencies,
    imports entries, runs `onLoad`, attaches listeners, registers commands, and
    resyncs guild commands.
 6. The `addons-autoupdate` job is registered on the scheduler.
-7. Discord event handlers are wired, then `client.login()` runs.
+7. `registerClientEvents()` wires Discord event handlers, then `client.login()`
+   runs.
 8. On ready: every guild's record and module state are synced, slash commands are
    registered **per guild**, and the scheduler starts.
+9. `registerShutdownHandlers()` installs the ordered shutdown steps.
 
 ## Process model
 
@@ -143,8 +148,13 @@ exclusively through the bot's **internal RPC control server** (default `127.0.0.
   which modules are loaded and what nodes they expose.
 - **Decoupled deployments**: Dashboard can be updated/restarted independently.
   Bot can run without dashboard; dashboard can run without bot (with cached data).
-- **Security**: `RPC_INTERNAL_TOKEN` guards all mutating/reading endpoints. The
-  dashboard never needs the Discord bot token.
+- **Security**: The listener binds to `127.0.0.1` by default. All `/api/v1/*`
+  endpoints require `RPC_INTERNAL_TOKEN` unless the request socket is loopback;
+  a token is mandatory for container or remote deployments. Health endpoints
+  remain unauthenticated so orchestrators can probe them.
+- **Credential split**: The dashboard does not use the bot's RPC for Discord
+  operations. It holds its own `BOT_TOKEN` only for the Discord REST calls it
+  needs (role/channel reads and verification role changes).
 
 ### RPC Endpoints
 

@@ -1,8 +1,7 @@
 # Web verification
 
 Module: `modules/security/verification/` (`security-verification`).
-Dashboard route: `/verify/[token]` (implemented in the web app, not in this
-repository).
+Dashboard route: `apps/dashboard/src/routes/verify/[token]/`.
 
 ## Flow
 
@@ -51,10 +50,15 @@ Table: `VerificationToken` (`packages/db/prisma/schema.prisma`).
 
 Dashboard responsibilities for `/verify/[token]`:
 
-1. Read `VerificationToken` by `tokenHash = sha256hex(token)`.
-2. Reject when the row is missing, `usedAt` is non-null, or `expiresAt <= now`.
-3. Grant `verifiedRoleId` and remove `pendingRoleId` through Discord REST.
-4. Mark `usedAt` so the link is one-time.
+1. Rate-limit page loads and submissions per client IP before touching Redis or
+   Discord.
+2. Read `VerificationToken` by `tokenHash = sha256hex(token)`.
+3. Reject when the row is missing, `usedAt` is non-null, or `expiresAt <= now`.
+4. Issue a short-lived math captcha in Redis for ready tokens, then consume it
+   once on submit.
+5. Grant `verifiedRoleId` and remove `pendingRoleId` through Discord REST.
+6. Mark `usedAt` so the link is one-time, then delete the pending Redis entry
+   and write an audit record.
 
 Token helper functions live in `modules/security/verification/token.ts` and are
 unit-tested without Discord or the database.
@@ -67,6 +71,8 @@ unit-tested without Discord or the database.
   challenge until it expires or is used.
 - Enforce expiry and one-time use on the server side (`expiresAt`, `usedAt`);
   never rely on the card text or client-side checks.
+- Captchas and rate-limit counters use the `lumi:dashboard:` namespace and
+  expire automatically. Captcha answers are never sent to the browser.
 - The cleanup task removes expired rows. It does not remove unexpired unused
   rows, so a re-issued prompt can coexist with an older link until that older
   link expires.

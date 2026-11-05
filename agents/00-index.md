@@ -2,7 +2,8 @@
 
 | Doc                                          | Use it when                                                                      |
 | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| [architecture.md](./architecture.md)         | You need the package map, dependency direction, or workspace rules.              |
+| [architecture.md](./architecture.md)         | You need the package map, runtime topology, process boundaries, or lifetimes.    |
+| [services.md](./services.md)                 | You are adding a service, changing DI, or touching the composition root.         |
 | [cache.md](./cache.md)                       | You are adding a cached read, a TTL, an invalidation, or a codec.                |
 | [db.md](./db.md)                             | You are touching Prisma, repositories, transactions, or migrations.              |
 | [redis.md](./redis.md)                       | You need Redis clients, keys, locks, cooldowns, or pub/sub.                      |

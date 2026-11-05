@@ -37,9 +37,9 @@ See `.env.example`.
 | `LOG_LEVEL`           | pino level. Default `info`.                                       |
 | `METRICS_ENABLED`     | Set to `false` to disable the metrics server.                     |
 | `METRICS_PORT`        | `/metrics` and `/healthz` port. Default `9090`.                   |
-| `RPC_HTTP_HOST`       | RPC control-server bind host. Default `0.0.0.0`.                  |
+| `RPC_HTTP_HOST`       | RPC control-server bind host. Default `127.0.0.1`.                |
 | `RPC_HTTP_PORT`       | RPC control-server port. Default `8091`.                          |
-| `RPC_INTERNAL_TOKEN`  | Bearer token for `/api/v1/status`; when unset, the route is open. |
+| `RPC_INTERNAL_TOKEN`  | Bearer token for `/api/v1/*`; required for any non-loopback use.  |
 | `GIT_TOKEN`           | Optional token for private addon repos over HTTPS.                |
 | `GIT_USERNAME`        | Token username; default `x-access-token`.                         |
 
@@ -76,8 +76,10 @@ The registry also defines DB query duration/count, Redis command duration, pg
 pool size/used/waiting, and economy transaction metrics. Those are declared but
 not yet instrumented.
 
-Health: `GET /healthz` returns `{ ok, ready, checks }` on the RPC server; the
+Health: `GET /healthz` on the RPC server returns `{ ok, ready, checks }`; the
 metrics server's `/healthz` returns `{ ok }` from the readiness callback.
+Unauthenticated RPC health responses expose check names and booleans only;
+authenticated requests also receive check details.
 Metrics: `GET /metrics` on `METRICS_PORT`.
 
 ## Process lifecycle

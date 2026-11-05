@@ -2,9 +2,9 @@
 
 Commands come from two sources:
 
-- Built-ins: `createPingCommand()` and `createAboutCommand()` in `src/core/`,
-  and the `moduleCommands` registry (`/lumi`, `/permit`) in
-  `src/admin/commands/index.ts`.
+- Built-ins: `createPingCommand()`, `createAboutCommand()`, `createHelpCommand()`,
+  the owner commands, and the `moduleCommands` registry (`/lumi`, `/config`,
+  `/permit`) in `src/admin/commands/index.ts`.
 - Module commands: the `commands` array returned by `defineModule` in each module.
 
 Slash and prefix commands share the same definitions. The default prefix is `,`
@@ -99,14 +99,25 @@ order is: built-in `ping:` handlers, the `lumi:` hub (modules, settings,
 permissions, and add-ons views), then the `permit_` panel. Each handler ignores
 custom IDs it does not own.
 
-## Module services
+## Service bags
 
-`services` is assembled in `src/index.ts` and passed to every command and
-listener. Module-facing code uses `client`, `permits`, `moduleLoader`,
-`moduleManager`, `modules.isEnabled`, `scheduler`, `addons`, `config`,
-`moduleConfig`, `configService`, `rpc`, `ui`, `discord`, `observability`
-(`{ healthMonitor, logger }`), and `helpers` (the `@lumi/db` helper tree).
-Database and cache access goes through `services.helpers`; modules do not
-receive `prisma`, `redis`, or the raw cache client. Static core commands that
-need process handles are factories closed over them, e.g.
-`createAboutCommand({ client, prisma, redis })`.
+`CommandDefinition<S = ModuleServices>` is generic over the bag its `execute` and
+`autocomplete` receive. Module commands use `ModuleServices`; built-in commands
+use `BuiltinCommandDefinition = CommandDefinition<BotServices>` from
+`src/core/modules.ts`. `CommandRegistry` stores a discriminated union on
+`module`, and dispatch/prefix choose the bag after narrowing on
+`command.module === null`.
+
+- Module commands receive `client`, `permits`, `config` (a `ModuleConfigAccess`),
+  `moduleConfig`, `ui`, `scheduler`, `observability`, `modules`, `helpers`,
+  `discord`, and an optional `moduleName`. They never receive `prisma`, `redis`,
+  or the raw cache client; persistence goes through `services.helpers`.
+- Built-in commands receive the wide `BotServices` assembled in `src/index.ts`
+  (`client`, `redis`, `prisma`, `helpers`, `configService`, `permits`,
+  `scheduler`, `moduleLoader`, `moduleManager`, `addons`, `moduleConfig`,
+  `modules`, `ui`, `discord`, `observability`).
+
+`servicesForModule()` in `src/core/modules.ts` is the only projection between the
+two. Static built-ins that need process handles are factories closed over them,
+e.g. `createAboutCommand({ client, prisma, redis })`. See
+[services.md](./services.md) for the full contract.

@@ -115,6 +115,8 @@ directory itself has no entry file and no code.
 - Modules reach persistence and cache only through `services.helpers`; direct
   imports of `@prisma/client`, `@lumi/db`, `@lumi/cache`, `@lumi/redis`, or
   `ioredis` are rejected for `modules/**`.
+- Module code receives `ModuleServices`, never the wide `BotServices`. See
+  [services.md](./services.md) for the two contracts and the projection rule.
 
 ## Supermodule Manifest
 

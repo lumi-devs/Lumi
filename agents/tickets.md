@@ -15,7 +15,7 @@ for every private thread it opens.
 | ------------------- | ------------------------------------------------------------- |
 | `manifest.json`     | Module metadata and `/lumi` config controls                   |
 | `index.ts`          | Module definition, command/listener registration, sweep timer |
-| `commands.ts`       | `/ticket` command group and all subcommands                   |
+| `commands/`         | `/ticket` command group, split by subcommand                  |
 | `interactions.ts`   | Panel buttons/selects, menu/text open flow, feedback buttons   |
 | `sessions.ts`       | Short-lived open-session state shared through cache           |
 | `policy.ts`         | Opening policy checks and category claiming/feedback rules     |
