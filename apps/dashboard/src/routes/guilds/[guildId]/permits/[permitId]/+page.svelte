@@ -3,7 +3,7 @@
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   import NodePicker from "#lib/components/NodePicker.svelte";
   import TimezoneSelect from "#lib/components/TimezoneSelect.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   function jsonValue(value: unknown): string {
     if (value === null || value === undefined) return "";
@@ -34,11 +34,11 @@
   </div>
 </div>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 {#if data.permit.builtin}
@@ -212,10 +212,9 @@
       {#if data.permit.builtin}
         <input type="hidden" name="targetType" value="USER" />
         <div class="field">
-          <label>Target type</label>
           <p class="muted" style="margin:0.35rem 0 0">
-            Users only — built-in permits cannot be assigned to roles or
-            channels.
+            <strong>Target type:</strong> users only — built-in permits cannot be
+            assigned to roles or channels.
           </p>
         </div>
       {:else}

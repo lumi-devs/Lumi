@@ -2,7 +2,7 @@
   import { formatDate } from "#lib/format.js";
   import NodePicker from "#lib/components/NodePicker.svelte";
   import TimezoneSelect from "#lib/components/TimezoneSelect.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   let selectedNodes = $state<string[]>([]);
 </script>
@@ -13,8 +13,8 @@
   permits cannot be deleted from the dashboard.
 </p>
 
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 <div class="panel">

@@ -3,7 +3,7 @@
   import ConfigFieldInput from "#lib/components/ConfigFieldInput.svelte";
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   import EscalationInput from "#lib/components/EscalationInput.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   const configuredGenerators = $derived(
     new Set(data.tempvc?.generators.map((generator) => generator.channelId)),
@@ -30,14 +30,14 @@
   </div>
 </div>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.warning}
-  <div class="notice warn" role="status">{data.form.warning}</div>
+{#if form?.warning}
+  <div class="notice warn" role="status">{form.warning}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 {#if data.tempvc}

@@ -73,16 +73,19 @@
     open = false;
     searchQuery = "";
   }
+
+  function focusOnMount(node: HTMLInputElement): void {
+    node.focus();
+  }
 </script>
 
 <input type="hidden" {name} {value} />
-<div
-  class="timezone-select"
-  {id}
+<svelte:window
   onkeydown={(event) => {
-    if (event.key === "Escape") open = false;
+    if (open && event.key === "Escape") open = false;
   }}
->
+/>
+<div class="timezone-select" {id}>
   <button
     type="button"
     class="timezone-trigger"
@@ -102,7 +105,7 @@
         bind:value={searchQuery}
         autocomplete="off"
         aria-label="Search timezones"
-        autofocus
+        use:focusOnMount
       />
       <div class="timezone-options" role="listbox" aria-label="Timezones">
         {#if defaultMatches}

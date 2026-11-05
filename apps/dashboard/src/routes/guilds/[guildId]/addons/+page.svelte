@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatDate } from "#lib/format.js";
-  let { data } = $props();
+  let { data, form } = $props();
 </script>
 
 <h2>Add-on manager</h2>
@@ -10,11 +10,11 @@
   File checkout and module loading stay with the bot's add-on manager.
 </div>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 <div class="panel">

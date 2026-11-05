@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatDate } from "#lib/format.js";
-  let { data } = $props();
+  let { data, form } = $props();
 </script>
 
 <svelte:head>
@@ -9,10 +9,10 @@
 
 <div class="verify-wrap">
   <div class="panel">
-    {#if data.form?.success}
+    {#if form?.success}
       <p class="badge on">Verified</p>
       <h1>You're in</h1>
-      <div class="notice ok" role="status">{data.form.success}</div>
+      <div class="notice ok" role="status">{form.success}</div>
       <p class="muted">You can close this tab and return to Discord.</p>
     {:else if data.state === "invalid"}
       <p class="badge warn">Invalid link</p>
@@ -34,6 +34,13 @@
       <p>
         This link has expired. Ask a server admin to create a new verification
         link.
+      </p>
+    {:else if data.state === "rate_limited"}
+      <p class="badge warn">Slow down</p>
+      <h1>Too many requests</h1>
+      <p>
+        This verification page has been opened too many times from your network.
+        Wait a few minutes and reload the page.
       </p>
     {:else if data.state === "misconfigured"}
       <p class="badge warn">Not configured</p>
@@ -70,8 +77,8 @@
         </p>
       {/if}
 
-      {#if data.form?.error}
-        <div class="notice error" role="alert">{data.form.error}</div>
+      {#if form?.error}
+        <div class="notice error" role="alert">{form.error}</div>
       {/if}
 
       <form method="POST">

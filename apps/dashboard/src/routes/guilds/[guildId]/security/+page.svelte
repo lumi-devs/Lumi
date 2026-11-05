@@ -1,7 +1,7 @@
 <script lang="ts">
   import { formatDate } from "#lib/format.js";
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   function statsSummary(stats: any): string {
     if (!stats) return "—";
@@ -27,16 +27,16 @@
   Changes are saved to <code>Guild.settings</code>; panic state lives in Redis.
 </p>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
-{#if data.form?.verificationLink}
+{#if form?.verificationLink}
   <div class="notice warn">
     <p><strong>One-time verification link</strong></p>
-    <p><a href={data.form.verificationLink}>{data.form.verificationLink}</a></p>
+    <p><a href={form.verificationLink}>{form.verificationLink}</a></p>
     <p class="hint">Only the SHA-256 hash is stored. Copy this link now.</p>
   </div>
 {/if}
@@ -505,8 +505,8 @@
     </div>
   {/if}
 
-  {#if data.form?.backupPreview}
-    {@const preview = data.form.backupPreview}
+  {#if form?.backupPreview}
+    {@const preview = form.backupPreview}
     <div class="panel" style="margin-top:1.5rem">
       <h3>Restore preview</h3>
       <p class="muted">

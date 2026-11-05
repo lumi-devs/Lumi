@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import type { ConfigField } from "#lib/server/modules.js";
 
   interface Entry {
@@ -52,8 +53,9 @@
     return entries.sort((a, b) => a.count - b.count);
   }
 
-  let entries = $state<Entry[]>(initialEntries(value));
-  let nextId = $state(entries.length);
+  const initial = untrack(() => initialEntries(value));
+  let entries = $state<Entry[]>(initial);
+  let nextId = $state(initial.length);
 
   const serialized = $derived.by(() => {
     const record: Record<string, { action: string; duration: number | null }> =

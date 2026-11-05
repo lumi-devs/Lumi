@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { data } = $props();
+  let { data, form } = $props();
 </script>
 
 <h2>Server settings</h2>
@@ -8,11 +8,11 @@
   edited on each module page.
 </p>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 <div class="panel">

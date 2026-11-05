@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   let expandedGroups = $state<string[]>([]);
   let enabledOverrides = $state<Record<string, boolean>>({});
@@ -75,14 +75,14 @@
   modules keep their configuration; their commands and listeners do not run.
 </p>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.warning}
-  <div class="notice warn" role="status">{data.form.warning}</div>
+{#if form?.warning}
+  <div class="notice warn" role="status">{form.warning}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 {#if data.groups.length === 0}

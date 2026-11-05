@@ -2,7 +2,7 @@
   import { formatDate } from "#lib/format.js";
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   import NodePicker from "#lib/components/NodePicker.svelte";
-  let { data } = $props();
+  let { data, form } = $props();
 
   function lines(value: unknown): string {
     return Array.isArray(value) ? value.join("\n") : "";
@@ -406,11 +406,11 @@
   database. Discord message panels are still sent by the bot.
 </p>
 
-{#if data.form?.success}
-  <div class="notice ok" role="status">{data.form.success}</div>
+{#if form?.success}
+  <div class="notice ok" role="status">{form.success}</div>
 {/if}
-{#if data.form?.error}
-  <div class="notice error" role="alert">{data.form.error}</div>
+{#if form?.error}
+  <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
 <div class="panel">
