@@ -27,27 +27,33 @@ export interface CreateBulkRoleJobInput {
   readonly createdBy: string;
 }
 
+type BulkRoleJobRow = Omit<BulkRoleJob, "status"> & { readonly status: string };
+
+function toBulkRoleJob(row: BulkRoleJobRow): BulkRoleJob {
+  return { ...row, status: row.status as BulkRoleJobStatus };
+}
+
 export async function createBulkRoleJob(
   services: ModuleServices,
   input: CreateBulkRoleJobInput,
 ): Promise<BulkRoleJob> {
-  return (await services.helpers.roles.bulkRole.create({
+  const row = await services.helpers.roles.bulkRole.create({
     guildId: input.guildId,
     roleId: input.roleId,
     action: input.action,
     filter: input.filter,
     total: input.total,
     createdBy: input.createdBy,
-  })) as unknown as BulkRoleJob;
+  });
+  return toBulkRoleJob(row);
 }
 
 export async function listRunnableBulkRoleJobs(
   services: ModuleServices,
   limit = 10,
 ): Promise<BulkRoleJob[]> {
-  return (await services.helpers.roles.bulkRole.listRunnable(
-    limit,
-  )) as unknown as BulkRoleJob[];
+  const rows = await services.helpers.roles.bulkRole.listRunnable(limit);
+  return rows.map(toBulkRoleJob);
 }
 
 export async function getBulkRoleJob(
@@ -55,10 +61,8 @@ export async function getBulkRoleJob(
   guildId: string,
   jobId: string,
 ): Promise<BulkRoleJob | null> {
-  return (await services.helpers.roles.bulkRole.find(
-    guildId,
-    jobId,
-  )) as unknown as BulkRoleJob | null;
+  const row = await services.helpers.roles.bulkRole.find(guildId, jobId);
+  return row ? toBulkRoleJob(row) : null;
 }
 
 export async function listGuildBulkRoleJobs(
@@ -66,10 +70,8 @@ export async function listGuildBulkRoleJobs(
   guildId: string,
   limit = 5,
 ): Promise<BulkRoleJob[]> {
-  return (await services.helpers.roles.bulkRole.listGuild(
-    guildId,
-    limit,
-  )) as unknown as BulkRoleJob[];
+  const rows = await services.helpers.roles.bulkRole.listGuild(guildId, limit);
+  return rows.map(toBulkRoleJob);
 }
 
 export async function updateBulkRoleJob(

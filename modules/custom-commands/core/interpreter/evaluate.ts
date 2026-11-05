@@ -176,7 +176,7 @@ function resolvePath(
           continue;
         }
         if (typeof key === "string" && Object.hasOwn(value, key)) {
-          value = (value as unknown as Record<string, unknown>)[key];
+          value = Object.getOwnPropertyDescriptor(value, key)?.value;
           continue;
         }
         const index = typeof key === "number" ? key : Number(key);

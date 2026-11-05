@@ -30,7 +30,7 @@ import {
   buildUserPayload,
   buildVoicePayload,
   type ViewData,
-} from "./views.js";
+} from "./views/index.js";
 
 export const StatsSubcommands = [
   "server",

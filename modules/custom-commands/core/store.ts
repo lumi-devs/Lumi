@@ -10,6 +10,24 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
+type CustomCommandsHelper = ModuleServices["helpers"]["customCommands"];
+export type CommandCreateInput =
+  Parameters<CustomCommandsHelper["createCommand"]>[0];
+export type CommandUpdateInput =
+  Parameters<CustomCommandsHelper["updateCommand"]>[1];
+type CommandRowRecord = Omit<CustomCommandRow, "permissionNodes"> & {
+  permissionNodes: unknown;
+};
+
+function permissionNodesOf(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((node): node is string => typeof node === "string");
+}
+
+function toCommandRow(record: CommandRowRecord): CustomCommandRow {
+  return { ...record, permissionNodes: permissionNodesOf(record.permissionNodes) };
+}
+
 export function invalidateGuild(guildId: string): void {
   cache.delete(guildId);
 }
@@ -22,10 +40,8 @@ export async function listCommands(
   services: ModuleServices,
   guildId: string,
 ): Promise<CustomCommandRow[]> {
-  const rows = (await services.helpers.customCommands.listCommands(
-    guildId,
-  )) as CustomCommandRow[];
-  return rows;
+  const rows = await services.helpers.customCommands.listCommands(guildId);
+  return rows.map(toCommandRow);
 }
 
 export async function listEnabledCommands(
@@ -36,9 +52,9 @@ export async function listEnabledCommands(
   const cached = cache.get(guildId);
   if (cached && cached.expiresAt > now) return cached.commands;
 
-  const rows = (await services.helpers.customCommands.listEnabledCommands(
-    guildId,
-  )) as CustomCommandRow[];
+  const rows = (
+    await services.helpers.customCommands.listEnabledCommands(guildId)
+  ).map(toCommandRow);
   cache.set(guildId, { expiresAt: now + CacheTtlMs, commands: rows });
   return rows;
 }
@@ -48,10 +64,28 @@ export async function getCommandByName(
   guildId: string,
   name: string,
 ): Promise<CustomCommandRow | null> {
-  return (await services.helpers.customCommands.findCommandByName(
+  const row = await services.helpers.customCommands.findCommandByName(
     guildId,
     name,
-  )) as CustomCommandRow | null;
+  );
+  return row ? toCommandRow(row) : null;
+}
+
+export async function createCommand(
+  services: ModuleServices,
+  data: CommandCreateInput,
+): Promise<CustomCommandRow> {
+  const row = await services.helpers.customCommands.createCommand(data);
+  return toCommandRow(row);
+}
+
+export async function updateCommand(
+  services: ModuleServices,
+  id: string,
+  data: CommandUpdateInput,
+): Promise<CustomCommandRow> {
+  const row = await services.helpers.customCommands.updateCommand(id, data);
+  return toCommandRow(row);
 }
 
 export async function countCommands(
@@ -65,9 +99,7 @@ export async function listGroups(
   services: ModuleServices,
   guildId: string,
 ): Promise<CustomCommandGroupRow[]> {
-  return (await services.helpers.customCommands.listGroups(
-    guildId,
-  )) as CustomCommandGroupRow[];
+  return services.helpers.customCommands.listGroups(guildId);
 }
 
 export async function getGroupByName(
@@ -75,10 +107,7 @@ export async function getGroupByName(
   guildId: string,
   name: string,
 ): Promise<CustomCommandGroupRow | null> {
-  return (await services.helpers.customCommands.findGroupByName(
-    guildId,
-    name,
-  )) as CustomCommandGroupRow | null;
+  return services.helpers.customCommands.findGroupByName(guildId, name);
 }
 
 export async function countGroups(

@@ -6,7 +6,7 @@ import {
   type TaskDefinition,
 } from "@lumi/module-kit";
 import type { Interaction } from "discord.js";
-import { ticketCommand } from "./commands.js";
+import { ticketCommand } from "./commands/index.js";
 import { TicketsConfigSchema } from "./config.js";
 import { TicketsModuleName } from "./constants.js";
 import { handleTicketInteraction } from "./interactions.js";

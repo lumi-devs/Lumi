@@ -28,11 +28,11 @@ export interface CardReply {
 export type CardMessageOptions = MessageReplyOptions & MessageEditOptions;
 
 export function cardMessage(card: CardReply): CardMessageOptions {
-  return card as unknown as CardMessageOptions;
+  return card;
 }
 
 export function cardCreateOptions(card: CardReply): MessageCreateOptions {
-  return card as unknown as MessageCreateOptions;
+  return card;
 }
 
 export interface CardOptions {

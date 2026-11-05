@@ -34,7 +34,7 @@ import {
   previewBackupRestore,
   pruneBackups,
   restoreBackup,
-} from "../backup-store.js";
+} from "../backup-store/index.js";
 import { readModuleConfig, securityCard, sendSecurityLog } from "../shared.js";
 
 const ModuleName = "security-backups";

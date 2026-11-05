@@ -1,6 +1,6 @@
 import { defineModule } from "@lumi/module-kit";
 import { z } from "zod";
-import { rolemenuCommand } from "./commands.js";
+import { rolemenuCommand } from "./commands/index.js";
 import {
   roleMenuInteractionListener,
   roleMenuReactionAddListener,

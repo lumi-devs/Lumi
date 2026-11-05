@@ -15,9 +15,7 @@ import {
   type ChatInputCommandInteraction,
   type Guild,
   type GuildMember,
-  type InteractionReplyOptions,
   type Message,
-  type MessageCreateOptions,
   type SendableChannels,
   type User,
 } from "discord.js";
@@ -320,15 +318,13 @@ async function deliverQuote(
   const payload = {
     ...cardWithButton,
     files: [attachment],
-  } as unknown as InteractionReplyOptions;
+  };
 
   const target = await resolveTargetChannel(interaction, config);
   let quoteMessage: Message;
   if (target && target.id !== interaction.channelId) {
     try {
-      quoteMessage = await target.send(
-        payload as unknown as MessageCreateOptions,
-      );
+      quoteMessage = await target.send(payload);
       await acknowledge(interaction, target);
     } catch (error) {
       services.observability?.logger?.warn?.(

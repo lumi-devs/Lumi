@@ -3,7 +3,7 @@ import {
   type ModuleDefinition,
   type ModuleServices,
 } from "@lumi/module-kit";
-import { customCommandCommand } from "./command.js";
+import { customCommandCommand } from "./command/index.js";
 import { CustomCommandsConfigSchema } from "./config.js";
 import {
   interactionListener,

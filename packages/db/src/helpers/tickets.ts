@@ -6,6 +6,11 @@ type TicketCategoryCreateData = Omit<
   "questions"
 > & { questions: unknown };
 
+type TicketCategoryUpdateData = Omit<
+  Prisma.TicketCategoryUncheckedUpdateInput,
+  "questions"
+> & { questions?: unknown };
+
 type TicketMessageCreateData = Omit<
   Prisma.TicketMessageUncheckedCreateInput,
   "attachments"
@@ -105,11 +110,17 @@ export function createTicketsHelpers(ctx: DbContext) {
 
     updateCategory: async (
       categoryId: string,
-      data: Record<string, unknown>,
+      data: TicketCategoryUpdateData,
     ) => {
+      const { questions, ...rest } = data;
       const category = await prisma.ticketCategory.update({
         where: { id: categoryId },
-        data: data as unknown as Prisma.TicketCategoryUncheckedUpdateInput,
+        data: {
+          ...rest,
+          ...(questions === undefined
+            ? {}
+            : { questions: questions as Prisma.InputJsonValue }),
+        },
       });
       await invalidateCategories(category.guildId);
       return category;

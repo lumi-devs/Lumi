@@ -43,6 +43,17 @@ import type {
 export type { PermitAuditLogEntry } from "./audit.js";
 export type { PermitExportData } from "./transfer.js";
 
+export interface PermitUpdate {
+  readonly name?: string;
+  readonly nodes?: readonly string[];
+  readonly polarity?: Polarity;
+  readonly schedule?: string | null;
+  readonly timezone?: string | null;
+  readonly expiresAt?: Date | null;
+  readonly conditions?: Prisma.InputJsonValue | null;
+  readonly whitelistScopes?: readonly string[];
+}
+
 const keys = createKeys();
 
 function isQuarantinedValue(value: string | null): boolean {
@@ -142,12 +153,34 @@ export class PermitRepository {
 
   async updatePermit(
     permitId: number,
-    data: Prisma.PermitUpdateInput,
+    data: PermitUpdate,
   ): Promise<PermitWithAssignments | null> {
+    const update: Prisma.PermitUpdateInput = {};
+    if (data.name !== undefined) update.name = data.name;
+    if (data.nodes !== undefined) {
+      update.nodes = Array.from(
+        new Set(data.nodes.map((node) => node.trim()).filter(Boolean)),
+      );
+    }
+    if (data.polarity !== undefined) update.polarity = data.polarity;
+    if (data.schedule !== undefined) {
+      update.schedule = data.schedule === null ? Prisma.DbNull : data.schedule;
+    }
+    if (data.timezone !== undefined) update.timezone = data.timezone;
+    if (data.expiresAt !== undefined) update.expiresAt = data.expiresAt;
+    if (data.conditions !== undefined) {
+      update.conditions =
+        data.conditions === null ? Prisma.DbNull : data.conditions;
+    }
+    if (data.whitelistScopes !== undefined) {
+      update.whitelistScopes = Array.from(
+        new Set(data.whitelistScopes.map((scope) => scope.trim()).filter(Boolean)),
+      );
+    }
     try {
       return await this.prisma.permit.update({
         where: { id: permitId },
-        data,
+        data: update,
         include: { assignments: true },
       });
     } catch (error) {

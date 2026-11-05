@@ -69,13 +69,13 @@ function channelValues(
   channel: GuildBasedChannel | null,
 ): Record<string, unknown> {
   if (!channel) return {};
-  const value = channel as unknown as {
+  const value: {
     id: string;
     name?: string;
     type?: number;
     topic?: string | null;
     parentId?: string | null;
-  };
+  } = channel;
   return {
     id: value.id,
     name: value.name ?? "",

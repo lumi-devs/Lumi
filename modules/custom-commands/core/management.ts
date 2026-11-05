@@ -18,13 +18,16 @@ import {
 import { validateTemplate } from "./interpreter/index.js";
 import { parseResponseInput, parseResponses } from "./responses.js";
 import {
+  type CommandUpdateInput,
   countCommands,
   countGroups,
+  createCommand,
   getCommandByName,
   getGroupByName,
   invalidateGuild,
   listCommands,
   listGroups,
+  updateCommand,
 } from "./store.js";
 import { parseIntervalInput } from "./transfer.js";
 import {
@@ -132,7 +135,7 @@ export async function createCustomCommand(
   const existing = await getCommandByName(services, guildId, name);
   if (existing) throw new Error(`Command "${name}" already exists.`);
 
-  const row = (await services.helpers.customCommands.createCommand({
+  const row = await createCommand(services, {
     guildId,
     name,
     description: options.description?.trim() || null,
@@ -144,7 +147,7 @@ export async function createCustomCommand(
     permissionNodes: parsePermissionNodes(options.permissions),
     groupId,
     createdBy: userId,
-  })) as unknown as CustomCommandRow;
+  });
 
   invalidateGuild(guildId);
   return makeSuccessCard(
@@ -175,9 +178,7 @@ export async function editCustomCommand(
   const command = await getCommandByName(services, guildId, name);
   if (!command) throw new Error(`Command "${name}" was not found.`);
 
-  const data: Parameters<
-    ModuleServices["helpers"]["customCommands"]["updateCommand"]
-  >[1] = {};
+  const data: CommandUpdateInput = {};
 
   if (options.triggerType !== undefined && options.triggerType !== null) {
     const type = triggerTypeOf(options.triggerType);
@@ -238,10 +239,7 @@ export async function editCustomCommand(
     throw new Error("Provide at least one field to edit.");
   }
 
-  const updated = (await services.helpers.customCommands.updateCommand(
-    command.id,
-    data,
-  )) as unknown as CustomCommandRow;
+  const updated = await updateCommand(services, command.id, data);
 
   invalidateGuild(guildId);
   return makeSuccessCard("Custom Command Updated", [
