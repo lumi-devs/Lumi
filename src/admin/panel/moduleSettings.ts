@@ -28,7 +28,7 @@ import {
 } from "./common.js";
 import { fieldPages } from "./configFields.js";
 import { escalationSummary, renderEscalationEditor } from "./escalation.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 const FieldsPerPage = 4;
 const MaxOptions = 25;
@@ -95,12 +95,12 @@ export function isMulti(field: ConfigField): boolean {
   return field.type === "multi-channel" || field.type === "multi-role";
 }
 
-function configKeyFor(services: HubServices, moduleName: string): string {
+function configKeyFor(services: BotServices, moduleName: string): string {
   return moduleByName(services, moduleName)?.manifest.configKey ?? moduleName;
 }
 
 export async function readModuleConfig(
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
 ): Promise<Record<string, unknown>> {
@@ -114,7 +114,7 @@ export async function readModuleConfig(
 }
 
 export async function writeModuleConfig(
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
   config: Record<string, unknown>,
@@ -126,14 +126,14 @@ export async function writeModuleConfig(
   );
 }
 
-function moduleByName(services: HubServices, name: string) {
+function moduleByName(services: BotServices, name: string) {
   return services.moduleLoader
     .listAll()
     .find((module) => module.manifest.name === name);
 }
 
 export function enabledConfigField(
-  services: HubServices,
+  services: BotServices,
   moduleName: string,
 ): ConfigField | undefined {
   return moduleByName(services, moduleName)?.manifest.configFields?.find(
@@ -142,7 +142,7 @@ export function enabledConfigField(
 }
 
 export async function isModuleFeatureEnabled(
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
 ): Promise<boolean> {
@@ -154,7 +154,7 @@ export async function isModuleFeatureEnabled(
 }
 
 export function findField(
-  services: HubServices,
+  services: BotServices,
   moduleName: string,
   key: string,
 ): ConfigField | undefined {
@@ -173,7 +173,7 @@ function fieldLine(field: ConfigField, value: FieldValue): string[] {
 
 export async function renderModuleDetail(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   moduleName: string,
   pageIndex = 0,
   notice?: string,
@@ -349,7 +349,7 @@ function channelTypesFor(field: ConfigField): ChannelType[] {
 
 export async function renderFieldEditor(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   moduleName: string,
   fieldKey: string,
   pageIndex: number,

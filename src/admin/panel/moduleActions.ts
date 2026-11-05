@@ -35,8 +35,8 @@ import {
   writeModuleConfig,
 } from "./moduleSettings.js";
 import { parseSubmoduleTogglePages } from "./modules.js";
-import { handleRolesModuleAction } from "./roles.js";
-import type { HubServices } from "./services.js";
+import { handleRolesModuleAction } from "./roles/index.js";
+import type { BotServices } from "../../core/contracts.js";
 import { handleTempVcModuleAction } from "./tempvc.js";
 
 function pageNumber(raw: string | undefined): number {
@@ -44,7 +44,7 @@ function pageNumber(raw: string | undefined): number {
 }
 
 async function toggleModule(
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
 ): Promise<boolean> {
@@ -68,7 +68,7 @@ async function toggleModule(
 
 export async function handleModuleAction(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   action: string,
   target: string,
@@ -345,7 +345,7 @@ export async function handleModuleAction(
 
 export async function handleModuleModal(
   interaction: ModalSubmitInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
   fieldKey: string,
@@ -427,7 +427,7 @@ async function renderEscalationAfterChange(
 
 export async function handleEscalationSave(
   interaction: ModalSubmitInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
   fieldKey: string,
@@ -488,7 +488,7 @@ export async function handleEscalationSave(
 
 export async function handleEscalationRemove(
   interaction: ModalSubmitInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   moduleName: string,
   fieldKey: string,

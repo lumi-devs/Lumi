@@ -19,7 +19,7 @@ import {
   panelOptions,
 } from "./common.js";
 import { moduleStates, renderModules } from "./moduleList.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 const DefaultPrefix = ",";
 
@@ -31,7 +31,7 @@ function currentPrefix(settings: Record<string, unknown>): string {
 
 async function renderHome(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const client = interaction.client;
@@ -79,7 +79,7 @@ async function renderHome(
 
 export async function renderSettings(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const settings = await services.configService.getAll(guildId);
@@ -153,7 +153,7 @@ export async function renderSettings(
 
 async function renderPermits(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
   const permits = await services.permits.listPermits(guildId);
@@ -203,7 +203,7 @@ async function renderPermits(
 export function renderHubPanel(
   view: HubView,
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   notice?: string,
 ): Promise<CardReply> {
   switch (view) {

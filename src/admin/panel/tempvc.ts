@@ -30,7 +30,7 @@ import {
   showPanel,
 } from "./common.js";
 import { readModuleConfig, writeModuleConfig } from "./moduleSettings.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 export const TempVcModuleName = "utility-tempvc";
 
@@ -90,7 +90,7 @@ export function parseTempVcGenerators(value: unknown): TempVcGenerator[] {
 }
 
 function moduleField(
-  services: HubServices,
+  services: BotServices,
   key: string,
 ): { default?: unknown } | undefined {
   return services.moduleLoader
@@ -99,7 +99,7 @@ function moduleField(
 }
 
 function stringDefault(
-  services: HubServices,
+  services: BotServices,
   config: ModuleConfig,
   key: string,
   fallback: string,
@@ -113,7 +113,7 @@ function stringDefault(
 }
 
 function numberDefault(
-  services: HubServices,
+  services: BotServices,
   config: ModuleConfig,
   key: string,
   fallback: number,
@@ -138,7 +138,7 @@ function numberDefault(
     : fallback;
 }
 
-function serverTemplate(services: HubServices, config: ModuleConfig): string {
+function serverTemplate(services: BotServices, config: ModuleConfig): string {
   return stringDefault(
     services,
     config,
@@ -147,12 +147,12 @@ function serverTemplate(services: HubServices, config: ModuleConfig): string {
   );
 }
 
-function serverUserLimit(services: HubServices, config: ModuleConfig): number {
+function serverUserLimit(services: BotServices, config: ModuleConfig): number {
   return numberDefault(services, config, "defaultUserLimit", 0, 0, 99);
 }
 
 function generatorTemplate(
-  services: HubServices,
+  services: BotServices,
   config: ModuleConfig,
   generator: TempVcGenerator,
 ): string {
@@ -160,7 +160,7 @@ function generatorTemplate(
 }
 
 function generatorLimit(
-  services: HubServices,
+  services: BotServices,
   config: ModuleConfig,
   generator: TempVcGenerator,
 ): number {
@@ -203,14 +203,14 @@ async function channelNames(
   return names;
 }
 
-function moduleTitle(services: HubServices): string {
+function moduleTitle(services: BotServices): string {
   const manifest = services.moduleLoader.getModule(TempVcModuleName)?.manifest;
   return `${manifest?.emoji ?? "🔊"} ${manifest?.displayName ?? "Temporary Voice"}`;
 }
 
 export async function renderTempVcGenerators(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   pageIndex: number,
   notice?: string,
 ): Promise<CardReply> {
@@ -282,7 +282,7 @@ export async function renderTempVcGenerators(
 
 export async function renderTempVcGenerator(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   generatorId: string,
   pageIndex: number,
   notice?: string,
@@ -383,7 +383,7 @@ export async function renderTempVcRemove(
 
 export function tempVcGeneratorModal(
   kind: "rename" | "limit",
-  services: HubServices,
+  services: BotServices,
   config: ModuleConfig,
   generator: TempVcGenerator,
   pageIndex: number,
@@ -432,7 +432,7 @@ async function replyModalError(
 
 export async function handleTempVcGeneratorModal(
   interaction: ModalSubmitInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   action: string,
   generatorId: string,
@@ -494,7 +494,7 @@ export async function handleTempVcGeneratorModal(
 
 export async function handleTempVcModuleAction(
   interaction: PanelInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   action: string,
   target: string,

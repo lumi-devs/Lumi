@@ -20,13 +20,13 @@ import {
 } from "./moduleActions.js";
 import { prefixModal } from "./moduleSettings.js";
 import { PermitPanel } from "./PermitPanel.js";
-import { handleRolesModuleModal } from "./roles.js";
+import { handleRolesModuleModal } from "./roles/index.js";
 import { handleTempVcGeneratorModal } from "./tempvc.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 export async function handleHubInteraction(
   interaction: PanelInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<boolean> {
   if (!interaction.customId.startsWith("lumi:")) return false;
 
@@ -170,7 +170,7 @@ export async function handleHubInteraction(
 
 async function handleHubModal(
   interaction: ModalSubmitInteraction,
-  services: HubServices,
+  services: BotServices,
   guildId: string,
 ): Promise<void> {
   const parts = interaction.customId.split(":");

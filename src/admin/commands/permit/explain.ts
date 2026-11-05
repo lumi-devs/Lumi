@@ -2,14 +2,14 @@ import { ephemeralCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
 import { roleIdsFrom } from "../../access.js";
-import type { HubServices } from "../../panel/services.js";
+import type { BotServices } from "../../../core/contracts.js";
 import { allExplanationCard, explanationCard } from "../../permits/explain.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 import { openPermitsRow, replyPermitError } from "./shared.js";
 
 export async function explainPermit(
   interaction: ChatInputCommandInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<void> {
   const guild = interaction.guild;
   if (guild === null) {

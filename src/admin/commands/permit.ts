@@ -3,7 +3,7 @@ import {
   type ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import type { HubServices } from "../panel/services.js";
+import type { BotServices } from "../../core/contracts.js";
 import { autocompleteNode } from "./permit/autocomplete.js";
 import { createPermit } from "./permit/create.js";
 import { explainPermit } from "./permit/explain.js";
@@ -81,7 +81,7 @@ export const permitCommand = {
     ),
   async execute(
     interaction: ChatInputCommandInteraction,
-    services: HubServices,
+    services: BotServices,
   ): Promise<void> {
     const subcommand = interaction.options.getSubcommand();
     if (subcommand === "create") {
@@ -92,7 +92,7 @@ export const permitCommand = {
   },
   async autocomplete(
     interaction: AutocompleteInteraction,
-    services: HubServices,
+    services: BotServices,
   ): Promise<void> {
     await autocompleteNode(interaction, services);
   },

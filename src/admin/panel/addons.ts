@@ -15,11 +15,11 @@ import {
   replyEphemeralError,
   showPanel,
 } from "./common.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 async function show(
   interaction: PanelInteraction,
-  services: HubServices,
+  services: BotServices,
   view: AddonView,
   notice?: string,
 ): Promise<void> {
@@ -30,7 +30,7 @@ async function show(
 
 export async function handleAddonInteraction(
   interaction: PanelInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<boolean> {
   const id = interaction.customId;
   if (id !== "lumi:addon" && !id.startsWith("lumi:addon:")) return false;

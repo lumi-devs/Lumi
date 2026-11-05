@@ -26,12 +26,12 @@ import {
   supermoduleItems,
 } from "./modules.js";
 import { paginate } from "./pages.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 const SubmodulesPerPage = 3;
 
 export async function moduleStates(
-  services: HubServices,
+  services: BotServices,
   guildId: string,
   modules: readonly { name: string }[],
 ): Promise<Map<string, boolean>> {
@@ -49,7 +49,7 @@ export async function moduleStates(
 
 export async function renderModules(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   page = 0,
   notice?: string,
 ): Promise<CardReply> {
@@ -121,7 +121,7 @@ export async function renderModules(
 
 export async function renderSubmodules(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   supermoduleName: string,
   originPage = 0,
   page = 0,

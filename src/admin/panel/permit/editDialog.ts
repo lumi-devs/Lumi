@@ -1,4 +1,3 @@
-import type { Prisma } from "@lumi/db";
 import { isBotOwner, isWhitelistScope } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
@@ -199,7 +198,7 @@ export async function handleEditSubmit(
       polarity: rawPolarity,
       whitelistScopes,
 
-      schedule: schedule as unknown as Prisma.PermitUpdateInput["schedule"],
+      schedule,
     });
 
     await interaction.update(await host.detailCard(permitId));

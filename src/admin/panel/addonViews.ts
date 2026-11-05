@@ -24,7 +24,7 @@ import {
 } from "./common.js";
 import { ModulesPerPage } from "./modules.js";
 import { paginate } from "./pages.js";
-import type { HubServices } from "./services.js";
+import type { BotServices } from "../../core/contracts.js";
 
 export type AddonView =
   | { kind: "home" }
@@ -109,7 +109,7 @@ function notOwnerCard(interaction: HubInteraction): CardReply {
 
 async function renderHome(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   notice?: string,
 ): Promise<CardReply> {
   const [repos, installed, auto] = await Promise.all([
@@ -173,7 +173,7 @@ async function renderHome(
 
 async function renderRepos(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   notice?: string,
 ): Promise<CardReply> {
   const repos = await services.addons.listRepos();
@@ -233,7 +233,7 @@ async function renderRepos(
 
 async function renderRepo(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   name: string,
   notice?: string,
 ): Promise<CardReply> {
@@ -299,7 +299,7 @@ async function renderRepo(
 
 async function renderBrowse(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   name: string,
   page: number,
   notice?: string,
@@ -372,7 +372,7 @@ async function renderBrowse(
 
 async function renderInstalled(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   notice?: string,
 ): Promise<CardReply> {
   const installed = await services.addons.listInstalled();
@@ -438,7 +438,7 @@ async function renderInstalled(
 
 async function renderManage(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   name: string,
   notice?: string,
 ): Promise<CardReply> {
@@ -505,7 +505,7 @@ async function renderManage(
 
 async function renderAutoUpdate(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   notice?: string,
 ): Promise<CardReply> {
   const auto = await services.addons.getAutoUpdate();
@@ -550,7 +550,7 @@ async function renderAutoUpdate(
 
 export async function renderAddonPanel(
   interaction: HubInteraction,
-  services: HubServices,
+  services: BotServices,
   view: AddonView,
   notice?: string,
 ): Promise<CardReply> {

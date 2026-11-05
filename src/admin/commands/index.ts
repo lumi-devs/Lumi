@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import { renderHubPanel } from "../panel/hubViews.js";
 import { renderModuleDetail } from "../panel/moduleSettings.js";
-import type { HubServices } from "../panel/services.js";
+import type { BotServices } from "../../core/contracts.js";
 import { permitCommand } from "./permit.js";
 
 export const moduleCommands = [
@@ -17,7 +17,7 @@ export const moduleCommands = [
       .setDescription("Open the Lumi control panel"),
     async execute(
       interaction: ChatInputCommandInteraction,
-      services: HubServices,
+      services: BotServices,
     ): Promise<void> {
       if (!interaction.guildId) {
         await interaction.reply(
@@ -46,7 +46,7 @@ export const moduleCommands = [
       ),
     async autocomplete(
       interaction: AutocompleteInteraction,
-      services: HubServices,
+      services: BotServices,
     ): Promise<void> {
       const focused = interaction.options.getFocused(true);
       const query = String(focused.value ?? "").toLowerCase();
@@ -69,7 +69,7 @@ export const moduleCommands = [
     },
     async execute(
       interaction: ChatInputCommandInteraction,
-      services: HubServices,
+      services: BotServices,
     ): Promise<void> {
       if (!interaction.guildId) {
         await interaction.reply(

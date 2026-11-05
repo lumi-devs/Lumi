@@ -2,7 +2,7 @@ import { isBotOwner, isWhitelistScope, type Polarity } from "@lumi/permits";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { errorMessage } from "../../../core/errors.js";
-import type { HubServices } from "../../panel/services.js";
+import type { BotServices } from "../../../core/contracts.js";
 import {
   formatPermitNodeLines,
   isValidNode,
@@ -14,7 +14,7 @@ import { openPermitsRow, replyPermitError } from "./shared.js";
 
 export async function createPermit(
   interaction: ChatInputCommandInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<void> {
   const guildId = interaction.guildId;
   if (guildId === null) {

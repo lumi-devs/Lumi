@@ -5,12 +5,12 @@ import {
   permitEnforcementEnabled,
   roleIdsFrom,
 } from "../../access.js";
-import type { HubServices } from "../../panel/services.js";
+import type { BotServices } from "../../../core/contracts.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 
 export async function autocompleteNode(
   interaction: AutocompleteInteraction,
-  services: HubServices,
+  services: BotServices,
 ): Promise<void> {
   const focused = interaction.options.getFocused(true);
   if (focused.name !== "nodes" && focused.name !== "node") {
