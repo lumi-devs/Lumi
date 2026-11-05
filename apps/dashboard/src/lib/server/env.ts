@@ -21,6 +21,7 @@ export interface ServerConfig {
   redirectUri: string;
   sessionSecret: string;
   sessionTtlSeconds: number;
+  sessionMaxAgeSeconds: number;
   databaseUrl: string;
   botToken: string;
   webBaseUrl: string;
@@ -51,6 +52,7 @@ export function serverConfig(): ServerConfig {
   const port = Number(process.env.REDIS_PORT ?? 6379);
   const db = Number(process.env.REDIS_DB ?? 0);
   const ttl = Number(process.env.SESSION_TTL_SECONDS ?? 604_800);
+  const maxAge = Number(process.env.SESSION_MAX_AGE_SECONDS ?? 2_592_000);
 
   cached = {
     discordClientId: required("DISCORD_CLIENT_ID"),
@@ -60,6 +62,8 @@ export function serverConfig(): ServerConfig {
       `${webBaseUrl.replace(/\/$/, "")}/auth/callback`,
     sessionSecret,
     sessionTtlSeconds: Number.isFinite(ttl) && ttl > 60 ? ttl : 604_800,
+    sessionMaxAgeSeconds:
+      Number.isFinite(maxAge) && maxAge > 60 ? maxAge : 2_592_000,
     databaseUrl: required("DATABASE_URL"),
     botToken: required("BOT_TOKEN"),
     webBaseUrl: webBaseUrl.replace(/\/$/, ""),

@@ -208,55 +208,40 @@ export function fetchOAuthUser(accessToken: string): Promise<OAuthUser> {
   return oauthGet("/users/@me", accessToken, OAuthUserSchema);
 }
 
+async function readCachedGuilds(key: string): Promise<GuildSummary[] | null> {
+  const cached = await getRedis().get(key);
+  if (!cached) return null;
+  try {
+    const parsed = z.array(GuildSummarySchema).safeParse(JSON.parse(cached));
+    if (parsed.success) return parsed.data;
+  } catch {
+    // Treat corrupt cache values as misses.
+  }
+  await getRedis().del(key);
+  return null;
+}
+
 export async function fetchUserGuilds(
   accessToken: string,
-  opts?: { forceRefresh?: boolean },
+  userId: string,
 ): Promise<GuildSummary[]> {
-  const userId = await getUserIdFromToken(accessToken);
-  if (!userId) {
-    return fetchUserGuildsUncached(accessToken);
-  }
-
   const cacheKey = dashboardKey("user", userId, "guilds");
   const lockKey = dashboardKey("lock", "user", userId, "guilds");
   const redis = getRedis();
 
-  if (!opts?.forceRefresh) {
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      console.log("[dashboard] fetchUserGuilds: cache hit for user", userId);
-      return JSON.parse(cached);
-    }
-  }
+  const cached = await readCachedGuilds(cacheKey);
+  if (cached) return cached;
 
-  // Acquire lock to prevent thundering herd
   const lockAcquired = await redis.set(lockKey, "1", "EX", 10, "NX");
   if (!lockAcquired) {
-    // Wait for lock holder to populate cache
-    console.log("[dashboard] fetchUserGuilds: waiting for lock, user", userId);
-    for (let i = 0; i < 50; i++) {
-      await new Promise((r) => setTimeout(r, 50));
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        console.log(
-          "[dashboard] fetchUserGuilds: cache populated while waiting, user",
-          userId,
-        );
-        return JSON.parse(cached);
-      }
+    for (let attempt = 0; attempt < 50; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const fresh = await readCachedGuilds(cacheKey);
+      if (fresh) return fresh;
     }
-    // Fallback: try to fetch anyway
-    console.log(
-      "[dashboard] fetchUserGuilds: lock wait timeout, fetching anyway, user",
-      userId,
-    );
   }
 
   try {
-    console.log(
-      "[dashboard] fetchUserGuilds: cache miss, fetching from Discord (lock held)...",
-      userId,
-    );
     const guilds = await fetchUserGuildsUncached(accessToken);
     await redis.set(
       cacheKey,
@@ -266,16 +251,7 @@ export async function fetchUserGuilds(
     );
     return guilds;
   } finally {
-    await redis.del(lockKey);
-  }
-}
-
-async function getUserIdFromToken(accessToken: string): Promise<string | null> {
-  try {
-    const user = await fetchOAuthUser(accessToken);
-    return user.id;
-  } catch {
-    return null;
+    if (lockAcquired) await redis.del(lockKey);
   }
 }
 
@@ -304,11 +280,6 @@ async function fetchUserGuildsUncached(
   if (!parsed.success) {
     throw new DiscordError("Discord returned an invalid guild list.", 502);
   }
-  console.log(
-    "[dashboard] fetchUserGuildsUncached: success, got",
-    parsed.data.length,
-    "guilds",
-  );
   return parsed.data;
 }
 
@@ -422,13 +393,27 @@ export async function removeMemberRole(
   );
 }
 
+const DiscordAssetUrl =
+  /^https:\/\/(?:cdn\.discordapp\.com|media\.discordapp\.net)\//;
+
+function imageHashUrl(
+  kind: "avatars" | "icons",
+  id: string,
+  hash: string,
+  size: number,
+): string | null {
+  if (DiscordAssetUrl.test(hash)) return hash;
+  if (!/^[a-zA-Z0-9_]+$/.test(hash)) return null;
+  const extension = hash.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/${kind}/${id}/${hash}.${extension}?size=${size}`;
+}
+
 export function userAvatarUrl(
   userId: string,
   avatar: string | null | undefined,
 ): string | null {
   if (!avatar) return null;
-  const extension = avatar.startsWith("a_") ? "gif" : "png";
-  return `https://cdn.discordapp.com/avatars/${userId}/${avatar}.${extension}?size=64`;
+  return imageHashUrl("avatars", userId, avatar, 64);
 }
 
 export function guildIconUrl(
@@ -436,6 +421,5 @@ export function guildIconUrl(
   icon: string | null | undefined,
 ): string | null {
   if (!icon) return null;
-  const extension = icon.startsWith("a_") ? "gif" : "png";
-  return `https://cdn.discordapp.com/icons/${guildId}/${icon}.${extension}?size=96`;
+  return imageHashUrl("icons", guildId, icon, 96);
 }

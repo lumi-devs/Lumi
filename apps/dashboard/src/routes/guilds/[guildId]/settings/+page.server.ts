@@ -2,6 +2,7 @@ import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
 import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import { readGuildSettings, setGuildSettings } from "#lib/server/settings.js";
 import { checkbox, formString, parseInput } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
@@ -88,6 +89,11 @@ export const actions: Actions = {
       channels.security = parsed.data.securityLogChannel;
     if (parsed.data.auditLogChannel)
       channels.audit = parsed.data.auditLogChannel;
+
+    const targets = await verifyGuildTargets(guildId, {
+      channels: Object.values(channels),
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
 
     await setGuildSettings(guildId, {
       prefix: parsed.data.prefix,

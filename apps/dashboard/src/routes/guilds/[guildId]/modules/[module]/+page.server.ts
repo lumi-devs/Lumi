@@ -7,13 +7,18 @@ import {
   fetchGuildChannels,
   VoiceChannelTypes,
 } from "#lib/server/discord.js";
+import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import {
   configFor,
   displayValues,
   enabledConfigField,
   parseConfigForm,
 } from "#lib/server/moduleConfig.js";
-import { type CatalogModule, findModule } from "#lib/server/modules.js";
+import {
+  type CatalogModule,
+  type ConfigField,
+  findModule,
+} from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { setModuleStateViaRpc } from "#lib/server/rpc.js";
 import {
@@ -49,6 +54,26 @@ function editableFields(module: CatalogModule) {
   return module.name === TempVcModuleName
     ? module.configFields.filter((field) => field.key !== "generators")
     : module.configFields;
+}
+
+function targetIds(fields: ConfigField[], values: Record<string, unknown>) {
+  const channels: string[] = [];
+  const roles: string[] = [];
+  for (const field of fields) {
+    const value = values[field.key];
+    if (field.type === "channel" && typeof value === "string") {
+      channels.push(value);
+    } else if (field.type === "role" && typeof value === "string") {
+      roles.push(value);
+    } else if (field.type === "multi-channel" && Array.isArray(value)) {
+      channels.push(
+        ...value.filter((id): id is string => typeof id === "string"),
+      );
+    } else if (field.type === "multi-role" && Array.isArray(value)) {
+      roles.push(...value.filter((id): id is string => typeof id === "string"));
+    }
+  }
+  return { channels, roles };
 }
 
 function parseGenerators(value: unknown): TempVcGenerator[] {
@@ -139,6 +164,12 @@ export const actions: Actions = {
       const current = await readModuleConfig(guildId, module);
       parsed.values.generators = parseGenerators(current.generators);
     }
+
+    const targets = await verifyGuildTargets(
+      guildId,
+      targetIds(fields, parsed.values),
+    );
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
 
     await setGuildSetting(guildId, module.configKey, parsed.values);
     let warning: string | undefined;

@@ -6,9 +6,14 @@ import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
 import { storedBackupStats } from "#lib/server/backups.js";
 import { type DiscordRole, fetchGuildRoles } from "#lib/server/discord.js";
 import { publicWebBaseUrl } from "#lib/server/env.js";
+import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { getRedis } from "#lib/server/redis.js";
-import { fetchBackupPreview, restoreBackupViaRpc } from "#lib/server/rpc.js";
+import {
+  fetchBackupPreview,
+  restoreBackupViaRpc,
+  setModuleStateViaRpc,
+} from "#lib/server/rpc.js";
 import {
   ensureGuild,
   readGuildSettings,
@@ -236,6 +241,12 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
+    const targets = await verifyGuildTargets(guildId, {
+      channels: [parsed.data.logChannelId],
+      roles: [parsed.data.quarantineRoleId, ...parsed.data.trustedRoleIds],
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
+
     await setGuildSetting(guildId, "security-core", parsed.data);
     await recordAudit({
       guildId,
@@ -365,6 +376,11 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
+    const targets = await verifyGuildTargets(guildId, {
+      roles: [parsed.data.verifiedRoleId, parsed.data.pendingRoleId],
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
+
     const existing = await readGuildSettings(guildId);
     const current = parseOr(
       VerificationLoad,
@@ -393,6 +409,11 @@ export const actions: Actions = {
         enabled: parsed.data.enabled,
       },
     });
+    const sync = await setModuleStateViaRpc(
+      guildId,
+      "security-verification",
+      parsed.data.enabled,
+    );
     await recordAudit({
       guildId,
       userId,
@@ -400,7 +421,14 @@ export const actions: Actions = {
       targetType: "guild_settings",
       changes: { key: "security-verification" },
     });
-    return { success: "Verification settings saved." };
+    return {
+      success: "Verification settings saved.",
+      ...(sync.ok
+        ? {}
+        : {
+            warning: `${sync.error ?? "The bot did not apply the change."} It will apply on the next bot restart.`,
+          }),
+    };
   },
 
   startPanic: async (event) => {

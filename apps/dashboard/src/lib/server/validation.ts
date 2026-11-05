@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { error, type RequestEvent } from "@sveltejs/kit";
 import { type ZodType, z } from "zod";
 
-function safeEqual(left: string, right: string): boolean {
+export function safeEqual(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);

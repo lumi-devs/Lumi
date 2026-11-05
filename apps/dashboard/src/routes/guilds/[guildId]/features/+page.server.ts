@@ -3,6 +3,7 @@ import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
 import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
+import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { isPrismaCode } from "#lib/server/prismaErrors.js";
 import { fetchPermitNodes } from "#lib/server/rpc.js";
@@ -389,6 +390,11 @@ export const actions: Actions = {
     });
     if (!group) return fail(404, { error: "Role menu not found." });
 
+    const targets = await verifyGuildTargets(guildId, {
+      roles: [parsed.data.roleId],
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
+
     try {
       await getPrisma().roleMenuOption.create({
         data: {
@@ -486,6 +492,15 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
+    const targets = await verifyGuildTargets(guildId, {
+      roles: [
+        ...parsed.data.staffRoleIds,
+        ...parsed.data.pingRoleIds,
+        ...parsed.data.requiredRoleIds,
+      ],
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
+
     const existing = await categoryBelongsTo(guildId, parsed.data.id);
     if (parsed.data.id && !existing) {
       return fail(404, { error: "Ticket category not found." });
@@ -578,6 +593,11 @@ export const actions: Actions = {
       categoryIds: splitList(formString(data, "categoryIds")),
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
+
+    const targets = await verifyGuildTargets(guildId, {
+      channels: [parsed.data.channelId],
+    });
+    if (!targets.ok) return fail(targets.status, { error: targets.message });
 
     if (parsed.data.categoryIds.length > 0) {
       const valid = await getPrisma().ticketCategory.count({

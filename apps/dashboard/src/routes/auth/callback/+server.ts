@@ -41,11 +41,6 @@ function validateConfig(): void {
   if (cfg.discordClientSecret.length < 10) {
     throw new Error("Discord Client Secret appears invalid (too short).");
   }
-  console.log("[dashboard] OAuth config validated:", {
-    clientId: cfg.discordClientId,
-    redirectUri: cfg.redirectUri,
-    secretLength: cfg.discordClientSecret.length,
-  });
 }
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
@@ -66,14 +61,6 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   const state = url.searchParams.get("state") ?? "";
   const cookieState = cookies.get(OAuthStateCookie) ?? "";
   const code = url.searchParams.get("code") ?? "";
-
-  console.log("[dashboard] OAuth callback received:", {
-    hasState: !!state,
-    hasCookieState: !!cookieState,
-    stateMatch: state === cookieState,
-    hasCode: !!code,
-    codeLength: code.length,
-  });
 
   if (!state || !cookieState || state !== cookieState) {
     fail("The sign-in state did not match. Start again.");
@@ -103,21 +90,11 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
     fail("The sign-in request was invalid. Start again.");
   }
 
-  console.log("[dashboard] Exchanging code for token...");
   let token: OAuthToken;
   let user: OAuthUser;
   try {
     token = await exchangeCode(code, payload.verifier);
-    console.log("[dashboard] Token exchange successful:", {
-      tokenType: token.token_type,
-      expiresIn: token.expires_in,
-      hasRefreshToken: !!token.refresh_token,
-    });
     user = await fetchOAuthUser(token.access_token);
-    console.log("[dashboard] Fetched OAuth user:", {
-      id: user.id,
-      username: user.username,
-    });
   } catch (error) {
     if (error instanceof DiscordError) {
       console.error("[dashboard] Discord API error:", {
@@ -147,6 +124,5 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   });
 
   setSessionCookie(cookies, session.id, serverConfig().cookieSecure);
-  console.log("[dashboard] Session created for user:", user.id);
   throw redirect(303, safeReturnTo(payload.returnTo));
 };

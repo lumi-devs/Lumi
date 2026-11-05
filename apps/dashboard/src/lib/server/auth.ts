@@ -73,9 +73,10 @@ export async function manageableGuilds(
   }
 
   const token = await validAccessToken(event);
+  const session = requireSession(event);
   let guilds: GuildSummary[];
   try {
-    guilds = await fetchUserGuilds(token);
+    guilds = await fetchUserGuilds(token, session.userId);
   } catch (fetchError) {
     if (fetchError instanceof DiscordError) {
       console.error("[dashboard] fetchUserGuilds failed:", {

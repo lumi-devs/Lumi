@@ -12,14 +12,17 @@ import {
   userAvatarUrl,
 } from "#lib/server/discord.js";
 import { getPrisma } from "#lib/server/prisma.js";
+import { consumeRateLimit } from "#lib/server/rateLimit.js";
 import { dashboardKey, getRedis } from "#lib/server/redis.js";
 import { readGuildSettings } from "#lib/server/settings.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 const TokenRe = /^[A-Za-z0-9_-]{20,200}$/;
+const NonceRe = /^[A-Za-z0-9_-]{20,64}$/;
 const CaptchaTtlSeconds = 600;
 const RateLimitWindowSeconds = 600;
 const RateLimitMax = 20;
+const PageRateLimitMax = 60;
 
 const VerificationSettingsSchema = z.object({
   verifiedRoleId: z.string().nullable().default(null),
@@ -31,7 +34,13 @@ const CaptchaSchema = z.object({
   answer: z.number(),
 });
 
-type PageState = "ready" | "invalid" | "used" | "expired" | "misconfigured";
+type PageState =
+  | "ready"
+  | "invalid"
+  | "used"
+  | "expired"
+  | "misconfigured"
+  | "rate_limited";
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -85,6 +94,24 @@ function roleName(roles: DiscordRole[], roleId: string | null): string | null {
 
 export const load: PageServerLoad = async (event) => {
   const token = event.params.token ?? "";
+  const ip = event.getClientAddress();
+  const allowed = await consumeRateLimit(
+    "verify-page",
+    ip,
+    PageRateLimitMax,
+    RateLimitWindowSeconds,
+  );
+  if (!allowed) {
+    return {
+      state: "rate_limited" as const,
+      token: null,
+      captcha: null,
+      guild: null,
+      user: null,
+      roles: { verified: null, pending: null, verifiedId: null },
+    };
+  }
+
   const loaded = await loadToken(token);
 
   if (loaded.state !== "ready" || !loaded.row) {
@@ -109,7 +136,10 @@ export const load: PageServerLoad = async (event) => {
     fetchGuildRoles(row.guildId).catch(() => [] as DiscordRole[]),
   ]);
 
-  const state: PageState = settings.verifiedRoleId ? "ready" : "misconfigured";
+  const verifiedRole = settings.verifiedRoleId
+    ? roles.find((role) => role.id === settings.verifiedRoleId)
+    : null;
+  const state: PageState = verifiedRole ? "ready" : "misconfigured";
   const captcha =
     state === "ready" ? await issueCaptcha(hashToken(token)) : null;
 
@@ -146,15 +176,13 @@ export const actions: Actions = {
     const data = await event.request.formData();
 
     const ip = event.getClientAddress();
-    const rateKey = dashboardKey(
-      "verify-rate",
-      createHash("sha256").update(ip).digest("hex"),
+    const allowed = await consumeRateLimit(
+      "verify-submit",
+      ip,
+      RateLimitMax,
+      RateLimitWindowSeconds,
     );
-    const attempts = await getRedis().incr(rateKey);
-    if (attempts === 1) {
-      await getRedis().expire(rateKey, RateLimitWindowSeconds);
-    }
-    if (attempts > RateLimitMax) {
+    if (!allowed) {
       return fail(429, {
         error: "Too many verification attempts. Wait a few minutes.",
       });
@@ -183,7 +211,7 @@ export const actions: Actions = {
     const nonce = String(data.get("nonce") ?? "");
     const answerRaw = String(data.get("answer") ?? "").trim();
     const answer = Number(answerRaw);
-    if (!nonce || !answerRaw || !Number.isInteger(answer)) {
+    if (!NonceRe.test(nonce) || !answerRaw || !Number.isInteger(answer)) {
       return fail(400, { error: "Enter the answer to the math question." });
     }
 

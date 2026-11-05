@@ -104,6 +104,14 @@ export async function readSession(
     return null;
   }
 
+  if (
+    Date.now() - result.data.createdAt >=
+    serverConfig().sessionMaxAgeSeconds * 1000
+  ) {
+    await getRedis().del(sessionKey(id));
+    return null;
+  }
+
   await getRedis().expire(sessionKey(id), serverConfig().sessionTtlSeconds);
   return { id, record: result.data };
 }

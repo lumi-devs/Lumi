@@ -5,6 +5,7 @@ import { recordAudit } from "#lib/server/audit.js";
 import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
 import { serverConfig } from "#lib/server/env.js";
 import { canManageOwnerOnlyPermit } from "#lib/server/permissions.js";
+import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { describeError, isPrismaCode } from "#lib/server/prismaErrors.js";
 import { fetchPermitNodes } from "#lib/server/rpc.js";
@@ -232,6 +233,15 @@ export const actions: Actions = {
       return fail(400, {
         error: "Built-in permits can only be assigned to users.",
       });
+    }
+    if (parsed.data.targetType !== "USER") {
+      const target = await verifyGuildTargets(
+        guildId,
+        parsed.data.targetType === "ROLE"
+          ? { roles: [parsed.data.targetId] }
+          : { channels: [parsed.data.targetId] },
+      );
+      if (!target.ok) return fail(target.status, { error: target.message });
     }
 
     try {

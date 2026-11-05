@@ -27,23 +27,17 @@ export const handle: Handle = async ({ event, resolve }) => {
   response.headers.set("x-content-type-options", "nosniff");
   response.headers.set("x-frame-options", "DENY");
   response.headers.set("referrer-policy", "same-origin");
+  response.headers.set("cross-origin-opener-policy", "same-origin");
   response.headers.set(
     "permissions-policy",
     "camera=(), microphone=(), geolocation=(), interest-cohort=()",
   );
-  response.headers.set(
-    "content-security-policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' https://cdn.discordapp.com data:",
-      "connect-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
-  );
+  if (event.url.protocol === "https:") {
+    response.headers.set(
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains",
+    );
+  }
 
   return response;
 };
