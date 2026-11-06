@@ -128,6 +128,20 @@ export function createRoleHelpers(ctx: DbContext) {
           orderBy: { createdAt: "asc" },
           take: limit,
         }),
+      claim: (jobId: string, leaseMs: number) =>
+        prisma.bulkRoleJob.updateMany({
+          where: {
+            id: jobId,
+            OR: [
+              { status: "pending" },
+              {
+                status: "running",
+                updatedAt: { lt: new Date(Date.now() - leaseMs) },
+              },
+            ],
+          },
+          data: { status: "running" },
+        }),
       find: (guildId: string, jobId: string) =>
         prisma.bulkRoleJob.findFirst({
           where: { id: jobId, guildId },
@@ -176,7 +190,13 @@ export function createRoleHelpers(ctx: DbContext) {
         if (input.lastError !== undefined) update.lastError = input.lastError;
         if (Object.keys(update).length === 0) return;
         await prisma.bulkRoleJob
-          .update({ where: { id: jobId }, data: update })
+          .updateMany({
+            where: {
+              id: jobId,
+              status: { notIn: ["completed", "cancelled", "failed"] },
+            },
+            data: update,
+          })
           .catch(() => undefined);
       },
       updateStatus: (jobId: string, status: string) =>

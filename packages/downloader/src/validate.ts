@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { ModuleManifest } from "@lumi/module-runtime";
 import {
@@ -7,7 +7,8 @@ import {
 } from "@lumi/module-runtime";
 import { pathExists } from "./fs.js";
 
-export const RequirementRe = /^[a-zA-Z0-9_.@/][a-zA-Z0-9_.@/\-^~>=<*]*$/;
+export const RequirementRe =
+  /^(?:@[a-zA-Z0-9][a-zA-Z0-9._-]*\/)?[a-zA-Z0-9][a-zA-Z0-9._-]*(?:@[0-9A-Za-z.*+^~<>=|_ -]+)?$/;
 
 const RuntimePackages = new Set([
   "discord.js",
@@ -32,7 +33,23 @@ const ForbiddenPackages = new Set([
   "@lumi/core",
 ]);
 
-const IgnoredDirs = new Set(["node_modules", ".git", "dist", "build"]);
+const StaticCallArgument =
+  /^\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\$]|\\.)*`)\s*[,)]/;
+const UnscannableDynamicImportRe = /(?:^|[^.\w])import\s*\(\s*/g;
+const UnscannableRequireRe = /(?:^|[^.\w])require\s*\(\s*/g;
+const MetaRequireRe = /import\s*\.\s*meta\s*\.\s*require\s*\(/;
+
+function isScriptFile(name: string): boolean {
+  return /\.(?:[cm]?[jt]sx?)$/i.test(name);
+}
+
+function hasUnscannableCall(source: string, pattern: RegExp): boolean {
+  for (const match of source.matchAll(pattern)) {
+    const index = (match.index ?? 0) + match[0].length;
+    if (!StaticCallArgument.test(source.slice(index))) return true;
+  }
+  return false;
+}
 
 async function walk(
   dir: string,
@@ -43,18 +60,31 @@ async function walk(
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     const rel = relative(root, full);
+    const info = await lstat(full).catch(() => null);
+    if (!info) {
+      errors.push(`${rel}: could not be inspected.`);
+      continue;
+    }
 
-    if (entry.isSymbolicLink()) {
+    if (info.isSymbolicLink()) {
       errors.push(`${rel}: symbolic links are not allowed in add-ons.`);
       continue;
     }
 
-    if (entry.isDirectory()) {
-      if (entry.name.startsWith(".") || IgnoredDirs.has(entry.name)) continue;
+    if (info.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
       files.push(...(await walk(full, root, errors)));
-    } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith(".test.ts")) {
-      files.push(full);
+      continue;
     }
+
+    if (!info.isFile()) {
+      errors.push(`${rel}: unsupported file type in add-ons.`);
+      continue;
+    }
+    if (info.nlink > 1) {
+      errors.push(`${rel}: hard links are not allowed in add-ons.`);
+    }
+    if (isScriptFile(entry.name)) files.push(full);
   }
   return files;
 }
@@ -104,9 +134,42 @@ function checkImport(
   );
 }
 
-export async function validateAddon(dir: string): Promise<string[]> {
+function checkUnscannableImports(
+  source: string,
+  file: string,
+  root: string,
+  errors: string[],
+): void {
+  const rel = relative(root, file);
+  if (MetaRequireRe.test(source)) {
+    errors.push(`${rel}: import.meta.require is not allowed in add-ons.`);
+  }
+  if (hasUnscannableCall(source, UnscannableDynamicImportRe)) {
+    errors.push(
+      `${rel}: dynamic import() with a computed specifier cannot be validated.`,
+    );
+  }
+  if (hasUnscannableCall(source, UnscannableRequireRe)) {
+    errors.push(
+      `${rel}: require() with a computed specifier cannot be validated.`,
+    );
+  }
+}
+
+export interface ValidateAddonOptions {
+  readonly expectedName?: string;
+}
+
+export async function validateAddon(
+  dir: string,
+  options: ValidateAddonOptions = {},
+): Promise<string[]> {
   const errors: string[] = [];
   const root = resolve(dir);
+  const rootInfo = await lstat(root).catch(() => null);
+  if (!rootInfo?.isDirectory() || rootInfo.isSymbolicLink()) {
+    return ["add-on root must be a real directory, not a symbolic link."];
+  }
   const manifestPath = join(root, "manifest.json");
 
   let manifest: ModuleManifest;
@@ -120,10 +183,32 @@ export async function validateAddon(dir: string): Promise<string[]> {
     ];
   }
 
-  if (manifest.name !== basename(root)) {
+  if (options.expectedName) {
+    if (manifest.name !== options.expectedName) {
+      errors.push(
+        `manifest name "${manifest.name}" must match the installed module name "${options.expectedName}".`,
+      );
+    }
+  } else if (manifest.name !== basename(root)) {
     errors.push(
       `manifest name "${manifest.name}" must match the directory name.`,
     );
+  }
+
+  if (manifest.entry) {
+    const entryFile = resolve(root, manifest.entry);
+    const entryInfo = await lstat(entryFile).catch(() => null);
+    if (!entryFile.startsWith(root + sep)) {
+      errors.push(`entry "${manifest.entry}" escapes the addon directory.`);
+    } else if (!isScriptFile(entryFile)) {
+      errors.push(
+        `entry "${manifest.entry}" must be a JavaScript or TypeScript file.`,
+      );
+    } else if (!entryInfo?.isFile() || entryInfo.isSymbolicLink()) {
+      errors.push(
+        `entry "${manifest.entry}" does not exist or is not a regular file.`,
+      );
+    }
   }
 
   const thickFields = supermoduleManifestFields(manifest);
@@ -158,6 +243,7 @@ export async function validateAddon(dir: string): Promise<string[]> {
     })),
   );
   for (const { file, source } of sources) {
+    checkUnscannableImports(source, file, root, errors);
     for (const imported of transpiler.scanImports(source)) {
       checkImport(imported.path, file, root, manifest.requirements, errors);
     }

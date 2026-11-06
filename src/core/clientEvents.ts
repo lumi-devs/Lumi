@@ -84,7 +84,13 @@ export function registerClientEvents(options: ClientEventsOptions): void {
   });
 
   client.on("guildCreate", async (guild: Guild) => {
-    if (await isGuildBlacklisted(services.prisma, services.helpers.cache, guild.id)) {
+    if (
+      await isGuildBlacklisted(
+        services.prisma,
+        services.helpers.cache,
+        guild.id,
+      )
+    ) {
       await guild.leave().catch(() => undefined);
       return;
     }

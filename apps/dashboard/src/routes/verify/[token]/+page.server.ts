@@ -35,12 +35,7 @@ const CaptchaSchema = z.object({
 });
 
 type PageState =
-  | "ready"
-  | "invalid"
-  | "used"
-  | "expired"
-  | "misconfigured"
-  | "rate_limited";
+  "ready" | "invalid" | "used" | "expired" | "misconfigured" | "rate_limited";
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

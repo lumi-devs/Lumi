@@ -47,9 +47,7 @@ describe("commandPayloadForGuild", () => {
         (entry) => entry.name,
       ),
     ).toEqual(["bulkrole"]);
-    expect(registry.payload().map((entry) => entry.name)).toEqual([
-      "bulkrole",
-    ]);
+    expect(registry.payload().map((entry) => entry.name)).toEqual(["bulkrole"]);
   });
 
   it("includes every command for guilds with all modules active", () => {

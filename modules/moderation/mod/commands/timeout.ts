@@ -3,11 +3,13 @@ import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
 import {
+  canActOn,
   describeError,
   getCaseLink,
   getReason,
   isImmune,
   replyError,
+  resolveActor,
 } from "../helpers.js";
 
 export const timeoutDef: CommandDefinition = {
@@ -46,6 +48,15 @@ export const timeoutDef: CommandDefinition = {
     const reason = getReason(interaction);
     const guild = interaction.guild!;
     const config = await getModerationConfig(services, guild.id);
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
 
     try {
       const member = await guild.members.fetch(target.id).catch(() => null);
@@ -54,6 +65,14 @@ export const timeoutDef: CommandDefinition = {
           interaction,
           "Not in guild",
           "User is not in this server",
+        );
+        return;
+      }
+      if (!canActOn(actor, member)) {
+        await replyError(
+          interaction,
+          "Cannot timeout",
+          "You cannot timeout a member with an equal or higher role.",
         );
         return;
       }

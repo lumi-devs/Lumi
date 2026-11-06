@@ -8,6 +8,7 @@ import {
 } from "#lib/server/discord.js";
 import { serverConfig } from "#lib/server/env.js";
 import { dashboardKey, getRedis } from "#lib/server/redis.js";
+import { safeReturnTo } from "#lib/server/returnTo.js";
 import { createSession, setSessionCookie } from "#lib/server/session.js";
 
 const OAuthStateCookie = "lumi_oauth_state";
@@ -15,15 +16,6 @@ const OAuthStateCookie = "lumi_oauth_state";
 interface StatePayload {
   verifier: string;
   returnTo: string;
-}
-
-function safeReturnTo(value: unknown): string {
-  return typeof value === "string" &&
-    value.startsWith("/") &&
-    !value.startsWith("//") &&
-    !value.includes("\\")
-    ? value.slice(0, 500)
-    : "/guilds";
 }
 
 function fail(reason: string): never {

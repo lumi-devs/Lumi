@@ -11,10 +11,12 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 
 type CustomCommandsHelper = ModuleServices["helpers"]["customCommands"];
-export type CommandCreateInput =
-  Parameters<CustomCommandsHelper["createCommand"]>[0];
-export type CommandUpdateInput =
-  Parameters<CustomCommandsHelper["updateCommand"]>[1];
+export type CommandCreateInput = Parameters<
+  CustomCommandsHelper["createCommand"]
+>[0];
+export type CommandUpdateInput = Parameters<
+  CustomCommandsHelper["updateCommand"]
+>[1];
 type CommandRowRecord = Omit<CustomCommandRow, "permissionNodes"> & {
   permissionNodes: unknown;
 };
@@ -25,7 +27,10 @@ function permissionNodesOf(value: unknown): string[] {
 }
 
 function toCommandRow(record: CommandRowRecord): CustomCommandRow {
-  return { ...record, permissionNodes: permissionNodesOf(record.permissionNodes) };
+  return {
+    ...record,
+    permissionNodes: permissionNodesOf(record.permissionNodes),
+  };
 }
 
 export function invalidateGuild(guildId: string): void {

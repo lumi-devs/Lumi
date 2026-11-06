@@ -39,16 +39,16 @@ no `/role-menu` slash command is registered.
 The prefix command remains available as `,role-menu` or `,rolemenu`. Every
 subcommand requires **Manage Server** or the `rolemenu.manage` permit.
 
-| Command                          | Behavior                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `,role-menu create`              | Create a group with name, description, mode, require-one, auto-toggle, max selections, and temporary duration |
-| `,role-menu edit`                | Change a group's name, description, or selection settings                                                     |
-| `,role-menu delete`              | Delete a group, its posted messages, options, and temporary-role records                                      |
-| `,role-menu add-option`          | Add a role with an optional label, emoji, and description                                                     |
-| `,role-menu remove-option`       | Remove a role from a group                                                                                    |
-| `,role-menu post`                | Publish a group as buttons, a select menu, or reactions                                                       |
-| `,role-menu list`                | List groups with mode, option count, and temporary settings                                                   |
-| `,role-menu refresh`             | Re-render a group's posted messages and reconcile reaction menus                                              |
+| Command                    | Behavior                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `,role-menu create`        | Create a group with name, description, mode, require-one, auto-toggle, max selections, and temporary duration |
+| `,role-menu edit`          | Change a group's name, description, or selection settings                                                     |
+| `,role-menu delete`        | Delete a group, its posted messages, options, and temporary-role records                                      |
+| `,role-menu add-option`    | Add a role with an optional label, emoji, and description                                                     |
+| `,role-menu remove-option` | Remove a role from a group                                                                                    |
+| `,role-menu post`          | Publish a group as buttons, a select menu, or reactions                                                       |
+| `,role-menu list`          | List groups with mode, option count, and temporary settings                                                   |
+| `,role-menu refresh`       | Re-render a group's posted messages and reconcile reaction menus                                              |
 
 Group options support autocomplete. Temporary durations are expressed in
 seconds and are capped at 30 days (`2,592,000`). A max selection of `0` and a
@@ -68,6 +68,10 @@ temporary duration of `0` mean unlimited and permanent respectively.
   send failures by direct message because reactions cannot reply ephemerally.
 - Role grants and removals check bot **Manage Roles**, role position, managed
   roles, the server owner, and member hierarchy before changing anything.
+- Selection and forced-removal plans are computed and applied under
+  `tryWithLock` keyed by guild, member, and group, so concurrent clicks or a
+  reaction racing a button cannot apply two plans from the same stale role
+  snapshot. A busy lock returns a retry message without mutating roles.
 
 ## Menu Styles
 

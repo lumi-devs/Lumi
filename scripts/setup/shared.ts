@@ -1,5 +1,4 @@
-export const DefaultDatabaseUrl =
-  "postgresql://lumi:lumi@127.0.0.1:5432/lumi";
+export const DefaultDatabaseUrl = "postgresql://lumi:lumi@127.0.0.1:5432/lumi";
 export const DefaultRedisUrl = "redis://localhost:6379/0";
 const PlaceholderValues: Record<string, true> = {
   "change-me": true,

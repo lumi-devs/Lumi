@@ -1,9 +1,6 @@
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import {
-  ChannelType,
-  SlashCommandBuilder,
-} from "discord.js";
+import { ChannelType, SlashCommandBuilder } from "discord.js";
 import { getRoleMenusConfig, MaxTempDurationSeconds } from "../config.js";
 import { createGroup, deleteGroup, editGroup } from "./groups.js";
 import { addOption, removeOption } from "./options.js";

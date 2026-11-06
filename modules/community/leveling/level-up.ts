@@ -155,7 +155,12 @@ export async function grantXp(
   const { level } = levelForTotalXp(config.levelFormula, totalXp);
   if (level <= user.level) return;
 
-  await services.helpers.leveling.setLevel(input.guildId, input.userId, level);
+  const advanced = await services.helpers.leveling.advanceLevel(
+    input.guildId,
+    input.userId,
+    level,
+  );
+  if (!advanced) return;
 
   const member =
     input.member ??

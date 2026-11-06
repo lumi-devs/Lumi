@@ -8,6 +8,7 @@ import {
   makeWarningCard,
 } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
+import { compileSafeRegex } from "../../../shared/regex.js";
 import { getTicketsConfig } from "../config.js";
 import { escapeHtml } from "../html.js";
 import { resolveThread } from "../ticket-service.js";
@@ -123,14 +124,9 @@ export async function tagCommand(
       return;
     }
     if (rawRegex) {
-      try {
-        new RegExp(rawRegex, "i");
-      } catch {
-        await replyError(
-          interaction,
-          "Invalid Regex",
-          "The auto-tag pattern is not a valid regular expression.",
-        );
+      const compiled = compileSafeRegex(rawRegex);
+      if (!compiled.ok) {
+        await replyError(interaction, "Invalid Regex", compiled.error);
         return;
       }
     }
@@ -177,25 +173,23 @@ export async function tagCommand(
     const regex = clearable(interaction.options.getString("regex"));
     if (regex !== undefined) {
       if (regex) {
-        try {
-          new RegExp(regex, "i");
-        } catch {
-          await replyError(
-            interaction,
-            "Invalid Regex",
-            "The auto-tag pattern is not a valid regular expression.",
-          );
+        const compiled = compileSafeRegex(regex);
+        if (!compiled.ok) {
+          await replyError(interaction, "Invalid Regex", compiled.error);
           return;
         }
       }
-      data.regex = regex?.slice(0, 200) ?? null;
+      data.regex = regex ?? null;
     }
     const autoTag = interaction.options.getBoolean("auto_tag");
     if (autoTag !== null) data.autoTag = autoTag;
     if (Object.keys(data).length === 0) {
       await replyCard(
         interaction,
-        makeWarningCard("Nothing To Change", "Provide at least one field to edit."),
+        makeWarningCard(
+          "Nothing To Change",
+          "Provide at least one field to edit.",
+        ),
       );
       return;
     }

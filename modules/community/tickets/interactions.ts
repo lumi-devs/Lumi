@@ -146,13 +146,17 @@ function buildTextModal(
       .setCustomId(`t${entry.index}`)
       .setLabel(question.label.slice(0, 45))
       .setStyle(
-        question.style === "long" ? TextInputStyle.Paragraph : TextInputStyle.Short,
+        question.style === "long"
+          ? TextInputStyle.Paragraph
+          : TextInputStyle.Short,
       )
       .setRequired(question.required);
     if (question.placeholder) input.setPlaceholder(question.placeholder);
     if (question.maxLength) input.setMaxLength(question.maxLength);
     modal.addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(input),
+      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+        input,
+      ),
     );
   }
   return modal;
@@ -164,7 +168,9 @@ async function showTextModal(
   customId: string,
 ): Promise<void> {
   if (!interaction.isModalSubmit() && "showModal" in interaction) {
-    await interaction.showModal(buildTextModal(questions, customId, "Open Ticket"));
+    await interaction.showModal(
+      buildTextModal(questions, customId, "Open Ticket"),
+    );
   }
 }
 
@@ -226,7 +232,10 @@ async function showMenuStep(
     ),
   );
 
-  if (interaction.isRepliable() && (interaction.deferred || interaction.replied)) {
+  if (
+    interaction.isRepliable() &&
+    (interaction.deferred || interaction.replied)
+  ) {
     if ("update" in interaction) {
       await interaction
         .update(cardCreateOptions(card) as never)
@@ -263,7 +272,11 @@ async function finishSession(
 ): Promise<void> {
   const guildId = requireGuildId(interaction.guildId);
   if (!guildId) {
-    await replyError(interaction, "Guild Only", "Tickets can only be opened in a server.");
+    await replyError(
+      interaction,
+      "Guild Only",
+      "Tickets can only be opened in a server.",
+    );
     return;
   }
 
@@ -335,7 +348,11 @@ async function createTicketFromAnswers(
   const guildId = requireGuildId(interaction.guildId);
   const guild = interaction.guild;
   if (!guildId || !guild) {
-    await replyError(interaction, "Guild Only", "Tickets can only be opened in a server.");
+    await replyError(
+      interaction,
+      "Guild Only",
+      "Tickets can only be opened in a server.",
+    );
     return;
   }
 
@@ -345,15 +362,15 @@ async function createTicketFromAnswers(
     !interaction.replied
   ) {
     if (interaction.isModalSubmit()) {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => undefined);
+      await interaction
+        .deferReply({ flags: MessageFlags.Ephemeral })
+        .catch(() => undefined);
     } else if ("deferUpdate" in interaction) {
       await interaction.deferUpdate().catch(() => undefined);
     }
   }
 
-  const parent = await guild.channels
-    .fetch(panel.channelId)
-    .catch(() => null);
+  const parent = await guild.channels.fetch(panel.channelId).catch(() => null);
   if (!parent || !("threads" in parent) || !parent.isTextBased()) {
     await replyError(
       interaction,
@@ -399,7 +416,9 @@ async function createTicketFromAnswers(
     userId: interaction.user.id,
     categoryId: category.id,
     subject,
-    priority: isPriority(category.defaultPriority) ? category.defaultPriority : "normal",
+    priority: isPriority(category.defaultPriority)
+      ? category.defaultPriority
+      : "normal",
   });
 
   await thread.members.add(interaction.user.id).catch(() => undefined);
@@ -500,20 +519,40 @@ async function handleMenuSelect(
   const index = Number(parts[4]);
   if (!token || !Number.isInteger(index)) return;
   const session = await getTicketOpenSession(services, token);
-  if (!session || session.userId !== interaction.user.id) {
-    await replyError(interaction, "Prompt Expired", "This ticket prompt is no longer valid.");
+  if (
+    !session ||
+    session.guildId !== interaction.guildId ||
+    session.userId !== interaction.user.id
+  ) {
+    await replyError(
+      interaction,
+      "Prompt Expired",
+      "This ticket prompt is no longer valid.",
+    );
     return;
   }
 
-  const category = await findCategory(services, session.guildId, session.categoryId);
+  const category = await findCategory(
+    services,
+    session.guildId,
+    session.categoryId,
+  );
   if (!category) {
-    await replyError(interaction, "Category Missing", "This ticket category no longer exists.");
+    await replyError(
+      interaction,
+      "Category Missing",
+      "This ticket category no longer exists.",
+    );
     return;
   }
   const questions = openQuestions(category);
   const question = questions[index];
   if (!question || !isMenuQuestion(question)) {
-    await replyError(interaction, "Prompt Expired", "This ticket prompt is no longer valid.");
+    await replyError(
+      interaction,
+      "Prompt Expired",
+      "This ticket prompt is no longer valid.",
+    );
     return;
   }
 
@@ -534,13 +573,29 @@ async function handleSkip(
   const index = Number(parts[4]);
   if (!token || !Number.isInteger(index)) return;
   const session = await getTicketOpenSession(services, token);
-  if (!session || session.userId !== interaction.user.id) {
-    await replyError(interaction, "Prompt Expired", "This ticket prompt is no longer valid.");
+  if (
+    !session ||
+    session.guildId !== interaction.guildId ||
+    session.userId !== interaction.user.id
+  ) {
+    await replyError(
+      interaction,
+      "Prompt Expired",
+      "This ticket prompt is no longer valid.",
+    );
     return;
   }
-  const category = await findCategory(services, session.guildId, session.categoryId);
+  const category = await findCategory(
+    services,
+    session.guildId,
+    session.categoryId,
+  );
   if (!category) {
-    await replyError(interaction, "Category Missing", "This ticket category no longer exists.");
+    await replyError(
+      interaction,
+      "Category Missing",
+      "This ticket category no longer exists.",
+    );
     return;
   }
   session.answers[index] = "";
@@ -561,13 +616,29 @@ async function handleSessionModal(
   const token = interaction.customId.split(":")[3];
   if (!token) return;
   const session = await getTicketOpenSession(services, token);
-  if (!session || session.userId !== interaction.user.id) {
-    await replyError(interaction, "Prompt Expired", "This ticket prompt is no longer valid.");
+  if (
+    !session ||
+    session.guildId !== interaction.guildId ||
+    session.userId !== interaction.user.id
+  ) {
+    await replyError(
+      interaction,
+      "Prompt Expired",
+      "This ticket prompt is no longer valid.",
+    );
     return;
   }
-  const category = await findCategory(services, session.guildId, session.categoryId);
+  const category = await findCategory(
+    services,
+    session.guildId,
+    session.categoryId,
+  );
   if (!category) {
-    await replyError(interaction, "Category Missing", "This ticket category no longer exists.");
+    await replyError(
+      interaction,
+      "Category Missing",
+      "This ticket category no longer exists.",
+    );
     return;
   }
   const questions = openQuestions(category);
@@ -586,12 +657,7 @@ async function handleFeedback(
   const parts = interaction.customId.split(":");
   const ticketId = parts[2];
   const rating = Number(parts[3]);
-  if (
-    !ticketId ||
-    !Number.isInteger(rating) ||
-    rating < 1 ||
-    rating > 5
-  ) {
+  if (!ticketId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     return;
   }
   const guildId = requireGuildId(interaction.guildId);
@@ -599,7 +665,11 @@ async function handleFeedback(
 
   const ticket = await findTicketById(services, ticketId);
   if (!ticket || ticket.guildId !== guildId) {
-    await replyError(interaction, "Ticket Missing", "That ticket no longer exists.");
+    await replyError(
+      interaction,
+      "Ticket Missing",
+      "That ticket no longer exists.",
+    );
     return;
   }
   const config = await getTicketsConfig(services, guildId);
@@ -614,7 +684,9 @@ async function handleFeedback(
     return;
   }
   await services.helpers.tickets.updateTicket(ticketId, { feedback: rating });
-  await threadMessage(interaction, "Thanks for the feedback!").catch(() => undefined);
+  await threadMessage(interaction, "Thanks for the feedback!").catch(
+    () => undefined,
+  );
   await replySuccess(
     interaction,
     "Feedback Recorded",
@@ -637,13 +709,20 @@ export async function handleTicketInteraction(
   services: ModuleServices,
 ): Promise<void> {
   if (!interaction.isRepliable()) return;
-  if (!("customId" in interaction) || typeof interaction.customId !== "string") {
+  if (
+    !("customId" in interaction) ||
+    typeof interaction.customId !== "string"
+  ) {
     return;
   }
   const guildId = requireGuildId(interaction.guildId);
   if (!guildId) return;
   if (!isTicketsModuleEnabled(services, guildId)) {
-    await replyError(interaction, "Tickets Disabled", "The tickets module is disabled.");
+    await replyError(
+      interaction,
+      "Tickets Disabled",
+      "The tickets module is disabled.",
+    );
     return;
   }
 
@@ -677,7 +756,11 @@ export async function handleTicketInteraction(
       const panel = await findPanel(services, panelId);
       const category = await findCategory(services, guildId, categoryId);
       if (!panel || !category || panel.guildId !== guildId) {
-        await replyError(interaction, "Panel Unavailable", "This ticket panel is no longer available.");
+        await replyError(
+          interaction,
+          "Panel Unavailable",
+          "This ticket panel is no longer available.",
+        );
         return;
       }
       const policy = await validateTicketOpen(services, {
@@ -691,7 +774,12 @@ export async function handleTicketInteraction(
         await replyError(interaction, policy.title, policy.body);
         return;
       }
-      await showTicketOpenMenu(interaction, services, policy.panel, policy.category);
+      await showTicketOpenMenu(
+        interaction,
+        services,
+        policy.panel,
+        policy.category,
+      );
       return;
     }
     if (parts[1] === "feedback") {
@@ -715,7 +803,11 @@ export async function handleTicketInteraction(
         interaction.values[0] ?? "",
       );
       if (!panel || !category || panel.guildId !== guildId) {
-        await replyError(interaction, "Panel Unavailable", "This ticket panel is no longer available.");
+        await replyError(
+          interaction,
+          "Panel Unavailable",
+          "This ticket panel is no longer available.",
+        );
         return;
       }
       const policy = await validateTicketOpen(services, {
@@ -729,7 +821,12 @@ export async function handleTicketInteraction(
         await replyError(interaction, policy.title, policy.body);
         return;
       }
-      await showTicketOpenMenu(interaction, services, policy.panel, policy.category);
+      await showTicketOpenMenu(
+        interaction,
+        services,
+        policy.panel,
+        policy.category,
+      );
     }
   }
 }

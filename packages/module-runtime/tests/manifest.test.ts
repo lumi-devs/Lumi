@@ -48,6 +48,31 @@ describe("validateManifest", () => {
     ).toThrow();
   });
 
+  it("rejects unsafe config keys", () => {
+    expect(() =>
+      validateManifest({ ...base, configKey: "__proto__" }),
+    ).toThrow();
+    expect(() =>
+      validateManifest({
+        ...base,
+        configFields: [{ key: "__proto__", label: "X", type: "string" }],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects invalid dependency and conflict names", () => {
+    expect(() =>
+      validateManifest({ ...base, dependencies: { "../x": "^1.0.0" } }),
+    ).toThrow();
+    expect(() =>
+      validateManifest({ ...base, conflicts: ["Bad Name"] }),
+    ).toThrow();
+  });
+
+  it("rejects non-JS entry paths", () => {
+    expect(() => validateManifest({ ...base, entry: "index.json" })).toThrow();
+  });
+
   it("rejects unsafe entry paths", () => {
     expect(() =>
       validateManifest({ ...base, entry: "../outside.ts" }),

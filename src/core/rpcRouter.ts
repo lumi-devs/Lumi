@@ -28,8 +28,15 @@ export interface RpcRouterOptions {
 export function createRpcRouter(
   options: RpcRouterOptions,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-  const { client, prisma, healthMonitor, moduleLoader, permits, logger, token } =
-    options;
+  const {
+    client,
+    prisma,
+    healthMonitor,
+    moduleLoader,
+    permits,
+    logger,
+    token,
+  } = options;
 
   const statusHandler = createStatusHandler({
     client,

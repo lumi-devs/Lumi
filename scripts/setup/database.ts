@@ -1,8 +1,4 @@
-import {
-  envRecord,
-  isPlaceholder,
-  runCommand,
-} from "./shared.ts";
+import { envRecord, isPlaceholder, runCommand } from "./shared.ts";
 
 export function validateDatabaseUrl(value: string): string | null {
   if (value.trim().length === 0) return "Missing DATABASE_URL.";

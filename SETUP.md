@@ -58,8 +58,9 @@ Run `bun run setup` without `--start-deps` to be prompted before Docker Compose
 starts the dependencies.
 
 `.env` must contain `BOT_TOKEN`, `OWNER_IDS`, and the Compose secrets
-(`REDIS_PASSWORD`, `RPC_INTERNAL_TOKEN`). `bun run setup` generates the secrets
-when they are missing. The bot process never migrates itself.
+(`POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `RPC_INTERNAL_TOKEN`). `bun run setup`
+generates the secrets when they are missing. The bot process never migrates
+itself.
 
 ## Nix / local
 

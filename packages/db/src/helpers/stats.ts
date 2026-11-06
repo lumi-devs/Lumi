@@ -31,6 +31,10 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+const SeriesTables = new Set(["stats_message_buckets", "stats_voice_buckets"]);
+const SeriesColumns = new Set(["count", "seconds"]);
+const SeriesFilterColumns = new Set(["user_id", "channel_id"]);
+
 export function createStatsHelpers(ctx: DbContext) {
   const { prisma } = ctx;
 
@@ -74,11 +78,16 @@ export function createStatsHelpers(ctx: DbContext) {
     bucketSeconds: number,
     filter?: { column: "user_id" | "channel_id"; value: string },
   ): Promise<StatsSeriesPoint[]> {
-    const tableRef = Prisma.raw(
-      table === "stats_message_buckets"
-        ? "stats_message_buckets"
-        : "stats_voice_buckets",
-    );
+    if (!SeriesTables.has(table)) {
+      throw new Error("Invalid stats series table.");
+    }
+    if (!SeriesColumns.has(column)) {
+      throw new Error("Invalid stats series column.");
+    }
+    if (filter && !SeriesFilterColumns.has(filter.column)) {
+      throw new Error("Invalid stats series filter column.");
+    }
+    const tableRef = Prisma.raw(table);
     const columnRef = Prisma.raw(column);
     const filterClause = filter
       ? Prisma.sql`AND ${Prisma.raw(filter.column)} = ${filter.value}`

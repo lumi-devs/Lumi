@@ -182,9 +182,9 @@ export async function categoryAdd(
         "ticket-{user}",
       defaultPriority: isPriority(defaultPriority) ? defaultPriority : "normal",
       openingMessage:
-        interaction.options.getString("opening_message")?.slice(0, 2000) ?? null,
-      cooldownSeconds:
-        interaction.options.getInteger("cooldown_seconds") ?? 0,
+        interaction.options.getString("opening_message")?.slice(0, 2000) ??
+        null,
+      cooldownSeconds: interaction.options.getInteger("cooldown_seconds") ?? 0,
       memberLimit: interaction.options.getInteger("member_limit") ?? 0,
       totalLimit: interaction.options.getInteger("total_limit") ?? 0,
       claimingEnabled:
@@ -250,8 +250,7 @@ export async function categoryEdit(
   const pingRoles = interaction.options.getString("ping_roles");
   if (pingRoles !== null) data.pingRoleIds = parseIdList(pingRoles);
   const requiredRoles = interaction.options.getString("required_roles");
-  if (requiredRoles !== null)
-    data.requiredRoleIds = parseIdList(requiredRoles);
+  if (requiredRoles !== null) data.requiredRoleIds = parseIdList(requiredRoles);
   const namingTemplate = interaction.options.getString("naming_template");
   if (namingTemplate !== null)
     data.namingTemplate = namingTemplate.slice(0, 100);

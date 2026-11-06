@@ -1,5 +1,8 @@
 import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
-import { type ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import {
+  type ChatInputCommandInteraction,
+  SlashCommandBuilder,
+} from "discord.js";
 import { Priorities } from "../constants.js";
 import {
   categoryAdd,
@@ -131,7 +134,9 @@ const Command = new SlashCommandBuilder()
           .addIntegerOption((option) =>
             option
               .setName("member_limit")
-              .setDescription("Max open tickets per user in this category (0 disables)")
+              .setDescription(
+                "Max open tickets per user in this category (0 disables)",
+              )
               .setRequired(false)
               .setMinValue(0)
               .setMaxValue(25),
@@ -253,7 +258,9 @@ const Command = new SlashCommandBuilder()
           .addIntegerOption((option) =>
             option
               .setName("member_limit")
-              .setDescription("Max open tickets per user in this category (0 disables)")
+              .setDescription(
+                "Max open tickets per user in this category (0 disables)",
+              )
               .setRequired(false)
               .setMinValue(0)
               .setMaxValue(25),
@@ -465,7 +472,9 @@ const Command = new SlashCommandBuilder()
           .addBooleanOption((option) =>
             option
               .setName("auto_tag")
-              .setDescription("Reply automatically when a message matches the regex")
+              .setDescription(
+                "Reply automatically when a message matches the regex",
+              )
               .setRequired(false),
           ),
       )
@@ -497,7 +506,9 @@ const Command = new SlashCommandBuilder()
           .addBooleanOption((option) =>
             option
               .setName("auto_tag")
-              .setDescription("Reply automatically when a message matches the regex")
+              .setDescription(
+                "Reply automatically when a message matches the regex",
+              )
               .setRequired(false),
           ),
       )

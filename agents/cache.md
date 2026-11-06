@@ -60,9 +60,17 @@ await services.helpers.cache.del(key);
 
 Available primitives: `get`, `getString`, `set`, `setString`, `del`,
 `getOrLoad`, `setNx`, `incr`, `incrBy`, `sAdd`, `sRem`, `sMembers`, `sCard`,
-`takeLock`. The facade uses JSON, has per-process single-flight for
-`getOrLoad`, and returns null/no-op when Redis is absent. `@lumi/cache` remains
-the guild-config L1+L2 cache used by `ConfigService`; helpers never bypass it.
+`takeLock`. `takeLock` returns `null` when Redis is absent or the lock is held,
+so check `cache.distributed` when the two cases need different handling. The
+facade uses JSON, has per-process single-flight for `getOrLoad`, and returns
+null/no-op when Redis is absent. `@lumi/cache` remains the guild-config L1+L2
+cache used by `ConfigService`; helpers never bypass it.
+
+Modules that need serialized read-modify-write work should use
+`tryWithLock` (`modules/shared/lock.ts`). It always takes a process-local lock,
+adds a Redis lock when `distributed` is true, can wait briefly for a busy lock,
+and releases the Redis lock only if the token still matches. Role-menu
+selection, temporary voice creation/cleanup, and rejoin expiry updates use it.
 
 ## Codec
 

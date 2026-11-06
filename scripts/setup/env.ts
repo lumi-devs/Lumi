@@ -169,6 +169,9 @@ export function applyDefaults(
   }
 
   if (options.compose) {
+    if (isPlaceholder(values.get("POSTGRES_PASSWORD"))) {
+      updates.POSTGRES_PASSWORD = generate();
+    }
     if (validateRedisUrl(redisUrl) === null) {
       const parsed = new URL(redisUrl);
       const fromUrl = parsed.password

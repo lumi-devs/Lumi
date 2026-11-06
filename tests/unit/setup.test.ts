@@ -159,6 +159,7 @@ describe("applyDefaults", () => {
       generateSecret: () => "generated-secret",
     });
 
+    expect(updates.POSTGRES_PASSWORD).toBe("generated-secret");
     expect(updates.REDIS_PASSWORD).toBe("generated-secret");
     expect(updates.REDIS_URL).toBe(
       "redis://:generated-secret@localhost:6379/0",
@@ -197,6 +198,7 @@ describe("applyDefaults", () => {
 
   it("is idempotent for a complete environment", () => {
     const values = validValues();
+    values.set("POSTGRES_PASSWORD", "password");
     values.set("REDIS_URL", "redis://:password@localhost:6379/0");
     values.set("REDIS_PASSWORD", "password");
     values.set("RPC_INTERNAL_TOKEN", "token");

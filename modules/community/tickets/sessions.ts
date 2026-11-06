@@ -84,7 +84,5 @@ export async function deleteTicketOpenSession(
   token: string,
 ): Promise<void> {
   memory.delete(token);
-  await services.helpers.cache
-    .del(key(token))
-    .catch(() => undefined);
+  await services.helpers.cache.del(key(token)).catch(() => undefined);
 }

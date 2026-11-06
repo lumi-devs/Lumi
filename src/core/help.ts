@@ -21,7 +21,9 @@ interface HelpOptions {
   client: Client;
 }
 
-export function createHelpCommand(options: HelpOptions): BuiltinCommandDefinition {
+export function createHelpCommand(
+  options: HelpOptions,
+): BuiltinCommandDefinition {
   const { registry, loader, permits, configService, client } = options;
 
   return {

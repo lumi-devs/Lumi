@@ -70,6 +70,48 @@ export function isImmune(
   );
 }
 
+export interface RankedActor {
+  readonly id: string;
+  readonly highestRolePosition: number;
+}
+
+export interface RankedTarget {
+  readonly id: string;
+  readonly highestRolePosition: number;
+}
+
+export function canActOnRanks(
+  actor: RankedActor,
+  target: RankedTarget,
+  guildOwnerId: string,
+): boolean {
+  if (target.id === guildOwnerId) return false;
+  if (actor.id === guildOwnerId) return true;
+  return actor.highestRolePosition > target.highestRolePosition;
+}
+
+export function canActOn(actor: GuildMember, target: GuildMember): boolean {
+  return canActOnRanks(
+    {
+      id: actor.id,
+      highestRolePosition: actor.roles.highest.position,
+    },
+    {
+      id: target.id,
+      highestRolePosition: target.roles.highest.position,
+    },
+    actor.guild.ownerId,
+  );
+}
+
+export async function resolveActor(
+  interaction: ChatInputCommandInteraction,
+): Promise<GuildMember | null> {
+  const guild = interaction.guild;
+  if (!guild) return null;
+  return guild.members.fetch(interaction.user.id).catch(() => null);
+}
+
 export function getReason(interaction: ChatInputCommandInteraction): string {
   return interaction.options.getString("reason") ?? "No reason provided";
 }

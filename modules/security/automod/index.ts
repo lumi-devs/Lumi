@@ -28,6 +28,8 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { z } from "zod";
+import { safeRegexTest } from "../../shared/regex.js";
+import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
 import { getSecurityConfig } from "../core/config.js";
 import { startPanic } from "../panic/state.js";
 import {
@@ -109,9 +111,7 @@ function applyFilters(
   }
 
   for (const rule of config.regexRules) {
-    try {
-      if (new RegExp(rule, "i").test(content)) reasons.push("regex");
-    } catch {}
+    if (safeRegexTest(rule, content)) reasons.push("regex");
   }
 
   if (config.blockInvites) {
@@ -256,6 +256,13 @@ const onMessageListener: ListenerDefinition = {
       ModuleName,
     );
     if (!config.enabled) return;
+    warnInvalidRegexPatterns(
+      services,
+      "automod",
+      guild.id,
+      "regexRules",
+      config.regexRules,
+    );
 
     const security = await getSecurityConfig(services, guild.id);
     if (member.id === guild.ownerId) return;

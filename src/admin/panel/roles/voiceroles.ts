@@ -47,7 +47,10 @@ export async function renderVoiceRolesPanel(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const mappings = await listVoiceRoleMappings(servicesForModule(services), guildId);
+  const mappings = await listVoiceRoleMappings(
+    servicesForModule(services),
+    guildId,
+  );
   const totalPages = pageTotal(mappings.length);
   const visible = pageItems(mappings, page);
   const lines =
@@ -80,8 +83,12 @@ export async function renderVoiceRolesPanel(
           options: await Promise.all(
             visible.map(async (mapping) => ({
               label: cut(
-                (await guildChannel(interaction.guild ?? null, mapping.channelId))
-                  ?.name ?? mapping.channelId,
+                (
+                  await guildChannel(
+                    interaction.guild ?? null,
+                    mapping.channelId,
+                  )
+                )?.name ?? mapping.channelId,
                 100,
               ),
               value: mapping.channelId,
@@ -138,7 +145,10 @@ export async function renderVoiceRoleMapping(
     );
   }
 
-  const channel = await channelLabel(interaction.guild ?? null, mapping.channelId);
+  const channel = await channelLabel(
+    interaction.guild ?? null,
+    mapping.channelId,
+  );
   const category = mapping.categoryId
     ? await channelLabel(interaction.guild ?? null, mapping.categoryId)
     : "*none*";

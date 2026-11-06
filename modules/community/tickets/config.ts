@@ -111,7 +111,7 @@ export function parseQuestionsInput(raw: string): TicketQuestion[] {
   const result = TicketQuestionsSchema.safeParse(parsed);
   if (!result.success) {
     throw new Error(
-      "Invalid questions JSON. Each question needs a label of 1-45 characters. Text questions accept style, placeholder, required, and maxLength. Menu questions need type \"menu\" and 1-25 options.",
+      'Invalid questions JSON. Each question needs a label of 1-45 characters. Text questions accept style, placeholder, required, and maxLength. Menu questions need type "menu" and 1-25 options.',
     );
   }
   return normalizeQuestions(result.data);

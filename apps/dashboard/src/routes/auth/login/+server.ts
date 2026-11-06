@@ -2,19 +2,9 @@ import { type RequestHandler, redirect } from "@sveltejs/kit";
 import { authorizeUrl, createPkce, randomState } from "#lib/server/discord.js";
 import { serverConfig } from "#lib/server/env.js";
 import { dashboardKey, getRedis } from "#lib/server/redis.js";
+import { safeReturnTo } from "#lib/server/returnTo.js";
 
 const OAuthStateCookie = "lumi_oauth_state";
-
-function safeReturnTo(value: string | null): string {
-  if (
-    value?.startsWith("/") &&
-    !value.startsWith("//") &&
-    !value.includes("\\")
-  ) {
-    return value.slice(0, 500);
-  }
-  return "/guilds";
-}
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
   const state = randomState();

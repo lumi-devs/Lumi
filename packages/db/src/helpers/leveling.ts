@@ -49,6 +49,17 @@ export function createLevelingHelpers(ctx: DbContext) {
       });
       return user;
     },
+    async advanceLevel(
+      guildId: string,
+      userId: string,
+      level: number,
+    ): Promise<boolean> {
+      const result = await prisma.levelingUser.updateMany({
+        where: { guildId, userId, level: { lt: level } },
+        data: { level },
+      });
+      return result.count > 0;
+    },
     count: (guildId: string) =>
       prisma.levelingUser.count({ where: { guildId } }),
     rank: (guildId: string, totalXp: bigint) =>

@@ -2,7 +2,14 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { getCaseLink, getReason, isImmune, replyError } from "../helpers.js";
+import {
+  canActOn,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+  resolveActor,
+} from "../helpers.js";
 
 export const quarantineDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -40,6 +47,23 @@ export const quarantineDef: CommandDefinition = {
     const member = await guild.members.fetch(target.id).catch(() => null);
     if (!member) {
       await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
+    if (!canActOn(actor, member)) {
+      await replyError(
+        interaction,
+        "Cannot quarantine",
+        "You cannot quarantine a member with an equal or higher role.",
+      );
       return;
     }
     if (isImmune(member, config)) {
@@ -112,6 +136,23 @@ export const unquarantineDef: CommandDefinition = {
     const member = await guild.members.fetch(target.id).catch(() => null);
     if (!member) {
       await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
+    if (!canActOn(actor, member)) {
+      await replyError(
+        interaction,
+        "Cannot unquarantine",
+        "You cannot unquarantine a member with an equal or higher role.",
+      );
       return;
     }
     if (!member.manageable) {

@@ -2,7 +2,14 @@ import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
-import { getCaseLink, getReason, isImmune, replyError } from "../helpers.js";
+import {
+  canActOn,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+  resolveActor,
+} from "../helpers.js";
 
 export const vcmuteDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -41,6 +48,23 @@ export const vcmuteDef: CommandDefinition = {
     }
 
     const config = await getModerationConfig(services, guild.id);
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
+    if (!canActOn(actor, member)) {
+      await replyError(
+        interaction,
+        "Cannot mute",
+        "You cannot VC mute a member with an equal or higher role.",
+      );
+      return;
+    }
     if (isImmune(member, config)) {
       await replyError(interaction, "Immune", "This member has an immune role");
       return;

@@ -5,6 +5,7 @@ import {
   type GuildChannelTypes,
   type NonThreadGuildBasedChannel,
   OverwriteType,
+  PermissionFlagsBits,
   type Role,
 } from "discord.js";
 import {
@@ -232,6 +233,45 @@ export async function restoreBackup(
   data: GuildBackupData,
 ): Promise<RestoreResult> {
   const warnings: string[] = [];
+  const bot = guild.members.me;
+  if (!bot) {
+    return {
+      rolesCreated: 0,
+      rolesUpdated: 0,
+      channelsCreated: 0,
+      channelsUpdated: 0,
+      warnings: ["Could not resolve the bot member for this server."],
+      aborted: true,
+    };
+  }
+
+  if (
+    data.roles.length > 0 &&
+    !bot.permissions.has(PermissionFlagsBits.ManageRoles)
+  ) {
+    warnings.push("The bot is missing the Manage Roles permission.");
+  }
+  if (
+    data.channels.length > 0 &&
+    !bot.permissions.has(PermissionFlagsBits.ManageChannels)
+  ) {
+    warnings.push("The bot is missing the Manage Channels permission.");
+  }
+  if (warnings.length > 0) {
+    warn(services, "security restore preflight failed", {
+      guildId: guild.id,
+      warnings,
+    });
+    return {
+      rolesCreated: 0,
+      rolesUpdated: 0,
+      channelsCreated: 0,
+      channelsUpdated: 0,
+      warnings,
+      aborted: true,
+    };
+  }
+
   const roleMap = new Map<string, string>();
   let rolesCreated = 0;
   let rolesUpdated = 0;

@@ -247,7 +247,10 @@ export async function renderRoleMenuGroup(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const group = await services.helpers.roleMenus.findGroupById(guildId, groupId);
+  const group = await services.helpers.roleMenus.findGroupById(
+    guildId,
+    groupId,
+  );
   if (!group) {
     return makeErrorCard(
       "Role Menu Missing",
@@ -263,12 +266,10 @@ export async function renderRoleMenuGroup(
     );
   }
 
-  const optionLines = group.options
-    .slice(0, MaxGroupOptions)
-    .map((option) => {
-      const emoji = option.emoji ? `${option.emoji} ` : "";
-      return `• ${emoji}**${option.label}** — <@&${option.roleId}>`;
-    });
+  const optionLines = group.options.slice(0, MaxGroupOptions).map((option) => {
+    const emoji = option.emoji ? `${option.emoji} ` : "";
+    return `• ${emoji}**${option.label}** — <@&${option.roleId}>`;
+  });
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [
     row(
       createRoleSelectMenu({
@@ -371,7 +372,10 @@ export async function renderRoleMenuPost(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const group = await services.helpers.roleMenus.findGroupById(guildId, groupId);
+  const group = await services.helpers.roleMenus.findGroupById(
+    guildId,
+    groupId,
+  );
   if (!group) {
     return makeErrorCard(
       "Role Menu Missing",
@@ -555,7 +559,10 @@ export async function createRoleMenuGroup(
   if (conflict) {
     await interaction.reply(
       ephemeralCard(
-        makeErrorCard("Name Taken", `A role menu named **${name}** already exists.`),
+        makeErrorCard(
+          "Name Taken",
+          `A role menu named **${name}** already exists.`,
+        ),
       ),
     );
     return;
@@ -646,7 +653,10 @@ export async function editRoleMenuGroup(
   if (conflict) {
     await interaction.reply(
       ephemeralCard(
-        makeErrorCard("Name Taken", `A role menu named **${name}** already exists.`),
+        makeErrorCard(
+          "Name Taken",
+          `A role menu named **${name}** already exists.`,
+        ),
       ),
     );
     return;

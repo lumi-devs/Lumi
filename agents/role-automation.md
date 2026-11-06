@@ -172,11 +172,17 @@ Only members needing a change are counted toward the job total.
 
 1. `/bulkrole start` validates the filter and role hierarchy, snapshots members,
    and either previews or creates a job.
-2. The `*/1 * * * *` worker picks `pending`/`running` jobs, verifies the guild,
-   role, and hierarchy, fetches members, and processes one `batchSize` batch.
+2. The `*/1 * * * *` worker picks `pending`/`running` jobs and atomically claims
+   one with a conditional update: `pending` jobs are claimable immediately, while
+   a `running` job is claimable only after its five-minute `updatedAt` lease
+   expires. It then verifies the guild, role, and hierarchy, fetches members, and
+   processes one `batchSize` batch. A worker that loses the claim exits without
+   touching the guild.
 3. Successful changes increment `processed`; failures increment `failed` and set
-   `lastError`. Remaining work returns the job to `pending`; an exhausted job
-   becomes `completed`, or `failed` when every member failed.
+   `lastError`. Progress updates only apply while the job is not terminal, so a
+   concurrent cancel is not overwritten. Remaining work returns the job to
+   `pending`; an exhausted job becomes `completed`, or `failed` when every member
+   failed.
 4. `pause`, `resume`, and `cancel` only change status. `resume` turns `paused`
    into `pending`, so work continues from persisted counters. Terminal jobs are
    never revived.

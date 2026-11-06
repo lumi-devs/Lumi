@@ -10,6 +10,7 @@ import {
   type PartialUser,
   type User,
 } from "discord.js";
+import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
 import { getCustomCommandsConfig, getMessagePrefix } from "./config.js";
 import { executeCustomCommand, notifyProblem } from "./engine.js";
 import { listEnabledCommands } from "./store.js";
@@ -106,6 +107,16 @@ async function handleMessage(
   for (const command of commands) {
     const type = command.triggerType as TriggerType;
     if (!isMessageTrigger(type)) continue;
+    if (type === "regex") {
+      warnInvalidRegexPatterns(
+        services,
+        "custom-commands",
+        message.guild.id,
+        `trigger:${command.id}`,
+        [command.trigger],
+        "iu",
+      );
+    }
     const args = matchMessageTrigger(
       type,
       command.trigger,

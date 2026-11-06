@@ -27,6 +27,7 @@ import {
   LoggingConfigSchema,
 } from "./config.js";
 import { isIgnored, sendLog } from "./services.js";
+import { fencedCode, inlineCode } from "./format.js";
 
 function eventCard(
   title: string,
@@ -244,9 +245,9 @@ const onMessageCreateListener: ListenerDefinition = {
       "📨 Message Sent",
       AccentColors.success,
       [
-        `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
+        `**Author**\n${inlineCode(message.author.tag)} (\`${message.author.id}\`)`,
         `**Channel**\n<#${message.channelId}>`,
-        `**Content**\n${message.content.slice(0, 1024) || "*No content*"}`,
+        `**Content**\n${fencedCode(message.content, 1024)}`,
       ],
       `Message ID: ${message.id}`,
     );
@@ -275,10 +276,10 @@ const onMessageUpdateListener: ListenerDefinition = {
       "✏️ Message Edited",
       AccentColors.warning,
       [
-        `**Author**\n${newMessage.author.tag} (\`${newMessage.author.id}\`)`,
+        `**Author**\n${inlineCode(newMessage.author.tag)} (\`${newMessage.author.id}\`)`,
         `**Channel**\n<#${newMessage.channelId}>`,
-        `**Before**\n${(oldMessage.content ?? "").slice(0, 512) || "*No content*"}`,
-        `**After**\n${(newMessage.content ?? "").slice(0, 512) || "*No content*"}`,
+        `**Before**\n${fencedCode(oldMessage.content ?? "", 512)}`,
+        `**After**\n${fencedCode(newMessage.content ?? "", 512)}`,
       ],
       `Message ID: ${newMessage.id}`,
     );
@@ -302,9 +303,9 @@ const onMessageDeleteListener: ListenerDefinition = {
       "🗑️ Message Deleted",
       AccentColors.error,
       [
-        `**Author**\n${message.author.tag} (\`${message.author.id}\`)`,
+        `**Author**\n${inlineCode(message.author.tag)} (\`${message.author.id}\`)`,
         `**Channel**\n<#${message.channelId}>`,
-        `**Content**\n${(message.content ?? "").slice(0, 1024) || "*No content*"}`,
+        `**Content**\n${fencedCode(message.content ?? "", 1024)}`,
       ],
       `Message ID: ${message.id}`,
     );
@@ -338,7 +339,7 @@ const onVoiceStateListener: ListenerDefinition = {
           "🔊 Voice Join",
           AccentColors.success,
           [
-            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**User**\n${inlineCode(member.user.tag)} (\`${member.id}\`)`,
             `**Channel**\n<#${newState.channelId}>`,
           ],
           `User ID: ${member.id}`,
@@ -352,7 +353,7 @@ const onVoiceStateListener: ListenerDefinition = {
           "🔇 Voice Leave",
           AccentColors.error,
           [
-            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**User**\n${inlineCode(member.user.tag)} (\`${member.id}\`)`,
             `**Channel**\n<#${oldState.channelId}>`,
           ],
           `User ID: ${member.id}`,
@@ -366,7 +367,7 @@ const onVoiceStateListener: ListenerDefinition = {
           "🔄 Voice Move",
           AccentColors.cyan,
           [
-            `**User**\n${member.user.tag} (\`${member.id}\`)`,
+            `**User**\n${inlineCode(member.user.tag)} (\`${member.id}\`)`,
             `**From**\n<#${oldState.channelId}>`,
             `**To**\n<#${newState.channelId}>`,
           ],

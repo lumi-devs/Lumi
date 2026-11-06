@@ -139,12 +139,7 @@ function numberDefault(
 }
 
 function serverTemplate(services: BotServices, config: ModuleConfig): string {
-  return stringDefault(
-    services,
-    config,
-    "templateName",
-    "➕ {user}'s Channel",
-  );
+  return stringDefault(services, config, "templateName", "➕ {user}'s Channel");
 }
 
 function serverUserLimit(services: BotServices, config: ModuleConfig): number {
@@ -254,8 +249,7 @@ export async function renderTempVcGenerators(
           placeholder: "Manage a generator…",
           options: generators.slice(0, MaxOptions).map((generator) => ({
             label: cut(
-              names.get(generator.channelId) ??
-                `#${generator.channelId}`,
+              names.get(generator.channelId) ?? `#${generator.channelId}`,
               100,
             ),
             value: generator.channelId,
@@ -266,18 +260,23 @@ export async function renderTempVcGenerators(
   }
   rows.push(row(backButton(`lumi:modopen:${TempVcModuleName}:${pageIndex}`)));
 
-  return makeCard(undefined, `${moduleTitle(services)} · Generators`, [
-    ...(notice ? [`**${notice}**`] : []),
-    ...lines,
-    "-# Members who join a generator get their own temporary channel.",
-  ], panelOptions(
-    interaction,
-    "modules",
-    ["Hub", "Modules", "Temporary Voice", "Generators"],
-    rows,
+  return makeCard(
     undefined,
-    false,
-  ));
+    `${moduleTitle(services)} · Generators`,
+    [
+      ...(notice ? [`**${notice}**`] : []),
+      ...lines,
+      "-# Members who join a generator get their own temporary channel.",
+    ],
+    panelOptions(
+      interaction,
+      "modules",
+      ["Hub", "Modules", "Temporary Voice", "Generators"],
+      rows,
+      undefined,
+      false,
+    ),
+  );
 }
 
 export async function renderTempVcGenerator(
@@ -310,42 +309,47 @@ export async function renderTempVcGenerator(
   const template = generatorTemplate(services, config, generator);
   const limit = generatorLimit(services, config, generator);
 
-  return makeCard(undefined, `${moduleTitle(services)} · Generator`, [
-    ...(notice ? [`**${notice}**`] : []),
-    `**Channel**\n${name ? `#${name}` : `<#${generatorId}>`}`,
-    `**Name template**\n\`${cut(template, 100)}\``,
-    `**User limit**\n${limitLabel(limit)}`,
-    `-# ${generator.templateName ? "Custom template" : "Using the server template"} · ${generator.userLimit === undefined ? "Using the server limit" : "Custom limit"}`,
-  ], panelOptions(
-    interaction,
-    "modules",
-    ["Hub", "Modules", "Temporary Voice", "Generators", name ?? "Generator"],
-    [
-      row(
-        createActionButton({
-          customId: `lumi:tempvcgenrename:${generatorId}:${pageIndex}`,
-          label: "Rename Template",
-          emoji: "✏️",
-          style: ButtonStyle.Secondary,
-        }),
-        createActionButton({
-          customId: `lumi:tempvcgenlimit:${generatorId}:${pageIndex}`,
-          label: "Set Limit",
-          emoji: "🔢",
-          style: ButtonStyle.Secondary,
-        }),
-        createActionButton({
-          customId: `lumi:tempvcgenremove:${generatorId}:${pageIndex}`,
-          label: "Remove",
-          emoji: "🗑️",
-          style: ButtonStyle.Danger,
-        }),
-      ),
-      row(backButton(`lumi:tempvcgens:${pageIndex}`)),
-    ],
+  return makeCard(
     undefined,
-    false,
-  ));
+    `${moduleTitle(services)} · Generator`,
+    [
+      ...(notice ? [`**${notice}**`] : []),
+      `**Channel**\n${name ? `#${name}` : `<#${generatorId}>`}`,
+      `**Name template**\n\`${cut(template, 100)}\``,
+      `**User limit**\n${limitLabel(limit)}`,
+      `-# ${generator.templateName ? "Custom template" : "Using the server template"} · ${generator.userLimit === undefined ? "Using the server limit" : "Custom limit"}`,
+    ],
+    panelOptions(
+      interaction,
+      "modules",
+      ["Hub", "Modules", "Temporary Voice", "Generators", name ?? "Generator"],
+      [
+        row(
+          createActionButton({
+            customId: `lumi:tempvcgenrename:${generatorId}:${pageIndex}`,
+            label: "Rename Template",
+            emoji: "✏️",
+            style: ButtonStyle.Secondary,
+          }),
+          createActionButton({
+            customId: `lumi:tempvcgenlimit:${generatorId}:${pageIndex}`,
+            label: "Set Limit",
+            emoji: "🔢",
+            style: ButtonStyle.Secondary,
+          }),
+          createActionButton({
+            customId: `lumi:tempvcgenremove:${generatorId}:${pageIndex}`,
+            label: "Remove",
+            emoji: "🗑️",
+            style: ButtonStyle.Danger,
+          }),
+        ),
+        row(backButton(`lumi:tempvcgens:${pageIndex}`)),
+      ],
+      undefined,
+      false,
+    ),
+  );
 }
 
 export async function renderTempVcRemove(
@@ -465,10 +469,7 @@ export async function handleTempVcGeneratorModal(
   } else {
     const limit = Number(raw);
     if (!Number.isInteger(limit) || limit < 0 || limit > 99) {
-      await replyModalError(
-        interaction,
-        "Enter a whole number from 0 to 99.",
-      );
+      await replyModalError(interaction, "Enter a whole number from 0 to 99.");
       return;
     }
     generator.userLimit = limit;
@@ -481,9 +482,7 @@ export async function handleTempVcGeneratorModal(
     services,
     generatorId,
     pageIndex,
-    action === "tempvcgenrename"
-      ? "✏️ Template updated."
-      : "🔢 Limit updated.",
+    action === "tempvcgenrename" ? "✏️ Template updated." : "🔢 Limit updated.",
   );
   if (isMessageModal(interaction)) {
     await interaction.update(card);
@@ -505,11 +504,7 @@ export async function handleTempVcModuleAction(
   switch (action) {
     case "tempvcgens": {
       await showPanel(interaction, () =>
-        renderTempVcGenerators(
-          interaction,
-          services,
-          pageNumber(target),
-        ),
+        renderTempVcGenerators(interaction, services, pageNumber(target)),
       );
       return true;
     }
@@ -518,11 +513,7 @@ export async function handleTempVcModuleAction(
       const channelId = interaction.values[0];
       if (!channelId || !SnowflakePattern.test(channelId)) return true;
       const config = configObject(
-        await readModuleConfig(
-          services,
-          guildId,
-          TempVcModuleName,
-        ),
+        await readModuleConfig(services, guildId, TempVcModuleName),
       );
       const generators = parseTempVcGenerators(config.generators);
       if (generators.some((item) => item.channelId === channelId)) {
@@ -565,22 +556,13 @@ export async function handleTempVcModuleAction(
     case "tempvcgen": {
       if (!SnowflakePattern.test(target)) return true;
       await showPanel(interaction, () =>
-        renderTempVcGenerator(
-          interaction,
-          services,
-          target,
-          pageNumber(extra),
-        ),
+        renderTempVcGenerator(interaction, services, target, pageNumber(extra)),
       );
       return true;
     }
     case "tempvcgenback": {
       await showPanel(interaction, () =>
-        renderTempVcGenerators(
-          interaction,
-          services,
-          pageNumber(target),
-        ),
+        renderTempVcGenerators(interaction, services, pageNumber(target)),
       );
       return true;
     }
@@ -589,11 +571,7 @@ export async function handleTempVcModuleAction(
       if (!interaction.isButton()) return true;
       if (!SnowflakePattern.test(target)) return true;
       const config = configObject(
-        await readModuleConfig(
-          services,
-          guildId,
-          TempVcModuleName,
-        ),
+        await readModuleConfig(services, guildId, TempVcModuleName),
       );
       const generators = parseTempVcGenerators(config.generators);
       const generator = generators.find((item) => item.channelId === target);
@@ -622,22 +600,14 @@ export async function handleTempVcModuleAction(
     case "tempvcgenremove": {
       if (!SnowflakePattern.test(target)) return true;
       await showPanel(interaction, () =>
-        renderTempVcRemove(
-          interaction,
-          target,
-          pageNumber(extra),
-        ),
+        renderTempVcRemove(interaction, target, pageNumber(extra)),
       );
       return true;
     }
     case "tempvcgenremoveconfirm": {
       if (!SnowflakePattern.test(target)) return true;
       const config = configObject(
-        await readModuleConfig(
-          services,
-          guildId,
-          TempVcModuleName,
-        ),
+        await readModuleConfig(services, guildId, TempVcModuleName),
       );
       const generators = parseTempVcGenerators(config.generators);
       config.generators = generators.filter(
@@ -656,12 +626,7 @@ export async function handleTempVcModuleAction(
     }
     case "tempvcgenremovecancel": {
       await showPanel(interaction, () =>
-        renderTempVcGenerator(
-          interaction,
-          services,
-          target,
-          pageNumber(extra),
-        ),
+        renderTempVcGenerator(interaction, services, target, pageNumber(extra)),
       );
       return true;
     }

@@ -1,6 +1,7 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import type { Guild, GuildMember, Role } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
+import { tryWithLock } from "../../shared/lock.js";
 import {
   planForcedRemoval,
   planSelection,
@@ -266,25 +267,40 @@ export async function applyRoleSelection(
   options: readonly MenuOption[],
   requestedRoleIds: readonly string[],
 ): Promise<ApplyResult> {
-  const current = currentOptionRoleIds(member, options);
-  const plan = planSelection({
-    rules: rulesFor(group, options),
-    currentRoleIds: current,
-    requestedRoleIds,
-  });
-  if (!plan.ok) return { ok: false, message: plan.message };
+  const locked = await tryWithLock(
+    services,
+    `role-menu:${group.guildId}:${member.id}:${group.id}`,
+    15_000,
+    async (): Promise<ApplyResult> => {
+      const current = currentOptionRoleIds(member, options);
+      const plan = planSelection({
+        rules: rulesFor(group, options),
+        currentRoleIds: current,
+        requestedRoleIds,
+      });
+      if (!plan.ok) return { ok: false, message: plan.message };
 
-  const currentSet = new Set(current);
-  const refreshRoleIds = group.tempDurationSeconds
-    ? requestedRoleIds.filter((roleId) => currentSet.has(roleId))
-    : [];
+      const currentSet = new Set(current);
+      const refreshRoleIds = group.tempDurationSeconds
+        ? requestedRoleIds.filter((roleId) => currentSet.has(roleId))
+        : [];
 
-  return applyPlan(services, guild, member, group, {
-    addRoleIds: plan.addRoleIds,
-    removeRoleIds: plan.removeRoleIds,
-    selectedRoleIds: plan.selectedRoleIds,
-    refreshRoleIds,
-  });
+      return applyPlan(services, guild, member, group, {
+        addRoleIds: plan.addRoleIds,
+        removeRoleIds: plan.removeRoleIds,
+        selectedRoleIds: plan.selectedRoleIds,
+        refreshRoleIds,
+      });
+    },
+  );
+  if (locked.ok) return locked.value;
+  return {
+    ok: false,
+    message:
+      locked.reason === "busy"
+        ? "Another role change is already in progress. Try again in a moment."
+        : "Role changes are temporarily unavailable. Try again shortly.",
+  };
 }
 
 export async function applyForcedRoleRemoval(
@@ -295,14 +311,29 @@ export async function applyForcedRoleRemoval(
   options: readonly MenuOption[],
   roleId: string,
 ): Promise<ApplyResult> {
-  const current = currentOptionRoleIds(member, options);
-  const plan = planForcedRemoval(rulesFor(group, options), current, roleId);
-  if (!plan.ok) return { ok: false, message: plan.message };
+  const locked = await tryWithLock(
+    services,
+    `role-menu:${group.guildId}:${member.id}:${group.id}`,
+    15_000,
+    async (): Promise<ApplyResult> => {
+      const current = currentOptionRoleIds(member, options);
+      const plan = planForcedRemoval(rulesFor(group, options), current, roleId);
+      if (!plan.ok) return { ok: false, message: plan.message };
 
-  return applyPlan(services, guild, member, group, {
-    addRoleIds: plan.addRoleIds,
-    removeRoleIds: plan.removeRoleIds,
-    selectedRoleIds: plan.selectedRoleIds,
-    refreshRoleIds: [],
-  });
+      return applyPlan(services, guild, member, group, {
+        addRoleIds: plan.addRoleIds,
+        removeRoleIds: plan.removeRoleIds,
+        selectedRoleIds: plan.selectedRoleIds,
+        refreshRoleIds: [],
+      });
+    },
+  );
+  if (locked.ok) return locked.value;
+  return {
+    ok: false,
+    message:
+      locked.reason === "busy"
+        ? "Another role change is already in progress. Try again in a moment."
+        : "Role changes are temporarily unavailable. Try again shortly.",
+  };
 }

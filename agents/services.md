@@ -5,10 +5,10 @@ them, or add compatibility re-exports.
 
 ## The two contracts
 
-| Contract        | Lives in                        | Audience                        | Shape                                            |
-| --------------- | ------------------------------- | ------------------------------- | ------------------------------------------------ |
-| `BotServices`   | `src/core/contracts.ts`         | built-in code under `src/`      | wide: every long-lived dependency the process owns |
-| `ModuleServices`| `packages/module-kit/src/types.ts` | first-party modules and addons | narrow: the public API modules are allowed to use |
+| Contract         | Lives in                           | Audience                       | Shape                                              |
+| ---------------- | ---------------------------------- | ------------------------------ | -------------------------------------------------- |
+| `BotServices`    | `src/core/contracts.ts`            | built-in code under `src/`     | wide: every long-lived dependency the process owns |
+| `ModuleServices` | `packages/module-kit/src/types.ts` | first-party modules and addons | narrow: the public API modules are allowed to use  |
 
 `BotServices` intentionally has fields that modules must never see:
 `redis`, `prisma`, `moduleLoader`, `moduleManager`, `addons`, `configService`.
@@ -106,7 +106,10 @@ const runtimeRef: { host?: ModuleHost } = {};
 const addonManager = new AddonManager({
   // ...
   runtime: () => {
-    if (!runtimeRef.host) throw new Error("Add-on runtime requested before the module host exists.");
+    if (!runtimeRef.host)
+      throw new Error(
+        "Add-on runtime requested before the module host exists.",
+      );
     return runtimeRef.host;
   },
 });

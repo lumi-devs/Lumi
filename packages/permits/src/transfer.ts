@@ -1,6 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { createAuditLog } from "./audit.js";
-import { MinCustomPermitNumber } from "./constants.js";
+import { isWhitelistScope, MinCustomPermitNumber } from "./constants.js";
 import { nextCustomPermitNumber } from "./numbering.js";
 import type { PermitTargetType, Polarity } from "./types.js";
 
@@ -46,6 +46,8 @@ export interface PermitImportOptions {
   readonly skipBuiltins?: boolean;
 
   readonly userId?: string;
+
+  readonly allowOwnerNodes?: boolean;
 }
 
 export interface PermitImportResult {
@@ -58,6 +60,13 @@ const TargetTypes: ReadonlySet<string> = new Set(["USER", "ROLE", "CHANNEL"]);
 
 function isPermitTargetType(value: unknown): value is PermitTargetType {
   return typeof value === "string" && TargetTypes.has(value);
+}
+
+function toDate(value: unknown): Date | null | undefined {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 function toJsonInput(
@@ -122,6 +131,14 @@ export async function exportPermits(
   };
 }
 
+/**
+ * Imports permits into one guild.
+ *
+ * Import data is treated as untrusted: malformed records are reported through
+ * `errors` instead of being written or thrown. Imported permits are always
+ * custom (the exported `builtin` flag is ignored), and owner-level `*` nodes are
+ * rejected unless a trusted caller explicitly passes `allowOwnerNodes`.
+ */
 export async function importPermits(
   db: PrismaClient,
   guildId: string,
@@ -130,11 +147,21 @@ export async function importPermits(
 ): Promise<PermitImportResult> {
   const overwriteExisting = options.overwriteExisting ?? false;
   const skipBuiltins = options.skipBuiltins ?? true;
+  const allowOwnerNodes = options.allowOwnerNodes ?? false;
   const userId = options.userId ?? "unknown";
   const result = { imported: 0, skipped: 0, errors: [] as string[] };
 
+  const payload = data as unknown;
+  if (payload === null || typeof payload !== "object") {
+    result.errors.push("Invalid import data");
+    return result;
+  }
   if (data.guildId !== guildId) {
     result.errors.push("Guild ID mismatch in import data");
+    return result;
+  }
+  if (typeof data.version !== "number" || !Number.isInteger(data.version)) {
+    result.errors.push(`Unsupported export version: ${String(data.version)}`);
     return result;
   }
   if (data.version > 1) {
@@ -142,26 +169,182 @@ export async function importPermits(
     return result;
   }
 
+  if (!Array.isArray(data.permits) || !Array.isArray(data.assignments)) {
+    result.errors.push(
+      "Invalid import data: permits and assignments must be arrays",
+    );
+    return result;
+  }
+
   const assignmentsByPermit = new Map<number, ExportedAssignment[]>();
   for (const assignment of data.assignments) {
+    if (
+      !assignment ||
+      typeof assignment !== "object" ||
+      typeof assignment.permitId !== "number" ||
+      !Number.isInteger(assignment.permitId)
+    ) {
+      result.errors.push("Skipped invalid assignment record");
+      continue;
+    }
     const list = assignmentsByPermit.get(assignment.permitId);
     if (list) list.push(assignment);
     else assignmentsByPermit.set(assignment.permitId, [assignment]);
   }
 
   for (const permitData of data.permits) {
+    if (!permitData || typeof permitData !== "object") {
+      result.errors.push("Failed to import permit: invalid entry");
+      continue;
+    }
     if (skipBuiltins && permitData.builtin) {
       result.skipped++;
       continue;
     }
 
-    const assignments = assignmentsByPermit.get(permitData.id) ?? [];
-    const invalidTarget = assignments.find(
-      (assignment) => !isPermitTargetType(assignment.targetType),
-    );
-    if (invalidTarget) {
+    if (
+      typeof permitData.name !== "string" ||
+      permitData.name.trim().length === 0
+    ) {
+      result.errors.push("Failed to import permit: invalid name");
+      continue;
+    }
+    const rawNodes: unknown = permitData.nodes;
+    if (!Array.isArray(rawNodes)) {
       result.errors.push(
-        `Failed to import permit ${permitData.name}: invalid target type ${String(invalidTarget.targetType)}`,
+        `Failed to import permit ${permitData.name}: invalid permission nodes`,
+      );
+      continue;
+    }
+    const nodes = rawNodes.filter(
+      (node): node is string => typeof node === "string",
+    );
+    if (
+      nodes.length === 0 ||
+      nodes.length !== rawNodes.length ||
+      nodes.some((node) => node.trim().length === 0)
+    ) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid permission nodes`,
+      );
+      continue;
+    }
+    if (!allowOwnerNodes && nodes.includes("*")) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: owner-level nodes are not allowed`,
+      );
+      continue;
+    }
+    if (permitData.polarity !== "Grant" && permitData.polarity !== "Deny") {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid polarity`,
+      );
+      continue;
+    }
+    const rawScopes: unknown = permitData.whitelistScopes;
+    if (
+      rawScopes !== undefined &&
+      rawScopes !== null &&
+      !Array.isArray(rawScopes)
+    ) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid whitelist scope`,
+      );
+      continue;
+    }
+    const whitelistScopes = Array.isArray(rawScopes)
+      ? rawScopes.filter((scope): scope is string => typeof scope === "string")
+      : [];
+    if (
+      (Array.isArray(rawScopes) &&
+        whitelistScopes.length !== rawScopes.length) ||
+      whitelistScopes.some((scope) => !isWhitelistScope(scope))
+    ) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid whitelist scope`,
+      );
+      continue;
+    }
+    if (
+      permitData.position !== undefined &&
+      (typeof permitData.position !== "number" ||
+        !Number.isFinite(permitData.position) ||
+        !Number.isInteger(permitData.position))
+    ) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid position`,
+      );
+      continue;
+    }
+    if (
+      permitData.timezone !== null &&
+      permitData.timezone !== undefined &&
+      typeof permitData.timezone !== "string"
+    ) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid timezone`,
+      );
+      continue;
+    }
+    const expiresAt = toDate(permitData.expiresAt);
+    if (expiresAt === undefined) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid expiry`,
+      );
+      continue;
+    }
+    const createdAtValue = toDate(permitData.createdAt);
+    const updatedAtValue = toDate(permitData.updatedAt);
+    if (createdAtValue === undefined || updatedAtValue === undefined) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: invalid timestamp`,
+      );
+      continue;
+    }
+    const createdAt = createdAtValue ?? new Date();
+    const updatedAt = updatedAtValue ?? createdAt;
+    const position =
+      typeof permitData.position === "number" ? permitData.position : 0;
+
+    const rawAssignments = assignmentsByPermit.get(permitData.id) ?? [];
+    const assignments: {
+      targetType: PermitTargetType;
+      targetId: string;
+      grantedBy: string;
+      expiresAt: Date | null;
+      grantedAt: Date | undefined;
+    }[] = [];
+    let assignmentError: string | null = null;
+    for (const assignment of rawAssignments) {
+      if (
+        !assignment ||
+        typeof assignment !== "object" ||
+        !isPermitTargetType(assignment.targetType) ||
+        typeof assignment.targetId !== "string" ||
+        assignment.targetId.length === 0 ||
+        typeof assignment.grantedBy !== "string" ||
+        assignment.grantedBy.length === 0
+      ) {
+        assignmentError = "invalid assignment target";
+        break;
+      }
+      const grantedAt = toDate(assignment.grantedAt);
+      const assignmentExpiresAt = toDate(assignment.expiresAt);
+      if (grantedAt === undefined || assignmentExpiresAt === undefined) {
+        assignmentError = "invalid assignment timestamp";
+        break;
+      }
+      assignments.push({
+        targetType: assignment.targetType,
+        targetId: assignment.targetId,
+        grantedBy: assignment.grantedBy,
+        expiresAt: assignmentExpiresAt,
+        grantedAt: grantedAt ?? undefined,
+      });
+    }
+    if (assignmentError !== null) {
+      result.errors.push(
+        `Failed to import permit ${permitData.name}: ${assignmentError}`,
       );
       continue;
     }
@@ -193,23 +376,17 @@ export async function importPermits(
             guildId,
             name: permitData.name,
             number,
-            nodes: [...permitData.nodes],
+            nodes,
             polarity: permitData.polarity,
-            position: permitData.position,
-            builtin: permitData.builtin,
-            expiresAt: permitData.expiresAt
-              ? new Date(permitData.expiresAt)
-              : null,
+            position,
+            builtin: false,
+            expiresAt,
             schedule: toJsonInput(permitData.schedule),
             timezone: permitData.timezone,
             conditions: toJsonInput(permitData.conditions),
-            whitelistScopes: Array.isArray(permitData.whitelistScopes)
-              ? permitData.whitelistScopes.filter(
-                  (scope): scope is string => typeof scope === "string",
-                )
-              : [],
-            createdAt: new Date(permitData.createdAt),
-            updatedAt: new Date(permitData.updatedAt),
+            whitelistScopes,
+            createdAt,
+            updatedAt,
           },
         });
 
@@ -221,12 +398,8 @@ export async function importPermits(
               targetType: assignment.targetType,
               targetId: assignment.targetId,
               grantedBy: assignment.grantedBy,
-              expiresAt: assignment.expiresAt
-                ? new Date(assignment.expiresAt)
-                : null,
-              grantedAt: assignment.grantedAt
-                ? new Date(assignment.grantedAt)
-                : undefined,
+              expiresAt: assignment.expiresAt,
+              grantedAt: assignment.grantedAt,
             })),
           });
         }

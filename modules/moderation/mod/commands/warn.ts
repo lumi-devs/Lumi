@@ -3,11 +3,13 @@ import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
 import {
+  canActOn,
   describeError,
   getCaseLink,
   getReason,
   isImmune,
   replyError,
+  resolveActor,
 } from "../helpers.js";
 
 export const warnDef: CommandDefinition = {
@@ -38,6 +40,26 @@ export const warnDef: CommandDefinition = {
     const guild = interaction.guild!;
     const config = await getModerationConfig(services, guild.id);
     const member = await guild.members.fetch(target.id).catch(() => null);
+
+    if (member) {
+      const actor = await resolveActor(interaction);
+      if (!actor) {
+        await replyError(
+          interaction,
+          "Cannot verify roles",
+          "I could not verify your server roles. Try again.",
+        );
+        return;
+      }
+      if (!canActOn(actor, member)) {
+        await replyError(
+          interaction,
+          "Cannot warn",
+          "You cannot warn a member with an equal or higher role.",
+        );
+        return;
+      }
+    }
 
     if (isImmune(member, config)) {
       await replyError(interaction, "Immune", "This member has an immune role");
@@ -79,9 +101,7 @@ export const warnDef: CommandDefinition = {
               autoAction = "quarantine failed - my role is too low";
             } else {
               const oldRoles = member.roles.cache
-                .filter(
-                  (item) => item.id !== guild.id && item.id !== role.id,
-                )
+                .filter((item) => item.id !== guild.id && item.id !== role.id)
                 .map((item) => item.id);
               await member.roles.set(
                 [role],

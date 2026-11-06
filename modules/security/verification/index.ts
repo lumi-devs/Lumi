@@ -339,6 +339,7 @@ const onInteractionListener: ListenerDefinition = {
 
     const [, , guildId, userId] = interaction.customId.split(":");
     if (!guildId || !userId) return;
+    if (guildId !== interaction.guildId) return;
     if (interaction.user.id !== userId) {
       await interaction.reply(
         ephemeralCard(

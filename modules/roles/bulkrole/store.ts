@@ -56,6 +56,15 @@ export async function listRunnableBulkRoleJobs(
   return rows.map(toBulkRoleJob);
 }
 
+export async function claimBulkRoleJob(
+  services: ModuleServices,
+  jobId: string,
+  leaseMs = 5 * 60_000,
+): Promise<boolean> {
+  const result = await services.helpers.roles.bulkRole.claim(jobId, leaseMs);
+  return result.count > 0;
+}
+
 export async function getBulkRoleJob(
   services: ModuleServices,
   guildId: string,

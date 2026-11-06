@@ -56,8 +56,8 @@ on each page load.
   lifetime cap (`SESSION_MAX_AGE_SECONDS`, default 30 days).
 - Access tokens refresh 30 seconds before expiry. A failed refresh redirects to
   `/auth/login?error=expired`.
-- `returnTo` values are restricted to relative paths; protocol-relative and
-  backslash paths are rejected.
+- `returnTo` values are restricted to same-origin relative paths; protocol-
+  relative, backslash, and ASCII control-character paths are rejected.
 
 Required env values live in `apps/dashboard/.env.example`. `BOT_TOKEN`,
 `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `SESSION_SECRET`, and
@@ -86,6 +86,12 @@ plain-HTTP local production smoke tests.
 Module toggles and configuration are written to Postgres first, then
 `setModuleStateViaRpc()` tells the bot to apply the change. RPC failures are
 reported as warnings; the next bot startup reconciles from Postgres.
+
+Config saves validate the module schema, including multi-string fields. The
+`regexRules` and `filterUsernamePatterns` fields also run `compileSafeRegex`
+before writing so unsafe patterns are rejected in the UI. This is a convenience
+guard only: other config writers can bypass the dashboard, so modules still warn
+and ignore unsafe stored patterns at read time.
 
 ## Web verification
 

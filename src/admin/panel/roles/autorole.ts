@@ -164,12 +164,7 @@ export async function renderAutoroleFilters(
         style: config.onlyOnJoin ? ButtonStyle.Success : ButtonStyle.Secondary,
       }),
     ),
-    row(
-      backButton(
-        `lumi:autorole:${page}`,
-        "Back",
-      ),
-    ),
+    row(backButton(`lumi:autorole:${page}`, "Back")),
   ];
 
   return postCard(

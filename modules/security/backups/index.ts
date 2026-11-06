@@ -35,7 +35,12 @@ import {
   pruneBackups,
   restoreBackup,
 } from "../backup-store/index.js";
-import { readModuleConfig, securityCard, sendSecurityLog } from "../shared.js";
+import {
+  hasPermit,
+  readModuleConfig,
+  securityCard,
+  sendSecurityLog,
+} from "../shared.js";
 
 const ModuleName = "security-backups";
 const ButtonPrefix = "lumi:backup";
@@ -336,6 +341,36 @@ const restoreButtonListener: ListenerDefinition = {
 
     if (action !== "confirm") return;
 
+    if (!services.modules.isEnabled(guildId, ModuleName)) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Backups Disabled",
+            "The backups module is not enabled for this server.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    const member = await guild.members
+      .fetch(interaction.user.id)
+      .catch(() => null);
+    if (
+      !member ||
+      !(await hasPermit(services, guild, member, "admin.config"))
+    ) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Missing Permission",
+            "You no longer have permission to restore backups.",
+          ),
+        ),
+      );
+      return;
+    }
+
     await interaction.deferUpdate();
     const backup = await backupById(services, guildId, backupId);
     if (!backup) {
@@ -363,17 +398,38 @@ const restoreButtonListener: ListenerDefinition = {
     }
 
     await interaction.editReply(
-      ephemeralCard(makeSuccessCard("Backup Restored", lines)),
+      ephemeralCard(
+        result.aborted
+          ? makeErrorCard("Backup Restore Aborted", lines)
+          : result.warnings.length > 0
+            ? makeWarningCard("Backup Restored with Warnings", lines)
+            : makeSuccessCard("Backup Restored", lines),
+      ),
     );
     await sendSecurityLog(
       services,
       guildId,
-      securityCard("💾 Backup Restored", [
-        `**By**\n<@${interaction.user.id}>`,
-        `**Backup**\n\`${backup.id}\``,
-        `**Roles**\n${result.rolesCreated} created · ${result.rolesUpdated} updated`,
-        `**Channels**\n${result.channelsCreated} created · ${result.channelsUpdated} updated`,
-      ]),
+      securityCard(
+        result.aborted
+          ? "💾 Backup Restore Aborted"
+          : result.warnings.length > 0
+            ? "💾 Backup Restored with Warnings"
+            : "💾 Backup Restored",
+        [
+          `**By**\n<@${interaction.user.id}>`,
+          `**Backup**\n\`${backup.id}\``,
+          `**Roles**\n${result.rolesCreated} created · ${result.rolesUpdated} updated`,
+          `**Channels**\n${result.channelsCreated} created · ${result.channelsUpdated} updated`,
+          ...(result.warnings.length > 0
+            ? [
+                `**Warnings**\n${fitLines(
+                  result.warnings.map((warning) => `-# ${warning}`),
+                  1500,
+                )}`,
+              ]
+            : []),
+        ],
+      ),
     );
   },
 };

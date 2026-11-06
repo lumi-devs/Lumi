@@ -160,4 +160,109 @@ describeBun("validateAddon", () => {
       ),
     );
   });
+
+  it("scans hidden directories for forbidden imports", async () => {
+    const dir = await makeAddon({
+      "index.ts": 'import "./.hidden/impl.js";\nexport default {};\n',
+      ".hidden/impl.ts": 'import "@lumi/db";\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("is internal and cannot be imported"),
+    );
+  });
+
+  it("scans JavaScript files for forbidden imports", async () => {
+    const dir = await makeAddon({
+      "index.ts": "export default {};\n",
+      "helper.js": 'import "@lumi/redis";\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("is internal and cannot be imported"),
+    );
+  });
+
+  it("scans a test-named entry file", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({ entry: "main.test.ts" }),
+      "main.test.ts": 'import "@lumi/downloader";\nexport default {};\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("is internal and cannot be imported"),
+    );
+  });
+
+  it("rejects a missing entry file", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({ entry: "missing.ts" }),
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("does not exist"),
+    );
+  });
+
+  it("rejects a non-script entry in the manifest", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({ entry: "index.json" }),
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("relative JS/TS path"),
+    );
+  });
+
+  it("rejects computed import specifiers", async () => {
+    const dir = await makeAddon({
+      "index.ts": 'const name = "./x.js";\nawait import(name);\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("computed specifier"),
+    );
+  });
+
+  it("rejects computed import expressions that begin with a literal", async () => {
+    const dir = await makeAddon({
+      "index.ts": 'const suffix = ".js";\nawait import("./x" + suffix);\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("computed specifier"),
+    );
+  });
+
+  it("rejects computed require expressions that begin with a literal", async () => {
+    const dir = await makeAddon({
+      "index.ts": 'const suffix = ".js";\nrequire("./x" + suffix);\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringContaining("computed specifier"),
+    );
+  });
+
+  it("accepts static dynamic imports", async () => {
+    const dir = await makeAddon({
+      "index.ts": 'await import("./x.js");\n',
+    });
+    await expect(validateAddon(dir)).resolves.toEqual([]);
+  });
+
+  it("scans JavaScript files regardless of extension case", async () => {
+    const dir = await makeAddon({
+      "evil.TS": 'import "@lumi/db";\n',
+    });
+    await expect(validateAddon(dir)).resolves.toContainEqual(
+      expect.stringMatching(/evil\.TS.*is internal/),
+    );
+  });
+
+  it("rejects requirements with path segments", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({
+        requirements: ["a/../../../tmp/evil", "../../installed-addon"],
+      }),
+    });
+    const errors = await validateAddon(dir);
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("is not a registry package spec"),
+      ]),
+    );
+  });
 });

@@ -19,13 +19,13 @@ enabled; supermodules are display-only containers.
 
 - `utility-afk` — AFK status with mention replies and nickname prefix
 - `utility-nick` — Nickname changes with role hierarchy checks and optional self-service
-- `utility-tempvc` — Join-to-create temporary voice channels with ownership controls
+- `utility-tempvc` — Join-to-create temporary voice channels with ownership controls. Creation, expiry refresh, and sweep deletion serialize on a per-channel lock so two joins cannot create duplicate channels and a rejoin cannot race an expired-channel delete.
 - `utility-info` — Avatar, banner, whois, serverinfo, and info commands
 - `utility-reminders` — Durable DM-first reminders with snooze, recurring schedules, and retention cleanup
 
 ### Community
 
-- `community-leveling` — XP, levels, role rewards, leaderboards, voice XP
+- `community-leveling` — XP, levels, role rewards, leaderboards, voice XP. Level writes advance monotonically through a conditional update, so a delayed XP calculation cannot lower a level or repeat a level-up reward.
 - `community-economy` — Currency, banking, rewards, shop, balance cards
 - `community-quote` — `/quote` plus `,quote`/`,q` prefix quotes, with optional quote channel, dark/color theme, watermark, name/avatar source, markdown stripping, and mention resolution
 - `community-stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
@@ -47,11 +47,13 @@ enabled; supermodules are display-only containers.
 
 ### Moderation
 
-- `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute)
+- `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute); destructive actions require the actor's highest role to outrank the target (guild owner bypasses, Administrators do not)
 
 ### Logging
 
-- `logging-logs` — Message, edit, delete, voice, and moderation logging
+- `logging-logs` — Message, edit, delete, voice, and moderation logging. Message
+  content is placed in dynamic-length code fences and user/author mentions are
+  inline-coded so stored text cannot inject formatting, links, or spoilers.
 
 ### Security
 
@@ -60,7 +62,7 @@ enabled; supermodules are display-only containers.
 - `security-join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
 - `security-verification` — Member verification with emoji captcha, web verification, pending/verified roles
 - `security-panic` — Automated server lockdown, channel locking, invite disabling
-- `security-backups` — Periodic server structure snapshots with per-backup stats, safe-repair restore previews (create missing, update existing, never delete), and confirm/reject controls in Discord and the dashboard
+- `security-backups` — Periodic server structure snapshots with per-backup stats, safe-repair restore previews (create missing, update existing, never delete), and confirm/reject controls in Discord and the dashboard. Restore preflights the bot member and Manage Roles/Manage Channels before mutating; partial failures return warnings and are shown as a warning card and security log instead of a success message.
 - `security-betrayal` — Velocity monitoring of whitelisted users with per-action limits
 - `security-autorecovery` — Automatic server restore from latest backup when panic triggers
 - `security-automod` — Heat-based automod with 13 filters, escalating punishments, permit-based immunity
@@ -117,6 +119,23 @@ directory itself has no entry file and no code.
   `ioredis` are rejected for `modules/**`.
 - Module code receives `ModuleServices`, never the wide `BotServices`. See
   [services.md](./services.md) for the two contracts and the projection rule.
+
+## Stored Regex Safety
+
+Stored patterns from automod `regexRules`, join-gate `filterUsernamePatterns`,
+ticket auto-tags, and custom-command `regex` triggers are untrusted. They are
+compiled with `compileSafeRegex` (`modules/shared/regex.ts`), which limits length
+to 200 characters and rejects backreferences, lookbehind, nested repetition, and
+repeated alternation. Runtime matching is fail-closed through `safeRegexTest`.
+
+A pattern that fails compilation is ignored for that evaluation and logged once
+per guild, field, pattern, and error by `warnInvalidRegexPatterns`
+(`modules/shared/regex-warnings.ts`). Never reject the whole module config or
+fall back to `enabled: false` because one stored pattern is unsafe; that would
+disable protection for every other rule. The dashboard applies the same checks
+before saving multi-string `regexRules` and `filterUsernamePatterns` values, but
+other config writers still bypass the UI, so module read paths must warn and
+filter as well.
 
 ## Supermodule Manifest
 

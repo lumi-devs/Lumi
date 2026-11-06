@@ -334,10 +334,7 @@ const infoDef: CommandDefinition = {
         .setName("role")
         .setDescription("Show information about a role")
         .addRoleOption((o) =>
-          o
-            .setName("role")
-            .setDescription("Role to lookup")
-            .setRequired(true),
+          o.setName("role").setDescription("Role to lookup").setRequired(true),
         ),
     )
     .addSubcommand((sub) =>
@@ -408,16 +405,11 @@ const utilityModule: ModuleDefinition = defineModule({
   name: "utility-info",
   displayName: "Utility",
   emoji: "🔧",
-  description: "Avatar, banner, whois, serverinfo, and consolidated info command",
+  description:
+    "Avatar, banner, whois, serverinfo, and consolidated info command",
   version: "2.0.0",
   config: UtilityConfigSchema,
-  commands: [
-    avatarDef,
-    bannerDef,
-    whoisDef,
-    serverinfoDef,
-    infoDef,
-  ],
+  commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, infoDef],
   listeners: [avatarViewListener],
   tasks: [],
   async onLoad(_services) {

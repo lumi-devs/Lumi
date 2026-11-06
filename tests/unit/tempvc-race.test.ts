@@ -155,6 +155,7 @@ const makeFixture = (guildId: string, userId: string) => {
       },
     },
     helpers: {
+      cache,
       utility: {
         tempvc: {
           findChannel: (channelId: string) =>

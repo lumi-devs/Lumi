@@ -1,7 +1,18 @@
 import { z } from "zod";
 
+const ConfigKeySchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z][A-Za-z0-9_.-]*$/);
+
+const ModuleNameSchema = z
+  .string()
+  .max(64)
+  .regex(/^[a-z][a-z0-9-]*$/);
+
 const ConfigFieldSchema = z.object({
-  key: z.string(),
+  key: ConfigKeySchema,
   label: z.string(),
   type: z.enum([
     "boolean",
@@ -31,16 +42,21 @@ const EntryPathSchema = z
   .min(1)
   .max(255)
   .refine(
-    (value) => !value.startsWith("/") && !value.split(/[\\/]/).includes(".."),
-    { message: "entry must be a relative path inside the module directory" },
+    (value) =>
+      !value.startsWith("/") &&
+      !value.startsWith("\\") &&
+      !/^[A-Za-z]:[\\/]/.test(value) &&
+      !value.split(/[\\/]/).includes("..") &&
+      /\.(?:[cm]?[jt]sx?)$/i.test(value),
+    {
+      message:
+        "entry must be a relative JS/TS path inside the module directory",
+    },
   );
 
 export const ModuleManifestSchema = z.object({
   apiVersion: z.literal(2),
-  name: z
-    .string()
-    .max(64)
-    .regex(/^[a-z][a-z0-9-]*$/),
+  name: ModuleNameSchema,
   displayName: z.string().min(1).max(50),
   emoji: z.string().min(1).max(10),
   description: z.string().min(1).max(200),
@@ -49,10 +65,10 @@ export const ModuleManifestSchema = z.object({
     .max(32)
     .regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/),
   entry: EntryPathSchema.optional(),
-  configKey: z.string().min(1).optional(),
-  dependencies: z.record(z.string(), z.string()).default({}),
+  configKey: ConfigKeySchema.optional(),
+  dependencies: z.record(ModuleNameSchema, z.string().max(64)).default({}),
   requirements: z.array(z.string()).default([]),
-  conflicts: z.array(z.string()).default([]),
+  conflicts: z.array(ModuleNameSchema).default([]),
   capabilities: z
     .array(
       z.object({

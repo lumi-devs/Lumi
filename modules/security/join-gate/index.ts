@@ -9,6 +9,8 @@ import {
 import { ephemeralCard, makeErrorCard, makeInfoCard } from "@lumi/ui";
 import { type GuildMember, SlashCommandBuilder } from "discord.js";
 import { z } from "zod";
+import { safeRegexTest } from "../../shared/regex.js";
+import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
 import { getSecurityConfig } from "../core/config.js";
 import {
   applyJoinAction,
@@ -78,12 +80,9 @@ function stronger(current: JoinAction, next: JoinAction): JoinAction {
 }
 
 function usernameMatches(member: GuildMember, patterns: string[]): boolean {
-  for (const pattern of patterns) {
-    try {
-      if (new RegExp(pattern, "i").test(member.user.username)) return true;
-    } catch {}
-  }
-  return false;
+  return patterns.some((pattern) =>
+    safeRegexTest(pattern, member.user.username),
+  );
 }
 
 const onMemberAddListener: ListenerDefinition = {
@@ -98,6 +97,13 @@ const onMemberAddListener: ListenerDefinition = {
       ModuleName,
     );
     if (!config.enabled) return;
+    warnInvalidRegexPatterns(
+      services,
+      "join-gate",
+      guild.id,
+      "filterUsernamePatterns",
+      config.filterUsernamePatterns,
+    );
 
     const security = await getSecurityConfig(services, guild.id);
     if (isTrusted(member, guild, security)) return;

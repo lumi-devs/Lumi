@@ -81,10 +81,22 @@ export async function claimTicket(
       );
       return;
     }
-    await services.helpers.tickets.updateTicket(context.ticket.id, {
-      claimedBy: null,
-      claimedAt: null,
-    });
+    const released = context.access.isAdmin
+      ? await services.helpers.tickets.releaseTicketIfClaimed(context.ticket.id)
+      : await services.helpers.tickets.releaseTicketIfClaimedBy(
+          context.ticket.id,
+          interaction.user.id,
+        );
+    if (released.count === 0) {
+      await replyCard(
+        interaction,
+        makeInfoCard(
+          "Claim Changed",
+          "This ticket is no longer claimed by you. Try again.",
+        ),
+      );
+      return;
+    }
     await replyCard(
       interaction,
       makeSuccessCard("Ticket Unclaimed", "This ticket is now unclaimed."),
@@ -116,10 +128,25 @@ export async function claimTicket(
     );
     return;
   }
-  await services.helpers.tickets.updateTicket(context.ticket.id, {
-    claimedBy: interaction.user.id,
-    claimedAt: new Date(),
-  });
+  const claimed = context.access.isAdmin
+    ? await services.helpers.tickets.claimTicketAsAdmin(
+        context.ticket.id,
+        interaction.user.id,
+        new Date(),
+      )
+    : await services.helpers.tickets.claimTicketIfUnclaimed(
+        context.ticket.id,
+        interaction.user.id,
+        new Date(),
+      );
+  if (claimed.count === 0) {
+    await replyError(
+      interaction,
+      "Already Claimed",
+      "This ticket was claimed by someone else. Try again.",
+    );
+    return;
+  }
   await replyCard(
     interaction,
     makeSuccessCard("Ticket Claimed", `You are now handling this ticket.`),

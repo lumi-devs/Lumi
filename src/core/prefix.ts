@@ -20,6 +20,7 @@ import {
   type RegisteredCommand,
   servicesForModule,
 } from "./modules.js";
+import { isBotOwner } from "./owner.js";
 
 const DefaultPrefix = process.env.DEFAULT_PREFIX ?? ",";
 const UserMention = /^<@!?(\d+)>$/;
@@ -292,6 +293,15 @@ export async function handlePrefixMessage(
         message,
         "Temporarily Locked",
         `The **${command.module}** module is locked while panic mode is active.`,
+      );
+      return;
+    }
+
+    if (command.ownerOnly && !isBotOwner(message.author.id)) {
+      await replyError(
+        message,
+        "Owner Only",
+        "That command is restricted to bot owners.",
       );
       return;
     }

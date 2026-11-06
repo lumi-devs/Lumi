@@ -15,6 +15,7 @@ import {
 } from "./filter.js";
 import {
   type BulkRoleJob,
+  claimBulkRoleJob,
   incrementBulkRoleJob,
   listRunnableBulkRoleJobs,
   updateBulkRoleJob,
@@ -47,6 +48,7 @@ export async function runBulkRoleJob(
   job: BulkRoleJob,
 ): Promise<void> {
   if (!isRunnableJob(job.status)) return;
+  if (!(await claimBulkRoleJob(services, job.id))) return;
 
   const guild = await resolveGuild(services, job.guildId);
   if (!guild) {
@@ -95,8 +97,6 @@ export async function runBulkRoleJob(
 
   const action: BulkRoleAction = job.action === "remove" ? "remove" : "add";
   const filter = normalizeBulkFilter(job.filter);
-
-  await updateBulkRoleJob(services, job.id, { status: "running" });
 
   let members: GuildMember[];
   try {

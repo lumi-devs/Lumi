@@ -105,4 +105,5 @@ export interface RestoreResult {
   channelsCreated: number;
   channelsUpdated: number;
   warnings: string[];
+  aborted?: boolean;
 }

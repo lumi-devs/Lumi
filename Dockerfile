@@ -14,7 +14,7 @@ RUN apk add --no-cache \
     giflib-dev
 
 COPY . .
-RUN bun install --production
+RUN bun install --frozen-lockfile --production
 RUN bun build src/index.ts --target=bun --external canvas --outdir=dist
 
 FROM docker.io/oven/bun:1.4.2-alpine AS runtime

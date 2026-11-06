@@ -63,9 +63,13 @@ async function recover(
     };
   }
   const result = await restoreBackup(services, guild, latest.data);
+  const summary = `Restored ${result.rolesCreated + result.rolesUpdated} roles and ${result.channelsCreated + result.channelsUpdated} channels from \`${latest.id}\`.`;
+  if (result.warnings.length === 0) {
+    return { ok: true, message: summary };
+  }
   return {
     ok: true,
-    message: `Restored ${result.rolesCreated + result.rolesUpdated} roles and ${result.channelsCreated + result.channelsUpdated} channels from \`${latest.id}\`.`,
+    message: `${summary} ${result.warnings.length} warning(s): ${result.warnings.slice(0, 3).join("; ")}`,
   };
 }
 

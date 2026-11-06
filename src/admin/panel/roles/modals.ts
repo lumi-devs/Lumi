@@ -12,11 +12,7 @@ import type { BotServices } from "../../../core/contracts.js";
 import { servicesForModule } from "../../../core/modules.js";
 import { renderAutoroleFilters, renderAutorolePanel } from "./autorole.js";
 import { createRoleMenuGroup, editRoleMenuGroup } from "./roleMenus.js";
-import {
-  isSnowflake,
-  pageNumber,
-  replyOrUpdate,
-} from "./shared.js";
+import { isSnowflake, pageNumber, replyOrUpdate } from "./shared.js";
 import { renderVoiceRoleMapping } from "./voiceroles.js";
 
 export async function handleRolesModuleModal(
@@ -27,7 +23,10 @@ export async function handleRolesModuleModal(
 ): Promise<boolean> {
   const action = parts[1];
   if (action === "armodaldelay") {
-    const config = await getAutoroleConfig(servicesForModule(services), guildId);
+    const config = await getAutoroleConfig(
+      servicesForModule(services),
+      guildId,
+    );
     const raw = interaction.fields.getTextInputValue("seconds").trim();
     const seconds = Number(raw);
     if (!Number.isInteger(seconds) || seconds < 0 || seconds > 604800) {
@@ -56,7 +55,10 @@ export async function handleRolesModuleModal(
   }
 
   if (action === "armodalage") {
-    const config = await getAutoroleConfig(servicesForModule(services), guildId);
+    const config = await getAutoroleConfig(
+      servicesForModule(services),
+      guildId,
+    );
     const raw = interaction.fields.getTextInputValue("hours").trim();
     const hours = Number(raw);
     if (!Number.isInteger(hours) || hours < 0 || hours > 8760) {
@@ -101,7 +103,9 @@ export async function handleRolesModuleModal(
     const channelId = parts[2];
     if (!isSnowflake(channelId)) {
       await interaction.reply(
-        ephemeralCard(makeErrorCard("Mapping Missing", "That mapping no longer exists.")),
+        ephemeralCard(
+          makeErrorCard("Mapping Missing", "That mapping no longer exists."),
+        ),
       );
       return true;
     }
@@ -112,7 +116,9 @@ export async function handleRolesModuleModal(
     );
     if (!mapping) {
       await interaction.reply(
-        ephemeralCard(makeErrorCard("Mapping Missing", "That mapping no longer exists.")),
+        ephemeralCard(
+          makeErrorCard("Mapping Missing", "That mapping no longer exists."),
+        ),
       );
       return true;
     }

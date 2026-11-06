@@ -9,19 +9,16 @@ import type { BotServices } from "./contracts.js";
 
 export type BuiltinCommandDefinition = CommandDefinition<BotServices>;
 
-export interface RegisteredModuleCommand
-  extends CommandDefinition<ModuleServices> {
+export interface RegisteredModuleCommand extends CommandDefinition<ModuleServices> {
   module: string;
 }
 
-export interface RegisteredBuiltinCommand
-  extends CommandDefinition<BotServices> {
+export interface RegisteredBuiltinCommand extends CommandDefinition<BotServices> {
   module: null;
 }
 
 export type RegisteredCommand =
-  | RegisteredModuleCommand
-  | RegisteredBuiltinCommand;
+  RegisteredModuleCommand | RegisteredBuiltinCommand;
 
 export function commandPayloadForGuild(
   registry: CommandRegistry,

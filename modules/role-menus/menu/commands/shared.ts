@@ -95,7 +95,10 @@ export async function resolveGroupOrReply(
   return group;
 }
 
-export function normalizeMax(raw: number | null, fallback: number): number | null {
+export function normalizeMax(
+  raw: number | null,
+  fallback: number,
+): number | null {
   const value = raw ?? fallback;
   return value > 0 ? value : null;
 }

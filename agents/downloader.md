@@ -39,10 +39,11 @@ repositories authenticate with `GIT_TOKEN` (`GIT_USERNAME` defaults to
 2. Refuse when the name belongs to a bundled module or another repository.
 3. Refuse when `manifest.conflicts` overlaps an installed add-on.
 4. Copy the supermodule into `data/addons/<module>` (skipping `node_modules`
-   and `.git`).
-5. Install `manifest.requirements` with
+   and `.git`; symbolic links are rejected).
+5. Re-run `validateAddon` on the staged copy before touching the live add-on.
+6. Install `manifest.requirements` with
    `bun add --production --ignore-scripts --no-save`.
-6. Insert the `DownloaderModule` row and mount the module through
+7. Insert the `DownloaderModule` row and mount the module through
    `AddonRuntime.mount`, which registers its commands and listeners immediately.
 
 `uninstall(name)` unmounts the module, removes its directory and backups, and
@@ -70,18 +71,27 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
 `validateAddon(dir)`:
 
 - Parses `manifest.json` with `validateManifest` and requires `name` to match
-  the directory.
+  the directory (or an explicit `expectedName` when validating a staged copy).
 - Accepts a rudimentary supermodule root manifest with no `entry`; submodule
-  entry files are validated by the loader when mounted.
-- Requires every `requirements` entry to be a registry package spec.
+  entries must be relative, existing JavaScript/TypeScript files.
+- Requires every `requirements` entry to be a registry package spec; path-like
+  specs, local paths, URLs, and git specs are rejected.
 - Rejects vendored `node_modules`, `.npmrc`, and `bunfig.toml`.
-- Scans every `.ts`/`.tsx` file with `Bun.Transpiler.scanImports`:
+- Rejects symbolic links, hard links, and other non-regular files anywhere in
+  the add-on.
+- Scans every JavaScript/TypeScript file with `Bun.Transpiler.scanImports`:
   - relative imports must stay inside the add-on;
   - `node:*`, `bun`, and `bun:*` are allowed;
   - internal `@lumi/*` packages are rejected;
   - other bare imports must be a host runtime package (`discord.js`,
     `@discordjs/builders`, `@discordjs/formatters`, `zod`, `@lumi/module-kit`,
-    `@lumi/ui`, `@lumi/foundation`) or be listed in `requirements`.
+    `@lumi/ui`, `@lumi/foundation`) or be listed in `requirements`;
+  - computed `import()`/`require()` specifiers and `import.meta.require` are
+    rejected.
+
+Storage paths for repos, add-ons, and backups only accept names matching
+`^[a-z][a-z0-9-]*$`; repository URLs must be absolute `https:` URLs without
+embedded credentials.
 
 ## Rules
 

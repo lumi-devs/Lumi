@@ -6,10 +6,7 @@ import {
   feedbackEnabledFor,
   validateTicketOpen,
 } from "../policy.ts";
-import type {
-  TicketCategoryRecord,
-  TicketPanelRecord,
-} from "../repository.ts";
+import type { TicketCategoryRecord, TicketPanelRecord } from "../repository.ts";
 
 const panel: TicketPanelRecord = {
   id: "panel-1",
@@ -129,9 +126,9 @@ describe("ticket open policy", () => {
     );
     expect(allowedRole.ok).toBe(true);
 
-    expect((await validateTicketOpen(services({ open: 3 }), openInput)).ok).toBe(
-      false,
-    );
+    expect(
+      (await validateTicketOpen(services({ open: 3 }), openInput)).ok,
+    ).toBe(false);
 
     const memberLimited = await validateTicketOpen(
       services({

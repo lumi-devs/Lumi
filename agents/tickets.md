@@ -16,9 +16,9 @@ for every private thread it opens.
 | `manifest.json`     | Module metadata and `/lumi` config controls                   |
 | `index.ts`          | Module definition, command/listener registration, sweep timer |
 | `commands/`         | `/ticket` command group, split by subcommand                  |
-| `interactions.ts`   | Panel buttons/selects, menu/text open flow, feedback buttons   |
+| `interactions.ts`   | Panel buttons/selects, menu/text open flow, feedback buttons  |
 | `sessions.ts`       | Short-lived open-session state shared through cache           |
-| `policy.ts`         | Opening policy checks and category claiming/feedback rules     |
+| `policy.ts`         | Opening policy checks and category claiming/feedback rules    |
 | `autotags.ts`       | Regex auto-tag matching and automatic replies                 |
 | `panel.ts`          | Components V2 panel, opened-ticket, and info cards            |
 | `config.ts`         | Zod config and question/id parsing                            |
@@ -59,7 +59,12 @@ for every private thread it opens.
    receive a single canned reply per tag per ticket.
 6. Staff claim/unclaim, set priority, add notes, add/remove members, send tags,
    and manage tags/blacklist from inside the thread. Claiming respects the
-   category toggle and records `claimedAt`. The opener or staff can close.
+   category toggle and records `claimedAt`. Claim and release use conditional
+   `updateMany` writes: non-admin claim only succeeds while `claimedBy` is null,
+   admin claim only replaces a different claimant, and release only clears the
+   caller's own claim (admins can clear any). A zero-row update reports that the
+   claim changed instead of overwriting the winner. The opener or staff can
+   close.
 7. Closing fetches any messages missing from the archive, renders a complete
    escaped HTML transcript, writes it to disk, uploads it to the configured
    transcript channel, stores the URL/path in `Ticket.transcriptUrl`, sets
@@ -82,23 +87,23 @@ zero. Uploaded transcript-channel messages are not deleted.
 
 All commands live under `/ticket`.
 
-| Command                                       | Who             | Purpose                                                                      |
-| --------------------------------------------- | --------------- | ---------------------------------------------------------------------------- |
-| `/ticket setup panel`                         | Admin           | Post a ticket panel                                                          |
-| `/ticket category add`                        | Admin           | Create a category                                                            |
-| `/ticket category edit`                       | Admin           | Edit roles, policy, opening message, questions, template, priority, enabled  |
-| `/ticket category remove`                     | Admin           | Delete a category and detach it from panels                                  |
-| `/ticket category list`                       | Admin           | List categories and their settings                                           |
-| `/ticket close`                               | Opener or staff | Close, transcript, lock/archive                                              |
-| `/ticket claim` / `unclaim`                   | Staff           | Claim/assign or release a ticket                                             |
-| `/ticket priority`                            | Staff           | Set low/normal/high/urgent                                                   |
-| `/ticket note`                                | Staff           | Add an internal note included in the transcript                              |
-| `/ticket add` / `remove`                      | Staff           | Add/remove a thread member                                                   |
-| `/ticket blacklist add` / `remove` / `list`   | Staff           | Manage members barred from opening                                           |
-| `/ticket tag add` / `edit` / `remove` / `list` / `use` | Staff   | Manage canned replies, regex auto-tags, and posting                          |
-| `/ticket feedback`                            | Opener          | Rate a closed ticket once                                                    |
-| `/ticket info`                                | Opener or staff | Show ticket metadata, notes, feedback                                        |
-| `/ticket list`                                | Staff           | List open, closed, or all tickets                                            |
+| Command                                                | Who             | Purpose                                                                     |
+| ------------------------------------------------------ | --------------- | --------------------------------------------------------------------------- |
+| `/ticket setup panel`                                  | Admin           | Post a ticket panel                                                         |
+| `/ticket category add`                                 | Admin           | Create a category                                                           |
+| `/ticket category edit`                                | Admin           | Edit roles, policy, opening message, questions, template, priority, enabled |
+| `/ticket category remove`                              | Admin           | Delete a category and detach it from panels                                 |
+| `/ticket category list`                                | Admin           | List categories and their settings                                          |
+| `/ticket close`                                        | Opener or staff | Close, transcript, lock/archive                                             |
+| `/ticket claim` / `unclaim`                            | Staff           | Claim/assign or release a ticket                                            |
+| `/ticket priority`                                     | Staff           | Set low/normal/high/urgent                                                  |
+| `/ticket note`                                         | Staff           | Add an internal note included in the transcript                             |
+| `/ticket add` / `remove`                               | Staff           | Add/remove a thread member                                                  |
+| `/ticket blacklist add` / `remove` / `list`            | Staff           | Manage members barred from opening                                          |
+| `/ticket tag add` / `edit` / `remove` / `list` / `use` | Staff           | Manage canned replies, regex auto-tags, and posting                         |
+| `/ticket feedback`                                     | Opener          | Rate a closed ticket once                                                   |
+| `/ticket info`                                         | Opener or staff | Show ticket metadata, notes, feedback                                       |
+| `/ticket list`                                         | Staff           | List open, closed, or all tickets                                           |
 
 Category questions are supplied as a JSON array:
 

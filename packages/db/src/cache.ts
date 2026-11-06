@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 
 export interface CacheFacade {
+  readonly distributed: boolean;
   get<T>(key: string): Promise<T | null>;
   getString(key: string): Promise<string | null>;
   set(key: string, value: unknown, ttlMs?: number): Promise<void>;
@@ -21,6 +22,9 @@ export interface CacheFacade {
   takeLock(key: string, ttlMs: number): Promise<(() => Promise<void>) | null>;
 }
 
+const ReleaseLockScript =
+  "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+
 interface Flight {
   promise: Promise<unknown>;
 }
@@ -34,6 +38,7 @@ export function createCacheFacade(redis: Redis | undefined): CacheFacade {
   }
 
   const facade: CacheFacade = {
+    distributed: Boolean(redis),
     async get<T>(key: string): Promise<T | null> {
       const value = await getRaw(key);
       if (value === null) return null;
@@ -137,7 +142,7 @@ export function createCacheFacade(redis: Redis | undefined): CacheFacade {
       return redis.scard(key);
     },
     async takeLock(key, ttlMs) {
-      const token = `${Date.now()}:${Math.random().toString(36).slice(2)}`;
+      const token = crypto.randomUUID();
       const lockKey = `lock:${key}`;
       if (!redis) return null;
       const acquired = await redis.set(
@@ -149,8 +154,7 @@ export function createCacheFacade(redis: Redis | undefined): CacheFacade {
       );
       if (acquired !== "OK") return null;
       return async () => {
-        const current = await redis.get(lockKey);
-        if (current === token) await redis.del(lockKey);
+        await redis.eval(ReleaseLockScript, 1, lockKey, token);
       };
     },
   };

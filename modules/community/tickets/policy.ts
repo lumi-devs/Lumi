@@ -70,7 +70,11 @@ export async function validateTicketOpen(
     };
   }
 
-  const category = await findCategory(services, input.guildId, input.categoryId);
+  const category = await findCategory(
+    services,
+    input.guildId,
+    input.categoryId,
+  );
   if (!category?.enabled || !panel.categoryIds.includes(category.id)) {
     return {
       ok: false,

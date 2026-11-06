@@ -1,3 +1,7 @@
+import {
+  compileSafeRegex as compileSharedRegex,
+  safeRegexTest as safeSharedRegexTest,
+} from "../../shared/regex.js";
 import { Limits, type TriggerType } from "./types.js";
 
 export type TriggerValidation = { ok: true } | { ok: false; error: string };
@@ -33,48 +37,11 @@ export function validateCommandName(name: string): TriggerValidation {
 export function compileSafeRegex(
   pattern: string,
 ): { ok: true; regex: RegExp } | { ok: false; error: string } {
-  if (pattern.length === 0) {
-    return { ok: false, error: "Regex pattern is required." };
-  }
-  if (pattern.length > Limits.regexMaxLength) {
-    return {
-      ok: false,
-      error: `Regex patterns are limited to ${Limits.regexMaxLength} characters.`,
-    };
-  }
-  if (/\\[1-9]/.test(pattern) || /\\k<[^>]+>/.test(pattern)) {
-    return {
-      ok: false,
-      error: "Backreferences are not allowed in regex triggers.",
-    };
-  }
-  if (/\(\?<[=!]/.test(pattern)) {
-    return { ok: false, error: "Lookbehind is not allowed in regex triggers." };
-  }
-  if (/(\([^)]*[+*][^)]*\))[+*{]/.test(pattern)) {
-    return {
-      ok: false,
-      error: "Nested repetition is not allowed in regex triggers.",
-    };
-  }
-  try {
-    return { ok: true, regex: new RegExp(pattern, "iu") };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Invalid regex pattern.",
-    };
-  }
+  return compileSharedRegex(pattern, "iu");
 }
 
 export function safeRegexTest(pattern: string, input: string): boolean {
-  const compiled = compileSafeRegex(pattern);
-  if (!compiled.ok) return false;
-  try {
-    return compiled.regex.test(input);
-  } catch {
-    return false;
-  }
+  return safeSharedRegexTest(pattern, input, "iu");
 }
 
 export function validateTrigger(

@@ -67,6 +67,10 @@ Rules:
 
 - Writes invalidate cache entries after the transaction commits.
 - Use `$transaction` for multi-row invariants; do not read-modify-write counters.
+- Use conditional `updateMany` plus a `count` check for claims, leases, and
+  progress transitions (tickets, bulk-role jobs, leveling) instead of reading a
+  row and then writing it unconditionally. A zero count means another worker
+  won the race; do not report success.
 - Never `upsert` on a read path; create rows on write.
 - Do not import `@lumi/db` from addons; it is an internal package.
 - Add a new helper instead of exposing Prisma to a module.

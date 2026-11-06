@@ -26,7 +26,10 @@ import { type MetricsServer, startMetricsServer } from "@lumi/observability";
 import { createRedisClient } from "@lumi/redis";
 import * as ui from "@lumi/ui";
 import { PermissionFlagsBits } from "discord.js";
-import { createCommandSync, type SyncGuildCommands } from "./core/commandSync.js";
+import {
+  createCommandSync,
+  type SyncGuildCommands,
+} from "./core/commandSync.js";
 import type { BotServices } from "./core/contracts.js";
 import { createModuleConfigService } from "./core/moduleConfig.js";
 import { CommandRegistry, ModuleHost } from "./core/modules.js";
@@ -143,7 +146,9 @@ async function main(): Promise<void> {
     notify: createAddonNotifier(client),
     runtime: () => {
       if (!runtimeRef.host) {
-        throw new Error("Add-on runtime requested before the module host exists.");
+        throw new Error(
+          "Add-on runtime requested before the module host exists.",
+        );
       }
       return runtimeRef.host;
     },

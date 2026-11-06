@@ -5,6 +5,7 @@ import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
 import {
   actionCard,
+  canActOn,
   describeError,
   getCaseLink,
   getDeleteDays,
@@ -12,6 +13,7 @@ import {
   getTargets,
   isImmune,
   replyError,
+  resolveActor,
 } from "../helpers.js";
 
 export const banAdd: CommandDefinition = {
@@ -47,6 +49,15 @@ export const banAdd: CommandDefinition = {
   async execute(interaction, services) {
     const guild = interaction.guild!;
     const config = await getModerationConfig(services, guild.id);
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
     const targets = await getTargets(interaction, config.maxTargets);
     if (targets.length === 0) {
       await replyError(
@@ -67,6 +78,11 @@ export const banAdd: CommandDefinition = {
     for (const target of targets) {
       try {
         const member = await guild.members.fetch(target.id).catch(() => null);
+        if (member && !canActOn(actor, member)) {
+          failures++;
+          lines.push(`❌ ${target.tag} — equal or higher role`);
+          continue;
+        }
         if (isImmune(member, config)) {
           failures++;
           lines.push(`❌ ${target.tag} — immune role`);

@@ -136,8 +136,17 @@ export class AddonManager {
         "Repository names must be lowercase letters, digits, and dashes.",
       );
     }
-    if (!/^https:\/\/[^\s]+$/.test(url)) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new Error("Repository URL is not valid.");
+    }
+    if (parsedUrl.protocol !== "https:") {
       throw new Error("Repository URLs must be HTTPS.");
+    }
+    if (parsedUrl.username || parsedUrl.password) {
+      throw new Error("Repository URLs must not contain credentials.");
     }
     const ref = branch?.trim() || null;
     if (ref && !BranchRe.test(ref)) {
@@ -283,6 +292,14 @@ export class AddonManager {
       const staging = await this.storage.stageModule(source);
       let committed = false;
       try {
+        const stagedErrors = await validateAddon(staging, {
+          expectedName: manifest.name,
+        });
+        if (stagedErrors.length > 0) {
+          throw new Error(
+            `Validation failed after staging:\n${stagedErrors.map((error) => `• ${error}`).join("\n")}`,
+          );
+        }
         await this.storage.installRequirements(
           staging,
           manifest.requirements,
@@ -365,7 +382,7 @@ export class AddonManager {
         recursive: true,
         force: true,
       });
-      await rm(join(this.storage.backupsDir, moduleName), {
+      await rm(this.storage.backupDir(moduleName), {
         recursive: true,
         force: true,
       });
@@ -487,7 +504,7 @@ export class AddonManager {
       }> = [];
       for (const trackedModule of tracked) {
         const target = this.storage.addonDir(trackedModule.name);
-        const backup = join(this.storage.backupsDir, trackedModule.name);
+        const backup = this.storage.backupDir(trackedModule.name);
         try {
           await mkdir(this.storage.backupsDir, { recursive: true });
           await rm(backup, { recursive: true, force: true });
@@ -510,6 +527,14 @@ export class AddonManager {
           const source = join(dir, trackedModule.name);
           const manifest = await this.storage.readManifest(source);
           staging = await this.storage.stageModule(source);
+          const stagedErrors = await validateAddon(staging, {
+            expectedName: manifest.name,
+          });
+          if (stagedErrors.length > 0) {
+            throw new Error(
+              `Validation failed after staging:\n${stagedErrors.map((error) => `• ${error}`).join("\n")}`,
+            );
+          }
           await this.storage.installRequirements(
             staging,
             manifest.requirements,
@@ -538,7 +563,7 @@ export class AddonManager {
         for (const appliedModule of applied) {
           const target = this.storage.addonDir(appliedModule.name);
           await rm(target, { recursive: true, force: true });
-          await cp(join(this.storage.backupsDir, appliedModule.name), target, {
+          await cp(this.storage.backupDir(appliedModule.name), target, {
             recursive: true,
             force: true,
           });
@@ -559,7 +584,7 @@ export class AddonManager {
         }
         await this.restoreRepo(dir, oldCommit, repo.url, repo.branch);
         for (const appliedModule of applied) {
-          await rm(join(this.storage.backupsDir, appliedModule.name), {
+          await rm(this.storage.backupDir(appliedModule.name), {
             recursive: true,
             force: true,
           });
@@ -580,7 +605,7 @@ export class AddonManager {
         data: { commit: newCommit },
       });
       for (const appliedModule of applied) {
-        await rm(join(this.storage.backupsDir, appliedModule.name), {
+        await rm(this.storage.backupDir(appliedModule.name), {
           recursive: true,
           force: true,
         });

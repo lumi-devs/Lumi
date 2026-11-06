@@ -274,6 +274,33 @@ export function createTicketsHelpers(ctx: DbContext) {
         data: { firstResponseAt: at, firstResponseBy: userId },
       }),
 
+    claimTicketIfUnclaimed: (ticketId: string, userId: string, at: Date) =>
+      prisma.ticket.updateMany({
+        where: { id: ticketId, claimedBy: null },
+        data: { claimedBy: userId, claimedAt: at },
+      }),
+
+    claimTicketAsAdmin: (ticketId: string, userId: string, at: Date) =>
+      prisma.ticket.updateMany({
+        where: {
+          id: ticketId,
+          OR: [{ claimedBy: null }, { claimedBy: { not: userId } }],
+        },
+        data: { claimedBy: userId, claimedAt: at },
+      }),
+
+    releaseTicketIfClaimedBy: (ticketId: string, userId: string) =>
+      prisma.ticket.updateMany({
+        where: { id: ticketId, claimedBy: userId },
+        data: { claimedBy: null, claimedAt: null },
+      }),
+
+    releaseTicketIfClaimed: (ticketId: string) =>
+      prisma.ticket.updateMany({
+        where: { id: ticketId, claimedBy: { not: null } },
+        data: { claimedBy: null, claimedAt: null },
+      }),
+
     listTickets: (guildId: string, status: string, take = 25) =>
       prisma.ticket.findMany({
         where: {
@@ -304,11 +331,7 @@ export function createTicketsHelpers(ctx: DbContext) {
         distinct: ["guildId"],
       }),
 
-    listExpiredClosedTickets: (
-      guildId: string,
-      before: Date,
-      take = 100,
-    ) =>
+    listExpiredClosedTickets: (guildId: string, before: Date, take = 100) =>
       prisma.ticket.findMany({
         where: { guildId, status: "closed", closedAt: { lt: before } },
         select: { id: true },

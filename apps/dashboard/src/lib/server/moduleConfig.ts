@@ -1,10 +1,16 @@
 import { z } from "zod";
+import {
+  compileSafeRegex,
+  RegexMaxLength,
+} from "../../../../../modules/shared/regex.js";
 import type { ConfigField } from "./modules";
 import { checkbox, formString, splitList } from "./validation";
 
 const Snowflake = z
   .string()
   .regex(/^\d{16,22}$/, "Expected a Discord snowflake ID.");
+
+const RegexFields = new Set(["regexRules", "filterUsernamePatterns"]);
 
 export type ConfigValues = Record<string, unknown>;
 
@@ -161,7 +167,35 @@ export function parseConfigForm(
     }
 
     if (field.type === "multi-string") {
-      values[field.key] = splitList(raw);
+      const list = splitList(raw);
+      if (list.length === 0 && field.required) {
+        return { ok: false, message: `${field.label} is required.` };
+      }
+      const parsed = fieldSchema(field).safeParse(list);
+      if (!parsed.success) {
+        return {
+          ok: false,
+          message: `${field.label}: ${parsed.error.issues[0]?.message ?? "Invalid value."}`,
+        };
+      }
+      if (RegexFields.has(field.key)) {
+        for (const pattern of list) {
+          if (pattern.length > RegexMaxLength) {
+            return {
+              ok: false,
+              message: `${field.label}: Regex patterns are limited to ${RegexMaxLength} characters.`,
+            };
+          }
+          const compiled = compileSafeRegex(pattern);
+          if (!compiled.ok) {
+            return {
+              ok: false,
+              message: `${field.label}: ${compiled.error}`,
+            };
+          }
+        }
+      }
+      values[field.key] = list;
       continue;
     }
 

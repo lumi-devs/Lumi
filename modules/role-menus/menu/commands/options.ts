@@ -1,6 +1,9 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
-import { type ChatInputCommandInteraction, PermissionFlagsBits } from "discord.js";
+import {
+  type ChatInputCommandInteraction,
+  PermissionFlagsBits,
+} from "discord.js";
 import type { RoleMenusConfig } from "../config.js";
 import type { GroupRecord } from "../service.js";
 

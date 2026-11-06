@@ -174,7 +174,9 @@ export class PermitRepository {
     }
     if (data.whitelistScopes !== undefined) {
       update.whitelistScopes = Array.from(
-        new Set(data.whitelistScopes.map((scope) => scope.trim()).filter(Boolean)),
+        new Set(
+          data.whitelistScopes.map((scope) => scope.trim()).filter(Boolean),
+        ),
       );
     }
     try {

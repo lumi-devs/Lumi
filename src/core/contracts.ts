@@ -1,7 +1,10 @@
 import type { DbHelpers, PrismaClient } from "@lumi/db";
 import type { AddonManager } from "@lumi/downloader";
 import type { Logger } from "@lumi/foundation";
-import type { ModuleConfigService, ModuleRegistryAccess } from "@lumi/module-kit";
+import type {
+  ModuleConfigService,
+  ModuleRegistryAccess,
+} from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { HealthMonitor } from "@lumi/observability";
 import type { PermitRepository } from "@lumi/permits";

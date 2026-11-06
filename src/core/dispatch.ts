@@ -44,8 +44,37 @@ async function handleAutocomplete(
 ): Promise<void> {
   if (!interaction.isAutocomplete()) return;
   const command = context.registry.get(interaction.commandName);
+  if (!command) {
+    await interaction.respond([]).catch(() => undefined);
+    return;
+  }
+  if (command.ownerOnly && !isBotOwner(interaction.user.id)) {
+    await interaction.respond([]).catch(() => undefined);
+    return;
+  }
+  if (command.requiresAdmin) {
+    const allowed =
+      interaction.guildId !== null &&
+      (await hasAdminAccess({
+        guildId: interaction.guildId,
+        userId: interaction.user.id,
+        roleIds: roleIdsFrom(interaction.member, interaction.guildId),
+        guildOwnerId: interaction.guild?.ownerId,
+        memberPermissions: interaction.memberPermissions,
+        enforcePermits: await permitEnforcementEnabled(
+          context.services.configService,
+          interaction.guildId,
+        ),
+        client: context.client,
+        permits: context.services.permits,
+      }));
+    if (!allowed) {
+      await interaction.respond([]).catch(() => undefined);
+      return;
+    }
+  }
   if (
-    command?.autocomplete &&
+    command.autocomplete &&
     (!command.module ||
       !interaction.guildId ||
       context.moduleLoader.isActive(interaction.guildId, command.module))

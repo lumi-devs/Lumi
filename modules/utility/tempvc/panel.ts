@@ -8,6 +8,7 @@ import {
   type VoiceChannel,
 } from "discord.js";
 import { z } from "zod";
+import { tryWithLock } from "../../shared/lock.js";
 import { type ControlPanelState, controlPanelCard } from "./ui.js";
 
 export const TempVcGeneratorSchema = z.object({
@@ -104,7 +105,14 @@ export async function updateTempRecord(
   channelId: string,
   data: Record<string, unknown>,
 ): Promise<boolean> {
-  return services.helpers.utility.tempvc.update(channelId, data);
+  const locked = await tryWithLock(
+    services,
+    `tempvc:channel:${channelId}`,
+    10_000,
+    () => services.helpers.utility.tempvc.update(channelId, data),
+    1_500,
+  );
+  return locked.ok ? locked.value : false;
 }
 
 export async function resolveGuildVoiceChannel(
@@ -160,7 +168,7 @@ export async function buildControlPanelForChannel(
   return buildControlPanel(channel, record);
 }
 
-export async function createTempVoiceChannel(
+async function createTempVoiceChannelUnlocked(
   services: ModuleServices,
   guildId: string,
   member: GuildMember,
@@ -292,7 +300,30 @@ export async function createTempVoiceChannel(
   return channel;
 }
 
-export async function deleteTempVoiceChannel(
+export async function createTempVoiceChannel(
+  services: ModuleServices,
+  guildId: string,
+  member: GuildMember,
+  config: TempVcConfig,
+  generator?: TempVcGenerator,
+): Promise<VoiceChannel | null> {
+  const locked = await tryWithLock(
+    services,
+    `tempvc:create:${guildId}:${member.id}`,
+    20_000,
+    () =>
+      createTempVoiceChannelUnlocked(
+        services,
+        guildId,
+        member,
+        config,
+        generator,
+      ),
+  );
+  return locked.ok ? locked.value : null;
+}
+
+async function deleteTempVoiceChannelUnlocked(
   services: ModuleServices,
   guildId: string,
   channelId: string,
@@ -311,6 +342,43 @@ export async function deleteTempVoiceChannel(
   }
   await services.helpers.utility.tempvc.delete(channelId);
   return true;
+}
+
+export async function deleteTempVoiceChannel(
+  services: ModuleServices,
+  guildId: string,
+  channelId: string,
+): Promise<boolean> {
+  const locked = await tryWithLock(
+    services,
+    `tempvc:channel:${channelId}`,
+    15_000,
+    () => deleteTempVoiceChannelUnlocked(services, guildId, channelId),
+    1_500,
+  );
+  return locked.ok ? locked.value : false;
+}
+
+export async function deleteExpiredTempVoiceChannel(
+  services: ModuleServices,
+  guildId: string,
+  channelId: string,
+  now: number,
+): Promise<boolean> {
+  const locked = await tryWithLock(
+    services,
+    `tempvc:channel:${channelId}`,
+    15_000,
+    async () => {
+      const record = await findTempChannel(services, channelId);
+      if (!record?.expiresAt) return false;
+      const expiresAt = new Date(record.expiresAt).getTime();
+      if (!Number.isFinite(expiresAt) || expiresAt > now) return false;
+      return deleteTempVoiceChannelUnlocked(services, guildId, channelId);
+    },
+    1_500,
+  );
+  return locked.ok ? locked.value : false;
 }
 
 export async function sweepExpiredTempChannels(
@@ -334,6 +402,11 @@ export async function sweepExpiredTempChannels(
     ) {
       continue;
     }
-    await deleteTempVoiceChannel(services, row.guildId, row.channelId);
+    await deleteExpiredTempVoiceChannel(
+      services,
+      row.guildId,
+      row.channelId,
+      now,
+    );
   }
 }

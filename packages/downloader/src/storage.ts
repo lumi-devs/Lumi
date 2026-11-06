@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { lstatSync } from "node:fs";
 import { cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { type ModuleManifest, validateManifest } from "@lumi/module-runtime";
-import { pathExists } from "./fs.js";
 import { RequirementRe } from "./validate.js";
 
 export class AddonStorage {
@@ -16,16 +16,23 @@ export class AddonStorage {
     this.backupsDir = join(root, "data", "addon-backups");
   }
 
+  private namePath(root: string, name: string): string {
+    if (!/^[a-z][a-z0-9-]*$/.test(name)) {
+      throw new Error(`Invalid storage name "${name}".`);
+    }
+    return join(root, name);
+  }
+
   repoDir(name: string): string {
-    return join(this.reposDir, name);
+    return this.namePath(this.reposDir, name);
   }
 
   addonDir(name: string): string {
-    return join(this.addonsDir, name);
+    return this.namePath(this.addonsDir, name);
   }
 
   backupDir(name: string): string {
-    return join(this.backupsDir, name);
+    return this.namePath(this.backupsDir, name);
   }
 
   async readManifest(dir: string): Promise<ModuleManifest> {
@@ -41,7 +48,11 @@ export class AddonStorage {
       force: true,
       filter: (path) => {
         const name = basename(path);
-        return name !== "node_modules" && name !== ".git";
+        if (name === "node_modules" || name === ".git") return false;
+        if (lstatSync(path).isSymbolicLink()) {
+          throw new Error("Symbolic links are not allowed in add-ons.");
+        }
+        return true;
       },
     });
   }
@@ -77,20 +88,18 @@ export class AddonStorage {
     if (requirements.length === 0) return;
 
     const packagePath = join(dir, "package.json");
-    if (!(await pathExists(packagePath))) {
-      await writeFile(
-        packagePath,
-        JSON.stringify(
-          {
-            name: `lumi-addon-${packageName}`,
-            version: "1.0.0",
-            private: true,
-          },
-          null,
-          2,
-        ),
-      );
-    }
+    await writeFile(
+      packagePath,
+      JSON.stringify(
+        {
+          name: `lumi-addon-${packageName}`,
+          version: "1.0.0",
+          private: true,
+        },
+        null,
+        2,
+      ),
+    );
 
     const proc = Bun.spawn(
       [

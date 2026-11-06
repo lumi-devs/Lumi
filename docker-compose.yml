@@ -4,7 +4,7 @@ services:
     container_name: lumi-postgres
     environment:
       POSTGRES_USER: lumi
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: lumi
     ports:
       - "127.0.0.1:5432:5432"
@@ -48,7 +48,7 @@ services:
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
       OWNER_IDS: ${OWNER_IDS}
-      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}

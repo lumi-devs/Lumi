@@ -1,6 +1,8 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { cardCreateOptions, makeInfoCard } from "@lumi/ui";
 import type { ThreadChannel } from "discord.js";
+import { safeRegexTest } from "../../shared/regex.js";
+import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
 import type { TicketsConfig } from "./config.js";
 import { escapeHtml } from "./html.js";
 import type { TicketRecord } from "./repository.js";
@@ -17,17 +19,18 @@ export async function applyAutoTags(
   const tags = await services.helpers.tickets
     .listAutoTags(ticket.guildId)
     .catch(() => []);
+  warnInvalidRegexPatterns(
+    services,
+    "tickets",
+    ticket.guildId,
+    "auto-tag",
+    tags.flatMap((tag) => (tag.regex ? [tag.regex] : [])),
+  );
   const applied: string[] = [];
 
   for (const tag of tags) {
     if (!tag.regex) continue;
-    let pattern: RegExp;
-    try {
-      pattern = new RegExp(tag.regex, "i");
-    } catch {
-      continue;
-    }
-    if (!pattern.test(text)) continue;
+    if (!safeRegexTest(tag.regex, text)) continue;
 
     const alreadyApplied = await services.helpers.tickets
       .hasTagApplication(ticket.id, tag.id)

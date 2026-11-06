@@ -180,7 +180,9 @@ export class ModuleLoader {
 
   private requireServices(): ModuleServices {
     if (!this.services) {
-      throw new Error("ModuleLoader.loadAll must run before module services are used.");
+      throw new Error(
+        "ModuleLoader.loadAll must run before module services are used.",
+      );
     }
     return this.services;
   }
@@ -554,11 +556,10 @@ export class ModuleLoader {
     if (!module) return;
     if (!module.isSubmodule) return;
 
-    const services =
-      this.moduleServices.get(moduleName) ?? {
-        ...this.requireServices(),
-        moduleName,
-      };
+    const services = this.moduleServices.get(moduleName) ?? {
+      ...this.requireServices(),
+      moduleName,
+    };
 
     try {
       await module.definition.onUnload(services);

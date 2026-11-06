@@ -22,9 +22,7 @@ import {
   upsertVoiceRoleMapping,
 } from "../../../../modules/roles/voiceroles/store.js";
 import { getRoleMenusConfig } from "../../../../modules/role-menus/menu/config.js";
-import {
-  refreshRoleMenuMessage,
-} from "../../../../modules/role-menus/menu/posting.js";
+import { refreshRoleMenuMessage } from "../../../../modules/role-menus/menu/posting.js";
 import type { RoleMenuStyle } from "../../../../modules/role-menus/menu/ui.js";
 import { backButton, type PanelInteraction, showPanel } from "../common.js";
 import type { BotServices } from "../../../core/contracts.js";
@@ -93,7 +91,10 @@ export async function handleRolesModuleAction(
     switch (action) {
       case "aroles": {
         if (!interaction.isRoleSelectMenu()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
         config.roleIds = [...interaction.values];
         await saveAutoroleConfig(servicesForModule(services), guildId, config);
         await showPanel(interaction, () =>
@@ -108,7 +109,10 @@ export async function handleRolesModuleAction(
       }
       case "ardelay": {
         if (!interaction.isButton()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
         await interaction.showModal(
           autoroleDelayModal(config, pageNumber(target)),
         );
@@ -116,17 +120,16 @@ export async function handleRolesModuleAction(
       }
       case "arfilters": {
         await showPanel(interaction, () =>
-          renderAutoroleFilters(
-            interaction,
-            services,
-            pageNumber(target),
-          ),
+          renderAutoroleFilters(interaction, services, pageNumber(target)),
         );
         return true;
       }
       case "arage": {
         if (!interaction.isButton()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
         await interaction.showModal(
           autoroleAgeModal(config, pageNumber(target)),
         );
@@ -135,8 +138,12 @@ export async function handleRolesModuleAction(
       case "arrequired":
       case "arignored": {
         if (!interaction.isRoleSelectMenu()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
-        if (action === "arrequired") config.requiredRoleIds = [...interaction.values];
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
+        if (action === "arrequired")
+          config.requiredRoleIds = [...interaction.values];
         else config.ignoredRoleIds = [...interaction.values];
         await saveAutoroleConfig(servicesForModule(services), guildId, config);
         await showPanel(interaction, () =>
@@ -152,7 +159,10 @@ export async function handleRolesModuleAction(
       case "arignorebots":
       case "aronlyjoin": {
         if (!interaction.isButton()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
         if (action === "arignorebots") config.ignoreBots = !config.ignoreBots;
         else config.onlyOnJoin = !config.onlyOnJoin;
         await saveAutoroleConfig(servicesForModule(services), guildId, config);
@@ -185,7 +195,10 @@ export async function handleRolesModuleAction(
       }
       case "arpause": {
         if (!interaction.isButton()) return true;
-        const config = await getAutoroleConfig(servicesForModule(services), guildId);
+        const config = await getAutoroleConfig(
+          servicesForModule(services),
+          guildId,
+        );
         config.paused = !config.paused;
         await saveAutoroleConfig(servicesForModule(services), guildId, config);
         await showPanel(interaction, () =>
@@ -314,7 +327,10 @@ export async function handleRolesModuleAction(
         const roleId = interaction.values[0];
         if (!roleId) return true;
         const categoryId = extra === "none" ? null : extra;
-        const config = await getVoiceRolesConfig(servicesForModule(services), guildId);
+        const config = await getVoiceRolesConfig(
+          servicesForModule(services),
+          guildId,
+        );
         await upsertVoiceRoleMapping(servicesForModule(services), {
           guildId,
           channelId: target,
@@ -335,11 +351,7 @@ export async function handleRolesModuleAction(
       }
       case "vrpage": {
         await showPanel(interaction, () =>
-          renderVoiceRolesPanel(
-            interaction,
-            services,
-            pageNumber(target),
-          ),
+          renderVoiceRolesPanel(interaction, services, pageNumber(target)),
         );
         return true;
       }
@@ -475,11 +487,7 @@ export async function handleRolesModuleAction(
     switch (action) {
       case "rmpage": {
         await showPanel(interaction, () =>
-          renderRoleMenusPanel(
-            interaction,
-            services,
-            pageNumber(target),
-          ),
+          renderRoleMenusPanel(interaction, services, pageNumber(target)),
         );
         return true;
       }
@@ -499,12 +507,7 @@ export async function handleRolesModuleAction(
       }
       case "rm": {
         await showPanel(interaction, () =>
-          renderRoleMenuGroup(
-            interaction,
-            services,
-            target,
-            pageNumber(extra),
-          ),
+          renderRoleMenuGroup(interaction, services, target, pageNumber(extra)),
         );
         return true;
       }
@@ -537,20 +540,19 @@ export async function handleRolesModuleAction(
           interaction.guild?.roles.cache.get(roleId) ??
           (await interaction.guild?.roles.fetch(roleId).catch(() => null));
         const me = interaction.guild?.members.me;
-        const problem =
-          !role
-            ? "That role no longer exists."
-            : role.id === guildId
-              ? "The @everyone role cannot be a menu option."
-              : role.managed
-                ? "Integration-managed roles cannot be assigned by role menus."
-                : !me?.permissions.has(PermissionFlagsBits.ManageRoles)
-                  ? "I need the **Manage Roles** permission to assign menu roles."
-                  : role.position >= (me?.roles.highest.position ?? 0)
-                    ? "That role is above or equal to my highest role."
-                    : group.options.some((option) => option.roleId === role.id)
-                      ? "That role is already an option in this group."
-                      : null;
+        const problem = !role
+          ? "That role no longer exists."
+          : role.id === guildId
+            ? "The @everyone role cannot be a menu option."
+            : role.managed
+              ? "Integration-managed roles cannot be assigned by role menus."
+              : !me?.permissions.has(PermissionFlagsBits.ManageRoles)
+                ? "I need the **Manage Roles** permission to assign menu roles."
+                : role.position >= (me?.roles.highest.position ?? 0)
+                  ? "That role is above or equal to my highest role."
+                  : group.options.some((option) => option.roleId === role.id)
+                    ? "That role is already an option in this group."
+                    : null;
         if (problem || !role) {
           await showPanel(interaction, () =>
             renderRoleMenuGroup(
@@ -639,7 +641,8 @@ export async function handleRolesModuleAction(
         );
         if (!group) return true;
         const field = extra === "requireOne" ? "requireOne" : "autoToggle";
-        const current = field === "requireOne" ? group.requireOne : group.autoToggle;
+        const current =
+          field === "requireOne" ? group.requireOne : group.autoToggle;
         await services.helpers.roleMenus.updateGroup(group.id, {
           [field]: !current,
         });
@@ -723,12 +726,7 @@ export async function handleRolesModuleAction(
       case "rmpost": {
         if (!interaction.isButton()) return true;
         await showPanel(interaction, () =>
-          renderRoleMenuPost(
-            interaction,
-            services,
-            target,
-            pageNumber(extra),
-          ),
+          renderRoleMenuPost(interaction, services, target, pageNumber(extra)),
         );
         return true;
       }
@@ -784,7 +782,10 @@ export async function handleRolesModuleAction(
         const channelId = interaction.values[0];
         const style = extra as RoleMenuStyle;
         if (!group || !channelId) return true;
-        const channel = await guildChannel(interaction.guild ?? null, channelId);
+        const channel = await guildChannel(
+          interaction.guild ?? null,
+          channelId,
+        );
         if (!channel?.isSendable()) {
           await showPanel(interaction, () =>
             renderRoleMenuPost(
@@ -797,7 +798,10 @@ export async function handleRolesModuleAction(
           );
           return true;
         }
-        if (group.options.length > MaxReactionOptions && style === "reactions") {
+        if (
+          group.options.length > MaxReactionOptions &&
+          style === "reactions"
+        ) {
           await showPanel(interaction, () =>
             renderRoleMenuPost(
               interaction,

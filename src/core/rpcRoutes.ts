@@ -428,9 +428,7 @@ export function createStatusHandler(
         ok: checks.healthy,
         ready: client.isReady(),
         checks: checks.results.map((result) =>
-          authorized
-            ? result
-            : { name: result.name, healthy: result.healthy },
+          authorized ? result : { name: result.name, healthy: result.healthy },
         ),
       });
       return;
