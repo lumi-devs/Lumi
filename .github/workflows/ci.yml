@@ -156,7 +156,7 @@ jobs:
         run: |
           sleep 5
           until pg_isready -h localhost -U lumi_test; do sleep 1; done
-          until redis-cli ping; do sleep 1; done
+          until (echo > /dev/tcp/127.0.0.1/6379) 2>/dev/null; do sleep 1; done
 
       - name: Run migrations
         run: bun run db:migrate:deploy
