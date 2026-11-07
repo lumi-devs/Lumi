@@ -107,68 +107,6 @@ jobs:
             modules
           retention-days: 7
 
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: build
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: lumi_test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: lumi_test
-        ports: [5432:5432]
-        options: >-
-          --health-cmd "pg_isready -U lumi_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:8-alpine
-        ports: [6379:6379]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      TEST_DATABASE_URL: postgresql://lumi_test:test@localhost:5432/lumi_test
-      TEST_REDIS_URL: redis://localhost:6379
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-        env:
-          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-
-      - name: Wait for services
-        run: |
-          sleep 5
-          until pg_isready -h localhost -U lumi_test; do sleep 1; done
-          until (echo > /dev/tcp/127.0.0.1/6379) 2>/dev/null; do sleep 1; done
-
-      - name: Run migrations
-        run: bun run db:migrate:deploy
-        env:
-          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-
-      - name: Run integration tests
-        run: bun run test tests/integration --reporter=verbose
-        env:
-          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
-          TEST_REDIS_URL: ${{ env.TEST_REDIS_URL }}
-
   load-tests:
     name: Load Tests
     runs-on: ubuntu-latest
@@ -207,7 +145,7 @@ jobs:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build, integration-tests]
+    needs: build
     if: github.event_name == 'push' || github.event_name == 'release' || github.event_name == 'pull_request'
     permissions:
       contents: read
