@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import { isBotOwner } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
@@ -6,7 +7,6 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { errorMessage } from "../../../core/errors.js";
 import type { CreateFlow } from "../../permits/flows.js";
 import { defaultNamespace } from "../../permits/format.js";
 import {

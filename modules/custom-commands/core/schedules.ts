@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices, TaskDefinition } from "@lumi/module-kit";
 import type { GuildBasedChannel, User } from "discord.js";
 import { getCustomCommandsConfig } from "./config.js";
@@ -58,7 +59,7 @@ export async function runDueSchedules(services: ModuleServices): Promise<void> {
         {
           guildId: schedule.command.guildId,
           command: schedule.command.name,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         },
       );
     }

@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { UserDataDeletionResult } from "@lumi/module-kit";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { BotServices } from "./contracts.js";
@@ -58,7 +59,7 @@ export function createDataLifecycleService(
         } catch (error) {
           failures.push({
             module: name,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           });
         }
       }
@@ -94,7 +95,7 @@ export function createDataLifecycleService(
         } catch (error) {
           failures.push({
             module: name,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           });
         }
       }

@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 
 const localLocks = new Set<string>();
@@ -35,7 +36,7 @@ export async function tryWithLock<T>(
         } catch (error) {
           services.observability?.logger?.warn?.("operation lock unavailable", {
             key,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           });
           return { ok: false, reason: "unavailable" };
         }

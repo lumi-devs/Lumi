@@ -5,7 +5,11 @@ import type {
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
-import { type MessageModalSubmit, showPanel } from "./common.js";
+import {
+  type MessageModalSubmit,
+  type ModuleActionParams,
+  showPanel,
+} from "./common.js";
 import {
   escalationActions,
   escalationEntries,
@@ -69,35 +73,13 @@ async function toggleModule(
 export async function handleModuleAction(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
   services: BotServices,
-  guildId: string,
-  action: string,
-  target: string,
-  extra: string,
-  extra2: string,
+  params: ModuleActionParams,
 ): Promise<boolean> {
-  if (
-    await handleRolesModuleAction(
-      interaction,
-      services,
-      guildId,
-      action,
-      target,
-      extra,
-      extra2,
-    )
-  ) {
+  const { guildId, action, target, extra, extra2 } = params;
+  if (await handleRolesModuleAction(interaction, services, params)) {
     return true;
   }
-  if (
-    await handleTempVcModuleAction(
-      interaction,
-      services,
-      guildId,
-      action,
-      target,
-      extra,
-    )
-  ) {
+  if (await handleTempVcModuleAction(interaction, services, params)) {
     return true;
   }
   switch (action) {

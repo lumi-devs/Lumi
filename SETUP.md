@@ -48,9 +48,25 @@ Run `bun run setup --help` for all options, including `--skip-migrate`,
 
 ## Docker (recommended)
 
+### Prebuilt image
+
+```bash
+cp .env.example .env
+# set BOT_TOKEN, OWNER_IDS, POSTGRES_PASSWORD, REDIS_PASSWORD, RPC_INTERNAL_TOKEN
+docker compose pull
+docker compose --profile migrate run --rm migrate
+docker compose up -d
+docker logs -f lumi-bot
+```
+
+Set `LUMI_TAG` in `.env` to a release tag in production. `latest` follows the
+newest stable release, not the development branch.
+
+### Build from source
+
 ```bash
 bun run setup --start-deps   # writes .env, starts Postgres/Redis, applies migrations
-docker compose up -d         # builds and starts the bot
+docker compose up -d --build # builds and starts the bot
 docker logs -f lumi-bot
 ```
 
@@ -60,7 +76,7 @@ starts the dependencies.
 `.env` must contain `BOT_TOKEN`, `OWNER_IDS`, and the Compose secrets
 (`POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `RPC_INTERNAL_TOKEN`). `bun run setup`
 generates the secrets when they are missing. The bot process never migrates
-itself.
+itself; run the `migrate` service after pulling a new image.
 
 ## Nix / local
 

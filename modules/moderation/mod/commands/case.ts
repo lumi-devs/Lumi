@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type {
   CommandDefinition,
   ListenerDefinition,
@@ -18,7 +19,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { ModerationModuleName } from "../constants.js";
-import { describeError, replyError } from "../helpers.js";
+import { replyError } from "../helpers.js";
 
 export const caseDef: CommandDefinition = {
   data: new SlashCommandBuilder()
@@ -240,7 +241,7 @@ export const casesPaginationListener: ListenerDefinition = {
       await interaction.editReply(card);
     } catch (e) {
       await interaction
-        .editReply(makeErrorCard("Cases failed", describeError(e)))
+        .editReply(makeErrorCard("Cases failed", errorMessage(e)))
         .catch(() => {});
     }
   },

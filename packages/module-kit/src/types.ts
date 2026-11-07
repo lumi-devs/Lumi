@@ -93,7 +93,7 @@ export interface CommandDefinition<S = ModuleServices> {
 export interface ListenerDefinition {
   event: string;
 
-  handler: (...args: any[]) => Promise<void>;
+  handler: (...args: never[]) => Promise<void>;
   once?: boolean;
 }
 

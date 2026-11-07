@@ -148,15 +148,13 @@ export async function handleHubInteraction(
     }
     default: {
       if (
-        await handleModuleAction(
-          interaction,
-          services,
+        await handleModuleAction(interaction, services, {
           guildId,
           action,
           target,
           extra,
           extra2,
-        )
+        })
       ) {
         return true;
       }

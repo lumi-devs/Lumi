@@ -250,9 +250,10 @@ For each v1 custom module:
 ### 6. Update Deploy
 
 ```bash
-# Docker
-docker build -t lumi:v2 .
-docker run -d --env-file .env lumi:v2
+# Docker Compose (prebuilt image)
+docker compose pull
+docker compose --profile migrate run --rm migrate
+docker compose up -d
 
 # Or bare metal
 bun run build

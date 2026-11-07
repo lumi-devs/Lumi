@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   type CardReply,
@@ -607,7 +608,7 @@ export async function diagnoseCommands(
       }
     } catch (error) {
       issues.push(
-        `**${command.name}** — invalid responses: ${error instanceof Error ? error.message : String(error)}`,
+        `**${command.name}** — invalid responses: ${errorMessage(error)}`,
       );
     }
 
@@ -647,9 +648,6 @@ export async function diagnoseCommands(
 
 export function errorCard(error: unknown): CardReply {
   return ephemeralCard(
-    makeErrorCard(
-      "Custom Command Error",
-      error instanceof Error ? error.message : String(error),
-    ),
+    makeErrorCard("Custom Command Error", errorMessage(error)),
   );
 }

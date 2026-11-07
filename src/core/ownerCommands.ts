@@ -1,5 +1,6 @@
 import type { ConfigService, GuildSettings } from "@lumi/admin";
 import type { DbHelpers, PrismaClient } from "@lumi/db";
+import { errorMessage } from "@lumi/foundation";
 import * as ui from "@lumi/ui";
 import type { ChatInputCommandInteraction, Client } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
@@ -388,9 +389,7 @@ export function createOwnerCommands(
               await configService.replaceAll(guildId, parsed as GuildSettings);
               await reply("Configuration Imported", `Updated \`${guildId}\`.`);
             } catch (error) {
-              await fail(
-                `Import failed: ${error instanceof Error ? error.message : String(error)}`,
-              );
+              await fail(`Import failed: ${errorMessage(error)}`);
             }
             return;
           }

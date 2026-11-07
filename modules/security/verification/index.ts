@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -26,7 +27,6 @@ import { z } from "zod";
 import { getSecurityConfig } from "../core/config.js";
 import {
   deleteStored,
-  describeError,
   fetchMember,
   getStoredJson,
   readModuleConfig,
@@ -195,7 +195,7 @@ async function createWebVerificationUrl(
       {
         guildId: member.guild.id,
         userId: member.id,
-        error: describeError(error),
+        error: errorMessage(error),
       },
     );
     return null;
@@ -281,7 +281,7 @@ async function grantVerified(
       services.observability?.logger?.warn?.("verification role grant failed", {
         guildId: member.guild.id,
         userId: member.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
       return false;
     });
@@ -507,7 +507,7 @@ const verificationTokenCleanup: TaskDefinition = {
     } catch (error) {
       services.observability?.logger?.warn?.(
         "verification token cleanup failed",
-        { error: describeError(error) },
+        { error: errorMessage(error) },
       );
     }
   },

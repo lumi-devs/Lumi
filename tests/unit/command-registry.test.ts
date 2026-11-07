@@ -29,6 +29,16 @@ describe("CommandRegistry", () => {
     expect(registry.aliasCount).toBe(1);
   });
 
+  it("normalizes command names when registering", () => {
+    const registry = new CommandRegistry();
+
+    expect(registry.add(command("Ping"))).toBe(true);
+    expect(registry.get("ping")?.data.name).toBe("Ping");
+    expect(registry.get("PING")?.data.name).toBe("Ping");
+    expect(registry.add(command("ping"))).toBe(false);
+    expect(registry.size).toBe(1);
+  });
+
   it("ignores duplicate command names", () => {
     const registry = new CommandRegistry();
 

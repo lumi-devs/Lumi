@@ -20,6 +20,8 @@ export interface RegisteredBuiltinCommand extends CommandDefinition<BotServices>
 export type RegisteredCommand =
   RegisteredModuleCommand | RegisteredBuiltinCommand;
 
+type RuntimeListener = (...args: unknown[]) => Promise<void>;
+
 export function commandPayloadForGuild(
   registry: CommandRegistry,
   loader: Pick<ModuleLoader, "isActive">,
@@ -65,7 +67,7 @@ export class CommandRegistry {
   private readonly aliases = new Map<string, RegisteredCommand>();
 
   add(command: RegisteredCommand): boolean {
-    const name = command.data.name;
+    const name = command.data.name.toLowerCase();
     if (this.commands.has(name)) return false;
 
     this.commands.set(name, command);
@@ -243,7 +245,7 @@ export class ModuleHost implements AddonRuntime {
     const moduleServices = servicesForModule(this.options.services, moduleName);
     const disposers: Array<() => void> = [];
     for (const listener of module.definition.listeners ?? []) {
-      const handler = listener.handler;
+      const handler = listener.handler as RuntimeListener;
       const event = listener.event;
       const wrapped = (...args: unknown[]) => {
         const guildId = guildIdFrom(args);

@@ -37,10 +37,6 @@ export function isTextGuildChannel(
   );
 }
 
-export function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export async function getTargets(
   interaction: ChatInputCommandInteraction,
   maxTargets: number,

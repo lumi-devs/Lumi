@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import {
   ChannelType,
   type Guild,
@@ -291,7 +292,7 @@ export async function restoreBackup(
           warnings.push(`Could not update @everyone permissions.`);
           warn(services, "security restore @everyone failed", {
             guildId: guild.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           });
         }
       }
@@ -316,7 +317,7 @@ export async function restoreBackup(
         warn(services, "security restore role failed", {
           guildId: guild.id,
           role: role.name,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         });
       }
       continue;
@@ -331,7 +332,7 @@ export async function restoreBackup(
       warn(services, "security restore role failed", {
         guildId: guild.id,
         role: role.name,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
   }
@@ -355,7 +356,7 @@ export async function restoreBackup(
       warnings.push("Could not restore role positions.");
       warn(services, "security restore role positions failed", {
         guildId: guild.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
   }
@@ -419,7 +420,7 @@ export async function restoreBackup(
         warn(services, "security restore channel failed", {
           guildId: guild.id,
           channel: channel.name,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         });
       }
       continue;
@@ -436,7 +437,7 @@ export async function restoreBackup(
       warn(services, "security restore channel failed", {
         guildId: guild.id,
         channel: channel.name,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
   }
@@ -454,7 +455,7 @@ export async function restoreBackup(
       warnings.push("Could not restore channel positions.");
       warn(services, "security restore channel positions failed", {
         guildId: guild.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       });
     }
   }

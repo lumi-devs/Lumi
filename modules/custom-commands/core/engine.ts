@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   type CardReply,
@@ -195,9 +196,17 @@ function withTimeout<T>(
   });
 }
 
-function asRecord(value: unknown): Record<string, any> | null {
+interface ReplyCapable {
+  reply?: (payload: unknown) => Promise<unknown>;
+  followUp?: (payload: unknown) => Promise<unknown>;
+  react?: (emoji: string) => Promise<unknown>;
+  send?: (payload: unknown) => Promise<unknown>;
+  channel?: ReplyCapable;
+}
+
+function asRecord(value: unknown): ReplyCapable | null {
   return value !== null && typeof value === "object"
-    ? (value as Record<string, any>)
+    ? (value as ReplyCapable)
     : null;
 }
 
@@ -374,7 +383,7 @@ export async function executeCustomCommand(
       {
         guildId: input.guild.id,
         command: command.name,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       },
     );
     return {
@@ -404,7 +413,7 @@ export async function executeCustomCommand(
       {
         guildId: input.guild.id,
         command: command.name,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       },
     );
     return {

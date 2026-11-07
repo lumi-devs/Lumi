@@ -1,7 +1,7 @@
+import { errorMessage } from "@lumi/foundation";
 import { isBotOwner, isWhitelistScope, type Polarity } from "@lumi/permits";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { errorMessage } from "../../../core/errors.js";
 import type { BotServices } from "../../../core/contracts.js";
 import {
   formatPermitNodeLines,

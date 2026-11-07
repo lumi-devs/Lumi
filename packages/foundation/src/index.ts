@@ -1,5 +1,6 @@
 import { pino } from "pino";
 
+export * from "./errors.js";
 export * from "./filters.js";
 export * from "./validation.js";
 

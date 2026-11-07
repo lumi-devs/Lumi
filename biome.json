@@ -22,7 +22,7 @@
     "rules": {
       "preset": "recommended",
       "suspicious": {
-        "noExplicitAny": "off"
+        "noExplicitAny": "error"
       },
       "style": {
         "noNonNullAssertion": "off"
@@ -30,6 +30,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["tests/**/*.ts", "**/tests/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["modules/**/*.ts"],
       "linter": {

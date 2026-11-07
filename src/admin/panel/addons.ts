@@ -1,7 +1,7 @@
 import type { InstalledAddon } from "@lumi/downloader";
+import { errorMessage } from "@lumi/foundation";
 import { isBotOwner } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
-import { errorMessage } from "../../core/errors.js";
 import {
   type AddonView,
   addRepoModal,

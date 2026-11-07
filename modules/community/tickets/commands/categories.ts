@@ -1,4 +1,4 @@
-import { requireGuildId } from "@lumi/foundation";
+import { errorMessage, requireGuildId } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   cardCreateOptions,
@@ -153,11 +153,7 @@ export async function categoryAdd(
   try {
     questions = rawQuestions ? parseQuestionsInput(rawQuestions) : [];
   } catch (error) {
-    await replyError(
-      interaction,
-      "Invalid Questions",
-      error instanceof Error ? error.message : String(error),
-    );
+    await replyError(interaction, "Invalid Questions", errorMessage(error));
     return;
   }
   const defaultPriority = interaction.options.getString("default_priority");
@@ -279,11 +275,7 @@ export async function categoryEdit(
     try {
       data.questions = parseQuestionsInput(rawQuestions);
     } catch (error) {
-      await replyError(
-        interaction,
-        "Invalid Questions",
-        error instanceof Error ? error.message : String(error),
-      );
+      await replyError(interaction, "Invalid Questions", errorMessage(error));
       return;
     }
   }

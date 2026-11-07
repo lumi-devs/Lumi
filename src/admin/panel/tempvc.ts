@@ -25,6 +25,7 @@ import {
   cut,
   type HubInteraction,
   type MessageModalSubmit,
+  type ModuleActionParams,
   type PanelInteraction,
   panelOptions,
   showPanel,
@@ -494,11 +495,9 @@ export async function handleTempVcGeneratorModal(
 export async function handleTempVcModuleAction(
   interaction: PanelInteraction,
   services: BotServices,
-  guildId: string,
-  action: string,
-  target: string,
-  extra: string,
+  params: ModuleActionParams,
 ): Promise<boolean> {
+  const { guildId, action, target, extra } = params;
   if (!action.startsWith("tempvc")) return false;
 
   switch (action) {

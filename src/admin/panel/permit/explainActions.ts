@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -5,7 +6,6 @@ import {
   row,
 } from "@lumi/ui";
 import { ButtonStyle } from "discord.js";
-import { errorMessage } from "../../../core/errors.js";
 import { roleIdsFrom } from "../../access.js";
 import { allExplanationCard } from "../../permits/explain.js";
 import type { ExplainFlow } from "../../permits/flows.js";

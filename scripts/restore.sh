@@ -113,7 +113,7 @@ restore_postgres() {
   
   # Run migrations to ensure schema is up to date
   log "Running database migrations"
-  cd /app && bun run db:migrate deploy || error "Migrations failed"
+  cd /app && bun run db:migrate:deploy || error "Migrations failed"
   
   log "PostgreSQL restore completed successfully"
 }

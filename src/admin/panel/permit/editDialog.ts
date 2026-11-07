@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import { isBotOwner, isWhitelistScope } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
 import {
@@ -6,7 +7,6 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { errorMessage } from "../../../core/errors.js";
 import { isValidNode, parseNodeList } from "../../permits/nodes.js";
 import { cut } from "../common.js";
 import type { PermitHost } from "./host.js";

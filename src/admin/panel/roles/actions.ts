@@ -24,7 +24,12 @@ import {
 import { getRoleMenusConfig } from "../../../../modules/role-menus/menu/config.js";
 import { refreshRoleMenuMessage } from "../../../../modules/role-menus/menu/posting.js";
 import type { RoleMenuStyle } from "../../../../modules/role-menus/menu/ui.js";
-import { backButton, type PanelInteraction, showPanel } from "../common.js";
+import {
+  backButton,
+  type ModuleActionParams,
+  type PanelInteraction,
+  showPanel,
+} from "../common.js";
 import type { BotServices } from "../../../core/contracts.js";
 import { servicesForModule } from "../../../core/modules.js";
 import {
@@ -63,12 +68,9 @@ import {
 export async function handleRolesModuleAction(
   interaction: PanelInteraction,
   services: BotServices,
-  guildId: string,
-  action: string,
-  target: string,
-  extra: string,
-  extra2: string,
+  params: ModuleActionParams,
 ): Promise<boolean> {
+  const { guildId, action, target, extra, extra2 } = params;
   if (action === "autorole") {
     await showPanel(interaction, () =>
       renderAutorolePanel(interaction, services, pageNumber(target)),

@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import { type CardReply, cardCreateOptions, makeCard } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
@@ -69,10 +70,6 @@ export async function deleteStored(
   key: string,
 ): Promise<void> {
   await services.helpers.cache.del(key);
-}
-
-export function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export function roleIds(member: GuildMember | null | undefined): string[] {
@@ -194,7 +191,7 @@ export async function applyResponse(
         services.observability?.logger?.warn?.("security ban failed", {
           guildId: guild.id,
           targetId,
-          error: describeError(error),
+          error: errorMessage(error),
         });
         return false;
       });
@@ -210,7 +207,7 @@ export async function applyResponse(
       services.observability?.logger?.warn?.("security quarantine failed", {
         guildId: guild.id,
         targetId,
-        error: describeError(error),
+        error: errorMessage(error),
       });
       return false;
     });

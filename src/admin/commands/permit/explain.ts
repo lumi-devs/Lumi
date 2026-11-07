@@ -1,6 +1,6 @@
+import { errorMessage } from "@lumi/foundation";
 import { ephemeralCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { errorMessage } from "../../../core/errors.js";
 import { roleIdsFrom } from "../../access.js";
 import type { BotServices } from "../../../core/contracts.js";
 import { allExplanationCard, explanationCard } from "../../permits/explain.js";

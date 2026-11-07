@@ -1,6 +1,6 @@
+import { errorMessage } from "@lumi/foundation";
 import type { PermitTargetType } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi/ui";
-import { errorMessage } from "../../../core/errors.js";
 import type { AssignFlow } from "../../permits/flows.js";
 import {
   expiryFromValue,

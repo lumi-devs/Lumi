@@ -349,6 +349,10 @@ export const myListener: ListenerDefinition = {
 };
 ```
 
+Module services always arrive as the final argument after the event arguments.
+The loader type-erases handlers at the registration boundary, so declare only the
+event parameters you use plus `services`.
+
 ### Available Events
 
 Import from `discord.js` Events:

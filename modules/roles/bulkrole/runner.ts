@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import type { Guild, GuildMember } from "discord.js";
 import {
@@ -24,10 +25,6 @@ import { isRunnableJob, nextBatch, nextJobStatus } from "./worker-logic.js";
 
 interface RunnerCandidate extends BulkCandidate {
   readonly member: GuildMember;
-}
-
-function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export async function processBulkRoleJobs(
@@ -105,7 +102,7 @@ export async function runBulkRoleJob(
   } catch (error) {
     await updateBulkRoleJob(services, job.id, {
       status: "failed",
-      lastError: `Member fetch failed: ${describeError(error)}`,
+      lastError: `Member fetch failed: ${errorMessage(error)}`,
     });
     return;
   }

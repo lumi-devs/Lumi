@@ -1,4 +1,4 @@
-import { isSnowflake } from "@lumi/foundation";
+import { errorMessage, isSnowflake } from "@lumi/foundation";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
@@ -6,7 +6,6 @@ import { getModerationConfig } from "../config.js";
 import {
   actionCard,
   canActOn,
-  describeError,
   getCaseLink,
   getDeleteDays,
   getReason,
@@ -111,7 +110,7 @@ export const banAdd: CommandDefinition = {
         lines.push(`✅ ${target.tag} (\`${target.id}\`)`);
       } catch (e) {
         failures++;
-        lines.push(`❌ ${target.tag} (\`${target.id}\`) — ${describeError(e)}`);
+        lines.push(`❌ ${target.tag} (\`${target.id}\`) — ${errorMessage(e)}`);
       }
     }
 
@@ -172,7 +171,7 @@ export const banRemove: CommandDefinition = {
         ),
       );
     } catch (e) {
-      await replyError(interaction, "Unban failed", describeError(e));
+      await replyError(interaction, "Unban failed", errorMessage(e));
     }
   },
 };

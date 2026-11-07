@@ -1,3 +1,9 @@
+x-lumi-image: &lumi-image
+  image: ghcr.io/lumi-devs/lumi:${LUMI_TAG:-latest}
+  build:
+    context: .
+    dockerfile: Dockerfile
+
 services:
   postgres:
     image: docker.io/postgres:18-alpine
@@ -40,10 +46,7 @@ services:
       retries: 10
 
   bot:
-    image: lumi-v2:local
-    build:
-      context: .
-      dockerfile: Dockerfile
+    <<: *lumi-image
     container_name: lumi-bot
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
@@ -52,6 +55,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CACHE_NAMESPACE: ${CACHE_NAMESPACE:-lumi}
+      DEFAULT_PREFIX: "${DEFAULT_PREFIX:-,}"
+      GIT_TOKEN: ${GIT_TOKEN:-}
+      GIT_USERNAME: ${GIT_USERNAME:-x-access-token}
+      WEB_BASE_URL: ${WEB_BASE_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       METRICS_ENABLED: "true"
       METRICS_PORT: "9090"
@@ -67,6 +75,18 @@ services:
     ports:
       - "127.0.0.1:8091:8091"
       - "127.0.0.1:9090:9090"
+
+  migrate:
+    <<: *lumi-image
+    profiles: ["migrate"]
+    container_name: lumi-migrate
+    command: ["run", "db:migrate:deploy"]
+    environment:
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   postgres_data:

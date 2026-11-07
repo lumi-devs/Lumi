@@ -100,7 +100,10 @@ describe("avatar command", () => {
       },
     };
 
-    await utilityModule.listeners[0]!.handler(interaction as any, {} as any);
+    const handler = utilityModule.listeners[0]!.handler as (
+      ...args: unknown[]
+    ) => Promise<void>;
+    await handler(interaction, {});
 
     const card = replies[0];
     const container = containerOf(card);

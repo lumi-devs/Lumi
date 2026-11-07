@@ -33,6 +33,35 @@ insights, written in TypeScript and running on Bun.
 - [AGENTS.md](AGENTS.md) and the `agents/` directory for agent-facing documentation.
 - [agents/00-index.md](agents/00-index.md) indexes every subsystem doc.
 
+## Self-hosting
+
+The bot ships as a container image at `ghcr.io/lumi-devs/lumi`. Compose runs
+Postgres, Redis, a one-shot migration service, and the bot.
+
+```sh
+cp .env.example .env
+# fill BOT_TOKEN, OWNER_IDS, POSTGRES_PASSWORD, REDIS_PASSWORD, RPC_INTERNAL_TOKEN
+docker compose pull
+docker compose --profile migrate run --rm migrate
+docker compose up -d
+```
+
+Pin `LUMI_TAG` to a release tag in production. See [SETUP.md](SETUP.md) for
+source installs, Nix, and platform-specific instructions.
+
+### Releases and upgrades
+
+- Pushes to `v2/develop` publish branch and commit tags; they never move
+  `latest`.
+- Publishing a stable GitHub release (`vX.Y.Z`) publishes `X.Y.Z`, `X.Y` and
+  `latest`, with SBOM and build provenance. Pre-releases never receive `latest`.
+- Production pins `LUMI_TAG=vX.Y.Z`, pulls the image, runs the one-shot
+  `migrate` service, then recreates the bot.
+- Migrations are forward-only. Roll back to an older image tag only when the
+  schema is compatible; otherwise restore the database backup first.
+- The dashboard deploys separately from source (`apps/dashboard`, Node adapter)
+  and should use the same release tag as the bot.
+
 ## Development
 
 ```sh

@@ -1,4 +1,9 @@
-export { createLogger, type Logger, logger } from "@lumi/foundation";
+export {
+  createLogger,
+  errorMessage,
+  type Logger,
+  logger,
+} from "@lumi/foundation";
 export { createAboutCommand } from "./about.js";
 export { createAddonNotifier } from "./addonNotify.js";
 export { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
@@ -8,7 +13,7 @@ export type { BotInteraction } from "./dispatch.js";
 export { handleInteraction } from "./dispatch.js";
 export { createErrorStore } from "./errorStore.js";
 export { createGuildSync } from "./guildSync.js";
-export { commandErrorCard, errorMessage } from "./errors.js";
+export { commandErrorCard } from "./errors.js";
 export { registerClientEvents } from "./clientEvents.js";
 export type { BotServices } from "./contracts.js";
 export { createClient } from "./gateway.js";

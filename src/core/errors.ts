@@ -40,10 +40,6 @@ function messageForHttpStatus(status: number): string | null {
   }
 }
 
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function commandErrorCard(error: unknown, traceId?: string): CardReply {
   const trace = traceId ? `\n\n-# Trace: \`${traceId}\`` : "";
   if (error instanceof DiscordAPIError) {

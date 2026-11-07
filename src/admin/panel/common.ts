@@ -34,6 +34,14 @@ export type MessageModalSubmit = ModalSubmitInteraction & {
   update(reply: CardReply): Promise<unknown>;
 };
 
+export interface ModuleActionParams {
+  readonly guildId: string;
+  readonly action: string;
+  readonly target: string;
+  readonly extra: string;
+  readonly extra2: string;
+}
+
 const HubTabs: Tab[] = [
   { id: "home", label: "Overview", emoji: "🏠" },
   { id: "modules", label: "Modules", emoji: "⚙️" },

@@ -704,6 +704,42 @@ async function threadMessage(
   }
 }
 
+async function openPanelCategory(
+  interaction: Interaction,
+  services: ModuleServices,
+  guildId: string,
+  panelId: string,
+  categoryId: string,
+): Promise<void> {
+  const panel = await findPanel(services, panelId);
+  const category = await findCategory(services, guildId, categoryId);
+  if (!panel || !category || panel.guildId !== guildId) {
+    await replyError(
+      interaction,
+      "Panel Unavailable",
+      "This ticket panel is no longer available.",
+    );
+    return;
+  }
+  const policy = await validateTicketOpen(services, {
+    guildId,
+    userId: interaction.user.id,
+    roleIds: memberRoleIds(interaction),
+    panelId,
+    categoryId,
+  });
+  if (!policy.ok) {
+    await replyError(interaction, policy.title, policy.body);
+    return;
+  }
+  await showTicketOpenMenu(
+    interaction,
+    services,
+    policy.panel,
+    policy.category,
+  );
+}
+
 export async function handleTicketInteraction(
   interaction: Interaction,
   services: ModuleServices,
@@ -752,34 +788,15 @@ export async function handleTicketInteraction(
     if (parts[1] === "panel" && parts[2] === "open") {
       const panelId = parts[3];
       const categoryId = parts[4];
-      if (!panelId || !categoryId) return;
-      const panel = await findPanel(services, panelId);
-      const category = await findCategory(services, guildId, categoryId);
-      if (!panel || !category || panel.guildId !== guildId) {
-        await replyError(
+      if (panelId && categoryId) {
+        await openPanelCategory(
           interaction,
-          "Panel Unavailable",
-          "This ticket panel is no longer available.",
+          services,
+          guildId,
+          panelId,
+          categoryId,
         );
-        return;
       }
-      const policy = await validateTicketOpen(services, {
-        guildId,
-        userId: interaction.user.id,
-        roleIds: memberRoleIds(interaction),
-        panelId,
-        categoryId,
-      });
-      if (!policy.ok) {
-        await replyError(interaction, policy.title, policy.body);
-        return;
-      }
-      await showTicketOpenMenu(
-        interaction,
-        services,
-        policy.panel,
-        policy.category,
-      );
       return;
     }
     if (parts[1] === "feedback") {
@@ -795,38 +812,17 @@ export async function handleTicketInteraction(
     }
     if (parts[1] === "panel" && parts[2] === "select") {
       const panelId = parts[3];
-      if (!panelId) return;
-      const panel = await findPanel(services, panelId);
-      const category = await findCategory(
-        services,
-        guildId,
-        interaction.values[0] ?? "",
-      );
-      if (!panel || !category || panel.guildId !== guildId) {
-        await replyError(
+      const categoryId = interaction.values[0];
+      if (panelId && categoryId) {
+        await openPanelCategory(
           interaction,
-          "Panel Unavailable",
-          "This ticket panel is no longer available.",
+          services,
+          guildId,
+          panelId,
+          categoryId,
         );
-        return;
       }
-      const policy = await validateTicketOpen(services, {
-        guildId,
-        userId: interaction.user.id,
-        roleIds: memberRoleIds(interaction),
-        panelId,
-        categoryId: category.id,
-      });
-      if (!policy.ok) {
-        await replyError(interaction, policy.title, policy.body);
-        return;
-      }
-      await showTicketOpenMenu(
-        interaction,
-        services,
-        policy.panel,
-        policy.category,
-      );
+      return;
     }
   }
 }

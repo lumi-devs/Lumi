@@ -1,3 +1,4 @@
+import { errorMessage } from "@lumi/foundation";
 import type { Redis } from "ioredis";
 
 const RecentKey = "lumi:errors:recent";
@@ -37,7 +38,7 @@ export function createErrorStore(redis: Redis): ErrorStore {
         id: crypto.randomUUID(),
         at: new Date().toISOString(),
         source: input.source,
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
         stack: error instanceof Error ? error.stack : undefined,
         guildId: input.guildId,
         userId: input.userId,

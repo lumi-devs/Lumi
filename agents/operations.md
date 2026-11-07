@@ -40,6 +40,7 @@ See `.env.example`.
 | `RPC_HTTP_HOST`      | RPC control-server bind host. Default `127.0.0.1`.                   |
 | `RPC_HTTP_PORT`      | RPC control-server port. Default `8091`.                             |
 | `RPC_INTERNAL_TOKEN` | Bearer token for `/api/v1/*`; required for any non-loopback use.     |
+| `LUMI_TAG`           | Container image tag used by Compose. Default `latest`.               |
 | `GIT_TOKEN`          | Optional token for private addon repos over HTTPS.                   |
 | `GIT_USERNAME`       | Token username; default `x-access-token`.                            |
 
@@ -48,10 +49,13 @@ See `.env.example`.
 ```sh
 bun run setup
 docker compose up -d
-bunx prisma migrate deploy
+bun run db:migrate:deploy
 bun run db:generate
 bun run dev:bot
 ```
+
+Prebuilt installs pull `ghcr.io/lumi-devs/lumi` and run the one-shot `migrate`
+profile before starting the bot.
 
 `docker compose` requires `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, and
 `RPC_INTERNAL_TOKEN`; setup generates them when they are missing.
@@ -62,7 +66,7 @@ bun run dev:bot
   (`DATABASE_URL`).
 - `bun run db:generate` after schema edits.
 - `bun run db:migrate` in development.
-- `bunx prisma migrate deploy` in production/CI.
+- `bun run db:migrate:deploy` in production/CI.
 - `packages/db/prisma/migrations/` is versioned; never edit an applied migration.
 - The generated client uses Prisma's default `@prisma/client` output.
 

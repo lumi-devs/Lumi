@@ -1,10 +1,10 @@
+import { errorMessage } from "@lumi/foundation";
 import type { CommandDefinition } from "@lumi/module-kit";
 import { ephemeralCard, makeSuccessCard } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { getModerationConfig } from "../config.js";
 import {
   canActOn,
-  describeError,
   getCaseLink,
   getReason,
   isImmune,
@@ -116,7 +116,7 @@ export const timeoutDef: CommandDefinition = {
         ),
       );
     } catch (e) {
-      await replyError(interaction, "Timeout failed", describeError(e));
+      await replyError(interaction, "Timeout failed", errorMessage(e));
     }
   },
 };
