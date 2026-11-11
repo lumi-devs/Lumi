@@ -125,13 +125,13 @@ export function createAboutCommand(services: AboutServices) {
 
       const body = [
         "# __Lumi__\n\n" +
-          "Lumi is a powerful, self-hosted Discord administration platform designed for communities that demand full control and rock-solid reliability. Powered by TypeScript and Bun. Lumi guarantees instant command responses, modular capability, and enterprise-grade uptime for your server. The all-in-one administration platform you host yourself - moderation, leveling, economy, and logging, engineered for reliability.",
-        "### 📊 __INSTANCE STATISTICS__\n" +
-          `-# ${formatCount(guilds.length)} Servers · ${formatCount(members)} Members · ${formatCount(channels)} Channels\n` +
-          `-# Uptime <t:${bootTime}:R> (Host Uptime <t:${hostBootTime}:R>)\n` +
-          `-# Gateway \`${Math.round(client.ws.ping)}ms\` · Memory \`${formatMb(memory.rss)}\` · CPU \`${cpuPercent.toFixed(1)}%\``,
-        "### ⚙️ __CORE ARCHITECTURE__\n" +
-          `_Lumi version_ v2.0.0\n` +
+          "Self-hosted Discord bot for moderation, security, and community tools. Runs on Bun with PostgreSQL and Redis.",
+        "### Instance\n" +
+          `-# ${formatCount(guilds.length)} servers · ${formatCount(members)} members · ${formatCount(channels)} channels\n` +
+          `-# Uptime <t:${bootTime}:R> · host uptime <t:${hostBootTime}:R>\n` +
+          `-# Gateway \`${Math.round(client.ws.ping)}ms\` · memory \`${formatMb(memory.rss)}\` · CPU \`${cpuPercent.toFixed(1)}%\``,
+        "### Runtime\n" +
+          `_Lumi v2.0.0_\n` +
           `${runtime} · *discord.js* v${discordVersion}\n` +
           `*PostgreSQL* ${postgres} · *Redis* v${redisVersionNumber}`,
       ];
@@ -156,13 +156,8 @@ export function createAboutCommand(services: AboutServices) {
           style: ButtonStyle.Link,
         }),
         createActionButton({
-          url: "https://lumi-devs.github.io/Lumi-docs/reference/data-and-privacy",
-          label: "Privacy Policy",
-          style: ButtonStyle.Link,
-        }),
-        createActionButton({
-          url: "https://github.com/lumi-devs/Lumi/blob/main/LICENSE",
-          label: "Terms of Service",
+          url: "https://github.com/lumi-devs/Lumi/blob/v2/develop/SETUP.md",
+          label: "Setup Guide",
           style: ButtonStyle.Link,
         }),
       );
