@@ -5,6 +5,7 @@
   "emoji": "📛",
   "description": "Nickname changes with hierarchy checks and optional self-service",
   "version": "2.0.0",
+  "category": "Utility",
   "entry": "index.ts",
   "configKey": "nick",
   "configFields": [
@@ -23,14 +24,13 @@
       "default": 32
     }
   ],
-  "dependencies": {
-    "utility": "^2.0.0"
-  },
   "capabilities": [
     {
       "name": "utility-nick",
       "version": "2.0.0",
-      "provides": ["utility.nick"]
+      "provides": [
+        "utility.nick"
+      ]
     }
   ],
   "conflicts": [],

@@ -1,8 +1,0 @@
-{
-  "apiVersion": 2,
-  "name": "security",
-  "displayName": "Security",
-  "emoji": "🛡️",
-  "description": "Server protection suite: anti-nuke, join gate, verification, panic mode, backups, and automod",
-  "version": "2.0.0"
-}

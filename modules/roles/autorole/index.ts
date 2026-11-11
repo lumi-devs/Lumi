@@ -19,7 +19,7 @@ import {
   fetchMember,
   parseRoleIds,
   roleMentions,
-} from "../shared.js";
+} from "../../shared/roles.js";
 import {
   AutoroleConfigSchema,
   AutoroleModuleName,

@@ -1,9 +1,8 @@
 # Role Automation
 
-Supermodule `roles` (`modules/roles/`) contains three independently toggleable
-submodules:
+The `Roles` category contains three independently toggleable modules:
 
-| Submodule          | Directory                  | Permit node        |
+| Module             | Directory                  | Permit node        |
 | ------------------ | -------------------------- | ------------------ |
 | `roles-autorole`   | `modules/roles/autorole`   | `roles.autorole`   |
 | `roles-voiceroles` | `modules/roles/voiceroles` | `roles.voiceroles` |
@@ -11,7 +10,7 @@ submodules:
 
 All three require **Manage Server** or their permit node. Replies are Components
 V2 cards only. Shared access, config, and hierarchy helpers live in
-`modules/roles/shared.ts`.
+`modules/shared/roles.ts`.
 
 `/config roles-autorole` and `/config roles-voiceroles` open ephemeral management
 panels (also reachable from `/lumi` → Modules). The `autorole` and `voiceroles`
@@ -214,7 +213,7 @@ Pure logic is isolated from Discord and Prisma so it can be unit tested:
 Run with:
 
 ```sh
-nix develop --command bunx vitest run modules/roles
+nix develop --command bunx vitest run modules/roles/autorole modules/roles/voiceroles modules/roles/bulkrole
 nix develop --command bun run typecheck
 ```
 

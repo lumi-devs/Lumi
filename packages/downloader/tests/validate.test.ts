@@ -54,47 +54,23 @@ describeBun("validateAddon", () => {
     await expect(validateAddon(dir)).resolves.toEqual([]);
   });
 
-  it("accepts a rudimentary supermodule without a root entry", async () => {
-    const parent = await mkdtemp(join(tmpdir(), "lumi-addon-"));
-    roots.push(parent);
-    const dir = join(parent, "test-addon");
-    await mkdir(join(dir, "status"), { recursive: true });
-    await writeFile(
-      join(dir, "manifest.json"),
-      JSON.stringify({
-        apiVersion: 2,
-        name: "test-addon",
-        displayName: "Test addon",
-        emoji: "🧪",
-        description: "Test addon",
-        version: "1.0.0",
-      }),
-    );
-    await writeFile(
-      join(dir, "status", "manifest.json"),
-      JSON.stringify({
-        apiVersion: 2,
-        name: "test-addon-status",
-        displayName: "Status",
-        emoji: "📊",
-        description: "Status submodule",
-        version: "1.0.0",
-        entry: "index.ts",
-      }),
-    );
-    await writeFile(join(dir, "status", "index.ts"), "export default {};\n");
-    await expect(validateAddon(dir)).resolves.toEqual([]);
-  });
-
-  it("rejects a supermodule manifest with an entry or config", async () => {
+  it("accepts a flat addon with settings and a category", async () => {
     const dir = await makeAddon({
       "manifest.json": JSON.stringify({
         entry: "index.ts",
+        category: "Testing",
         configFields: [{ key: "x", label: "X", type: "string" }],
       }),
     });
+    await expect(validateAddon(dir)).resolves.toEqual([]);
+  });
+
+  it("rejects a manifest without an entry", async () => {
+    const dir = await makeAddon({
+      "manifest.json": JSON.stringify({ entry: undefined }),
+    });
     await expect(validateAddon(dir)).resolves.toContainEqual(
-      expect.stringContaining("supermodule manifest must be metadata-only"),
+      expect.stringContaining("manifest.json"),
     );
   });
 

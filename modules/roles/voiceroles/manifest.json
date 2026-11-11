@@ -5,17 +5,17 @@
   "emoji": "🔊",
   "description": "Per voice and stage channel roles with optional category mapping and grace periods",
   "version": "2.0.0",
+  "category": "Roles",
   "entry": "index.ts",
-  "dependencies": {
-    "roles": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "roles-voiceroles",
       "version": "2.0.0",
-      "provides": ["roles.voice"]
+      "provides": [
+        "roles.voice"
+      ]
     }
   ],
   "configFields": [

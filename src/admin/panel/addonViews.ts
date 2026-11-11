@@ -22,6 +22,7 @@ import {
   pageRow,
   panelOptions,
 } from "./common.js";
+import { isModuleFeatureEnabled } from "./moduleSettings.js";
 import { ModulesPerPage } from "./modules.js";
 import { paginate } from "./pages.js";
 import type { BotServices } from "../../core/contracts.js";
@@ -459,11 +460,18 @@ async function renderManage(
     );
   }
 
+  const enabled = await isModuleFeatureEnabled(
+    services,
+    interaction.guildId!,
+    addon.name,
+  );
+
   return makeCard(
     undefined,
     `📦 ${addon.name}`,
     [
       ...(notice ? [`✅ ${notice}`, ""] : []),
+      `**Status:** ${enabled ? "✅ Enabled" : "⛔ Disabled"}`,
       `**Repository:** ${addon.repoName}`,
       `**Version:** ${addon.version ?? "unknown"}`,
       `**Commit:** ${formatCommit(addon.commit)}`,
@@ -479,9 +487,15 @@ async function renderManage(
           row(
             createActionButton({
               customId: `lumi:modopen:${addon.name}:0`,
-              label: "Open",
+              label: "Settings",
               emoji: "⚙️",
               style: ButtonStyle.Primary,
+            }),
+            createActionButton({
+              customId: `lumi:addon:toggle:${addon.name}`,
+              label: enabled ? "Disable" : "Enable",
+              emoji: enabled ? "⛔" : "✅",
+              style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
             }),
             createActionButton({
               customId: `lumi:addon:pin:${addon.name}`,

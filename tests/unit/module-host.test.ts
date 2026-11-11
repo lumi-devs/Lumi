@@ -31,7 +31,6 @@ function definition(
 function loadedModule(
   name: string,
   options: { commands?: string[]; listeners?: string[] } = {},
-  supermodule?: string,
 ): LoadedModule {
   return {
     manifest: {
@@ -51,8 +50,6 @@ function loadedModule(
     definition: definition(name, options),
     path: `/tmp/${name}`,
     origin: "bundled",
-    supermodule,
-    isSubmodule: Boolean(supermodule),
     guildsDisabled: new Set(),
   };
 }
@@ -66,12 +63,10 @@ function fakeLoader(initial: LoadedModule[]) {
     discover: vi.fn(async () => Array.from(modules.values())),
     loadAll: vi.fn(async (targets: LoadedModule[]) => targets),
     unload: vi.fn(async (name: string) => {
-      const removed = Array.from(modules.values()).filter(
-        (module) =>
-          module.manifest.name === name || module.supermodule === name,
-      );
-      for (const module of removed) modules.delete(module.manifest.name);
-      return removed;
+      const module = modules.get(name);
+      if (!module) return [];
+      modules.delete(name);
+      return [module];
     }),
     reload: vi.fn(async (name: string) => {
       const current = modules.get(name);
@@ -85,10 +80,7 @@ function fakeLoader(initial: LoadedModule[]) {
     getModule: vi.fn((name: string) => modules.get(name)),
     isActive: vi.fn((guildId: string, name: string) => {
       const module = modules.get(name);
-      if (!module || module.guildsDisabled.has(guildId)) return false;
-      return module.supermodule
-        ? !modules.get(module.supermodule)?.guildsDisabled.has(guildId)
-        : true;
+      return Boolean(module && !module.guildsDisabled.has(guildId));
     }),
     listAll: vi.fn(() => Array.from(modules.values())),
   };
@@ -160,18 +152,16 @@ describe("ModuleHost", () => {
     expect(secondHandler).toHaveBeenCalledOnce();
   });
 
-  it("mounts a supermodule together with its submodules", async () => {
-    const parent = loadedModule("utility", { commands: ["utility"] });
-    const child = loadedModule("utility-afk", { commands: ["afk"] }, "utility");
-    const { host, registry, loader } = setup([parent, child]);
+  it("mounts a flat module by exact name", async () => {
+    const addon = loadedModule("utility-afk", { commands: ["afk"] });
+    const { host, registry, loader } = setup([addon]);
 
-    await host.mount("utility");
+    await host.mount("utility-afk");
 
     expect(loader.loadAll).toHaveBeenCalledWith(
-      expect.arrayContaining([parent, child]),
-      {},
+      [addon],
+      expect.anything(),
     );
-    expect(registry.get("utility")?.module).toBe("utility");
     expect(registry.get("afk")?.module).toBe("utility-afk");
   });
 

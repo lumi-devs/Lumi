@@ -54,7 +54,7 @@ export const load: PageServerLoad = async (event) => {
   const disabled = new Set(disabledModules.map((row) => row.module));
   const enabledModules = catalog.filter(
     (module) =>
-      module.isSubmodule &&
+      !module.isAddon &&
       effectiveModuleEnabled(
         module.configFields,
         configFor(settings, module.configKey),
@@ -62,7 +62,7 @@ export const load: PageServerLoad = async (event) => {
       ),
   ).length;
   const availableModules = catalog.filter(
-    (module) => module.isSubmodule,
+    (module) => !module.isAddon,
   ).length;
 
   return {

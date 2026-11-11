@@ -5,6 +5,7 @@
   "emoji": "✅",
   "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -53,7 +54,11 @@
       "type": "select",
       "description": "How members prove they're human",
       "default": "emoji",
-      "choices": ["emoji", "none", "web"],
+      "choices": [
+        "emoji",
+        "none",
+        "web"
+      ],
       "category": "Setup"
     },
     {
@@ -69,19 +74,23 @@
       "type": "select",
       "description": "Require verification from everyone or only suspicious accounts",
       "default": "everyone",
-      "choices": ["everyone", "suspicious"],
+      "choices": [
+        "everyone",
+        "suspicious"
+      ],
       "category": "Setup"
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-core": "^2.0.0"
   },
   "capabilities": [
     {
       "name": "security-verification",
       "version": "2.0.0",
-      "provides": ["security.verification"]
+      "provides": [
+        "security.verification"
+      ]
     }
   ],
   "conflicts": [],

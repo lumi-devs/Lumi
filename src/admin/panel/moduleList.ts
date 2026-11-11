@@ -2,8 +2,6 @@ import {
   type CardReply,
   makeCard,
   makeEmptyCard,
-  makeErrorCard,
-  row,
   settingRow,
 } from "@lumi/ui";
 import {
@@ -11,24 +9,11 @@ import {
   ButtonStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import {
-  backButton,
-  cut,
-  type HubInteraction,
-  pageRow,
-  panelOptions,
-} from "./common.js";
+import { cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
 import { isModuleFeatureEnabled } from "./moduleSettings.js";
-import {
-  ModulesPerPage,
-  moduleListRowId,
-  submoduleItems,
-  supermoduleItems,
-} from "./modules.js";
+import { ModulesPerPage, moduleItems } from "./modules.js";
 import { paginate } from "./pages.js";
 import type { BotServices } from "../../core/contracts.js";
-
-const SubmodulesPerPage = 3;
 
 export async function moduleStates(
   services: BotServices,
@@ -54,12 +39,11 @@ export async function renderModules(
   notice?: string,
 ): Promise<CardReply> {
   const guildId = interaction.guildId!;
-  const allModules = services.moduleLoader.listGlobal();
+  const allModules = services.moduleLoader
+    .listGlobal()
+    .filter((module) => module.origin === "bundled");
   const states = await moduleStates(services, guildId, allModules);
-  const modules = supermoduleItems(
-    allModules,
-    (name) => states.get(name) ?? false,
-  );
+  const modules = moduleItems(allModules, (name) => states.get(name) ?? false);
 
   if (modules.length === 0) {
     return makeEmptyCard(
@@ -76,33 +60,31 @@ export async function renderModules(
     totalPages,
   } = paginate(modules, page, ModulesPerPage);
 
-  const sections = shown.map((module) =>
-    settingRow(
-      [
-        `${module.emoji} **${module.displayName}**`,
-        `-# ${module.enabledCount}/${module.submoduleCount} enabled · ${module.submoduleCount} submodules · ${cut(module.description || "No description", 80)}`,
-      ],
-      {
-        customId: moduleListRowId(module.name, currentPage),
-        label: "Submodules",
-        style: ButtonStyle.Primary,
-      },
-    ),
-  );
+  const sections = shown.map((module, index) => {
+    const previous = shown[index - 1];
+    const lines =
+      !previous || previous.category !== module.category
+        ? [
+            `**${module.category}**`,
+            `${module.emoji} **${module.displayName}** — ${module.enabled ? "Enabled" : "Disabled"}`,
+          ]
+        : [
+            `${module.emoji} **${module.displayName}** — ${module.enabled ? "Enabled" : "Disabled"}`,
+          ];
+    lines.push(`-# ${cut(module.description || "No description", 80)}`);
+    return settingRow(lines, {
+      customId: `lumi:modopen:${module.name}:0`,
+      label: "Open",
+      style: ButtonStyle.Primary,
+    });
+  });
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
   if (totalPages > 1) rows.push(pageRow("lumi:mods", currentPage, totalPages));
 
-  const enabledCount = modules.reduce(
-    (total, module) => total + module.enabledCount,
-    0,
-  );
-  const totalCount = modules.reduce(
-    (total, module) => total + module.submoduleCount,
-    0,
-  );
+  const enabledCount = modules.filter((module) => module.enabled).length;
   const footer = [
-    `${enabledCount} of ${totalCount} modules enabled`,
+    `${enabledCount} of ${modules.length} modules enabled`,
     totalPages > 1 ? `page ${currentPage + 1}/${totalPages}` : null,
   ]
     .filter(Boolean)
@@ -117,97 +99,4 @@ export async function renderModules(
       ...panelOptions(interaction, "modules", ["Hub", "Modules"], rows, footer),
     },
   );
-}
-
-export async function renderSubmodules(
-  interaction: HubInteraction,
-  services: BotServices,
-  supermoduleName: string,
-  originPage = 0,
-  page = 0,
-  notice?: string,
-): Promise<CardReply> {
-  const guildId = interaction.guildId!;
-  const modules = services.moduleLoader.listGlobal();
-  const parent = modules.find(
-    (module) => module.name === supermoduleName && !module.isSubmodule,
-  );
-  const back = backButton(`lumi:mods:${originPage}`, "Back", null);
-  const backRow = row(back);
-
-  if (!parent) {
-    return makeErrorCard(
-      "Unknown Module",
-      `No supermodule named \`${supermoduleName}\` is loaded.`,
-      panelOptions(interaction, "modules", ["Hub", "Modules"], [backRow]),
-    );
-  }
-
-  const breadcrumbs = ["Hub", "Modules", parent.displayName];
-  const states = await moduleStates(services, guildId, modules);
-  const children = submoduleItems(
-    modules,
-    supermoduleName,
-    (name) => states.get(name) ?? false,
-  );
-  const {
-    items: shown,
-    page: currentPage,
-    totalPages,
-  } = paginate(children, page, SubmodulesPerPage);
-
-  const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  if (totalPages > 1) {
-    rows.push(
-      pageRow(
-        moduleListRowId(supermoduleName, originPage),
-        currentPage,
-        totalPages,
-      ),
-    );
-  }
-  rows.push(row(back));
-
-  if (children.length === 0) {
-    return makeEmptyCard(
-      "No submodules",
-      `**${parent.displayName}** has no submodules.`,
-      undefined,
-      panelOptions(interaction, "modules", breadcrumbs, rows),
-    );
-  }
-
-  const enabledCount = children.filter((module) => module.enabled).length;
-  const sections = shown.map((module) =>
-    settingRow(
-      [
-        `${module.emoji} **${module.displayName}** — ${module.enabled ? "Enabled" : "Disabled"}`,
-        `-# ${cut(module.description || "No description", 90)}`,
-      ],
-      {
-        customId: `lumi:modopen:${module.name}:0`,
-        label: "Open",
-        style: ButtonStyle.Primary,
-      },
-    ),
-  );
-
-  const body = [
-    parent.description || "No description provided.",
-    `**Submodules:** ${children.length} · ${enabledCount} enabled`,
-  ];
-  if (notice) body.unshift(`**${notice}**`);
-
-  return makeCard(undefined, `${parent.emoji} ${parent.displayName}`, body, {
-    sections,
-    ...panelOptions(
-      interaction,
-      "modules",
-      breadcrumbs,
-      rows,
-      totalPages > 1
-        ? `page ${currentPage + 1}/${totalPages} · Open a submodule to enable, disable, or configure it.`
-        : "Open a submodule to enable, disable, or configure it.",
-    ),
-  });
 }

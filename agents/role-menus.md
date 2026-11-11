@@ -1,7 +1,6 @@
 # Role Menus
 
-Group `role-menus` with submodule `role-menus-menu` in
-`modules/role-menus/menu/`.
+Module `role-menus-menu` in `modules/role-menus/menu/`.
 
 Role menus let members claim roles for themselves from a posted message.
 Staff create a group, attach roles, choose a selection mode, and publish the
@@ -9,9 +8,9 @@ group as buttons, a string select, or reactions.
 
 ## Configuration
 
-Stored per guild under the `role-menus-menu` key (the submodule manifest sets
+Stored per guild under the `role-menus-menu` key (the manifest sets
 `configKey`). Settings are edited from `/config role-menus-menu` or
-`/lumi` → Modules → Role Menus → Role Menus.
+`/lumi` → Modules → Role Menus.
 
 | Key                          | Type   | Default    | Purpose                                      |
 | ---------------------------- | ------ | ---------- | -------------------------------------------- |
@@ -22,9 +21,9 @@ Stored per guild under the `role-menus-menu` key (the submodule manifest sets
 | `defaultTempDurationSeconds` | number | `0`        | Default temporary duration; `0` is permanent |
 | `maxOptionsPerGroup`         | number | `25`       | Upper bound for roles in one group           |
 
-The submodule is enabled per guild. Disabling it stops the `,role-menu`
+The module is enabled per guild. Disabling it stops the `,role-menu`
 (`,rolemenu`) prefix command, menu components, and reaction handling for that
-guild. Expired temporary roles are still swept after the submodule is disabled so
+guild. Expired temporary roles are still swept after the module is disabled so
 roles do not leak.
 
 ## Management

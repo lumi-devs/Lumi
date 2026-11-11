@@ -1,6 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
-import { readConfig } from "../shared.js";
+import { readConfig } from "../../shared/roles.js";
 
 export const VoiceRolesModuleName = "roles-voiceroles";
 export const VoiceRolesConfigKey = VoiceRolesModuleName;

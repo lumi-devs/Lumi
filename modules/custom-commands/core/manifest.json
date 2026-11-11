@@ -5,18 +5,19 @@
   "emoji": "🧩",
   "description": "Guild-authored commands with safe templates, triggers, schedules, and per-user KV storage",
   "version": "2.0.0",
+  "category": "Custom Commands",
   "entry": "index.ts",
   "configKey": "customCommands",
-  "dependencies": {
-    "custom-commands": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "custom-commands-core",
       "version": "2.0.0",
-      "provides": ["custom-commands.engine", "custom-commands.scheduler"]
+      "provides": [
+        "custom-commands.engine",
+        "custom-commands.scheduler"
+      ]
     }
   ],
   "configFields": [
@@ -59,7 +60,10 @@
       "label": "Schedule Output Channel",
       "type": "channel",
       "description": "Channel where cron and interval command output is sent",
-      "channelTypes": [0, 5],
+      "channelTypes": [
+        0,
+        5
+      ],
       "category": "Execution"
     }
   ]

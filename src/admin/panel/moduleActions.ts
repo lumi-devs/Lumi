@@ -22,7 +22,7 @@ import {
   serializeEscalation,
   upsertEscalation,
 } from "./escalation.js";
-import { renderModules, renderSubmodules } from "./moduleList.js";
+import { renderModules } from "./moduleList.js";
 import {
   enabledConfigField,
   fieldModal,
@@ -38,7 +38,6 @@ import {
   renderModuleDetail,
   writeModuleConfig,
 } from "./moduleSettings.js";
-import { parseSubmoduleTogglePages } from "./modules.js";
 import { handleRolesModuleAction } from "./roles/index.js";
 import type { BotServices } from "../../core/contracts.js";
 import { handleTempVcModuleAction } from "./tempvc.js";
@@ -47,13 +46,13 @@ function pageNumber(raw: string | undefined): number {
   return Number(raw) || 0;
 }
 
-async function toggleModule(
+export async function toggleModule(
   services: BotServices,
   guildId: string,
   moduleName: string,
 ): Promise<boolean> {
   const loaded = services.moduleLoader.getModule(moduleName);
-  if (!loaded?.isSubmodule) return false;
+  if (!loaded) return false;
   const wasEnabled = await isModuleFeatureEnabled(
     services,
     guildId,
@@ -93,37 +92,6 @@ export async function handleModuleAction(
       if (interaction.isStringSelectMenu()) return true;
       await showPanel(interaction, () =>
         renderModuleDetail(interaction, services, target, pageNumber(extra)),
-      );
-      return true;
-    }
-    case "modsubs": {
-      await showPanel(interaction, () =>
-        renderSubmodules(
-          interaction,
-          services,
-          target,
-          pageNumber(extra),
-          pageNumber(extra2),
-        ),
-      );
-      return true;
-    }
-    case "modsubtoggle": {
-      await interaction.deferUpdate();
-      const loaded = services.moduleLoader.getModule(target);
-      if (!loaded?.supermodule) return true;
-
-      const { originPage, childPage } = parseSubmoduleTogglePages(extra);
-      const enabled = await toggleModule(services, guildId, target);
-      await interaction.editReply(
-        await renderSubmodules(
-          interaction,
-          services,
-          loaded.supermodule,
-          originPage,
-          childPage,
-          `${loaded.manifest.displayName} ${enabled ? "disabled" : "enabled"}.`,
-        ),
       );
       return true;
     }

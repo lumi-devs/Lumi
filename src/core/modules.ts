@@ -172,21 +172,19 @@ export class ModuleHost implements AddonRuntime {
 
   async mount(name: string): Promise<void> {
     const discovered = await this.options.loader.discover();
-    const targets = discovered.filter(
-      (module) => module.manifest.name === name || module.supermodule === name,
+    const target = discovered.find(
+      (module) => module.manifest.name === name,
     );
-    if (targets.length === 0) {
+    if (!target) {
       throw new Error(`Add-on "${name}" was not discovered.`);
     }
 
     await this.options.loader.loadAll(
-      targets,
+      [target],
       servicesForModule(this.options.services),
     );
-    for (const target of targets) {
-      const loaded = this.options.loader.getModule(target.manifest.name);
-      if (loaded) this.attach(loaded);
-    }
+    const loaded = this.options.loader.getModule(target.manifest.name);
+    if (loaded) this.attach(loaded);
     await this.options.syncCommands();
   }
 
@@ -222,19 +220,13 @@ export class ModuleHost implements AddonRuntime {
   }
 
   async reload(name: string): Promise<void> {
-    const targets = this.options.loader
-      .listAll()
-      .filter(
-        (module) =>
-          module.manifest.name === name || module.supermodule === name,
-      );
+    const target = this.options.loader.getModule(name);
+    if (!target) return;
 
-    for (const target of targets) {
-      this.detach(target.manifest.name);
-      await this.options.loader.reload(target.manifest.name);
-      const loaded = this.options.loader.getModule(target.manifest.name);
-      if (loaded) this.attach(loaded);
-    }
+    this.detach(target.manifest.name);
+    await this.options.loader.reload(target.manifest.name);
+    const loaded = this.options.loader.getModule(target.manifest.name);
+    if (loaded) this.attach(loaded);
     await this.options.syncCommands();
   }
 

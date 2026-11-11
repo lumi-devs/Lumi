@@ -1,7 +1,7 @@
 import type { Guild } from "discord.js";
 import { describe, expect, it } from "vitest";
-import { restoreBackup } from "../../modules/security/backup-store/restore.js";
-import type { GuildBackupData } from "../../modules/security/backup-store/types.js";
+import { restoreBackup } from "../../modules/shared/backup-store/restore.js";
+import type { GuildBackupData } from "../../modules/shared/backup-store/types.js";
 
 const emptyData: GuildBackupData = { version: 1, roles: [], channels: [] };
 

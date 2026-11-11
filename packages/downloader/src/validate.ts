@@ -1,10 +1,7 @@
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { ModuleManifest } from "@lumi/module-runtime";
-import {
-  supermoduleManifestFields,
-  validateManifest,
-} from "@lumi/module-runtime";
+import { validateManifest } from "@lumi/module-runtime";
 import { pathExists } from "./fs.js";
 
 export const RequirementRe =
@@ -195,26 +192,17 @@ export async function validateAddon(
     );
   }
 
-  if (manifest.entry) {
-    const entryFile = resolve(root, manifest.entry);
-    const entryInfo = await lstat(entryFile).catch(() => null);
-    if (!entryFile.startsWith(root + sep)) {
-      errors.push(`entry "${manifest.entry}" escapes the addon directory.`);
-    } else if (!isScriptFile(entryFile)) {
-      errors.push(
-        `entry "${manifest.entry}" must be a JavaScript or TypeScript file.`,
-      );
-    } else if (!entryInfo?.isFile() || entryInfo.isSymbolicLink()) {
-      errors.push(
-        `entry "${manifest.entry}" does not exist or is not a regular file.`,
-      );
-    }
-  }
-
-  const thickFields = supermoduleManifestFields(manifest);
-  if (thickFields.length > 0) {
+  const entryFile = resolve(root, manifest.entry);
+  const entryInfo = await lstat(entryFile).catch(() => null);
+  if (!entryFile.startsWith(root + sep)) {
+    errors.push(`entry "${manifest.entry}" escapes the addon directory.`);
+  } else if (!isScriptFile(entryFile)) {
     errors.push(
-      `supermodule manifest must be metadata-only; remove ${thickFields.join(", ")}.`,
+      `entry "${manifest.entry}" must be a JavaScript or TypeScript file.`,
+    );
+  } else if (!entryInfo?.isFile() || entryInfo.isSymbolicLink()) {
+    errors.push(
+      `entry "${manifest.entry}" does not exist or is not a regular file.`,
     );
   }
 

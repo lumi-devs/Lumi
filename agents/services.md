@@ -18,6 +18,12 @@ them, or add compatibility re-exports.
 `scheduler`, `observability`, `modules`, `helpers`, `discord`, and an optional
 `moduleName` when the host is running code on behalf of a module.
 
+`helpers` includes typed namespaces (`economy`, `leveling`, `stats`, `tickets`,
+`roleMenus`, `customCommands`, `roles`, `security`, `verification`, `utility`,
+`moderation`) plus `moduleData`, a generic durable per-guild key/value store, and
+`cache`. See [module-data.md](./module-data.md) before adding a new table for
+feature-local state.
+
 ## The single projection
 
 `servicesForModule()` in `src/core/modules.ts` is the **only** place that turns

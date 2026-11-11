@@ -5,17 +5,17 @@
   "emoji": "🧰",
   "description": "Durable bulk add or remove role jobs with filters, dry-run previews, and resumable progress",
   "version": "2.0.0",
+  "category": "Roles",
   "entry": "index.ts",
-  "dependencies": {
-    "roles": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "roles-bulkrole",
       "version": "2.0.0",
-      "provides": ["roles.bulk"]
+      "provides": [
+        "roles.bulk"
+      ]
     }
   ],
   "configFields": [

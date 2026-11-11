@@ -1,5 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
-import { addMemberRoles, fetchMember } from "../shared.js";
+import { addMemberRoles, fetchMember } from "../../shared/roles.js";
 import { AutoroleModuleName, getAutoroleConfig } from "./config.js";
 import {
   choosePendingAssignAt,

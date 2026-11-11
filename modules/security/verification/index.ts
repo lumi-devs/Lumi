@@ -34,7 +34,7 @@ import {
   securityKey,
   sendSecurityLog,
   setStoredJson,
-} from "../shared.js";
+} from "../../shared/security.js";
 import {
   buildVerificationUrl,
   generateVerificationToken,

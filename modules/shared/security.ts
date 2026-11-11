@@ -3,7 +3,7 @@ import type { ModuleServices } from "@lumi/module-kit";
 import { type CardReply, cardCreateOptions, makeCard } from "@lumi/ui";
 import type { Guild, GuildMember } from "discord.js";
 import type { z } from "zod";
-import { getSecurityConfig, type SecurityConfig } from "./core/config.js";
+import { getSecurityConfig, type SecurityConfig } from "../security/core/config.js";
 
 export type SecurityResponse = "log" | "quarantine" | "ban";
 export type JoinAction = "log" | "kick" | "timeout" | "quarantine";

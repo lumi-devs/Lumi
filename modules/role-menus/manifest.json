@@ -1,8 +1,0 @@
-{
-  "apiVersion": 2,
-  "name": "role-menus",
-  "displayName": "Role Menus",
-  "emoji": "🎭",
-  "description": "Self-service role menus with buttons, selects, reaction menus, and temporary roles",
-  "version": "2.0.0"
-}

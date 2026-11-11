@@ -21,7 +21,7 @@ import {
   securityCard,
   securityKey,
   sendSecurityLog,
-} from "../shared.js";
+} from "../../shared/security.js";
 
 const ModuleName = "security-join-gate";
 

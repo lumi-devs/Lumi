@@ -5,16 +5,16 @@
   "emoji": "🔧",
   "description": "Avatar, banner, whois, serverinfo, and consolidated info command",
   "version": "2.0.0",
+  "category": "Utility",
   "entry": "index.ts",
   "configFields": [],
-  "dependencies": {
-    "utility": "^2.0.0"
-  },
   "capabilities": [
     {
       "name": "utility-info",
       "version": "2.0.0",
-      "provides": ["utility.info"]
+      "provides": [
+        "utility.info"
+      ]
     }
   ],
   "conflicts": [],

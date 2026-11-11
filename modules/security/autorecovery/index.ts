@@ -14,7 +14,7 @@ import {
 } from "@lumi/ui";
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { z } from "zod";
-import { latestBackup, restoreBackup } from "../backup-store/index.js";
+import { latestBackup, restoreBackup } from "../../shared/backup-store/index.js";
 import {
   deleteStored,
   getStoredJson,
@@ -22,7 +22,7 @@ import {
   securityCard,
   securityKey,
   sendSecurityLog,
-} from "../shared.js";
+} from "../../shared/security.js";
 
 const ModuleName = "security-autorecovery";
 

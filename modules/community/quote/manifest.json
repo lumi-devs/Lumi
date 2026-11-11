@@ -5,18 +5,20 @@
   "emoji": "💬",
   "description": "Turn messages and text into \"Make it a Quote\" images",
   "version": "1.0.0",
+  "category": "Community",
   "entry": "index.ts",
   "configKey": "quote",
-  "dependencies": {
-    "community": "^2.0.0"
-  },
-  "requirements": ["makeitaquote@^12.1.6"],
+  "requirements": [
+    "makeitaquote@^12.1.6"
+  ],
   "conflicts": [],
   "capabilities": [
     {
       "name": "community-quote",
       "version": "1.0.0",
-      "provides": ["quote.render"]
+      "provides": [
+        "quote.render"
+      ]
     }
   ],
   "configFields": [
@@ -26,7 +28,10 @@
       "type": "channel",
       "description": "Channel where generated quotes are posted. Leave empty to post quotes in the channel where the command is used.",
       "category": "Delivery",
-      "channelTypes": [0, 5]
+      "channelTypes": [
+        0,
+        5
+      ]
     },
     {
       "key": "theme",
@@ -34,7 +39,10 @@
       "type": "select",
       "description": "Dark desaturates the avatar. Color keeps the avatar in full color.",
       "default": "dark",
-      "choices": ["dark", "color"],
+      "choices": [
+        "dark",
+        "color"
+      ],
       "category": "Appearance"
     },
     {
@@ -51,7 +59,10 @@
       "type": "select",
       "description": "Use the server nickname or the account's global name.",
       "default": "nickname",
-      "choices": ["nickname", "global"],
+      "choices": [
+        "nickname",
+        "global"
+      ],
       "category": "Appearance"
     },
     {
@@ -60,7 +71,10 @@
       "type": "select",
       "description": "Use the per-server avatar or the account's global avatar.",
       "default": "guild",
-      "choices": ["guild", "global"],
+      "choices": [
+        "guild",
+        "global"
+      ],
       "category": "Appearance"
     },
     {

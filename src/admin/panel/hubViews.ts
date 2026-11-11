@@ -36,7 +36,7 @@ async function renderHome(
   const guildId = interaction.guildId!;
   const client = interaction.client;
   const allModules = services.moduleLoader.listGlobal();
-  const modules = allModules.filter((module) => module.isSubmodule);
+  const modules = allModules.filter((module) => module.origin === "bundled");
   const states = await moduleStates(services, guildId, modules);
   const enabled = modules.filter(
     (module) => states.get(module.name) ?? false,

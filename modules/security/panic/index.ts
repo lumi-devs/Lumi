@@ -28,7 +28,7 @@ import {
   securityKey,
   sendSecurityLog,
   setStoredJson,
-} from "../shared.js";
+} from "../../shared/security.js";
 import { endPanic, getPanic, panicKey, startPanic } from "./state.js";
 
 const ModuleName = "security-panic";
@@ -248,7 +248,7 @@ const panicCommand: CommandDefinition = {
         ephemeralCard(
           makeErrorCard(
             "Panic Disabled",
-            "Enable the panic submodule in the security panel first.",
+            "Enable the panic module in the security panel first.",
           ),
         ),
       );

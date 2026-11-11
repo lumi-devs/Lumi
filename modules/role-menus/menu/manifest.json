@@ -5,18 +5,19 @@
   "emoji": "🎭",
   "description": "Create and post self-service role menus with optional temporary roles",
   "version": "2.0.0",
+  "category": "Role Menus",
   "entry": "index.ts",
   "configKey": "role-menus-menu",
-  "dependencies": {
-    "role-menus": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "role-menus-menu",
       "version": "2.0.0",
-      "provides": ["role-menus.menu", "role-menus.temp-roles"]
+      "provides": [
+        "role-menus.menu",
+        "role-menus.temp-roles"
+      ]
     }
   ],
   "configFields": [
@@ -25,7 +26,10 @@
       "label": "Default Selection Mode",
       "type": "select",
       "description": "Whether new role menus allow one or multiple choices",
-      "choices": ["single", "multiple"],
+      "choices": [
+        "single",
+        "multiple"
+      ],
       "default": "multiple",
       "category": "Defaults"
     },

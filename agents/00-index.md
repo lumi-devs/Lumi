@@ -8,6 +8,7 @@
 | [db.md](./db.md)                             | You are touching Prisma, repositories, transactions, or migrations.              |
 | [redis.md](./redis.md)                       | You need Redis clients, keys, locks, cooldowns, or pub/sub.                      |
 | [modules.md](./modules.md)                   | You are adding/changing a module, manifest, command, or listener.                |
+| [module-data.md](./module-data.md)           | You are storing generic per-guild module state via `helpers.moduleData`.         |
 | [downloader.md](./downloader.md)             | You are changing addon install/update/validation flows.                          |
 | [commands.md](./commands.md)                 | You are adding a built-in command or changing dispatch.                          |
 | [permissions.md](./permissions.md)           | You are changing permits, access tiers, the permission panel, or command gating. |

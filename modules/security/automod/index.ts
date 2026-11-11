@@ -43,7 +43,7 @@ import {
   securityKey,
   sendSecurityLog,
   setStoredJson,
-} from "../shared.js";
+} from "../../shared/security.js";
 
 const ModuleName = "security-automod";
 

@@ -1,8 +1,0 @@
-{
-  "apiVersion": 2,
-  "name": "utility",
-  "displayName": "Utility",
-  "emoji": "🔧",
-  "description": "Utility tools: AFK, temporary voice, nicknames, info, and reminders",
-  "version": "2.0.0"
-}

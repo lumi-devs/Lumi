@@ -1,7 +1,7 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import type { Guild, GuildMember } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { hasPermit } from "../../modules/security/shared.ts";
+import { hasPermit } from "../../modules/shared/security.ts";
 
 function services(enforcePermits: boolean): ModuleServices {
   return {

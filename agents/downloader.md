@@ -1,7 +1,7 @@
 # Add-on downloader
 
 Package: `@lumi/downloader` (`packages/downloader`). Tracks git repositories,
-installs add-on supermodules into `data/addons/<module>`, and keeps them up to
+installs flat add-on modules into `data/addons/<module>`, and keeps them up to
 date.
 
 ## Storage layout
@@ -9,7 +9,7 @@ date.
 | Path                          | Contents                                            |
 | ----------------------------- | --------------------------------------------------- |
 | `data/repos/<repo>`           | Shallow clone of a tracked repository               |
-| `data/addons/<module>`        | Installed supermodule (loaded by the module loader) |
+| `data/addons/<module>`        | Installed add-on (loaded by the module loader)      |
 | `data/addon-backups/<module>` | Copy used to roll back a failed update              |
 
 Repositories and installs are recorded in Prisma: `DownloaderRepo` and
@@ -23,7 +23,8 @@ be installed only once.
 - `addRepo(name, url, branch)` — validates an HTTPS URL and a lowercase repo
   name, shallow-clones into `data/repos/<name>`, records the HEAD commit.
 - `removeRepo(name)` — refuses while add-ons from that repo are installed.
-- `listRepoModules(name)` — reads each top-level directory with a manifest.
+- `listRepoModules(name)` — reads each top-level directory with a manifest;
+  one directory per add-on, manifest at its root.
 - `updateRepo(name)` — fetches the branch, checks out the new HEAD, validates
   every installed module, applies the update, and rolls back on failure.
 
@@ -38,8 +39,8 @@ repositories authenticate with `GIT_TOKEN` (`GIT_USERNAME` defaults to
 1. Read and validate `data/repos/<repo>/<module>`.
 2. Refuse when the name belongs to a bundled module or another repository.
 3. Refuse when `manifest.conflicts` overlaps an installed add-on.
-4. Copy the supermodule into `data/addons/<module>` (skipping `node_modules`
-   and `.git`; symbolic links are rejected).
+4. Copy the add-on into `data/addons/<module>` (skipping `node_modules` and
+   `.git`; symbolic links are rejected).
 5. Re-run `validateAddon` on the staged copy before touching the live add-on.
 6. Install `manifest.requirements` with
    `bun add --production --ignore-scripts --no-save`.
@@ -72,8 +73,9 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
 
 - Parses `manifest.json` with `validateManifest` and requires `name` to match
   the directory (or an explicit `expectedName` when validating a staged copy).
-- Accepts a rudimentary supermodule root manifest with no `entry`; submodule
-  entries must be relative, existing JavaScript/TypeScript files.
+- Requires `entry`; it must be a relative, existing JavaScript/TypeScript file
+  inside the add-on directory.
+- Accepts an optional `category` (1–32 characters) used only for UI grouping.
 - Requires every `requirements` entry to be a registry package spec; path-like
   specs, local paths, URLs, and git specs are rejected.
 - Rejects vendored `node_modules`, `.npmrc`, and `bunfig.toml`.

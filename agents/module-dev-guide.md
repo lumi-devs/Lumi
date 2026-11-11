@@ -4,25 +4,27 @@ This guide covers creating, testing, and publishing first-party modules for Lumi
 
 ## Quick Start
 
-Submodules live inside a supermodule group. Create the supermodule directory
-first if the group does not exist yet; its manifest is metadata only.
+Modules live under category directories: `modules/<category>/<module>/`. The
+loader walks nested directories and loads every directory with a
+`manifest.json`.
 
 ```bash
-# 1. Create the submodule directory inside its supermodule
-mkdir -p modules/my-supermodule/my-module
-cd modules/my-supermodule/my-module
+# 1. Create the module directory
+mkdir -p modules/utility/my-module
+cd modules/utility/my-module
 
 # 2. Create manifest.json
 cat > manifest.json << 'EOF'
 {
   "apiVersion": 2,
-  "name": "my-supermodule-my-module",
+  "name": "my-module",
   "displayName": "My Module",
   "emoji": "✨",
   "description": "A short description",
   "version": "0.1.0",
+  "category": "My Category",
   "entry": "index.ts",
-  "dependencies": { "my-supermodule": "^2.0.0" },
+  "dependencies": {},
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
@@ -39,7 +41,7 @@ import { defineModule, type ModuleDefinition } from "@lumi/module-kit";
 import { z } from "zod";
 
 export default defineModule({
-  name: "my-supermodule-my-module",
+  name: "my-module",
   displayName: "My Module",
   emoji: "✨",
   description: "A short description",
@@ -66,66 +68,49 @@ EOF
 
 ---
 
-## Supermodules are groups
+## Grouping
 
-A supermodule is a rudimentary display container, not a module. Its
-`manifest.json` contains only `apiVersion`, `name`, `displayName`, `emoji`,
-`description`, and `version`:
-
-```json
-{
-  "apiVersion": 2,
-  "name": "my-supermodule",
-  "displayName": "My Supermodule",
-  "emoji": "📦",
-  "description": "Groups related feature modules",
-  "version": "2.0.0"
-}
-```
-
-Do not add `entry`, `index.ts`, `configKey`, `configFields`, or enable/disable
-state to a supermodule. The loader synthesizes a no-op definition for grouping
-and never runs code from the supermodule directory.
+Category directories are organisational only; they have no manifest. The
+optional manifest `category` field independently groups modules in the `/lumi`
+Modules tab and dashboard. Use a short label such as `Utility`, `Community`, or
+`Security`; modules without a category render under `Other`.
 
 ## Module Anatomy
 
 ```
-modules/<supermodule>/
-├── manifest.json       # Required: group metadata only
-└── <submodule>/
-    ├── manifest.json   # Required: metadata, deps, entry point, config UI
-    ├── index.ts        # Required: module definition export
-    ├── commands/       # Optional: command files
-    │   └── my-command.ts
-    ├── listeners/      # Optional: event listeners
-    │   └── my-listener.ts
-    ├── services/       # Optional: internal services
-    │   └── my-service.ts
-    └── tests/          # Optional: vitest tests
-        └── my-module.test.ts
+modules/<category>/<module>/
+├── manifest.json       # Required: metadata, deps, entry point, config UI
+├── index.ts            # Required: module definition export
+├── commands/           # Optional: command files
+│   └── my-command.ts
+├── listeners/          # Optional: event listeners
+│   └── my-listener.ts
+├── services/           # Optional: internal services
+│   └── my-service.ts
+└── tests/              # Optional: vitest tests
+    └── my-module.test.ts
 ```
 
 ---
 
 ## Manifest Fields
 
-| Field          | Required | Description                                                 |
-| -------------- | -------- | ----------------------------------------------------------- |
-| `apiVersion`   | ✅       | Must be `2`                                                 |
-| `name`         | ✅       | Lowercase, hyphenated; submodules use `<supermodule>-<dir>` |
-| `displayName`  | ✅       | Human-readable name                                         |
-| `emoji`        | ✅       | Single emoji for UI                                         |
-| `description`  | ✅       | One-line description                                        |
-| `version`      | ✅       | Semver (e.g., `0.1.0`)                                      |
-| `entry`        | ✅       | Submodule entry, relative to the submodule directory        |
-| `dependencies` | ❌       | Other modules: `{ "supermodule-name": "^2.0.0" }`           |
-| `requirements` | ❌       | NPM packages: `["lodash@^4.17.21"]`                         |
-| `conflicts`    | ❌       | Module names that cannot co-exist                           |
-| `capabilities` | ❌       | Descriptive metadata only; validated but not acted on       |
-| `configKey`    | ❌       | Stored settings key when it differs from `name`             |
-| `configFields` | ❌       | `/lumi` settings metadata; defaults to `[]`                 |
-
-Supermodule manifests use only the first six fields.
+| Field          | Required | Description                                           |
+| -------------- | -------- | ----------------------------------------------------- |
+| `apiVersion`   | ✅       | Must be `2`                                           |
+| `name`         | ✅       | Lowercase, hyphenated; matches the directory name     |
+| `displayName`  | ✅       | Human-readable name                                   |
+| `emoji`        | ✅       | Single emoji for UI                                   |
+| `description`  | ✅       | One-line description                                  |
+| `version`      | ✅       | Semver (e.g., `0.1.0`)                                |
+| `entry`        | ✅       | Entry file, relative to the module directory          |
+| `category`     | ❌       | Optional UI group label (1–32 characters)             |
+| `dependencies` | ❌       | Other modules: `{ "other-module": "^2.0.0" }`         |
+| `requirements` | ❌       | NPM packages: `["lodash@^4.17.21"]`                   |
+| `conflicts`    | ❌       | Module names that cannot co-exist                     |
+| `capabilities` | ❌       | Descriptive metadata only; validated but not acted on |
+| `configKey`    | ❌       | Stored settings key when it differs from `name`       |
+| `configFields` | ❌       | `/lumi` settings metadata; defaults to `[]`           |
 
 ### Dependency policy
 
@@ -149,8 +134,7 @@ local, so quote generation does not depend on an external image API.
 ## Configuration Schema
 
 Use **Zod** for validation. The parsed `config` shape is stored per guild in
-`Guild.settings`; the Zod schema itself is not persisted. Configuration belongs
-to submodules only; supermodules have no config.
+`Guild.settings`; the Zod schema itself is not persisted.
 
 ```ts
 import { z } from "zod";
@@ -484,15 +468,15 @@ bunx vitest run modules/my-module/tests/my-module.test.ts
 
 ## Module Checklist (Pre-Ship)
 
-- [ ] Manifest validates (apiVersion: 2, name matches `<supermodule>-<dir>`, entry exists)
-- [ ] Supermodule manifest is metadata-only (no entry, code, config, or toggle state)
+- [ ] Manifest validates (apiVersion: 2, name matches the directory, entry exists)
+- [ ] Category (if set) is 1–32 characters and groups the module sensibly
 - [ ] Zod config schema covers all settings with defaults
 - [ ] Manifest `configFields` metadata matches schema types
 - [ ] All commands have `requiredPermit` or check `isEnabled`
 - [ ] All listeners check `isEnabled` at start
 - [ ] No `EmbedBuilder` usage — use `@lumi/ui` cards
 - [ ] No direct imports of `src`, `modules/*`, or internal packages
-- [ ] Dependencies declared in manifest (both modules + npm, including the parent supermodule)
+- [ ] Dependencies declared in manifest (both modules + npm)
 - [ ] No dependency cycles
 - [ ] Tests pass (`bun run test`)
 - [ ] Typecheck passes (`bun run typecheck`)
@@ -502,7 +486,7 @@ bunx vitest run modules/my-module/tests/my-module.test.ts
 
 ## Publishing (First-Party)
 
-1. Submodule lives in `modules/<supermodule>/<submodule>/`
+1. Module lives in `modules/<category>/<module>/`
 2. Version bump in `manifest.json` and `index.ts`
 3. PR merged to main
 4. Released as part of Lumi v2 release

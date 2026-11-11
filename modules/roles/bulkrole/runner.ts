@@ -6,7 +6,7 @@ import {
   botMember,
   canBotManageGuildRole,
   removeMemberRoles,
-} from "../shared.js";
+} from "../../shared/roles.js";
 import { BulkRoleModuleName, getBulkRoleConfig } from "./config.js";
 import {
   type BulkCandidate,

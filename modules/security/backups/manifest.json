@@ -5,6 +5,7 @@
   "emoji": "💾",
   "description": "Periodic server structure snapshots for auto-recovery and manual restore",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -34,14 +35,15 @@
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-core": "^2.0.0"
   },
   "capabilities": [
     {
       "name": "security-backups",
       "version": "2.0.0",
-      "provides": ["security.backups"]
+      "provides": [
+        "security.backups"
+      ]
     }
   ],
   "conflicts": [],

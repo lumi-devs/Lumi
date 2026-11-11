@@ -1,6 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
-import { readConfig, saveConfig } from "../shared.js";
+import { readConfig, saveConfig } from "../../shared/roles.js";
 
 export const AutoroleModuleName = "roles-autorole";
 export const AutoroleConfigKey = AutoroleModuleName;

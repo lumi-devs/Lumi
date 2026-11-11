@@ -43,8 +43,8 @@ on one permit; its node option autocompletes from built-in, module, and existing
 custom nodes. `/permit explain` checks every node when its node option is
 omitted. `/permit` requires **Manage Server** or an `admin.*`/`*` permit.
 
-`/config module:<submodule>` opens a submodule's settings panel ephemerally from
-any server. The module option autocompletes loaded submodules. It requires
+`/config module:<module>` opens a module's settings panel ephemerally from any
+server. The module option autocompletes loaded modules. It requires
 **Manage Server** or an `admin.*`/`*` permit. Use it for modules whose settings
 have no prefix command (for example `moderation-mod` locks), and for the full
 autorole, voice-role, and role-menu management panels.
@@ -80,7 +80,7 @@ Interaction dispatch is in `src/core/dispatch.ts`:
 1. Look up the slash command.
 2. Reject unknown commands with an ephemeral error card.
 3. For module commands, check `moduleLoader.isActive(guildId, module)` (the
-   submodule's own effective enabled state; supermodules are not gates).
+   module's own effective enabled state).
 4. For `requiresAdmin` commands, check **Manage Server** or an `admin.*`/`*`
    permit.
 5. Run `execute`, then record command metrics.

@@ -12,7 +12,7 @@ import {
   previewBackupRestore,
   restoreBackup,
   toBackupRecord,
-} from "../../modules/security/backup-store/index.js";
+} from "../../modules/shared/backup-store/index.js";
 import { permitNodeCatalog } from "../admin/permits/nodes.js";
 
 export interface StatusRouteOptions {

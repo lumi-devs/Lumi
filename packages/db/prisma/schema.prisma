@@ -36,6 +36,7 @@ model Guild {
   levelingConfig    LevelingConfig?
   economyConfig     EconomyConfig?
   tempVcConfig      TempVcConfig?
+  moduleData        ModuleData[]
 
   @@map("guilds")
 }
@@ -341,6 +342,25 @@ model CustomCommandKv {
   @@unique([guildId, userId, key])
   @@index([guildId, expiresAt])
   @@map("custom_command_kv")
+}
+
+model ModuleData {
+  id         String    @id @default(cuid())
+  guildId    String    @map("guild_id")
+  guild      Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  moduleName String    @map("module_name") @db.VarChar(64)
+  targetId   String    @map("target_id") @db.VarChar(64)
+  key        String    @db.VarChar(128)
+  value      Json
+  expiresAt  DateTime? @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@unique([guildId, moduleName, targetId, key])
+  @@index([guildId, moduleName])
+  @@index([moduleName, targetId])
+  @@index([expiresAt])
+  @@map("module_data")
 }
 
 // Tickets

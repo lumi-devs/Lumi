@@ -2,7 +2,7 @@
 
 Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + loader).
 
-## Architecture: Built-in Services vs Toggleable Submodules
+## Architecture: Built-in Services vs Toggleable Modules
 
 **Built-in Services** (always running, non-disableable):
 
@@ -11,9 +11,10 @@ Packages: `@lumi/module-kit` (contracts), `@lumi/module-runtime` (discovery + lo
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
-Every module under `modules/` is a **submodule** grouped by a rudimentary
-**supermodule** directory. Only submodules are loaded, configured, and
-enabled; supermodules are display-only containers.
+Every nested directory under `modules/` with a `manifest.json` is one module
+with its own entry file. Bundled modules and add-ons share one contract; the
+only difference is their discovery root (`modules/` vs `data/addons/`) and
+`origin`.
 
 ### Utility
 
@@ -57,7 +58,7 @@ enabled; supermodules are display-only containers.
 
 ### Security
 
-- `security-core` — Shared security settings (log channel, quarantine role, trusted roles) used by the other security submodules
+- `security-core` — Shared security settings (log channel, quarantine role, trusted roles) used by the other security modules
 - `security-antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses
 - `security-join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
 - `security-verification` — Member verification with emoji captcha, web verification, pending/verified roles
@@ -70,53 +71,54 @@ enabled; supermodules are display-only containers.
 ## Layout
 
 ```
-modules/<supermodule>/
-├── manifest.json          # group metadata only
-└── <submodule>/
-    ├── manifest.json
-    ├── index.ts
-    └── <feature files>
+modules/<category>/<module>/
+├── manifest.json
+├── index.ts
+└── <feature files>
 ```
 
-There is no `submodules/` container and no `src/` level inside a module. The
-loader treats every subdirectory of a supermodule that owns a `manifest.json` as
-a submodule, so the filesystem is the single source of truth. The supermodule
-directory itself has no entry file and no code.
+Category directories are optional and purely organisational: they have no
+manifest. The loader walks nested directories (up to four levels), and every
+directory containing a `manifest.json` is one module. A module directory name
+does not need to match `manifest.name`; the manifest name is the unique module
+name and MUST match the definition `name`. Module names stay globally unique
+even when their directories are grouped.
+
+`modules/shared/` is a helper directory without a manifest; it is not loaded as
+a module.
 
 ## Rules
 
-- Every directory under `modules/` is a **supermodule**. No standalone modules
-  exist.
-- A supermodule is a rudimentary grouping container: a thin `manifest.json` with
-  `name`, `displayName`, `emoji`, `description`, and `version`. It has no
-  `entry`, no `index.ts`, no `configKey`, no `configFields`, and no
-  enable/disable state.
-- The loader synthesizes a no-op definition for each supermodule so it can be
-  listed for grouping. That synthesized definition is not configurable.
-- A supermodule must contain at least one valid submodule. The loader logs an
-  error and skips a top-level directory that has no loadable submodules.
-- Submodules are the real modules. Each has its own manifest, entry file, code,
-  config schema, `configKey`/`configFields` when needed, and per-guild
-  enable/disable state.
-- Submodules declare `dependencies: { "supermodule-name": "^2.0.0" }` to
-  depend on their parent. A dependency outside its semver range skips the
-  module; a missing dependency only logs a warning.
+- Any nested directory under `modules/` with a `manifest.json` is a module.
+  `origin` is `bundled`; add-ons discovered under `data/addons/` are `addon`.
+  Duplicate manifest names are rejected; the first discovered module wins.
+- Each module has its own manifest, entry file, code, config schema,
+  `configKey`/`configFields` when needed, and per-guild enable/disable state.
+- The definition `name` MUST match `manifest.name`. The manifest `entry` is
+  required.
+- Modules declare `dependencies` with semver ranges. A dependency outside its
+  semver range skips the module; a missing dependency only logs a warning.
 - `conflicts` lists module names that cannot coexist. If any listed module is
   available, the loader logs a warning and skips the conflicting module.
-- Shared settings live in a normal core submodule, never in the supermodule.
-  Examples: `security-core`, `logging-logs`, `role-menus-menu`.
-- The `/lumi` panel shows supermodules as headers with enabled counts and lists
-  their submodules as configurable, toggleable rows.
+- Shared settings live in a normal module. Examples: `security-core`,
+  `logging-logs`, `role-menus-menu`.
+- The `/lumi` Modules tab lists bundled modules only, grouped by the optional
+  manifest `category` (falling back to `Other`). Add-ons appear in the Add-ons
+  tab and never in the Modules tab.
 - Always-on behaviour lives in `src/` as built-in services, not in a module.
 - Modules may depend on other modules with semver ranges. The loader checks the
   dependency's version and skips a module when it falls outside the declared
   range; a missing dependency is logged and the module still loads. A dependency
   cycle marks the involved modules broken and skips them; other modules still
   load.
-- Modules never import another module. Shared code goes into a package.
+- Modules never import another module. Shared code goes into a package or
+  `modules/shared/`.
 - Modules reach persistence and cache only through `services.helpers`; direct
   imports of `@prisma/client`, `@lumi/db`, `@lumi/cache`, `@lumi/redis`, or
   `ioredis` are rejected for `modules/**`.
+- Use `services.helpers.moduleData` for generic per-guild module key/value or
+  JSON state instead of adding a table per feature. See
+  [module-data.md](./module-data.md).
 - Module code receives `ModuleServices`, never the wide `BotServices`. See
   [services.md](./services.md) for the two contracts and the projection rule.
 
@@ -137,24 +139,7 @@ before saving multi-string `regexRules` and `filterUsernamePatterns` values, but
 other config writers still bypass the UI, so module read paths must warn and
 filter as well.
 
-## Supermodule Manifest
-
-```json
-{
-  "apiVersion": 2,
-  "name": "utility",
-  "displayName": "Utility",
-  "emoji": "🔧",
-  "description": "Utility tools: AFK, temporary voice, and info commands",
-  "version": "2.0.0"
-}
-```
-
-A supermodule manifest must not declare `entry`, `dependencies`,
-`requirements`, `conflicts`, `capabilities`, `configKey`, or `configFields`.
-Those belong to submodules.
-
-## Submodule Manifest
+## Manifest
 
 ```json
 {
@@ -164,22 +149,21 @@ Those belong to submodules.
   "emoji": "💤",
   "description": "Set AFK status with mention replies and nickname prefix",
   "version": "2.0.0",
+  "category": "Utility",
   "entry": "index.ts",
-  "dependencies": { "utility": "^2.0.0" },
+  "dependencies": { "utility-info": "^2.0.0" },
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "configFields": [...]
+  "configFields": []
 }
 ```
 
-- `name` must match `^[a-z][a-z0-9-]*$`. Supermodule names match their
-  top-level directory; submodule names are `<supermodule>-<directory>` (for
-  example `utility-afk` in `utility/afk/`).
-- `entry` is required for submodules and is relative to the submodule directory
-  (usually `index.ts`). It is optional in the manifest schema only so that
-  rudimentary supermodule manifests can omit it; the loader ignores any
-  supermodule entry.
+- `name` must match `^[a-z][a-z0-9-]*$` and the definition `name`. It is the
+  globally unique module name, independent of the directory it lives in.
+- `entry` is required and relative to the module directory (usually `index.ts`).
+- `category` is optional (1–32 characters). It groups bundled modules in the
+  `/lumi` Modules tab and dashboard.
 - `capabilities` is descriptive metadata only. Each entry is
   `{ "name": "...", "version": "...", "provides": ["..."] }`; the loader
   validates its shape but does not act on it. Expose shared module APIs here so
@@ -197,7 +181,7 @@ Those belong to submodules.
 ## Definition
 
 ```ts
-// Submodule index.ts
+// index.ts
 export default defineModule({
   name: "utility-afk",
   displayName: "AFK",
@@ -212,28 +196,24 @@ export default defineModule({
 });
 ```
 
-Supermodules have no definition file. The loader synthesizes a no-op container
-definition from their thin manifest.
+`configFields` lives in `manifest.json`, never in `defineModule`. It is optional
+display metadata for the `/lumi` module detail panel. Zod remains the validator;
+the metadata only chooses the control (`boolean`, `number`, `string`, `channel`,
+`role`, `multi-channel`, `multi-role`, `json`, `select`, `multi-string`,
+`escalation`) and supplies labels. A field with `choices` renders a string
+select; channel and role fields render pickers; multi-select fields store
+`string[]` values and render a menu with `minValues: 0`; `escalation` renders
+warning-count rules with an action picker and optional timeout duration in the
+`/lumi` panel and dashboard; everything else opens a text modal. Fields may
+declare a `category`; the panel groups settings by category and labels each page
+with it instead of using numbered settings pages. The detail panel renders up to
+four settings per page. Modules without metadata still open in the panel but
+show no editable settings.
 
-`configFields` lives only in a **submodule** `manifest.json`, never in
-`defineModule` or in a supermodule manifest. It is optional display metadata for
-the `/lumi` submodule detail panel. Zod remains the validator; the metadata only
-chooses the control (`boolean`, `number`, `string`, `channel`, `role`,
-`multi-channel`, `multi-role`, `json`, `select`, `multi-string`, `escalation`)
-and supplies labels. A field with `choices` renders a string select; channel and
-role fields render pickers; multi-select fields store `string[]` values and
-render a menu with `minValues: 0`; `escalation` renders warning-count rules with
-an action picker and optional timeout duration in the `/lumi` panel and
-dashboard; everything else opens a text modal. Fields may declare a
-`category`; the panel groups settings by category and labels each page with it
-instead of using numbered settings pages. The detail panel renders up to four
-settings per page. Submodules without metadata still open in the panel but show
-no editable settings.
-
-A submodule manifest may set `configKey` when its stored settings key differs
-from its module name. The panel reads and writes that key, so module code and the
-panel must use the same key. Examples: `community-leveling` stores its settings
-under `leveling`, `security-core` under `security-core`, `logging-logs` under
+A manifest may set `configKey` when its stored settings key differs from its
+module name. The panel reads and writes that key, so module code and the panel
+must use the same key. Examples: `community-leveling` stores its settings under
+`leveling`, `security-core` under `security-core`, `logging-logs` under
 `logging-logs`, and `role-menus-menu` under `role-menus-menu`.
 
 The loader verifies the definition `name` matches the manifest. The host
@@ -243,24 +223,27 @@ declare a module name.
 
 ## Loading Order
 
-1. The loader discovers supermodule containers from their thin manifests and
-   registers synthetic no-op definitions for grouping
-2. Submodule definitions load (topologically sorted by `dependencies`, including
-   cross-supermodule deps)
+1. The loader walks nested directories, reads every `manifest.json`, requires
+   the manifest and definition names to match, and imports the entry.
+2. Definitions load (topologically sorted by `dependencies`).
 
 ## Panel UI
 
-In `/lumi` → Modules tab:
+In `/lumi` → Modules tab, bundled modules are listed one paginated list grouped
+by `manifest.category ?? "Other"`:
 
 ```
-🔧 Utility                         3/5 enabled
-👥 Community                       1/4 enabled
-🛡️ Security                        2/9 enabled
+Utility
+💤 AFK — Enabled
+Community
+📈 Leveling — Disabled
 ```
 
-Supermodule headers are not configurable and have no toggle. Opening a
-supermodule lists its submodules as rows with `Enabled`/`Disabled` status, a
-settings button, and a toggle. Settings pages are grouped and labelled by
-`category`; pagination stays inside a category when it has too many fields.
-Disabling a submodule immediately resyncs that guild's slash commands and stops
-its listeners from running in that guild.
+Opening a module shows its settings and an enable/disable toggle. Settings pages
+are grouped and labelled by `category`; pagination stays inside a category when
+it has too many fields. Disabling a module immediately resyncs that guild's
+slash commands and stops its listeners from running in that guild.
+
+Add-ons are managed under `/lumi` → Add-ons. Installed add-ons can open the same
+settings panel and toggle their guild state, but they never appear in the
+Modules tab.

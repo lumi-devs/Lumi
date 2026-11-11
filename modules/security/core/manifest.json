@@ -5,18 +5,18 @@
   "emoji": "🛡️",
   "description": "Shared security settings used by all security modules",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configKey": "security-core",
-  "dependencies": {
-    "security": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "security-core",
       "version": "2.0.0",
-      "provides": ["security.config"]
+      "provides": [
+        "security.config"
+      ]
     }
   ],
   "configFields": [
@@ -26,7 +26,9 @@
       "type": "channel",
       "description": "Channel for security events and verification prompts",
       "category": "General",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "quarantineRoleId",

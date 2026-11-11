@@ -5,6 +5,7 @@
   "emoji": "🔊",
   "description": "Join-to-create temporary voice channels with ownership controls",
   "version": "2.0.0",
+  "category": "Utility",
   "entry": "index.ts",
   "configFields": [
     {
@@ -12,7 +13,9 @@
       "label": "Category",
       "type": "channel",
       "description": "Category to create channels in",
-      "channelTypes": [4],
+      "channelTypes": [
+        4
+      ],
       "default": null,
       "category": "Channels"
     },
@@ -89,14 +92,13 @@
       "category": "Limits"
     }
   ],
-  "dependencies": {
-    "utility": "^2.0.0"
-  },
   "capabilities": [
     {
       "name": "utility-tempvc",
       "version": "2.0.0",
-      "provides": ["utility.tempvc"]
+      "provides": [
+        "utility.tempvc"
+      ]
     }
   ],
   "conflicts": [],

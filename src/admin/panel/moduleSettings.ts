@@ -187,14 +187,6 @@ export async function renderModuleDetail(
       panelOptions(interaction, "modules", ["Hub", "Modules"]),
     );
   }
-  if (!loaded.isSubmodule) {
-    return makeErrorCard(
-      "Supermodule",
-      `**${loaded.manifest.displayName}** is a group. Configure one of its submodules instead.`,
-      panelOptions(interaction, "modules", ["Hub", "Modules"]),
-    );
-  }
-
   const meta = loaded.manifest;
   const fields = meta.configFields ?? [];
   const pages = fieldPages(fields, FieldsPerPage);

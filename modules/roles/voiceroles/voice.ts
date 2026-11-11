@@ -1,6 +1,6 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import type { VoiceState } from "discord.js";
-import { addMemberRoles, fetchMember, removeMemberRoles } from "../shared.js";
+import { addMemberRoles, fetchMember, removeMemberRoles } from "../../shared/roles.js";
 import { getVoiceRolesConfig, VoiceRolesModuleName } from "./config.js";
 import { resolveGraceUntil, selectVoiceRoleMapping } from "./logic.js";
 import {

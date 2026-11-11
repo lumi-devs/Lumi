@@ -109,9 +109,6 @@ export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
   const module = await findModule(event.params.module ?? "");
   if (!module) throw error(404, "Module not found.");
-  if (!module.isSubmodule) {
-    throw error(404, "Supermodules are groups; configure a submodule instead.");
-  }
 
   const settings = await readGuildSettings(guildId);
   const config = configFor(settings, module.configKey);
@@ -145,11 +142,6 @@ export const actions: Actions = {
     const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module) return fail(404, { error: "Module not found." });
-    if (!module.isSubmodule) {
-      return fail(400, {
-        error: "Supermodules are groups; configure a submodule instead.",
-      });
-    }
 
     const data = await event.request.formData();
     const userId = assertCsrf(event, data);
@@ -205,11 +197,6 @@ export const actions: Actions = {
     const guildId = await requireGuildId(event);
     const module = await findModule(event.params.module ?? "");
     if (!module) return fail(404, { error: "Module not found." });
-    if (!module.isSubmodule) {
-      return fail(400, {
-        error: "Supermodules are groups; configure a submodule instead.",
-      });
-    }
 
     const data = await event.request.formData();
     const userId = assertCsrf(event, data);

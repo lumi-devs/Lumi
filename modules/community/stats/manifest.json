@@ -5,18 +5,19 @@
   "emoji": "📊",
   "description": "Server statistics with message, voice, member, status, and boost tracking",
   "version": "1.0.0",
+  "category": "Community",
   "entry": "index.ts",
   "configKey": "stats",
-  "dependencies": {
-    "community": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "community-stats",
       "version": "1.0.0",
-      "provides": ["stats.tracking", "stats.view"]
+      "provides": [
+        "stats.tracking",
+        "stats.view"
+      ]
     }
   ],
   "configFields": [

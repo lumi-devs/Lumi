@@ -5,10 +5,8 @@
   "emoji": "🛡️",
   "description": "Case-backed moderation with bans, kicks, timeouts, warns, purge, notes, lockdown, softban, quarantine, voice mute",
   "version": "2.0.0",
+  "category": "Moderation",
   "entry": "index.ts",
-  "dependencies": {
-    "moderation": "^2.0.0"
-  },
   "configFields": [
     {
       "key": "quarantineRoleId",
@@ -42,7 +40,12 @@
       "type": "escalation",
       "description": "Choose how many active warnings trigger a timeout, kick, ban, or quarantine.",
       "default": {},
-      "choices": ["timeout", "kick", "ban", "quarantine"],
+      "choices": [
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
       "category": "Warn Escalation"
     }
   ],
@@ -50,7 +53,9 @@
     {
       "name": "moderation-mod",
       "version": "2.0.0",
-      "provides": ["moderation.cases"]
+      "provides": [
+        "moderation.cases"
+      ]
     }
   ],
   "conflicts": [],

@@ -52,7 +52,6 @@ export const moduleCommands = [
       const query = String(focused.value ?? "").toLowerCase();
       const modules = services.moduleLoader
         .listAll()
-        .filter((module) => module.isSubmodule)
         .filter((module) => {
           const manifest = module.manifest;
           return (
@@ -84,7 +83,7 @@ export const moduleCommands = [
       }
       const moduleName = interaction.options.getString("module", true);
       const loaded = services.moduleLoader.getModule(moduleName);
-      if (!loaded?.isSubmodule) {
+      if (!loaded) {
         await interaction.reply(
           ephemeralCard(
             makeErrorCard(

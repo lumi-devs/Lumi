@@ -6,18 +6,19 @@ import type {
   ModuleDefinition,
   ModuleServices,
 } from "@lumi/module-kit";
-import {
-  type ModuleManifest,
-  supermoduleManifestFields,
-  validateManifest,
-} from "./manifest.js";
+import { type ModuleManifest, validateManifest } from "./manifest.js";
 
 export type ModuleSummary = Pick<
   ModuleManifest,
-  "name" | "displayName" | "emoji" | "description" | "version" | "configFields"
+  | "name"
+  | "displayName"
+  | "emoji"
+  | "description"
+  | "version"
+  | "category"
+  | "configFields"
 > & {
-  isSubmodule: boolean;
-  supermodule?: string;
+  origin: "bundled" | "addon";
 };
 
 export interface LoadedModule {
@@ -25,8 +26,6 @@ export interface LoadedModule {
   definition: ModuleDefinition;
   path: string;
   origin: "bundled" | "addon";
-  supermodule?: string;
-  isSubmodule: boolean;
   guildsDisabled: Set<string>;
 }
 
@@ -164,13 +163,6 @@ export function checkDependencies(
   return issues;
 }
 
-export function submoduleManifestName(
-  supermodule: string,
-  directory: string,
-): string {
-  return `${supermodule}-${directory}`;
-}
-
 export class ModuleLoader {
   private modules = new Map<string, LoadedModule>();
   private moduleServices = new Map<string, ModuleServices>();
@@ -208,39 +200,63 @@ export class ModuleLoader {
     const discovered: LoadedModule[] = [];
 
     for (const root of this.roots) {
-      let entries: Dirent[];
-      try {
-        entries = await readdir(root.path, { withFileTypes: true });
-      } catch (error) {
-        if (!isMissingPath(error)) {
-          console.error(`Error discovering modules in ${root.path}:`, error);
+      await this.discoverDirectory(root.path, root.origin, discovered, 0);
+    }
+
+    const seen = new Set<string>();
+    return discovered
+      .filter((module) => {
+        const name = module.manifest.name;
+        if (seen.has(name)) {
+          console.error(`Duplicate module "${name}" in ${module.path}; skipping.`);
+          return false;
+        }
+        seen.add(name);
+        return true;
+      })
+      .sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
+  }
+
+  private async discoverDirectory(
+    dir: string,
+    origin: "bundled" | "addon",
+    discovered: LoadedModule[],
+    depth: number,
+  ): Promise<void> {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      if (!isMissingPath(error)) {
+        console.error(`Error discovering modules in ${dir}:`, error);
+      }
+      return;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      if (entry.name === "node_modules" || entry.name === "data") continue;
+
+      const modulePath = join(dir, entry.name);
+      const manifest = await this.readManifest(modulePath);
+      if (!manifest) {
+        if (depth < 4) {
+          await this.discoverDirectory(modulePath, origin, discovered, depth + 1);
         }
         continue;
       }
 
-      for (const entry of entries) {
-        if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      const definition = await this.loadDefinition(modulePath, manifest);
+      if (!definition) continue;
 
-        const modulePath = join(root.path, entry.name);
-        const manifest = await this.readManifest(modulePath);
-        if (!manifest) continue;
-        if (entry.name !== manifest.name) {
-          console.error(
-            `Module directory "${entry.name}" does not match manifest name "${manifest.name}".`,
-          );
-          continue;
-        }
-
-        await this.discoverSupermodule(
-          modulePath,
-          manifest,
-          root.origin,
-          discovered,
-        );
-      }
+      discovered.push({
+        manifest,
+        definition,
+        path: modulePath,
+        origin,
+        guildsDisabled: new Set(),
+      });
     }
-
-    return discovered;
   }
 
   private async readManifest(dir: string): Promise<ModuleManifest | null> {
@@ -272,10 +288,6 @@ export class ModuleLoader {
     dir: string,
     manifest: ModuleManifest,
   ): Promise<ModuleDefinition | null> {
-    if (!manifest.entry) {
-      console.error(`Module ${manifest.name} has no entry file.`);
-      return null;
-    }
     const entryPath = this.entryPath(dir, manifest.entry);
     if (!entryPath) {
       console.error(
@@ -315,102 +327,6 @@ export class ModuleLoader {
       console.error(`Failed to load module ${manifest.name}:`, error);
       return null;
     }
-  }
-
-  private containerDefinition(manifest: ModuleManifest): ModuleDefinition {
-    return {
-      name: manifest.name,
-      displayName: manifest.displayName,
-      emoji: manifest.emoji,
-      description: manifest.description,
-      version: manifest.version,
-      config: {},
-      commands: [],
-      listeners: [],
-      tasks: [],
-      async onLoad() {
-        return [];
-      },
-      async onUnload() {},
-    };
-  }
-
-  private async discoverSupermodule(
-    modulePath: string,
-    manifest: ModuleManifest,
-    origin: "bundled" | "addon",
-    discovered: LoadedModule[],
-  ): Promise<void> {
-    const thickFields = supermoduleManifestFields(manifest);
-    if (thickFields.length > 0) {
-      console.error(
-        `Supermodule ${manifest.name} must use a thin manifest; remove ${thickFields.join(", ")}.`,
-      );
-      return;
-    }
-
-    let entries: Dirent[];
-    try {
-      entries = await readdir(modulePath, { withFileTypes: true });
-    } catch (error) {
-      if (!isMissingPath(error)) {
-        console.error(`Failed to read submodules of ${manifest.name}:`, error);
-      }
-      return;
-    }
-
-    const submodules: LoadedModule[] = [];
-    for (const entry of entries) {
-      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-      if (entry.name === "node_modules") continue;
-
-      const subPath = join(modulePath, entry.name);
-      const subManifest = await this.readManifest(subPath);
-      if (!subManifest) continue;
-
-      const expectedName = submoduleManifestName(manifest.name, entry.name);
-      if (subManifest.name !== expectedName) {
-        console.error(
-          `Submodule directory "${entry.name}" must use manifest name "${expectedName}", got "${subManifest.name}".`,
-        );
-        continue;
-      }
-
-      if (!subManifest.entry) {
-        console.error(`Submodule ${subManifest.name} has no entry file.`);
-        continue;
-      }
-
-      const subDefinition = await this.loadDefinition(subPath, subManifest);
-      if (!subDefinition) continue;
-
-      submodules.push({
-        manifest: subManifest,
-        definition: subDefinition,
-        path: subPath,
-        origin,
-        supermodule: manifest.name,
-        isSubmodule: true,
-        guildsDisabled: new Set(),
-      });
-    }
-
-    if (submodules.length === 0) {
-      console.error(
-        `Module ${manifest.name} is standalone; a module must live inside a supermodule with at least one submodule.`,
-      );
-      return;
-    }
-
-    discovered.push({
-      manifest,
-      definition: this.containerDefinition(manifest),
-      path: modulePath,
-      origin,
-      isSubmodule: false,
-      guildsDisabled: new Set(),
-    });
-    discovered.push(...submodules);
   }
 
   async loadAll(
@@ -554,7 +470,6 @@ export class ModuleLoader {
   async reload(moduleName: string): Promise<void> {
     const module = this.modules.get(moduleName);
     if (!module) return;
-    if (!module.isSubmodule) return;
 
     const services = this.moduleServices.get(moduleName) ?? {
       ...this.requireServices(),
@@ -581,11 +496,9 @@ export class ModuleLoader {
   }
 
   async unload(moduleName: string): Promise<LoadedModule[]> {
-    const removed = this.listAll().filter(
-      (module) =>
-        module.manifest.name === moduleName ||
-        module.supermodule === moduleName,
-    );
+    const module = this.modules.get(moduleName);
+    if (!module) return [];
+    const removed = [module];
 
     for (const module of removed) {
       const name = module.manifest.name;
@@ -618,9 +531,9 @@ export class ModuleLoader {
       emoji: module.manifest.emoji,
       description: module.manifest.description,
       version: module.manifest.version,
+      category: module.manifest.category,
       configFields: module.manifest.configFields,
-      isSubmodule: module.isSubmodule,
-      supermodule: module.supermodule,
+      origin: module.origin,
     }));
   }
 }

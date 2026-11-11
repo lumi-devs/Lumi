@@ -5,6 +5,7 @@
   "emoji": "♻️",
   "description": "Automatic server restore from latest backup when panic mode triggers or nuke detected",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -30,7 +31,6 @@
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-backups": "^2.0.0",
     "security-core": "^2.0.0"
   },
@@ -38,7 +38,9 @@
     {
       "name": "security-autorecovery",
       "version": "2.0.0",
-      "provides": ["security.autorecovery"]
+      "provides": [
+        "security.autorecovery"
+      ]
     }
   ],
   "conflicts": [],

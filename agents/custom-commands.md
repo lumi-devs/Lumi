@@ -1,8 +1,7 @@
 # Custom Commands
 
-Group `custom-commands` (`modules/custom-commands/`) with submodule
-`custom-commands-core` in `modules/custom-commands/core/`. Guild-only.
-Settings key: `customCommands` (the submodule manifest's `configKey`).
+Module `custom-commands-core` in `modules/custom-commands/core/`. Guild-only.
+Settings key: `customCommands` (the manifest's `configKey`).
 Entry: `/customcommand` with alias `/cc`.
 
 The module lets server managers author commands without code. Command

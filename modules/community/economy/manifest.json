@@ -5,6 +5,7 @@
   "emoji": "💰",
   "description": "Currency, banking, rewards, and shop",
   "version": "2.0.0",
+  "category": "Community",
   "entry": "index.ts",
   "configKey": "economy",
   "configFields": [
@@ -137,14 +138,14 @@
       "category": "Shop"
     }
   ],
-  "dependencies": {
-    "community": "^2.0.0"
-  },
   "capabilities": [
     {
       "name": "community-economy",
       "version": "2.0.0",
-      "provides": ["economy.banking", "economy.shop"]
+      "provides": [
+        "economy.banking",
+        "economy.shop"
+      ]
     }
   ],
   "conflicts": [],

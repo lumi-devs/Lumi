@@ -30,37 +30,36 @@ export const load: PageServerLoad = async (event) => {
     readGuildSettings(guildId),
   ]);
   const states = new Map(rows.map((row) => [row.module, row.enabled]));
-  const modules = catalog.map((module) => ({
-    ...module,
-    enabled: effectiveModuleEnabled(
-      module.configFields,
-      configFor(settings, module.configKey),
-      states.get(module.name) ?? true,
-    ),
-  }));
-  const known = new Set(modules.map((module) => module.name));
-  const groups = modules
-    .filter((module) => !module.isSubmodule)
-    .map((parent) => {
-      const submodules = modules.filter(
-        (module) => module.isSubmodule && module.supermodule === parent.name,
-      );
-      return {
-        ...parent,
-        submodules,
-        enabledCount: submodules.filter((module) => module.enabled).length,
-      };
-    })
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
-  const orphanSubmodules = modules.filter(
-    (module) =>
-      module.isSubmodule &&
-      (module.supermodule === null || !known.has(module.supermodule)),
-  );
+  const modules = catalog
+    .filter((module) => !module.isAddon)
+    .map((module) => ({
+      ...module,
+      enabled: effectiveModuleEnabled(
+        module.configFields,
+        configFor(settings, module.configKey),
+        states.get(module.name) ?? true,
+      ),
+    }));
+  const known = new Set(catalog.map((module) => module.name));
+  const byCategory = new Map<string, typeof modules>();
+  for (const module of modules) {
+    const category = module.category ?? "Other";
+    const list = byCategory.get(category) ?? [];
+    list.push(module);
+    byCategory.set(category, list);
+  }
+  const groups = Array.from(byCategory, ([category, list]) => ({
+    category,
+    modules: list.sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    enabledCount: list.filter((module) => module.enabled).length,
+  })).sort((a, b) => {
+    if (a.category === "Other") return 1;
+    if (b.category === "Other") return -1;
+    return a.category.localeCompare(b.category);
+  });
 
   return {
     groups,
-    orphanSubmodules,
     unknownModules: rows
       .filter((row) => !known.has(row.module))
       .map((row) => ({ name: row.module, enabled: row.enabled })),
@@ -80,12 +79,6 @@ export const actions: Actions = {
       catalog.find((entry) => entry.name === parsed.data.module),
     );
     if (!module) return fail(404, { error: "That module is not available." });
-    if (!module.isSubmodule) {
-      return fail(400, {
-        error:
-          "Supermodules are groups; enable or disable a submodule instead.",
-      });
-    }
 
     const enabled = checkbox(data, "enabled");
     await ensureGuild(guildId);

@@ -11,40 +11,28 @@ function counter(): number {
 }
 
 async function writeModuleFixture(root: string): Promise<void> {
-  const supermodule = join(root, "loader-test");
-  const submodule = join(supermodule, "demo");
-  await mkdir(submodule, { recursive: true });
+  const moduleDir = join(root, "loader-test-demo");
+  await mkdir(moduleDir, { recursive: true });
 
   await writeFile(
-    join(supermodule, "manifest.json"),
-    JSON.stringify({
-      apiVersion: 2,
-      name: "loader-test",
-      displayName: "Loader Test",
-      emoji: "🧪",
-      description: "Loader disposer test supermodule",
-      version: "1.0.0",
-    }),
-  );
-  await writeFile(
-    join(submodule, "manifest.json"),
+    join(moduleDir, "manifest.json"),
     JSON.stringify({
       apiVersion: 2,
       name: "loader-test-demo",
       displayName: "Loader Test Demo",
       emoji: "🧪",
-      description: "Loader disposer test submodule",
+      description: "Loader disposer test module",
       version: "1.0.0",
       entry: "index.mjs",
     }),
   );
   await writeFile(
-    join(submodule, "index.mjs"),
+    join(moduleDir, "index.mjs"),
     `export default {
   name: "loader-test-demo",
   displayName: "Loader Test Demo",
   emoji: "🧪",
-  description: "Loader disposer test submodule",
+  description: "Loader disposer test module",
   version: "1.0.0",
   config: {},
   commands: [],
@@ -64,7 +52,7 @@ async function writeModuleFixture(root: string): Promise<void> {
 }
 
 describe("ModuleLoader disposers", () => {
-  it("runs onLoad disposers when reloading and unloading modules", async () => {
+  it("runs onLoad disposers on exact-name reload and unload", async () => {
     const root = await mkdtemp(join(tmpdir(), "lumi-loader-"));
     (globalThis as Record<string, unknown>)[CounterKey] = 0;
     try {
@@ -82,6 +70,10 @@ describe("ModuleLoader disposers", () => {
       expect(counter()).toBe(1);
 
       await loader.unload("loader-test");
+      expect(counter()).toBe(1);
+      expect(loader.getModule("loader-test-demo")).toBeDefined();
+
+      await loader.unload("loader-test-demo");
       expect(counter()).toBe(2);
       expect(loader.getModule("loader-test-demo")).toBeUndefined();
     } finally {

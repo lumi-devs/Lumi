@@ -13,7 +13,7 @@ import {
   enqueueAutorole,
   processPendingAutoroles,
 } from "../../../../modules/roles/autorole/store.js";
-import { fetchMember } from "../../../../modules/roles/shared.js";
+import { fetchMember } from "../../../../modules/shared/roles.js";
 import { getVoiceRolesConfig } from "../../../../modules/roles/voiceroles/config.js";
 import {
   deleteVoiceRoleMapping,

@@ -5,18 +5,18 @@
   "emoji": "⏰",
   "description": "Create, list, snooze, and cancel personal reminders",
   "version": "2.0.0",
+  "category": "Utility",
   "entry": "index.ts",
   "configKey": "reminders",
-  "dependencies": {
-    "utility": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "utility-reminders",
       "version": "2.0.0",
-      "provides": ["utility.reminders"]
+      "provides": [
+        "utility.reminders"
+      ]
     }
   ],
   "configFields": [

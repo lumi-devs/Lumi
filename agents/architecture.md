@@ -8,9 +8,9 @@ src/                      deployable process: entry, composition root, dispatch,
   core/                   gateway, lifecycle, interaction/prefix dispatch,
                           built-in commands, RPC control server, service wiring
   admin/                  module management, config, /lumi panel
-modules/                  bundled feature modules (toggleable)
-  <supermodule>/          manifest.json (group metadata only)
-    <submodule>/          manifest.json + entry + feature files
+modules/                  bundled feature modules (toggleable, flat)
+  <module>/               manifest.json + entry + feature files
+  shared/                 non-module helpers (no manifest)
 packages/permits/         Built-in: permit evaluation, time-based, conditions
 packages/cache/           L1 LRU + Redis L2 cache, codec, single-flight
 packages/redis/           ioredis client, keys, TTLs, invalidation bus, locks
@@ -28,11 +28,11 @@ packages/scheduler/       distributed cron with Redis locks
 
 - `src/` — the process. It wires dependencies, owns the lifecycle, and is never
   imported by anything else.
-- `modules/*` — first-party product features (toggleable submodules grouped by
-  rudimentary supermodule directories). Submodules are ordinary modules loaded
-  by the module runtime at boot, exactly like addons, and may not import the app.
-  Supermodules contain no code and no config; the loader synthesizes display-only
-  containers for them.
+- `modules/*` — first-party product features grouped into category directories;
+  each module directory holds one toggleable module with its own manifest.
+  Bundled modules are loaded by the module runtime at boot, exactly like addons,
+  and may not import the app. UI grouping comes from the optional manifest
+  `category`, independent of the directory layout.
 - `packages/*` — reusable libraries with narrow, declared dependencies. They
   never import the app or bundled modules.
 
@@ -45,22 +45,21 @@ packages/scheduler/       distributed cron with Redis locks
 - `src/admin/` — Module management, config, `/lumi` panel, owner commands
 
 **Toggleable Modules** (enable/disable per guild via `/lumi` → Modules).
-Every submodule under `modules/<supermodule>/<submodule>/` toggles independently.
-The supermodule directory is only a grouping label; it has no code, config, or
-enable state.
+Every module directory under `modules/<category>/<module>/` toggles
+independently.
 
-- `community` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
+- `community-*` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
   `economy` (currency, banking, rewards, shop), `stats` (message/voice/member
   tracking and cards), `tickets` (private-thread ticket panels)
-- `custom-commands` — `core` (guild-authored commands, schedules, KV)
-- `logging` — `logs` (message, edit, delete, voice, moderation logging)
-- `moderation` — `mod` (case-backed ban, kick, timeout, warn, purge, notes,
-  lockdown, quarantine, softban, voice mute)
-- `role-menus` — `menu` (button/select/reaction role menus)
-- `roles` — `autorole`, `bulkrole`, `voiceroles`
-- `security` — `core` (shared security settings), `antinuke`, `automod`,
+- `custom-commands-core` — guild-authored commands, schedules, KV
+- `logging-logs` — message, edit, delete, voice, moderation logging
+- `moderation-mod` — case-backed ban, kick, timeout, warn, purge, notes,
+  lockdown, quarantine, softban, voice mute
+- `role-menus-menu` — button/select/reaction role menus
+- `roles-*` — `autorole`, `bulkrole`, `voiceroles`
+- `security-*` — `core` (shared security settings), `antinuke`, `automod`,
   `autorecovery`, `backups`, `betrayal`, `join-gate`, `panic`, `verification`
-- `utility` — `afk` (AFK status + mention replies), `nick` (nickname changes
+- `utility-*` — `afk` (AFK status + mention replies), `nick` (nickname changes
   with hierarchy checks), `tempvc` (join-to-create voice channels), `info`
   (avatar, banner, whois, serverinfo), `reminders`
 
@@ -86,9 +85,9 @@ Rules:
 - `module-runtime` and `downloader` never import `src` or `modules`.
 - Only `src` constructs services and owns the process lifecycle.
 - Built-in services live in `src/` and are non-disableable.
-- Toggleable modules live in `modules/<supermodule>/<submodule>/` and are
-  ordinary modules: discovered, validated, toggleable, reloadable. Supermodule
-  directories contain only a thin manifest and are not loaded as code.
+- Toggleable modules live in `modules/<category>/<module>/` and are ordinary
+  modules: discovered, validated, toggleable, reloadable. Bundled modules and
+  add-ons share the same manifest and loader contract.
 
 ## Boot order
 

@@ -5,11 +5,9 @@
   "emoji": "📝",
   "description": "Message, edit, delete, and voice logging",
   "version": "2.0.0",
+  "category": "Logging",
   "entry": "index.ts",
   "configKey": "logging-logs",
-  "dependencies": {
-    "logging": "^2.0.0"
-  },
   "configFields": [
     {
       "key": "messageLogChannel",
@@ -17,7 +15,9 @@
       "type": "channel",
       "description": "Channel for new messages",
       "category": "Channels",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "editLogChannel",
@@ -25,7 +25,9 @@
       "type": "channel",
       "description": "Channel for edited messages",
       "category": "Channels",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "deleteLogChannel",
@@ -33,7 +35,9 @@
       "type": "channel",
       "description": "Channel for deleted messages",
       "category": "Channels",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "voiceLogChannel",
@@ -41,7 +45,9 @@
       "type": "channel",
       "description": "Channel for voice activity",
       "category": "Channels",
-      "channelTypes": [0]
+      "channelTypes": [
+        0
+      ]
     },
     {
       "key": "ignoredChannels",
@@ -55,7 +61,9 @@
     {
       "name": "logging-logs",
       "version": "2.0.0",
-      "provides": ["logging.channels"]
+      "provides": [
+        "logging.channels"
+      ]
     }
   ],
   "conflicts": [],

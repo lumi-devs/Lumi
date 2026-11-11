@@ -8,6 +8,7 @@ import { createCustomCommandHelpers } from "./helpers/customCommands.js";
 import { createEconomyHelpers } from "./helpers/economy.js";
 import { createLevelingHelpers } from "./helpers/leveling.js";
 import { createModerationHelpers } from "./helpers/moderation.js";
+import { createModuleDataHelpers } from "./helpers/moduleData.js";
 import { createRoleMenuHelpers } from "./helpers/roleMenus.js";
 import { createRoleHelpers } from "./helpers/roles.js";
 import { createSecurityHelpers } from "./helpers/security.js";
@@ -64,6 +65,7 @@ export function createDbHelpers(redis?: Redis) {
     verification: createVerificationHelpers(ctx),
     utility: createUtilityHelpers(ctx),
     moderation: createModerationHelpers(ctx),
+    moduleData: createModuleDataHelpers(ctx),
   };
 }
 
@@ -85,6 +87,11 @@ export type {
   EconomyWalletLedger,
 } from "./helpers/economy.js";
 export type { LevelingXpInput } from "./helpers/leveling.js";
+export type {
+  ModuleDataEntry,
+  ModuleDataQuery,
+  ModuleDataSetOptions,
+} from "./helpers/moduleData.js";
 export type {
   ModerationCaseInput,
   ModerationCaseKind,

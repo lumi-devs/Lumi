@@ -19,7 +19,7 @@ import {
   canManageRolesCommand,
   parseRoleIds,
   roleMentions,
-} from "../shared.js";
+} from "../../shared/roles.js";
 import { BulkRoleConfigSchema, BulkRoleModuleName } from "./config.js";
 import {
   type BulkCandidate,

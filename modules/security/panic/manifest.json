@@ -5,6 +5,7 @@
   "emoji": "🚨",
   "description": "Automated server lockdown on threat velocity spikes, channel locking, invite disabling, and permission snapshots",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -63,14 +64,15 @@
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-core": "^2.0.0"
   },
   "capabilities": [
     {
       "name": "security-panic",
       "version": "2.0.0",
-      "provides": ["security.panic"]
+      "provides": [
+        "security.panic"
+      ]
     }
   ],
   "conflicts": [],

@@ -5,6 +5,7 @@
   "emoji": "☢️",
   "description": "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -41,7 +42,11 @@
       "type": "select",
       "description": "Action taken when ban threshold trips",
       "default": "quarantine",
-      "choices": ["log", "quarantine", "ban"],
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ],
       "category": "Member Actions"
     },
     {
@@ -60,7 +65,11 @@
       "type": "select",
       "description": "Action taken when kick threshold trips",
       "default": "quarantine",
-      "choices": ["log", "quarantine", "ban"],
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ],
       "category": "Member Actions"
     },
     {
@@ -79,7 +88,11 @@
       "type": "select",
       "description": "Action taken when channel-delete threshold trips",
       "default": "quarantine",
-      "choices": ["log", "quarantine", "ban"],
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ],
       "category": "Channel & Role Actions"
     },
     {
@@ -98,7 +111,11 @@
       "type": "select",
       "description": "Action taken when role-delete threshold trips",
       "default": "quarantine",
-      "choices": ["log", "quarantine", "ban"],
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ],
       "category": "Channel & Role Actions"
     },
     {
@@ -117,7 +134,11 @@
       "type": "select",
       "description": "Action taken when webhook-create threshold trips",
       "default": "quarantine",
-      "choices": ["log", "quarantine", "ban"],
+      "choices": [
+        "log",
+        "quarantine",
+        "ban"
+      ],
       "category": "Webhook & Vanity"
     },
     {
@@ -152,14 +173,15 @@
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-core": "^2.0.0"
   },
   "capabilities": [
     {
       "name": "security-antinuke",
       "version": "2.0.0",
-      "provides": ["security.antinuke"]
+      "provides": [
+        "security.antinuke"
+      ]
     }
   ],
   "conflicts": [],

@@ -15,6 +15,7 @@ import {
   replyEphemeralError,
   showPanel,
 } from "./common.js";
+import { toggleModule } from "./moduleActions.js";
 import type { BotServices } from "../../core/contracts.js";
 
 async function show(
@@ -42,6 +43,18 @@ export async function handleAddonInteraction(
           "Bot Owners Only",
           "Add-ons can only be managed by bot owners.",
         ),
+      ),
+    );
+    return true;
+  }
+
+  const ownerId = interaction.message?.interactionMetadata?.user.id;
+  if (ownerId !== undefined && ownerId !== interaction.user.id) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Add-ons", "This panel belongs to another user.", {
+          footer: "Run `/lumi` to open your own panel",
+        }),
       ),
     );
     return true;
@@ -176,6 +189,22 @@ export async function handleAddonInteraction(
           services,
           { kind: "installed" },
           `Uninstalled ${target}.`,
+        );
+        return true;
+      }
+      case "toggle": {
+        if (!target) return false;
+        await interaction.deferUpdate();
+        const enabled = await toggleModule(
+          services,
+          interaction.guildId!,
+          target,
+        );
+        await show(
+          interaction,
+          services,
+          { kind: "manage", name: target },
+          `${target} ${enabled ? "disabled" : "enabled"}.`,
         );
         return true;
       }

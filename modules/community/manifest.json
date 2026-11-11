@@ -1,8 +1,0 @@
-{
-  "apiVersion": 2,
-  "name": "community",
-  "displayName": "Community",
-  "emoji": "👥",
-  "description": "Community features: leveling, economy, stats, quotes, and tickets",
-  "version": "2.0.0"
-}

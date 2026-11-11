@@ -4,7 +4,7 @@ import {
   getStoredJson,
   securityKey,
   setStoredJson,
-} from "../shared.js";
+} from "../../shared/security.js";
 
 const LockedModules = ["moderation-mod"];
 

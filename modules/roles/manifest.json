@@ -1,8 +1,0 @@
-{
-  "apiVersion": 2,
-  "name": "roles",
-  "displayName": "Roles",
-  "emoji": "🎭",
-  "description": "Role automation: join autoroles, voice channel roles, and bulk role jobs",
-  "version": "2.0.0"
-}

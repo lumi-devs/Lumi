@@ -5,6 +5,7 @@
   "emoji": "🤖",
   "description": "Heat-based automod with 13 filters, escalating punishments, and permit-based immunity",
   "version": "2.0.0",
+  "category": "Security",
   "entry": "index.ts",
   "configFields": [
     {
@@ -336,12 +337,13 @@
       "label": "Log Channel",
       "type": "channel",
       "description": "Channel for filter hit logs",
-      "channelTypes": [0],
+      "channelTypes": [
+        0
+      ],
       "category": "Logging"
     }
   ],
   "dependencies": {
-    "security": "^2.0.0",
     "security-core": "^2.0.0",
     "security-panic": "^2.0.0"
   },
@@ -349,7 +351,9 @@
     {
       "name": "security-automod",
       "version": "2.0.0",
-      "provides": ["security.automod"]
+      "provides": [
+        "security.automod"
+      ]
     }
   ],
   "conflicts": [],

@@ -12,7 +12,7 @@ import {
   makeSuccessCard,
 } from "@lumi/ui";
 import { ChannelType, SlashCommandBuilder, type VoiceState } from "discord.js";
-import { canManageRolesCommand, roleMentions } from "../shared.js";
+import { canManageRolesCommand, roleMentions } from "../../shared/roles.js";
 import {
   getVoiceRolesConfig,
   VoiceRolesConfigSchema,

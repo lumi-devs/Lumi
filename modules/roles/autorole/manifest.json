@@ -5,17 +5,17 @@
   "emoji": "🚪",
   "description": "Multi-role autorole on join with filters, optional delay, and a durable pending queue",
   "version": "2.0.0",
+  "category": "Roles",
   "entry": "index.ts",
-  "dependencies": {
-    "roles": "^2.0.0"
-  },
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
       "name": "roles-autorole",
       "version": "2.0.0",
-      "provides": ["roles.autorole"]
+      "provides": [
+        "roles.autorole"
+      ]
     }
   ],
   "configFields": [

@@ -3,7 +3,6 @@
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   let { data, form } = $props();
 
-  let expandedGroups = $state<string[]>([]);
   let enabledOverrides = $state<Record<string, boolean>>({});
   let pendingModules = $state<Record<string, boolean>>({});
 
@@ -11,16 +10,8 @@
     return enabledOverrides[module.name] ?? module.enabled;
   }
 
-  function enabledCount(group: {
-    submodules: Array<{ name: string; enabled: boolean }>;
-  }) {
-    return group.submodules.filter((module) => moduleEnabled(module)).length;
-  }
-
-  function toggleGroup(name: string) {
-    expandedGroups = expandedGroups.includes(name)
-      ? expandedGroups.filter((group) => group !== name)
-      : [...expandedGroups, name];
+  function enabledCount(modules: Array<{ name: string; enabled: boolean }>) {
+    return modules.filter((module) => moduleEnabled(module)).length;
   }
 </script>
 
@@ -71,8 +62,8 @@
 
 <h2>Feature modules</h2>
 <p class="muted">
-  Modules are grouped by supermodule, matching the in-Discord panel. Disabled
-  modules keep their configuration; their commands and listeners do not run.
+  Modules are grouped by category. Disabled modules keep their configuration;
+  their commands and listeners do not run.
 </p>
 
 {#if form?.success}
@@ -90,104 +81,41 @@
     <p class="muted">No modules were found on the server filesystem.</p>
   </div>
 {:else}
-  {#each data.groups as group (group.name)}
-    {@const expanded = expandedGroups.includes(group.name)}
-    {@const enabledTotal = enabledCount(group)}
-    <section class="panel module-group">
-      <div class="module-group-head" class:expanded>
-        <div>
-          <h3 style="margin:0">
-            {group.emoji}
-            {group.displayName}
-            {#if group.isAddon}<span class="badge">addon</span>{/if}
-            <span
-              class="badge {enabledTotal === group.submodules.length &&
-              group.submodules.length > 0
-                ? 'on'
-                : 'off'}">{enabledTotal}/{group.submodules.length} enabled</span
-            >
-          </h3>
-          <p class="muted" style="margin:0.25rem 0 0">
-            {group.description || "No description"} · v{group.version} ·
-            <code>{group.name}</code> · {group.submodules.length} submodule{group
-              .submodules.length === 1
-              ? ""
-              : "s"}
-          </p>
-        </div>
-        {#if group.submodules.length > 0}
-          <button
-            type="button"
-            class="secondary small group-toggle"
-            aria-expanded={expanded}
-            onclick={() => toggleGroup(group.name)}
-          >
-            {expanded ? "Collapse" : "Expand"}
-            <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>
-          </button>
-        {/if}
-      </div>
-
-      {#if group.submodules.length > 0 && expanded}
-        <div class="table-wrap" style="margin-top:0.75rem">
-          <table>
-            <thead>
-              <tr>
-                <th>Module</th>
-                <th>State</th>
-                <th><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each group.submodules as module (module.name)}
-                <tr class="submodule-row">
-                  <td>
-                    <strong>{module.emoji} {module.displayName}</strong>
-                    {#if module.isAddon}<span class="badge">addon</span>{/if}
-                    <div class="muted">
-                      {module.description || "No description"} · v{module.version}
-                      · <code>{module.name}</code>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge {moduleEnabled(module) ? 'on' : 'off'}"
-                      >{moduleEnabled(module) ? "Enabled" : "Disabled"}</span
-                    >
-                  </td>
-                  <td>
-                    <div class="actions">
-                      {@render configureLink(module, true)}
-                      {@render toggleForm(module, true)}
-                    </div>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      {/if}
-    </section>
-  {/each}
-
-  {#if data.orphanSubmodules.length > 0}
+  {#each data.groups as group (group.category)}
+    {@const enabledTotal = enabledCount(group.modules)}
     <section class="panel module-group">
       <div class="module-group-head expanded">
         <div>
-          <h3 style="margin:0">Ungrouped modules</h3>
-          <p class="muted" style="margin:0.25rem 0 0">
-            These submodules are loaded without a matching supermodule.
-          </p>
+          <h3 style="margin:0">
+            {group.category}
+            <span
+              class="badge {enabledTotal === group.modules.length &&
+              group.modules.length > 0
+                ? 'on'
+                : 'off'}">{enabledTotal}/{group.modules.length} enabled</span
+            >
+          </h3>
         </div>
       </div>
+
       <div class="table-wrap" style="margin-top:0.75rem">
         <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>State</th>
+              <th><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
           <tbody>
-            {#each data.orphanSubmodules as module (module.name)}
-              <tr class="submodule-row">
+            {#each group.modules as module (module.name)}
+              <tr class="module-row">
                 <td>
                   <strong>{module.emoji} {module.displayName}</strong>
-                  {#if module.isAddon}<span class="badge">addon</span>{/if}
-                  <div class="muted"><code>{module.name}</code></div>
+                  <div class="muted">
+                    {module.description || "No description"} · v{module.version}
+                    · <code>{module.name}</code>
+                  </div>
                 </td>
                 <td>
                   <span class="badge {moduleEnabled(module) ? 'on' : 'off'}"
@@ -206,7 +134,7 @@
         </table>
       </div>
     </section>
-  {/if}
+  {/each}
 {/if}
 
 {#if data.unknownModules.length > 0}
@@ -278,54 +206,48 @@
     max-width: 90ch;
   }
 
-  .group-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .submodule-row td {
+  .module-row td {
     padding-top: 0.85rem;
     padding-bottom: 0.85rem;
   }
 
-  .submodule-row td:first-child {
+  .module-row td:first-child {
     padding-left: 0;
     padding-right: 1.5rem;
   }
 
-  .submodule-row td:nth-child(2),
-  .submodule-row td:nth-child(3) {
+  .module-row td:nth-child(2),
+  .module-row td:nth-child(3) {
     width: 1%;
     white-space: nowrap;
   }
 
-  .submodule-row td:nth-child(2) {
+  .module-row td:nth-child(2) {
     padding-right: 1.25rem;
   }
 
-  .submodule-row .actions {
+  .module-row .actions {
     flex-wrap: nowrap;
     justify-content: flex-end;
   }
 
-  .submodule-row strong {
+  .module-row strong {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
   }
 
-  .submodule-row .muted {
+  .module-row .muted {
     margin-top: 0.2rem;
   }
 
   @media (max-width: 900px) {
-    .submodule-row td:nth-child(2),
-    .submodule-row td:nth-child(3) {
+    .module-row td:nth-child(2),
+    .module-row td:nth-child(3) {
       width: auto;
     }
 
-    .submodule-row .actions {
+    .module-row .actions {
       flex-wrap: wrap;
       justify-content: flex-start;
     }

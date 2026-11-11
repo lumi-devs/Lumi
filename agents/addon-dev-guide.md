@@ -1,36 +1,34 @@
 # Add-on development guide
 
-Add-ons are third-party supermodules. They follow the same module contract as
+Add-ons are third-party flat modules. They follow the same module contract as
 bundled modules, are installed from git repositories, and run in-process.
 
 ## Differences from bundled modules
 
-| Aspect           | Bundled                  | Add-on                             |
-| ---------------- | ------------------------ | ---------------------------------- |
-| Location         | `modules/<supermodule>/` | `data/addons/<supermodule>/`       |
-| Origin           | `bundled`                | `addon`                            |
-| Install          | Deployed with the bot    | `/lumi` → Add-ons, bot owners only |
-| Update           | Deploy the bot           | Repo update or auto-update         |
-| npm dependencies | Root `package.json`      | `manifest.requirements`            |
-| Trust            | Full                     | Static validation on install       |
+| Aspect           | Bundled               | Add-on                             |
+| ---------------- | --------------------- | ---------------------------------- |
+| Location         | `modules/<category>/<module>/` | `data/addons/<module>/`   |
+| Origin           | `bundled`             | `addon`                            |
+| Install          | Deployed with the bot | `/lumi` → Add-ons, bot owners only |
+| Update           | Deploy the bot        | Repo update or auto-update         |
+| npm dependencies | Root `package.json`   | `manifest.requirements`            |
+| Trust            | Full                  | Static validation on install       |
 
 ## Structure
 
-Every add-on is a supermodule: a directory with a thin root `manifest.json` and
-one or more submodule directories. The root manifest is group metadata only; it
-has no `entry` and no code.
+Each add-on is one top-level directory with a `manifest.json` and an entry file.
+The add-on directory name must equal `manifest.name` so the downloader can
+install and update it by name. The loader also accepts nested bundled modules,
+but add-on repositories stay flat.
 
 ```
 my-addon/
-├── manifest.json          # supermodule metadata only
-└── status/                # submodule: my-addon-status
-    ├── manifest.json
-    └── index.ts
+├── manifest.json
+├── index.ts
+└── <feature files>
 ```
 
-Each submodule uses the same `defineModule` shape and manifest contract as
-bundled modules. Submodule manifests use prefixed names (for example
-`my-addon-status`) and declare `dependencies: { "my-addon": "^1.0.0" }`.
+Use the same `defineModule` shape and manifest contract as bundled modules.
 
 ## Manifest
 
@@ -41,15 +39,15 @@ bundled modules. Submodule manifests use prefixed names (for example
   "displayName": "My Add-on",
   "emoji": "🔌",
   "description": "What the add-on does",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "category": "Add-ons",
+  "entry": "index.ts"
 }
 ```
 
-- The root manifest contains only `apiVersion`, `name`, `displayName`, `emoji`,
-  `description`, and `version`.
-- Submodule manifests declare `entry`, `dependencies`, `requirements`,
-  `conflicts`, `capabilities`, and `configFields`.
-- `entry` is loaded directly by Bun; ship TypeScript, not compiled JS.
+- The manifest declares `entry`, `dependencies`, `requirements`, `conflicts`,
+  `capabilities`, `configFields`, and an optional `category`.
+- `entry` is required and loaded directly by Bun; ship TypeScript, not compiled JS.
 - `requirements` are npm registry specs installed with
   `bun add --production --ignore-scripts --no-save`.
 - `dependencies` are module names and semver ranges.
@@ -87,7 +85,7 @@ Add-ons receive the same `ModuleServices` bag as bundled modules: `client`,
 (`{ healthMonitor, logger }`), `helpers`, and an optional `moduleName`.
 Database and cache access goes through the `helpers` namespaces (`economy`,
 `leveling`, `stats`, `tickets`, `roleMenus`, `customCommands`, `roles`,
-`security`, `verification`, `utility`, `cache`). `prisma`, `redis`, the raw cache
+`security`, `verification`, `utility`, `moduleData`, `cache`). `prisma`, `redis`, the raw cache
 client, `moduleLoader`, `moduleManager`, `configService`, and `addons` are not
 part of the add-on services contract. See
 [services.md](./services.md).
@@ -106,12 +104,12 @@ bun add --production --ignore-scripts --no-save <requirements>
 bun run dev:bot
 ```
 
-A linked directory has no `DownloaderModule` row, so it appears in the Modules
-tab but not under Add-ons → Installed.
+A linked directory has no `DownloaderModule` row, so it is loaded but not listed
+under Add-ons → Installed. It never appears in the Modules tab.
 
 ## Publishing
 
-1. Put the supermodule at the repository root (or in a top-level directory).
+1. Put each add-on in its own top-level directory in the repository.
 2. Push the repository over HTTPS.
 3. In Discord: `/lumi` → Add-ons → Repositories → Add Repository.
 4. Open the repository, browse modules, and install.
@@ -122,11 +120,10 @@ validation or reload rolls the update back and reports the error to bot owners.
 
 ## Checklist
 
-- [ ] Supermodule `manifest.json` is metadata-only and its name matches the directory
-- [ ] Submodule names follow `<supermodule>-<directory>`
-- [ ] Each submodule entry file exists and default-exports `defineModule(...)`
-- [ ] Submodule names are prefixed and unique
+- [ ] `manifest.json` name matches the directory
+- [ ] The entry file exists and default-exports `defineModule(...)`
+- [ ] Names are unique across bundled modules and installed add-ons
 - [ ] No internal `@lumi/*` imports
-- [ ] npm dependencies are declared in each submodule's `requirements`
+- [ ] npm dependencies are declared in `manifest.requirements`
 - [ ] Commands and listeners check `services.modules.isEnabled(guildId, name)`
-- [ ] Config fields are declared in the submodule manifest's `configFields`
+- [ ] Config fields are declared in the manifest's `configFields`

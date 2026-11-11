@@ -34,13 +34,13 @@ import {
   previewBackupRestore,
   pruneBackups,
   restoreBackup,
-} from "../backup-store/index.js";
+} from "../../shared/backup-store/index.js";
 import {
   hasPermit,
   readModuleConfig,
   securityCard,
   sendSecurityLog,
-} from "../shared.js";
+} from "../../shared/security.js";
 
 const ModuleName = "security-backups";
 const ButtonPrefix = "lumi:backup";
