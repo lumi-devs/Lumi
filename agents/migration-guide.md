@@ -96,7 +96,7 @@ export const ModModule: Module = {
 
 // v2 module structure (modules/moderation/mod/index.ts)
 export default defineModule({
-  name: "moderation-mod",
+  name: "mod",
   config: z.object({ ... }),
   commands: [banCmd, kickCmd, ...],
   listeners: [modLogListener],
@@ -157,7 +157,7 @@ export const banCmd: CommandDefinition = {
   requiredPermit: "mod.ban",  // Catalog metadata; evaluate permits yourself
   async execute(interaction, services) {
     // Module enablement still needed
-    if (!services.modules.isEnabled(guildId, "moderation-mod")) return;
+    if (!services.modules.isEnabled(guildId, "mod")) return;
     ...
   },
 };
@@ -269,10 +269,10 @@ bun dist/index.js
 | `guildSettings.prefix`         | Guild `prefix` setting (`/lumi` → Settings) |
 | `guildSettings.modLogChannel`  | `logging` module log channels               |
 | `guildSettings.welcomeChannel` | No direct equivalent (no welcome module)    |
-| `guildSettings.levelUpChannel` | `community-leveling` → `announceChannel`    |
-| `guildSettings.currencyName`   | `community-economy` → `currencyName`        |
-| `guildSettings.autoModRules`   | `security-automod` heat filters             |
-| `guildSettings.tempVcCategory` | `utility-tempvc` → `categoryId`             |
+| `guildSettings.levelUpChannel` | `leveling` → `announceChannel`    |
+| `guildSettings.currencyName`   | `economy` → `currencyName`        |
+| `guildSettings.autoModRules`   | `automod` heat filters             |
+| `guildSettings.tempVcCategory` | `tempvc` → `categoryId`             |
 
 ### Example: Economy Config Migration
 

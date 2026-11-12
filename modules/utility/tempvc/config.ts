@@ -1,7 +1,7 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { type TempVcConfig, TempVcConfigSchema } from "./panel.js";
 
-export const TempVcModuleName = "utility-tempvc";
+export const TempVcModuleName = "tempvc";
 export const TempVcConfigKey = TempVcModuleName;
 
 export const isModuleEnabled = (

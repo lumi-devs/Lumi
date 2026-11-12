@@ -477,7 +477,7 @@ const workerListener: ListenerDefinition = {
   async handler(services: ModuleServices) {
     void processBulkRoleJobs(services).catch((error) =>
       services.observability?.logger?.warn?.(
-        "[roles-bulkrole] initial worker run failed",
+        "[bulkrole] initial worker run failed",
         { error },
       ),
     );

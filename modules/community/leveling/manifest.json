@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "community-leveling",
+  "name": "leveling",
   "displayName": "Leveling",
   "emoji": "📈",
   "description": "XP, levels, role rewards, and leaderboards with voice XP support",
@@ -174,7 +174,7 @@
   ],
   "capabilities": [
     {
-      "name": "community-leveling",
+      "name": "leveling",
       "version": "2.1.0",
       "provides": [
         "leveling.xp",

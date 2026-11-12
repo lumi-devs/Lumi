@@ -37,4 +37,15 @@ describe("AddonManager repository URLs", () => {
       manager(root).addRepo("repo", "ssh://git@example.com/repo.git"),
     ).rejects.toThrow("must be HTTPS");
   });
+
+  it.each(["-danger", "a..b", "a//b", "a/.", "a/b.lock", "a/"])(
+    "rejects invalid branch ref %s",
+    async (branch) => {
+      const root = await mkdtemp(join(tmpdir(), "lumi-manager-"));
+      roots.push(root);
+      await expect(
+        manager(root).addRepo("repo", "https://example.com/repo.git", branch),
+      ).rejects.toThrow("not a valid git ref");
+    },
+  );
 });

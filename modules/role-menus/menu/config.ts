@@ -19,7 +19,7 @@ export const RoleMenusConfigSchema = z.object({
 
 export type RoleMenusConfig = z.infer<typeof RoleMenusConfigSchema>;
 
-export const RoleMenusConfigKey = "role-menus-menu";
+export const RoleMenusConfigKey = "role-menus";
 
 export async function getRoleMenusConfig(
   services: ModuleServices,

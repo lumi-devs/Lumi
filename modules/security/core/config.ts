@@ -9,7 +9,7 @@ export const SecurityConfigSchema = z.object({
 
 export type SecurityConfig = z.infer<typeof SecurityConfigSchema>;
 
-export const SecurityConfigKey = "security-core";
+export const SecurityConfigKey = "security";
 
 export async function getSecurityConfig(
   services: ModuleServices,

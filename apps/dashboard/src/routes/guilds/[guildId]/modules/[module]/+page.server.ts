@@ -30,7 +30,7 @@ import {
 import { assertCsrf, formString } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
-const TempVcModuleName = "utility-tempvc";
+const TempVcModuleName = "tempvc";
 
 const Snowflake = z.string().regex(/^\d{16,22}$/);
 

@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "utility-nick",
+  "name": "nick",
   "displayName": "Nicknames",
   "emoji": "📛",
   "description": "Nickname changes with hierarchy checks and optional self-service",
@@ -26,7 +26,7 @@
   ],
   "capabilities": [
     {
-      "name": "utility-nick",
+      "name": "nick",
       "version": "2.0.0",
       "provides": [
         "utility.nick"

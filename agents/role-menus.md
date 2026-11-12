@@ -1,6 +1,6 @@
 # Role Menus
 
-Module `role-menus-menu` in `modules/role-menus/menu/`.
+Module `role-menus` in `modules/role-menus/menu/`.
 
 Role menus let members claim roles for themselves from a posted message.
 Staff create a group, attach roles, choose a selection mode, and publish the
@@ -8,8 +8,8 @@ group as buttons, a string select, or reactions.
 
 ## Configuration
 
-Stored per guild under the `role-menus-menu` key (the manifest sets
-`configKey`). Settings are edited from `/config role-menus-menu` or
+Stored per guild under the `role-menus` key (the manifest sets
+`configKey`). Settings are edited from `/config role-menus` or
 `/lumi` → Modules → Role Menus.
 
 | Key                          | Type   | Default    | Purpose                                      |
@@ -28,7 +28,7 @@ roles do not leak.
 
 ## Management
 
-`/config role-menus-menu` (or `/lumi` → Modules → Role Menus) opens an ephemeral
+`/config role-menus` (or `/lumi` → Modules → Role Menus) opens an ephemeral
 panel. It lists groups with pagination, creates groups, edits group settings,
 adds/removes role options, toggles require-one and auto-toggle, posts as buttons,
 select or reactions, refreshes posted menus, and deletes groups with their

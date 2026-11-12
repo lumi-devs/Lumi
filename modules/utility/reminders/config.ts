@@ -1,7 +1,7 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
 
-export const ModuleName = "utility-reminders";
+export const ModuleName = "reminders";
 export const ConfigKey = "reminders";
 
 export const ReminderConfigSchema = z.object({

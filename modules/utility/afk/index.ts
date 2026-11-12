@@ -256,7 +256,7 @@ const onMessageListener: ListenerDefinition = {
 };
 
 const afkModule: ModuleDefinition = defineModule({
-  name: "utility-afk",
+  name: "afk",
   displayName: "AFK",
   emoji: "💤",
   description: "Set AFK status with mention replies and nickname prefix",

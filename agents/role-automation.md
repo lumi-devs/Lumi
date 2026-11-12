@@ -4,26 +4,26 @@ The `Roles` category contains three independently toggleable modules:
 
 | Module             | Directory                  | Permit node        |
 | ------------------ | -------------------------- | ------------------ |
-| `roles-autorole`   | `modules/roles/autorole`   | `roles.autorole`   |
-| `roles-voiceroles` | `modules/roles/voiceroles` | `roles.voiceroles` |
-| `roles-bulkrole`   | `modules/roles/bulkrole`   | `roles.bulkrole`   |
+| `autorole`   | `modules/roles/autorole`   | `roles.autorole`   |
+| `voiceroles` | `modules/roles/voiceroles` | `roles.voiceroles` |
+| `bulkrole`   | `modules/roles/bulkrole`   | `roles.bulkrole`   |
 
 All three require **Manage Server** or their permit node. Replies are Components
 V2 cards only. Shared access, config, and hierarchy helpers live in
 `modules/shared/roles.ts`.
 
-`/config roles-autorole` and `/config roles-voiceroles` open ephemeral management
+`/config autorole` and `/config voiceroles` open ephemeral management
 panels (also reachable from `/lumi` → Modules). The `autorole` and `voiceroles`
 command definitions are **prefix-only** and are not registered as slash
 commands; `/bulkrole` remains a slash command.
 
 ## Autorole
 
-`roles-autorole` assigns multiple configured roles when a member joins.
+`autorole` assigns multiple configured roles when a member joins.
 
 ### Storage
 
-Settings are stored in `Guild.settings` under `roles-autorole`:
+Settings are stored in `Guild.settings` under `autorole`:
 
 ```ts
 {
@@ -62,7 +62,7 @@ The bot must own a role higher than every target role. Managed roles and
 
 ### Management
 
-- `/config roles-autorole` (or `/lumi` → Modules → Autorole) opens an ephemeral
+- `/config autorole` (or `/lumi` → Modules → Autorole) opens an ephemeral
   panel with the role picker, delay modal, filters (minimum account age,
   required/ignored roles, ignore bots, only-on-join), run/pause/cancel queue
   actions, and a member picker to queue one member immediately.
@@ -80,12 +80,12 @@ The prefix-only command remains available:
 
 ## Voice Roles
 
-`roles-voiceroles` assigns a role while a member is in a mapped voice or stage
+`voiceroles` assigns a role while a member is in a mapped voice or stage
 channel.
 
 ### Storage
 
-Settings are stored in `Guild.settings` under `roles-voiceroles`:
+Settings are stored in `Guild.settings` under `voiceroles`:
 
 ```ts
 {
@@ -119,7 +119,7 @@ Role add and remove use the same hierarchy checks as autorole.
 
 ### Management
 
-- `/config roles-voiceroles` (or `/lumi` → Modules → Voice Roles) opens an
+- `/config voiceroles` (or `/lumi` → Modules → Voice Roles) opens an
   ephemeral panel listing mappings with pagination. Adding a mapping asks for a
   voice/stage channel, then an optional category and the role. Each mapping can
   be enabled/disabled, given a grace period, re-categorised, or removed.
@@ -135,11 +135,11 @@ Removing a mapping also deletes its sessions.
 
 ## Bulk Role
 
-`roles-bulkrole` runs durable add/remove role jobs across filtered members.
+`bulkrole` runs durable add/remove role jobs across filtered members.
 
 ### Storage
 
-Settings are stored in `Guild.settings` under `roles-bulkrole`:
+Settings are stored in `Guild.settings` under `bulkrole`:
 
 ```ts
 {

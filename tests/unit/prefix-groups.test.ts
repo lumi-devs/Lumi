@@ -57,7 +57,7 @@ describe("prefix dispatch", () => {
     registry.add({
       data: commandData(),
       execute,
-      module: "community-tickets",
+      module: "tickets",
     });
 
     const source = message(",tickets setup panel #123456789012345678");

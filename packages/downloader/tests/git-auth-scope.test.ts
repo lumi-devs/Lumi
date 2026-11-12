@@ -1,51 +1,49 @@
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { clone } from "../src/git.js";
+import { createGitAuth } from "../src/git.js";
 
-const roots: string[] = [];
+const previousToken = process.env.GIT_TOKEN;
+const previousUsername = process.env.GIT_USERNAME;
 
-afterEach(async () => {
-  await Promise.all(
-    roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
-  );
+afterEach(() => {
+  if (previousToken === undefined) delete process.env.GIT_TOKEN;
+  else process.env.GIT_TOKEN = previousToken;
+  if (previousUsername === undefined) delete process.env.GIT_USERNAME;
+  else process.env.GIT_USERNAME = previousUsername;
 });
 
 describe("git authentication", () => {
-  it("scopes the auth header to the repository origin", async () => {
-    const bin = await mkdtemp(join(tmpdir(), "lumi-git-auth-"));
-    roots.push(bin);
-    const capture = join(bin, "capture");
-    const git = join(bin, "git");
-    await writeFile(
-      git,
-      '#!/bin/sh\nprintf \'%s\\n%s\\n\' "$GIT_CONFIG_KEY_0" "$GIT_CONFIG_VALUE_0" > "$CAPTURE_FILE"\n',
-    );
-    await chmod(git, 0o755);
-
-    const previousPath = process.env.PATH;
-    const previousToken = process.env.GIT_TOKEN;
-    const previousCapture = process.env.CAPTURE_FILE;
-    process.env.PATH = bin;
+  it("scopes credentials to the repository origin", () => {
     process.env.GIT_TOKEN = "test-token";
-    process.env.CAPTURE_FILE = capture;
-    try {
-      await clone(
-        "https://example.com/org/repo.git",
-        join(bin, "checkout"),
-        null,
-      );
-      const [key, value] = (await readFile(capture, "utf8")).trim().split("\n");
-      expect(key).toBe("http.https://example.com/.extraheader");
-      expect(value).toMatch(/^Authorization: Basic /);
-    } finally {
-      if (previousPath === undefined) delete process.env.PATH;
-      else process.env.PATH = previousPath;
-      if (previousToken === undefined) delete process.env.GIT_TOKEN;
-      else process.env.GIT_TOKEN = previousToken;
-      if (previousCapture === undefined) delete process.env.CAPTURE_FILE;
-      else process.env.CAPTURE_FILE = previousCapture;
-    }
+    const auth = createGitAuth("https://example.com/org/repo.git");
+
+    expect(auth?.("https://example.com/org/repo.git/info/refs")).toEqual({
+      username: "x-access-token",
+      password: "test-token",
+    });
+    expect(auth?.("https://example.com/other/repo.git")).toEqual({
+      username: "x-access-token",
+      password: "test-token",
+    });
+    expect(auth?.("https://evil.example/repo.git")).toBeUndefined();
+    expect(auth?.("https://example.com.evil.example/repo.git")).toBeUndefined();
+  });
+
+  it("returns no credentials without a token or valid URL", () => {
+    delete process.env.GIT_TOKEN;
+    expect(createGitAuth("https://example.com/org/repo.git")).toBeUndefined();
+
+    process.env.GIT_TOKEN = "test-token";
+    expect(createGitAuth("not a url")).toBeUndefined();
+  });
+
+  it("honors a configured username", () => {
+    process.env.GIT_TOKEN = "test-token";
+    process.env.GIT_USERNAME = "custom-user";
+    const auth = createGitAuth("https://example.com/org/repo.git");
+
+    expect(auth?.("https://example.com/org/repo.git")).toEqual({
+      username: "custom-user",
+      password: "test-token",
+    });
   });
 });

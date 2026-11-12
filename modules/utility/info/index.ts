@@ -402,7 +402,7 @@ const avatarViewListener: ListenerDefinition = {
 };
 
 const utilityModule: ModuleDefinition = defineModule({
-  name: "utility-info",
+  name: "info",
   displayName: "Utility",
   emoji: "🔧",
   description:

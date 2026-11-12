@@ -6,7 +6,7 @@ import {
   setStoredJson,
 } from "../../shared/security.js";
 
-const LockedModules = ["moderation-mod"];
+const LockedModules = ["mod"];
 
 function moduleLockKey(guildId: string, moduleName: string): string {
   return ["lumi", "lock", "module", guildId, moduleName].join(":");

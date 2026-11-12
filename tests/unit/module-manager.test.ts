@@ -20,15 +20,15 @@ describe("ModuleManager", () => {
   it("persists the disabled state, updates the loader, and resyncs that guild", async () => {
     const { manager, moduleLoader, prisma, syncCommands } = setup();
 
-    await manager.disable("guild", "utility-afk");
+    await manager.disable("guild", "afk");
 
     expect(prisma.guildModule.upsert).toHaveBeenCalledWith({
-      where: { guildId_module: { guildId: "guild", module: "utility-afk" } },
+      where: { guildId_module: { guildId: "guild", module: "afk" } },
       update: { enabled: false },
-      create: { guildId: "guild", module: "utility-afk", enabled: false },
+      create: { guildId: "guild", module: "afk", enabled: false },
     });
     expect(moduleLoader.setEnabled).toHaveBeenCalledWith(
-      "utility-afk",
+      "afk",
       "guild",
       false,
     );
@@ -38,10 +38,10 @@ describe("ModuleManager", () => {
   it("resyncs the guild after enabling a module", async () => {
     const { manager, moduleLoader, syncCommands } = setup();
 
-    await manager.enable("guild", "utility-afk");
+    await manager.enable("guild", "afk");
 
     expect(moduleLoader.setEnabled).toHaveBeenCalledWith(
-      "utility-afk",
+      "afk",
       "guild",
       true,
     );

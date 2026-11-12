@@ -1,18 +1,18 @@
 {
   "apiVersion": 2,
-  "name": "security-core",
+  "name": "security",
   "displayName": "Security Core",
   "emoji": "🛡️",
   "description": "Shared security settings used by all security modules",
   "version": "2.0.0",
   "category": "Security",
   "entry": "index.ts",
-  "configKey": "security-core",
+  "configKey": "security",
   "requirements": [],
   "conflicts": [],
   "capabilities": [
     {
-      "name": "security-core",
+      "name": "security",
       "version": "2.0.0",
       "provides": [
         "security.config"

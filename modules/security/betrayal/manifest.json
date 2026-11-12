@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-betrayal",
+  "name": "betrayal",
   "displayName": "Betrayal Guard",
   "emoji": "🔍",
   "description": "Velocity monitoring of whitelisted users with per-action minute/hour limits and automatic immunity revocation",
@@ -42,11 +42,11 @@
     }
   ],
   "dependencies": {
-    "security-core": "^2.0.0"
+    "security": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-betrayal",
+      "name": "betrayal",
       "version": "2.0.0",
       "provides": [
         "security.betrayal"

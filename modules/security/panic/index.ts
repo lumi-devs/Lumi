@@ -31,7 +31,7 @@ import {
 } from "../../shared/security.js";
 import { endPanic, getPanic, panicKey, startPanic } from "./state.js";
 
-const ModuleName = "security-panic";
+const ModuleName = "panic";
 
 const PanicConfigSchema = z.object({
   enabled: z.boolean().default(false),

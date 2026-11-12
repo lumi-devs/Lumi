@@ -247,7 +247,7 @@ export async function renderModuleDetail(
               style: enabled ? ButtonStyle.Danger : ButtonStyle.Success,
             }),
           ]),
-      ...(moduleName === "utility-tempvc"
+      ...(moduleName === "tempvc"
         ? [
             createActionButton({
               customId: `lumi:tempvcgens:${safePage}`,
@@ -257,7 +257,7 @@ export async function renderModuleDetail(
             }),
           ]
         : []),
-      ...(moduleName === "roles-autorole"
+      ...(moduleName === "autorole"
         ? [
             createActionButton({
               customId: `lumi:autorole:${safePage}`,
@@ -267,7 +267,7 @@ export async function renderModuleDetail(
             }),
           ]
         : []),
-      ...(moduleName === "roles-voiceroles"
+      ...(moduleName === "voiceroles"
         ? [
             createActionButton({
               customId: `lumi:voiceroles:${safePage}`,
@@ -277,7 +277,7 @@ export async function renderModuleDetail(
             }),
           ]
         : []),
-      ...(moduleName === "role-menus-menu"
+      ...(moduleName === "role-menus"
         ? [
             createActionButton({
               customId: `lumi:rolemenus:${safePage}`,

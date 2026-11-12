@@ -43,7 +43,7 @@ import {
   resolveWebBaseUrl,
 } from "./token.js";
 
-const ModuleName = "security-verification";
+const ModuleName = "verification";
 
 const VerificationConfigSchema = z.object({
   enabled: z.boolean().default(false),

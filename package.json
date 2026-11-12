@@ -32,6 +32,7 @@
     "canvas": "^3.2.3",
     "discord.js": "^14.27.0",
     "ioredis": "^6.0.0",
+    "isomorphic-git": "^1.44.12",
     "prisma": "^7.10.1",
     "zod": "^4.6.7"
   },

@@ -18,55 +18,55 @@ only difference is their discovery root (`modules/` vs `data/addons/`) and
 
 ### Utility
 
-- `utility-afk` — AFK status with mention replies and nickname prefix
-- `utility-nick` — Nickname changes with role hierarchy checks and optional self-service
-- `utility-tempvc` — Join-to-create temporary voice channels with ownership controls. Creation, expiry refresh, and sweep deletion serialize on a per-channel lock so two joins cannot create duplicate channels and a rejoin cannot race an expired-channel delete.
-- `utility-info` — Avatar, banner, whois, serverinfo, and info commands
-- `utility-reminders` — Durable DM-first reminders with snooze, recurring schedules, and retention cleanup
+- `afk` — AFK status with mention replies and nickname prefix
+- `nick` — Nickname changes with role hierarchy checks and optional self-service
+- `tempvc` — Join-to-create temporary voice channels with ownership controls. Creation, expiry refresh, and sweep deletion serialize on a per-channel lock so two joins cannot create duplicate channels and a rejoin cannot race an expired-channel delete.
+- `info` — Avatar, banner, whois, serverinfo, and info commands
+- `reminders` — Durable DM-first reminders with snooze, recurring schedules, and retention cleanup
 
 ### Community
 
-- `community-leveling` — XP, levels, role rewards, leaderboards, voice XP. Level writes advance monotonically through a conditional update, so a delayed XP calculation cannot lower a level or repeat a level-up reward.
-- `community-economy` — Currency, banking, rewards, shop, balance cards
-- `community-quote` — `/quote` plus `,quote`/`,q` prefix quotes, with optional quote channel, dark/color theme, watermark, name/avatar source, markdown stripping, and mention resolution
-- `community-stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
-- `community-tickets` — Private-thread ticket panels, categories, claims, priorities, notes, tags, feedback, and HTML transcripts
+- `leveling` — XP, levels, role rewards, leaderboards, voice XP. Level writes advance monotonically through a conditional update, so a delayed XP calculation cannot lower a level or repeat a level-up reward.
+- `economy` — Currency, banking, rewards, shop, balance cards
+- `quote` — `/quote` plus `,quote`/`,q` prefix quotes, with optional quote channel, dark/color theme, watermark, name/avatar source, markdown stripping, and mention resolution
+- `stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
+- `tickets` — Private-thread ticket panels, categories, claims, priorities, notes, tags, feedback, and HTML transcripts
 
 ### Custom Commands
 
-- `custom-commands-core` — Guild-authored Mustache-style commands with triggers, KV, cron/interval schedules, and card responses
+- `custom-commands` — Guild-authored Mustache-style commands with triggers, KV, cron/interval schedules, and card responses
 
 ### Role Menus
 
-- `role-menus-menu` — Button, select, and reaction role menus with single/multiple modes and temporary roles
+- `role-menus` — Button, select, and reaction role menus with single/multiple modes and temporary roles
 
 ### Roles
 
-- `roles-autorole` — Join autoroles with delays and filters
-- `roles-voiceroles` — Per voice/stage channel roles with grace periods
-- `roles-bulkrole` — Resumable bulk add/remove role jobs with filters and dry runs
+- `autorole` — Join autoroles with delays and filters
+- `voiceroles` — Per voice/stage channel roles with grace periods
+- `bulkrole` — Resumable bulk add/remove role jobs with filters and dry runs
 
 ### Moderation
 
-- `moderation-mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute); destructive actions require the actor's highest role to outrank the target (guild owner bypasses, Administrators do not)
+- `mod` — Case-backed moderation (ban, kick, timeout, warn, purge, notes, lockdown, quarantine, voice mute); destructive actions require the actor's highest role to outrank the target (guild owner bypasses, Administrators do not)
 
 ### Logging
 
-- `logging-logs` — Message, edit, delete, voice, and moderation logging. Message
+- `logs` — Message, edit, delete, voice, and moderation logging. Message
   content is placed in dynamic-length code fences and user/author mentions are
   inline-coded so stored text cannot inject formatting, links, or spoilers.
 
 ### Security
 
-- `security-core` — Shared security settings (log channel, quarantine role, trusted roles) used by the other security modules
-- `security-antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses
-- `security-join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
-- `security-verification` — Member verification with emoji captcha, web verification, pending/verified roles
-- `security-panic` — Automated server lockdown, channel locking, invite disabling
-- `security-backups` — Periodic server structure snapshots with per-backup stats, safe-repair restore previews (create missing, update existing, never delete), and confirm/reject controls in Discord and the dashboard. Restore preflights the bot member and Manage Roles/Manage Channels before mutating; partial failures return warnings and are shown as a warning card and security log instead of a success message.
-- `security-betrayal` — Velocity monitoring of whitelisted users with per-action limits
-- `security-autorecovery` — Automatic server restore from latest backup when panic triggers
-- `security-automod` — Heat-based automod with 13 filters, escalating punishments, permit-based immunity
+- `security` — Shared security settings (log channel, quarantine role, trusted roles) used by the other security modules
+- `antinuke` — Anti-nuke detection with sliding windows, quarantine/ban responses
+- `join-gate` — On-join security filters: no avatar, min age, unverified bots, advertising, raid detection
+- `verification` — Member verification with emoji captcha, web verification, pending/verified roles
+- `panic` — Automated server lockdown, channel locking, invite disabling
+- `backups` — Periodic server structure snapshots with per-backup stats, safe-repair restore previews (create missing, update existing, never delete), and confirm/reject controls in Discord and the dashboard. Restore preflights the bot member and Manage Roles/Manage Channels before mutating; partial failures return warnings and are shown as a warning card and security log instead of a success message.
+- `betrayal` — Velocity monitoring of whitelisted users with per-action limits
+- `autorecovery` — Automatic server restore from latest backup when panic triggers
+- `automod` — Heat-based automod with 13 filters, escalating punishments, permit-based immunity
 
 ## Layout
 
@@ -100,8 +100,8 @@ a module.
   semver range skips the module; a missing dependency only logs a warning.
 - `conflicts` lists module names that cannot coexist. If any listed module is
   available, the loader logs a warning and skips the conflicting module.
-- Shared settings live in a normal module. Examples: `security-core`,
-  `logging-logs`, `role-menus-menu`.
+- Shared settings live in a normal module. Examples: `security`,
+  `logs`, `role-menus`.
 - The `/lumi` Modules tab lists bundled modules only, grouped by the optional
   manifest `category` (falling back to `Other`). Add-ons appear in the Add-ons
   tab and never in the Modules tab.
@@ -144,14 +144,14 @@ filter as well.
 ```json
 {
   "apiVersion": 2,
-  "name": "utility-afk",
+  "name": "afk",
   "displayName": "AFK",
   "emoji": "💤",
   "description": "Set AFK status with mention replies and nickname prefix",
   "version": "2.0.0",
   "category": "Utility",
   "entry": "index.ts",
-  "dependencies": { "utility-info": "^2.0.0" },
+  "dependencies": { "info": "^2.0.0" },
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
@@ -171,7 +171,7 @@ filter as well.
 - Bundled modules share the root `package.json` runtime dependencies, matching
   Redbot's central cogs. `requirements` is for downloadable add-ons; the
   add-on downloader installs those specs into the add-on directory.
-- `community-quote` intentionally declares `makeitaquote` in its manifest
+- `quote` intentionally declares `makeitaquote` in its manifest
   `requirements` as a working example of the field. Because it is a bundled
   module, the downloader does not install it automatically; use
   `bun add --no-save --ignore-scripts makeitaquote@^12.1.6` for local
@@ -183,7 +183,7 @@ filter as well.
 ```ts
 // index.ts
 export default defineModule({
-  name: "utility-afk",
+  name: "afk",
   displayName: "AFK",
   emoji: "💤",
   description: "Set AFK status with mention replies and nickname prefix",
@@ -212,9 +212,9 @@ show no editable settings.
 
 A manifest may set `configKey` when its stored settings key differs from its
 module name. The panel reads and writes that key, so module code and the panel
-must use the same key. Examples: `community-leveling` stores its settings under
-`leveling`, `security-core` under `security-core`, `logging-logs` under
-`logging-logs`, and `role-menus-menu` under `role-menus-menu`.
+must use the same key. Examples: `leveling` stores its settings under
+`leveling`, `security` under `security`, `logs` under
+`logs`, and `role-menus` under `role-menus`.
 
 The loader verifies the definition `name` matches the manifest. The host
 attaches every command to its owning module; a command name that collides with

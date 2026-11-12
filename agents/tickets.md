@@ -1,6 +1,6 @@
 # Tickets
 
-Module: `modules/community/tickets/` (`community-tickets`, config key
+Module: `modules/community/tickets/` (`tickets`, config key
 `tickets`). The module is
 toggleable per guild; when disabled its commands, listeners, and auto-close
 sweep stop for that guild.

@@ -1,3 +1,3 @@
-export const ModerationConfigKey = "moderation-mod";
+export const ModerationConfigKey = "mod";
 
-export const ModerationModuleName = "moderation-mod";
+export const ModerationModuleName = "mod";

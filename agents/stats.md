@@ -1,6 +1,6 @@
 # Server Stats
 
-Module: `modules/community/stats/` (`community-stats`, config key `stats`).
+Module: `modules/community/stats/` (`stats`, config key `stats`).
 Guild-only. It owns
 message, voice, member, status, and boost statistics and renders Statbot-style
 PNG cards with Lumi branding through `canvas`.

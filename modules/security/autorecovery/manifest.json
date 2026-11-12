@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-autorecovery",
+  "name": "autorecovery",
   "displayName": "Auto Recovery",
   "emoji": "♻️",
   "description": "Automatic server restore from latest backup when panic mode triggers or nuke detected",
@@ -31,12 +31,12 @@
     }
   ],
   "dependencies": {
-    "security-backups": "^2.0.0",
-    "security-core": "^2.0.0"
+    "backups": "^2.0.0",
+    "security": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-autorecovery",
+      "name": "autorecovery",
       "version": "2.0.0",
       "provides": [
         "security.autorecovery"

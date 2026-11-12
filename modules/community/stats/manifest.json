@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "community-stats",
+  "name": "stats",
   "displayName": "Server Stats",
   "emoji": "📊",
   "description": "Server statistics with message, voice, member, status, and boost tracking",
@@ -12,7 +12,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "community-stats",
+      "name": "stats",
       "version": "1.0.0",
       "provides": [
         "stats.tracking",

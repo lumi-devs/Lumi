@@ -23,7 +23,7 @@ import {
   sendSecurityLog,
 } from "../../shared/security.js";
 
-const ModuleName = "security-join-gate";
+const ModuleName = "join-gate";
 
 const JoinGateConfigSchema = z.object({
   enabled: z.boolean().default(false),

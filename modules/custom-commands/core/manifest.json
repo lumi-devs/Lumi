@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "custom-commands-core",
+  "name": "custom-commands",
   "displayName": "Custom Commands",
   "emoji": "🧩",
   "description": "Guild-authored commands with safe templates, triggers, schedules, and per-user KV storage",
@@ -12,7 +12,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "custom-commands-core",
+      "name": "custom-commands",
       "version": "2.0.0",
       "provides": [
         "custom-commands.engine",

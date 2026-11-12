@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "community-quote",
+  "name": "quote",
   "displayName": "Quotes",
   "emoji": "💬",
   "description": "Turn messages and text into \"Make it a Quote\" images",
@@ -14,7 +14,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "community-quote",
+      "name": "quote",
       "version": "1.0.0",
       "provides": [
         "quote.render"

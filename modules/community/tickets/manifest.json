@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "community-tickets",
+  "name": "tickets",
   "displayName": "Tickets",
   "emoji": "🎫",
   "description": "Private support ticket threads with categories, claims, priorities, notes, tags, transcripts, and feedback",
@@ -12,7 +12,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "community-tickets",
+      "name": "tickets",
       "version": "2.0.0",
       "provides": [
         "tickets.threads"

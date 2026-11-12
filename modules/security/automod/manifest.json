@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-automod",
+  "name": "automod",
   "displayName": "Automod",
   "emoji": "🤖",
   "description": "Heat-based automod with 13 filters, escalating punishments, and permit-based immunity",
@@ -344,12 +344,12 @@
     }
   ],
   "dependencies": {
-    "security-core": "^2.0.0",
-    "security-panic": "^2.0.0"
+    "security": "^2.0.0",
+    "panic": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-automod",
+      "name": "automod",
       "version": "2.0.0",
       "provides": [
         "security.automod"

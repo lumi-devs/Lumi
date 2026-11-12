@@ -45,7 +45,7 @@ import {
   setStoredJson,
 } from "../../shared/security.js";
 
-const ModuleName = "security-automod";
+const ModuleName = "automod";
 
 const AutomodConfigSchema = z.object({
   enabled: z.boolean().default(false),

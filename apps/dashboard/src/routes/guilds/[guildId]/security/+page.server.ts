@@ -124,7 +124,7 @@ function panicKey(guildId: string): string {
 }
 
 function moduleLockKey(guildId: string): string {
-  return `lumi:lock:module:${guildId}:moderation-mod`;
+  return `lumi:lock:module:${guildId}:mod`;
 }
 
 async function currentPanic(guildId: string) {
@@ -177,12 +177,12 @@ export const load: PageServerLoad = async (event) => {
   }
 
   return {
-    security: parseOr(SecurityLoad, settings["security-core"], {
+    security: parseOr(SecurityLoad, settings.security, {
       logChannelId: null,
       quarantineRoleId: null,
       trustedRoleIds: [],
     }),
-    panicConfig: parseOr(PanicLoad, settings["security-panic"], {
+    panicConfig: parseOr(PanicLoad, settings.panic, {
       enabled: false,
       burstLimit: 3,
       burstWindowSeconds: 2,
@@ -190,12 +190,12 @@ export const load: PageServerLoad = async (event) => {
       notifyOwners: true,
       lockModCommands: false,
     }),
-    backupsConfig: parseOr(BackupsLoad, settings["security-backups"], {
+    backupsConfig: parseOr(BackupsLoad, settings.backups, {
       enabled: false,
       intervalHours: 3,
       keepCount: 10,
     }),
-    verification: parseOr(VerificationLoad, settings["security-verification"], {
+    verification: parseOr(VerificationLoad, settings.verification, {
       enabled: false,
       verifiedRoleId: null,
       pendingRoleId: null,
@@ -247,13 +247,13 @@ export const actions: Actions = {
     });
     if (!targets.ok) return fail(targets.status, { error: targets.message });
 
-    await setGuildSetting(guildId, "security-core", parsed.data);
+    await setGuildSetting(guildId, "security", parsed.data);
     await recordAudit({
       guildId,
       userId,
       action: "dashboard.security.config",
       targetType: "guild_settings",
-      changes: { key: "security-core" },
+      changes: { key: "security" },
     });
     return { success: "Security settings saved." };
   },
@@ -271,13 +271,13 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    await setGuildSetting(guildId, "security-panic", parsed.data);
+    await setGuildSetting(guildId, "panic", parsed.data);
     await recordAudit({
       guildId,
       userId,
       action: "dashboard.security.panic_config",
       targetType: "guild_settings",
-      changes: { key: "security-panic" },
+      changes: { key: "panic" },
     });
     return { success: "Panic mode settings saved." };
   },
@@ -292,13 +292,13 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    await setGuildSetting(guildId, "security-backups", parsed.data);
+    await setGuildSetting(guildId, "backups", parsed.data);
     await recordAudit({
       guildId,
       userId,
       action: "dashboard.security.backups_config",
       targetType: "guild_settings",
-      changes: { key: "security-backups" },
+      changes: { key: "backups" },
     });
     return { success: "Backup settings saved." };
   },
@@ -384,7 +384,7 @@ export const actions: Actions = {
     const existing = await readGuildSettings(guildId);
     const current = parseOr(
       VerificationLoad,
-      existing["security-verification"],
+      existing.verification,
       {
         enabled: false,
         verifiedRoleId: null,
@@ -395,23 +395,23 @@ export const actions: Actions = {
         target: "everyone",
       },
     );
-    await setGuildSetting(guildId, "security-verification", {
+    await setGuildSetting(guildId, "verification", {
       ...current,
       ...parsed.data,
     });
     await ensureGuild(guildId);
     await getPrisma().guildModule.upsert({
-      where: { guildId_module: { guildId, module: "security-verification" } },
+      where: { guildId_module: { guildId, module: "verification" } },
       update: { enabled: parsed.data.enabled },
       create: {
         guildId,
-        module: "security-verification",
+        module: "verification",
         enabled: parsed.data.enabled,
       },
     });
     const sync = await setModuleStateViaRpc(
       guildId,
-      "security-verification",
+      "verification",
       parsed.data.enabled,
     );
     await recordAudit({
@@ -419,7 +419,7 @@ export const actions: Actions = {
       userId,
       action: "dashboard.security.verification_config",
       targetType: "guild_settings",
-      changes: { key: "security-verification" },
+      changes: { key: "verification" },
     });
     return {
       success: "Verification settings saved.",
@@ -495,7 +495,7 @@ export const actions: Actions = {
     const settings = await readGuildSettings(guildId);
     const verification = parseOr(
       VerificationLoad,
-      settings["security-verification"],
+      settings.verification,
       {
         enabled: false,
         verifiedRoleId: null,

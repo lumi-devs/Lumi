@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "roles-bulkrole",
+  "name": "bulkrole",
   "displayName": "Bulk Role",
   "emoji": "🧰",
   "description": "Durable bulk add or remove role jobs with filters, dry-run previews, and resumable progress",
@@ -11,7 +11,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "roles-bulkrole",
+      "name": "bulkrole",
       "version": "2.0.0",
       "provides": [
         "roles.bulk"

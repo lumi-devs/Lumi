@@ -73,7 +73,7 @@ async function loadToken(token: string) {
 
 async function verificationSettings(guildId: string) {
   const settings = await readGuildSettings(guildId);
-  const raw = settings["security-verification"];
+  const raw = settings.verification;
   const parsed = VerificationSettingsSchema.safeParse(
     raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {},
   );

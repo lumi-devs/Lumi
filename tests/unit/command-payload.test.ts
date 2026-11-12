@@ -19,11 +19,11 @@ describe("commandPayloadForGuild", () => {
   it("keeps built-in commands and removes disabled module commands", () => {
     const registry = new CommandRegistry();
     registry.add(command("ping", null));
-    registry.add(command("afk", "utility-afk"));
-    registry.add(command("rank", "community-leveling"));
+    registry.add(command("afk", "afk"));
+    registry.add(command("rank", "leveling"));
     const loader = {
       isActive: (guildId: string, name: string) =>
-        guildId !== "guild" || name !== "utility-afk",
+        guildId !== "guild" || name !== "afk",
     };
 
     expect(
@@ -36,10 +36,10 @@ describe("commandPayloadForGuild", () => {
   it("excludes prefix-only commands from the slash payload", () => {
     const registry = new CommandRegistry();
     registry.add({
-      ...command("autorole", "roles-autorole"),
+      ...command("autorole", "autorole"),
       prefixOnly: true,
     });
-    registry.add(command("bulkrole", "roles-bulkrole"));
+    registry.add(command("bulkrole", "bulkrole"));
     const loader = { isActive: () => true };
 
     expect(
@@ -53,7 +53,7 @@ describe("commandPayloadForGuild", () => {
   it("includes every command for guilds with all modules active", () => {
     const registry = new CommandRegistry();
     registry.add(command("ping", null));
-    registry.add(command("afk", "utility-afk"));
+    registry.add(command("afk", "afk"));
     const loader = { isActive: () => true };
 
     expect(

@@ -26,7 +26,7 @@ import {
   selectionSuccessCard,
 } from "./ui.js";
 
-const ModuleName = "role-menus-menu";
+const ModuleName = "role-menus";
 
 async function replyError(
   interaction: ButtonInteraction | StringSelectMenuInteraction,

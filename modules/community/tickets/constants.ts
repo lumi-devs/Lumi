@@ -1,4 +1,4 @@
-export const TicketsModuleName = "community-tickets";
+export const TicketsModuleName = "tickets";
 export const TicketsConfigKey = "tickets";
 
 export const Priorities = ["low", "normal", "high", "urgent"] as const;

@@ -1,6 +1,6 @@
 # Custom Commands
 
-Module `custom-commands-core` in `modules/custom-commands/core/`. Guild-only.
+Module `custom-commands` in `modules/custom-commands/core/`. Guild-only.
 Settings key: `customCommands` (the manifest's `configKey`).
 Entry: `/customcommand` with alias `/cc`.
 

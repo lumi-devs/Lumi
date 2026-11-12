@@ -1,6 +1,6 @@
 # Reminders
 
-Module: `modules/utility/reminders/` (`utility-reminders`, config key
+Module: `modules/utility/reminders/` (`reminders`, config key
 `reminders`). Guild-only.
 
 ## Commands

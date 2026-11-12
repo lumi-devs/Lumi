@@ -42,7 +42,7 @@ import {
   sendSecurityLog,
 } from "../../shared/security.js";
 
-const ModuleName = "security-backups";
+const ModuleName = "backups";
 const ButtonPrefix = "lumi:backup";
 
 const BackupsConfigSchema = z.object({

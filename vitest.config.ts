@@ -11,6 +11,14 @@ const packageAliases = readdirSync(resolve(root, "packages")).map((name) => ({
 }));
 
 export default defineConfig({
+  test: {
+    include: [
+      "tests/**/*.test.ts",
+      "packages/*/tests/**/*.test.ts",
+      "modules/**/tests/**/*.test.ts",
+      "apps/*/tests/**/*.test.ts",
+    ],
+  },
   resolve: {
     alias: [
       { find: "@lumi/core", replacement: resolve(root, "src/core") },

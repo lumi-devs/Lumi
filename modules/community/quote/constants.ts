@@ -1,4 +1,4 @@
-export const QuoteModuleName = "community-quote";
+export const QuoteModuleName = "quote";
 export const QuoteConfigKey = "quote";
 export const QuoteRequirement = "makeitaquote@^12.1.6";
 export const QuoteAttachmentName = "quote.png";

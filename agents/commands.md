@@ -46,7 +46,7 @@ omitted. `/permit` requires **Manage Server** or an `admin.*`/`*` permit.
 `/config module:<module>` opens a module's settings panel ephemerally from any
 server. The module option autocompletes loaded modules. It requires
 **Manage Server** or an `admin.*`/`*` permit. Use it for modules whose settings
-have no prefix command (for example `moderation-mod` locks), and for the full
+have no prefix command (for example `mod` locks), and for the full
 autorole, voice-role, and role-menu management panels.
 
 `/tempvc` opens the control panel for the caller's temporary voice channel. Staff

@@ -25,7 +25,17 @@ import { validateAddon } from "./validate.js";
 const AutoUpdateKey = "lumi:addons:autoupdate";
 const RepoNameRe = /^[a-z][a-z0-9-]*$/;
 const ModuleNameRe = /^[a-z][a-z0-9-]*$/;
-const BranchRe = /^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*$/;
+const BranchRe = /^[a-zA-Z0-9_.][a-zA-Z0-9_.-]*(?:\/[a-zA-Z0-9_.-]+)*$/;
+
+function isValidBranchName(ref: string): boolean {
+  if (!BranchRe.test(ref) || ref.includes("..")) return false;
+  return ref
+    .split("/")
+    .every(
+      (segment) =>
+        segment !== "." && segment !== ".." && !segment.endsWith(".lock"),
+    );
+}
 const DefaultAutoUpdate: AutoUpdateState = {
   enabled: false,
   intervalMinutes: 360,
@@ -149,10 +159,8 @@ export class AddonManager {
       throw new Error("Repository URLs must not contain credentials.");
     }
     const ref = branch?.trim() || null;
-    if (ref && !BranchRe.test(ref)) {
-      throw new Error(
-        "Branch names may only contain letters, digits, dot, dash, and underscore.",
-      );
+    if (ref && !isValidBranchName(ref)) {
+      throw new Error("Branch name is not a valid git ref.");
     }
 
     return this.run(async () => {

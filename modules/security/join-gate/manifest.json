@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-join-gate",
+  "name": "join-gate",
   "displayName": "Join Gate",
   "emoji": "🚪",
   "description": "On-join security filters: no avatar, min age, unverified bots, advertising names, suspicious accounts, username patterns, and raid detection",
@@ -207,11 +207,11 @@
     }
   ],
   "dependencies": {
-    "security-core": "^2.0.0"
+    "security": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-join-gate",
+      "name": "join-gate",
       "version": "2.0.0",
       "provides": [
         "security.join-gate"

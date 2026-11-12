@@ -51,11 +51,11 @@ independently.
 - `community-*` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
   `economy` (currency, banking, rewards, shop), `stats` (message/voice/member
   tracking and cards), `tickets` (private-thread ticket panels)
-- `custom-commands-core` — guild-authored commands, schedules, KV
-- `logging-logs` — message, edit, delete, voice, moderation logging
-- `moderation-mod` — case-backed ban, kick, timeout, warn, purge, notes,
+- `custom-commands` — guild-authored commands, schedules, KV
+- `logs` — message, edit, delete, voice, moderation logging
+- `mod` — case-backed ban, kick, timeout, warn, purge, notes,
   lockdown, quarantine, softban, voice mute
-- `role-menus-menu` — button/select/reaction role menus
+- `role-menus` — button/select/reaction role menus
 - `roles-*` — `autorole`, `bulkrole`, `voiceroles`
 - `security-*` — `core` (shared security settings), `antinuke`, `automod`,
   `autorecovery`, `backups`, `betrayal`, `join-gate`, `panic`, `verification`

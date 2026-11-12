@@ -289,7 +289,7 @@ const nickDef: CommandDefinition = {
 };
 
 const nickModule: ModuleDefinition = defineModule({
-  name: "utility-nick",
+  name: "nick",
   displayName: "Nicknames",
   emoji: "📛",
   description:

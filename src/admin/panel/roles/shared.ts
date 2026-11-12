@@ -20,9 +20,9 @@ import {
 } from "../common.js";
 import type { BotServices } from "../../../core/contracts.js";
 
-export const AutoroleModuleName = "roles-autorole";
-export const VoiceRolesModuleName = "roles-voiceroles";
-export const RoleMenusModuleName = "role-menus-menu";
+export const AutoroleModuleName = "autorole";
+export const VoiceRolesModuleName = "voiceroles";
+export const RoleMenusModuleName = "role-menus";
 
 export const MaxRoleOptions = 25;
 export const MaxGroupOptions = 20;

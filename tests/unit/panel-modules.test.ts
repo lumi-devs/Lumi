@@ -19,9 +19,9 @@ function summary(
 }
 
 const modules: ModuleSummary[] = [
-  summary("utility-afk", { displayName: "AFK", category: "Utility" }),
-  summary("utility-info", { displayName: "Info", category: "Utility" }),
-  summary("security-antinuke", {
+  summary("afk", { displayName: "AFK", category: "Utility" }),
+  summary("info", { displayName: "Info", category: "Utility" }),
+  summary("antinuke", {
     displayName: "Anti-nuke",
     category: "Security",
   }),
@@ -33,7 +33,7 @@ const modules: ModuleSummary[] = [
   summary("uncategorized", { displayName: "Uncategorized" }),
 ];
 
-const enabled = new Set(["utility-afk", "addon-status"]);
+const enabled = new Set(["afk", "addon-status"]);
 const isEnabled = (name: string) => enabled.has(name);
 
 describe("moduleItems", () => {
@@ -45,17 +45,17 @@ describe("moduleItems", () => {
         enabled: false,
       }),
       expect.objectContaining({
-        name: "security-antinuke",
+        name: "antinuke",
         category: "Security",
         enabled: false,
       }),
       expect.objectContaining({
-        name: "utility-afk",
+        name: "afk",
         category: "Utility",
         enabled: true,
       }),
       expect.objectContaining({
-        name: "utility-info",
+        name: "info",
         category: "Utility",
         enabled: false,
       }),

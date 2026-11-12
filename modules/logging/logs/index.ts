@@ -379,7 +379,7 @@ const onVoiceStateListener: ListenerDefinition = {
 };
 
 const loggingModule: ModuleDefinition = defineModule({
-  name: "logging-logs",
+  name: "logs",
   displayName: "Logging",
   emoji: "📝",
   description: "Message, edit, delete, voice, and moderation logging",

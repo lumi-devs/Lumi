@@ -1,13 +1,13 @@
 {
   "apiVersion": 2,
-  "name": "logging-logs",
+  "name": "logs",
   "displayName": "Logging",
   "emoji": "📝",
   "description": "Message, edit, delete, and voice logging",
   "version": "2.0.0",
   "category": "Logging",
   "entry": "index.ts",
-  "configKey": "logging-logs",
+  "configKey": "logs",
   "configFields": [
     {
       "key": "messageLogChannel",
@@ -59,7 +59,7 @@
   ],
   "capabilities": [
     {
-      "name": "logging-logs",
+      "name": "logs",
       "version": "2.0.0",
       "provides": [
         "logging.channels"

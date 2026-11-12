@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "utility-reminders",
+  "name": "reminders",
   "displayName": "Reminders",
   "emoji": "⏰",
   "description": "Create, list, snooze, and cancel personal reminders",
@@ -12,7 +12,7 @@
   "conflicts": [],
   "capabilities": [
     {
-      "name": "utility-reminders",
+      "name": "reminders",
       "version": "2.0.0",
       "provides": [
         "utility.reminders"

@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "utility-tempvc",
+  "name": "tempvc",
   "displayName": "Temporary Voice",
   "emoji": "🔊",
   "description": "Join-to-create temporary voice channels with ownership controls",
@@ -94,7 +94,7 @@
   ],
   "capabilities": [
     {
-      "name": "utility-tempvc",
+      "name": "tempvc",
       "version": "2.0.0",
       "provides": [
         "utility.tempvc"

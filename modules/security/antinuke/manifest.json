@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-antinuke",
+  "name": "antinuke",
   "displayName": "Anti-Nuke",
   "emoji": "☢️",
   "description": "Anti-nuke detection with sliding windows, quarantine/ban responses, and trusted role exemptions",
@@ -173,11 +173,11 @@
     }
   ],
   "dependencies": {
-    "security-core": "^2.0.0"
+    "security": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-antinuke",
+      "name": "antinuke",
       "version": "2.0.0",
       "provides": [
         "security.antinuke"

@@ -138,7 +138,7 @@ const onInteractionListener: ListenerDefinition = {
 };
 
 const tempvcModule: ModuleDefinition = defineModule({
-  name: "utility-tempvc",
+  name: "tempvc",
   displayName: "Temporary Voice",
   emoji: "🔊",
   description:

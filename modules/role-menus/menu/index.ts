@@ -9,7 +9,7 @@ import {
 import { tempRoleSweep } from "./temp-roles.js";
 
 const RoleMenusMenuModule = defineModule({
-  name: "role-menus-menu",
+  name: "role-menus",
   displayName: "Role Menus",
   emoji: "🎭",
   description:
@@ -24,11 +24,11 @@ const RoleMenusMenuModule = defineModule({
   ],
   tasks: [tempRoleSweep],
   async onLoad(_services) {
-    console.log("[role-menus-menu] Module loaded");
+    console.log("[role-menus] Module loaded");
     return [];
   },
   async onUnload() {
-    console.log("[role-menus-menu] Module unloaded");
+    console.log("[role-menus] Module unloaded");
   },
 });
 

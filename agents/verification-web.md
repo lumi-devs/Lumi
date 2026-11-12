@@ -1,6 +1,6 @@
 # Web verification
 
-Module: `modules/security/verification/` (`security-verification`).
+Module: `modules/security/verification/` (`verification`).
 Dashboard route: `apps/dashboard/src/routes/verify/[token]/`.
 
 ## Flow

@@ -122,7 +122,7 @@ add-ons, whose downloader installs them into the add-on directory. Declare
 module-to-module dependencies in `dependencies` and incompatible module names in
 `conflicts`.
 
-`community-quote` is the exception used as a live example of the field: it
+`quote` is the exception used as a live example of the field: it
 declares `makeitaquote@^12.1.6` in `manifest.requirements` without adding it to
 the root package. Install it for local development with
 `bun add --no-save --ignore-scripts makeitaquote@^12.1.6`; add-on installs run

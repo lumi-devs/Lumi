@@ -3,7 +3,7 @@ import { validateManifest } from "../src/manifest.js";
 
 const base = {
   apiVersion: 2,
-  name: "utility-afk",
+  name: "afk",
   displayName: "AFK",
   emoji: "💤",
   description: "Set AFK status",
@@ -35,20 +35,20 @@ describe("validateManifest", () => {
   it("accepts dependencies, conflicts, and capabilities", () => {
     const manifest = validateManifest({
       ...base,
-      dependencies: { "utility-info": "^2.0.0" },
+      dependencies: { "info": "^2.0.0" },
       requirements: ["lodash@^4.17.21"],
-      conflicts: ["utility-afk-legacy"],
+      conflicts: ["afk-legacy"],
       capabilities: [
         {
-          name: "utility-afk",
+          name: "afk",
           version: "2.0.0",
           provides: ["utility.afk"],
         },
       ],
     });
 
-    expect(manifest.dependencies).toEqual({ "utility-info": "^2.0.0" });
-    expect(manifest.conflicts).toEqual(["utility-afk-legacy"]);
+    expect(manifest.dependencies).toEqual({ "info": "^2.0.0" });
+    expect(manifest.conflicts).toEqual(["afk-legacy"]);
     expect(manifest.capabilities[0]?.provides).toEqual(["utility.afk"]);
   });
 
@@ -56,7 +56,7 @@ describe("validateManifest", () => {
     expect(() =>
       validateManifest({
         ...base,
-        capabilities: [{ name: "utility-afk", version: "2.0.0" }],
+        capabilities: [{ name: "afk", version: "2.0.0" }],
       }),
     ).toThrow();
   });

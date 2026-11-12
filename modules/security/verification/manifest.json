@@ -1,6 +1,6 @@
 {
   "apiVersion": 2,
-  "name": "security-verification",
+  "name": "verification",
   "displayName": "Verification",
   "emoji": "✅",
   "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
@@ -82,11 +82,11 @@
     }
   ],
   "dependencies": {
-    "security-core": "^2.0.0"
+    "security": "^2.0.0"
   },
   "capabilities": [
     {
-      "name": "security-verification",
+      "name": "verification",
       "version": "2.0.0",
       "provides": [
         "security.verification"

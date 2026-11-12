@@ -32,7 +32,7 @@ import {
   setStoredJson,
 } from "../../shared/security.js";
 
-const ModuleName = "security-betrayal";
+const ModuleName = "betrayal";
 
 const BetrayalConfigSchema = z.object({
   enabled: z.boolean().default(false),

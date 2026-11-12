@@ -33,7 +33,7 @@ import {
 import { readModuleConfig, writeModuleConfig } from "./moduleSettings.js";
 import type { BotServices } from "../../core/contracts.js";
 
-export const TempVcModuleName = "utility-tempvc";
+export const TempVcModuleName = "tempvc";
 
 const MaxOptions = 25;
 const MaxListed = 20;

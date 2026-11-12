@@ -1,2 +1,2 @@
-export const EconomyModuleName = "community-economy";
+export const EconomyModuleName = "economy";
 export const EconomyConfigKey = "economy";

@@ -24,7 +24,7 @@ import {
   sendSecurityLog,
 } from "../../shared/security.js";
 
-const ModuleName = "security-autorecovery";
+const ModuleName = "autorecovery";
 
 const AutoRecoveryConfigSchema = z.object({
   enabled: z.boolean().default(false),

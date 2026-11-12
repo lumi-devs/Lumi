@@ -153,16 +153,16 @@ describe("ModuleHost", () => {
   });
 
   it("mounts a flat module by exact name", async () => {
-    const addon = loadedModule("utility-afk", { commands: ["afk"] });
+    const addon = loadedModule("afk", { commands: ["afk"] });
     const { host, registry, loader } = setup([addon]);
 
-    await host.mount("utility-afk");
+    await host.mount("afk");
 
     expect(loader.loadAll).toHaveBeenCalledWith(
       [addon],
       expect.anything(),
     );
-    expect(registry.get("afk")?.module).toBe("utility-afk");
+    expect(registry.get("afk")?.module).toBe("afk");
   });
 
   it("detaches commands and listeners when a module unmounts", async () => {

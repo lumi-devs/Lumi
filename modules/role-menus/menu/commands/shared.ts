@@ -12,7 +12,7 @@ import { formatTempDuration } from "../selection.js";
 import { findGroup, type GroupRecord } from "../service.js";
 import { groupMode } from "../ui.js";
 
-export const ModuleName = "role-menus-menu";
+export const ModuleName = "role-menus";
 export const PermitNode = "rolemenu.manage";
 
 export function roleIdsOf(

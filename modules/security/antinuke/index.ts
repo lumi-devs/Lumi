@@ -28,7 +28,7 @@ import {
   setStoredJson,
 } from "../../shared/security.js";
 
-const ModuleName = "security-antinuke";
+const ModuleName = "antinuke";
 
 const AntiNukeConfigSchema = z.object({
   enabled: z.boolean().default(false),
