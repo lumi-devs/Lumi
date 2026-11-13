@@ -42,3 +42,4 @@ export function defineModule<T extends ModuleDefinition>(def: T): T {
 }
 
 export * from "./types.js";
+export * from "./lock.js";

@@ -97,11 +97,11 @@ const rankDef: CommandDefinition = {
     const bar = `${"█".repeat(filled)}${"░".repeat(10 - filled)}`;
 
     const body = [
-      `**Level** — ${progress.level}\n**Rank** — #${rank} / ${totalUsers}\n**XP** — ${totalXp.toLocaleString()}`,
+      `**Level** — ${progress.level}\n**Rank** — #${rank} / ${totalUsers}\n**XP** — ${totalXp}`,
       `${bar} ${Math.round(progress.progress * 100)}%`,
       progress.xpForNext === 0
         ? "**Max level reached**"
-        : `**To next level** — ${progress.xpForNext.toLocaleString()} XP`,
+        : `**To next level** — ${progress.xpForNext} XP`,
     ];
 
     const footer = `${config.xpPerMessage} XP per message · ${config.voiceXpPerMinute} XP per VC minute`;
@@ -202,12 +202,12 @@ async function renderLeaderboard(
       const member = guild?.members.cache.get(u.userId);
       const name = member?.user.tag ?? `Unknown (${u.userId})`;
       if (boardType === "voice") {
-        return `**#${(page - 1) * perPage + i + 1}** ${name} — ${u.voiceMinutes.toLocaleString()} voice minutes`;
+        return `**#${(page - 1) * perPage + i + 1}** ${name} — ${u.voiceMinutes} voice minutes`;
       }
       const totalXp = Number(u.totalXp);
       const { level } = levelForTotalXp(config.levelFormula, totalXp);
       const progress = levelProgress(config.levelFormula, totalXp, level);
-      return `**#${(page - 1) * perPage + i + 1}** ${name} — Level ${progress.level} · ${totalXp.toLocaleString()} XP (${progress.xpForNext.toLocaleString()} to next)`;
+      return `**#${(page - 1) * perPage + i + 1}** ${name} — Level ${progress.level} · ${totalXp} XP (${progress.xpForNext} to next)`;
     },
   );
 

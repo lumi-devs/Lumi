@@ -17,25 +17,38 @@ import {
   type StatsCardPayload,
 } from "../statsCard.js";
 
-export const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
+const Months = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
-const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
+function utcDate(date: Date, includeYear: boolean): string {
+  const base = `${Months[date.getUTCMonth()]} ${date.getUTCDate()}`;
+  return includeYear ? `${base}, ${date.getUTCFullYear()}` : base;
+}
 
-const hourFormatter = new Intl.DateTimeFormat("en-US", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-  timeZone: "UTC",
-});
+export const dateFormatter = {
+  format: (date: Date): string => utcDate(date, true),
+};
+
+const shortDateFormatter = {
+  format: (date: Date): string => utcDate(date, false),
+};
+
+const hourFormatter = {
+  format: (date: Date): string =>
+    `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`,
+};
 
 export const ChartPointCount = 42;
 

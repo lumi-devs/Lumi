@@ -38,3 +38,9 @@ const value = await services.helpers.moduleData.get<T>(
   has real relational structure or cross-row queries. `moduleData` is for
   feature-local key/value state.
 - Never read `prisma` or the cache client directly from module code.
+- `list` is ordered by `(guildId, targetId, key)` and capped at 5,000 rows. For
+  unbounded scans, request the next page with `after` set to the last returned
+  entry; stop when a page is smaller than the requested `limit`. A single
+  `list` call with a large limit silently truncates.
+- `set` has no compare-and-swap. Wrap read-modify-write sequences in
+  `withKeyLock(services, key, task)` from `@lumi/module-kit`.

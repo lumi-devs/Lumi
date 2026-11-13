@@ -17,6 +17,7 @@ export interface ModuleDataQuery {
   targetId?: string;
   key?: string;
   prefix?: string;
+  after?: { guildId: string; targetId: string; key: string };
   limit?: number;
 }
 
@@ -346,6 +347,20 @@ export function createModuleDataHelpers(ctx: DbContext) {
           : query.key !== undefined
             ? query.key
             : undefined;
+      const after = query.after;
+      const cursor: Prisma.ModuleDataWhereInput | null = after
+        ? {
+            OR: [
+              { guildId: { gt: after.guildId } },
+              { guildId: after.guildId, targetId: { gt: after.targetId } },
+              {
+                guildId: after.guildId,
+                targetId: after.targetId,
+                key: { gt: after.key },
+              },
+            ],
+          }
+        : null;
       const rows = await prisma.moduleData.findMany({
         where: {
           ...(query.guildId !== undefined ? { guildId: query.guildId } : {}),
@@ -354,7 +369,10 @@ export function createModuleDataHelpers(ctx: DbContext) {
             ? { targetId: query.targetId }
             : {}),
           ...(keyFilter !== undefined ? { key: keyFilter } : {}),
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          AND: [
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+            ...(cursor ? [cursor] : []),
+          ],
         },
         orderBy: [{ guildId: "asc" }, { targetId: "asc" }, { key: "asc" }],
         take:

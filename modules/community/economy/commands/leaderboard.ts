@@ -59,7 +59,7 @@ export const leaderboardDef: CommandDefinition = {
       (user: { userId: string; balance: bigint }, index: number) => {
         const member = guild.members.cache.get(user.userId);
         const name = member?.user.tag ?? `Unknown (${user.userId})`;
-        return `**#${(page - 1) * PerPage + index + 1}** ${name} — ${symbol} ${user.balance.toLocaleString()}`;
+        return `**#${(page - 1) * PerPage + index + 1}** ${name} — ${symbol} ${user.balance}`;
       },
     );
 

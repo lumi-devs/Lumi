@@ -24,10 +24,10 @@ export const balanceDef: CommandDefinition = {
     const symbol = config.currencySymbol;
     const title = `${symbol} ${target.username}`;
     const body = [
-      `**${symbol} Wallet** — ${user.balance.toLocaleString()}`,
-      `**🏦 Bank** — ${user.bankBalance.toLocaleString()}`,
-      `**📈 Total earned** — ${user.totalEarned.toLocaleString()}`,
-      `**📉 Total spent** — ${user.totalSpent.toLocaleString()}`,
+      `**${symbol} Wallet** — ${user.balance}`,
+      `**🏦 Bank** — ${user.bankBalance}`,
+      `**📈 Total earned** — ${user.totalEarned}`,
+      `**📉 Total spent** — ${user.totalSpent}`,
     ];
     const options = {
       subtitle: `${config.currencyName} • ${target.tag}`,

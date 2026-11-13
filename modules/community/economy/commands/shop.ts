@@ -61,7 +61,7 @@ export const shopDef: CommandDefinition = {
 
     const lines = paginatedItems.map(
       (item) =>
-        `**${item.name}** — ${symbol} ${item.price.toLocaleString()} · ${item.type}\n-# ${item.description}`,
+        `**${item.name}** — ${symbol} ${item.price} · ${item.type}\n-# ${item.description}`,
     );
     const options = {
       subtitle: `${guild.name} · ${currencyName}`,

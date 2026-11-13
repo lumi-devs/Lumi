@@ -194,7 +194,7 @@ function drawShopItem(
   ctx.font = "bold 20px Arial";
   ctx.textAlign = "right";
   ctx.fillText(
-    `${item.currencySymbol} ${item.price.toLocaleString()}`,
+    `${item.currencySymbol} ${item.price}`,
     x + width - 20,
     badgeY + 20,
   );

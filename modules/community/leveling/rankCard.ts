@@ -138,7 +138,7 @@ export async function generateRankCard(data: RankCardData): Promise<Buffer> {
   ctx.fillText(
     data.xpToNext === 0
       ? "MAX LEVEL"
-      : `${data.xp.toLocaleString()} / ${requirement.toLocaleString()} XP`,
+      : `${data.xp} / ${requirement} XP`,
     barX + barWidth - 10,
     barY + 13,
   );

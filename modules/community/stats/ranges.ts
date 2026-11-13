@@ -270,5 +270,5 @@ export function formatCount(value: number): string {
   if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}m`;
   if (abs >= 10_000) return `${(value / 1_000).toFixed(1)}k`;
   if (abs >= 1_000) return `${(value / 1_000).toFixed(2)}k`;
-  return Math.round(value).toLocaleString("en-US");
+  return String(Math.round(value));
 }

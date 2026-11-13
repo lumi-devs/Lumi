@@ -98,8 +98,8 @@ function formatAnnouncement(
   return config.announceMessage
     .replace("{user}", `<@${userId}>`)
     .replace("{level}", String(level))
-    .replace("{xp}", totalXp.toLocaleString())
-    .replace("{xpNeeded}", progress.xpForNext.toLocaleString());
+    .replace("{xp}", String(totalXp))
+    .replace("{xpNeeded}", String(progress.xpForNext));
 }
 
 async function announceLevelUp(
