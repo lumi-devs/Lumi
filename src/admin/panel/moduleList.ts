@@ -1,7 +1,9 @@
 import {
   type CardReply,
+  createStringSelectMenu,
   makeCard,
   makeEmptyCard,
+  row,
   settingRow,
 } from "@lumi/ui";
 import {
@@ -80,7 +82,37 @@ export async function renderModules(
   });
 
   const rows: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [];
-  if (totalPages > 1) rows.push(pageRow("lumi:mods", currentPage, totalPages));
+  if (totalPages > 1) {
+    const jumpOptions = Array.from({ length: totalPages }, (_, index) => {
+      const first = modules[index * ModulesPerPage]!;
+      const last =
+        modules[
+          Math.min(modules.length - 1, (index + 1) * ModulesPerPage - 1)
+        ]!;
+      const section =
+        first.category === last.category
+          ? first.category
+          : `${first.category} → ${last.category}`;
+      return {
+        label: cut(`${section} · ${index + 1}/${totalPages}`, 100),
+        value: String(index),
+        description: cut(
+          `Modules ${index * ModulesPerPage + 1}-${Math.min(modules.length, (index + 1) * ModulesPerPage)} of ${modules.length}`,
+          100,
+        ),
+      };
+    }).slice(0, 25);
+    rows.push(
+      row(
+        createStringSelectMenu({
+          customId: "lumi:mods:jump",
+          placeholder: "Jump to a page…",
+          options: jumpOptions,
+        }),
+      ),
+    );
+    rows.push(pageRow("lumi:mods", currentPage, totalPages));
+  }
 
   const enabledCount = modules.filter((module) => module.enabled).length;
   const footer = [

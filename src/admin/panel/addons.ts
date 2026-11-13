@@ -121,12 +121,16 @@ export async function handleAddonInteraction(
         const branch = interaction.fields.getTextInputValue("branch").trim();
         await interaction.deferUpdate();
         try {
-          await services.addons.addRepo(name, url, branch || undefined);
+          const repo = await services.addons.addRepo(
+            name,
+            url,
+            branch || undefined,
+          );
           await show(
             interaction,
             services,
-            { kind: "repo", name },
-            `Repository ${name} added.`,
+            { kind: "repo", name: repo.name },
+            `Repository ${repo.name} added.`,
           );
         } catch (error) {
           await replyEphemeralError(

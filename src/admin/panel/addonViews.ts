@@ -63,22 +63,21 @@ export function addRepoModal(): ModalBuilder {
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
-          .setCustomId("name")
-          .setLabel("Repository name")
-          .setPlaceholder("community-addons")
-          .setMinLength(1)
-          .setMaxLength(64)
-          .setRequired(true)
-          .setStyle(TextInputStyle.Short),
-      ),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(
-        new TextInputBuilder()
           .setCustomId("url")
           .setLabel("HTTPS git URL")
           .setPlaceholder("https://github.com/owner/repo.git")
           .setMinLength(8)
           .setMaxLength(200)
           .setRequired(true)
+          .setStyle(TextInputStyle.Short),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("name")
+          .setLabel("Repository name (optional)")
+          .setPlaceholder("Auto-generated from the URL")
+          .setMaxLength(64)
+          .setRequired(false)
           .setStyle(TextInputStyle.Short),
       ),
       new ActionRowBuilder<TextInputBuilder>().addComponents(
@@ -119,57 +118,48 @@ async function renderHome(
     services.addons.getAutoUpdate(),
   ]);
 
-  const sections = installed.slice(0, 5).map((addon) =>
+  const sections = [
+    settingRow(`**Repositories:** ${repos.length}`, {
+      customId: "lumi:addon:repos",
+      label: "Repositories",
+      emoji: "🔗",
+      style: ButtonStyle.Primary,
+    }),
+    settingRow(`**Installed:** ${installed.length}`, {
+      customId: "lumi:addon:installed",
+      label: "Installed",
+      emoji: "📦",
+      style: ButtonStyle.Primary,
+    }),
     settingRow(
-      [
-        `${addon.pinned ? "📌" : "📦"} **${addon.name}** \`${addon.version ?? "unknown"}\``,
-        `-# from ${addon.repoName}${addon.pinned ? " · pinned" : ""}`,
-      ],
+      `**Auto-update:** ${auto.enabled ? `every ${formatInterval(auto.intervalMinutes)}` : "disabled"}`,
       {
-        customId: `lumi:modopen:${addon.name}:0`,
-        label: "Open",
+        customId: "lumi:addon:auto",
+        label: "Auto-update",
+        emoji: "🔄",
         style: ButtonStyle.Primary,
       },
     ),
-  );
-
-  return makeCard(
-    undefined,
-    "📦 Add-ons",
-    [
-      ...(notice ? [`✅ ${notice}`, ""] : []),
-      `**Repositories:** ${repos.length}`,
-      `**Installed:** ${installed.length}`,
-      `**Auto-update:** ${auto.enabled ? `every ${formatInterval(auto.intervalMinutes)}` : "disabled"}`,
-    ],
-    {
-      sections,
-      ...panelOptions(
-        interaction,
-        "addons",
-        ["Hub", "Add-ons"],
+    ...installed.slice(0, 5).map((addon) =>
+      settingRow(
         [
-          row(
-            createActionButton({
-              customId: "lumi:addon:repos",
-              label: "Repositories",
-              emoji: "🔗",
-            }),
-            createActionButton({
-              customId: "lumi:addon:installed",
-              label: "Installed",
-              emoji: "📦",
-            }),
-            createActionButton({
-              customId: "lumi:addon:auto",
-              label: "Auto-update",
-              emoji: "🔄",
-            }),
-          ),
+          `${addon.pinned ? "📌" : "📦"} **${addon.name}** \`${addon.version ?? "unknown"}\``,
+          `-# from ${addon.repoName}${addon.pinned ? " · pinned" : ""}`,
         ],
+        {
+          customId: `lumi:modopen:${addon.name}:0`,
+          label: "Open",
+          style: ButtonStyle.Primary,
+        },
       ),
-    },
-  );
+    ),
+  ];
+
+  return makeCard(undefined, "📦 Add-ons", notice ? [`✅ ${notice}`] : [], {
+    sections,
+    separatorBetweenSections: true,
+    ...panelOptions(interaction, "addons", ["Hub", "Add-ons"]),
+  });
 }
 
 async function renderRepos(

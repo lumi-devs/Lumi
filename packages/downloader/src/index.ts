@@ -1,4 +1,5 @@
 export { AddonManager, type AddonManagerOptions } from "./manager.js";
+export { repoNameFromUrl } from "./repoName.js";
 export type {
   AddonLogger,
   AddonNotifier,

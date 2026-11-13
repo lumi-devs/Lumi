@@ -83,8 +83,11 @@ export async function handleModuleAction(
   }
   switch (action) {
     case "mods": {
+      const page = interaction.isStringSelectMenu()
+        ? pageNumber(interaction.values[0])
+        : pageNumber(target);
       await showPanel(interaction, () =>
-        renderModules(interaction, services, pageNumber(target)),
+        renderModules(interaction, services, page),
       );
       return true;
     }

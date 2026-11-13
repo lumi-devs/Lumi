@@ -47,6 +47,7 @@ export interface CardOptions {
   readonly hideTitle?: boolean | undefined;
   readonly noAccent?: boolean | undefined;
   readonly sections?: readonly SectionBuilder[] | undefined;
+  readonly separatorBetweenSections?: boolean | undefined;
   readonly actionRows?: readonly Row[] | undefined;
   readonly separatorAboveActionRows?: boolean | undefined;
   readonly mediaGallery?: MediaGalleryBuilder | undefined;
@@ -104,7 +105,10 @@ function buildContainer(
   }
 
   if (opts.sections && opts.sections.length > 0) {
-    for (const sec of opts.sections) {
+    for (const [index, sec] of opts.sections.entries()) {
+      if (index > 0 && opts.separatorBetweenSections) {
+        c.addSeparatorComponents((sep) => sep.setSpacing(1).setDivider(true));
+      }
       c.addSectionComponents(sec);
     }
   }

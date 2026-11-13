@@ -21,7 +21,8 @@ be installed only once.
 `AddonManager` (constructed in `src/index.ts`):
 
 - `addRepo(name, url, branch)` — validates an HTTPS URL and a lowercase repo
-  name, shallow-clones into `data/repos/<name>`, records the HEAD commit.
+  name (blank names are derived from the URL), shallow-clones into
+  `data/repos/<name>`, records the HEAD commit.
 - `removeRepo(name)` — refuses while add-ons from that repo are installed.
 - `listRepoModules(name)` — reads each top-level directory with a manifest;
   one directory per add-on, manifest at its root.

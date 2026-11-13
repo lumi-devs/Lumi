@@ -6,6 +6,7 @@ import type { ModuleManifest } from "@lumi/module-runtime";
 import type { Redis } from "ioredis";
 import { isMissingPath, pathExists } from "./fs.js";
 import { checkout, clone, fetch, head } from "./git.js";
+import { repoNameFromUrl } from "./repoName.js";
 import { AddonStorage } from "./storage.js";
 import type {
   AddonLogger,
@@ -141,11 +142,6 @@ export class AddonManager {
     url: string,
     branch?: string,
   ): Promise<RepoRecord> {
-    if (!RepoNameRe.test(name)) {
-      throw new Error(
-        "Repository names must be lowercase letters, digits, and dashes.",
-      );
-    }
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -158,30 +154,43 @@ export class AddonManager {
     if (parsedUrl.username || parsedUrl.password) {
       throw new Error("Repository URLs must not contain credentials.");
     }
+    const repoName = name.trim() || repoNameFromUrl(url);
+    if (!RepoNameRe.test(repoName)) {
+      throw new Error(
+        "Repository names must be lowercase letters, digits, and dashes.",
+      );
+    }
     const ref = branch?.trim() || null;
     if (ref && !isValidBranchName(ref)) {
       throw new Error("Branch name is not a valid git ref.");
     }
 
     return this.run(async () => {
-      if (await this.prisma.downloaderRepo.findUnique({ where: { name } })) {
-        throw new Error(`Repository "${name}" is already tracked.`);
+      if (
+        await this.prisma.downloaderRepo.findUnique({
+          where: { name: repoName },
+        })
+      ) {
+        throw new Error(`Repository "${repoName}" is already tracked.`);
       }
 
       await mkdir(this.storage.reposDir, { recursive: true });
-      const dir = this.storage.repoDir(name);
+      const dir = this.storage.repoDir(repoName);
 
       if (await pathExists(join(dir, ".git"))) {
         const commit = await head(dir);
         const repo = await this.prisma.downloaderRepo.create({
-          data: { name, url, branch: ref, commit },
+          data: { name: repoName, url, branch: ref, commit },
         });
-        this.logger.info(`Adopted existing clone for ${name}.`);
+        this.logger.info(`Adopted existing clone for ${repoName}.`);
         return { ...repo, installed: 0 };
       }
 
       await rm(dir, { recursive: true, force: true });
-      const staging = join(this.storage.reposDir, `.${name}-${randomUUID()}`);
+      const staging = join(
+        this.storage.reposDir,
+        `.${repoName}-${randomUUID()}`,
+      );
       try {
         await clone(url, staging, ref);
         await rename(staging, dir);
@@ -192,7 +201,7 @@ export class AddonManager {
 
       const commit = await head(dir);
       const repo = await this.prisma.downloaderRepo.create({
-        data: { name, url, branch: ref, commit },
+        data: { name: repoName, url, branch: ref, commit },
       });
       return { ...repo, installed: 0 };
     });
