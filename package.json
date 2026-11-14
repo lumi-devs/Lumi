@@ -1,6 +1,6 @@
 {
   "name": "@lumi-devs/lumi",
-  "version": "0.6.4",
+  "version": "2.0.0",
   "license": "AGPL-3.0-only",
   "description": "Lumi - modular Discord bot (TypeScript / discord.js / Postgres / Redis). Monorepo root.",
   "type": "module",
