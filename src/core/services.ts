@@ -59,7 +59,11 @@ export function createCoreServices(options: CoreServicesOptions): CoreServices {
     cache,
     configCache,
     permits: new PermitRepository(db, options.redis),
-    configService: new ConfigService(db, configCache),
+    configService: new ConfigService({
+      prisma: db,
+      cache: configCache,
+      invalidation,
+    }),
     scheduler: new DistributedScheduler(options.redis),
     healthMonitor: createHealthMonitor(),
   };

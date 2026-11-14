@@ -69,6 +69,20 @@ async function main(): Promise<void> {
   });
 
   healthMonitor.register({
+    name: "postgres",
+    check: async () => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        return { healthy: true, details: "connected" };
+      } catch (error) {
+        return {
+          healthy: false,
+          details: error instanceof Error ? error.message : "query failed",
+        };
+      }
+    },
+  });
+  healthMonitor.register({
     name: "redis",
     check: async () => ({
       healthy: redis.status === "ready",

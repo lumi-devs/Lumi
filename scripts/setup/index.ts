@@ -29,6 +29,18 @@ import {
   usage,
 } from "./shared.ts";
 
+function versionSatisfies(current: string, required: string): boolean {
+  const currentParts = current.split(".").map(Number);
+  const requiredParts = required.split(".").map(Number);
+  for (let i = 0; i < Math.max(currentParts.length, requiredParts.length); i++) {
+    const c = currentParts[i] ?? 0;
+    const r = requiredParts[i] ?? 0;
+    if (c > r) return true;
+    if (c < r) return false;
+  }
+  return true;
+}
+
 export async function runSetup(options: SetupOptions): Promise<number> {
   if (options.help) {
     process.stdout.write(`${usage()}\n`);
@@ -41,6 +53,15 @@ export async function runSetup(options: SetupOptions): Promise<number> {
   ) {
     process.stderr.write(
       "Run setup from the Lumi repository root after `bun install`.\n",
+    );
+    return 1;
+  }
+
+  const minBunVersion = "1.4.2";
+  const currentBunVersion = process.versions.bun;
+  if (currentBunVersion && !versionSatisfies(currentBunVersion, minBunVersion)) {
+    process.stderr.write(
+      `Bun version ${currentBunVersion} is below minimum required ${minBunVersion}.\n`,
     );
     return 1;
   }

@@ -1,4 +1,5 @@
 import type { NamespacedCache } from "@lumi/cache";
+import type { InvalidationBus } from "@lumi/redis";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 export type GuildSettings = Record<string, unknown>;
@@ -19,14 +20,17 @@ function isRetryableConfigConflict(error: unknown): boolean {
   return code === "P2002" || code === "P2034";
 }
 
+export interface ConfigServiceOptions {
+  readonly prisma: PrismaClient;
+  readonly cache?: NamespacedCache<GuildSettings>;
+  readonly invalidation?: InvalidationBus;
+}
+
 export class ConfigService {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly cache?: NamespacedCache<GuildSettings>,
-  ) {}
+  constructor(private readonly options: ConfigServiceOptions) {}
 
   private async load(guildId: string): Promise<GuildSettings> {
-    const guild = await this.prisma.guild.findUnique({
+    const guild = await this.options.prisma.guild.findUnique({
       where: { id: guildId },
       select: { settings: true },
     });
@@ -34,8 +38,8 @@ export class ConfigService {
   }
 
   private async read(guildId: string): Promise<GuildSettings> {
-    if (!this.cache) return this.load(guildId);
-    const settings = await this.cache.getOrLoad(guildId, ConfigTtlMs, () =>
+    if (!this.options.cache) return this.load(guildId);
+    const settings = await this.options.cache.getOrLoad(guildId, ConfigTtlMs, () =>
       this.load(guildId),
     );
 
@@ -48,7 +52,7 @@ export class ConfigService {
   ): Promise<GuildSettings> {
     for (let attempt = 1; attempt <= MaxConfigAttempts; attempt++) {
       try {
-        const settings = await this.prisma.$transaction(
+        const settings = await this.options.prisma.$transaction(
           async (tx) => {
             const guild = await tx.guild.findUnique({
               where: { id: guildId },
@@ -65,7 +69,8 @@ export class ConfigService {
           },
           { isolationLevel: "Serializable" },
         );
-        await this.cache?.delete(guildId);
+        await this.options.cache?.delete(guildId);
+        await this.options.invalidation?.invalidate("config", [guildId]);
         return settings;
       } catch (error) {
         if (

@@ -1,0 +1,137 @@
+version: '3'
+
+vars:
+  COMPOSE: 'docker compose'
+  BUN: 'bun'
+
+tasks:
+  # Stack Management
+  up:
+    desc: "Start full stack (postgres, redis, bot, dashboard)"
+    cmds:
+      - "{{.COMPOSE}} up -d"
+
+  down:
+    desc: "Stop stack"
+    cmds:
+      - "{{.COMPOSE}} down"
+
+  reset:
+    desc: "Nuke volumes and restart fresh"
+    cmds:
+      - "{{.COMPOSE}} down -v"
+      - "{{.COMPOSE}} up -d"
+
+  logs:
+    desc: "Follow all logs"
+    cmds:
+      - "{{.COMPOSE}} logs -f"
+
+  logs-bot:
+    desc: "Follow bot logs"
+    cmds:
+      - "{{.COMPOSE}} logs -f bot"
+
+  logs-dashboard:
+    desc: "Follow dashboard logs"
+    cmds:
+      - "{{.COMPOSE}} logs -f dashboard"
+
+  # Database
+  migrate:
+    desc: "Run pending migrations"
+    cmds:
+      - "{{.COMPOSE}} --profile migrate run --rm migrate"
+
+  migrate:create:
+    desc: "Create new migration"
+    cmds:
+      - "{{.BUN}} run db:migrate"
+
+  studio:
+    desc: "Open Prisma Studio"
+    cmds:
+      - "{{.BUN}} run db:studio"
+
+  # Development
+  dev:
+    desc: "Start bot in watch mode"
+    cmds:
+      - "{{.BUN}} run dev:bot"
+
+  dev-dashboard:
+    desc: "Start dashboard in watch mode"
+    cmds:
+      - "{{.BUN}} run dashboard:dev"
+
+  # Quality Gates
+  lint:
+    desc: "Run Biome lint"
+    cmds:
+      - "{{.BUN}} run lint"
+
+  lint:fix:
+    desc: "Run Biome lint --write"
+    cmds:
+      - "{{.BUN}} run lint:fix"
+
+  format:
+    desc: "Run Prettier --write"
+    cmds:
+      - "{{.BUN}} run format"
+
+  format:check:
+    desc: "Run Prettier --check"
+    cmds:
+      - "{{.BUN}} run format:check"
+
+  typecheck:
+    desc: "Run TypeScript typecheck"
+    cmds:
+      - "{{.BUN}} run typecheck"
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - "{{.BUN}} run test"
+
+  test:watch:
+    desc: "Run tests in watch mode"
+    cmds:
+      - "{{.BUN}} run test:watch"
+
+  test:coverage:
+    desc: "Run tests with coverage"
+    cmds:
+      - "{{.BUN}} run test:coverage"
+
+  # CI Simulation
+  ci:
+    desc: "Run full CI pipeline locally"
+    cmds:
+      - "{{.BUN}} run lint:fix"
+      - "{{.BUN}} run format:check"
+      - "{{.BUN}} run typecheck"
+      - "{{.BUN}} run test"
+      - "{{.BUN}} run dashboard:build"
+
+  audit:
+    desc: "Run dependency audit (high+)"
+    cmds:
+      - "{{.BUN}} audit --audit-level=high"
+
+  # Setup
+  setup:
+    desc: "Run interactive setup"
+    cmds:
+      - "{{.BUN}} run setup"
+
+  setup:check:
+    desc: "Validate environment without prompts"
+    cmds:
+      - "{{.BUN}} run setup:check"
+
+  # List all tasks
+  default:
+    cmds:
+      - task --list
