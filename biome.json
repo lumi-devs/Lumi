@@ -1,0 +1,65 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**/*.ts",
+      "modules/**/*.ts",
+      "packages/**/*.ts",
+      "tests/**/*.ts",
+      "apps/dashboard/src/**/*.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/**/*.ts", "**/tests/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["modules/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@prisma/client": "Use services.helpers for database access.",
+                  "@lumi/db": "Use services.helpers for database access.",
+                  "@lumi/cache": "Use services.helpers.cache for cache access.",
+                  "@lumi/redis": "Use services.helpers.cache for cache access.",
+                  "ioredis": "Use services.helpers.cache for cache access."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

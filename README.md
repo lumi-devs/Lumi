@@ -1,133 +1,103 @@
-<div align="center">
-  <img src="assets/banner.png" alt="Lumi" width="800">
+# Lumi
 
-  <h3>Modular, self-hosted Discord bot platform for communities that want full control.</h3>
+![Lumi](assets/banner.png)
 
-  <p>
-    <a href="https://github.com/lumi-devs/Lumi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/Lumi/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
-    <a href="https://github.com/lumi-devs/Lumi/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/Lumi/security.yml?branch=main&style=flat-square&label=Security&logo=github" alt="Security"></a>
-    <a href="https://codecov.io/gh/lumi-devs/Lumi"><img src="https://codecov.io/gh/lumi-devs/Lumi/branch/main/graph/badge.svg" alt="Coverage"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-A42E2B?style=flat-square&logo=gnu&logoColor=white" alt="GPL v3"></a>
-    <a href="https://lumi-devs.github.io/Lumi-docs/"><img src="https://img.shields.io/badge/docs-lumi--devs.github.io-4C6EF5?style=flat-square&logo=gitbook&logoColor=white" alt="Documentation"></a>
-  </p>
+Lumi is a self-hosted Discord bot for moderation, community features, and
+server security. It runs as a single Bun process and uses PostgreSQL and Redis.
+A separate SvelteKit dashboard lives in `apps/dashboard`.
 
-  <p>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
-    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
-    <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-blue?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
-    <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
-  </p>
-</div>
+The v2 branch is still in development. Expect schema and configuration changes
+between releases.
 
----
+## What it does
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Redis. It runs as a single process: one Discord gateway client, an embedded RPC bridge, and in-process BullMQ scheduling.
+- Moderation with cases, bans, kicks, timeouts, warnings, notes, purge, channel
+  locks, quarantine, and voice moderation.
+- Numbered permits with schedules, conditions, role and channel assignments,
+  and optional manager bypass rules.
+- Security features including anti-nuke, automod, join gate, verification,
+  panic mode, backups, and auto-recovery.
+- Community tools for leveling, economy, stats, temp voice, AFK, nicknames, and
+  quote images.
+- Custom commands with triggers, key-value storage, and cron or interval
+  schedules.
+- Ticket threads with categories, staff roles, claims, priorities, feedback,
+  and HTML transcripts.
+- Role menus, autorole, voice roles, and resumable bulk role jobs.
+- A web dashboard for guild configuration, permits, cases, security, stats, and
+  web verification.
 
-Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
+## Requirements
 
----
+- Docker Compose, or Bun 1.4.2+ with PostgreSQL 18+ and Redis 8+
+- A Discord application with the Server Members, Message Content, and Presence
+  intents enabled
 
-## Architecture
+## Docker
 
-Lumi is a single-package monolith under `src/`:
+The image is published to `ghcr.io/lumi-devs/lumi`.
 
-| Path | Purpose |
-| :--- | :--- |
-| `src/Index.ts` | The one boot: database → modules → slash registration → RPC → gateway login → scheduling. |
-| `src/modules/*` | Self-contained feature modules (commands, listeners, interactions, tasks, services, data). |
-| `src/lib/*` | Shared framework: database, cache, permits, scheduler, RPC, UI kit, utilities. |
-| `src/cli` | Command-line tool (`lumi`) for operations, migrations, and addon scaffolding. |
-| `src/contracts` | Typed RPC router and schemas for the RPC bridge. |
-| `data/addons` | Third-party addon root. Addons load in-process through the same module loader. |
+```sh
+cp .env.example .env
+# Set BOT_TOKEN, OWNER_IDS, POSTGRES_PASSWORD, REDIS_PASSWORD, and
+# RPC_INTERNAL_TOKEN in .env.
+docker compose pull
+docker compose --profile migrate run --rm migrate
+docker compose up -d
+```
 
-Import aliases: internal code uses the domain aliases in `tsconfig.base.json` (`@lib/*`, `@modules/*`, `@api/*`, `@cache/*`, `@db/*`, ...); addons import the public surface `@lumi/*`.
+Pin `LUMI_TAG` to a release tag in production. Pushes to `v2/develop` publish
+`v2-develop` and commit tags. Stable releases also publish the version tags and
+move `latest`.
 
----
+## From source
 
-## Features
+```sh
+nix develop
+bun install
+bun run setup
+bun run dev:bot
+```
 
-- **Single Process**: Gateway, RPC, and scheduling run in one Bun process.
-- **Red-Style Modules**: Self-contained modules plus third-party addons, loaded by one in-process loader with dependency sorting and per-guild toggles.
-- **Granular Permissions**: Hierarchical, node-based permission system (`mod.*`, `admin.*`) checked before command execution, reorderable from the RPC and the hub panel.
-- **Leveling**: Message and voice XP with 7 selectable level formulas, image rank cards, and Overall / Voice / Weekly / Monthly image leaderboards.
-- **Guild Economy**: Wallet + bank balances with payday, taxed transfers, slots, and a fully audited transaction ledger.
-- **Observability Built-in**: OpenTelemetry tracing and Prometheus metrics.
-- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Redis for caching, locks, and queues.
+`bun run setup` writes `.env`, checks PostgreSQL and Redis, generates the
+Prisma client, and applies migrations. See [SETUP.md](SETUP.md) for manual
+installs, systemd, and other platforms.
 
----
+## Dashboard
 
-## Quickstart
+The dashboard deploys separately from the bot. It needs a Discord OAuth2
+application and the bot RPC settings.
 
-### Prerequisites
+```sh
+bun install
+bun run db:generate
+cp apps/dashboard/.env.example apps/dashboard/.env
+# Fill in the Discord, database, Redis, and session values.
+bun run dashboard:dev
+```
 
-- [Docker](https://docs.docker.com/get-docker/) with the compose plugin
-- Discord Bot Application & Bot Token ([developer portal](https://discord.com/developers/applications))
-  — enable the Server Members, Message Content, and Presence intents under Bot
-
-### Setup
-
-No clone, no build. Two commands:
-
-1. **Answer a few questions** (writes `.env` + `compose.yml` into `./lumi`):
-   ```bash
-   mkdir lumi && cd lumi
-   docker run --rm -it -v .:/setup ghcr.io/lumi-devs/lumi:latest lumi-setup init /setup
-   ```
-
-2. **Start everything** (pulls Postgres, Redis, and the bot; migrations run automatically):
-   ```bash
-   docker compose up -d
-   docker logs -f lumi-bot
-   ```
-
-Then invite the bot via the URL printed in the boot banner (OAuth2 `bot` + `applications.commands`
-scopes) and run `/about` in your server. Updating is `docker compose pull && docker compose up -d`.
-
-Contributors start at [Development](#development) below — that path uses a repo checkout.
-
----
+Use `bun run dashboard:build` for a production build. Keep the dashboard and
+bot on the same release tag.
 
 ## Development
 
-```bash
-# Typecheck
+```sh
 bun run typecheck
-
-# Run linter
-bun run lint
-bun run lint:fix
-
-# Run unit test suite (each file runs in its own process for isolation)
+bun run dashboard:typecheck
 bun run test
+bun run build
+bun run dashboard:build
 ```
 
----
+Formatting uses Prettier and linting uses Biome:
 
-## Addons & CLI
-
-Lumi includes a command-line tool `lumi` (`src/cli`):
-
-```bash
-# Scaffold a new addon module
-bun src/cli/Main.ts addon create my-addon
-
-# Validate an addon
-bun src/cli/Main.ts addon validate my-addon
+```sh
+bun run format
+bun run lint
 ```
 
-Addons consume the bot through `createModuleApi()` (`src/lib/ModuleApi.ts`),
-which hands out a guild-scoped surface: config, `bank` (balances, transfers,
-pay-to-run, leaderboards), `levels` (XP, levels, boards), permits, UI cards,
-KV, files, flags, scheduling, and antispam. See `docs/framework_bank.md` and
-`docs/framework_leveling.md`.
+## Documentation
 
----
-
-## Inspiration
-
-Lumi's module system takes inspiration from [Red-DiscordBot](https://github.com/Cog-Creators/Red-DiscordBot).
-
-## License
-
-Lumi is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
+- [SETUP.md](SETUP.md) covers installation and configuration.
+- [AGENTS.md](AGENTS.md) and [agents/00-index.md](agents/00-index.md) document
+  the codebase for contributors and coding agents.

@@ -1,0 +1,212 @@
+import type { LoadedModule } from "@lumi/module-runtime";
+import { describe, expect, it, vi } from "vitest";
+import { CommandRegistry, ModuleHost } from "../../src/core/modules.ts";
+
+function definition(
+  name: string,
+  options: { commands?: string[]; listeners?: string[] } = {},
+) {
+  return {
+    name,
+    displayName: name,
+    emoji: "x",
+    description: "",
+    version: "1.0.0",
+    config: {},
+    configFields: [],
+    commands: (options.commands ?? []).map((command) => ({
+      data: { name: command, toJSON: () => ({ name: command }) },
+      execute: async () => {},
+    })),
+    listeners: (options.listeners ?? []).map((event) => ({
+      event,
+      handler: async () => {},
+    })),
+    tasks: [],
+    onLoad: async () => [],
+    onUnload: async () => {},
+  } as any;
+}
+
+function loadedModule(
+  name: string,
+  options: { commands?: string[]; listeners?: string[] } = {},
+): LoadedModule {
+  return {
+    manifest: {
+      apiVersion: 2,
+      name,
+      displayName: name,
+      emoji: "x",
+      description: "",
+      version: "1.0.0",
+      entry: "index.ts",
+      dependencies: {},
+      requirements: [],
+      conflicts: [],
+      capabilities: [],
+      configFields: [],
+    },
+    definition: definition(name, options),
+    path: `/tmp/${name}`,
+    origin: "bundled",
+    guildsDisabled: new Set(),
+  };
+}
+
+function fakeLoader(initial: LoadedModule[]) {
+  const modules = new Map(
+    initial.map((module) => [module.manifest.name, module]),
+  );
+
+  return {
+    discover: vi.fn(async () => Array.from(modules.values())),
+    loadAll: vi.fn(async (targets: LoadedModule[]) => targets),
+    unload: vi.fn(async (name: string) => {
+      const module = modules.get(name);
+      if (!module) return [];
+      modules.delete(name);
+      return [module];
+    }),
+    reload: vi.fn(async (name: string) => {
+      const current = modules.get(name);
+      if (current) {
+        modules.set(name, {
+          ...current,
+          definition: definition(name, { commands: ["reloaded"] }),
+        });
+      }
+    }),
+    getModule: vi.fn((name: string) => modules.get(name)),
+    isActive: vi.fn((guildId: string, name: string) => {
+      const module = modules.get(name);
+      return Boolean(module && !module.guildsDisabled.has(guildId));
+    }),
+    listAll: vi.fn(() => Array.from(modules.values())),
+  };
+}
+
+function setup(initial: LoadedModule[]) {
+  const registry = new CommandRegistry();
+  const loader = fakeLoader(initial);
+  const client = {
+    on: vi.fn(),
+    once: vi.fn(),
+    off: vi.fn(),
+  };
+  const syncCommands = vi.fn(async () => {});
+  const logger = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+  const host = new ModuleHost({
+    client: client as any,
+    loader: loader as any,
+    registry,
+    services: {} as never,
+    logger,
+    syncCommands,
+  });
+
+  return { host, registry, loader, client, syncCommands, logger };
+}
+
+describe("ModuleHost", () => {
+  it("attaches commands and listeners when modules load", async () => {
+    const demo = loadedModule("demo", {
+      commands: ["ping"],
+      listeners: ["messageCreate"],
+    });
+    const { host, registry, client, syncCommands } = setup([demo]);
+
+    await host.load([demo]);
+
+    expect(registry.get("ping")?.module).toBe("demo");
+    expect(client.on).toHaveBeenCalledWith(
+      "messageCreate",
+      expect.any(Function),
+    );
+    expect(syncCommands).toHaveBeenCalledOnce();
+  });
+
+  it("shares one client listener across modules for the same event", async () => {
+    const first = loadedModule("first", { listeners: ["messageCreate"] });
+    const second = loadedModule("second", { listeners: ["messageCreate"] });
+    const firstHandler = vi.fn(async () => {});
+    const secondHandler = vi.fn(async () => {});
+    first.definition.listeners[0].handler = firstHandler;
+    second.definition.listeners[0].handler = secondHandler;
+    const { host, client } = setup([first, second]);
+
+    await host.load([first, second]);
+
+    const listeners = client.on.mock.calls.filter(
+      ([event]) => event === "messageCreate",
+    );
+    expect(listeners).toHaveLength(1);
+    (listeners[0]![1] as (message: { guildId: string }) => void)({
+      guildId: "guild",
+    });
+    expect(firstHandler).toHaveBeenCalledOnce();
+    expect(secondHandler).toHaveBeenCalledOnce();
+  });
+
+  it("mounts a flat module by exact name", async () => {
+    const addon = loadedModule("afk", { commands: ["afk"] });
+    const { host, registry, loader } = setup([addon]);
+
+    await host.mount("afk");
+
+    expect(loader.loadAll).toHaveBeenCalledWith(
+      [addon],
+      expect.anything(),
+    );
+    expect(registry.get("afk")?.module).toBe("afk");
+  });
+
+  it("detaches commands and listeners when a module unmounts", async () => {
+    const demo = loadedModule("demo", {
+      commands: ["ping"],
+      listeners: ["messageCreate"],
+    });
+    const { host, registry, client } = setup([demo]);
+    await host.load([demo]);
+
+    await host.unmount("demo");
+
+    expect(registry.get("ping")).toBeUndefined();
+    expect(client.off).toHaveBeenCalledWith(
+      "messageCreate",
+      expect.any(Function),
+    );
+  });
+
+  it("skips listeners for guilds where the module is disabled", async () => {
+    const demo = loadedModule("demo", { listeners: ["messageCreate"] });
+    const handler = vi.fn(async () => {});
+    demo.definition.listeners[0].handler = handler;
+    demo.guildsDisabled.add("guild");
+    const { host, client, loader } = setup([demo]);
+    await host.load([demo]);
+
+    const listener = client.on.mock.calls.find(
+      ([event]) => event === "messageCreate",
+    )?.[1] as (message: { guildId: string }) => void;
+    listener({ guildId: "guild" });
+
+    expect(loader.isActive).toHaveBeenCalledWith("guild", "demo");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("re-registers commands after a reload", async () => {
+    const demo = loadedModule("demo", { commands: ["ping"] });
+    const { host, registry } = setup([demo]);
+    await host.load([demo]);
+
+    await host.reload("demo");
+
+    expect(registry.get("ping")).toBeUndefined();
+    expect(registry.get("reloaded")?.module).toBe("demo");
+  });
+});

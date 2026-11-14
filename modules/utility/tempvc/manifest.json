@@ -1,0 +1,106 @@
+{
+  "apiVersion": 2,
+  "name": "tempvc",
+  "displayName": "Temporary Voice",
+  "emoji": "🔊",
+  "description": "Join-to-create temporary voice channels with ownership controls",
+  "version": "2.0.0",
+  "category": "Utility",
+  "entry": "index.ts",
+  "configFields": [
+    {
+      "key": "categoryId",
+      "label": "Category",
+      "type": "channel",
+      "description": "Category to create channels in",
+      "channelTypes": [
+        4
+      ],
+      "default": null,
+      "category": "Channels"
+    },
+    {
+      "key": "templateName",
+      "label": "Channel Name Template",
+      "type": "string",
+      "description": "Use {user} for username",
+      "default": "➕ {user}'s Channel",
+      "category": "Channels"
+    },
+    {
+      "key": "defaultBitrate",
+      "label": "Default Bitrate",
+      "type": "number",
+      "description": "Bitrate in bps (8000-384000)",
+      "default": 64000,
+      "category": "Channels"
+    },
+    {
+      "key": "defaultUserLimit",
+      "label": "Default User Limit",
+      "type": "number",
+      "description": "0 = unlimited",
+      "default": 0,
+      "category": "Channels"
+    },
+    {
+      "key": "maxChannels",
+      "label": "Max Channels",
+      "type": "number",
+      "description": "Guild-wide limit",
+      "default": 50,
+      "category": "Limits"
+    },
+    {
+      "key": "maxPerUser",
+      "label": "Max Per User",
+      "type": "number",
+      "description": "How many channels one user can own",
+      "default": 1,
+      "category": "Limits"
+    },
+    {
+      "key": "emptyTimeoutMs",
+      "label": "Empty Timeout (ms)",
+      "type": "number",
+      "description": "Delete after empty for this long",
+      "default": 300000,
+      "category": "Limits"
+    },
+    {
+      "key": "createCooldownMs",
+      "label": "Create Cooldown (ms)",
+      "type": "number",
+      "description": "Wait before creating another channel",
+      "default": 10000,
+      "category": "Limits"
+    },
+    {
+      "key": "ownerLeaveDelete",
+      "label": "Delete on Owner Leave",
+      "type": "boolean",
+      "description": "Delete channel when owner leaves",
+      "default": true,
+      "category": "Limits"
+    },
+    {
+      "key": "generators",
+      "label": "Generators",
+      "type": "json",
+      "description": "Join-to-create generator channels",
+      "default": [],
+      "category": "Limits"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "tempvc",
+      "version": "2.0.0",
+      "provides": [
+        "utility.tempvc"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

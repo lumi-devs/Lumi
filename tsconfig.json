@@ -1,9 +1,42 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
     "allowImportingTsExtensions": true,
-    "rootDir": "."
+    "lib": ["ES2022"],
+    "types": ["bun"],
+
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+
+    "paths": {
+      "@lumi/core": ["./src/core"],
+      "@lumi/admin": ["./src/admin"],
+      "@lumi/permits": ["./packages/permits/src"],
+      "@lumi/cache": ["./packages/cache/src"],
+      "@lumi/redis": ["./packages/redis/src"],
+      "@lumi/db": ["./packages/db/src"],
+      "@lumi/foundation": ["./packages/foundation/src"],
+      "@lumi/ui": ["./packages/ui/src"],
+      "@lumi/observability": ["./packages/observability/src"],
+      "@lumi/scheduler": ["./packages/scheduler/src"],
+      "@lumi/module-kit": ["./packages/module-kit/src"],
+      "@lumi/module-runtime": ["./packages/module-runtime/src"],
+      "@lumi/downloader": ["./packages/downloader/src"]
+    }
   },
-  "include": ["prisma.config.ts", "src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"]
+  "exclude": ["node_modules", "dist", "build", "apps/dashboard"]
 }

@@ -1,0 +1,98 @@
+{
+  "apiVersion": 2,
+  "name": "verification",
+  "displayName": "Verification",
+  "emoji": "✅",
+  "description": "Member verification with emoji captcha, web verification, pending/verified roles, and timeout sweep",
+  "version": "2.0.0",
+  "category": "Security",
+  "entry": "index.ts",
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Verification Enabled",
+      "type": "boolean",
+      "description": "Require members to verify via panel",
+      "default": false,
+      "category": "Setup"
+    },
+    {
+      "key": "verifiedRoleId",
+      "label": "Verified Role",
+      "type": "role",
+      "description": "Role granted after passing verification",
+      "category": "Setup"
+    },
+    {
+      "key": "pendingRoleId",
+      "label": "Pending Role",
+      "type": "role",
+      "description": "Role assigned on join and removed once verified (optional)",
+      "category": "Setup"
+    },
+    {
+      "key": "timeoutMinutes",
+      "label": "Verify Timeout (minutes)",
+      "type": "number",
+      "description": "How long a member has to pass the captcha",
+      "default": 10,
+      "min": 1,
+      "max": 1440,
+      "category": "Timeouts"
+    },
+    {
+      "key": "kickOnTimeout",
+      "label": "Kick on Timeout",
+      "type": "boolean",
+      "description": "Kick members who don't verify before timeout",
+      "default": false,
+      "category": "Timeouts"
+    },
+    {
+      "key": "mode",
+      "label": "Verification Mode",
+      "type": "select",
+      "description": "How members prove they're human",
+      "default": "emoji",
+      "choices": [
+        "emoji",
+        "none",
+        "web"
+      ],
+      "category": "Setup"
+    },
+    {
+      "key": "webBaseUrl",
+      "label": "Web Verification Base URL",
+      "type": "string",
+      "description": "Public dashboard URL used for web verification links. Falls back to WEB_BASE_URL.",
+      "category": "Setup"
+    },
+    {
+      "key": "target",
+      "label": "Verification Target",
+      "type": "select",
+      "description": "Require verification from everyone or only suspicious accounts",
+      "default": "everyone",
+      "choices": [
+        "everyone",
+        "suspicious"
+      ],
+      "category": "Setup"
+    }
+  ],
+  "dependencies": {
+    "security": "^2.0.0"
+  },
+  "capabilities": [
+    {
+      "name": "verification",
+      "version": "2.0.0",
+      "provides": [
+        "security.verification"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

@@ -1,0 +1,46 @@
+import type { ListenerDefinition, ModuleServices } from "@lumi/module-kit";
+import { Events, type Message } from "discord.js";
+import { applyAutoTags } from "./autotags.js";
+import { getTicketsConfig, isTicketsModuleEnabled } from "./config.js";
+import { archiveMessage, findTicketByChannel } from "./repository.js";
+
+export const ticketMessageListener: ListenerDefinition = {
+  event: Events.MessageCreate,
+  async handler(message: Message, services: ModuleServices) {
+    if (!message.guild) return;
+    if (!isTicketsModuleEnabled(services, message.guild.id)) return;
+    if (!message.channel.isThread()) return;
+
+    const ticket = await findTicketByChannel(services, message.channel.id);
+    if (!ticket || ticket.guildId !== message.guild.id) return;
+    if (ticket.status !== "open") return;
+
+    await archiveMessage(services, ticket.id, {
+      id: message.id,
+      content: message.content,
+      author: message.author,
+      member: message.member ?? null,
+      createdAt: message.createdAt,
+      attachments: message.attachments,
+    });
+
+    if (!message.author.bot) {
+      await services.helpers.tickets
+        .updateTicket(ticket.id, { lastActivityAt: new Date() })
+        .catch(() => undefined);
+      if (ticket.userId !== message.author.id) {
+        await services.helpers.tickets
+          .recordFirstResponse(ticket.id, message.author.id, message.createdAt)
+          .catch(() => undefined);
+      }
+      const config = await getTicketsConfig(services, message.guild.id);
+      await applyAutoTags(
+        services,
+        config,
+        ticket,
+        message.channel,
+        message.content,
+      ).catch(() => undefined);
+    }
+  },
+};

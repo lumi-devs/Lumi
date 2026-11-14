@@ -1,0 +1,154 @@
+import { isSnowflake } from "@lumi/foundation";
+import {
+  type CardReply,
+  ephemeralCard,
+  makeErrorCard,
+  makeSuccessCard,
+  makeWarningCard,
+} from "@lumi/ui";
+import type {
+  APIInteractionDataResolvedChannel,
+  Channel,
+  ChatInputCommandInteraction,
+  GuildBasedChannel,
+  GuildChannel,
+  GuildMember,
+  GuildTextBasedChannel,
+  User,
+} from "discord.js";
+import type { ModerationConfig } from "./config.js";
+
+export function isTextGuildChannel(
+  channel:
+    | Channel
+    | GuildBasedChannel
+    | APIInteractionDataResolvedChannel
+    | null
+    | undefined,
+): channel is GuildTextBasedChannel & {
+  permissionOverwrites: GuildChannel["permissionOverwrites"];
+} {
+  return Boolean(
+    channel &&
+    "isTextBased" in channel &&
+    channel.isTextBased() &&
+    "permissionOverwrites" in channel &&
+    !channel.isThread(),
+  );
+}
+
+export async function getTargets(
+  interaction: ChatInputCommandInteraction,
+  maxTargets: number,
+): Promise<User[]> {
+  const single = interaction.options.getUser("user");
+  const extra = interaction.options.getString("users");
+  const ids = new Set(
+    extra ? extra.split(/\s+/).filter((s) => isSnowflake(s)) : [],
+  );
+  if (single) ids.add(single.id);
+
+  const fetched = await Promise.all(
+    [...ids].map((id) => interaction.client.users.fetch(id).catch(() => null)),
+  );
+  return fetched
+    .filter((user): user is User => user !== null)
+    .slice(0, maxTargets);
+}
+
+export function isImmune(
+  member: GuildMember | null,
+  config: ModerationConfig,
+): boolean {
+  return Boolean(
+    member &&
+    config.immuneRoleIds.some((roleId) => member.roles.cache.has(roleId)),
+  );
+}
+
+export interface RankedActor {
+  readonly id: string;
+  readonly highestRolePosition: number;
+}
+
+export interface RankedTarget {
+  readonly id: string;
+  readonly highestRolePosition: number;
+}
+
+export function canActOnRanks(
+  actor: RankedActor,
+  target: RankedTarget,
+  guildOwnerId: string,
+): boolean {
+  if (target.id === guildOwnerId) return false;
+  if (actor.id === guildOwnerId) return true;
+  return actor.highestRolePosition > target.highestRolePosition;
+}
+
+export function canActOn(actor: GuildMember, target: GuildMember): boolean {
+  return canActOnRanks(
+    {
+      id: actor.id,
+      highestRolePosition: actor.roles.highest.position,
+    },
+    {
+      id: target.id,
+      highestRolePosition: target.roles.highest.position,
+    },
+    actor.guild.ownerId,
+  );
+}
+
+export async function resolveActor(
+  interaction: ChatInputCommandInteraction,
+): Promise<GuildMember | null> {
+  const guild = interaction.guild;
+  if (!guild) return null;
+  return guild.members.fetch(interaction.user.id).catch(() => null);
+}
+
+export function getReason(interaction: ChatInputCommandInteraction): string {
+  return interaction.options.getString("reason") ?? "No reason provided";
+}
+
+export function getCaseLink(interaction: ChatInputCommandInteraction): {
+  channelId?: string;
+  messageId?: string;
+} {
+  const messageOption = interaction.options.data.find(
+    (option) => option.name === "message_id",
+  );
+  const messageValue =
+    typeof messageOption?.value === "string" ? messageOption.value : null;
+  return {
+    channelId: interaction.channelId || undefined,
+    messageId:
+      messageValue && isSnowflake(messageValue) ? messageValue : undefined,
+  };
+}
+
+export function getDeleteDays(
+  interaction: ChatInputCommandInteraction,
+): number {
+  return interaction.options.getInteger("delete_days") ?? 0;
+}
+
+export function actionCard(
+  title: string,
+  lines: string[],
+  failures: number,
+  total: number,
+): CardReply {
+  if (failures === 0) return makeSuccessCard(title, lines);
+  if (failures >= total) return makeErrorCard(title, lines);
+  return makeWarningCard(title, lines);
+}
+
+export async function replyError(
+  interaction: ChatInputCommandInteraction,
+  title: string,
+  body: string,
+): Promise<void> {
+  await interaction.reply(ephemeralCard(makeErrorCard(title, body)));
+}

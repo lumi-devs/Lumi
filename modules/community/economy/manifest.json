@@ -1,0 +1,153 @@
+{
+  "apiVersion": 2,
+  "name": "economy",
+  "displayName": "Economy",
+  "emoji": "💰",
+  "description": "Currency, banking, rewards, and shop",
+  "version": "2.0.0",
+  "category": "Community",
+  "entry": "index.ts",
+  "configKey": "economy",
+  "configFields": [
+    {
+      "key": "currencyName",
+      "label": "Currency Name",
+      "type": "string",
+      "description": "Name of the currency",
+      "default": "Credits",
+      "category": "Currency"
+    },
+    {
+      "key": "currencySymbol",
+      "label": "Currency Symbol",
+      "type": "string",
+      "description": "Emoji or symbol",
+      "default": "💰",
+      "category": "Currency"
+    },
+    {
+      "key": "startingBalance",
+      "label": "Starting Balance",
+      "type": "number",
+      "description": "Initial balance for new users",
+      "default": 0,
+      "category": "Currency"
+    },
+    {
+      "key": "dailyAmount",
+      "label": "Daily Reward",
+      "type": "number",
+      "description": "Amount for /daily",
+      "default": 100,
+      "category": "Rewards"
+    },
+    {
+      "key": "weeklyAmount",
+      "label": "Weekly Reward",
+      "type": "number",
+      "description": "Amount for /weekly",
+      "default": 500,
+      "category": "Rewards"
+    },
+    {
+      "key": "taxRate",
+      "label": "Transaction Tax",
+      "type": "number",
+      "description": "Tax on transfers (0.05 = 5%)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "bankMin",
+      "label": "Minimum Bank Amount",
+      "type": "number",
+      "description": "Minimum deposit or withdrawal",
+      "default": 1,
+      "category": "Bank"
+    },
+    {
+      "key": "bankMax",
+      "label": "Maximum Bank Amount",
+      "type": "number",
+      "description": "Maximum deposit or withdrawal (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "bankDailyCap",
+      "label": "Daily Bank Cap",
+      "type": "number",
+      "description": "Maximum deposited or withdrawn per direction per day (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "transferMin",
+      "label": "Minimum Transfer",
+      "type": "number",
+      "description": "Minimum amount for /pay",
+      "default": 1,
+      "category": "Bank"
+    },
+    {
+      "key": "transferMax",
+      "label": "Maximum Transfer",
+      "type": "number",
+      "description": "Maximum amount for /pay (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "transferDailyCap",
+      "label": "Daily Transfer Cap",
+      "type": "number",
+      "description": "Maximum transferred per day (0 = unlimited)",
+      "default": 0,
+      "category": "Bank"
+    },
+    {
+      "key": "workCooldown",
+      "label": "Work Cooldown (seconds)",
+      "type": "number",
+      "description": "Seconds between /work",
+      "default": 3600,
+      "category": "Work"
+    },
+    {
+      "key": "workMinPay",
+      "label": "Work Min Pay",
+      "type": "number",
+      "description": "Minimum /work payout",
+      "default": 50,
+      "category": "Work"
+    },
+    {
+      "key": "workMaxPay",
+      "label": "Work Max Pay",
+      "type": "number",
+      "description": "Maximum /work payout",
+      "default": 200,
+      "category": "Work"
+    },
+    {
+      "key": "shopItems",
+      "label": "Shop Items",
+      "type": "json",
+      "description": "Items sold by /shop",
+      "default": [],
+      "category": "Shop"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "economy",
+      "version": "2.0.0",
+      "provides": [
+        "economy.banking",
+        "economy.shop"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

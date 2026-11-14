@@ -1,0 +1,22 @@
+{
+  "name": "@lumi/cache",
+  "version": "2.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./codec": "./dist/codec.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "devalue": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5"
+  }
+}

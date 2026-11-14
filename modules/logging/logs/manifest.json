@@ -1,0 +1,71 @@
+{
+  "apiVersion": 2,
+  "name": "logs",
+  "displayName": "Logging",
+  "emoji": "📝",
+  "description": "Message, edit, delete, and voice logging",
+  "version": "2.0.0",
+  "category": "Logging",
+  "entry": "index.ts",
+  "configKey": "logs",
+  "configFields": [
+    {
+      "key": "messageLogChannel",
+      "label": "Message Log Channel",
+      "type": "channel",
+      "description": "Channel for new messages",
+      "category": "Channels",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "editLogChannel",
+      "label": "Edit Log Channel",
+      "type": "channel",
+      "description": "Channel for edited messages",
+      "category": "Channels",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "deleteLogChannel",
+      "label": "Delete Log Channel",
+      "type": "channel",
+      "description": "Channel for deleted messages",
+      "category": "Channels",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "voiceLogChannel",
+      "label": "Voice Log Channel",
+      "type": "channel",
+      "description": "Channel for voice activity",
+      "category": "Channels",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "ignoredChannels",
+      "label": "Ignored Channels",
+      "type": "multi-channel",
+      "description": "Channels excluded from logging",
+      "category": "Filters"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "logs",
+      "version": "2.0.0",
+      "provides": [
+        "logging.channels"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

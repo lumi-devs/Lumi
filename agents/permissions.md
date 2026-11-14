@@ -1,0 +1,122 @@
+# Permits and access control
+
+Code: `packages/permits/src/`.
+Panel: `src/admin/panel/PermitPanel.ts` (`/lumi` → Permissions → Open
+Permit Panel). Commands: `/permit create`, `/permit explain`.
+`/lumi` and `/permit` require **Manage Server** or an `admin.*`/`*` permit for
+both slash and prefix use. Permit-only holders can see and run the slash
+commands because no Discord default permission hides them.
+By default the resolver's manager tier treats Discord `Administrator` or
+`ManageGuild` as an allow. Setting the guild setting `enforcePermits` to `true`
+disables that bypass, so managers need a real permit like everyone else.
+
+## Built-in permits
+
+Built-in permits are created with fixed guild numbers:
+
+| #   | Name          | Nodes     | Security whitelist                                        |
+| --- | ------------- | --------- | --------------------------------------------------------- |
+| 1   | Extra Owner   | `*`       | `security.total`, `security.antinuke`, `security.automod` |
+| 2   | Trusted Admin | `admin.*` | `security.total`, `security.antinuke`, `security.automod` |
+
+Custom permits always receive number 3 or higher. Only bot owners can create,
+edit, assign, or delete a permit containing `*`; guild Extra Owner holders cannot
+create another Extra Owner. Built-in permits cannot be edited, deleted, moved, or
+assigned to roles/channels (users only).
+
+## Evaluation
+
+`evaluatePermit(options, container)` resolves one node (`mod.ban`, `admin.*`)
+for one user, channel, and member. Tiers run in this order and the first
+decisive tier wins:
+
+1. **owner** — `OWNER_IDS` or the guild owner. Always allows.
+2. **manager** — `Administrator` or `ManageGuild` when `enforcePermits` is off.
+3. **custom:user** — permits assigned to the user.
+4. **custom:channel** — permits assigned to the current channel.
+5. **custom:role:<id>** — permits assigned to each role, in cache order.
+
+A tier is `allow`, `deny`, or `pass`. Deny is checked before grant inside one
+rule bucket. Custom tiers are walked in chain order and the first decisive tier
+wins; later tiers are still rendered for Explain Check.
+
+`PermitRepository.explainPermitNodes` evaluates a whole node catalog from one
+permit-chain fetch. Single-node checks use `evaluatePermit`.
+`PermitRepository.hasGrantNode` walks only the custom tiers, so it can distinguish
+an `Extra Owner` grant from a Discord manager or guild owner.
+
+## Quarantine
+
+While a member is quarantined (Redis `lumi:mod:<guild>:quarantine:<user>`),
+custom tiers are still explained but never decide. This matches Lumi v1:
+quarantine suspends custom grants.
+
+## Node matching
+
+`evaluateNodeMatch(granted, required)`:
+
+- `*` matches everything.
+- `mod.*` matches `mod` and `mod.ban`, but not `modular.ban`.
+- Otherwise the strings must match exactly.
+- Empty nodes never match.
+
+## Storage and cache
+
+- `permit` rows hold a guild-local `number`, name, a node list, polarity
+  (`Grant` or `Deny`), priority `position`, optional
+  expiry/schedule/conditions, security `whitelistScopes`, and a `builtin` flag.
+  The global `id` remains the storage key; `number` is the visible per-guild
+  label. New custom permits take the smallest free number from 6 upward, so
+  deleting a permit reuses its number. Numbers 1, 4, and 5 are reserved for
+  built-ins.
+- `permitAssignment` rows target user, role, or channel and may carry their own
+  expiry. Built-in permits only accept user assignments.
+- Built-in permits are seeded on guild join and ready backfill. Never seed them
+  from a read path.
+- Only bot owners (`OWNER_IDS`) can create, edit, assign, or delete a permit
+  containing `*`. Guild `Extra Owner` holders cannot create another Extra Owner.
+  The dashboard enforces the same rule.
+- Add-on management is separate from admin-panel access: it requires a bot owner
+  (`OWNER_IDS`). `Extra Owner` (`*`) and `Trusted Admin` (`admin.*`) can open the
+  hub but cannot add repositories, install modules, or change updates.
+- Expired permits and expired assignments are ignored, as are permits whose
+  schedule, timezone, or conditions do not match the evaluation time and context.
+
+## Security whitelist scopes
+
+`whitelistScopes` lets a permit bypass security systems without granting an
+arbitrary `*` node. `security.total` covers every security scope;
+`security.antinuke` and `security.automod` cover one subsystem. The security
+modules call `PermitRepository.hasWhitelistScope` after normal node checks, so a
+Trusted Admin permit bypasses anti-nuke and automod while still only holding
+`admin.*`. A quarantined member never receives whitelist scopes. Custom permits
+can add scopes through the edit dialog, import/export, or the dashboard.
+
+## Panel
+
+`/lumi` → Permissions lists permits by guild number, opens details, creates
+permits, assigns users, roles, and channels, revokes assignments, and explains
+permissions. Built-in permits only accept user assignments.
+Create, Explain, and Assign use Components V2 selects instead of modals; Create
+also opens a name modal, and Edit remains a modal. One permit holds every
+selected node. Explain selects a member and evaluates every catalog node at
+once, grouping the results into allowed, denied, and no-explicit-permit lists.
+
+Selection state is held in memory per panel message and invoking user. Every
+selection re-renders the card in place. Panels have no close buttons; if one is
+added, it must delete the message rather than edit it. Panels are ephemeral and
+require **Manage Server** or an `admin.*`/`*` permit to interact with.
+`/lumi` → Settings includes the **Enforce Permits** toggle for the
+`enforcePermits` guild setting.
+`/permit create` and `/permit explain` expose the same operations without the
+hub, with node autocomplete from built-ins, modules, and existing custom nodes.
+Create accepts a comma-separated node list for one permit. `/permit explain`
+accepts one node or, when the node is omitted, runs the full catalog check. It
+also accepts an optional channel for channel-scoped rules.
+
+## Adding a command
+
+Set `.setDefaultMemberPermissions(...)` for Discord access; prefix dispatch
+enforces the same `default_member_permissions` value as slash commands. Set
+`requiredPermit` on module commands so the permit node catalog and `/permit`
+autocomplete include their nodes.

@@ -1,0 +1,257 @@
+import { errorMessage } from "@lumi/foundation";
+import type { ModuleServices } from "@lumi/module-kit";
+import { type CardReply, cardCreateOptions, makeCard } from "@lumi/ui";
+import type { Guild, GuildMember } from "discord.js";
+import type { z } from "zod";
+import { getSecurityConfig, type SecurityConfig } from "../security/core/config.js";
+
+export type SecurityResponse = "log" | "quarantine" | "ban";
+export type JoinAction = "log" | "kick" | "timeout" | "quarantine";
+
+const KeyPrefix = "lumi:security";
+
+export function securityKey(...parts: Array<string | number>): string {
+  return [KeyPrefix, ...parts].join(":");
+}
+
+export async function readModuleConfig<T>(
+  services: ModuleServices,
+  guildId: string,
+  key: string,
+  schema: z.ZodType<T>,
+  label: string,
+): Promise<T> {
+  const stored = await services.moduleConfig.read(
+    guildId,
+    services.moduleName ?? key,
+    key,
+  );
+  const parsed = schema.safeParse(stored ?? {});
+  if (parsed.success) return parsed.data;
+
+  services.observability?.logger?.warn?.(
+    `[${label}] invalid configuration, using defaults`,
+    { guildId, issues: parsed.error.issues },
+  );
+  return schema.parse({});
+}
+
+export async function incrementWindow(
+  services: ModuleServices,
+  key: string,
+  windowSeconds: number,
+  amount = 1,
+): Promise<number> {
+  return services.helpers.cache.incrBy(key, amount, windowSeconds * 1000);
+}
+
+export async function getStoredJson<T>(
+  services: ModuleServices,
+  key: string,
+): Promise<T | null> {
+  return services.helpers.cache.get<T>(key);
+}
+
+export async function setStoredJson(
+  services: ModuleServices,
+  key: string,
+  value: unknown,
+  ttlSeconds?: number,
+): Promise<void> {
+  await services.helpers.cache.set(
+    key,
+    value,
+    ttlSeconds === undefined ? undefined : ttlSeconds * 1000,
+  );
+}
+
+export async function deleteStored(
+  services: ModuleServices,
+  key: string,
+): Promise<void> {
+  await services.helpers.cache.del(key);
+}
+
+export function roleIds(member: GuildMember | null | undefined): string[] {
+  if (!member) return [];
+  return Array.from(member.roles.cache.keys());
+}
+
+export function isTrusted(
+  member: GuildMember | null | undefined,
+  guild: Guild,
+  config: SecurityConfig,
+): boolean {
+  if (!member) return false;
+  if (member.id === guild.ownerId) return true;
+  return config.trustedRoleIds.some((roleId) => member.roles.cache.has(roleId));
+}
+
+export function isStaff(
+  member: GuildMember | null | undefined,
+  guild: Guild,
+  config: SecurityConfig,
+): boolean {
+  if (!member) return false;
+  if (member.id === guild.ownerId) return true;
+  if (isTrusted(member, guild, config)) return true;
+  return member.permissions.has("ManageGuild");
+}
+
+export async function hasPermit(
+  services: ModuleServices,
+  guild: Guild,
+  member: GuildMember,
+  node: string,
+  channelId?: string,
+): Promise<boolean> {
+  try {
+    const enforcePermits =
+      (await services.config.get(guild.id, "enforcePermits")) === true;
+    const result = await services.permits.explainPermit(
+      {
+        guildId: guild.id,
+        userId: member.id,
+        roleIds: roleIds(member),
+        ...(channelId ? { channelId } : {}),
+        guildOwnerId: guild.ownerId,
+        permitNode: node,
+        ...(enforcePermits ? { managerBypass: false } : {}),
+      },
+      services.client,
+    );
+    if (result?.allowed) return true;
+
+    const scope = whitelistScopeForNode(node);
+    if (!scope) return false;
+    return services.permits.hasWhitelistScope(
+      {
+        guildId: guild.id,
+        userId: member.id,
+        roleIds: roleIds(member),
+        ...(channelId ? { channelId } : {}),
+        guildOwnerId: guild.ownerId,
+      },
+      scope,
+    );
+  } catch {
+    return false;
+  }
+}
+
+function whitelistScopeForNode(node: string): string | null {
+  if (node === "security.antinuke.bypass") return "security.antinuke";
+  if (node === "automod.bypass" || node === "security.automod.bypass") {
+    return "security.automod";
+  }
+  if (node === "security.total" || node === "security.bypass") {
+    return "security.total";
+  }
+  return null;
+}
+
+export async function sendSecurityLog(
+  services: ModuleServices,
+  guildId: string,
+  card: CardReply,
+): Promise<void> {
+  const config = await getSecurityConfig(services, guildId);
+  if (!config.logChannelId) return;
+  const channel = await services.client.channels
+    .fetch(config.logChannelId)
+    .catch(() => null);
+  if (!channel?.isTextBased()) return;
+  if (!("send" in channel)) return;
+  await channel.send(cardCreateOptions(card)).catch(() => undefined);
+}
+
+export async function fetchMember(
+  guild: Guild,
+  userId: string,
+): Promise<GuildMember | null> {
+  return guild.members.fetch(userId).catch(() => null);
+}
+
+export async function applyResponse(
+  services: ModuleServices,
+  guild: Guild,
+  config: SecurityConfig,
+  targetId: string,
+  response: SecurityResponse,
+  reason: string,
+): Promise<string> {
+  if (response === "log") return "logged";
+
+  const member = await fetchMember(guild, targetId);
+  if (response === "ban") {
+    const banned = await guild.bans
+      .create(targetId, { reason })
+      .then(() => true)
+      .catch((error: unknown) => {
+        services.observability?.logger?.warn?.("security ban failed", {
+          guildId: guild.id,
+          targetId,
+          error: errorMessage(error),
+        });
+        return false;
+      });
+    return banned ? "banned" : "failed";
+  }
+
+  if (!config.quarantineRoleId) return "failed";
+  if (!member) return "failed";
+  const quarantined = await member.roles
+    .set([config.quarantineRoleId], reason)
+    .then(() => true)
+    .catch((error: unknown) => {
+      services.observability?.logger?.warn?.("security quarantine failed", {
+        guildId: guild.id,
+        targetId,
+        error: errorMessage(error),
+      });
+      return false;
+    });
+  return quarantined ? "quarantined" : "failed";
+}
+
+export async function applyJoinAction(
+  config: SecurityConfig,
+  member: GuildMember,
+  action: JoinAction,
+  reason: string,
+): Promise<string> {
+  switch (action) {
+    case "log":
+      return "logged";
+    case "kick": {
+      const kicked = await member
+        .kick(reason)
+        .then(() => true)
+        .catch(() => false);
+      return kicked ? "kicked" : "failed";
+    }
+    case "timeout": {
+      const timed = await member
+        .timeout(10 * 60_000, reason)
+        .then(() => true)
+        .catch(() => false);
+      return timed ? "timed out" : "failed";
+    }
+    case "quarantine": {
+      if (!config.quarantineRoleId) return "failed";
+      const quarantined = await member.roles
+        .set([config.quarantineRoleId], reason)
+        .then(() => true)
+        .catch(() => false);
+      return quarantined ? "quarantined" : "failed";
+    }
+  }
+}
+
+export function securityCard(
+  title: string,
+  lines: string[],
+  opts?: { footer?: string },
+): CardReply {
+  return makeCard(undefined, title, lines, opts);
+}

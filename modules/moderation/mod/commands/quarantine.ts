@@ -1,0 +1,203 @@
+import type { CommandDefinition } from "@lumi/module-kit";
+import { ephemeralCard, makeSuccessCard, makeWarningCard } from "@lumi/ui";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { getModerationConfig } from "../config.js";
+import {
+  canActOn,
+  getCaseLink,
+  getReason,
+  isImmune,
+  replyError,
+  resolveActor,
+} from "../helpers.js";
+
+export const quarantineDef: CommandDefinition = {
+  data: new SlashCommandBuilder()
+    .setName("quarantine")
+    .setDescription(
+      "Quarantine a user (assign quarantine role, remove other roles)",
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .addUserOption((o) =>
+      o.setName("user").setDescription("User to quarantine").setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("reason")
+        .setDescription("Reason")
+        .setRequired(false)
+        .setAutocomplete(true),
+    ),
+  requiredPermit: "mod.quarantine",
+  async execute(interaction, services) {
+    const target = interaction.options.getUser("user", true);
+    const reason = getReason(interaction);
+    const guild = interaction.guild!;
+    const config = await getModerationConfig(services, guild.id);
+
+    if (!config.quarantineRoleId) {
+      await replyError(
+        interaction,
+        "Not configured",
+        "Quarantine role not set",
+      );
+      return;
+    }
+
+    const member = await guild.members.fetch(target.id).catch(() => null);
+    if (!member) {
+      await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
+    if (!canActOn(actor, member)) {
+      await replyError(
+        interaction,
+        "Cannot quarantine",
+        "You cannot quarantine a member with an equal or higher role.",
+      );
+      return;
+    }
+    if (isImmune(member, config)) {
+      await replyError(interaction, "Immune", "This member has an immune role");
+      return;
+    }
+    if (!member.manageable) {
+      await replyError(
+        interaction,
+        "Cannot quarantine",
+        "That member's highest role is above mine.",
+      );
+      return;
+    }
+
+    const oldRoles = member.roles.cache
+      .filter((r) => r.id !== guild.id)
+      .map((r) => r.id);
+    const quarantineRole = guild.roles.cache.get(config.quarantineRoleId);
+
+    if (!quarantineRole) {
+      await replyError(interaction, "Failed", "Quarantine role not found");
+      return;
+    }
+
+    await member.roles.set([quarantineRole], reason);
+
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "quarantine",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
+      metadata: { oldRoles },
+    });
+
+    await interaction.reply(
+      ephemeralCard(
+        makeWarningCard("Quarantined", [
+          `**User**\n${target.tag} (\`${target.id}\`)`,
+          `**Role**\n${quarantineRole}`,
+          `**Reason**\n${reason}`,
+        ]),
+      ),
+    );
+  },
+};
+
+export const unquarantineDef: CommandDefinition = {
+  data: new SlashCommandBuilder()
+    .setName("unquarantine")
+    .setDescription("Remove quarantine from a user")
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .addUserOption((o) =>
+      o
+        .setName("user")
+        .setDescription("User to unquarantine")
+        .setRequired(true),
+    )
+    .addStringOption((o) =>
+      o.setName("reason").setDescription("Reason").setRequired(false),
+    ),
+  requiredPermit: "mod.quarantine",
+  async execute(interaction, services) {
+    const target = interaction.options.getUser("user", true);
+    const reason = getReason(interaction);
+    const guild = interaction.guild!;
+
+    const member = await guild.members.fetch(target.id).catch(() => null);
+    if (!member) {
+      await replyError(interaction, "Not found", "User not in server");
+      return;
+    }
+    const actor = await resolveActor(interaction);
+    if (!actor) {
+      await replyError(
+        interaction,
+        "Cannot verify roles",
+        "I could not verify your server roles. Try again.",
+      );
+      return;
+    }
+    if (!canActOn(actor, member)) {
+      await replyError(
+        interaction,
+        "Cannot unquarantine",
+        "You cannot unquarantine a member with an equal or higher role.",
+      );
+      return;
+    }
+    if (!member.manageable) {
+      await replyError(
+        interaction,
+        "Cannot unquarantine",
+        "That member's highest role is above mine.",
+      );
+      return;
+    }
+
+    const quarantineCase = await services.helpers.moderation.findActive(
+      guild.id,
+      "quarantine",
+      target.id,
+    );
+
+    const oldRoles =
+      ((quarantineCase?.metadata as { oldRoles?: string[] } | null)
+        ?.oldRoles as string[]) ?? [];
+    const validRoles = oldRoles.filter((id) => guild.roles.cache.has(id));
+
+    await member.roles.set(validRoles, reason);
+
+    if (quarantineCase) {
+      await services.helpers.moderation.close(quarantineCase.id);
+    }
+
+    await services.helpers.moderation.create({
+      guildId: guild.id,
+      kind: "unquarantine",
+      targetId: target.id,
+      moderatorId: interaction.user.id,
+      reason,
+      ...getCaseLink(interaction),
+    });
+
+    await interaction.reply(
+      ephemeralCard(
+        makeSuccessCard("Unquarantined", [
+          `**User**\n${target.tag} (\`${target.id}\`)`,
+          `**Roles restored**\n${validRoles.length}`,
+          `**Reason**\n${reason}`,
+        ]),
+      ),
+    );
+  },
+};

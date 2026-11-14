@@ -1,389 +1,93 @@
-networks:
-  lumi-net:
-    driver: bridge
-  lumi-obs-net:
-    driver: bridge
-
-volumes:
-  postgres-data:
-  redis-data:
-  addon-data:
-  prometheus-data:
-  grafana-data:
-  tempo-data:
-  backup-data:
-
-x-lumi-service: &lumi-service
-  image: ghcr.io/lumi-devs/lumi:latest
+x-lumi-image: &lumi-image
+  image: ghcr.io/lumi-devs/lumi:${LUMI_TAG:-latest}
   build:
     context: .
     dockerfile: Dockerfile
-    target: bot
-  env_file:
-    - path: .env
-      required: false
-  environment: &lumi-env
-    REDIS_HOST: redis
-    REDIS_PASSWORD: "${REDIS_PASSWORD:-lumi}"
-    POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-pgbouncer}:6432/lumi"
-    DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-    OTEL_ENABLED: "${OTEL_ENABLED:-true}"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
-    OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-0.05}"
-    METRICS_ENABLED: "${METRICS_ENABLED:-true}"
-    METRICS_PORT: "9090"
-    LOG_FORMAT: "${LOG_FORMAT:-json}"
-    LOG_LEVEL: "${LOG_LEVEL:-info}"
-    NODE_OPTIONS: "${NODE_OPTIONS:---max-old-space-size=384}"
-    DISCORD_PROXY_URL: "${DISCORD_PROXY_URL:-}"
-    LUMI_DEV_PATHS: "${LUMI_DEV_PATHS:-/lumi-addons}"
-  depends_on:
-    migrate:
-      condition: service_completed_successfully
-    postgres:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
-  # Exit-code contract: 0 clean shutdown, 1 crash, 26 requested restart.
-  # unless-stopped restarts on all of them; use `docker exec lumi-bot lumi-setup`
-  # for preflight and `docker logs lumi-bot` for the boot banner.
-  restart: unless-stopped
-  cap_drop:
-    - ALL
-  security_opt:
-    - no-new-privileges:true
-  volumes:
-    - addon-data:/app/data
-  networks:
-    - lumi-net
-  deploy:
-    resources:
-      limits:
-        memory: 512m
-        cpus: '1.0'
-  logging:
-    driver: json-file
-    options:
-      max-size: 10m
-      max-file: "3"
 
 services:
-  migrate:
-    <<: *lumi-service
-    container_name: lumi-migrate
-    command: ["bunx", "prisma", "migrate", "deploy"]
-    restart: "no"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  bot:
-    <<: *lumi-service
-    container_name: lumi-bot
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      pgbouncer:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      <<: *lumi-env
-      RPC_HTTP_HOST: "0.0.0.0"
-      RPC_HTTP_PORT: "8091"
-      RPC_INTERNAL_TOKEN: "${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}"
-      METRICS_HOST: "0.0.0.0"
-    expose:
-      - "8091"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9090/readyz > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-
-  lumi-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: bot
-    container_name: lumi-dev
-    env_file:
-      - path: .env
-        required: false
-    environment:
-      REDIS_HOST: redis
-      POSTGRES_URL: "${POSTGRES_URL:-postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
-      DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
-      OTEL_ENABLED: "${OTEL_ENABLED:-true}"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}"
-      OTEL_TRACES_SAMPLE_RATIO: "${OTEL_TRACES_SAMPLE_RATIO:-0.05}"
-      METRICS_ENABLED: "${METRICS_ENABLED:-true}"
-      METRICS_PORT: "9090"
-      LOG_FORMAT: "${LOG_FORMAT:-pretty}"
-      LOG_LEVEL: "${LOG_LEVEL:-debug}"
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      pgbouncer:
-        condition: service_healthy
-        required: false
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - .:/app:z
-      - ../lumi-addons:/lumi-addons:z
-    networks:
-      - lumi-net
-    stdin_open: true
-    tty: true
-    profiles:
-      - development
-
-  dashboard:
-    image: ghcr.io/lumi-devs/lumi-dashboard:${LUMI_DASHBOARD_TAG:-latest}
-    container_name: lumi-dashboard
-    environment:
-      <<: *lumi-env
-      DASHBOARD_HOST: "0.0.0.0"
-      DASHBOARD_PORT: "8080"
-      DASHBOARD_SESSION_SECRET: "${DASHBOARD_SESSION_SECRET:?set DASHBOARD_SESSION_SECRET in .env}"
-      RPC_HTTP_URL: "http://bot:8091"
-      DISCORD_OAUTH2_CLIENT_ID: "${DISCORD_OAUTH2_CLIENT_ID:-}"
-      DISCORD_OAUTH2_CLIENT_SECRET: "${DISCORD_OAUTH2_CLIENT_SECRET:-}"
-    depends_on:
-      bot:
-        condition: service_healthy
-    ports:
-      - "${DASHBOARD_PORT:-8080}:8080"
-    profiles:
-      - dashboard
-
   postgres:
-    image: docker.io/library/postgres:18-alpine
+    image: docker.io/postgres:18-alpine
     container_name: lumi-postgres
     environment:
-      POSTGRES_DB: lumi
       POSTGRES_USER: lumi
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
-      POSTGRES_INITDB_ARGS: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: lumi
+    ports:
+      - "127.0.0.1:5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql
-    networks:
-      - lumi-net
-    restart: unless-stopped
+      - postgres_data:/var/lib/postgresql
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lumi -d lumi"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-    ports:
-      - "127.0.0.1:5432:5432"
-
-  backup:
-    image: docker.io/library/postgres:18-alpine
-    container_name: lumi-backup
-    entrypoint: []
-    command: ["/scripts/backup.sh", "loop"]
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: lumi
-      POSTGRES_USER: lumi
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
-      BACKUP_DIR: /backups
-      BACKUP_RETENTION: "${BACKUP_RETENTION:-7}"
-      BACKUP_INTERVAL_HOURS: "${BACKUP_INTERVAL_HOURS:-24}"
-    volumes:
-      - ./deploy/backup/backup.sh:/scripts/backup.sh:ro
-      - ./deploy/backup/restore-test.sh:/scripts/restore-test.sh:ro
-      - backup-data:/backups
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-    profiles:
-      - backup
-
-  pgbouncer:
-    image: docker.io/edoburu/pgbouncer:latest
-    container_name: lumi-pgbouncer
-    environment:
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_NAME: lumi
-      DB_USER: lumi
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-lumi}
-      LISTEN_PORT: "6432"
-      POOL_MODE: transaction
-      AUTH_TYPE: scram-sha-256
-      MAX_CLIENT_CONN: "1000"
-      DEFAULT_POOL_SIZE: "20"
-      MAX_PREPARED_STATEMENTS: "0"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U lumi"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 64m
-    ports:
-      - "127.0.0.1:6432:6432"
+      retries: 10
 
   redis:
-    image: docker.io/redis/redis:8-alpine
+    image: docker.io/redis:8-alpine
     container_name: lumi-redis
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
-    volumes:
-      - redis-data:/data
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-lumi}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 160m
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     ports:
       - "127.0.0.1:6379:6379"
-
-  nirn-proxy:
-    image: ghcr.io/germanoeich/nirn-proxy:latest
-    container_name: lumi-nirn-proxy
-    environment:
-      LOG_LEVEL: "${NIRN_LOG_LEVEL:-info}"
-      PORT: "8080"
-      METRICS_PORT: "9000"
-      BIND_IP: "0.0.0.0"
-      REQUEST_TIMEOUT: "10000"
-      BUFFER_SIZE: "200"
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/nirn/v1/buckets > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-    ports:
-      - "127.0.0.1:18080:8080"
-      - "127.0.0.1:19000:9000"
-    profiles:
-      - scale
-
-  otel-collector:
-    image: docker.io/otel/opentelemetry-collector-contrib:0.159.0
-    container_name: lumi-otel-collector
-    command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ./config/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
-    networks:
-      - lumi-net
-    restart: unless-stopped
-    profiles:
-      - observability
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-    ports:
-      - "127.0.0.1:4318:4318"
-
-  tempo:
-    image: docker.io/grafana/tempo:2.10.0
-    container_name: lumi-tempo
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
-    volumes:
-      - ./config/observability/tempo.yaml:/etc/tempo/tempo.yaml:ro
-      - tempo-data:/var/tempo
-    networks:
-      - lumi-net
-      - lumi-obs-net
-    restart: unless-stopped
-    profiles:
-      - observability
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-
-  prometheus:
-    image: docker.io/prom/prometheus:v3.14.0
-    container_name: lumi-prometheus
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.enable-lifecycle"
-    volumes:
-      - ./config/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./config/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus-data:/prometheus
-    networks:
-      - lumi-net
-      - lumi-obs-net
-    restart: unless-stopped
-    profiles:
-      - observability
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-    ports:
-      - "127.0.0.1:9091:9090"
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  grafana:
-    image: docker.io/grafana/grafana:13.2.1
-    container_name: lumi-grafana
+  bot:
+    <<: *lumi-image
+    container_name: lumi-bot
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env}"
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    volumes:
-      - ./config/observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./config/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana-data:/var/lib/grafana
+      BOT_TOKEN: ${BOT_TOKEN}
+      OWNER_IDS: ${OWNER_IDS}
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CACHE_NAMESPACE: ${CACHE_NAMESPACE:-lumi}
+      DEFAULT_PREFIX: "${DEFAULT_PREFIX:-,}"
+      GIT_TOKEN: ${GIT_TOKEN:-}
+      GIT_USERNAME: ${GIT_USERNAME:-x-access-token}
+      WEB_BASE_URL: ${WEB_BASE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_ENABLED: "true"
+      METRICS_PORT: "9090"
+      RPC_HTTP_HOST: 0.0.0.0
+      RPC_HTTP_PORT: "8091"
+      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}
     depends_on:
-      - prometheus
-      - tempo
-    networks:
-      - lumi-obs-net
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-    profiles:
-      - observability
-    deploy:
-      resources:
-        limits:
-          memory: 256m
     ports:
-      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:9090:9090"
+
+  migrate:
+    <<: *lumi-image
+    profiles: ["migrate"]
+    container_name: lumi-migrate
+    command: ["run", "db:migrate:deploy"]
+    environment:
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:

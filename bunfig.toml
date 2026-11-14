@@ -1,4 +1,4 @@
 [test]
-root = "tests"
+root = "."
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"

@@ -1,94 +1,58 @@
 # AGENTS.md
 
-Operating spec for any AI coding agent working in this repository.
+Operating spec for agents working in this repository.
 
-Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, discord.js v14
-(native, no framework), Prisma/PostgreSQL, Redis. Single-process monolith.
+Lumi v2 is a Bun-workspace monorepo for a self-hosted Discord bot. The product's
+centrepiece is the **module loader and addon downloader**; caching and database
+access exist to keep that hot path fast and correct.
 
-## Repo shape
+## Read first
 
+1. `agents/00-index.md`
+2. The doc for the area you are changing.
+
+The `agents/` directory is the source of truth for how this codebase works. If
+your change alters a documented contract, update the matching doc in the same
+change. If you add a new subsystem, add a new `agents/<area>.md` and link it from
+`agents/00-index.md`. If you delete a subsystem, delete its doc and its index
+entry.
+
+## Non-negotiables
+
+- Every module is toggleable. There is no privileged "core" module and no
+  `essential`/`disableable` escape hatch. Always-on behaviour lives in
+  `src/` as built-in listeners/commands, not as a module.
+- Modules are discovered from `manifest.json` and loaded from an explicit entry
+  file. No hidden global registries, no side-effect imports.
+- Built-in commands have `module: null` and always run. Module commands only run
+  when that module is enabled for the guild.
+- Addons are untrusted. Install with validation, path checks, and atomic
+  switches. Never let an addon import bot internals (`@lumi/db`, `@lumi/redis`,
+  `@lumi/cache`, `@lumi/module-runtime`, `@lumi/downloader`). Addons are not sandboxed.
+  Addon npm dependencies live in `manifest.json` `requirements` and are installed
+  with `bun install --production --ignore-scripts --no-save`; registry semver
+  ranges only.
+- The database is Postgres via Prisma with versioned migrations. Do not copy
+  Redbot's idempotent-DDL approach.
+- Redis is a single endpoint. No Cluster/Sentinel code paths. Multi-replica
+  correctness comes from exact-key invalidation over pub/sub.
+- Every cache read has an explicit namespace. Never derive a metrics label from
+  a key segment.
+- UI is the card system in `@lumi/ui`. **Never use Discord embeds.** Do not
+  import `EmbedBuilder`, do not pass `embeds:` to any Discord API call, and do
+  not build ad-hoc message payloads outside `@lumi/ui`. All user-facing output is
+  a Components V2 card (`makeCard`, `makeInfoCard`, `makeSuccessCard`,
+  `makeErrorCard`, `makeWarningCard`) sent with `MessageFlags.IsComponentsV2`;
+  use `ephemeralCard()` for ephemeral replies.
+- No compatibility shims. Change the caller.
+
+## Verification
+
+Run through the nix shell:
+
+```sh
+nix develop --command bun run typecheck
+nix develop --command bun run test
 ```
-src/
-  Index.ts        # the one boot: db -> modules -> slash register -> RPC -> gateway -> scheduling
-  modules/<name>/ # self-contained feature modules
-    Index.ts      # defineModule({...}) entrypoint
-    commands/ listeners/ interactions/ tasks/ utilities/ services/ data/
-    config-schema via defineModule options, manifest.json (discovery fast path)
-  lib/            # shared framework (database, cache, permits, scheduler, rpc, ui, utilities...)
-  contracts/      # typed RPC router + schemas for the dashboard bridge
-  cli/            # `lumi` command-line tool
-  observability/  # OpenTelemetry tracing, Prometheus metrics, health probes
-  shared/         # tiny shared primitives (being replaced by @sapphire/*)
-tests/            # mirrors src/ (tests/core, tests/api, tests/cli)
-data/addons/      # third-party addon root, same module shape, same loader
-```
 
-Import aliases (`tsconfig.base.json` paths, honored by Bun at runtime).
-Internal code uses the granular domains:
-`@lib/*` -> `src/lib/*`, `@modules/*` -> `src/modules/*`,
-`@contracts/*` -> `src/contracts/*`, `@observability/*`, `@shared/*`,
-`@cli/*`, `@scripts/*`, plus per-area lib aliases: `@api/*`, `@cache/*`,
-`@redis/*`, `@db/*` (prisma), `@rpc/*`, `@ui/*`, `@commands/*`,
-`@listeners/*`, `@interactions/*`, `@module-system/*`, `@utilities/*`,
-`@i18n/*`, `@scheduler/*`, `@downloader/*`, `@discord/*`, `@event-bus/*`.
-Addons import the public surface: `@lumi/module`, `@lumi/commands`,
-`@lumi/ui`, `@lumi/config`, `@lumi/services`, ... (anything else under
-`@lumi/*` minus bot internals). Always keep the `.js` suffix on relative
-specifiers.
-
-## Module system
-
-Feature modules live under `src/modules/<name>/`, each exporting a
-`defineModule({...})` object (`src/lib/module-system/Module.ts`).
-`src/lib/module-system/ModuleStore.ts` discovers across multiple roots
-(core `src/modules` + `data/addons`), sorts dependencies topologically,
-and loads every module in-process — core modules and addons share the
-piece loaders, with a separate `#loadAddon` path per origin. There is no
-sandbox, no isolate, no SDK: modules import the shared lib through its domain aliases directly.
-
-**Zero cross-module import law**: a module must never import from a
-sibling module. Shared code belongs under `src/lib/*`.
-
-## RPC bridge (dashboard ↔ bot)
-
-The dashboard (separate repo) talks to the embedded RPC server
-(`src/lib/rpc/HttpServer.ts`, started from `src/Index.ts`) over HTTP.
-The action surface is a typed router built from
-`src/contracts/rpc/*.ts` slices, implemented with `implementRpc()`
-(`src/lib/rpc/Implement.ts`) in each module's own `Rpc.ts`.
-`guild.permits.*` covers the permit system including display-order moves.
-
-## Permits
-
-Wick-style permit nodes (`mod.ban`, `admin.*`) evaluated by
-`PermitResolver` (`src/lib/api/permissions/PermitResolver.ts`): owner bypass
-> enforced user > custom user > channel > roles (position order), deny
-first per tier. All decisions go through `authorize()`
-(`src/lib/api/permissions/Authorize.ts`) — never touch `PermitResolver`
-directly from rpc/preconditions code. Permits carry a `position` display
-order, reorderable via RPC (`guild.permits.move`), the hub panel
-(`↕ Order`), and the dashboard.
-
-## Repo-specific anti-patterns
-
-- **Database access**: modules go through `container.db`, never
-  `container.prisma` directly.
-- **Discord embeds**: never construct `new EmbedBuilder()` in a command —
-  use the card builders in `@ui/Cards.js` or `ctx.replySuccess` /
-  `ctx.replyError`.
-- **No shims**: never add compatibility re-exports or alias layers.
-  Replace, don't wrap. No code comments in new or edited code.
-- **No framework**: discord.js native only. Framework-independent
-  `@sapphire/*` packages (`utilities`, `duration`, `snowflake`,
-  `async-queue`, `ratelimits`) are approved for replacing hand-rolled code.
-
-## Running things
-
-`bun`, `gh`, etc. come from the Nix devshell: `nix develop --command <cmd>`.
-
-- `bun run typecheck` — single `tsc --noEmit` over `src` + `tests`.
-- `bun run lint` / `bun run lint:fix` — eslint over `src tests`.
-- `bun run test` — isolated per-file runner (`scripts/RunTests.ts`), one process per test file. `bun run test:coverage` runs a single parallel `bun test` pass with coverage.
-- `bun run db:generate` — regenerate the Prisma client after a schema change.
-- `bun run db:migrate` — `prisma migrate dev` (needs Postgres up).
-- `bun src/Index.ts` — run the bot. `lumi` bin -> `src/cli/Main.ts`.
+Database-backed checks need Postgres and Redis; see `agents/testing.md`.

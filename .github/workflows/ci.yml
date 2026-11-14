@@ -1,193 +1,241 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, v2/develop, "release/*"]
+    branches: [main, v2/develop, develop, release/*]
   pull_request:
-    branches: [main, v2/develop]
-  merge_group:
-  workflow_dispatch:
+    branches: [main, v2/develop, develop]
+  release:
+    types: [published]
+  schedule:
+    # Run load tests weekly on Sundays at 2 AM UTC
+    - cron: "0 2 * * 0"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions: {}
+permissions:
+  contents: read
 
 env:
-  CI: "true"
-  NEXT_TELEMETRY_DISABLED: "1"
-  SKIP_ENV_VALIDATION: "1"
+  BUN_VERSION: "1.4.2"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  changes:
-    name: Detect Changed Paths
+  lint-and-typecheck:
+    name: Lint & Typecheck
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-      nix: ${{ steps.filter.outputs.nix }}
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          filters: |
-            code:
-              - 'src/**'
-              - '!src/**/*.md'
-              - 'tests/**'
-              - '!tests/**/*.md'
-              - 'prisma/**'
-              - 'scripts/**'
-              - 'package.json'
-              - 'bun.lock'
-              - 'tsconfig*.json'
-              - 'eslint.config.*'
-              - '.github/workflows/ci.yml'
-            nix:
-              - 'flake.nix'
-              - 'flake.lock'
+      - uses: actions/checkout@v4
 
-  lint:
-    name: Lint
-    needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          fetch-depth: 0
-      - run: echo "::add-matcher::.github/problemMatchers/eslint.json"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - uses: actions/cache@v6
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-      - run: bun install --frozen-lockfile
-      - run: bun run db:generate
-      - run: bun run lint
+          bun-version: ${{ env.BUN_VERSION }}
 
-  typecheck:
-    name: Typecheck
-    needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - run: echo "::add-matcher::.github/problemMatchers/tsc.json"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - uses: actions/cache@v6
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-      - run: bun install --frozen-lockfile
-      - run: bun run db:generate
-      - run: bun run typecheck
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-  test:
-    name: Test
-    needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+      - name: Generate Prisma client
+        run: bun run db:generate
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Run typecheck
+        run: bun run typecheck
+
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 15
+    needs: lint-and-typecheck
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          bun-version: 1.4.2
-      - uses: actions/cache@v6
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-      - run: bun install --frozen-lockfile
-      - run: bun run db:generate
-      - run: bun run test:coverage
-      - uses: actions/upload-artifact@v7
-        with:
-          name: coverage-report
-          path: coverage/lcov.info
-          retention-days: 1
-          if-no-files-found: error
-      - name: Codecov Upload
-        uses: codecov/codecov-action@v7
-        continue-on-error: true
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Run unit tests
+        run: bun run test --reporter=verbose
 
   build:
-    name: Docker Build
-    needs: changes
-    if: ${{ needs.changes.outputs.code == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
+    name: Build
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 20
+    needs: [lint-and-typecheck, unit-tests]
     steps:
-      - uses: actions/checkout@v7
-      - name: Build bot image
-        run: docker build --target bot -t lumi:ci .
+      - uses: actions/checkout@v4
 
-  nix-check:
-    name: Nix Flake Evaluation
-    needs: changes
-    if: ${{ needs.changes.outputs.nix == 'true' || github.event_name == 'push' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-      - uses: DeterminateSystems/nix-installer-action@v23
-      - uses: DeterminateSystems/magic-nix-cache-action@v15
-      - name: Verify Nix Flake Output
-        run: nix flake check --extra-experimental-features "nix-command flakes"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
-  ci-status:
-    name: CI Status / All Checks Passed
-    needs: [changes, lint, typecheck, test, build, nix-check]
-    if: always()
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Build
+        run: bun run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist
+            modules
+          retention-days: 7
+
+  load-tests:
+    name: Load Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.event_name == 'release'
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run db:generate
+        env:
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+
+      - name: Run load tests
+        run: bun run test tests/load --reporter=verbose
+        env:
+          LOAD_TEST_DURATION: 60000
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: load-test-results.json
+          retention-days: 30
+
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'release' || github.event_name == 'pull_request'
     permissions:
       contents: read
+      packages: write
     steps:
-      - name: Evaluate status of upstream jobs
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint-and-typecheck
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Run npm audit
+        run: bun audit --audit-level=high || true
+
+  dependency-update:
+    name: Dependency Update Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Check for outdated dependencies
+        run: bun outdated || true
+
+      - name: Create issue if updates available
         run: |
-          results='${{ toJSON(needs) }}'
-          echo "Evaluating CI Results: $results"
-
-          failed=0
-          for job in changes lint typecheck test build nix-check; do
-            result=$(echo "$results" | jq -r --arg job "$job" '.[$job].result // empty')
-            echo "Job $job: $result"
-            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
-              echo "Job $job failed or was cancelled."
-              failed=1
-            fi
-          done
-
-          if [ $failed -ne 0 ]; then
-            echo "One or more required CI jobs failed."
-            exit 1
+          # Check if there are updates
+          if bun outdated --json | jq -e 'length > 0'; then
+            echo "Updates available, creating issue..."
+            # gh issue create --title "Dependency Updates Available" --body "$(bun outdated)"
           fi
-
-          echo "All CI checks passed or skipped successfully."

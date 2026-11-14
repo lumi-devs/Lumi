@@ -1,0 +1,41 @@
+{
+  "apiVersion": 2,
+  "name": "voiceroles",
+  "displayName": "Voice Roles",
+  "emoji": "🔊",
+  "description": "Per voice and stage channel roles with optional category mapping and grace periods",
+  "version": "2.0.0",
+  "category": "Roles",
+  "entry": "index.ts",
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [
+    {
+      "name": "voiceroles",
+      "version": "2.0.0",
+      "provides": [
+        "roles.voice"
+      ]
+    }
+  ],
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Voice Roles Enabled",
+      "type": "boolean",
+      "description": "Assign roles while members are in mapped voice channels",
+      "default": true,
+      "category": "General"
+    },
+    {
+      "key": "defaultGraceSeconds",
+      "label": "Default Grace Period",
+      "type": "number",
+      "description": "Seconds to keep the role after leaving when no per-channel grace is set",
+      "default": 0,
+      "min": 0,
+      "max": 86400,
+      "category": "General"
+    }
+  ]
+}

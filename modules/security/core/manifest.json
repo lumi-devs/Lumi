@@ -1,0 +1,48 @@
+{
+  "apiVersion": 2,
+  "name": "security",
+  "displayName": "Security Core",
+  "emoji": "🛡️",
+  "description": "Shared security settings used by all security modules",
+  "version": "2.0.0",
+  "category": "Security",
+  "entry": "index.ts",
+  "configKey": "security",
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [
+    {
+      "name": "security",
+      "version": "2.0.0",
+      "provides": [
+        "security.config"
+      ]
+    }
+  ],
+  "configFields": [
+    {
+      "key": "logChannelId",
+      "label": "Security Log Channel",
+      "type": "channel",
+      "description": "Channel for security events and verification prompts",
+      "category": "General",
+      "channelTypes": [
+        0
+      ]
+    },
+    {
+      "key": "quarantineRoleId",
+      "label": "Quarantine Role",
+      "type": "role",
+      "description": "Role assigned when a member is quarantined or held for verification",
+      "category": "General"
+    },
+    {
+      "key": "trustedRoleIds",
+      "label": "Trusted Roles",
+      "type": "multi-role",
+      "description": "Roles exempt from anti-nuke, join gate, and betrayal monitoring",
+      "category": "General"
+    }
+  ]
+}

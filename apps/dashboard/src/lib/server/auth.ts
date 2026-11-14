@@ -1,0 +1,145 @@
+import { error, type RequestEvent, redirect } from "@sveltejs/kit";
+import {
+  canManageGuild,
+  DiscordError,
+  fetchUserGuilds,
+  type GuildSummary,
+  refreshOAuthToken,
+} from "./discord";
+import { serverConfig } from "./env";
+import { isBotOwner } from "./permissions";
+import { type SessionRecord, saveSession } from "./session";
+import type { GuildAccess } from "./types";
+import { assertCsrf } from "./validation";
+
+export function requireSession(event: RequestEvent): SessionRecord {
+  if (!event.locals.session) {
+    const next = encodeURIComponent(event.url.pathname + event.url.search);
+    throw redirect(303, `/auth/login?returnTo=${next}`);
+  }
+  return event.locals.session;
+}
+
+export function requireBotOwner(event: RequestEvent): SessionRecord {
+  const session = requireSession(event);
+  if (!isBotOwner(session.userId, serverConfig().ownerIds)) {
+    throw error(403, "Only bot owners can manage add-ons.");
+  }
+  return session;
+}
+
+export function guildAccessFromSummary(guild: GuildSummary): GuildAccess {
+  return {
+    id: guild.id,
+    name: guild.name,
+    icon: guild.icon ?? null,
+    owner: Boolean(guild.owner),
+    permissions: guild.permissions ?? "0",
+  };
+}
+
+async function validAccessToken(event: RequestEvent): Promise<string> {
+  const session = requireSession(event);
+  if (session.tokenExpiresAt > Date.now() + 30_000) {
+    return session.accessToken;
+  }
+  if (!session.refreshToken) {
+    throw redirect(303, "/auth/login?error=expired");
+  }
+
+  try {
+    const token = await refreshOAuthToken(session.refreshToken);
+    const updated: SessionRecord = {
+      ...session,
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token ?? session.refreshToken,
+      tokenExpiresAt: Date.now() + token.expires_in * 1000,
+    };
+    if (event.locals.sessionId)
+      await saveSession(event.locals.sessionId, updated);
+    event.locals.session = updated;
+    return updated.accessToken;
+  } catch (refreshError) {
+    console.warn("[dashboard] oauth refresh failed", refreshError);
+    throw redirect(303, "/auth/login?error=expired");
+  }
+}
+
+export async function manageableGuilds(
+  event: RequestEvent,
+): Promise<GuildAccess[]> {
+  if (event.locals.guildCache) {
+    return Array.from(event.locals.guildCache.values());
+  }
+
+  const token = await validAccessToken(event);
+  const session = requireSession(event);
+  let guilds: GuildSummary[];
+  try {
+    guilds = await fetchUserGuilds(token, session.userId);
+  } catch (fetchError) {
+    if (fetchError instanceof DiscordError) {
+      console.error("[dashboard] fetchUserGuilds failed:", {
+        status: fetchError.status,
+        message: fetchError.message,
+        body: fetchError.body,
+      });
+    } else {
+      console.error(
+        "[dashboard] fetchUserGuilds unexpected error:",
+        fetchError,
+      );
+    }
+    if (
+      fetchError instanceof DiscordError &&
+      (fetchError.status === 401 || fetchError.status === 403)
+    ) {
+      throw redirect(303, "/auth/login?error=expired");
+    }
+    throw fetchError;
+  }
+
+  const cache = new Map<string, GuildAccess>();
+  for (const guild of guilds) {
+    if (canManageGuild(guild)) {
+      cache.set(guild.id, guildAccessFromSummary(guild));
+    }
+  }
+  event.locals.guildCache = cache;
+  return Array.from(cache.values());
+}
+
+export async function requireGuildAccess(
+  event: RequestEvent,
+  guildId: string,
+): Promise<GuildAccess> {
+  if (!/^\d{16,22}$/.test(guildId)) {
+    throw error(404, "Server not found.");
+  }
+
+  requireSession(event);
+  if (!event.locals.guildCache) await manageableGuilds(event);
+  const guild = event.locals.guildCache?.get(guildId);
+  if (!guild) {
+    throw error(
+      403,
+      "You do not have Manage Server in this server, or the server is unavailable.",
+    );
+  }
+  return guild;
+}
+
+export async function requireGuildId(event: RequestEvent): Promise<string> {
+  const guildId = event.params.guildId ?? "";
+  await requireGuildAccess(event, guildId);
+  return guildId;
+}
+
+export async function requireGuildForm(
+  event: RequestEvent,
+): Promise<{ guildId: string; userId: string; data: FormData }> {
+  const guildId = await requireGuildId(event);
+  const data = await event.request.formData();
+  const userId = assertCsrf(event, data);
+  return { guildId, userId, data };
+}

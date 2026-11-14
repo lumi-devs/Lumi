@@ -1,5 +1,5 @@
 {
-  description = "Lumi — Production-ready multi-platform dev shell (Bun / Node / Git / GH / JQ / Postgres / Redis / RabbitMQ)";
+  description = "Lumi v2 — Bun monorepo dev shell";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -19,11 +19,11 @@
             git
             gh
             jq
-            coreutils
             openssl
-            prisma-engines
+            util-linux
             postgresql
             redis
+            prisma-engines
             stdenv.cc.cc.lib
           ];
 
@@ -33,16 +33,8 @@
           };
 
           shellHook = ''
-            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
-            echo "========================================="
-            echo "  Lumi Multi-Platform Dev Shell (Flake)  "
-            echo "========================================="
-            echo "  Bun:        $(bun --version 2>/dev/null || echo 'N/A')"
-            echo "  Node:       $(node --version 2>/dev/null || echo 'N/A')"
-            echo "  Git:        $(git --version 2>/dev/null || echo 'N/A')"
-            echo "  GitHub CLI: $(gh --version 2>/dev/null | head -n1 || echo 'N/A')"
-            echo "  jq:         $(jq --version 2>/dev/null || echo 'N/A')"
-            echo "========================================="
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:${pkgs.util-linux.lib}/lib:$LD_LIBRARY_PATH"
+            echo "lumi v2 · bun $(bun --version) · node $(node --version) · pg $(postgres --version | cut -d' ' -f3) · redis $(redis-server --version | cut -d' ' -f3 | cut -d= -f2)"
           '';
         };
       });

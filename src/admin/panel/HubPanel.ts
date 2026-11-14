@@ -1,0 +1,255 @@
+import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import type { ModalSubmitInteraction } from "discord.js";
+import {
+  hasAdminAccess,
+  permitEnforcementEnabled,
+  roleIdsFrom,
+} from "../access.js";
+import { handleAddonInteraction } from "./addons.js";
+import {
+  type MessageModalSubmit,
+  type PanelInteraction,
+  showPanel,
+} from "./common.js";
+import { renderHubPanel, renderSettings } from "./hubViews.js";
+import {
+  handleEscalationRemove,
+  handleEscalationSave,
+  handleModuleAction,
+  handleModuleModal,
+} from "./moduleActions.js";
+import { prefixModal } from "./moduleSettings.js";
+import { PermitPanel } from "./PermitPanel.js";
+import { handleRolesModuleModal } from "./roles/index.js";
+import { handleTempVcGeneratorModal } from "./tempvc.js";
+import type { BotServices } from "../../core/contracts.js";
+
+export async function handleHubInteraction(
+  interaction: PanelInteraction,
+  services: BotServices,
+): Promise<boolean> {
+  if (!interaction.customId.startsWith("lumi:")) return false;
+
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Lumi", "This panel only works in a server."),
+      ),
+    );
+    return true;
+  }
+
+  if (interaction.customId.startsWith("lumi:addon:")) {
+    await handleAddonInteraction(interaction, services);
+    return true;
+  }
+
+  const allowed = await hasAdminAccess({
+    guildId,
+    userId: interaction.user.id,
+    roleIds: roleIdsFrom(interaction.member, guildId),
+    guildOwnerId: interaction.guild?.ownerId,
+    memberPermissions: interaction.memberPermissions,
+    enforcePermits: await permitEnforcementEnabled(
+      services.configService,
+      guildId,
+    ),
+    client: interaction.client,
+    permits: services.permits,
+  });
+  if (!allowed) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Missing Permissions",
+          "You need **Manage Server** or an admin permit to use the Lumi control panel.",
+        ),
+      ),
+    );
+    return true;
+  }
+
+  if (interaction.isModalSubmit()) {
+    await handleHubModal(interaction, services, guildId);
+    return true;
+  }
+
+  const message = interaction.message;
+  if (!message) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Lumi", "This panel has expired. Run `/lumi` again."),
+      ),
+    );
+    return true;
+  }
+
+  const ownerId = message.interactionMetadata?.user.id;
+  if (ownerId !== undefined && ownerId !== interaction.user.id) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard("Lumi", "This panel belongs to another user.", {
+          footer: "Run `/lumi` to open your own panel",
+        }),
+      ),
+    );
+    return true;
+  }
+
+  const [, action, target, extra, extra2] = interaction.customId.split(":");
+
+  switch (action) {
+    case "home":
+    case "modules":
+    case "settings":
+    case "permits":
+    case "addons": {
+      await showPanel(interaction, () =>
+        renderHubPanel(action, interaction, services),
+      );
+      return true;
+    }
+    case "permitpanel": {
+      const panel = new PermitPanel({
+        permitRepo: services.permits,
+        guildId,
+        interaction,
+        moduleLoader: services.moduleLoader,
+      });
+      await panel.render();
+      return true;
+    }
+    case "setprefix": {
+      await interaction.showModal(prefixModal());
+      return true;
+    }
+    case "setreset": {
+      await showPanel(interaction, async () => {
+        await services.configService.reset(guildId, "prefix");
+        return renderSettings(interaction, services);
+      });
+      return true;
+    }
+    case "toggleenforce": {
+      await showPanel(interaction, async () => {
+        const current = await services.configService.get(
+          guildId,
+          "enforcePermits",
+        );
+        await services.configService.set(
+          guildId,
+          "enforcePermits",
+          current !== true,
+        );
+        return renderSettings(interaction, services);
+      });
+      return true;
+    }
+    default: {
+      if (
+        await handleModuleAction(interaction, services, {
+          guildId,
+          action,
+          target,
+          extra,
+          extra2,
+        })
+      ) {
+        return true;
+      }
+      await interaction.reply(
+        ephemeralCard(makeErrorCard("Lumi", "Unknown panel action.")),
+      );
+      return true;
+    }
+  }
+}
+
+async function handleHubModal(
+  interaction: ModalSubmitInteraction,
+  services: BotServices,
+  guildId: string,
+): Promise<void> {
+  const parts = interaction.customId.split(":");
+  const action = parts[1];
+
+  if (await handleRolesModuleModal(interaction, services, guildId, parts)) {
+    return;
+  }
+
+  if (action === "setprefixmodal") {
+    const prefix = interaction.fields.getTextInputValue("prefix").trim();
+    if (!prefix || /\s/.test(prefix)) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard(
+            "Invalid Prefix",
+            "The prefix cannot be empty or contain spaces.",
+          ),
+        ),
+      );
+      return;
+    }
+    await services.configService.set(guildId, "prefix", prefix);
+    const card = await renderSettings(interaction, services);
+    if (interaction.isFromMessage()) {
+      await (interaction as MessageModalSubmit).update(card);
+    } else {
+      await interaction.reply(ephemeralCard(card));
+    }
+    return;
+  }
+
+  if (action === "tempvcgenrename" || action === "tempvcgenlimit") {
+    const [, , generatorId, pageIndex] = parts;
+    await handleTempVcGeneratorModal(
+      interaction,
+      services,
+      guildId,
+      action,
+      generatorId,
+      Number(pageIndex) || 0,
+    );
+    return;
+  }
+
+  if (action === "modinput") {
+    const [, , moduleName, fieldKey, pageIndex] = parts;
+    await handleModuleModal(
+      interaction,
+      services,
+      guildId,
+      moduleName,
+      fieldKey,
+      pageIndex,
+    );
+    return;
+  }
+
+  if (action === "escsave") {
+    const [, , moduleName, fieldKey, pageIndex, original] = parts;
+    await handleEscalationSave(
+      interaction,
+      services,
+      guildId,
+      moduleName,
+      fieldKey,
+      pageIndex,
+      original,
+    );
+    return;
+  }
+
+  if (action === "escremove") {
+    const [, , moduleName, fieldKey, pageIndex] = parts;
+    await handleEscalationRemove(
+      interaction,
+      services,
+      guildId,
+      moduleName,
+      fieldKey,
+      pageIndex,
+    );
+  }
+}

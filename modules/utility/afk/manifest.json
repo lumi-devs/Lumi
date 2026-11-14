@@ -1,0 +1,52 @@
+{
+  "apiVersion": 2,
+  "name": "afk",
+  "displayName": "AFK",
+  "emoji": "💤",
+  "description": "Set AFK status with mention replies and nickname prefix",
+  "version": "2.0.0",
+  "category": "Utility",
+  "entry": "index.ts",
+  "configKey": "afk",
+  "configFields": [
+    {
+      "key": "nickPrefixEnabled",
+      "label": "Nickname Prefix",
+      "type": "boolean",
+      "description": "Prefix nickname when AFK",
+      "default": true
+    },
+    {
+      "key": "nickPrefix",
+      "label": "Prefix Text",
+      "type": "string",
+      "description": "Text to prepend to nickname",
+      "default": "[AFK] "
+    },
+    {
+      "key": "mentionReply",
+      "label": "Mention Reply",
+      "type": "boolean",
+      "description": "Reply when mentioned while AFK",
+      "default": true
+    },
+    {
+      "key": "maxReasonLength",
+      "label": "Max Reason Length",
+      "type": "number",
+      "description": "Maximum AFK reason length",
+      "default": 200
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "afk",
+      "version": "2.0.0",
+      "provides": [
+        "utility.afk"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

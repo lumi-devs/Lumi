@@ -1,0 +1,48 @@
+{
+  "apiVersion": 2,
+  "name": "autorecovery",
+  "displayName": "Auto Recovery",
+  "emoji": "♻️",
+  "description": "Automatic server restore from latest backup when panic mode triggers or nuke detected",
+  "version": "2.0.0",
+  "category": "Security",
+  "entry": "index.ts",
+  "configFields": [
+    {
+      "key": "enabled",
+      "label": "Auto Recovery Enabled",
+      "type": "boolean",
+      "description": "Automatically restore from backup on panic/nuke",
+      "default": false
+    },
+    {
+      "key": "triggerOnPanic",
+      "label": "Trigger on Panic Mode",
+      "type": "boolean",
+      "description": "Auto-restore when panic mode activates",
+      "default": true
+    },
+    {
+      "key": "triggerOnNuke",
+      "label": "Trigger on Nuke Detection",
+      "type": "boolean",
+      "description": "Auto-restore when anti-nuke threshold exceeded",
+      "default": false
+    }
+  ],
+  "dependencies": {
+    "backups": "^2.0.0",
+    "security": "^2.0.0"
+  },
+  "capabilities": [
+    {
+      "name": "autorecovery",
+      "version": "2.0.0",
+      "provides": [
+        "security.autorecovery"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "requirements": []
+}

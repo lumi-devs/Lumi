@@ -1,22 +1,21 @@
-import { config as loadEnv } from 'dotenv';
-import { defineConfig } from 'prisma/config';
+import { defineConfig } from "prisma/config";
 
-// The Prisma CLI runs under Node, which never auto-loads `.env` the way `bun run`
-// does — without this every `db:push`/`migrate` fails on a missing datasource url.
-loadEnv();
+try {
+  process.loadEnvFile();
+} catch {}
 
-const datasourceUrl =
-	process.env.DIRECT_POSTGRES_URL ??
-	process.env.POSTGRES_URL ??
-	"postgresql://dummy:dummy@localhost:5432/dummy";
+const datasourceUrl = process.env.DATABASE_URL;
+
+if (!datasourceUrl) {
+  throw new Error("DATABASE_URL is not set.");
+}
 
 export default defineConfig({
-	schema: 'prisma/schema.prisma',
-	migrations: {
-		path: 'prisma/migrations'
-	},
-	datasource: {
-		// Connect directly to bypass transaction pooler if present.
-		url: datasourceUrl
-	}
+  schema: "packages/db/prisma/schema.prisma",
+  migrations: {
+    path: "packages/db/prisma/migrations",
+  },
+  datasource: {
+    url: datasourceUrl,
+  },
 });
