@@ -7,7 +7,7 @@ import {
   effectiveModuleEnabled,
   enabledConfigField,
 } from "#lib/server/moduleConfig.js";
-import { moduleCatalog } from "#lib/server/modules.js";
+import { moduleCatalog, invalidateModuleCatalog } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { setModuleStateViaRpc } from "#lib/server/rpc.js";
 import {
@@ -25,22 +25,21 @@ const ToggleSchema = z.object({
 export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
   const [catalog, rows, settings] = await Promise.all([
-    moduleCatalog(),
+    moduleCatalog(guildId),
     getPrisma().guildModule.findMany({ where: { guildId } }),
     readGuildSettings(guildId),
   ]);
-  const states = new Map(rows.map((row) => [row.module, row.enabled]));
-  const modules = catalog
+  const modules = (catalog ?? [])
     .filter((module) => !module.isAddon)
     .map((module) => ({
       ...module,
       enabled: effectiveModuleEnabled(
         module.configFields,
         configFor(settings, module.configKey),
-        states.get(module.name) ?? true,
+        module.enabled,
       ),
     }));
-  const known = new Set(catalog.map((module) => module.name));
+  const known = new Set((catalog ?? []).map((module) => module.name));
   const byCategory = new Map<string, typeof modules>();
   for (const module of modules) {
     const category = module.category ?? "Other";
@@ -59,6 +58,7 @@ export const load: PageServerLoad = async (event) => {
   });
 
   return {
+    catalogAvailable: catalog !== null,
     groups,
     unknownModules: rows
       .filter((row) => !known.has(row.module))
@@ -75,9 +75,13 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    const module = await moduleCatalog().then((catalog) =>
-      catalog.find((entry) => entry.name === parsed.data.module),
-    );
+    const catalog = await moduleCatalog(guildId);
+    if (!catalog) {
+      return fail(503, {
+        error: "The bot is offline; module state is unavailable.",
+      });
+    }
+    const module = catalog.find((entry) => entry.name === parsed.data.module);
     if (!module) return fail(404, { error: "That module is not available." });
 
     const enabled = checkbox(data, "enabled");
@@ -103,6 +107,7 @@ export const actions: Actions = {
       parsed.data.module,
       enabled,
     );
+    await invalidateModuleCatalog(guildId);
     await recordAudit({
       guildId,
       userId,
@@ -129,10 +134,13 @@ export const actions: Actions = {
     });
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
-    const known = await moduleCatalog().then((catalog) =>
-      catalog.some((entry) => entry.name === parsed.data.module),
-    );
-    if (known) {
+    const catalog = await moduleCatalog(guildId);
+    if (!catalog) {
+      return fail(503, {
+        error: "The bot is offline; module state is unavailable.",
+      });
+    }
+    if (catalog.some((entry) => entry.name === parsed.data.module)) {
       return fail(400, {
         error: "That module still exists; disable it instead of removing it.",
       });

@@ -1,5 +1,6 @@
 import type { ConfigService, GuildSettings } from "@lumi/admin";
-import type { DbHelpers, PrismaClient } from "@lumi/db";
+import type { DbHelpers } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import { errorMessage } from "@lumi/foundation";
 import * as ui from "@lumi/ui";
 import type { ChatInputCommandInteraction, Client } from "discord.js";

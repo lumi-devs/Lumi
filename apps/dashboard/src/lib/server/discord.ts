@@ -1,16 +1,15 @@
-import { createHash, randomBytes } from "node:crypto";
-import { z } from "zod";
-import { serverConfig } from "./env";
+import { logger } from "@lumi/foundation";
+import { z } from "zod/v4";
+import { getDashboardCache } from "./dashboardCache.js";
 import { dashboardKey, getRedis } from "./redis";
 
 const ApiBase = "https://discord.com/api/v10";
 const OAuthBase = "https://discord.com/oauth2/authorize";
 const TokenUrl = `${ApiBase}/oauth2/token`;
 
-const USER_GUILDS_CACHE_TTL = 45;
+const USER_GUILDS_CACHE_TTL = 45_000;
 
 export const ManageGuildPermission = 1n << 5n;
-export const AdministratorPermission = 1n << 3n;
 
 const OAuthTokenSchema = z.object({
   access_token: z.string().min(1),
@@ -208,80 +207,53 @@ export function fetchOAuthUser(accessToken: string): Promise<OAuthUser> {
   return oauthGet("/users/@me", accessToken, OAuthUserSchema);
 }
 
-async function readCachedGuilds(key: string): Promise<GuildSummary[] | null> {
-  const cached = await getRedis().get(key);
-  if (!cached) return null;
-  try {
-    const parsed = z.array(GuildSummarySchema).safeParse(JSON.parse(cached));
-    if (parsed.success) return parsed.data;
-  } catch {
-    // Treat corrupt cache values as misses.
-  }
-  await getRedis().del(key);
-  return null;
-}
 
 export async function fetchUserGuilds(
   accessToken: string,
   userId: string,
 ): Promise<GuildSummary[]> {
+  const cache = getDashboardCache();
   const cacheKey = dashboardKey("user", userId, "guilds");
-  const lockKey = dashboardKey("lock", "user", userId, "guilds");
-  const redis = getRedis();
 
-  const cached = await readCachedGuilds(cacheKey);
-  if (cached) return cached;
-
-  const lockAcquired = await redis.set(lockKey, "1", "EX", 10, "NX");
-  if (!lockAcquired) {
-    for (let attempt = 0; attempt < 50; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      const fresh = await readCachedGuilds(cacheKey);
-      if (fresh) return fresh;
-    }
-  }
-
-  try {
-    const guilds = await fetchUserGuildsUncached(accessToken);
-    await redis.set(
-      cacheKey,
-      JSON.stringify(guilds),
-      "EX",
-      USER_GUILDS_CACHE_TTL,
-    );
-    return guilds;
-  } finally {
-    if (lockAcquired) await redis.del(lockKey);
-  }
+  return cache.userGuilds.getOrLoad(cacheKey, USER_GUILDS_CACHE_TTL, () =>
+    fetchUserGuildsUncached(accessToken),
+  ) ?? [];
 }
 
 async function fetchUserGuildsUncached(
   accessToken: string,
 ): Promise<GuildSummary[]> {
-  const response = await fetch(`${ApiBase}/users/@me/guilds`, {
-    headers: { authorization: `Bearer ${accessToken}` },
-    signal: AbortSignal.timeout(15_000),
-  });
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(`${ApiBase}/users/@me/guilds`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(15_000),
+    });
 
-  if (!response.ok) {
-    const body = (await response.text()).slice(0, 500);
-    console.error("[dashboard] fetchUserGuildsUncached: Discord error:", {
+    if (response.ok) {
+      const parsed = z
+        .array(GuildSummarySchema)
+        .safeParse(await response.json());
+      if (!parsed.success) {
+        throw new DiscordError("Discord returned an invalid guild list.", 502);
+      }
+      return parsed.data;
+    }
+
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get("retry-after") ?? "1");
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+      continue;
+    }
+
+    const body = await response.text().catch(() => "");
+    logger.error("[dashboard] fetchUserGuildsUncached: Discord error:", {
       status: response.status,
       body,
     });
-    throw new DiscordError(
-      "Could not load your Discord servers.",
-      response.status,
-      body,
-    );
+    throw new DiscordError("Failed to fetch user guilds.", response.status);
   }
-
-  const parsed = z.array(GuildSummarySchema).safeParse(await response.json());
-  if (!parsed.success) {
-    throw new DiscordError("Discord returned an invalid guild list.", 502);
-  }
-  return parsed.data;
 }
+
 
 export function canManageGuild(guild: GuildSummary): boolean {
   if (guild.owner) return true;

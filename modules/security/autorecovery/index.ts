@@ -207,12 +207,12 @@ const autoRecoveryModule: ModuleDefinition = defineModule({
   commands: [recoveryCommand],
   listeners: [],
   tasks: [recoveryTask],
-  async onLoad(_services) {
-    console.log(`[${ModuleName}] Module loaded`);
+  async onLoad(services) {
+    services.observability.logger.info(`[${ModuleName}] Module loaded`);
     return [];
   },
-  async onUnload() {
-    console.log(`[${ModuleName}] Module unloaded`);
+  async onUnload(services) {
+    services.observability.logger.info(`[${ModuleName}] Module unloaded`);
   },
 });
 

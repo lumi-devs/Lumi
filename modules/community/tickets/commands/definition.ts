@@ -1,8 +1,7 @@
+import { requireGuildId } from "@lumi/foundation";
 import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
-import {
-  type ChatInputCommandInteraction,
-  SlashCommandBuilder,
-} from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import { Priorities } from "../constants.js";
 import {
   categoryAdd,
@@ -16,7 +15,6 @@ import { blacklistCommand, tagCommand } from "./moderation.js";
 import {
   CategoryNameLimit,
   ensureModule,
-  guildIdOf,
   replyError,
 } from "./shared.js";
 import {
@@ -598,10 +596,9 @@ async function execute(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,
 ): Promise<void> {
-  const guildId = await guildIdOf(interaction);
+  const guildId = requireGuildId(interaction.guildId);
   if (!guildId) return;
   if (!(await ensureModule(interaction, services, guildId))) return;
-
   const group = interaction.options.getSubcommandGroup(false);
   const sub = interaction.options.getSubcommand(false);
 

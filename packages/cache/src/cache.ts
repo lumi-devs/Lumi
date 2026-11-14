@@ -1,5 +1,5 @@
+import { logger } from "@lumi/foundation";
 import { type Codec, createCodec } from "./codec.js";
-
 export interface CacheRedis {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, unit: "PX", ttlMs: number): Promise<unknown>;
@@ -126,7 +126,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
         for (const fullKey of this.flights.keys()) this.markDiscarded(fullKey);
       })
       .catch((error: unknown) => {
-        console.error("cache resync failed", { error });
+        logger.error("cache resync failed", { error });
       });
   }
 
@@ -305,7 +305,7 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       if ((this.loadGenerations.get(fullKey) ?? 0) !== generation) {
         this.metrics?.recordStaleWrite(this.label);
         await this.dropIfStill(fullKey, encoded).catch((error: unknown) => {
-          console.error("cache stale write cleanup failed", {
+          logger.error("cache stale write cleanup failed", {
             key: fullKey,
             error,
           });

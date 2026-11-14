@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { cp, mkdir, readdir, rename, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import type { ModuleManifest } from "@lumi/module-runtime";
 import type { Redis } from "ioredis";
 import { isMissingPath, pathExists } from "./fs.js";

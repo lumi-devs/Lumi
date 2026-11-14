@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import type Redis from "ioredis";
 
 export interface InvalidationMessage {
@@ -47,7 +48,7 @@ export class InvalidationBus {
     this.subscriber
       .subscribe(this.channel)
       .catch((error: unknown) =>
-        console.error("invalidation subscribe failed", { error }),
+        logger.error("invalidation subscribe failed", { error }),
       );
 
     this.subscriber.on("message", (channel, message) => {
@@ -56,7 +57,7 @@ export class InvalidationBus {
         const parsed: unknown = JSON.parse(message);
         if (isInvalidationMessage(parsed)) this.handleInvalidation(parsed);
       } catch (error) {
-        console.error("invalidation message parse failed", { error });
+        logger.error("invalidation message parse failed", { error });
       }
     });
   }

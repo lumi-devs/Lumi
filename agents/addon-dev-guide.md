@@ -84,7 +84,7 @@ Add-ons receive the same `ModuleServices` bag as bundled modules: `client`,
 (`{ isEnabled }`), `scheduler`, `ui`, `discord`, `observability`
 (`{ healthMonitor, logger }`), `helpers`, and an optional `moduleName`.
 Database and cache access goes through the `helpers` namespaces (`economy`,
-`leveling`, `stats`, `tickets`, `roleMenus`, `customCommands`, `roles`,
+`leveling`, `stats`, `tickets`, `roleMenus`, `roles`,
 `security`, `verification`, `utility`, `moduleData`, `cache`). `prisma`, `redis`, the raw cache
 client, `moduleLoader`, `moduleManager`, `configService`, and `addons` are not
 part of the add-on services contract. See

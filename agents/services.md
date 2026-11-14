@@ -19,7 +19,7 @@ them, or add compatibility re-exports.
 `moduleName` when the host is running code on behalf of a module.
 
 `helpers` includes typed namespaces (`economy`, `leveling`, `stats`, `tickets`,
-`roleMenus`, `customCommands`, `roles`, `security`, `verification`, `utility`,
+`roleMenus`, `roles`, `security`, `verification`, `utility`,
 `moderation`) plus `moduleData`, a generic durable per-guild key/value store, and
 `cache`. See [module-data.md](./module-data.md) before adding a new table for
 feature-local state.

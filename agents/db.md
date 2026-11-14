@@ -8,7 +8,7 @@ Package: `@lumi/db` (`packages/db`). Postgres + Prisma 7 + `@prisma/adapter-pg`.
   the `prisma` singleton; exports `createDbHelpers(redis)`.
 - `packages/db/src/cache.ts` — the Redis-backed `CacheFacade` used by helpers.
 - `packages/db/src/helpers/` — domain helpers: `leveling`, `economy`, `stats`,
-  `tickets`, `roleMenus`, `customCommands`, `roles`, `security`,
+  `tickets`, `roleMenus`, `roles`, `security`,
   `verification`, `utility`, plus the `cache` namespace.
 - `packages/db/prisma/schema.prisma` — models.
 - `packages/db/prisma/migrations/` — versioned SQL migrations.

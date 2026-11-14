@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
+import type { AddonManager } from "@lumi/downloader";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { HealthMonitor } from "@lumi/observability";
 import { httpRequestDuration, httpRequests } from "@lumi/observability";
@@ -35,9 +36,15 @@ export interface GuildRouteOptions {
   token: string | undefined;
 }
 
-export interface ModuleStateRouteOptions {
-  moduleLoader: Pick<ModuleLoader, "listGlobal" | "setEnabled">;
+export interface ModuleRouteOptions {
+  moduleLoader: Pick<ModuleLoader, "listGlobal" | "setEnabled" | "isEnabled">;
+  prisma?: PrismaClient;
   syncCommands?: (guildId: string) => Promise<void>;
+  invalidation?: { invalidate(namespace: string, keys: string[]): Promise<void> };
+  token: string | undefined;
+}
+export interface AddonRouteOptions {
+  addons: AddonManager;
   token: string | undefined;
 }
 
@@ -86,12 +93,30 @@ function isAuthorized(
     provided.length === expected.length && timingSafeEqual(provided, expected)
   );
 }
+function createResponseFinisher(
+  req: IncomingMessage,
+  res: ServerResponse,
+  route: string,
+  startedAt: number,
+): (status: number, body: unknown) => void {
+  const method = req.method ?? "GET";
+  return (status: number, body: unknown): void => {
+    const seconds = (performance.now() - startedAt) / 1000;
+    httpRequests.inc({ method, route, status: String(status) });
+    httpRequestDuration.observe(
+      { method, route, status: String(status) },
+      seconds,
+    );
+    res.setHeader("content-type", "application/json");
+    res.statusCode = status;
+    res.end(JSON.stringify(body));
+  };
+}
 
-export function createModuleStateHandler(
-  options: ModuleStateRouteOptions,
+export function createModuleHandler(
+  options: ModuleRouteOptions,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-  const { moduleLoader, syncCommands, token } = options;
-
+  const { moduleLoader, prisma, syncCommands, invalidation, token } = options;
   return async function handleModuleStateRequest(
     req: IncomingMessage,
     res: ServerResponse,
@@ -103,28 +128,32 @@ export function createModuleStateHandler(
     );
     const route = url.pathname;
     const method = req.method ?? "GET";
-
-    const finish = (status: number, body: unknown): void => {
-      const seconds = (performance.now() - startedAt) / 1000;
-      httpRequests.inc({ method, route, status: String(status) });
-      httpRequestDuration.observe(
-        { method, route, status: String(status) },
-        seconds,
-      );
-      res.setHeader("content-type", "application/json");
-      res.statusCode = status;
-      res.end(JSON.stringify(body));
-    };
+    const finish = createResponseFinisher(req, res, route, startedAt);
 
     if (!isAuthorized(req, token)) {
       finish(401, { error: "unauthorized" });
       return;
     }
 
-    const match = route.match(
+    const catalogMatch = route.match(/^\/api\/v1\/guilds\/([0-9]+)\/modules$/);
+    if (catalogMatch) {
+      if (method !== "GET") {
+        finish(405, { error: "method_not_allowed" });
+        return;
+      }
+      const guildId = catalogMatch[1]!;
+      const modules = moduleLoader.listGlobal().map((module) => ({
+        ...module,
+        enabled: moduleLoader.isEnabled(guildId, module.name),
+      }));
+      finish(200, { modules });
+      return;
+    }
+
+    const stateMatch = route.match(
       /^\/api\/v1\/guilds\/([0-9]+)\/modules\/([^/]+)\/state$/,
     );
-    if (!match) {
+    if (!stateMatch) {
       finish(404, { error: "not found" });
       return;
     }
@@ -133,8 +162,8 @@ export function createModuleStateHandler(
       return;
     }
 
-    const guildId = match[1]!;
-    const moduleName = decodePathPart(match[2] ?? "");
+    const guildId = stateMatch[1]!;
+    const moduleName = decodePathPart(stateMatch[2] ?? "");
     if (!moduleName) {
       finish(400, { error: "invalid_path" });
       return;
@@ -160,9 +189,202 @@ export function createModuleStateHandler(
       return;
     }
 
+    if (prisma) {
+      await prisma.guild.upsert({
+        where: { id: guildId },
+        update: {},
+        create: { id: guildId },
+      });
+      await prisma.guildModule.upsert({
+        where: { guildId_module: { guildId, module: moduleName } },
+        update: { enabled },
+        create: { guildId, module: moduleName, enabled },
+      });
+    }
     await moduleLoader.setEnabled(moduleName, guildId, enabled);
     await syncCommands?.(guildId);
+    if (invalidation) {
+      await invalidation.invalidate("modules", [guildId]);
+    }
     finish(200, { module: moduleName, enabled });
+  };
+}
+
+function addonError(error: unknown): string {
+  return error instanceof Error ? error.message : "Add-on operation failed.";
+}
+
+export function createAddonHandler(
+  options: AddonRouteOptions,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  const { addons, token } = options;
+
+  return async function handleAddonRequest(
+    req: IncomingMessage,
+    res: ServerResponse,
+  ): Promise<void> {
+    const startedAt = performance.now();
+    const url = new URL(
+      req.url ?? "/",
+      `http://${req.headers.host ?? "localhost"}`,
+    );
+    const route = url.pathname;
+    const method = req.method ?? "GET";
+    const finish = createResponseFinisher(req, res, route, startedAt);
+
+    if (!isAuthorized(req, token)) {
+      finish(401, { error: "unauthorized" });
+      return;
+    }
+
+    try {
+      if (route === "/api/v1/addons") {
+        if (method !== "GET") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        const [repos, installed, autoUpdate] = await Promise.all([
+          addons.listRepos(),
+          addons.listInstalled(),
+          addons.getAutoUpdate(),
+        ]);
+        const withCandidates = await Promise.all(
+          repos.map(async (repo) => ({
+            ...repo,
+            candidates: await addons.listRepoModules(repo.name).catch(() => []),
+          })),
+        );
+        finish(200, { repos: withCandidates, installed, autoUpdate });
+        return;
+      }
+
+      if (route === "/api/v1/addons/repos") {
+        if (method !== "POST") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        const body = (await readJsonBody(req)) as {
+          name?: unknown;
+          url?: unknown;
+          branch?: unknown;
+        } | null;
+        if (
+          !body ||
+          typeof body.name !== "string" ||
+          typeof body.url !== "string" ||
+          (body.branch !== undefined && typeof body.branch !== "string")
+        ) {
+          finish(400, { error: "invalid_body" });
+          return;
+        }
+        const repo = await addons.addRepo(
+          body.name,
+          body.url,
+          typeof body.branch === "string" ? body.branch : undefined,
+        );
+        finish(201, { repo });
+        return;
+      }
+
+      const repoMatch = route.match(/^\/api\/v1\/addons\/repos\/([^/]+)$/);
+      if (repoMatch) {
+        const name = decodePathPart(repoMatch[1] ?? "");
+        if (!name) {
+          finish(400, { error: "invalid_path" });
+          return;
+        }
+        if (method !== "DELETE") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        await addons.removeRepo(name);
+        finish(200, { ok: true });
+        return;
+      }
+
+      const updateMatch = route.match(
+        /^\/api\/v1\/addons\/repos\/([^/]+)\/update$/,
+      );
+      if (updateMatch) {
+        const name = decodePathPart(updateMatch[1] ?? "");
+        if (!name) {
+          finish(400, { error: "invalid_path" });
+          return;
+        }
+        if (method !== "POST") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        const result = await addons.updateRepo(name);
+        finish(200, { result });
+        return;
+      }
+
+      if (route === "/api/v1/addons/install") {
+        if (method !== "POST") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        const body = (await readJsonBody(req)) as {
+          repo?: unknown;
+          module?: unknown;
+        } | null;
+        if (
+          !body ||
+          typeof body.repo !== "string" ||
+          typeof body.module !== "string"
+        ) {
+          finish(400, { error: "invalid_body" });
+          return;
+        }
+        await addons.install(body.repo, body.module);
+        finish(200, { ok: true });
+        return;
+      }
+
+      const moduleMatch = route.match(/^\/api\/v1\/addons\/modules\/([^/]+)$/);
+      if (moduleMatch) {
+        const name = decodePathPart(moduleMatch[1] ?? "");
+        if (!name) {
+          finish(400, { error: "invalid_path" });
+          return;
+        }
+        if (method !== "DELETE") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        await addons.uninstall(name);
+        finish(200, { ok: true });
+        return;
+      }
+
+      const pinMatch = route.match(
+        /^\/api\/v1\/addons\/modules\/([^/]+)\/pin$/,
+      );
+      if (pinMatch) {
+        const name = decodePathPart(pinMatch[1] ?? "");
+        if (!name) {
+          finish(400, { error: "invalid_path" });
+          return;
+        }
+        if (method !== "POST") {
+          finish(405, { error: "method_not_allowed" });
+          return;
+        }
+        const body = (await readJsonBody(req)) as { pinned?: unknown } | null;
+        if (!body || typeof body.pinned !== "boolean") {
+          finish(400, { error: "invalid_body" });
+          return;
+        }
+        await addons.setPinned(name, body.pinned);
+        finish(200, { ok: true });
+        return;
+      }
+
+      finish(404, { error: "not found" });
+    } catch (error) {
+      finish(400, { error: addonError(error) });
+    }
   };
 }
 
@@ -187,19 +409,8 @@ export function createPermitNodesHandler(
       `http://${req.headers.host ?? "localhost"}`,
     );
     const route = url.pathname;
-    const method = req.method ?? "GET";
 
-    const finish = (status: number, body: unknown): void => {
-      const seconds = (performance.now() - startedAt) / 1000;
-      httpRequests.inc({ method, route, status: String(status) });
-      httpRequestDuration.observe(
-        { method, route, status: String(status) },
-        seconds,
-      );
-      res.setHeader("content-type", "application/json");
-      res.statusCode = status;
-      res.end(JSON.stringify(body));
-    };
+    const finish = createResponseFinisher(req, res, route, startedAt);
 
     if (route === "/api/v1/permits/nodes") {
       if (!isAuthorized(req, token)) {
@@ -241,19 +452,8 @@ export function createGuildHandler(
       `http://${req.headers.host ?? "localhost"}`,
     );
     const route = url.pathname;
-    const method = req.method ?? "GET";
 
-    const finish = (status: number, body: unknown): void => {
-      const seconds = (performance.now() - startedAt) / 1000;
-      httpRequests.inc({ method, route, status: String(status) });
-      httpRequestDuration.observe(
-        { method, route, status: String(status) },
-        seconds,
-      );
-      res.setHeader("content-type", "application/json");
-      res.statusCode = status;
-      res.end(JSON.stringify(body));
-    };
+    const finish = createResponseFinisher(req, res, route, startedAt);
 
     const match = route.match(/^\/api\/v1\/guilds\/([0-9]+)$/);
     if (match) {
@@ -306,17 +506,7 @@ export function createBackupHandler(
     const route = url.pathname;
     const method = req.method ?? "GET";
 
-    const finish = (status: number, body: unknown): void => {
-      const seconds = (performance.now() - startedAt) / 1000;
-      httpRequests.inc({ method, route, status: String(status) });
-      httpRequestDuration.observe(
-        { method, route, status: String(status) },
-        seconds,
-      );
-      res.setHeader("content-type", "application/json");
-      res.statusCode = status;
-      res.end(JSON.stringify(body));
-    };
+    const finish = createResponseFinisher(req, res, route, startedAt);
 
     if (!isAuthorized(req, token)) {
       finish(401, { error: "unauthorized" });
@@ -407,19 +597,8 @@ export function createStatusHandler(
       `http://${req.headers.host ?? "localhost"}`,
     );
     const route = url.pathname;
-    const method = req.method ?? "GET";
 
-    const finish = (status: number, body: unknown): void => {
-      const seconds = (performance.now() - startedAt) / 1000;
-      httpRequests.inc({ method, route, status: String(status) });
-      httpRequestDuration.observe(
-        { method, route, status: String(status) },
-        seconds,
-      );
-      res.setHeader("content-type", "application/json");
-      res.statusCode = status;
-      res.end(JSON.stringify(body));
-    };
+    const finish = createResponseFinisher(req, res, route, startedAt);
 
     if (route === "/healthz") {
       const checks = await healthMonitor.runChecks();

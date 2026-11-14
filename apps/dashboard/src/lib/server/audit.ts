@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "./prisma";
 
@@ -21,6 +22,6 @@ export async function recordAudit(input: {
       },
     });
   } catch (error) {
-    console.error("[dashboard] audit write failed", error);
+    logger.error("[dashboard] audit write failed", error);
   }
 }

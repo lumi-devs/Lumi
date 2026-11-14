@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
@@ -244,7 +245,7 @@ export const actions: Actions = {
         "Verification completed on the Lumi dashboard",
       );
     } catch (error) {
-      console.error("[dashboard] verification role grant failed", error);
+      logger.error("[dashboard] verification role grant failed", error);
       return fail(502, {
         error:
           "The verified role could not be assigned. Check the bot's role hierarchy and permissions, then try again.",
@@ -261,7 +262,7 @@ export const actions: Actions = {
         settings.pendingRoleId,
         "Verification completed",
       ).catch((error: unknown) => {
-        console.warn("[dashboard] pending role removal failed", error);
+        logger.warn("[dashboard] pending role removal failed", error);
       });
     }
 

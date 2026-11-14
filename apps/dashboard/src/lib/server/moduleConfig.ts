@@ -4,7 +4,7 @@ import {
   RegexMaxLength,
 } from "../../../../../modules/shared/regex.js";
 import type { ConfigField } from "./modules";
-import { checkbox, formString, splitList } from "./validation";
+import { checkbox, formString, splitLines, splitList } from "./validation";
 
 const Snowflake = z
   .string()
@@ -62,6 +62,7 @@ function fieldSchema(field: ConfigField): z.ZodType<unknown> {
     switch (field.type) {
       case "number": {
         let schema = z.coerce.number().finite();
+        if (field.integer !== false) schema = schema.int();
         if (typeof field.min === "number") schema = schema.min(field.min);
         if (typeof field.max === "number") schema = schema.max(field.max);
         return schema;
@@ -106,6 +107,51 @@ function fieldSchema(field: ConfigField): z.ZodType<unknown> {
                   message: "Expected escalation rules.",
                 });
                 return z.NEVER;
+              }
+              for (const [count, rule] of Object.entries(parsed)) {
+                const warningCount = Number(count);
+                if (
+                  !Number.isInteger(warningCount) ||
+                  warningCount < 1 ||
+                  warningCount > 1000
+                ) {
+                  ctx.addIssue({
+                    code: "custom",
+                    message:
+                      "Warning counts must be whole numbers from 1 to 1000.",
+                  });
+                  return z.NEVER;
+                }
+                if (
+                  typeof rule !== "object" ||
+                  rule === null ||
+                  Array.isArray(rule) ||
+                  !("action" in rule) ||
+                  typeof rule.action !== "string" ||
+                  rule.action.length === 0 ||
+                  rule.action.length > 50
+                ) {
+                  ctx.addIssue({
+                    code: "custom",
+                    message: "Each escalation rule needs a valid action.",
+                  });
+                  return z.NEVER;
+                }
+                if ("duration" in rule && rule.duration !== null) {
+                  if (
+                    typeof rule.duration !== "number" ||
+                    !Number.isInteger(rule.duration) ||
+                    rule.duration < 0 ||
+                    rule.duration > 2_592_000
+                  ) {
+                    ctx.addIssue({
+                      code: "custom",
+                      message:
+                        "Timeout durations must be whole seconds from 0 to 2592000.",
+                    });
+                    return z.NEVER;
+                  }
+                }
               }
               return parsed;
             } catch {
@@ -167,7 +213,7 @@ export function parseConfigForm(
     }
 
     if (field.type === "multi-string") {
-      const list = splitList(raw);
+      const list = splitLines(raw);
       if (list.length === 0 && field.required) {
         return { ok: false, message: `${field.label} is required.` };
       }

@@ -1,4 +1,4 @@
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { requireGuildId } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -38,12 +38,11 @@ import { levelForTotalXp, levelProgress } from "./formulas.js";
 import { applyRewardRoles, grantVoiceXp, grantXp } from "./level-up.js";
 import { isAudible, voiceAudibleTransition } from "./voice-sessions.js";
 
-async function requireGuildId(
+async function requireGuildIdLocal(
   interaction: ChatInputCommandInteraction,
 ): Promise<string | null> {
-  const guildId = guildIdOf(interaction.guildId);
+  const guildId = requireGuildId(interaction.guildId);
   if (guildId) return guildId;
-
   await interaction.reply(
     ephemeralCard(
       makeErrorCard(
@@ -64,7 +63,7 @@ const rankDef: CommandDefinition = {
     ),
   async execute(interaction, services) {
     const target = interaction.options.getUser("user") ?? interaction.user;
-    const guildId = await requireGuildId(interaction);
+    const guildId = await requireGuildIdLocal(interaction);
     if (!guildId) return;
 
     const user = await services.helpers.leveling.findUser(guildId, target.id);
@@ -254,7 +253,7 @@ const leaderboardDef: CommandDefinition = {
     const boardType = parseLeaderboardType(
       interaction.options.getString("type"),
     );
-    const guildId = await requireGuildId(interaction);
+    const guildId = await requireGuildIdLocal(interaction);
     if (!guildId) return;
     const config = await getLevelingConfig(services, guildId);
     const card = await renderLeaderboard(
@@ -493,12 +492,12 @@ const levelingModule: ModuleDefinition = defineModule({
     onMemberRemoveListener,
   ],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[leveling] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[leveling] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[leveling] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[leveling] Module unloaded");
   },
 });
 

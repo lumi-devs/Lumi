@@ -1,4 +1,4 @@
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { requireGuildId } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -91,7 +91,7 @@ const afkDef: CommandDefinition = {
         .setMaxLength(500),
     ),
   async execute(interaction, services) {
-    const guildId = guildIdOf(interaction.guildId);
+    const guildId = requireGuildId(interaction.guildId);
     if (!guildId) {
       await interaction.reply(
         ephemeralCard(
@@ -277,12 +277,12 @@ const afkModule: ModuleDefinition = defineModule({
   commands: [afkDef],
   listeners: [onMessageListener],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[afk] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[afk] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[afk] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[afk] Module unloaded");
   },
 });
 

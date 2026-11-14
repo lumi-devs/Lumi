@@ -1,4 +1,4 @@
-import { requireGuildId as guildIdOf, isSnowflake } from "@lumi/foundation";
+import { isSnowflake, requireGuildId } from "@lumi/foundation";
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   type GuildMember,
@@ -530,7 +530,7 @@ export async function handleTempVcInteraction(
   if (!customId.startsWith("tempvc:")) {
     return false;
   }
-  const guildId = guildIdOf(interaction.guildId);
+  const guildId = requireGuildId(interaction.guildId);
   if (!guildId) {
     await replyError(
       interaction,

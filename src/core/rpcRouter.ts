@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
+import type { AddonManager } from "@lumi/downloader";
 import type { Logger } from "@lumi/foundation";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { HealthMonitor } from "@lumi/observability";
@@ -7,9 +8,10 @@ import type { PermitRepository } from "@lumi/permits";
 import type { Client } from "discord.js";
 import type { SyncGuildCommands } from "./commandSync.js";
 import {
+  createAddonHandler,
   createBackupHandler,
   createGuildHandler,
-  createModuleStateHandler,
+  createModuleHandler,
   createPermitNodesHandler,
   createStatusHandler,
 } from "./rpcRoutes.js";
@@ -19,10 +21,12 @@ export interface RpcRouterOptions {
   readonly prisma: PrismaClient;
   readonly healthMonitor: HealthMonitor;
   readonly moduleLoader: ModuleLoader;
+  readonly addons: AddonManager;
   readonly permits: PermitRepository;
   readonly logger: Logger;
   readonly token: string | undefined;
   readonly getSyncGuildCommands: () => SyncGuildCommands | undefined;
+  readonly invalidation: { invalidate(namespace: string, keys: string[]): Promise<void> };
 }
 
 export function createRpcRouter(
@@ -33,11 +37,11 @@ export function createRpcRouter(
     prisma,
     healthMonitor,
     moduleLoader,
+    addons,
     permits,
     logger,
     token,
   } = options;
-
   const statusHandler = createStatusHandler({
     client,
     healthMonitor,
@@ -50,10 +54,13 @@ export function createRpcRouter(
     token,
   });
   const guildHandler = createGuildHandler({ client, token });
-  const moduleStateHandler = createModuleStateHandler({
+  const addonHandler = createAddonHandler({ addons, token });
+  const moduleHandler = createModuleHandler({
     moduleLoader,
+    prisma,
     syncCommands: (guildId) =>
       options.getSyncGuildCommands()?.(guildId) ?? Promise.resolve(),
+    invalidation: options.invalidation,
     token,
   });
   const backupHandler = createBackupHandler({
@@ -68,6 +75,11 @@ export function createRpcRouter(
       req.url ?? "/",
       `http://${req.headers.host ?? "localhost"}`,
     );
+
+    if (url.pathname.startsWith("/api/v1/addons")) {
+      await addonHandler(req, res);
+      return;
+    }
 
     if (url.pathname === "/api/v1/permits/nodes") {
       await nodesHandler(req, res);
@@ -84,9 +96,9 @@ export function createRpcRouter(
 
     if (
       url.pathname.startsWith("/api/v1/guilds/") &&
-      url.pathname.includes("/modules/")
+      (/\/modules$/.test(url.pathname) || url.pathname.includes("/modules/"))
     ) {
-      await moduleStateHandler(req, res);
+      await moduleHandler(req, res);
       return;
     }
 

@@ -1,5 +1,5 @@
 import type { NamespacedCache } from "@lumi/cache";
-import type { Prisma, PrismaClient } from "@lumi/db";
+import type { Prisma, PrismaClient } from "@prisma/client";
 
 export type GuildSettings = Record<string, unknown>;
 

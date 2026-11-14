@@ -29,6 +29,7 @@
       "key": "startingBalance",
       "label": "Starting Balance",
       "type": "number",
+      "min": 0,
       "description": "Initial balance for new users",
       "default": 0,
       "category": "Currency"
@@ -37,6 +38,7 @@
       "key": "dailyAmount",
       "label": "Daily Reward",
       "type": "number",
+      "min": 0,
       "description": "Amount for /daily",
       "default": 100,
       "category": "Rewards"
@@ -45,6 +47,7 @@
       "key": "weeklyAmount",
       "label": "Weekly Reward",
       "type": "number",
+      "min": 0,
       "description": "Amount for /weekly",
       "default": 500,
       "category": "Rewards"
@@ -53,6 +56,9 @@
       "key": "taxRate",
       "label": "Transaction Tax",
       "type": "number",
+      "min": 0,
+      "max": 1,
+      "integer": false,
       "description": "Tax on transfers (0.05 = 5%)",
       "default": 0,
       "category": "Bank"
@@ -61,6 +67,7 @@
       "key": "bankMin",
       "label": "Minimum Bank Amount",
       "type": "number",
+      "min": 1,
       "description": "Minimum deposit or withdrawal",
       "default": 1,
       "category": "Bank"
@@ -69,6 +76,7 @@
       "key": "bankMax",
       "label": "Maximum Bank Amount",
       "type": "number",
+      "min": 0,
       "description": "Maximum deposit or withdrawal (0 = unlimited)",
       "default": 0,
       "category": "Bank"
@@ -77,6 +85,7 @@
       "key": "bankDailyCap",
       "label": "Daily Bank Cap",
       "type": "number",
+      "min": 0,
       "description": "Maximum deposited or withdrawn per direction per day (0 = unlimited)",
       "default": 0,
       "category": "Bank"
@@ -85,6 +94,7 @@
       "key": "transferMin",
       "label": "Minimum Transfer",
       "type": "number",
+      "min": 1,
       "description": "Minimum amount for /pay",
       "default": 1,
       "category": "Bank"
@@ -93,6 +103,7 @@
       "key": "transferMax",
       "label": "Maximum Transfer",
       "type": "number",
+      "min": 0,
       "description": "Maximum amount for /pay (0 = unlimited)",
       "default": 0,
       "category": "Bank"
@@ -101,6 +112,7 @@
       "key": "transferDailyCap",
       "label": "Daily Transfer Cap",
       "type": "number",
+      "min": 0,
       "description": "Maximum transferred per day (0 = unlimited)",
       "default": 0,
       "category": "Bank"
@@ -109,6 +121,7 @@
       "key": "workCooldown",
       "label": "Work Cooldown (seconds)",
       "type": "number",
+      "min": 60,
       "description": "Seconds between /work",
       "default": 3600,
       "category": "Work"
@@ -117,6 +130,7 @@
       "key": "workMinPay",
       "label": "Work Min Pay",
       "type": "number",
+      "min": 1,
       "description": "Minimum /work payout",
       "default": 50,
       "category": "Work"
@@ -125,6 +139,7 @@
       "key": "workMaxPay",
       "label": "Work Max Pay",
       "type": "number",
+      "min": 1,
       "description": "Maximum /work payout",
       "default": 200,
       "category": "Work"
@@ -142,10 +157,7 @@
     {
       "name": "economy",
       "version": "2.0.0",
-      "provides": [
-        "economy.banking",
-        "economy.shop"
-      ]
+      "provides": ["economy.banking", "economy.shop"]
     }
   ],
   "conflicts": [],

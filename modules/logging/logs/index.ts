@@ -393,12 +393,12 @@ const loggingModule: ModuleDefinition = defineModule({
     onVoiceStateListener,
   ],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[logging] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[logging] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[logging] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[logging] Module unloaded");
   },
 });
 

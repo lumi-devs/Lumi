@@ -1,4 +1,5 @@
-import type { DbHelpers, PrismaClient } from "@lumi/db";
+import type { DbHelpers } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 
 const TtlMs = 60_000;
 

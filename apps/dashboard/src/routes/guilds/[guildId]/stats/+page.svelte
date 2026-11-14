@@ -3,7 +3,7 @@
   let { data } = $props();
 </script>
 
-<h2>Stats & metrics</h2>
+<h2>Stats</h2>
 <p class="muted">
   Read-only server statistics from the bot's snapshots and event buckets.
   Metrics are never edited from the dashboard.

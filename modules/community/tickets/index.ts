@@ -60,12 +60,12 @@ const ticketsModule: ModuleDefinition = defineModule({
   commands: [ticketCommand],
   listeners: [ticketMessageListener, ticketInteractionListener],
   tasks: [autoCloseTask, retentionTask],
-  async onLoad(_services) {
-    console.log("[tickets] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[tickets] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log("[tickets] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[tickets] Module unloaded");
   },
 });
 

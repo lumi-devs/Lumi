@@ -4,42 +4,104 @@ export interface PermitNodesResponse {
   nodes: string[];
 }
 
+export interface RpcConfigField {
+  key: string;
+  label: string;
+  type: string;
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+  choices?: string[];
+  category?: string;
+  min?: number;
+  max?: number;
+  integer?: boolean;
+  channelTypes?: number[];
+}
+
+export interface RpcModule {
+  name: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  version: string;
+  configKey?: string;
+  configFields: RpcConfigField[];
+  category: string | null;
+  origin: "bundled" | "addon";
+  enabled: boolean;
+}
+
 export interface RpcError {
   error: string;
 }
 
-export async function fetchPermitNodes(guildId: string): Promise<string[]> {
+export type RpcResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+function isRpcError(value: unknown): value is RpcError {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "error" in value &&
+    typeof (value as RpcError).error === "string"
+  );
+}
+
+async function rpcRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = 5000,
+): Promise<RpcResult<T>> {
   const config = serverConfig();
   if (!config.rpcUrl) {
-    return [];
+    return { ok: false, error: "RPC is not configured." };
   }
 
-  const url = new URL("/api/v1/permits/nodes", config.rpcUrl);
-  url.searchParams.set("guild_id", guildId);
-
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-  };
+  const url = new URL(path, config.rpcUrl);
+  const headers = new Headers(init.headers);
+  headers.set("accept", "application/json");
   if (config.rpcInternalToken) {
-    headers.Authorization = `Bearer ${config.rpcInternalToken}`;
+    headers.set("authorization", `Bearer ${config.rpcInternalToken}`);
   }
 
   try {
-    const response = await fetch(url.toString(), {
+    const response = await fetch(url, {
+      ...init,
       headers,
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
+    const data: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      return [];
+      return {
+        ok: false,
+        error: isRpcError(data)
+          ? data.error
+          : `The bot rejected the request (HTTP ${response.status}).`,
+      };
     }
-    const data = (await response.json()) as PermitNodesResponse | RpcError;
-    if ("error" in data) {
-      return [];
+    if (data === null || isRpcError(data)) {
+      return { ok: false, error: "The bot returned an invalid response." };
     }
-    return data.nodes ?? [];
+    return { ok: true, data: data as T };
   } catch {
-    return [];
+    return { ok: false, error: "The bot did not respond." };
   }
+}
+
+export async function fetchPermitNodes(guildId: string): Promise<string[]> {
+  const result = await rpcRequest<PermitNodesResponse>(
+    `/api/v1/permits/nodes?guild_id=${encodeURIComponent(guildId)}`,
+  );
+  return result.ok ? result.data.nodes : [];
+}
+
+export async function fetchModules(
+  guildId: string,
+): Promise<RpcModule[] | null> {
+  const result = await rpcRequest<{ modules: RpcModule[] }>(
+    `/api/v1/guilds/${encodeURIComponent(guildId)}/modules`,
+  );
+  return result.ok ? result.data.modules : null;
 }
 
 export interface BackupStats {
@@ -90,37 +152,16 @@ export interface BackupRestoreResult {
   warnings: string[];
 }
 
-function rpcHeaders(): Record<string, string> {
-  const config = serverConfig();
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (config.rpcInternalToken) {
-    headers.Authorization = `Bearer ${config.rpcInternalToken}`;
-  }
-  return headers;
-}
-
 export async function fetchBackupPreview(
   guildId: string,
   backupId: string,
 ): Promise<BackupPreview | null> {
-  const config = serverConfig();
-  if (!config.rpcUrl) return null;
-
-  const url = new URL(
-    `/api/v1/guilds/${guildId}/backups/${encodeURIComponent(backupId)}/preview`,
-    config.rpcUrl,
+  const result = await rpcRequest<BackupPreview>(
+    `/api/v1/guilds/${encodeURIComponent(guildId)}/backups/${encodeURIComponent(backupId)}/preview`,
+    {},
+    15000,
   );
-
-  try {
-    const response = await fetch(url.toString(), {
-      headers: rpcHeaders(),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as BackupPreview;
-  } catch {
-    return null;
-  }
+  return result.ok ? result.data : null;
 }
 
 export interface ModuleStateResult {
@@ -128,44 +169,145 @@ export interface ModuleStateResult {
   error?: string;
 }
 
+export interface AddonModule {
+  name: string;
+  displayName: string;
+  emoji: string;
+  description: string;
+  version: string;
+  installed: boolean;
+}
+
+export interface AddonRepo {
+  id: number;
+  name: string;
+  url: string;
+  branch: string | null;
+  commit: string | null;
+  installed: number;
+  candidates: AddonModule[];
+}
+
+export interface InstalledAddon {
+  name: string;
+  version: string | null;
+  commit: string | null;
+  pinned: boolean;
+  installedAt: string;
+  repoName: string;
+}
+
+export interface AutoUpdateState {
+  enabled: boolean;
+  intervalMinutes: number;
+  lastCheckedAt: string | null;
+}
+
+export interface AddonCatalog {
+  repos: AddonRepo[];
+  installed: InstalledAddon[];
+  autoUpdate: AutoUpdateState;
+}
+
+export interface RepoUpdateResult {
+  repo: string;
+  oldCommit: string | null;
+  newCommit: string;
+  changed: boolean;
+  updated: string[];
+  pinned: string[];
+  failures: Array<{ module: string; error: string }>;
+}
+
+export async function fetchAddons(): Promise<RpcResult<AddonCatalog>> {
+  return rpcRequest<AddonCatalog>("/api/v1/addons", {}, 15000);
+}
+
+export async function addAddonRepo(
+  name: string,
+  url: string,
+  branch: string,
+): Promise<RpcResult<unknown>> {
+  return rpcRequest("/api/v1/addons/repos", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name, url, branch: branch || undefined }),
+  });
+}
+
+export async function removeAddonRepo(
+  name: string,
+): Promise<RpcResult<unknown>> {
+  return rpcRequest(
+    `/api/v1/addons/repos/${encodeURIComponent(name)}`,
+    { method: "DELETE" },
+    15000,
+  );
+}
+
+export async function updateAddonRepo(
+  name: string,
+): Promise<RpcResult<{ result: RepoUpdateResult }>> {
+  return rpcRequest(
+    `/api/v1/addons/repos/${encodeURIComponent(name)}/update`,
+    { method: "POST" },
+    60000,
+  );
+}
+
+export async function installAddon(
+  repo: string,
+  moduleName: string,
+): Promise<RpcResult<unknown>> {
+  return rpcRequest(
+    "/api/v1/addons/install",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ repo, module: moduleName }),
+    },
+    30000,
+  );
+}
+
+export async function uninstallAddon(
+  moduleName: string,
+): Promise<RpcResult<unknown>> {
+  return rpcRequest(
+    `/api/v1/addons/modules/${encodeURIComponent(moduleName)}`,
+    { method: "DELETE" },
+    15000,
+  );
+}
+
+export async function pinAddon(
+  moduleName: string,
+  pinned: boolean,
+): Promise<RpcResult<unknown>> {
+  return rpcRequest(
+    `/api/v1/addons/modules/${encodeURIComponent(moduleName)}/pin`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pinned }),
+    },
+  );
+}
+
 export async function setModuleStateViaRpc(
   guildId: string,
   moduleName: string,
   enabled: boolean,
 ): Promise<ModuleStateResult> {
-  const config = serverConfig();
-  if (!config.rpcUrl) {
-    return { ok: false, error: "RPC is not configured." };
-  }
-
-  const url = new URL(
-    `/api/v1/guilds/${guildId}/modules/${encodeURIComponent(moduleName)}/state`,
-    config.rpcUrl,
-  );
-
-  try {
-    const response = await fetch(url.toString(), {
+  const result = await rpcRequest(
+    `/api/v1/guilds/${encodeURIComponent(guildId)}/modules/${encodeURIComponent(moduleName)}/state`,
+    {
       method: "POST",
-      headers: {
-        ...rpcHeaders(),
-        "content-type": "application/json",
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ enabled }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) {
-      return {
-        ok: false,
-        error: `The bot rejected the module update (HTTP ${response.status}).`,
-      };
-    }
-    return { ok: true };
-  } catch {
-    return {
-      ok: false,
-      error: "The bot did not respond to the module update.",
-    };
-  }
+    },
+  );
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 export async function restoreBackupViaRpc(
@@ -174,38 +316,12 @@ export async function restoreBackupViaRpc(
 ): Promise<
   { ok: true; result: BackupRestoreResult } | { ok: false; error: string }
 > {
-  const config = serverConfig();
-  if (!config.rpcUrl) {
-    return { ok: false, error: "RPC is not configured." };
-  }
-
-  const url = new URL(
-    `/api/v1/guilds/${guildId}/backups/${encodeURIComponent(backupId)}/restore`,
-    config.rpcUrl,
+  const result = await rpcRequest<{ result: BackupRestoreResult }>(
+    `/api/v1/guilds/${encodeURIComponent(guildId)}/backups/${encodeURIComponent(backupId)}/restore`,
+    { method: "POST" },
+    60000,
   );
-
-  try {
-    const response = await fetch(url.toString(), {
-      method: "POST",
-      headers: rpcHeaders(),
-      signal: AbortSignal.timeout(60000),
-    });
-    const data = (await response.json()) as
-      { result: BackupRestoreResult } | RpcError;
-    if (!response.ok || "error" in data) {
-      return {
-        ok: false,
-        error:
-          "error" in data
-            ? `Restore failed: ${data.error}`
-            : `Restore failed (HTTP ${response.status}).`,
-      };
-    }
-    return { ok: true, result: data.result };
-  } catch {
-    return {
-      ok: false,
-      error: "The bot did not respond to the restore request.",
-    };
-  }
+  return result.ok
+    ? { ok: true, result: result.data.result }
+    : { ok: false, error: `Restore failed: ${result.error}` };
 }

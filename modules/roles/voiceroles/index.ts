@@ -16,7 +16,6 @@ import { canManageRolesCommand, roleMentions } from "../../shared/roles.js";
 import {
   getVoiceRolesConfig,
   VoiceRolesConfigSchema,
-  VoiceRolesModuleName,
 } from "./config.js";
 import {
   deleteVoiceRoleMapping,
@@ -256,7 +255,7 @@ const onVoiceStateListener: ListenerDefinition = {
 };
 
 const voiceRolesModule: ModuleDefinition = defineModule({
-  name: VoiceRolesModuleName,
+  name: "voiceroles",
   displayName: "Voice Roles",
   emoji: "🔊",
   description:
@@ -290,12 +289,12 @@ const voiceRolesModule: ModuleDefinition = defineModule({
       },
     },
   ],
-  async onLoad(_services) {
-    console.log(`[${VoiceRolesModuleName}] Module loaded`);
+  async onLoad(services) {
+    services.observability.logger.info("[voiceroles] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log(`[${VoiceRolesModuleName}] Module unloaded`);
+  async onUnload(services) {
+    services.observability.logger.info("[voiceroles] Module unloaded");
   },
 });
 

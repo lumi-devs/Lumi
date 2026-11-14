@@ -50,7 +50,7 @@
   }
 </script>
 
-<h2>Cases & audit log</h2>
+<h2>Cases &amp; audit</h2>
 <p class="muted">
   Read-only view of <code>audit_logs</code>, including moderation cases and
   dashboard changes.

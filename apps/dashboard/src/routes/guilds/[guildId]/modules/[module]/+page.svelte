@@ -28,6 +28,22 @@
       key <code>{data.module.configKey}</code>
     </p>
   </div>
+  <div class="actions">
+    <span class="badge {data.module.enabled ? 'on' : 'off'}"
+      >{data.module.enabled ? "Enabled" : "Disabled"}</span
+    >
+    <form method="POST" action="?/toggle">
+      <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
+      <input
+        type="hidden"
+        name="enabled"
+        value={data.module.enabled ? "false" : "true"}
+      />
+      <button class="small {data.module.enabled ? 'danger' : ''}" type="submit"
+        >{data.module.enabled ? "Disable" : "Enable"}</button
+      >
+    </form>
+  </div>
 </div>
 
 {#if form?.success}
@@ -47,6 +63,13 @@
       Members who join one of these voice channels get their own temporary
       channel. Add an existing voice channel below.
     </p>
+
+    {#if data.tempvc.channelsError}
+      <div class="notice error" role="alert">
+        Could not load voice channels from the bot. Saved generator IDs are
+        shown without names until the bot API is reachable.
+      </div>
+    {/if}
 
     {#if data.tempvc.generators.length === 0}
       <p class="muted">No generators configured yet.</p>
@@ -68,7 +91,11 @@
                   {#if generator.name}
                     <strong>#{generator.name}</strong>
                   {:else}
-                    <strong>Unknown channel</strong>
+                    <strong
+                      >{data.tempvc.channelsError
+                        ? "Channel unavailable"
+                        : "Unknown channel"}</strong
+                    >
                   {/if}
                   <div class="muted"><code>{generator.channelId}</code></div>
                 </td>
@@ -92,7 +119,9 @@
       </div>
     {/if}
 
-    {#if availableChannels.length === 0}
+    {#if data.tempvc.channelsError}
+      <p class="muted">Reload this page after the bot reconnects.</p>
+    {:else if availableChannels.length === 0}
       <p class="muted">
         There are no available voice channels to add. Create one in Discord,
         then reload this page.
@@ -172,11 +201,17 @@
 <div class="panel">
   <h3>Reset configuration</h3>
   <p class="muted">
-    Removes the stored <code>{data.module.configKey}</code> settings object. The module
-    falls back to its declared defaults.
+    Removes the stored <code>{data.module.configKey}</code> settings object. The
+    module falls back to its declared defaults.
+    {#if data.tempvc}
+      This also deletes {data.tempvc.generators.length} configured generator channel(s).
+    {/if}
   </p>
-  <form method="POST" action="?/reset">
-    <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
-    <button class="danger" type="submit">Reset settings</button>
-  </form>
+  <ConfirmForm
+    action="?/reset"
+    csrfToken={data.csrfToken ?? ""}
+    buttonLabel="Reset settings"
+    message="Delete all stored settings for {data.module.displayName}?"
+    confirmLabel="Reset settings"
+  />
 </div>

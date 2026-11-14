@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { Prisma } from "@prisma/client";
 import { error, fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
@@ -163,7 +164,7 @@ export const actions: Actions = {
           error: "A permit with that name already exists.",
         });
       }
-      console.error("[dashboard] permit update failed", updateError);
+      logger.error("[dashboard] permit update failed", updateError);
       return fail(500, { error: "Could not update the permit." });
     }
 
@@ -261,7 +262,7 @@ export const actions: Actions = {
           error: "That target is already assigned to this permit.",
         });
       }
-      console.error("[dashboard] permit assign failed", assignError);
+      logger.error("[dashboard] permit assign failed", assignError);
       return fail(500, { error: describeError(assignError) });
     }
 

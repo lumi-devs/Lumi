@@ -70,13 +70,13 @@ const statsModule: ModuleDefinition = defineModule({
   permitNodes: [StatsPermitNode],
   listeners: [...trackingListeners, ...statsButtonListeners],
   tasks: [snapshotTask, retentionTask],
-  async onLoad(_services) {
-    console.log("[stats] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[stats] Module loaded");
     return [];
   },
   async onUnload(services) {
     await flushVoiceSessions(services);
-    console.log("[stats] Module unloaded");
+    services.observability.logger.info("[stats] Module unloaded");
   },
 });
 

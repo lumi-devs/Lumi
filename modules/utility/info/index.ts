@@ -412,12 +412,12 @@ const utilityModule: ModuleDefinition = defineModule({
   commands: [avatarDef, bannerDef, whoisDef, serverinfoDef, infoDef],
   listeners: [avatarViewListener],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[utility] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[utility] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[utility] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[utility] Module unloaded");
   },
 });
 

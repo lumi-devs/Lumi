@@ -17,7 +17,7 @@ import {
 import {
   type CatalogModule,
   type ConfigField,
-  findModule,
+  moduleCatalog,
 } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { setModuleStateViaRpc } from "#lib/server/rpc.js";
@@ -56,24 +56,36 @@ function editableFields(module: CatalogModule) {
     : module.configFields;
 }
 
-function targetIds(fields: ConfigField[], values: Record<string, unknown>) {
+function targetIds(
+  fields: ConfigField[],
+  values: Record<string, unknown>,
+  previous: Record<string, unknown>,
+) {
   const channels: string[] = [];
   const roles: string[] = [];
+  const channelTypes: Array<{ id: string; types: readonly number[] }> = [];
   for (const field of fields) {
     const value = values[field.key];
+    if (JSON.stringify(value) === JSON.stringify(previous[field.key])) {
+      continue;
+    }
+    const types = field.channelTypes ?? [];
     if (field.type === "channel" && typeof value === "string") {
       channels.push(value);
+      if (types.length > 0) channelTypes.push({ id: value, types });
     } else if (field.type === "role" && typeof value === "string") {
       roles.push(value);
     } else if (field.type === "multi-channel" && Array.isArray(value)) {
-      channels.push(
-        ...value.filter((id): id is string => typeof id === "string"),
-      );
+      const ids = value.filter((id): id is string => typeof id === "string");
+      channels.push(...ids);
+      if (types.length > 0) {
+        channelTypes.push(...ids.map((id) => ({ id, types })));
+      }
     } else if (field.type === "multi-role" && Array.isArray(value)) {
       roles.push(...value.filter((id): id is string => typeof id === "string"));
     }
   }
-  return { channels, roles };
+  return { channels, roles, channelTypes };
 }
 
 function parseGenerators(value: unknown): TempVcGenerator[] {
@@ -105,10 +117,25 @@ async function readModuleConfig(
   return configFor(settings, module.configKey);
 }
 
+async function requireModule(
+  guildId: string,
+  name: string,
+): Promise<CatalogModule> {
+  const catalog = await moduleCatalog(guildId);
+  if (!catalog) {
+    throw error(
+      503,
+      "The bot is offline; module configuration is unavailable.",
+    );
+  }
+  const module = catalog.find((entry) => entry.name === name);
+  if (!module) throw error(404, "Module not found.");
+  return module;
+}
+
 export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
-  const module = await findModule(event.params.module ?? "");
-  if (!module) throw error(404, "Module not found.");
+  const module = await requireModule(guildId, event.params.module ?? "");
 
   const settings = await readGuildSettings(guildId);
   const config = configFor(settings, module.configKey);
@@ -117,10 +144,13 @@ export const load: PageServerLoad = async (event) => {
 
   let generators: Array<TempVcGenerator & { name: string | null }> = [];
   let channels: DiscordChannel[] = [];
+  let channelsError = false;
   if (isTempVc) {
-    channels = await fetchGuildChannels(guildId)
-      .then(voiceChannels)
-      .catch(() => []);
+    try {
+      channels = voiceChannels(await fetchGuildChannels(guildId));
+    } catch {
+      channelsError = true;
+    }
     const names = new Map(
       channels.map((channel) => [channel.id, channel.name]),
     );
@@ -133,15 +163,14 @@ export const load: PageServerLoad = async (event) => {
   return {
     module: { ...module, configFields: fields },
     config: displayValues(fields, config),
-    tempvc: isTempVc ? { generators, channels } : null,
+    tempvc: isTempVc ? { generators, channels, channelsError } : null,
   };
 };
 
 export const actions: Actions = {
   save: async (event) => {
     const guildId = await requireGuildId(event);
-    const module = await findModule(event.params.module ?? "");
-    if (!module) return fail(404, { error: "Module not found." });
+    const module = await requireModule(guildId, event.params.module ?? "");
 
     const data = await event.request.formData();
     const userId = assertCsrf(event, data);
@@ -152,19 +181,25 @@ export const actions: Actions = {
       return fail(400, { error: parsed.message ?? "Invalid configuration." });
     }
 
+    const current = await readModuleConfig(guildId, module);
     if (module.name === TempVcModuleName) {
-      const current = await readModuleConfig(guildId, module);
       parsed.values.generators = parseGenerators(current.generators);
     }
 
+    const previous = displayValues(fields, current);
     const targets = await verifyGuildTargets(
       guildId,
-      targetIds(fields, parsed.values),
+      targetIds(fields, parsed.values, previous),
     );
-    if (!targets.ok) return fail(targets.status, { error: targets.message });
+    let warning: string | undefined;
+    if (!targets.ok) {
+      if (targets.status !== 502) {
+        return fail(targets.status, { error: targets.message });
+      }
+      warning = `${targets.message} Saved without verifying Discord targets.`;
+    }
 
     await setGuildSetting(guildId, module.configKey, parsed.values);
-    let warning: string | undefined;
     const enabledField = enabledConfigField(fields);
     if (enabledField) {
       const enabled = parsed.values[enabledField.key] === true;
@@ -195,13 +230,27 @@ export const actions: Actions = {
 
   reset: async (event) => {
     const guildId = await requireGuildId(event);
-    const module = await findModule(event.params.module ?? "");
-    if (!module) return fail(404, { error: "Module not found." });
+    const module = await requireModule(guildId, event.params.module ?? "");
 
     const data = await event.request.formData();
     const userId = assertCsrf(event, data);
 
     await deleteGuildSetting(guildId, module.configKey);
+    let warning: string | undefined;
+    const enabledField = enabledConfigField(editableFields(module));
+    if (enabledField) {
+      const enabled = enabledField.default === true;
+      await ensureGuild(guildId);
+      await getPrisma().guildModule.upsert({
+        where: { guildId_module: { guildId, module: module.name } },
+        update: { enabled },
+        create: { guildId, module: module.name, enabled },
+      });
+      const sync = await setModuleStateViaRpc(guildId, module.name, enabled);
+      if (!sync.ok) {
+        warning = `${sync.error ?? "The bot did not apply the change."} It will apply on the next bot restart.`;
+      }
+    }
     await recordAudit({
       guildId,
       userId,
@@ -210,13 +259,46 @@ export const actions: Actions = {
       targetType: "module",
       changes: { configKey: module.configKey },
     });
-    return { success: `Reset ${module.displayName} configuration.` };
+    return {
+      success: `Reset ${module.displayName} configuration.`,
+      ...(warning ? { warning } : {}),
+    };
+  },
+
+  toggle: async (event) => {
+    const guildId = await requireGuildId(event);
+    const module = await requireModule(guildId, event.params.module ?? "");
+    const data = await event.request.formData();
+    const userId = assertCsrf(event, data);
+    const enabled = formString(data, "enabled") === "true";
+
+    await ensureGuild(guildId);
+    await getPrisma().guildModule.upsert({
+      where: { guildId_module: { guildId, module: module.name } },
+      update: { enabled },
+      create: { guildId, module: module.name, enabled },
+    });
+    const sync = await setModuleStateViaRpc(guildId, module.name, enabled);
+    await recordAudit({
+      guildId,
+      userId,
+      action: enabled ? "dashboard.module.enable" : "dashboard.module.disable",
+      targetId: module.name,
+      targetType: "module",
+    });
+    const warning = sync.ok
+      ? undefined
+      : `${sync.error ?? "The bot did not apply the change."} It will apply on the next bot restart.`;
+    return {
+      success: `${module.displayName} ${enabled ? "enabled" : "disabled"}.`,
+      ...(warning ? { warning } : {}),
+    };
   },
 
   addGenerator: async (event) => {
     const guildId = await requireGuildId(event);
-    const module = await findModule(event.params.module ?? "");
-    if (!module || module.name !== TempVcModuleName) {
+    const module = await requireModule(guildId, event.params.module ?? "");
+    if (module.name !== TempVcModuleName) {
       return fail(404, { error: "Module not found." });
     }
 
@@ -282,8 +364,8 @@ export const actions: Actions = {
 
   removeGenerator: async (event) => {
     const guildId = await requireGuildId(event);
-    const module = await findModule(event.params.module ?? "");
-    if (!module || module.name !== TempVcModuleName) {
+    const module = await requireModule(guildId, event.params.module ?? "");
+    if (module.name !== TempVcModuleName) {
       return fail(404, { error: "Module not found." });
     }
 

@@ -7,11 +7,11 @@ export type {
 import type {
   CommandDefinition,
   ListenerDefinition,
-  ModuleCapability,
   ModuleDataLifecycle,
   ModuleServices,
   TaskDefinition,
 } from "./types.js";
+export type { ConfigField } from "@lumi/module-runtime";
 
 export interface ModuleDefinition {
   name: string;
@@ -32,7 +32,6 @@ export interface ModuleDefinition {
   dependencies?: Readonly<Record<string, string>>;
   requirements?: readonly string[];
   conflicts?: readonly string[];
-  capabilities?: readonly ModuleCapability[];
 }
 
 export type Disposer = () => void | Promise<void>;

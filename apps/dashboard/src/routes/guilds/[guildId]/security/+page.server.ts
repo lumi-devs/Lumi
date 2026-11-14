@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { createHash, randomBytes } from "node:crypto";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
@@ -173,7 +174,7 @@ export const load: PageServerLoad = async (event) => {
     roles = await fetchGuildRoles(guildId);
     botRolesAvailable = true;
   } catch (error) {
-    console.warn("[dashboard] could not load guild roles", error);
+    logger.warn("[dashboard] could not load guild roles", error);
   }
 
   return {

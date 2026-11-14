@@ -63,12 +63,12 @@ const modModule: ModuleDefinition = defineModule({
   ],
   listeners: [casesPaginationListener],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[mod] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[mod] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[mod] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[mod] Module unloaded");
   },
 });
 

@@ -17,115 +17,7 @@
   }
 </script>
 
-{#snippet commandForm(command: any)}
-  {@const uid = `cmd-${command?.id ?? "new"}`}
-  <form method="POST" action="?/saveCommand">
-    <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
-    {#if command}<input type="hidden" name="id" value={command.id} />{/if}
-    <div class="form-grid">
-      <div class="field">
-        <label for="{uid}-name">Name</label>
-        <input
-          id="{uid}-name"
-          name="name"
-          type="text"
-          maxlength="64"
-          value={command?.name ?? ""}
-          required
-        />
-      </div>
-      <div class="field">
-        <label for="{uid}-trigger-type">Trigger type</label>
-        <select id="{uid}-trigger-type" name="triggerType">
-          {#each ["exact", "contains", "starts_with", "regex"] as type (type)}
-            <option
-              value={type}
-              selected={(command?.triggerType ?? "exact") === type}
-              >{type}</option
-            >
-          {/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="{uid}-trigger">Trigger</label>
-        <input
-          id="{uid}-trigger"
-          name="trigger"
-          type="text"
-          maxlength="500"
-          value={command?.trigger ?? ""}
-          required
-        />
-      </div>
-      <div class="field">
-        <label for="{uid}-cooldown">Cooldown (seconds)</label>
-        <input
-          id="{uid}-cooldown"
-          name="cooldownSeconds"
-          type="number"
-          min="0"
-          max="86400"
-          value={command?.cooldownSeconds ?? 0}
-        />
-      </div>
-      <div class="field">
-        <label for="{uid}-group">Group</label>
-        <select id="{uid}-group" name="groupId">
-          <option value="">No group</option>
-          {#each data.commandGroups as group (group.id)}
-            <option value={group.id} selected={command?.groupId === group.id}
-              >{group.name}</option
-            >
-          {/each}
-        </select>
-      </div>
-      <div class="field">
-        <label style="display:flex;gap:0.5rem;align-items:center">
-          <input
-            type="checkbox"
-            name="enabled"
-            checked={command ? command.enabled : true}
-          />
-          Enabled
-        </label>
-      </div>
-      <div class="field full">
-        <label for="{uid}-description">Description</label>
-        <input
-          id="{uid}-description"
-          name="description"
-          type="text"
-          maxlength="500"
-          value={command?.description ?? ""}
-        />
-      </div>
-      <div class="field full">
-        <label for="{uid}-responses">Responses</label>
-        <textarea id="{uid}-responses" name="responses" required
-          >{lines(command?.responses ?? [])}</textarea
-        >
-        <span class="hint">One response per line.</span>
-      </div>
-      <div class="field full">
-        <label for="{uid}-permissions">Permission nodes</label>
-        <NodePicker
-          id="{uid}-permissions"
-          name="permissionNodes"
-          nodes={data.nodes}
-          selected={[...(command?.permissionNodes ?? [])]}
-        />
-      </div>
-    </div>
-    <div class="actions" style="margin-top:0.8rem">
-      <button type="submit"
-        >{command ? "Save command" : "Create command"}</button
-      >
-    </div>
-  </form>
-{/snippet}
-
 {#snippet menuForm(menu: any)}
-  {@const uid = `menu-${menu?.id ?? "new"}`}
   <form method="POST" action="?/saveMenu">
     <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
     {#if menu}<input type="hidden" name="id" value={menu.id} />{/if}
@@ -399,13 +291,11 @@
     </div>
   </form>
 {/snippet}
-
 <h2>Feature configuration</h2>
 <p class="muted">
-  Configure custom commands, role menus, and ticket categories stored in the
+  Configure role menus, and ticket categories stored in the
   database. Discord message panels are still sent by the bot.
 </p>
-
 {#if form?.success}
   <div class="notice ok" role="status">{form.success}</div>
 {/if}
@@ -413,58 +303,6 @@
   <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
-<div class="panel">
-  <h3>Custom commands</h3>
-  {#if data.commands.length === 0}
-    <p class="muted">No custom commands yet.</p>
-  {:else}
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Trigger</th><th>State</th><th></th></tr>
-        </thead>
-        <tbody>
-          {#each data.commands as command (command.id)}
-            <tr>
-              <td><strong>{command.name}</strong></td>
-              <td><code>{command.triggerType}: {command.trigger}</code></td>
-              <td>
-                <span class="badge {command.enabled ? 'on' : 'off'}"
-                  >{command.enabled ? "Enabled" : "Disabled"}</span
-                >
-              </td>
-              <td>
-                <div class="actions">
-                  <ConfirmForm
-                    action="?/deleteCommand"
-                    csrfToken={data.csrfToken ?? ""}
-                    buttonLabel="Delete"
-                    confirmLabel="Confirm"
-                    message="Delete this custom command?"
-                    hidden={[{ name: "id", value: command.id }]}
-                    small
-                  />
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td colspan="4">
-                <details>
-                  <summary>Edit {command.name}</summary>
-                  {@render commandForm(command)}
-                </details>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {/if}
-  <details style="margin-top:1rem">
-    <summary><strong>Create custom command</strong></summary>
-    {@render commandForm(null)}
-  </details>
-</div>
 
 <div class="panel">
   <h3>Role menus</h3>

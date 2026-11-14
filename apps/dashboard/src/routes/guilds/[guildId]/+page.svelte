@@ -9,10 +9,19 @@
     cannot see it. Dashboard edits are saved, but bot actions will not run.
   </div>
 {/if}
+{#if !data.modules}
+  <div class="notice warn" role="status">
+    The bot RPC API is unreachable, so live module state is unavailable.
+  </div>
+{/if}
 
 <div class="grid" style="margin-bottom:1rem">
   <div class="stat">
-    <strong>{data.modules.enabled}/{data.modules.available}</strong>
+    <strong
+      >{data.modules
+        ? `${data.modules.enabled}/${data.modules.available}`
+        : "—"}</strong
+    >
     <span>Modules enabled</span>
   </div>
   <div class="stat">
@@ -25,7 +34,11 @@
   </div>
   <div class="stat">
     <strong>{data.memberCount ?? "—"}</strong>
-    <span>Members (latest snapshot)</span>
+    <span
+      >Members{data.snapshotAt
+        ? ` · ${formatDate(data.snapshotAt)}`
+        : " · no snapshot yet"}</span
+    >
   </div>
 </div>
 
@@ -59,7 +72,17 @@
           {#each data.recentAudit as entry (entry.id)}
             <tr>
               <td><code>{entry.action}</code></td>
-              <td>{entry.userId}</td>
+              <td>
+                {#if entry.userName}
+                  <a
+                    href="https://discord.com/users/{entry.userId}"
+                    target="_blank"
+                    rel="noreferrer">{entry.userName}</a
+                  >
+                {:else}
+                  <code title="Discord user ID">{entry.userId}</code>
+                {/if}
+              </td>
               <td>{entry.targetId ?? "—"}</td>
               <td>{formatDate(entry.createdAt)}</td>
             </tr>

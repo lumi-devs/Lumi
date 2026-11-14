@@ -1,10 +1,8 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
 import { readConfig } from "../../shared/roles.js";
-
 export const BulkRoleModuleName = "bulkrole";
-export const BulkRoleConfigKey = BulkRoleModuleName;
-
+export const BulkRoleConfigKey = "bulkrole";
 export const BulkRoleConfigSchema = z.object({
   enabled: z.boolean().default(true),
   batchSize: z.number().int().min(1).max(500).default(50),

@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import type { Dirent } from "node:fs";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
@@ -17,6 +18,7 @@ export type ModuleSummary = Pick<
   | "version"
   | "category"
   | "configFields"
+  | "configKey"
 > & {
   origin: "bundled" | "addon";
 };
@@ -169,7 +171,7 @@ export class ModuleLoader {
   private moduleDisposers = new Map<string, Disposer[]>();
   private roots: Array<{ path: string; origin: "bundled" | "addon" }> = [];
   private services: ModuleServices | null = null;
-
+  private dependents = new Map<string, Set<string>>();
   private requireServices(): ModuleServices {
     if (!this.services) {
       throw new Error(
@@ -187,7 +189,7 @@ export class ModuleLoader {
       try {
         await dispose();
       } catch (error) {
-        console.error(`Failed to dispose module ${moduleName}:`, error);
+        logger.error(`Failed to dispose module ${moduleName}:`, error);
       }
     }
   }
@@ -208,7 +210,9 @@ export class ModuleLoader {
       .filter((module) => {
         const name = module.manifest.name;
         if (seen.has(name)) {
-          console.error(`Duplicate module "${name}" in ${module.path}; skipping.`);
+          logger.error(
+            `Duplicate module "${name}" in ${module.path}; skipping.`,
+          );
           return false;
         }
         seen.add(name);
@@ -228,7 +232,7 @@ export class ModuleLoader {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (error) {
       if (!isMissingPath(error)) {
-        console.error(`Error discovering modules in ${dir}:`, error);
+        logger.error(`Error discovering modules in ${dir}:`, error);
       }
       return;
     }
@@ -241,7 +245,12 @@ export class ModuleLoader {
       const manifest = await this.readManifest(modulePath);
       if (!manifest) {
         if (depth < 4) {
-          await this.discoverDirectory(modulePath, origin, discovered, depth + 1);
+          await this.discoverDirectory(
+            modulePath,
+            origin,
+            discovered,
+            depth + 1,
+          );
         }
         continue;
       }
@@ -265,7 +274,7 @@ export class ModuleLoader {
       content = await readFile(join(dir, "manifest.json"), "utf-8");
     } catch (error) {
       if (!isMissingPath(error)) {
-        console.error(`Failed to read manifest in ${dir}:`, error);
+        logger.error(`Failed to read manifest in ${dir}:`, error);
       }
       return null;
     }
@@ -273,7 +282,7 @@ export class ModuleLoader {
     try {
       return validateManifest(JSON.parse(content));
     } catch (error) {
-      console.error(`Invalid manifest in ${dir}:`, error);
+      logger.error(`Invalid manifest in ${dir}:`, error);
       return null;
     }
   }
@@ -290,7 +299,7 @@ export class ModuleLoader {
   ): Promise<ModuleDefinition | null> {
     const entryPath = this.entryPath(dir, manifest.entry);
     if (!entryPath) {
-      console.error(
+      logger.error(
         `Module ${manifest.name} has an unsafe entry path "${manifest.entry}".`,
       );
       return null;
@@ -302,7 +311,7 @@ export class ModuleLoader {
         realpath(entryPath),
       ]);
       if (!realEntry.startsWith(realRoot + sep)) {
-        console.error(
+        logger.error(
           `Module ${manifest.name} entry "${manifest.entry}" resolves outside the module directory.`,
         );
         return null;
@@ -313,18 +322,18 @@ export class ModuleLoader {
       };
       const definition = mod.default;
       if (!definition) {
-        console.error(`Module ${manifest.name} has no default export.`);
+        logger.error(`Module ${manifest.name} has no default export.`);
         return null;
       }
       if (definition.name !== manifest.name) {
-        console.error(
+        logger.error(
           `Module name mismatch: ${definition.name} !== ${manifest.name}.`,
         );
         return null;
       }
       return definition;
     } catch (error) {
-      console.error(`Failed to load module ${manifest.name}:`, error);
+      logger.error(`Failed to load module ${manifest.name}:`, error);
       return null;
     }
   }
@@ -334,9 +343,10 @@ export class ModuleLoader {
     services: ModuleServices,
   ): Promise<LoadedModule[]> {
     this.services = services;
+    this.dependents.clear();
     const { ordered, cyclic } = this.sortModules(discovered);
     for (const name of cyclic) {
-      console.error(`Module ${name} is part of a dependency cycle; skipping.`);
+      logger.error(`Module ${name} is part of a dependency cycle; skipping.`);
     }
 
     const available = new Map(
@@ -351,7 +361,7 @@ export class ModuleLoader {
         (other) => other !== name && available.has(other),
       );
       if (conflict) {
-        console.warn(`Module ${name} conflicts with ${conflict}, skipping.`);
+        logger.warn(`Module ${name} conflicts with ${conflict}, skipping.`);
         continue;
       }
 
@@ -362,11 +372,11 @@ export class ModuleLoader {
       );
       for (const issue of dependencyIssues) {
         if (issue.reason === "missing") {
-          console.warn(
+          logger.warn(
             `Module ${name} depends on missing module ${issue.dependency}.`,
           );
         } else {
-          console.warn(
+          logger.warn(
             `Module ${name} requires ${issue.dependency}@${issue.required} but found ${issue.found}, skipping.`,
           );
         }
@@ -375,12 +385,18 @@ export class ModuleLoader {
         continue;
       }
 
+      for (const dep of Object.keys(module.manifest.dependencies)) {
+        const set = this.dependents.get(dep);
+        if (set) set.add(name);
+        else this.dependents.set(dep, new Set([name]));
+      }
+
       const moduleServices: ModuleServices = { ...services, moduleName: name };
       let disposers: Disposer[] = [];
       try {
         disposers = await module.definition.onLoad(moduleServices);
       } catch (error) {
-        console.error(`Failed to initialize module ${name}:`, error);
+        logger.error(`Failed to initialize module ${name}:`, error);
         continue;
       }
 
@@ -498,7 +514,36 @@ export class ModuleLoader {
   async unload(moduleName: string): Promise<LoadedModule[]> {
     const module = this.modules.get(moduleName);
     if (!module) return [];
-    const removed = [module];
+
+    const toUnload = new Set<string>([moduleName]);
+    const queue = [moduleName];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const deps = this.dependents.get(current);
+      if (deps) {
+        for (const dep of deps) {
+          if (!toUnload.has(dep) && this.modules.has(dep)) {
+            toUnload.add(dep);
+            queue.push(dep);
+          }
+        }
+      }
+    }
+
+    const removed: LoadedModule[] = [];
+    for (const name of toUnload) {
+      const mod = this.modules.get(name);
+      if (!mod) continue;
+      removed.push(mod);
+    }
+
+    removed.sort((a, b) => {
+      const aDependsOnB = this.dependents.get(b.manifest.name)?.has(a.manifest.name);
+      const bDependsOnA = this.dependents.get(a.manifest.name)?.has(b.manifest.name);
+      if (aDependsOnB && !bDependsOnA) return 1;
+      if (bDependsOnA && !aDependsOnB) return -1;
+      return 0;
+    });
 
     for (const module of removed) {
       const name = module.manifest.name;
@@ -506,11 +551,15 @@ export class ModuleLoader {
       try {
         await module.definition.onUnload(services);
       } catch (error) {
-        console.error(`Failed to unload module ${name}:`, error);
+        logger.error(`Failed to unload module ${name}:`, error);
       }
       await this.runDisposers(name);
       this.modules.delete(name);
       this.moduleServices.delete(name);
+      this.dependents.delete(name);
+      for (const set of this.dependents.values()) {
+        set.delete(name);
+      }
     }
 
     return removed;
@@ -533,6 +582,7 @@ export class ModuleLoader {
       version: module.manifest.version,
       category: module.manifest.category,
       configFields: module.manifest.configFields,
+      configKey: module.manifest.configKey,
       origin: module.origin,
     }));
   }

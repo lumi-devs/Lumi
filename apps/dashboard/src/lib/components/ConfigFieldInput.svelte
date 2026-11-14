@@ -44,7 +44,12 @@
       {field.label}{#if field.required}<span aria-hidden="true"> *</span>{/if}
     </label>
     {#if field.type === "select" && field.choices?.length}
-      <select {id} name={field.key}>
+      <select
+        {id}
+        name={field.key}
+        required={field.required}
+        aria-required={field.required ?? false}
+      >
         {#each field.choices as choice (choice)}
           <option value={choice} selected={String(value ?? "") === choice}
             >{choice}</option
@@ -52,16 +57,24 @@
         {/each}
       </select>
     {:else if field.type === "json"}
-      <textarea {id} name={field.key} rows="8" spellcheck="false"
-        >{textValue()}</textarea
+      <textarea
+        {id}
+        name={field.key}
+        rows="8"
+        spellcheck="false"
+        required={field.required}
+        aria-required={field.required ?? false}>{textValue()}</textarea
       >
     {:else if multi}
       <textarea
         {id}
         name={field.key}
         rows="4"
-        placeholder="One value per line, or comma-separated"
-        >{textValue()}</textarea
+        placeholder={field.type === "multi-string"
+          ? "One value per line"
+          : "One value per line, or comma-separated"}
+        required={field.required}
+        aria-required={field.required ?? false}>{textValue()}</textarea
       >
     {:else if field.type === "number"}
       <input
@@ -69,9 +82,11 @@
         name={field.key}
         type="number"
         value={textValue()}
-        step="any"
+        step={field.integer === false ? "any" : "1"}
         min={field.min}
         max={field.max}
+        required={field.required}
+        aria-required={field.required ?? false}
       />
     {:else if field.type === "channel"}
       <input
@@ -81,6 +96,8 @@
         inputmode="numeric"
         placeholder="Channel ID"
         value={textValue()}
+        required={field.required}
+        aria-required={field.required ?? false}
       />
     {:else if field.type === "role"}
       <input
@@ -90,6 +107,8 @@
         inputmode="numeric"
         placeholder="Role ID"
         value={textValue()}
+        required={field.required}
+        aria-required={field.required ?? false}
       />
     {:else}
       <input
@@ -104,7 +123,9 @@
     {#if field.type === "channel" || field.type === "role"}
       <span class="hint">Discord snowflake ID.</span>
     {/if}
-    {#if multi}
+    {#if field.type === "multi-string"}
+      <span class="hint">One value per line.</span>
+    {:else if multi}
       <span class="hint">Discord IDs, one per line or comma-separated.</span>
     {/if}
   {/if}

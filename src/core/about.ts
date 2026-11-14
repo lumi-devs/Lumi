@@ -1,5 +1,5 @@
 import { uptime } from "node:os";
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import {
   buildSafeActionRows,
   createActionButton,

@@ -81,4 +81,15 @@ export function splitList(value: string): string[] {
   );
 }
 
+export function splitLines(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(/\r?\n/)
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
 export { z };

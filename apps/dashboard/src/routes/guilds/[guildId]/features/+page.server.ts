@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import type { Prisma } from "@prisma/client";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
@@ -28,18 +29,6 @@ const OptionalInt = (min: number, max: number) =>
       { message: `Expected an integer between ${min} and ${max}, or empty.` },
     );
 
-const CommandSchema = z.object({
-  id: z.string().trim().max(64).optional(),
-  name: z.string().trim().min(1).max(64),
-  description: z.string().trim().max(500),
-  triggerType: z.enum(["exact", "contains", "starts_with", "regex"]),
-  trigger: z.string().trim().min(1).max(500),
-  responses: z.array(z.string().min(1).max(2000)).min(1).max(50),
-  enabled: z.boolean(),
-  cooldownSeconds: z.coerce.number().int().min(0).max(86_400),
-  permissionNodes: z.array(z.string().min(1).max(200)).max(100),
-  groupId: z.string().trim().max(64).nullable(),
-});
 
 const RoleMenuGroupSchema = z.object({
   id: z.string().trim().max(64).optional(),
@@ -94,10 +83,6 @@ function optionalText(data: FormData, name: string): string | null {
   return value === "" ? null : value;
 }
 
-async function commandBelongsTo(guildId: string, id: string | undefined) {
-  if (!id) return null;
-  return getPrisma().customCommand.findFirst({ where: { id, guildId } });
-}
 
 async function menuBelongsTo(guildId: string, id: string | undefined) {
   if (!id) return null;
@@ -113,13 +98,8 @@ export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
   const prisma = getPrisma();
 
-  const [commands, groups, categories, panels, tickets, nodes] =
+  const [groups, categories, panels, tickets, nodes] =
     await Promise.all([
-      prisma.customCommand.findMany({
-        where: { guildId },
-        orderBy: { name: "asc" },
-        include: { schedule: true },
-      }),
       prisma.roleMenuGroup.findMany({
         where: { guildId },
         orderBy: { name: "asc" },
@@ -142,28 +122,8 @@ export const load: PageServerLoad = async (event) => {
       fetchPermitNodes(guildId),
     ]);
 
-  const groupsForCommand = await prisma.customCommandGroup.findMany({
-    where: { guildId },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
-
   return {
     nodes,
-    commands: commands.map((command) => ({
-      ...command,
-      createdAt: command.createdAt.toISOString(),
-      updatedAt: command.updatedAt.toISOString(),
-      schedule: command.schedule
-        ? {
-            ...command.schedule,
-            nextRunAt: command.schedule.nextRunAt.toISOString(),
-            lastRunAt: command.schedule.lastRunAt?.toISOString() ?? null,
-            createdAt: command.schedule.createdAt.toISOString(),
-          }
-        : null,
-    })),
-    commandGroups: groupsForCommand,
     menus: groups.map((group) => ({
       ...group,
       createdAt: group.createdAt.toISOString(),
@@ -195,99 +155,6 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-  saveCommand: async (event) => {
-    const { guildId, userId, data } = await requireGuildForm(event);
-
-    const parsed = parseInput(CommandSchema, {
-      id: optionalText(data, "id") ?? undefined,
-      name: formString(data, "name"),
-      description: formString(data, "description"),
-      triggerType: formString(data, "triggerType", "exact"),
-      trigger: formString(data, "trigger"),
-      responses: splitList(formString(data, "responses")),
-      enabled: checkbox(data, "enabled"),
-      cooldownSeconds: formString(data, "cooldownSeconds", "0"),
-      permissionNodes: splitList(formString(data, "permissionNodes")),
-      groupId: optionalText(data, "groupId"),
-    });
-    if (!parsed.ok) return fail(400, { error: parsed.message });
-
-    if (parsed.data.groupId) {
-      const group = await getPrisma().customCommandGroup.findFirst({
-        where: { id: parsed.data.groupId, guildId },
-      });
-      if (!group) return fail(400, { error: "Unknown command group." });
-    }
-
-    const existing = await commandBelongsTo(guildId, parsed.data.id);
-    if (parsed.data.id && !existing) {
-      return fail(404, { error: "Command not found." });
-    }
-
-    const payload = {
-      name: parsed.data.name,
-      description: parsed.data.description || null,
-      triggerType: parsed.data.triggerType,
-      trigger: parsed.data.trigger,
-      responses: parsed.data.responses,
-      enabled: parsed.data.enabled,
-      cooldownSeconds: parsed.data.cooldownSeconds,
-      permissionNodes: parsed.data.permissionNodes,
-      groupId: parsed.data.groupId,
-    };
-
-    try {
-      if (existing) {
-        await getPrisma().customCommand.update({
-          where: { id: existing.id },
-          data: payload,
-        });
-      } else {
-        await getPrisma().customCommand.create({
-          data: { ...payload, guildId, createdBy: userId },
-        });
-      }
-    } catch (error) {
-      if (isPrismaCode(error, "P2002")) {
-        return fail(409, {
-          error: "A custom command with that name already exists.",
-        });
-      }
-      console.error("[dashboard] custom command save failed", error);
-      return fail(500, { error: "Could not save the custom command." });
-    }
-
-    await recordAudit({
-      guildId,
-      userId,
-      action: existing
-        ? "dashboard.feature.command.update"
-        : "dashboard.feature.command.create",
-      targetId: parsed.data.name,
-      targetType: "custom_command",
-    });
-    return { success: existing ? "Command updated." : "Command created." };
-  },
-
-  deleteCommand: async (event) => {
-    const { guildId, userId, data } = await requireGuildForm(event);
-
-    const id = formString(data, "id");
-    const removed = await getPrisma().customCommand.deleteMany({
-      where: { id, guildId },
-    });
-    if (removed.count === 0) {
-      return fail(404, { error: "Command not found." });
-    }
-    await recordAudit({
-      guildId,
-      userId,
-      action: "dashboard.feature.command.delete",
-      targetId: id,
-      targetType: "custom_command",
-    });
-    return { success: "Command deleted." };
-  },
 
   saveMenu: async (event) => {
     const { guildId, userId, data } = await requireGuildForm(event);
@@ -336,7 +203,7 @@ export const actions: Actions = {
           error: "A role menu with that name already exists.",
         });
       }
-      console.error("[dashboard] role menu save failed", error);
+      logger.error("[dashboard] role menu save failed", error);
       return fail(500, { error: "Could not save the role menu." });
     }
 
@@ -412,7 +279,7 @@ export const actions: Actions = {
           error: "That role is already an option in this menu.",
         });
       }
-      console.error("[dashboard] role menu option failed", error);
+      logger.error("[dashboard] role menu option failed", error);
       return fail(500, { error: "Could not add the role menu option." });
     }
 
@@ -543,7 +410,7 @@ export const actions: Actions = {
           error: "A ticket category with that name already exists.",
         });
       }
-      console.error("[dashboard] ticket category save failed", error);
+      logger.error("[dashboard] ticket category save failed", error);
       return fail(500, { error: "Could not save the ticket category." });
     }
 

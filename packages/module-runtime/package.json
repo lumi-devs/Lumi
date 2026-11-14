@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@lumi/foundation": "workspace:*",
     "@lumi/module-kit": "workspace:*",
     "zod": "^4.6.7"
   },

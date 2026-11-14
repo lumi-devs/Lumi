@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { type RequestHandler, redirect } from "@sveltejs/kit";
 import {
   DiscordError,
@@ -19,7 +20,7 @@ interface StatePayload {
 }
 
 function fail(reason: string): never {
-  console.error("[dashboard] oauth fail:", reason);
+  logger.error("[dashboard] oauth fail:", reason);
   throw redirect(303, `/?error=${encodeURIComponent(reason)}`);
 }
 
@@ -41,7 +42,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   const discordError = url.searchParams.get("error");
   const discordErrorDescription = url.searchParams.get("error_description");
   if (discordError) {
-    console.error("[dashboard] Discord returned error:", {
+    logger.error("[dashboard] Discord returned error:", {
       error: discordError,
       description: discordErrorDescription,
     });
@@ -74,7 +75,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
   try {
     payload = JSON.parse(raw) as StatePayload;
   } catch (e) {
-    console.error("[dashboard] Failed to parse OAuth state payload:", e);
+    logger.error("[dashboard] Failed to parse OAuth state payload:", e);
     fail("The sign-in request was invalid. Start again.");
   }
 
@@ -89,7 +90,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
     user = await fetchOAuthUser(token.access_token);
   } catch (error) {
     if (error instanceof DiscordError) {
-      console.error("[dashboard] Discord API error:", {
+      logger.error("[dashboard] Discord API error:", {
         status: error.status,
         message: error.message,
         body: error.body,
@@ -100,7 +101,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
         );
       }
     } else {
-      console.error("[dashboard] OAuth callback failed:", error);
+      logger.error("[dashboard] OAuth callback failed:", error);
     }
     fail("Discord sign-in failed. Try again in a moment.");
   }

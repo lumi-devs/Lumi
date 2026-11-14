@@ -11,12 +11,12 @@ const SecurityCoreModule = defineModule({
   commands: [],
   listeners: [],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[security] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[security] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log("[security] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[security] Module unloaded");
   },
 });
 

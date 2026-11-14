@@ -12,7 +12,6 @@
 | [downloader.md](./downloader.md)             | You are changing addon install/update/validation flows.                          |
 | [commands.md](./commands.md)                 | You are adding a built-in command or changing dispatch.                          |
 | [permissions.md](./permissions.md)           | You are changing permits, access tiers, the permission panel, or command gating. |
-| [custom-commands.md](./custom-commands.md)   | You are changing custom command triggers, templating, KV, or schedules.          |
 | [tickets.md](./tickets.md)                   | You are changing ticket panels, threads, categories, or transcripts.             |
 | [role-menus.md](./role-menus.md)             | You are changing reaction/button/select role menus or temporary roles.           |
 | [role-automation.md](./role-automation.md)   | You are changing autorole, voice roles, or bulk role jobs.                       |

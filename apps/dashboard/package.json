@@ -12,6 +12,8 @@
     "typecheck": "svelte-kit sync && tsc --noEmit"
   },
   "dependencies": {
+    "@lumi/cache": "workspace:*",
+    "@lumi/foundation": "workspace:*",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "ioredis": "^6.0.0",

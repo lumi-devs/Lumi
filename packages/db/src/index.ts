@@ -1,10 +1,10 @@
+import { logger } from "@lumi/foundation";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import type { Redis } from "ioredis";
 import { Pool } from "pg";
 import { createCacheFacade } from "./cache.js";
 import type { DbContext } from "./context.js";
-import { createCustomCommandHelpers } from "./helpers/customCommands.js";
 import { createEconomyHelpers } from "./helpers/economy.js";
 import { createLevelingHelpers } from "./helpers/leveling.js";
 import { createModerationHelpers } from "./helpers/moderation.js";
@@ -37,12 +37,12 @@ export async function disconnectDatabase(): Promise<void> {
   try {
     await prisma.$disconnect();
   } catch (error) {
-    console.error("prisma disconnect failed", { error });
+    logger.error("prisma disconnect failed", { error });
   }
   try {
     await pool.end();
   } catch (error) {
-    console.error("postgres pool shutdown failed", { error });
+    logger.error("postgres pool shutdown failed", { error });
   }
 }
 
@@ -59,7 +59,6 @@ export function createDbHelpers(redis?: Redis) {
     stats: createStatsHelpers(ctx),
     tickets: createTicketsHelpers(ctx),
     roleMenus: createRoleMenuHelpers(ctx),
-    customCommands: createCustomCommandHelpers(ctx),
     roles: createRoleHelpers(ctx),
     security: createSecurityHelpers(ctx),
     verification: createVerificationHelpers(ctx),
@@ -71,7 +70,6 @@ export function createDbHelpers(redis?: Redis) {
 
 export type DbHelpers = ReturnType<typeof createDbHelpers>;
 
-export type { Prisma, PrismaClient } from "@prisma/client";
 export type { CacheFacade } from "./cache.js";
 export type { DbContext } from "./context.js";
 export type {

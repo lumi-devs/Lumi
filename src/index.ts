@@ -27,10 +27,7 @@ import { type MetricsServer, startMetricsServer } from "@lumi/observability";
 import { createRedisClient } from "@lumi/redis";
 import * as ui from "@lumi/ui";
 import { PermissionFlagsBits } from "discord.js";
-import {
-  createCommandSync,
-  type SyncGuildCommands,
-} from "./core/commandSync.js";
+import { createCommandSync } from "./core/commandSync.js";
 import type { BotServices } from "./core/contracts.js";
 import { createModuleConfigService } from "./core/moduleConfig.js";
 import { CommandRegistry, ModuleHost } from "./core/modules.js";
@@ -90,20 +87,94 @@ async function main(): Promise<void> {
   moduleLoader.addRoot("modules", "bundled");
   moduleLoader.addRoot("data/addons", "addon");
 
-  let syncGuildCommands: SyncGuildCommands | undefined;
+  const registry = new CommandRegistry();
+  const commandSync = createCommandSync({
+    client,
+    registry,
+    moduleLoader,
+    logger,
+  });
+  const syncGuildCommands = commandSync.syncGuild;
+
+  const moduleManager = new ModuleManager(
+    moduleLoader,
+    prisma,
+    commandSync.syncGuild,
+  );
+  const guildSync = createGuildSync({
+    prisma,
+    permits: permitRepo,
+    moduleLoader,
+    logger,
+  });
+
+  const services: BotServices = {
+    client,
+    redis,
+    prisma,
+    helpers,
+    configService,
+    permits: permitRepo,
+    scheduler,
+    moduleLoader,
+    moduleManager,
+    addons: null as unknown as AddonManager,
+    moduleConfig: createModuleConfigService({
+      loader: moduleLoader,
+      config: configService,
+    }),
+    modules: {
+      isEnabled: (guildId, moduleName) =>
+        moduleLoader.isEnabled(guildId, moduleName),
+    },
+    ui,
+    discord: { PermissionFlagsBits },
+    observability: { healthMonitor, logger },
+  };
+
+  const host = new ModuleHost({
+    client,
+    loader: moduleLoader,
+    registry,
+    services,
+    logger,
+    syncCommands: () => commandSync.syncAll(),
+  });
+
+  const runtimeRef: { host: ModuleHost } = { host };
+
+  const addonManager = new AddonManager({
+    prisma,
+    redis,
+    logger,
+    notify: createAddonNotifier(client),
+    runtime: () => runtimeRef.host,
+  });
+
+  (services as { addons: AddonManager }).addons = addonManager;
+
   const rpcPort = Number.parseInt(process.env.RPC_HTTP_PORT ?? "8091", 10);
+  const rpcHost = process.env.RPC_HTTP_HOST ?? "127.0.0.1";
+  const loopbackHosts = new Set(["127.0.0.1", "localhost", "::1"]);
+  if (!loopbackHosts.has(rpcHost) && !process.env.RPC_INTERNAL_TOKEN) {
+    throw new Error(
+      `RPC_INTERNAL_TOKEN is required when binding RPC server to non-loopback host "${rpcHost}".`,
+    );
+  }
   const rpc = createRpcServer({
     port: rpcPort,
-    host: process.env.RPC_HTTP_HOST ?? "127.0.0.1",
+    host: rpcHost,
     handler: createRpcRouter({
       client,
       prisma,
       healthMonitor,
       moduleLoader,
+      addons: addonManager,
       permits: permitRepo,
       logger,
       token: process.env.RPC_INTERNAL_TOKEN,
       getSyncGuildCommands: () => syncGuildCommands,
+      invalidation: coreServices.invalidation,
     }),
   });
   await rpc.start();
@@ -119,80 +190,12 @@ async function main(): Promise<void> {
     );
   }
 
-  const registry = new CommandRegistry();
-  const commandSync = createCommandSync({
-    client,
-    registry,
-    moduleLoader,
-    logger,
-  });
-  syncGuildCommands = commandSync.syncGuild;
-  const moduleManager = new ModuleManager(
-    moduleLoader,
-    prisma,
-    commandSync.syncGuild,
-  );
-  const guildSync = createGuildSync({
-    prisma,
-    permits: permitRepo,
-    moduleLoader,
-    logger,
-  });
-
-  const runtimeRef: { host?: ModuleHost } = {};
-  const addonManager = new AddonManager({
-    prisma,
-    redis,
-    logger,
-    notify: createAddonNotifier(client),
-    runtime: () => {
-      if (!runtimeRef.host) {
-        throw new Error(
-          "Add-on runtime requested before the module host exists.",
-        );
-      }
-      return runtimeRef.host;
-    },
-  });
-
-  const services: BotServices = {
-    client,
-    redis,
-    prisma,
-    helpers,
-    configService,
-    permits: permitRepo,
-    scheduler,
-    moduleLoader,
-    moduleManager,
-    addons: addonManager,
-    moduleConfig: createModuleConfigService({
-      loader: moduleLoader,
-      config: configService,
-    }),
-    modules: {
-      isEnabled: (guildId, moduleName) =>
-        moduleLoader.isEnabled(guildId, moduleName),
-    },
-    ui,
-    discord: { PermissionFlagsBits },
-    observability: { healthMonitor, logger },
-  };
 
   const dataLifecycle = createDataLifecycleService({
     loader: moduleLoader,
     services,
   });
 
-  const host = new ModuleHost({
-    client,
-    loader: moduleLoader,
-    registry,
-    services,
-    logger,
-    syncCommands: () => commandSync.syncAll(),
-  });
-  runtimeRef.host = host;
 
   scheduler.register({
     name: "addons-autoupdate",

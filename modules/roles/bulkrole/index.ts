@@ -20,7 +20,7 @@ import {
   parseRoleIds,
   roleMentions,
 } from "../../shared/roles.js";
-import { BulkRoleConfigSchema, BulkRoleModuleName } from "./config.js";
+import { BulkRoleConfigSchema } from "./config.js";
 import {
   type BulkCandidate,
   type BulkRoleAction,
@@ -485,7 +485,7 @@ const workerListener: ListenerDefinition = {
 };
 
 const bulkRoleModule: ModuleDefinition = defineModule({
-  name: BulkRoleModuleName,
+  name: "bulkrole",
   displayName: "Bulk Role",
   emoji: "🧰",
   description:
@@ -515,12 +515,12 @@ const bulkRoleModule: ModuleDefinition = defineModule({
       },
     },
   ],
-  async onLoad(_services) {
-    console.log(`[${BulkRoleModuleName}] Module loaded`);
+  async onLoad(services) {
+    services.observability.logger.info("[bulkrole] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log(`[${BulkRoleModuleName}] Module unloaded`);
+  async onUnload(services) {
+    services.observability.logger.info("[bulkrole] Module unloaded");
   },
 });
 

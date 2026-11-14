@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { DistributedLock, type Redis } from "@lumi/redis";
 
 export interface ScheduledJob {
@@ -80,7 +81,7 @@ export class DistributedScheduler {
         await lock.release();
       }
     } catch (error) {
-      console.error(`Job ${job.name} failed:`, error);
+      logger.error(`Job ${job.name} failed:`, error);
     } finally {
       this.running.delete(job.name);
     }

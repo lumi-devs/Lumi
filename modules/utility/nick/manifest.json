@@ -20,6 +20,8 @@
       "key": "maxLength",
       "label": "Max Nickname Length",
       "type": "number",
+      "min": 1,
+      "max": 32,
       "description": "Maximum nickname length",
       "default": 32
     }
@@ -28,9 +30,7 @@
     {
       "name": "nick",
       "version": "2.0.0",
-      "provides": [
-        "utility.nick"
-      ]
+      "provides": ["utility.nick"]
     }
   ],
   "conflicts": [],

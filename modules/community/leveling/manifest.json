@@ -30,6 +30,8 @@
       "key": "xpPerMessage",
       "label": "XP per Message",
       "type": "number",
+      "min": 1,
+      "max": 1000,
       "description": "Base XP per message",
       "default": 15,
       "category": "XP & Cooldown"
@@ -38,6 +40,8 @@
       "key": "cooldownSeconds",
       "label": "XP Cooldown",
       "type": "number",
+      "min": 1,
+      "max": 3600,
       "description": "Seconds between XP gains",
       "default": 60,
       "category": "XP & Cooldown"
@@ -54,6 +58,8 @@
       "key": "voiceXpPerMinute",
       "label": "Voice XP Per Minute",
       "type": "number",
+      "min": 1,
+      "max": 1000,
       "description": "XP granted per audible minute in voice",
       "default": 4,
       "category": "Voice XP"
@@ -85,6 +91,8 @@
       "key": "minMessageLength",
       "label": "Minimum Message Length",
       "type": "number",
+      "min": 0,
+      "max": 500,
       "description": "Messages shorter than this earn no XP",
       "default": 4,
       "category": "XP & Cooldown"
@@ -121,6 +129,7 @@
       "default": 1,
       "min": 0,
       "max": 100,
+      "integer": false,
       "category": "Multipliers"
     },
     {
@@ -176,10 +185,7 @@
     {
       "name": "leveling",
       "version": "2.1.0",
-      "provides": [
-        "leveling.xp",
-        "leveling.rewards"
-      ]
+      "provides": ["leveling.xp", "leveling.rewards"]
     }
   ],
   "conflicts": [],

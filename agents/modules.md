@@ -32,9 +32,6 @@ only difference is their discovery root (`modules/` vs `data/addons/`) and
 - `stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
 - `tickets` — Private-thread ticket panels, categories, claims, priorities, notes, tags, feedback, and HTML transcripts
 
-### Custom Commands
-
-- `custom-commands` — Guild-authored Mustache-style commands with triggers, KV, cron/interval schedules, and card responses
 
 ### Role Menus
 
@@ -200,7 +197,10 @@ export default defineModule({
 display metadata for the `/lumi` module detail panel. Zod remains the validator;
 the metadata only chooses the control (`boolean`, `number`, `string`, `channel`,
 `role`, `multi-channel`, `multi-role`, `json`, `select`, `multi-string`,
-`escalation`) and supplies labels. A field with `choices` renders a string
+`escalation`) and supplies labels. Number fields accept `min`, `max`, and
+`integer` (default `true`; set `false` for decimals) so the dashboard and panel
+reject values the module schema would reject. Channel and role fields accept
+`channelTypes` to constrain the picker. A field with `choices` renders a string
 select; channel and role fields render pickers; multi-select fields store
 `string[]` values and render a menu with `minValues: 0`; `escalation` renders
 warning-count rules with an action picker and optional timeout duration in the

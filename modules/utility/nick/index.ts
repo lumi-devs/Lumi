@@ -299,12 +299,12 @@ const nickModule: ModuleDefinition = defineModule({
   commands: [nickDef],
   listeners: [],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[nick] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[nick] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[nick] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[nick] Module unloaded");
   },
 });
 

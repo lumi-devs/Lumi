@@ -5,6 +5,7 @@ type TargetId = string | null | undefined;
 export interface GuildTargetRequest {
   channels?: Iterable<TargetId>;
   roles?: Iterable<TargetId>;
+  channelTypes?: Array<{ id: string; types: readonly number[] }>;
 }
 
 export type GuildTargetResult =
@@ -43,13 +44,29 @@ export async function verifyGuildTargets(
     };
   }
 
-  const knownChannels = new Set(channels.map((channel) => channel.id));
+  const knownChannels = new Map(
+    channels.map((channel) => [channel.id, channel.type]),
+  );
   if (channelIds.some((id) => !knownChannels.has(id))) {
     return {
       ok: false,
       status: 400,
       message: "Choose channels that belong to this server.",
     };
+  }
+  for (const constraint of request.channelTypes ?? []) {
+    const type = knownChannels.get(constraint.id);
+    if (
+      type !== undefined &&
+      constraint.types.length > 0 &&
+      !constraint.types.includes(type)
+    ) {
+      return {
+        ok: false,
+        status: 400,
+        message: "Choose a channel with the required type for that field.",
+      };
+    }
   }
 
   const knownRoles = new Set(roles.map((role) => role.id));

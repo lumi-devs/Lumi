@@ -37,12 +37,12 @@ const economyModule: ModuleDefinition = defineModule({
   ],
   listeners: [],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[economy] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[economy] Module loaded");
     return [];
   },
-  async onUnload(_services) {
-    console.log("[economy] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[economy] Module unloaded");
   },
 });
 

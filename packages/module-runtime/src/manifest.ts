@@ -35,6 +35,7 @@ const ConfigFieldSchema = z.object({
   category: z.string().optional(),
   min: z.number().optional(),
   max: z.number().optional(),
+  integer: z.boolean().optional(),
 });
 
 const EntryPathSchema = z

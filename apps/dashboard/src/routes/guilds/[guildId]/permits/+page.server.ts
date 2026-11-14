@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
@@ -120,7 +121,7 @@ export const actions: Actions = {
           }
           continue;
         }
-        console.error("[dashboard] permit create failed", error);
+        logger.error("[dashboard] permit create failed", error);
         return fail(500, { error: "Could not create the permit." });
       }
     }

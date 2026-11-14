@@ -14,12 +14,12 @@ const quoteModule: ModuleDefinition = defineModule({
   commands: [quoteCommand],
   listeners: [quoteRemoveListener],
   tasks: [],
-  async onLoad(_services) {
-    console.log("[quote] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[quote] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log("[quote] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[quote] Module unloaded");
   },
 });
 

@@ -1,5 +1,5 @@
 import { totalmem } from "node:os";
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import {
   type CardReply,

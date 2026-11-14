@@ -1,4 +1,5 @@
-import type { DbHelpers, PrismaClient } from "@lumi/db";
+import type { DbHelpers } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import type { AddonManager } from "@lumi/downloader";
 import type { Logger } from "@lumi/foundation";
 import type {

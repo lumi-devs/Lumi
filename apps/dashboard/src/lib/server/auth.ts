@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { error, type RequestEvent, redirect } from "@sveltejs/kit";
 import {
   canManageGuild,
@@ -60,7 +61,7 @@ async function validAccessToken(event: RequestEvent): Promise<string> {
     event.locals.session = updated;
     return updated.accessToken;
   } catch (refreshError) {
-    console.warn("[dashboard] oauth refresh failed", refreshError);
+    logger.warn("[dashboard] oauth refresh failed", refreshError);
     throw redirect(303, "/auth/login?error=expired");
   }
 }
@@ -79,13 +80,13 @@ export async function manageableGuilds(
     guilds = await fetchUserGuilds(token, session.userId);
   } catch (fetchError) {
     if (fetchError instanceof DiscordError) {
-      console.error("[dashboard] fetchUserGuilds failed:", {
+      logger.error("[dashboard] fetchUserGuilds failed:", {
         status: fetchError.status,
         message: fetchError.message,
         body: fetchError.body,
       });
     } else {
-      console.error(
+      logger.error(
         "[dashboard] fetchUserGuilds unexpected error:",
         fetchError,
       );

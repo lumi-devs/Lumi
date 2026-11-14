@@ -1,5 +1,6 @@
+import { logger } from "@lumi/foundation";
 import { requireGuildId } from "#lib/server/auth.js";
-import { fetchBotGuild } from "#lib/server/discord.js";
+import { fetchBotGuild, fetchBotUser } from "#lib/server/discord.js";
 import { configFor, effectiveModuleEnabled } from "#lib/server/moduleConfig.js";
 import { moduleCatalog } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
@@ -11,7 +12,6 @@ export const load: PageServerLoad = async (event) => {
   const prisma = getPrisma();
 
   const [
-    disabledModules,
     permitCount,
     openTickets,
     recentAudit,
@@ -20,10 +20,6 @@ export const load: PageServerLoad = async (event) => {
     catalog,
     settings,
   ] = await Promise.all([
-    prisma.guildModule.findMany({
-      where: { guildId, enabled: false },
-      select: { module: true },
-    }),
     prisma.permit.count({ where: { guildId } }),
     prisma.ticket.count({ where: { guildId, status: "open" } }),
     prisma.auditLog.findMany({
@@ -40,7 +36,7 @@ export const load: PageServerLoad = async (event) => {
       orderBy: { createdAt: "desc" },
       select: { id: true, reason: true, createdAt: true },
     }),
-    moduleCatalog(),
+    moduleCatalog(guildId),
     readGuildSettings(guildId),
   ]);
 
@@ -48,29 +44,33 @@ export const load: PageServerLoad = async (event) => {
   try {
     botPresent = Boolean(await fetchBotGuild(guildId));
   } catch (error) {
-    console.warn("[dashboard] bot guild lookup failed", error);
+    logger.warn("[dashboard] bot guild lookup failed", error);
   }
 
-  const disabled = new Set(disabledModules.map((row) => row.module));
-  const enabledModules = catalog.filter(
-    (module) =>
-      !module.isAddon &&
-      effectiveModuleEnabled(
-        module.configFields,
-        configFor(settings, module.configKey),
-        !disabled.has(module.name),
-      ),
-  ).length;
-  const availableModules = catalog.filter(
-    (module) => !module.isAddon,
+  const userIds = Array.from(new Set(recentAudit.map((entry) => entry.userId)));
+  const userNames = new Map(
+    await Promise.all(
+      userIds.map(async (id) => {
+        const user = await fetchBotUser(id).catch(() => null);
+        return [id, user?.global_name || user?.username || null] as const;
+      }),
+    ),
+  );
+
+  const bundled = catalog?.filter((module) => !module.isAddon) ?? [];
+  const enabledModules = bundled.filter((module) =>
+    effectiveModuleEnabled(
+      module.configFields,
+      configFor(settings, module.configKey),
+      module.enabled,
+    ),
   ).length;
 
   return {
     botPresent,
-    modules: {
-      enabled: enabledModules,
-      available: availableModules,
-    },
+    modules: catalog
+      ? { enabled: enabledModules, available: bundled.length }
+      : null,
     permitCount,
     openTickets,
     memberCount: latestSnapshot?.memberCount ?? null,
@@ -86,6 +86,7 @@ export const load: PageServerLoad = async (event) => {
       id: entry.id,
       action: entry.action,
       userId: entry.userId,
+      userName: userNames.get(entry.userId) ?? null,
       targetId: entry.targetId,
       createdAt: entry.createdAt.toISOString(),
     })),

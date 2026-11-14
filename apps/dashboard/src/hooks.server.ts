@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import type { Handle } from "@sveltejs/kit/hooks";
 import "dotenv/config";
 import { readSession, SessionCookie } from "#lib/server/session.js";
@@ -18,7 +19,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         event.cookies.delete(SessionCookie, { path: "/" });
       }
     } catch (error) {
-      console.error("[dashboard] could not load session", error);
+      logger.error("[dashboard] could not load session", error);
     }
   }
 

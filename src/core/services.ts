@@ -1,9 +1,6 @@
 import { createCache, type NamespacedCache } from "@lumi/cache";
-import {
-  createDbHelpers,
-  prisma as defaultPrisma,
-  type PrismaClient,
-} from "@lumi/db";
+import { createDbHelpers, prisma as defaultPrisma } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import {
   createHealthMonitor,
   type HealthMonitor,

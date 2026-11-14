@@ -104,11 +104,6 @@ export interface TaskDefinition {
   timezone?: string;
 }
 
-export interface ModuleCapability {
-  readonly name: string;
-  readonly version: string;
-  readonly provides: readonly string[];
-}
 
 export interface UserDataDeletionResult {
   deleted?: number;

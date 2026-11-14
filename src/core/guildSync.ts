@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@lumi/db";
+import type { PrismaClient } from "@prisma/client";
 import type { Logger } from "@lumi/foundation";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { PermitRepository } from "@lumi/permits";

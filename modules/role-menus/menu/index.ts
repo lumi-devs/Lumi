@@ -23,12 +23,12 @@ const RoleMenusMenuModule = defineModule({
     roleMenuReactionRemoveListener,
   ],
   tasks: [tempRoleSweep],
-  async onLoad(_services) {
-    console.log("[role-menus] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[role-menus] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log("[role-menus] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[role-menus] Module unloaded");
   },
 });
 

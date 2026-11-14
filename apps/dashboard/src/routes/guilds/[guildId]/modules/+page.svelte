@@ -60,7 +60,7 @@
   >
 {/snippet}
 
-<h2>Feature modules</h2>
+<h2>Modules</h2>
 <p class="muted">
   Modules are grouped by category. Disabled modules keep their configuration;
   their commands and listeners do not run.
@@ -76,9 +76,20 @@
   <div class="notice error" role="alert">{form.error}</div>
 {/if}
 
+{#if !data.catalogAvailable}
+  <div class="notice warn" role="status">
+    The bot RPC API is unreachable, so the module catalog and live state are
+    unavailable.
+  </div>
+{/if}
+
 {#if data.groups.length === 0}
   <div class="panel">
-    <p class="muted">No modules were found on the server filesystem.</p>
+    <p class="muted">
+      {data.catalogAvailable
+        ? "No bundled modules are installed."
+        : "Module list unavailable while the bot is offline."}
+    </p>
   </div>
 {:else}
   {#each data.groups as group (group.category)}
@@ -200,10 +211,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.45rem;
-  }
-
-  .module-group-head p {
-    max-width: 90ch;
   }
 
   .module-row td {

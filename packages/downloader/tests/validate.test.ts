@@ -25,6 +25,7 @@ async function makeAddon(
       emoji: "🧪",
       description: "Test addon",
       version: "1.0.0",
+      entry: "index.ts",
       ...JSON.parse(files["manifest.json"] ?? "{}"),
     }),
   );
@@ -67,7 +68,7 @@ describeBun("validateAddon", () => {
 
   it("rejects a manifest without an entry", async () => {
     const dir = await makeAddon({
-      "manifest.json": JSON.stringify({ entry: undefined }),
+      "manifest.json": JSON.stringify({ entry: null }),
     });
     await expect(validateAddon(dir)).resolves.toContainEqual(
       expect.stringContaining("manifest.json"),

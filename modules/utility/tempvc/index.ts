@@ -1,4 +1,4 @@
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { requireGuildId } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -47,7 +47,7 @@ const tempvcCommand: CommandDefinition = {
         .setDescription("Manage voice generator channels (staff only)"),
     ),
   async execute(interaction, services) {
-    const guildId = guildIdOf(interaction.guildId);
+    const guildId = requireGuildId(interaction.guildId);
     if (!guildId) {
       await replyError(
         interaction,
@@ -166,12 +166,12 @@ const tempvcModule: ModuleDefinition = defineModule({
       void sweepExpiredTempChannels(services).catch(() => undefined);
     }, 60_000);
     void sweepExpiredTempChannels(services).catch(() => undefined);
-    console.log("[tempvc] Module loaded");
+    services.observability.logger.info("[tempvc] Module loaded");
     return [stopSweep];
   },
-  async onUnload(_services) {
+  async onUnload(services) {
     stopSweep();
-    console.log("[tempvc] Module unloaded");
+    services.observability.logger.info("[tempvc] Module unloaded");
   },
 });
 

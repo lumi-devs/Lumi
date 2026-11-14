@@ -56,11 +56,11 @@ export default defineModule({
   tasks: [],         // Reserved; see "Tasks" below
   // permitNodes: ["my-module.view"], // Optional nodes used by buttons/UI only
   async onLoad(services) {
-    console.log("[my-module] Loaded");
+    services.observability.logger.info("[my-module] Loaded");
     return []; // return disposers if needed
   },
   async onUnload(services) {
-    console.log("[my-module] Unloaded");
+    services.observability.logger.info("[my-module] Unloaded");
   },
 });
 EOF
@@ -191,6 +191,13 @@ Declare these in `manifest.json` `configFields`; they are not part of
 | `multi-string`  | `z.string()`               | Text modal (stored as one string)     |
 | `json`          | `z.object()` / `z.array()` | JSON modal                            |
 | `escalation`    | `z.record(...)`            | Warning-count → action rule editor    |
+
+Numeric fields set `min`; add `max` when there is a hard upper bound (omit it
+only when `0` means unlimited). Decimals set `integer: false`; integers default
+to `integer: true`. Defaults must satisfy the declared bounds.
+`apps/dashboard/tests/module-config.test.ts` checks every module manifest's
+numeric defaults and rejects below-min, above-max, and decimal values for
+integer fields.
 
 ---
 
@@ -373,7 +380,7 @@ export const myTask: TaskDefinition = {
   timezone: "UTC",
   async handler(services) {
     // Not currently invoked by the module loader.
-    console.log("[my-module] cleanup");
+    services.observability.logger.info("[my-module] cleanup");
   },
 };
 ```
@@ -406,7 +413,7 @@ interface ModuleServices {
 ```
 
 `DbHelpers` exposes `leveling`, `economy`, `stats`, `tickets`, `roleMenus`,
-`customCommands`, `roles`, `security`, `verification`, `utility`, and `cache`.
+`roles`, `security`, `verification`, `utility`, and `cache`.
 Modules must not import `@prisma/client`, `@lumi/db`, `@lumi/cache`,
 `@lumi/redis`, or `ioredis`; Biome blocks those imports under `modules/**`.
 The wide host bag (`prisma`, `redis`, `configService`, `moduleLoader`,

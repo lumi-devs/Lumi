@@ -22,7 +22,6 @@ import {
 } from "../../shared/roles.js";
 import {
   AutoroleConfigSchema,
-  AutoroleModuleName,
   getAutoroleConfig,
   saveAutoroleConfig,
 } from "./config.js";
@@ -417,7 +416,7 @@ const onMemberAddListener: ListenerDefinition = {
   event: "guildMemberAdd",
   async handler(member: GuildMember, services: ModuleServices) {
     const guild = member.guild;
-    if (!services.modules.isEnabled(guild.id, AutoroleModuleName)) return;
+    if (!services.modules.isEnabled(guild.id, "autorole")) return;
     const config = await getAutoroleConfig(services, guild.id);
     const decision = evaluateAutoroleCandidate(
       {
@@ -450,7 +449,7 @@ const onMemberAddListener: ListenerDefinition = {
 };
 
 const autoroleModule: ModuleDefinition = defineModule({
-  name: AutoroleModuleName,
+  name: "autorole",
   displayName: "Autorole",
   emoji: "🚪",
   description:
@@ -480,12 +479,12 @@ const autoroleModule: ModuleDefinition = defineModule({
       },
     },
   ],
-  async onLoad(_services) {
-    console.log(`[${AutoroleModuleName}] Module loaded`);
+  async onLoad(services) {
+    services.observability.logger.info("[autorole] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log(`[${AutoroleModuleName}] Module unloaded`);
+  async onUnload(services) {
+    services.observability.logger.info("[autorole] Module unloaded");
   },
 });
 

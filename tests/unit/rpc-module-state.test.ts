@@ -1,6 +1,6 @@
 import { Readable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import { createModuleStateHandler } from "../../src/core/rpcRoutes.ts";
+import { createModuleHandler } from "../../src/core/rpcRoutes.ts";
 
 function request(body: unknown, method = "POST", remoteAddress = "127.0.0.1") {
   const req = Readable.from([Buffer.from(JSON.stringify(body))]) as never as {
@@ -31,14 +31,15 @@ function response() {
   return res;
 }
 
-describe("createModuleStateHandler", () => {
+describe("createModuleHandler", () => {
   it("resyncs guild commands after applying a module state change", async () => {
     const setEnabled = vi.fn(async () => {});
     const syncCommands = vi.fn(async () => {});
-    const handler = createModuleStateHandler({
+    const handler = createModuleHandler({
       moduleLoader: {
         listGlobal: () => [{ name: "demo" }] as never,
         setEnabled,
+        isEnabled: () => false,
       },
       syncCommands,
       token: undefined,
@@ -55,10 +56,11 @@ describe("createModuleStateHandler", () => {
 
   it("rejects unauthenticated requests from non-loopback addresses", async () => {
     const setEnabled = vi.fn(async () => {});
-    const handler = createModuleStateHandler({
+    const handler = createModuleHandler({
       moduleLoader: {
         listGlobal: () => [{ name: "demo" }] as never,
         setEnabled,
+        isEnabled: () => false,
       },
       token: undefined,
     });
@@ -75,10 +77,11 @@ describe("createModuleStateHandler", () => {
 
   it("requires a matching bearer token when a secret is configured", async () => {
     const setEnabled = vi.fn(async () => {});
-    const handler = createModuleStateHandler({
+    const handler = createModuleHandler({
       moduleLoader: {
         listGlobal: () => [{ name: "demo" }] as never,
         setEnabled,
+        isEnabled: () => false,
       },
       token: "secret",
     });

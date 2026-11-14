@@ -44,20 +44,6 @@ export async function replyError(
   await replyCard(interaction, makeErrorCard(title, body));
 }
 
-export async function guildIdOf(
-  interaction: ChatInputCommandInteraction,
-): Promise<string | null> {
-  const guildId = requireGuildId(interaction.guildId);
-  if (!guildId) {
-    await replyError(
-      interaction,
-      "Server Only",
-      "Ticket commands can only be used inside a server.",
-    );
-    return null;
-  }
-  return guildId;
-}
 
 export async function ensureModule(
   interaction: ChatInputCommandInteraction,

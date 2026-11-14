@@ -56,13 +56,57 @@
   const initial = untrack(() => initialEntries(value));
   let entries = $state<Entry[]>(initial);
   let nextId = $state(initial.length);
+  let lastValue = untrack(() => value);
+
+  $effect(() => {
+    if (value === lastValue) return;
+    lastValue = value;
+    entries = initialEntries(value);
+    nextId = entries.length;
+  });
+
+  const rowIssues = $derived.by(() => {
+    const counts = new Map<number, number>();
+    for (const entry of entries) {
+      if (Number.isInteger(entry.count)) {
+        counts.set(entry.count, (counts.get(entry.count) ?? 0) + 1);
+      }
+    }
+    const issues = new Map<number, string[]>();
+    for (const entry of entries) {
+      const problems: string[] = [];
+      if (
+        !Number.isInteger(entry.count) ||
+        entry.count < 1 ||
+        entry.count > 1000
+      ) {
+        problems.push("Warning count must be a whole number from 1 to 1000.");
+      } else if ((counts.get(entry.count) ?? 0) > 1) {
+        problems.push("Warning counts must be unique.");
+      }
+      if (!actions.includes(entry.action)) {
+        problems.push("Choose a valid action.");
+      }
+      if (
+        entry.action === "timeout" &&
+        (!Number.isInteger(entry.minutes) ||
+          entry.minutes < 1 ||
+          entry.minutes > 40320)
+      ) {
+        problems.push("Timeout must be a whole number from 1 to 40320.");
+      }
+      if (problems.length > 0) issues.set(entry.id, problems);
+    }
+    return issues;
+  });
+
+  const issues = $derived(Array.from(rowIssues.values()).flat());
 
   const serialized = $derived.by(() => {
+    if (issues.length > 0) return "";
     const record: Record<string, { action: string; duration: number | null }> =
       {};
     for (const entry of [...entries].sort((a, b) => a.count - b.count)) {
-      if (!Number.isInteger(entry.count) || entry.count < 1) continue;
-      if (!actions.includes(entry.action)) continue;
       record[String(entry.count)] = {
         action: entry.action,
         duration:
@@ -120,7 +164,9 @@
               type="number"
               min="1"
               max="1000"
+              step="1"
               bind:value={entry.count}
+              aria-invalid={rowIssues.has(entry.id)}
             />
           </div>
           <div class="field">
@@ -138,8 +184,10 @@
               type="number"
               min="1"
               max="40320"
+              step="1"
               bind:value={entry.minutes}
               disabled={entry.action !== "timeout"}
+              aria-invalid={rowIssues.has(entry.id)}
             />
           </div>
           <button
@@ -152,6 +200,9 @@
         </div>
       {/each}
     </div>
+  {/if}
+  {#if issues.length > 0}
+    <p class="error-text" role="alert">{issues.join(" ")}</p>
   {/if}
   <div class="actions" style="margin-top:0.6rem">
     <button type="button" onclick={addEntry}>Add escalation rule</button>

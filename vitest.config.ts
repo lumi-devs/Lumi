@@ -18,11 +18,15 @@ export default defineConfig({
       "modules/**/tests/**/*.test.ts",
       "apps/*/tests/**/*.test.ts",
     ],
+    exclude: [
+      "data/repos/**/tests/**/*.test.ts",
+    ],
   },
   resolve: {
     alias: [
       { find: "@lumi/core", replacement: resolve(root, "src/core") },
       { find: "@lumi/admin", replacement: resolve(root, "src/admin") },
+      { find: "@lumi/ui", replacement: resolve(root, "packages/ui/src") },
       ...packageAliases,
     ],
   },

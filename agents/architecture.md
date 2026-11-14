@@ -51,7 +51,6 @@ independently.
 - `community-*` — `leveling` (XP, ranks, voice XP, role rewards, leaderboards),
   `economy` (currency, banking, rewards, shop), `stats` (message/voice/member
   tracking and cards), `tickets` (private-thread ticket panels)
-- `custom-commands` — guild-authored commands, schedules, KV
 - `logs` — message, edit, delete, voice, moderation logging
 - `mod` — case-backed ban, kick, timeout, warn, purge, notes,
   lockdown, quarantine, softban, voice mute
@@ -164,7 +163,19 @@ exclusively through the bot's **internal RPC control server** (default `127.0.0.
 | `GET /api/v1/status`                            | Bearer | Bot identity, guild count, loaded modules                                          |
 | `GET /api/v1/permits/nodes?guild_id=`           | Bearer | Dynamic node catalog (built-ins + module commands + custom)                        |
 | `GET /api/v1/guilds/:id`                        | Bearer | Live guild info (name, icon, member count)                                         |
+| `GET /api/v1/guilds/:id/modules`                | Bearer | Loaded module catalog (manifest metadata, config fields, per-guild enabled state)  |
 | `POST /api/v1/guilds/:id/modules/:module/state` | Bearer | Apply a module enable/disable change to the running bot (`{ "enabled": boolean }`) |
+| `GET /api/v1/addons`                            | Bearer | Add-on repositories, candidates, installed modules, and auto-update state          |
+| `POST /api/v1/addons/repos`                     | Bearer | Clone and register a repository                                                    |
+| `DELETE /api/v1/addons/repos/:name`             | Bearer | Remove a repository and its modules                                                |
+| `POST /api/v1/addons/repos/:name/update`        | Bearer | Fetch and update unpinned add-ons from a repository                                |
+| `POST /api/v1/addons/install`                   | Bearer | Install a module from a registered repository                                      |
+| `DELETE /api/v1/addons/modules/:name`           | Bearer | Uninstall an add-on module                                                         |
+| `POST /api/v1/addons/modules/:name/pin`         | Bearer | Pin or unpin an add-on module                                                      |
+
+Add-on operations are owner-only in the dashboard. The dashboard never reads
+`data/addons`; cloning, file materialization, validation, and mounting happen in
+the bot process.
 
 ### Dashboard Data Flow
 

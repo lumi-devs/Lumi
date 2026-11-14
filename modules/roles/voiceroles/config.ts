@@ -1,10 +1,8 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
 import { readConfig } from "../../shared/roles.js";
-
 export const VoiceRolesModuleName = "voiceroles";
-export const VoiceRolesConfigKey = VoiceRolesModuleName;
-
+export const VoiceRolesConfigKey = "voiceroles";
 export const VoiceRolesConfigSchema = z.object({
   enabled: z.boolean().default(true),
   defaultGraceSeconds: z.number().int().min(0).max(86400).default(0),

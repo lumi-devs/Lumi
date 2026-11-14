@@ -1,4 +1,4 @@
-import { requireGuildId as guildIdOf } from "@lumi/foundation";
+import { requireGuildId } from "@lumi/foundation";
 import {
   type CommandDefinition,
   defineModule,
@@ -48,7 +48,7 @@ async function requireReady(
   interaction: Parameters<CommandDefinition["execute"]>[0],
   services: ModuleServices,
 ): Promise<{ guildId: string; config: ReminderConfig } | null> {
-  const guildId = guildIdOf(interaction.guildId);
+  const guildId = requireGuildId(interaction.guildId);
   if (!guildId) {
     await interaction.reply(
       ephemeralCard(
@@ -478,12 +478,12 @@ const remindersModule: ModuleDefinition = defineModule({
   commands: [remindCommand],
   listeners: [],
   tasks: [deliveryTask, cleanupTask],
-  async onLoad() {
-    console.log("[reminders] Module loaded");
+  async onLoad(services) {
+    services.observability.logger.info("[reminders] Module loaded");
     return [];
   },
-  async onUnload() {
-    console.log("[reminders] Module unloaded");
+  async onUnload(services) {
+    services.observability.logger.info("[reminders] Module unloaded");
   },
 });
 

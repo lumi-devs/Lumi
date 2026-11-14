@@ -4,6 +4,12 @@ x-lumi-image: &lumi-image
     context: .
     dockerfile: Dockerfile
 
+x-dashboard-image: &dashboard-image
+  image: ghcr.io/lumi-devs/lumi-dashboard:${LUMI_TAG:-latest}
+  build:
+    context: ./apps/dashboard
+    dockerfile: Dockerfile
+
 services:
   postgres:
     image: docker.io/postgres:18-alpine
@@ -75,6 +81,29 @@ services:
     ports:
       - "127.0.0.1:8091:8091"
       - "127.0.0.1:9090:9090"
+
+  dashboard:
+    <<: *dashboard-image
+    container_name: lumi-dashboard
+    environment:
+      RPC_URL: http://bot:8091
+      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}
+      ORIGIN: ${WEB_BASE_URL:-http://localhost:3000}
+      BOT_TOKEN: ${BOT_TOKEN}
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    depends_on:
+      bot:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
 
   migrate:
     <<: *lumi-image

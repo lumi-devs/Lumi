@@ -6,20 +6,23 @@ instances. It never opens a Discord gateway connection.
 
 ## Data sources
 
-| Source               | Used for                                                                    |
-| -------------------- | --------------------------------------------------------------------------- |
-| Postgres (Prisma)    | Guild settings, permits, cases/audit log, module overrides, stats, backups. |
-| Redis                | Sessions, OAuth state, guild-list cache, verification captchas/rate limits. |
-| Discord OAuth REST   | Current user and the guilds they can manage.                                |
-| Discord bot REST     | Guild, role, channel, and user lookups; verification role assignment.       |
-| Bot RPC (`RPC_URL`)  | Live module catalog state, permit node catalog, backup preview/restore.     |
-| Local data directory | Installed add-on list and add-on package versions (owner-only addons page). |
+| Source              | Used for                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Postgres (Prisma)   | Guild settings, permits, cases/audit log, module overrides, stats, backups.                              |
+| Redis               | Sessions, OAuth state, guild-list cache, verification captchas/rate limits.                              |
+| Discord OAuth REST  | Current user and the guilds they can manage.                                                             |
+| Discord bot REST    | Guild, role, channel, and user lookups; verification role assignment.                                    |
+| Bot RPC (`RPC_URL`) | Live module catalog/state, add-on repos/install operations, permit node catalog, backup preview/restore. |
 
 Postgres is the source of truth for configuration. The dashboard writes config
 there and then calls the bot so running listeners and commands react without a
 restart. Discord REST is used only where Prisma has no live equivalent (roles,
 channels, member display names, role grants). RPC is used only for data the bot
 process owns.
+
+The dashboard has no filesystem access to add-on code. The Add-ons page lists
+repositories, candidates, and installed modules through the bot's RPC API;
+cloning, file materialization, and module mounting happen in the bot process.
 
 ## Request lifecycle
 
@@ -66,22 +69,22 @@ plain-HTTP local production smoke tests.
 
 ## Routes
 
-| Route                                | Load data                                                                  | Mutations                                           |
-| ------------------------------------ | -------------------------------------------------------------------------- | --------------------------------------------------- |
-| `/`                                  | Session redirect / login error                                             | —                                                   |
-| `/guilds`                            | Discord guild list filtered to manageable guilds                           | —                                                   |
-| `/guilds/[guildId]`                  | Dashboard summary: modules, permits, tickets, audit, stats, latest backup  | —                                                   |
-| `/guilds/[guildId]/settings`         | Guild settings JSON                                                        | `save`                                              |
-| `/guilds/[guildId]/modules`          | Module catalog plus per-guild enable overrides                             | `toggle`, `removeUnknown`                           |
-| `/guilds/[guildId]/modules/[module]` | Module metadata, schema-driven config, generators                          | `save`, `reset`, `addGenerator`, `removeGenerator`  |
-| `/guilds/[guildId]/features`         | Custom commands, menus, categories, ticket panels plus permit nodes        | Ten save/delete actions for those entities          |
-| `/guilds/[guildId]/permits`          | Permits, assignments, bot permit-node catalog                              | `create`                                            |
-| `/guilds/[guildId]/permits/[id]`     | One permit, assignments, available nodes                                   | `update`, `delete`, `assign`, `unassign`            |
-| `/guilds/[guildId]/security`         | Security settings, panic state, verification tokens, backups               | Security/panic/backup/verification actions          |
-| `/guilds/[guildId]/cases`            | Recent audit/case entries                                                  | —                                                   |
-| `/guilds/[guildId]/stats`            | Latest snapshot, 14-snapshot history, 7-day counters, economy/level counts | —                                                   |
-| `/guilds/[guildId]/addons`           | Installed add-ons and local add-on repositories (bot owners only)          | `addRepo`, `updateRepo`, `install`, `update`, `pin` |
-| `/verify/[token]`                    | Public verification token, guild/user/role display, captcha                | `default` (submit captcha)                          |
+| Route                                | Load data                                                                     | Mutations                                                            |
+| ------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `/`                                  | Session redirect / login error                                                | —                                                                    |
+| `/guilds`                            | Discord guild list filtered to manageable guilds                              | —                                                                    |
+| `/guilds/[guildId]`                  | Dashboard summary: modules, permits, tickets, audit, stats, latest backup     | —                                                                    |
+| `/guilds/[guildId]/settings`         | Guild settings JSON                                                           | `save`                                                               |
+| `/guilds/[guildId]/modules`          | Module catalog plus per-guild enable overrides                                | `toggle`, `removeUnknown`                                            |
+| `/guilds/[guildId]/modules/[module]` | Module metadata, schema-driven config, generators                             | `save`, `reset`, `addGenerator`, `removeGenerator`                   |
+| `/guilds/[guildId]/features`         | Custom commands, menus, categories, ticket panels plus permit nodes           | Ten save/delete actions for those entities                           |
+| `/guilds/[guildId]/permits`          | Permits, assignments, bot permit-node catalog                                 | `create`                                                             |
+| `/guilds/[guildId]/permits/[id]`     | One permit, assignments, available nodes                                      | `update`, `delete`, `assign`, `unassign`                             |
+| `/guilds/[guildId]/security`         | Security settings, panic state, verification tokens, backups                  | Security/panic/backup/verification actions                           |
+| `/guilds/[guildId]/cases`            | Recent audit/case entries                                                     | —                                                                    |
+| `/guilds/[guildId]/stats`            | Latest snapshot, 14-snapshot history, 7-day counters, economy/level counts    | —                                                                    |
+| `/guilds/[guildId]/addons`           | Installed add-ons, repositories, and candidates via bot RPC (bot owners only) | `addRepo`, `removeRepo`, `updateRepo`, `install`, `uninstall`, `pin` |
+| `/verify/[token]`                    | Public verification token, guild/user/role display, captcha                   | `default` (submit captcha)                                           |
 
 Module toggles and configuration are written to Postgres first, then
 `setModuleStateViaRpc()` tells the bot to apply the change. RPC failures are
@@ -107,15 +110,23 @@ storage.
 
 The dashboard calls these bot endpoints:
 
-| Method | Path                                 | Auth                     |
-| ------ | ------------------------------------ | ------------------------ |
-| `GET`  | `/healthz`, `/ready`, `/readyz`      | Public summary           |
-| `GET`  | `/api/v1/status`                     | Bearer token or loopback |
-| `GET`  | `/api/v1/permits/nodes?guild_id=X`   | Bearer token or loopback |
-| `GET`  | `/api/v1/guilds/X`                   | Bearer token or loopback |
-| `POST` | `/api/v1/guilds/X/modules/Y/state`   | Bearer token or loopback |
-| `GET`  | `/api/v1/guilds/X/backups/Y/preview` | Bearer token or loopback |
-| `POST` | `/api/v1/guilds/X/backups/Y/restore` | Bearer token or loopback |
+| Method   | Path                                 | Auth                     |
+| -------- | ------------------------------------ | ------------------------ |
+| `GET`    | `/healthz`, `/ready`, `/readyz`      | Public summary           |
+| `GET`    | `/api/v1/status`                     | Bearer token or loopback |
+| `GET`    | `/api/v1/permits/nodes?guild_id=X`   | Bearer token or loopback |
+| `GET`    | `/api/v1/guilds/X`                   | Bearer token or loopback |
+| `GET`    | `/api/v1/guilds/X/modules`           | Bearer token or loopback |
+| `POST`   | `/api/v1/guilds/X/modules/Y/state`   | Bearer token or loopback |
+| `GET`    | `/api/v1/guilds/X/backups/Y/preview` | Bearer token or loopback |
+| `POST`   | `/api/v1/guilds/X/backups/Y/restore` | Bearer token or loopback |
+| `GET`    | `/api/v1/addons`                     | Bearer token or loopback |
+| `POST`   | `/api/v1/addons/repos`               | Bearer token or loopback |
+| `DELETE` | `/api/v1/addons/repos/:name`         | Bearer token or loopback |
+| `POST`   | `/api/v1/addons/repos/:name/update`  | Bearer token or loopback |
+| `POST`   | `/api/v1/addons/install`             | Bearer token or loopback |
+| `DELETE` | `/api/v1/addons/modules/:name`       | Bearer token or loopback |
+| `POST`   | `/api/v1/addons/modules/:name/pin`   | Bearer token or loopback |
 
 Set `RPC_INTERNAL_TOKEN` identically in both processes when the RPC server is
 bound beyond loopback. Without a token, non-loopback requests are rejected.

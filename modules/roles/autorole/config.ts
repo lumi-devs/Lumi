@@ -1,10 +1,8 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import { z } from "zod";
 import { readConfig, saveConfig } from "../../shared/roles.js";
-
 export const AutoroleModuleName = "autorole";
-export const AutoroleConfigKey = AutoroleModuleName;
-
+export const AutoroleConfigKey = "autorole";
 export const AutoroleConfigSchema = z.object({
   enabled: z.boolean().default(true),
   paused: z.boolean().default(false),
