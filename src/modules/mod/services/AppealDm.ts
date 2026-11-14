@@ -1,8 +1,8 @@
 import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
-import { getDashboardPublicUrl } from "#src/lib/Env.js";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
-import { generateAppealToken } from "#src/modules/mod/services/AppealToken.js";
+import { getDashboardPublicUrl } from "@lib/Env.js";
+import { makeInfoCard } from "@ui/Cards.js";
+import { generateAppealToken } from "@modules/mod/services/AppealToken.js";
 
 export async function sendAppealLinkDm(
   targetUser: User,

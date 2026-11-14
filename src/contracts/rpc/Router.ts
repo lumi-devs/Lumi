@@ -1,18 +1,18 @@
-import { accountRpc } from "#src/contracts/rpc/Account.js";
-import { afkRpc } from "#src/contracts/rpc/Afk.js";
-import { coreRpc } from "#src/contracts/rpc/Core.js";
-import { dashboardRpc } from "#src/contracts/rpc/Dashboard.js";
-import { economyRpc } from "#src/contracts/rpc/Economy.js";
-import { filterRpc } from "#src/contracts/rpc/Filter.js";
-import type { RpcInputOf, RpcOutputOf } from "#src/contracts/rpc/Define.js";
-import { downloaderRpc } from "#src/contracts/rpc/Downloader.js";
-import { loggingRpc } from "#src/contracts/rpc/Logging.js";
-import { modRpc } from "#src/contracts/rpc/Mod.js";
-import { reactionrolesRpc } from "#src/contracts/rpc/Reactionroles.js";
-import { securityRpc } from "#src/contracts/rpc/Security.js";
-import { systemRpc } from "#src/contracts/rpc/System.js";
-import { tempvcRpc } from "#src/contracts/rpc/Tempvc.js";
-import { welcomeRpc } from "#src/contracts/rpc/Welcome.js";
+import { accountRpc } from "@contracts/rpc/Account.js";
+import { afkRpc } from "@contracts/rpc/Afk.js";
+import { coreRpc } from "@contracts/rpc/Core.js";
+import { dashboardRpc } from "@contracts/rpc/Dashboard.js";
+import { economyRpc } from "@contracts/rpc/Economy.js";
+import { filterRpc } from "@contracts/rpc/Filter.js";
+import type { RpcInputOf, RpcOutputOf } from "@contracts/rpc/Define.js";
+import { downloaderRpc } from "@contracts/rpc/Downloader.js";
+import { loggingRpc } from "@contracts/rpc/Logging.js";
+import { modRpc } from "@contracts/rpc/Mod.js";
+import { reactionrolesRpc } from "@contracts/rpc/Reactionroles.js";
+import { securityRpc } from "@contracts/rpc/Security.js";
+import { systemRpc } from "@contracts/rpc/System.js";
+import { tempvcRpc } from "@contracts/rpc/Tempvc.js";
+import { welcomeRpc } from "@contracts/rpc/Welcome.js";
 
 export const rpcSlices = [
   accountRpc,

@@ -1,7 +1,7 @@
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import {mgetSafe, pipelineBySlot} from "#src/lib/valkey/Cluster.js";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import {mgetSafe, pipelineBySlot} from "@redis/Cluster.js";
+import { Repository } from "@db/repositories/Repository.js";
+import { tryParseJSON } from "@shared/Index.ts";
 
 export type PermitKind = "enforced" | "custom";
 export type PermitTargetType = "user" | "role" | "channel";
@@ -66,12 +66,12 @@ export class PermissionRepository extends Repository {
     chainTargets: Array<{ targetType: PermitTargetType; targetId: string }>,
   ): Promise<{ tiers: TargetPermitPayload[]; isQuarantined: boolean }> {
     const keys = chainTargets.map((t) =>
-      ValkeyKeys.targetPermits(guildId, t.targetType, t.targetId),
+      RedisKeys.targetPermits(guildId, t.targetType, t.targetId),
     );
 
-    const quarantineKey = ValkeyKeys.quarantineState(guildId, userId);
+    const quarantineKey = RedisKeys.quarantineState(guildId, userId);
 
-    const rawResults = await mgetSafe(this.valkey, [...keys, quarantineKey]);
+    const rawResults = await mgetSafe(this.redis, [...keys, quarantineKey]);
     const rawQuarantine = rawResults[rawResults.length - 1];
     const isQuarantined = rawQuarantine != null && rawQuarantine !== "0";
     const tiers: TargetPermitPayload[] = new Array(chainTargets.length);
@@ -125,11 +125,11 @@ export class PermissionRepository extends Repository {
         return { cacheKey: keys[i]!, payload };
       });
       await pipelineBySlot(
-        this.valkey,
+        this.redis,
         writes,
         (w) => w.cacheKey,
         (pipe, w) => {
-          pipe.setex(w.cacheKey, ValkeyTTL.permits, JSON.stringify(w.payload));
+          pipe.setex(w.cacheKey, RedisTTL.permits, JSON.stringify(w.payload));
         },
       );
     }
@@ -282,7 +282,7 @@ export class PermissionRepository extends Repository {
   ): Promise<void> {
     if (!assignments || assignments.length === 0) return;
     const keys = assignments.map((a) =>
-      ValkeyKeys.targetPermits(
+      RedisKeys.targetPermits(
         a.guildId,
         a.targetType as PermitTargetType,
         a.targetId,
@@ -315,7 +315,7 @@ export class PermissionRepository extends Repository {
       },
     });
     await this.invalidate(
-      ValkeyKeys.targetPermits(permit.guildId, targetType, targetId),
+      RedisKeys.targetPermits(permit.guildId, targetType, targetId),
     );
     return assignment;
   }
@@ -335,7 +335,7 @@ export class PermissionRepository extends Repository {
       where: { permitId, guildId, targetType, targetId },
     });
     await this.invalidate(
-      ValkeyKeys.targetPermits(permit.guildId, targetType, targetId),
+      RedisKeys.targetPermits(permit.guildId, targetType, targetId),
     );
     return count;
   }

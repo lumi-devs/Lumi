@@ -1,12 +1,12 @@
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { GatewayDispatchPayload, APIGuild } from "discord-api-types/v10";
-import { logError } from "#src/lib/utilities/Errors.js";
+import { logError } from "@utilities/Errors.js";
 import {
   seedVoiceStates,
   clearVoiceChannelOccupancy,
-} from "#src/modules/tempvc/services/VoiceOccupancy.js";
-import { listVcRecords } from "#src/modules/tempvc/data/Tempvc.js";
+} from "@modules/tempvc/services/VoiceOccupancy.js";
+import { listVcRecords } from "@modules/tempvc/data/Tempvc.js";
 
 const tempvcRawGuildCreate = defineListener({
   name: "tempvcRawGuildCreate",

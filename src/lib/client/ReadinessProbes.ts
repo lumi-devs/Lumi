@@ -1,7 +1,7 @@
-import { getClusterName, isPrimaryShard } from "#src/lib/Env.js";
-import { registerReadinessProbe } from "#src/observability/Index.ts";
-import { container } from "#src/lib/Services.js";
-import { DefaultClusterName, readClusterShards } from "#src/lib/sharding/ShardTelemetry.js";
+import { getClusterName, isPrimaryShard } from "@lib/Env.js";
+import { registerReadinessProbe } from "@observability/Index.ts";
+import { container } from "@lib/Services.js";
+import { DefaultClusterName, readClusterShards } from "@lib/sharding/ShardTelemetry.js";
 
 export function registerInfrastructureReadinessProbes(): void {
 
@@ -15,17 +15,17 @@ export function registerInfrastructureReadinessProbes(): void {
     }
   });
 
-  registerReadinessProbe("valkey", async () => {
+  registerReadinessProbe("redis", async () => {
     try {
-      const pong = await container.valkey.ping();
+      const pong = await container.redis.ping();
       if (pong === "PONG") return { status: "ok" };
       container.logger?.error(
-        `[Readiness] valkey probe returned unexpected reply: ${pong}`,
+        `[Readiness] redis probe returned unexpected reply: ${pong}`,
       );
-      return { status: "fail", detail: "valkey unreachable" };
+      return { status: "fail", detail: "redis unreachable" };
     } catch (err) {
-      container.logger?.error("[Readiness] valkey probe failed:", err);
-      return { status: "fail", detail: "valkey unreachable" };
+      container.logger?.error("[Readiness] redis probe failed:", err);
+      return { status: "fail", detail: "redis unreachable" };
     }
   });
 }
@@ -35,14 +35,6 @@ export function registerRpcReadinessProbe(isRpcReady: () => boolean): void {
     isRpcReady()
       ? { status: "ok" }
       : { status: "fail", detail: "rpc server not running" },
-  );
-}
-
-export function registerSchedulerReadinessProbe(hasLock: () => boolean): void {
-  registerReadinessProbe("scheduler-tasks", () =>
-    hasLock()
-      ? { status: "ok" }
-      : { status: "fail", detail: "scheduler lock not held" },
   );
 }
 
@@ -56,7 +48,7 @@ export function registerWorkerProbes(client: { isReady: () => boolean }): void {
     if (!isPrimaryShard()) return { status: "ok" };
     try {
       const snapshot = await readClusterShards({
-        valkey: container.valkey,
+        redis: container.redis,
         clusterName: getClusterName() ?? DefaultClusterName,
       });
       if (snapshot.shards.length === 0) {

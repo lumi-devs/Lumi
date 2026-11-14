@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import type { Guild, User } from "discord.js";
 import type { ModerationCase } from "@prisma/client";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
-import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";
-import { sendAppealLinkDm } from "#src/modules/mod/services/AppealDm.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
+import { scheduleCaseLift } from "@modules/mod/services/Helpers.js";
+import { sendAppealLinkDm } from "@modules/mod/services/AppealDm.js";
 
 interface ModerationLogEntry {
   guildId: string;
@@ -22,7 +22,6 @@ interface ModerationAppealDm {
 }
 
 interface RunModerationActionOptions<T extends ModerationCase> {
-
   perform: () => Promise<T>;
 
   scheduleLift?: boolean;

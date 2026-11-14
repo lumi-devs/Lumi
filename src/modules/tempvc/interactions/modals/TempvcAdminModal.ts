@@ -2,14 +2,14 @@ import type { ModalSubmitInteraction } from "discord.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { makeErrorCard } from "#src/lib/ui/Cards.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { makeErrorCard } from "@ui/Cards.js";
 import {
   assertTempvcAdmin,
   renderGeneratorCard,
   updateGenerator,
-} from "#src/modules/tempvc/commands/Tempvc.js";
+} from "@modules/tempvc/commands/Tempvc.js";
 
 function parseId(customId: string): { kind: string; channelId: string } | null {
   const parts = customId.split(":");

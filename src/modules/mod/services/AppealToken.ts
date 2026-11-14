@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { envParseString } from "#src/lib/Env.js";
-import { Time } from "#src/shared/Index.ts";
+import { envParseString } from "@lib/Env.js";
+import { Time } from "@shared/Index.ts";
 
 interface AppealTokenPayload {
   guildId: string;

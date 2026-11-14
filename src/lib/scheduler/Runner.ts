@@ -1,17 +1,17 @@
 import { Queue, Worker, type Job, type JobsOptions } from "bullmq";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   getScheduledTask,
   repeatedScheduledTasks,
-} from "#src/lib/scheduler/Tasks.js";
+} from "@scheduler/Tasks.js";
 import {
   getQueuePrefix,
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_DEFAULT_JOB_OPTIONS,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#src/lib/scheduler/Queue.js";
-import type { ScheduleOptions } from "#src/lib/scheduler/Schedule.js";
-import { resolveTaskRef, toBullMQJobOptions } from "#src/lib/scheduler/Schedule.js";
+} from "@scheduler/Queue.js";
+import type { ScheduleOptions } from "@scheduler/Schedule.js";
+import { resolveTaskRef, toBullMQJobOptions } from "@scheduler/Schedule.js";
 
 export interface RepeatedTaskSpec {
   name: string;

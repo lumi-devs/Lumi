@@ -1,8 +1,8 @@
 import { AsyncQueue } from "@sapphire/async-queue";
-import { type Container } from "#src/lib/Services.js";
-import { queueDepth } from "#src/observability/Index.ts";
-import { scheduleTask, QueuePriority } from "#src/lib/scheduler/Schedule.js";
-import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "#src/lib/outbound/Render.js";
+import { type Container } from "@lib/Services.js";
+import { queueDepth } from "@observability/Index.ts";
+import { scheduleTask, QueuePriority } from "@scheduler/Schedule.js";
+import { renderAuditCard, renderLogCard, type AuditEntry, type LogCard } from "@lib/outbound/Render.js";
 
 const QueueLabel = "outbound-send";
 

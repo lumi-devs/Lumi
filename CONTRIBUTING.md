@@ -16,7 +16,7 @@ Ensure the following prerequisites are installed on your workstation:
 | **[Bun](https://bun.sh)** | `1.4.2+` | <code>curl -fsSL https://bun.sh/install &#124; bash</code> | Primary JavaScript runtime, package manager, and test runner |
 | **Node.js** | `26.0.0+` | `nvm install 26` | Required for tooling compatibility and typechecking |
 | **PostgreSQL** | `17.0+` | Docker / Native | Relational database (uses PgBouncer connection pooler) |
-| **Valkey** | `8.0+` | Docker / Native | High-speed cache, rate limiting, and Valkey Streams event bus |
+| **Redis** | `8.0+` | Docker / Native | High-speed cache, rate limiting, and Redis Streams event bus |
 | **Nix** | Optional | [Nix Package Manager](https://nixos.org) | Declarative shell environment via `nix develop` |
 
 ---
@@ -40,10 +40,10 @@ nix develop --command bun install
 
 ### 2. Infrastructure Backends (Docker Compose)
 
-Start PostgreSQL, PgBouncer, and Valkey containerized services:
+Start PostgreSQL, PgBouncer, and Redis containerized services:
 
 ```bash
-docker compose up -d postgres pgbouncer valkey
+docker compose up -d postgres pgbouncer redis
 ```
 
 ### 3. Database Schema Provisioning
@@ -108,7 +108,7 @@ Modules inside `src/modules/` **must never** import code directly from sibling m
 import { MuteService } from "../mod/services/MuteService.js";
 
 // ✅ Allowed: Inter-module communication via typed utilities or the event bus
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import { getUtility } from "@module-system/Utility.js";
 const filter = getUtility("filter");
 ```
 
@@ -129,7 +129,7 @@ const guild = await container.db.guilds.get(guildId);
 Raw Discord embeds (`EmbedBuilder`) are strictly prohibited in user-facing command responses. Always construct UI responses using Lumi's standardized card primitives:
 
 ```ts
-import { makeSuccessCard } from "#src/lib/ui/Cards.js";
+import { makeSuccessCard } from "@ui/Cards.js";
 
 // Respond with standardized success feedback
 await ctx.replySuccess("Settings Saved", "Updated moderation threshold.");
@@ -137,9 +137,9 @@ await ctx.replySuccess("Settings Saved", "Updated moderation threshold.");
 
 ### 4. Code Hygiene & Utility Functions
 
-* **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `#src/shared/Index.ts`.
-* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `#src/shared/Index.ts`.
-* **Configuration Validation**: All module configurations must define a strict schema using the `cfg.*` helpers from `#src/lib/module-system/ConfigSchema.js` inside `defineModule`.
+* **JSON Parsing**: Never place raw `JSON.parse()` calls inside generic `try/catch` blocks. Use `tryParseJSON` from `@shared/Index.ts`.
+* **Array Filtering**: Do not filter typed arrays using `.filter(Boolean)`. Use `.filter(filterNullish)` from `@shared/Index.ts`.
+* **Configuration Validation**: All module configurations must define a strict schema using the `cfg.*` helpers from `@module-system/ConfigSchema.js` inside `defineModule`.
 
 ### 5. Internationalization (i18n)
 
@@ -178,7 +178,7 @@ bun run validate
 | `bun run typecheck` | `tsc` | Type checking without emitting files |
 | `bun run lint` | `eslint` | Code style enforcement (check-only, no auto-fix) |
 | `bun run lint:fix` | `eslint --fix` | Same checks, with auto-fixes applied locally |
-| `bun run test` | `bun test` | Unit and integration tests under `tests/` |
+| `bun run test` | `scripts/RunTests.ts` | Unit and integration tests under `tests/`, one process per file |
 | `bun run test:coverage` | `bun test --coverage` | Same tests with coverage |
 | `bun run validate` | Bun TS | Addon structure, import, and UI checks |
 

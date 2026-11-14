@@ -1,4 +1,4 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 
 export interface GuildKvRow {
   guildId: string;

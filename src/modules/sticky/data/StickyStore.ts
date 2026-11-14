@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import type { Container } from "@lib/Services.js";
+import { claimCooldown } from "@redis/Cooldown.js";
 
 export const StickyCooldownMs = 1_000;
 
@@ -14,7 +14,7 @@ export async function getStickyMessageId(
   guildId: string,
   channelId: string,
 ): Promise<string | null> {
-  return services.valkey.get(stickyKey(guildId, channelId));
+  return services.redis.get(stickyKey(guildId, channelId));
 }
 
 export async function setStickyMessageId(
@@ -23,7 +23,7 @@ export async function setStickyMessageId(
   channelId: string,
   messageId: string,
 ): Promise<void> {
-  await services.valkey.set(stickyKey(guildId, channelId), messageId);
+  await services.redis.set(stickyKey(guildId, channelId), messageId);
 }
 
 export async function delStickyMessageId(
@@ -31,11 +31,7 @@ export async function delStickyMessageId(
   guildId: string,
   channelId: string,
 ): Promise<void> {
-  if (services.invalidation) {
-    await services.invalidation.invalidate(stickyKey(guildId, channelId));
-  } else {
-    await services.valkey.del(stickyKey(guildId, channelId));
-  }
+  await services.invalidation.invalidate(stickyKey(guildId, channelId));
 }
 
 export async function isStickyOnCooldown(

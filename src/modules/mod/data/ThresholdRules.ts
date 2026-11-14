@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import type { WarnThresholdAction } from "#src/contracts/rpc/Index.ts";
+import type { Container } from "@lib/Services.js";
+import type { WarnThresholdAction } from "@contracts/rpc/Index.ts";
 
 export type ThresholdAction = WarnThresholdAction;
 

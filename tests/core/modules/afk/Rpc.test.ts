@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { AfkRepository } from "#src/modules/afk/data/AfkRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { AfkRepository } from "@modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -43,16 +44,11 @@ describe("afk module RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-      set: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    };
-    (container as any).valkey = valkey;
+    const redis = createMemoryRedis();
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
+    db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();

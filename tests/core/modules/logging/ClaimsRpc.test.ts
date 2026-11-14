@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { LogClaimCodeTtlMs } from "#src/modules/logging/services/Claims.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { LogClaimCodeTtlMs } from "@modules/logging/services/Claims.js";
+import { RedisKeys } from "@redis/Store.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
+import { createMemoryRedis, type MemoryRedis } from "../../mocks/MemoryRedis.js";
 
 const GUILD_ID = "123456789012345678";
 const OWNER_ID = "111111111111111111";
@@ -32,11 +33,11 @@ function mockRest(opts: {
 }
 
 describe("logging module claim RPC handlers", () => {
-  let strings: Map<string, string>;
+  let redis: MemoryRedis;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    strings = new Map();
+    redis = createMemoryRedis();
     repositoryCache.clear();
 
     container.logger = {
@@ -51,15 +52,7 @@ describe("logging module claim RPC handlers", () => {
       member: memberWith([]),
     });
 
-    (container as any).valkey = {
-      set: vi.fn((key: string, value: string, ...args: unknown[]) => {
-        if (args.includes("NX") && strings.has(key)) return Promise.resolve(null);
-        strings.set(key, value);
-        return Promise.resolve("OK");
-      }),
-      get: vi.fn((key: string) => Promise.resolve(strings.get(key) ?? null)),
-      setex: vi.fn(),
-    } as any;
+    (container as any).redis = redis;
 
     registerRpcHandlers();
   });
@@ -90,7 +83,7 @@ describe("logging module claim RPC handlers", () => {
 
       expect(res.code).toMatch(/^[A-Z2-9]{6}$/);
       expect(res.expiresIn).toBe(LogClaimCodeTtlMs);
-      expect(strings.get(ValkeyKeys.logClaimCode(GUILD_ID, res.code))).toBe(
+      expect(redis.$store.get(RedisKeys.logClaimCode(GUILD_ID, res.code))).toBe(
         OWNER_ID,
       );
     });

@@ -1,10 +1,10 @@
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 import {
   dataFile,
   loadOrMintKeyFile,
   openSealedString,
   sealString,
-} from "#src/lib/crypto/Seal.js";
+} from "@lib/crypto/Seal.js";
 
 export interface SharedTokenView {
   service: string;

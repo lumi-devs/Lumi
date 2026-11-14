@@ -10,15 +10,15 @@ import {
   segmentsFromState,
   stepCustomId,
   type SetupWizardState,
-} from "#src/modules/onboarding/services/SetupWizard.js";
+} from "@modules/onboarding/services/SetupWizard.js";
 import {
   SetupTotalSteps,
   buildSetupReviewView,
   buildSetupStepView,
   buildSetupSuccessCard,
   setupProgressLines,
-} from "#src/modules/onboarding/ui/SetupWizard.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
+} from "@modules/onboarding/ui/SetupWizard.js";
+import type { CardReply } from "@ui/Cards.js";
 import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;

@@ -1,58 +1,14 @@
-import { TimeoutError, withTimeout } from "#src/lib/utilities/Resilience.js";
-
-export type ComponentStatus = "ok" | "degraded" | "down";
-
-export interface ComponentHealth {
-  status: ComponentStatus;
-  reason?: string;
-}
-
-export interface QueueCounts {
-  waiting: number;
-  active: number;
-  failed: number;
-  delayed: number;
-}
-
-export interface SchedulerHealth extends ComponentHealth {
-  lockHolder: string | null;
-  heartbeatAgeMs: number | null;
-  queue: QueueCounts | null;
-}
-
-export interface ShardsHealth extends ComponentHealth {
-  total: number;
-  up: number;
-  stale: number;
-  worstLagMs: number | null;
-}
-
-export interface EventBusHealth extends ComponentHealth {
-  lag: number | null;
-  pending: number | null;
-}
-
-export interface ApiHealth extends ComponentHealth {
-  uptimeSec: number;
-  eventLoopLagP99Ms: number | null;
-}
-
-export interface LatencyHealth extends ComponentHealth {
-  latencyMs: number | null;
-}
-
-export interface SystemStatusSnapshot {
-  observedAt: string;
-  status: ComponentStatus;
-  components: {
-    api: ApiHealth;
-    postgres: LatencyHealth;
-    valkey: LatencyHealth;
-    scheduler: SchedulerHealth;
-    shards: ShardsHealth;
-    eventBus: EventBusHealth;
-  };
-}
+import { TimeoutError, withTimeout } from "@utilities/Resilience.js";
+import type {
+  SystemApiHealth,
+  SystemComponentStatus,
+  SystemEventBusHealth,
+  SystemLatencyHealth,
+  SystemQueueCounts,
+  SystemSchedulerHealth,
+  SystemShardsHealth,
+  SystemStatusData,
+} from "@contracts/rpc/System.js";
 
 export interface ShardsSnapshot {
 
@@ -75,7 +31,7 @@ export const StatusThresholds = {
 
   postgresSlowMs: 500,
 
-  valkeySlowMs: 200,
+  redisSlowMs: 200,
 
   schedulerHeartbeatStaleMs: 30_000,
 
@@ -95,17 +51,17 @@ export interface SystemStatusDeps {
   uptimeSec: () => number;
   eventLoopLagP99Ms: () => number | null;
   probePostgresLatencyMs: () => Promise<number>;
-  pingValkey: () => Promise<string>;
+  pingRedis: () => Promise<string>;
   readSchedulerHeartbeat: () => Promise<SchedulerHeartbeatInfo | null>;
-  readSchedulerQueueCounts: () => Promise<QueueCounts | null>;
+  readSchedulerQueueCounts: () => Promise<SystemQueueCounts | null>;
   readShardsSnapshot: () => Promise<ShardsSnapshot>;
   readEventBusStats: () => Promise<{ lag: number | null; pending: number | null }>;
 }
 
 const DefaultProbeTimeoutMs = 3_000;
 
-function worse(a: ComponentStatus, b: ComponentStatus): ComponentStatus {
-  const rank: Record<ComponentStatus, number> = { ok: 0, degraded: 1, down: 2 };
+function worse(a: SystemComponentStatus, b: SystemComponentStatus): SystemComponentStatus {
+  const rank: Record<SystemComponentStatus, number> = { ok: 0, degraded: 1, down: 2 };
   return rank[b] > rank[a] ? b : a;
 }
 
@@ -127,10 +83,10 @@ async function probe<T>(
 async function buildPostgresHealth(
   deps: SystemStatusDeps,
   timeoutMs: number,
-): Promise<LatencyHealth> {
+): Promise<SystemLatencyHealth> {
   const result = await probe(() => deps.probePostgresLatencyMs(), timeoutMs);
   if (!result.ok) return { status: "down", reason: result.reason, latencyMs: null };
-  const status: ComponentStatus =
+  const status: SystemComponentStatus =
     result.value > StatusThresholds.postgresSlowMs ? "degraded" : "ok";
   return {
     status,
@@ -139,18 +95,18 @@ async function buildPostgresHealth(
   };
 }
 
-async function buildValkeyHealth(
+async function buildRedisHealth(
   deps: SystemStatusDeps,
   timeoutMs: number,
-): Promise<LatencyHealth> {
+): Promise<SystemLatencyHealth> {
   const start = (deps.now ?? Date.now)();
-  const result = await probe(() => deps.pingValkey(), timeoutMs);
+  const result = await probe(() => deps.pingRedis(), timeoutMs);
   if (!result.ok) return { status: "down", reason: result.reason, latencyMs: null };
   if (result.value !== "PONG") {
     return { status: "down", reason: `unexpected reply: ${result.value}`, latencyMs: null };
   }
   const latencyMs = (deps.now ?? Date.now)() - start;
-  const status: ComponentStatus = latencyMs > StatusThresholds.valkeySlowMs ? "degraded" : "ok";
+  const status: SystemComponentStatus = latencyMs > StatusThresholds.redisSlowMs ? "degraded" : "ok";
   return {
     status,
     latencyMs,
@@ -161,7 +117,7 @@ async function buildValkeyHealth(
 async function buildSchedulerHealth(
   deps: SystemStatusDeps,
   timeoutMs: number,
-): Promise<SchedulerHealth> {
+): Promise<SystemSchedulerHealth> {
   const heartbeatResult = await probe(() => deps.readSchedulerHeartbeat(), timeoutMs);
   if (!heartbeatResult.ok) {
     return {
@@ -197,7 +153,7 @@ async function buildSchedulerHealth(
     };
   }
 
-  let status: ComponentStatus = "ok";
+  let status: SystemComponentStatus = "ok";
   let reason: string | undefined;
   if (!queueResult.ok) {
     status = "degraded";
@@ -225,7 +181,7 @@ async function buildSchedulerHealth(
 async function buildShardsHealth(
   deps: SystemStatusDeps,
   timeoutMs: number,
-): Promise<ShardsHealth> {
+): Promise<SystemShardsHealth> {
   const result = await probe(() => deps.readShardsSnapshot(), timeoutMs);
   if (!result.ok) {
     return {
@@ -265,7 +221,7 @@ async function buildShardsHealth(
   return { status: "ok", total, up, stale, worstLagMs };
 }
 
-function buildApiHealth(deps: SystemStatusDeps): ApiHealth {
+function buildApiHealth(deps: SystemStatusDeps): SystemApiHealth {
   const eventLoopLagP99Ms = deps.eventLoopLagP99Ms();
   const degraded =
     eventLoopLagP99Ms !== null &&
@@ -278,7 +234,7 @@ function buildApiHealth(deps: SystemStatusDeps): ApiHealth {
   };
 }
 
-async function buildEventBusHealth(deps: SystemStatusDeps): Promise<EventBusHealth> {
+async function buildEventBusHealth(deps: SystemStatusDeps): Promise<SystemEventBusHealth> {
   const { lag, pending } = await deps.readEventBusStats();
   const degraded = pending !== null && pending >= StatusThresholds.eventBusPendingDegraded;
   return {
@@ -291,27 +247,27 @@ async function buildEventBusHealth(deps: SystemStatusDeps): Promise<EventBusHeal
 
 export async function getSystemStatus(
   deps: SystemStatusDeps,
-): Promise<SystemStatusSnapshot> {
+): Promise<SystemStatusData> {
   const timeoutMs = deps.probeTimeoutMs ?? DefaultProbeTimeoutMs;
   const now = deps.now ?? Date.now;
 
-  const [api, postgres, valkey, scheduler, shards, eventBus] = await Promise.all([
+  const [api, postgres, redis, scheduler, shards, eventBus] = await Promise.all([
     Promise.resolve(buildApiHealth(deps)),
     buildPostgresHealth(deps, timeoutMs),
-    buildValkeyHealth(deps, timeoutMs),
+    buildRedisHealth(deps, timeoutMs),
     buildSchedulerHealth(deps, timeoutMs),
     buildShardsHealth(deps, timeoutMs),
     buildEventBusHealth(deps),
   ]);
 
-  const status = [api, postgres, valkey, scheduler, shards, eventBus].reduce(
+  const status = [api, postgres, redis, scheduler, shards, eventBus].reduce(
     (acc, component) => worse(acc, component.status),
-    "ok" as ComponentStatus,
+    "ok" as SystemComponentStatus,
   );
 
   return {
     observedAt: new Date(now()).toISOString(),
     status,
-    components: { api, postgres, valkey, scheduler, shards, eventBus },
+    components: { api, postgres, redis, scheduler, shards, eventBus },
   };
 }

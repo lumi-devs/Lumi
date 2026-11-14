@@ -1,7 +1,7 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
-import { CaptchaButtonId } from "#src/modules/security/Constants.js";
+import { createActionButton, buildSafeActionRows } from "@ui/Panels.js";
+import { CaptchaButtonId } from "@modules/security/Constants.js";
 
 export const EmojiPool = [
   "🍎",

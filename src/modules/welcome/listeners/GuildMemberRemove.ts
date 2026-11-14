@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember, PartialGuildMember } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { loadWelcomeConfig, renderGoodbyeCard, sendWelcomeCard, templateVarsFor } from "#src/modules/welcome/services/Welcome.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { loadWelcomeConfig, renderGoodbyeCard, sendWelcomeCard, templateVarsFor } from "@modules/welcome/services/Welcome.js";
 
 export const WelcomeMemberRemoveListener = defineListener({
   name: "welcomeMemberRemove",

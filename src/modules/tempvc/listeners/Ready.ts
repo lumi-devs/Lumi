@@ -1,11 +1,11 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { getUtility } from "@module-system/Utility.js";
 import type { Client } from "discord.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import type { Container } from "#src/lib/Services.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
+import { logError } from "@utilities/Errors.js";
+import type { Container } from "@lib/Services.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
 
 const ReconcileConcurrency = 10;
 

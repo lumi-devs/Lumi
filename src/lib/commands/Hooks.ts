@@ -1,4 +1,4 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandContext } from "@commands/Context.js";
 
 export interface BeforeInvokeDenial {
   reason: string;

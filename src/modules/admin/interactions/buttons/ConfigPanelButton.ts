@@ -1,38 +1,38 @@
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { UserError } from "#src/shared/Index.ts";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { UserError } from "@shared/Index.ts";
+import type { LumiT } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { ConfigUtility } from "#src/modules/admin/utilities/ConfigUtility.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { FieldType } from "@module-system/ConfigSchema.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { ConfigUtility } from "@modules/admin/utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
   loadDetail,
   loadFeatures,
   type FeatureDetail,
-} from "#src/modules/admin/services/ConfigPanel.js";
+} from "@lib/hub/ConfigPanel.js";
 import {
   buildFeatureDetailView,
   buildFeatureListView,
   buildFieldEditView,
-} from "#src/modules/admin/ui/Modules.js";
+} from "@lib/hub/Modules.js";
 import {
   buildHistoryView,
   buildOverridesView,
-} from "#src/modules/admin/ui/Overrides.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { respond } from "#src/lib/utilities/CommandResponse.js";
+} from "@modules/admin/ui/Overrides.js";
+import { ephemeralCard, makeErrorCard } from "@ui/Cards.js";
+import { respond } from "@utilities/CommandResponse.js";
 import {
   ConfigButtonId,
   ConfigFieldModalId,
   ConfigModalId,
   ConfigOverrideModalId,
-} from "#src/modules/core/Constants.js";
+} from "@interactions/ModuleIds.js";
 import {
   LabelBuilder,
   ModalBuilder,

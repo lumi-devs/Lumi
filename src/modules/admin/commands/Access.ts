@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { isSnowflakeId } from "@utilities/Snowflakes.js";
 
 function targetId(raw: string): string | null {
   const id = raw.replace(/\D/g, "");

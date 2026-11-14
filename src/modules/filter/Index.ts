@@ -1,14 +1,14 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { container, type Container } from "#src/lib/Services.js";
-import { NoEndUserData } from "#src/lib/module-system/Meta.js";
-import { cfg, toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
+import { defineModule } from "@module-system/Module.js";
+import { container, type Container } from "@lib/Services.js";
+import { NoEndUserData } from "@module-system/Meta.js";
+import { cfg, toStringArray } from "@module-system/ConfigSchema.js";
+import { tryGetUtility } from "@module-system/Utility.js";
 import { ChannelType } from "discord.js";
-import { shutdownRegexWorker } from "#src/lib/regex-worker/Handler.js";
-import { validateRegexPattern } from "#src/lib/regex-worker/Validate.js";
-import { DefaultWarnMessage } from "#src/modules/filter/services/Rules.js";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { handleAutoLockdownUnlockFire } from "#src/modules/filter/services/AutoLockdownHandler.js";
+import { shutdownRegexWorker } from "@lib/regex-worker/Handler.js";
+import { validateRegexPattern } from "@lib/regex-worker/Validate.js";
+import { DefaultWarnMessage } from "@modules/filter/services/Rules.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { handleAutoLockdownUnlockFire } from "@modules/filter/services/AutoLockdownHandler.js";
 
 const CompiledKeys = [
   "terms",

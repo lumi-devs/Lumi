@@ -1,37 +1,27 @@
-import { UserError } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import type {
   ButtonInteraction,
   GuildMember,
   MessageComponentInteraction,
   VoiceBasedChannel,
 } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { LumiT } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { getVcRecord, removeVcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import { TempVcKeys, TempVcPanelId } from "#src/modules/tempvc/Constants.js";
+} from "@interactions/InteractionDef.js";
+import { getUtility } from "@module-system/Utility.js";
+import { makeSuccessCard } from "@ui/Cards.js";
+import { getVcRecord, removeVcRecord } from "@modules/tempvc/data/Tempvc.js";
+import { TempVcKeys, TempVcPanelId } from "@modules/tempvc/Constants.js";
 import {
-  showLimitModal,
-  showRenameModal,
-} from "#src/modules/tempvc/services/PanelHelpers.js";
-import { resolveOwnedVc, resolveVc } from "#src/modules/tempvc/services/PanelGuard.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
-import {
-  buildBlockView,
-  buildDeleteConfirmView,
-  buildKickView,
-  buildPanel,
-  buildTransferView,
-  buildTrustView,
-  buildUnblockView,
-  buildUntrustView,
-} from "#src/modules/tempvc/ui/Panel.js";
+  handlePanelMenuAction,
+} from "@modules/tempvc/services/PanelHelpers.js";
+import { resolveOwnedVc, resolveVc } from "@modules/tempvc/services/PanelGuard.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
+import { buildPanel } from "@modules/tempvc/ui/Panel.js";
 
 export const tempVcPanelButton = defineInteraction({
   prefix: TempVcPanelId.prefix,
@@ -89,63 +79,23 @@ export const tempVcPanelButton = defineInteraction({
     if (!owned) return;
     const { channel, record } = owned;
 
-    switch (action) {
-      case "panel":
-        await interaction.editReply(await buildPanel(services, channel, record, t));
-        return;
-      case "name":
-        await showRenameModal(interaction, channel, t);
-        return;
-      case "limit":
-        await showLimitModal(interaction, channel, t);
-        return;
-      case "delete":
-        await interaction.editReply(buildDeleteConfirmView(channel, t));
-        return;
-      case "delyes":
-        await doDelete(services, interaction, channel, t);
-        return;
-      case "lock": {
-        const next = await service.setLock(
-          services,
-          channel,
-          record,
-          !record.locked,
-        );
-        await interaction.editReply(await buildPanel(services, channel, next, t));
-        return;
-      }
-      case "hide": {
-        const next = await service.setHide(
-          services,
-          channel,
-          record,
-          !record.hidden,
-        );
-        await interaction.editReply(await buildPanel(services, channel, next, t));
-        return;
-      }
-      case "kick":
-        await interaction.editReply(buildKickView(channel, record, t));
-        return;
-      case "trust":
-        await interaction.editReply(buildTrustView(channel, record, t));
-        return;
-      case "untrust":
-        await interaction.editReply(buildUntrustView(channel, record, t));
-        return;
-      case "block":
-        await interaction.editReply(buildBlockView(channel, record, t));
-        return;
-      case "unblock":
-        await interaction.editReply(buildUnblockView(channel, record, t));
-        return;
-      case "transfer":
-        await interaction.editReply(buildTransferView(channel, record, t));
-        return;
-      default:
-        return;
+    if (action === "panel") {
+      await interaction.editReply(await buildPanel(services, channel, record, t));
+      return;
     }
+    if (action === "delyes") {
+      await doDelete(services, interaction, channel, t);
+      return;
+    }
+    await handlePanelMenuAction(
+      services,
+      service,
+      interaction,
+      channel,
+      record,
+      action,
+      t,
+    );
   },
 });
 
@@ -203,7 +153,7 @@ async function claim(
       });
     }
 
-    const guard = await services.valkey.set(
+    const guard = await services.redis.set(
       TempVcKeys.claimGuard(channel.id),
       member.id,
       "PX",

@@ -1,6 +1,6 @@
 import type { OverlayOptions } from "sharp";
-import { fetchCircleAvatar } from "#src/modules/leveling/services/RankCard.js";
-import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+import { fetchCircleAvatar } from "@modules/leveling/services/RankCard.js";
+import { Semaphore } from "@utilities/Concurrency.js";
 
 const boardFetch = new Semaphore(4);
 

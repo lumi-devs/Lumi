@@ -5,10 +5,10 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { splitOnSeparator } from "#src/contracts/Index.ts";
-import { makeCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { renderTemplate } from "#src/lib/utilities/Template.js";
+import { splitOnSeparator } from "@contracts/Index.ts";
+import { makeCard, type CardReply } from "@ui/Cards.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { renderTemplate } from "@utilities/Template.js";
 
 export interface MessageButton {
   label: string;
@@ -25,7 +25,8 @@ export interface MessageContent {
   buttons?: MessageButton[] | undefined;
 }
 
-const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const HexColorPattern = /^#[0-9a-fA-F]{6}$/;
+const HexColorSchema = z.string().regex(HexColorPattern);
 const HttpUrlSchema = z.string().url();
 
 const MessageButtonSchema = z.object({
@@ -42,8 +43,6 @@ export const MessageContentSchema = z.object({
   footer: z.string().max(2000).optional(),
   buttons: z.array(MessageButtonSchema).max(5).optional(),
 });
-
-const HexColorPattern = /^#[0-9a-fA-F]{6}$/;
 
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HexColorPattern.test(value);

@@ -1,17 +1,17 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { Colors } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
-import { LumiEvents, type GuildMessage } from "#src/lib/types/Common.js";
-import { makeCard } from "#src/lib/ui/Cards.js";
-import { logError } from "#src/lib/utilities/Errors.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { memberRoleIds } from "@api/permissions/Subject.js";
+import { LumiEvents, type GuildMessage } from "@lib/types/Common.js";
+import { makeCard } from "@ui/Cards.js";
+import { logError } from "@utilities/Errors.js";
 import {
   consumeLogClaimCode,
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#src/modules/logging/services/Claims.js";
+} from "@modules/logging/services/Claims.js";
 
 export default defineListener({
   name: "loggingClaimMessage",

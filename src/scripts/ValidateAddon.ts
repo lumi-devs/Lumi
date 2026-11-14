@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import path from "node:path";
-import { validateAddonOrRepo } from "#src/lib/downloader/Validate.js";
+import { validateAddonOrRepo } from "@downloader/Validate.js";
 
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";

@@ -13,11 +13,11 @@ import {
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { makeCard } from "#src/lib/ui/Cards.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { LumiT } from "@i18n/Index.js";
+import { makeCard } from "@ui/Cards.js";
+import { resolveCardColor } from "@ui/Palette.js";
 
 const KeyPermissions = [
   { flag: PermissionFlagsBits.Administrator, name: "Administrator" },

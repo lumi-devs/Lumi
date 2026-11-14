@@ -1,4 +1,12 @@
 import type { User } from "discord.js";
+import { Time } from "@shared/Index.ts";
+
+const SuspiciousAccountAgeMs = 7 * Time.Day;
+
+export function isSuspiciousAccount(user: User): boolean {
+  const ageMs = Date.now() - user.createdTimestamp;
+  return ageMs < SuspiciousAccountAgeMs || user.avatar === null;
+}
 
 export function hasNoAvatar(user: User): boolean {
   return user.avatar === null;

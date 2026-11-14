@@ -35,7 +35,7 @@ path-filters first so unrelated jobs skip. Required jobs:
 - **test** — `bun run test:coverage`; uploads `coverage/lcov.info`,
   `coverage/api/lcov.info`, `coverage/cli/lcov.info` (Codecov step is
   `continue-on-error`)
-- **integration** — live Postgres/Valkey suite, separate job
+- **integration** — live Postgres/Redis suite, separate job
 - **build** — `bun turbo run build`
 - **nix-check** — only when `flake.nix`/`flake.lock` changed
 

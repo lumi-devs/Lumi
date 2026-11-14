@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 import { parseArgs } from "node:util";
-import * as addon from "#src/cli/commands/Addon.js";
-import * as commands from "#src/cli/commands/Commands.js";
-import * as config from "#src/cli/commands/Config.js";
-import * as migrate from "#src/cli/commands/Migrate.js";
-import * as moduleCmd from "#src/cli/commands/Module.js";
-import * as start from "#src/cli/commands/Start.js";
-import * as setup from "#src/cli/commands/Setup.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
+import * as addon from "@cli/commands/Addon.js";
+import * as commands from "@cli/commands/Commands.js";
+import * as config from "@cli/commands/Config.js";
+import * as migrate from "@cli/commands/Migrate.js";
+import * as moduleCmd from "@cli/commands/Module.js";
+import * as start from "@cli/commands/Start.js";
+import * as setup from "@cli/commands/Setup.js";
+import { LumiInfo } from "@utilities/Version.js";
 
 interface CliCommand {
   name: string;

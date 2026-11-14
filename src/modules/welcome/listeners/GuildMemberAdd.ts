@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { buildDmWelcomeCard, loadWelcomeConfig, renderWelcomeCard, renderWelcomeTemplate, sendWelcomeCard, templateVarsFor } from "#src/modules/welcome/services/Welcome.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { logError } from "@utilities/Errors.js";
+import { buildDmWelcomeCard, loadWelcomeConfig, renderWelcomeCard, renderWelcomeTemplate, sendWelcomeCard, templateVarsFor } from "@modules/welcome/services/Welcome.js";
 
 export const WelcomeMemberAddListener = defineListener({
   name: "welcomeMemberAdd",

@@ -3,9 +3,9 @@ import {
   levelForTotalXp,
   totalXpForLevel,
   xpForLevel,
-} from "#src/modules/leveling/services/Formulas.js";
-import { applyMultipliers } from "#src/modules/leveling/Config.js";
-import type { LevelingConfig } from "#src/modules/leveling/Config.js";
+} from "@modules/leveling/services/Formulas.js";
+import { applyMultipliers } from "@modules/leveling/Config.js";
+import type { LevelingConfig } from "@modules/leveling/Config.js";
 
 function baseConfig(overrides: Partial<LevelingConfig> = {}): LevelingConfig {
   return {

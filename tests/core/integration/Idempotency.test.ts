@@ -1,10 +1,10 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type Valkey from "iovalkey";
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
-import { withIdempotency } from "#src/lib/rpc/Idempotency.js";
-import { ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { createTestValkey, deleteByPrefix, integrationDescribe, scanKeys } from "./Setup.js";
+import { container } from "@lib/Services.js";
+import type Redis from "ioredis";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
+import { withIdempotency } from "@rpc/Idempotency.js";
+import { RedisTTL } from "@redis/Store.js";
+import { createTestRedis, deleteByPrefix, integrationDescribe, scanKeys } from "./Setup.js";
 
 const KeyPrefix = "lumi:rpc:idem:";
 
@@ -12,20 +12,20 @@ function uniqueGuildId(): string {
   return `int${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-integrationDescribe("withIdempotency (real Valkey)", () => {
-  let valkey: Valkey;
+integrationDescribe("withIdempotency (real Redis)", () => {
+  let redis: Redis;
 
   beforeAll(() => {
-    valkey = createTestValkey();
-    (container as unknown as { valkey: Valkey }).valkey = valkey;
+    redis = createTestRedis();
+    (container as unknown as { redis: Redis }).redis = redis;
   });
 
   afterEach(async () => {
-    await deleteByPrefix(valkey, KeyPrefix);
+    await deleteByPrefix(redis, KeyPrefix);
   });
 
   afterAll(async () => {
-    await valkey.quit();
+    await redis.quit();
   });
 
   it("first call wins the SET NX lock and runs fn exactly once", async () => {
@@ -92,11 +92,11 @@ integrationDescribe("withIdempotency (real Valkey)", () => {
     const guildId = uniqueGuildId();
     await withIdempotency("test.action", guildId, 1000, { a: 1 }, async () => "ok");
 
-    const keys = await scanKeys(valkey, `lumi:rpc:idem:test.action:${guildId}:*`);
+    const keys = await scanKeys(redis, `lumi:rpc:idem:test.action:${guildId}:*`);
     expect(keys.length).toBe(1);
 
-    const pttl = await valkey.pttl(keys[0]!);
-    const expectedMs = ValkeyTTL.rpcIdempotencyDone * 1000;
+    const pttl = await redis.pttl(keys[0]!);
+    const expectedMs = RedisTTL.rpcIdempotencyDone * 1000;
     expect(pttl).toBeGreaterThan(0);
     expect(pttl).toBeLessThanOrEqual(expectedMs);
     expect(pttl).toBeGreaterThan(expectedMs - 5000);

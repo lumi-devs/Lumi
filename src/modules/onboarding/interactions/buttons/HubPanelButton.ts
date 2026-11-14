@@ -1,13 +1,13 @@
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { LumiT } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-import type { GuildSettingsUtility } from "#src/modules/admin/utilities/GuildSettingsUtility.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { DownloaderUtility } from "@utilities/DownloaderUtility.js";
+import type { GuildSettingsUtility } from "@utilities/GuildSettingsUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -18,26 +18,26 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#src/modules/onboarding/services/HubPanel.js";
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
+} from "@modules/onboarding/services/HubPanel.js";
+import { loadFeatures } from "@lib/hub/ConfigPanel.js";
 import {
   buildAddonInstalledView,
   buildAddonReposCard,
   buildAddonsView,
   buildAutoUpdateSettingsView,
   buildRepoUpdateConfirmView,
-} from "#src/modules/admin/ui/Addons.js";
-import { DefaultPrefix } from "#src/modules/onboarding/ui/Hub.js";
-import { buildFeatureListView } from "#src/modules/admin/ui/Modules.js";
-import { buildPermitPickerView, PermitOrderPerPage } from "#src/modules/admin/ui/Permissions.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { HubAddonModalId, HubId } from "#src/modules/core/Constants.js";
+} from "@lib/hub/Addons.js";
+import { DefaultPrefix } from "@lib/hub/Hub.js";
+import { buildFeatureListView } from "@lib/hub/Modules.js";
+import { buildPermitPickerView, PermitOrderPerPage } from "@lib/hub/Permissions.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard } from "@ui/Cards.js";
+import { HubAddonModalId, HubId } from "@interactions/ModuleIds.js";
 import {
   ActionRowBuilder,
   ModalBuilder,
   TextInputBuilder,
 } from "@discordjs/builders";
-import { UserError } from "#src/shared/Index.ts";
+import { UserError } from "@shared/Index.ts";
 import { TextInputStyle, type ButtonInteraction } from "discord.js";
 
 const ADDON_MODAL_ACTIONS = new Set([

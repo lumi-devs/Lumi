@@ -1,18 +1,18 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { getUtility } from "@module-system/Utility.js";
 import type { VoiceState } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { makeWarningCard } from "#src/lib/ui/Cards.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import type { Container } from "#src/lib/Services.js";
-import { TempvcCreateCooldownMs } from "#src/modules/tempvc/Constants.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { makeWarningCard } from "@ui/Cards.js";
+import { logError } from "@utilities/Errors.js";
+import type { Container } from "@lib/Services.js";
+import { TempvcCreateCooldownMs } from "@modules/tempvc/Constants.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
-} from "#src/modules/tempvc/services/VoiceOccupancy.js";
+} from "@modules/tempvc/services/VoiceOccupancy.js";
 
 const tempvcVoiceStateUpdate = defineListener({
   name: "tempvcVoiceStateUpdate",

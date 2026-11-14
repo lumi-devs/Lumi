@@ -1,10 +1,10 @@
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
-import { type Container } from "#src/lib/Services.js";
-import { Time } from "#src/shared/Index.ts";
-import { getGdprExportDir, resolveGdprExportTtlHours } from "#src/lib/Env.js";
-import { executeGdprExport } from "#src/lib/gdpr/Requests.js";
-import { loadOrMintKeyFile, dataFile, sealBytes } from "#src/lib/crypto/Seal.js";
+import { type Container } from "@lib/Services.js";
+import { Time } from "@shared/Index.ts";
+import { getGdprExportDir, resolveGdprExportTtlHours } from "@lib/Env.js";
+import { executeGdprExport } from "@lib/gdpr/Requests.js";
+import { loadOrMintKeyFile, dataFile, sealBytes } from "@lib/crypto/Seal.js";
 
 export interface GdprExportFirePayload {
   jobId: string;

@@ -1,5 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { getGdprExportSigningSecret, getRpcInternalToken } from "#src/lib/Env.js";
+import { getGdprExportSigningSecret, getRpcInternalToken } from "@lib/Env.js";
 
 const TokenSeparator = ".";
 
@@ -77,7 +77,7 @@ export interface GdprExportJobRecord {
 export async function findGdprExportJob(
   jobId: string,
 ): Promise<GdprExportJobRecord | null> {
-  const { container } = await import("#src/lib/Services.js");
+  const { container } = await import("@lib/Services.js");
   return (await container.db?.gdprExportJobs.findById(jobId)) ?? null;
 }
 

@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { BankService } from "#src/modules/economy/services/BankService.js";
-import { formatAmount, getEconomyConfig } from "#src/modules/economy/Config.js";
-import { reportEconomyError } from "#src/modules/economy/services/Respond.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { BankService } from "@modules/economy/services/BankService.js";
+import { formatAmount, getEconomyConfig } from "@modules/economy/Config.js";
+import { reportEconomyError } from "@modules/economy/services/Respond.js";
 
 export const paydayDef: CommandDef = {
   name: "payday",

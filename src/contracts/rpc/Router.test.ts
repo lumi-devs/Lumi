@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { rpcRouter, rpcSlices, type RpcInput, type RpcOutput } from "#src/contracts/rpc/Router.js";
+import { rpcRouter, rpcSlices, type RpcInput, type RpcOutput } from "@contracts/rpc/Router.js";
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2

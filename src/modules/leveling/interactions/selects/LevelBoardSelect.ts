@@ -1,11 +1,8 @@
 import type { StringSelectMenuInteraction } from "discord.js";
-import {
-  acknowledge,
-  defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { isBoardKind } from "#src/modules/leveling/services/LevelService.js";
-import { renderBoardMessage } from "#src/modules/leveling/commands/Leaderboard.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { isBoardKind } from "@modules/leveling/services/LevelService.js";
+import { showBoard } from "@modules/leveling/interactions/buttons/LevelButtons.js";
 
 export const levelingBoardSelect = defineInteraction({
   prefix: "lvl:sel",
@@ -20,19 +17,6 @@ export const levelingBoardSelect = defineInteraction({
     if (!guildId) return;
     const board = interaction.values[0];
     if (!isBoardKind(board)) return;
-    await acknowledge(interaction);
-    try {
-      const { files, components, empty } = await renderBoardMessage(
-        services,
-        guildId,
-        board,
-        0,
-        "#5865F2",
-      );
-      if (empty) return;
-      await interaction.editReply({ files, components }).catch(() => null);
-    } catch {
-      return;
-    }
+    await showBoard(services, interaction, guildId, board, 0);
   },
 });

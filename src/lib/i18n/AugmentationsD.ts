@@ -1,12 +1,12 @@
-import type common from "#src/languages/en-US/common.json";
-import type commands from "#src/languages/en-US/commands.json";
-import type preconditions from "#src/languages/en-US/preconditions.json";
-import type core from "#src/languages/en-US/core.json";
-import type tempvc from "#src/languages/en-US/tempvc.json";
-import type afk from "#src/languages/en-US/afk.json";
-import type logging from "#src/languages/en-US/logging.json";
-import type filter from "#src/languages/en-US/filter.json";
-import type panels from "#src/languages/en-US/panels.json";
+import type common from "@languages/en-US/common.json";
+import type commands from "@languages/en-US/commands.json";
+import type preconditions from "@languages/en-US/preconditions.json";
+import type core from "@languages/en-US/core.json";
+import type tempvc from "@languages/en-US/tempvc.json";
+import type afk from "@languages/en-US/afk.json";
+import type logging from "@languages/en-US/logging.json";
+import type filter from "@languages/en-US/filter.json";
+import type panels from "@languages/en-US/panels.json";
 
 declare module "i18next" {
   interface CustomTypeOptions {

@@ -1,6 +1,6 @@
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { Gauge } from "prom-client";
-import { registry } from "#src/observability/Metrics.js";
+import { registry } from "@observability/Metrics.js";
 
 const ResolutionMs = 20;
 

@@ -1,10 +1,10 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { formatAuditReason } from "#src/lib/utilities/AuditReason.js";
-import { liftAllActiveCases } from "#src/modules/mod/services/Helpers.js";
-import { sendModActionDm } from "#src/modules/mod/services/Notify.js";
-import { formatDuration } from "#src/lib/utilities/Time.js";
-import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+import { formatAuditReason } from "@utilities/AuditReason.js";
+import { liftAllActiveCases } from "@modules/mod/services/Helpers.js";
+import { sendModActionDm } from "@modules/mod/services/Notify.js";
+import { formatDuration } from "@utilities/Time.js";
+import { runModerationAction } from "@modules/mod/services/RunModerationAction.js";
 
 export interface MuteApplyOptions {
   guild: Guild;

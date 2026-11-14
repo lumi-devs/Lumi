@@ -4,7 +4,7 @@ import {
   isChannelLocked,
   lockChannel,
   unlockChannel,
-} from "#src/lib/discord/ChannelLocks.js";
+} from "@discord/ChannelLocks.js";
 
 function makeChannel(denied: boolean) {
   const overwrite = denied

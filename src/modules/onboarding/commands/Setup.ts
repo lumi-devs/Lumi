@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { emptySetupState } from "#src/modules/onboarding/services/SetupWizard.js";
-import { buildSetupStepView } from "#src/modules/onboarding/ui/SetupWizard.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { emptySetupState } from "@modules/onboarding/services/SetupWizard.js";
+import { buildSetupStepView } from "@modules/onboarding/ui/SetupWizard.js";
 
 export const setupDef: CommandDef = {
   name: "setup",

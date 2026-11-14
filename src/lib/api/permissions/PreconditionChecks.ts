@@ -1,14 +1,14 @@
-import { container, type Container } from "#src/lib/Services.js";
+import { container, type Container } from "@lib/Services.js";
 import type {
   ChatInputCommandInteraction,
   Guild,
   Message,
 } from "discord.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { explainPermit } from "#src/lib/api/permissions/PermitResolver.js";
-import { memberRoleIds, permitSubject } from "#src/lib/api/permissions/Subject.js";
-import { handleDenied } from "#src/lib/utilities/CommandResponse.js";
-import { UserError } from "#src/shared/Index.ts";
+import { authorize } from "@api/permissions/Authorize.js";
+import { explainPermit } from "@api/permissions/PermitResolver.js";
+import { memberRoleIds, permitSubject } from "@api/permissions/Subject.js";
+import { handleDenied } from "@utilities/CommandResponse.js";
+import { UserError } from "@shared/Index.ts";
 
 export interface GateSource {
   userId: string;

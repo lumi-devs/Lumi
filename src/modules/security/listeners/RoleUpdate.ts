@@ -1,10 +1,10 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { AuditLogEvent, type Role } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
-import { resolveAuditLogExecutor } from "#src/modules/security/services/Audit.js";
-import { DangerousPermissions, evaluateNukeEvent } from "#src/modules/security/services/AntiNuke.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { swallow } from "@utilities/Errors.js";
+import { resolveAuditLogExecutor } from "@modules/security/services/Audit.js";
+import { DangerousPermissions, evaluateNukeEvent } from "@modules/security/services/AntiNuke.js";
 
 export const SecurityRoleUpdateListener = defineListener({
   name: "securityRoleUpdate",

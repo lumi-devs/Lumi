@@ -11,26 +11,26 @@ import {
   type APIComponentInActionRow,
   type User,
 } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { Container } from "#src/lib/Services.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { Container } from "@lib/Services.js";
 import {
   createStringSelectMenu,
-} from "#src/lib/ui/Panels.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
+} from "@ui/Panels.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
 import {
   BoardKinds,
   isBoardKind,
   LevelService,
   type BoardEntry,
   type BoardKind,
-} from "#src/modules/leveling/services/LevelService.js";
-import { xpForLevel, type LevelFormula } from "#src/modules/leveling/services/Formulas.js";
+} from "@modules/leveling/services/LevelService.js";
+import { xpForLevel, type LevelFormula } from "@modules/leveling/services/Formulas.js";
 import {
   renderLeaderboardCard,
   type BoardCardRow,
-} from "#src/modules/leveling/services/LeaderboardCard.js";
-import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+} from "@modules/leveling/services/LeaderboardCard.js";
+import { Semaphore } from "@utilities/Concurrency.js";
 
 const userFetch = new Semaphore(4);
 
@@ -163,31 +163,22 @@ export async function renderBoardMessage(
   );
   const totalPages = Math.max(1, Math.ceil(total / BoardPageSize));
   const safePage = Math.min(Math.max(0, page), totalPages - 1);
-  if (safePage !== page) {
-    const fixed = await service.board(
-      guildId,
-      board,
-      config,
-      BoardPageSize,
-      safePage * BoardPageSize,
-    );
-    return renderEntries(
-      services,
-      board,
-      config,
-      fixed.entries,
-      fixed.total,
-      safePage,
-      totalPages,
-      accent,
-    );
-  }
+  const result =
+    safePage !== page
+      ? await service.board(
+          guildId,
+          board,
+          config,
+          BoardPageSize,
+          safePage * BoardPageSize,
+        )
+      : { entries, total };
   return renderEntries(
     services,
     board,
     config,
-    entries,
-    total,
+    result.entries,
+    result.total,
     safePage,
     totalPages,
     accent,

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { guildDeleteEventBusListener } from "#src/modules/core/listeners/bus/GuildDelete.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
+import { guildDeleteEventBusListener } from "@modules/core/listeners/bus/GuildDelete.js";
+import { tryGetUtility } from "@module-system/Utility.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   tryGetUtility: vi.fn(),
 }));
 
@@ -13,7 +13,7 @@ function makeServices() {
   );
   const services = {
     db: { markGuildLeft: vi.fn().mockResolvedValue(undefined) },
-    valkey: { scan: vi.fn().mockResolvedValue(["0", []]) },
+    redis: { scan: vi.fn().mockResolvedValue(["0", []]) },
     invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
     logger: { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() },
   } as any;
@@ -25,7 +25,7 @@ describe("guildDeleteEventBusListener", () => {
     vi.clearAllMocks();
   });
 
-  it("marks the guild left and evicts its Valkey state when it is a real departure", async () => {
+  it("marks the guild left and evicts its Redis state when it is a real departure", async () => {
     const { services, mockFilterUtility } = makeServices();
     const guild = { id: "g1", available: true } as any;
 

@@ -6,7 +6,7 @@ networks:
 
 volumes:
   postgres-data:
-  valkey-data:
+  redis-data:
   addon-data:
   prometheus-data:
   grafana-data:
@@ -23,8 +23,8 @@ x-lumi-service: &lumi-service
     - path: .env
       required: false
   environment: &lumi-env
-    VALKEY_HOST: valkey
-    VALKEY_PASSWORD: "${VALKEY_PASSWORD:-lumi}"
+    REDIS_HOST: redis
+    REDIS_PASSWORD: "${REDIS_PASSWORD:-lumi}"
     POSTGRES_URL: "postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@${POSTGRES_HOST:-pgbouncer}:6432/lumi"
     DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
     OTEL_ENABLED: "${OTEL_ENABLED:-true}"
@@ -42,7 +42,7 @@ x-lumi-service: &lumi-service
       condition: service_completed_successfully
     postgres:
       condition: service_healthy
-    valkey:
+    redis:
       condition: service_healthy
   # Exit-code contract: 0 clean shutdown, 1 crash, 26 requested restart.
   # unless-stopped restarts on all of them; use `docker exec lumi-bot lumi-setup`
@@ -87,7 +87,7 @@ services:
         condition: service_healthy
       pgbouncer:
         condition: service_healthy
-      valkey:
+      redis:
         condition: service_healthy
     environment:
       <<: *lumi-env
@@ -114,7 +114,7 @@ services:
       - path: .env
         required: false
     environment:
-      VALKEY_HOST: valkey
+      REDIS_HOST: redis
       POSTGRES_URL: "${POSTGRES_URL:-postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres:5432/lumi}"
       DIRECT_POSTGRES_URL: postgresql://lumi:${POSTGRES_PASSWORD:-lumi}@postgres/lumi
       OTEL_ENABLED: "${OTEL_ENABLED:-true}"
@@ -132,7 +132,7 @@ services:
         required: false
       postgres:
         condition: service_healthy
-      valkey:
+      redis:
         condition: service_healthy
     volumes:
       - .:/app:z
@@ -252,17 +252,17 @@ services:
     ports:
       - "127.0.0.1:6432:6432"
 
-  valkey:
-    image: docker.io/valkey/valkey:8-alpine
-    container_name: lumi-valkey
-    command: valkey-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${VALKEY_PASSWORD:-lumi}
+  redis:
+    image: docker.io/redis/redis:8-alpine
+    container_name: lumi-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass ${REDIS_PASSWORD:-lumi}
     volumes:
-      - valkey-data:/data
+      - redis-data:/data
     networks:
       - lumi-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "valkey-cli", "-a", "${VALKEY_PASSWORD:-lumi}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-lumi}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5

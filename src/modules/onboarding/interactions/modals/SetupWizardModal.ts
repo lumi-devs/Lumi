@@ -2,12 +2,12 @@ import {
   hasSetupAccess,
   parseMinAgeHours,
   stateFromSegments,
-} from "#src/modules/onboarding/services/SetupWizard.js";
-import { buildSetupStepView } from "#src/modules/onboarding/ui/SetupWizard.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { SetupAgeModalId } from "#src/modules/core/Constants.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@modules/onboarding/services/SetupWizard.js";
+import { buildSetupStepView } from "@modules/onboarding/ui/SetupWizard.js";
+import { ephemeralCard, makeErrorCard } from "@ui/Cards.js";
+import { SetupAgeModalId } from "@interactions/ModuleIds.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import type { ModalSubmitInteraction } from "discord.js";
 
 export const setupWizardModal = defineInteraction({

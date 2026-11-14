@@ -1,17 +1,17 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/api/moderation/ModerationFlow.js";
+} from "@api/moderation/ModerationFlow.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
+import type { Container } from "@lib/Services.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { applyLocalizedBuilder } from "@i18n/Index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { respondWithReasonChoices } from "#src/modules/mod/services/ReasonAutocomplete.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { respondWithReasonChoices } from "@modules/mod/services/ReasonAutocomplete.js";
 
 const Root = "commands";
 

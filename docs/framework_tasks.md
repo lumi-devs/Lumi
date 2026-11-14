@@ -8,7 +8,7 @@ scheduler to deploy.
 Classes under `tasks/` are discovered from the module directory:
 
 ```ts
-import { LumiScheduledTask } from "#lib/scheduler/Tasks.js";
+import { LumiScheduledTask } from "@scheduler/Tasks.js";
 
 export class SweepTask extends LumiScheduledTask {
   public constructor() {

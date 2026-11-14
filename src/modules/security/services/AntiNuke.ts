@@ -1,12 +1,12 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { Colors, PermissionFlagsBits, type Guild } from "discord.js";
-import { isNullish, type Awaitable } from "#src/shared/Index.ts";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import { getConfigNumber } from "#src/modules/security/services/ConfigHelpers.js";
+import { isNullish, type Awaitable } from "@shared/Index.ts";
+import { RedisKeys } from "@redis/Store.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { isImmuneToAutomatedAction } from "@api/moderation/Immunity.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
+import { getConfigNumber } from "@modules/security/services/ConfigHelpers.js";
 
 export type NukeKind =
   | "ban"
@@ -117,8 +117,8 @@ export async function recordAction(
   kind: NukeKind,
   config: AntiNukeConfig,
 ): Promise<number | null> {
-  const key = ValkeyKeys.securityWindow(guild.id, executorId, kind);
-  const results = await container.valkey
+  const key = RedisKeys.securityWindow(guild.id, executorId, kind);
+  const results = await container.redis
     .multi()
     .incr(key)
     .expire(key, config.windowSeconds, "NX")
@@ -126,8 +126,8 @@ export async function recordAction(
   const count = results?.[0]?.[1] as number;
   if (count <= config.limits[kind]) return null;
 
-  const tripped = await container.valkey.set(
-    ValkeyKeys.securityTripped(guild.id, executorId, kind),
+  const tripped = await container.redis.set(
+    RedisKeys.securityTripped(guild.id, executorId, kind),
     String(Date.now()),
     "EX",
     TrippedCooldownSeconds,
@@ -211,8 +211,8 @@ export async function respond(
         container.logger.warn(
           `[security] Ban failed for ${executorId} in ${guild.id}: ${String(err)}`,
         );
-        await container.valkey
-          .del(ValkeyKeys.securityTripped(guild.id, executorId, kind))
+        await container.redis
+          .del(RedisKeys.securityTripped(guild.id, executorId, kind))
           .catch(() => null);
       }
     }
@@ -263,6 +263,6 @@ export async function evaluateNukeEvent(
 
 export async function isQuarantined(guildId: string, userId: string): Promise<boolean> {
   return (
-    (await container.valkey.exists(ValkeyKeys.quarantineState(guildId, userId))) === 1
+    (await container.redis.exists(RedisKeys.quarantineState(guildId, userId))) === 1
   );
 }

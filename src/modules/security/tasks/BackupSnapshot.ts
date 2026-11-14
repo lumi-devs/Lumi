@@ -1,4 +1,4 @@
-import { RelayTask } from "#src/lib/scheduler/Tasks.js";
+import { RelayTask } from "@scheduler/Tasks.js";
 
 export class BackupSnapshotTask extends RelayTask<"security-backup-snapshot"> {
   public constructor() {

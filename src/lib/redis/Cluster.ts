@@ -1,9 +1,9 @@
-import Valkey, { Cluster, type ChainableCommander } from "iovalkey";
+import Redis, { Cluster, type ChainableCommander } from "ioredis";
 import calculateSlot from "cluster-key-slot";
 
-export type ValkeyClient = Valkey | Cluster;
+export type RedisClient = Redis | Cluster;
 
-export function isCluster(client: ValkeyClient): client is Cluster {
+export function isCluster(client: RedisClient): client is Cluster {
   return client instanceof Cluster;
 }
 
@@ -19,7 +19,7 @@ function groupBySlot(keys: readonly string[]): Map<number, string[]> {
 }
 
 export async function mgetSafe(
-  client: ValkeyClient,
+  client: RedisClient,
   keys: readonly string[],
 ): Promise<(string | null)[]> {
   if (keys.length === 0) return [];
@@ -37,11 +37,11 @@ export async function mgetSafe(
 }
 
 export async function scanKeysSafe(
-  client: ValkeyClient,
+  client: RedisClient,
   pattern: string,
   count = 100,
 ): Promise<string[]> {
-  const scanNode = async (node: Valkey): Promise<string[]> => {
+  const scanNode = async (node: Redis): Promise<string[]> => {
     const found: string[] = [];
     let cursor = "0";
     do {
@@ -65,7 +65,7 @@ export async function scanKeysSafe(
 }
 
 export async function pipelineBySlot<T>(
-  client: ValkeyClient,
+  client: RedisClient,
   items: readonly T[],
   keyOf: (item: T) => string,
   apply: (pipe: ChainableCommander, item: T) => void,
@@ -97,7 +97,7 @@ export async function pipelineBySlot<T>(
 }
 
 function assertExecResults(results: unknown): void {
-  if (results === null) throw new Error("Valkey pipeline was discarded");
+  if (results === null) throw new Error("Redis pipeline was discarded");
   if (!Array.isArray(results)) return;
   const failure = results.find(
     (entry) => Array.isArray(entry) && entry[0] != null,
@@ -106,7 +106,7 @@ function assertExecResults(results: unknown): void {
 }
 
 export async function delSafe(
-  client: ValkeyClient,
+  client: RedisClient,
   keys: readonly string[],
 ): Promise<void> {
   if (keys.length === 0) return;

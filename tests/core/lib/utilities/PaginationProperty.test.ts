@@ -4,7 +4,7 @@ import {
   computePageCount,
   sliceForPage,
   clampPageIndex,
-} from "#src/lib/utilities/Pagination.js";
+} from "@utilities/Pagination.js";
 
 describe("computePageCount (property)", () => {
   it("equals ceil(itemCount / perPage), floored to a minimum of 1", () => {

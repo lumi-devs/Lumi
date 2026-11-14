@@ -1,10 +1,10 @@
-import type { Container } from "#src/lib/Services.js";
-import { parseDuration } from "#src/lib/utilities/Time.js";
-import { LevelingModuleName } from "#src/modules/leveling/Constants.js";
+import type { Container } from "@lib/Services.js";
+import { parseDuration } from "@utilities/Time.js";
+import { LevelingModuleName } from "@modules/leveling/Constants.js";
 import {
   isLevelFormula,
   type LevelFormula,
-} from "#src/modules/leveling/services/Formulas.js";
+} from "@modules/leveling/services/Formulas.js";
 
 export interface LevelReward {
   level: number;

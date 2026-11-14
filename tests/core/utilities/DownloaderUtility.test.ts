@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { downloaderUtility, ModuleAlreadyInstalledError } from "#src/modules/admin/utilities/DownloaderUtility.js";
-import { container } from "#src/lib/Services.js";
-import { resolver } from "#src/lib/downloader/Resolver.js";
+import { downloaderUtility, ModuleAlreadyInstalledError } from "@utilities/DownloaderUtility.js";
+import { container } from "@lib/Services.js";
+import { resolver } from "@downloader/Resolver.js";
 import { promises as fs } from "node:fs";
 
 class MockRepoAlreadyInstalledError extends Error {
@@ -13,7 +13,7 @@ class MockRepoAlreadyInstalledError extends Error {
   }
 }
 
-vi.mock("#lib/downloader/Resolver.js", () => ({
+vi.mock("@downloader/Resolver.js", () => ({
   resolver: {
     addRepo: vi.fn().mockResolvedValue({ sha: null, signedBy: null, signatureWarning: null }),
     updateRepo: vi.fn().mockResolvedValue({
@@ -28,6 +28,7 @@ vi.mock("#lib/downloader/Resolver.js", () => ({
     installModule: vi.fn().mockResolvedValue({ version: "1.0.0", signedBy: null, signatureWarning: null }),
     getModulesInRepo: vi.fn().mockResolvedValue([{ name: "test-module" }]),
     releasePinnedWorktreeIfUnused: vi.fn().mockResolvedValue(undefined),
+    deleteRepoDisk: vi.fn().mockResolvedValue(undefined),
   },
   RepoAlreadyInstalledError: MockRepoAlreadyInstalledError,
   AddonModulesRoot: "/mock/addon_modules",
@@ -46,6 +47,7 @@ vi.mock("node:fs", () => ({
 }));
 
 import { fakeSpawnResult } from "../helpers/MockBunSpawn.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
 describe("DownloaderUtility", () => {
   let service: typeof downloaderUtility;
@@ -53,7 +55,7 @@ describe("DownloaderUtility", () => {
   let mockModuleStore: any;
   let mockLogger: any;
   let mockClient: any;
-  let mockValkey: any;
+  let mockRedis: any;
   let spawnSpy: { mockImplementation: (fn: (cmd: string[]) => unknown) => void };
 
   beforeEach(() => {
@@ -89,10 +91,7 @@ describe("DownloaderUtility", () => {
       getRecord: vi.fn().mockReturnValue(undefined),
     };
 
-    mockValkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue(undefined),
-    };
+    mockRedis = createMemoryRedis();
 
     mockLogger = {
       info: vi.fn(),
@@ -113,7 +112,7 @@ describe("DownloaderUtility", () => {
     (container as any).moduleStore = mockModuleStore;
     container.logger = mockLogger;
     container.client = mockClient;
-    (container as any).valkey = mockValkey;
+    (container as any).redis = mockRedis;
 
     service = downloaderUtility;
   });
@@ -558,18 +557,18 @@ describe("DownloaderUtility", () => {
   });
 
   describe("checkForUpdates", () => {
-    it("returns the cached result from Valkey without hitting the DB or git", async () => {
-      mockValkey.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
+    it("returns the cached result from Redis without hitting the DB or git", async () => {
+      mockRedis.get.mockResolvedValue(JSON.stringify(["cached-mod"]));
 
       const res = await service.checkForUpdates(container);
 
       expect(res).toEqual(["cached-mod"]);
       expect(mockDb.downloader.readAllInstalledDownloaderModules).not.toHaveBeenCalled();
-      expect(mockValkey.setex).not.toHaveBeenCalled();
+      expect(mockRedis.setex).not.toHaveBeenCalled();
     });
 
     it("swallows a per-module failure with a warning and still caches the modules that succeeded", async () => {
-      mockValkey.get.mockResolvedValue(null);
+      mockRedis.get.mockResolvedValue(null);
       mockDb.downloader.readAllInstalledDownloaderModules.mockResolvedValue([
         { moduleName: "modA" },
         { moduleName: "modB" },
@@ -600,7 +599,7 @@ describe("DownloaderUtility", () => {
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining("[DownloaderUtility] Update check failed for modB:")
       );
-      expect(mockValkey.setex).toHaveBeenCalledWith(
+      expect(mockRedis.setex).toHaveBeenCalledWith(
         "lumi:addon:update-check",
         300,
         JSON.stringify(["modA"])
@@ -620,7 +619,7 @@ describe("DownloaderUtility", () => {
     it("enables/disables the module via the ModuleStore and re-syncs commands", async () => {
       mockDb.downloader.readInstalledDownloaderModule.mockResolvedValue({ id: "m1-id", repoId: "r1-id" });
       const { commandRegistry } = await import(
-        "#src/lib/commands/CommandDef.js"
+        "@commands/CommandDef.js"
       );
       commandRegistry.set("ut-toggle-cmd", {
         name: "ut-toggle-cmd",
@@ -684,7 +683,7 @@ describe("DownloaderUtility", () => {
 
     it("builds registered defs and sets global commands", async () => {
       const { commandRegistry } = await import(
-        "#src/lib/commands/CommandDef.js"
+        "@commands/CommandDef.js"
       );
       commandRegistry.set("ut-cmd1", {
         name: "ut-cmd1",

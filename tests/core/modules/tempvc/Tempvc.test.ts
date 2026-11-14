@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import TempVcUtility, {
   resolveGeneratorName,
-} from "#src/modules/tempvc/utilities/TempVcUtility.js";
-import { container } from "#src/lib/Services.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
-import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "#src/modules/tempvc/services/VoiceOccupancy.js";
-import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "#src/modules/tempvc/data/Tempvc.js";
+} from "@modules/tempvc/utilities/TempVcUtility.js";
+import { container } from "@lib/Services.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
+import { isVoiceChannelEmpty, clearVoiceChannelOccupancy } from "@modules/tempvc/services/VoiceOccupancy.js";
+import { setVcRecord, patchVcRecord, listVcRecords, listGenerators, removeVcRecord, getVcRecord, setGenerator, removeGenerator } from "@modules/tempvc/data/Tempvc.js";
 
-vi.mock("#src/modules/tempvc/services/VoiceOccupancy.js", () => ({
+vi.mock("@modules/tempvc/services/VoiceOccupancy.js", () => ({
   isVoiceChannelEmpty: vi.fn(),
   clearVoiceChannelOccupancy: vi.fn(),
 }));
 
-vi.mock("#src/modules/tempvc/data/Tempvc.js", () => ({
+vi.mock("@modules/tempvc/data/Tempvc.js", () => ({
   setVcRecord: vi.fn(),
   patchVcRecord: vi.fn(),
   listVcRecords: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("#src/modules/tempvc/data/Tempvc.js", () => ({
   removeGenerator: vi.fn(),
 }));
 
-vi.mock("#src/modules/tempvc/data/Registry.js", () => ({
+vi.mock("@modules/tempvc/data/Registry.js", () => ({
   tempVcRegistry: {
     nextNumber: vi.fn(),
     addVc: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock("#src/modules/tempvc/data/Registry.js", () => ({
   },
 }));
 
-vi.mock("#src/modules/tempvc/ui/Panel.js", () => ({
+vi.mock("@modules/tempvc/ui/Panel.js", () => ({
   buildPanel: vi.fn(() => Promise.resolve({ content: "panel" })),
 }));
 
@@ -43,7 +43,7 @@ describe("TempVcUtility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    (container as any).valkey = {
+    (container as any).redis = {
       set: vi.fn(),
     } as any;
     (container as any).db = {
@@ -74,13 +74,13 @@ describe("TempVcUtility", () => {
 
   describe("onCreateCooldown", () => {
     it("returns false if NX set succeeds (no cooldown)", async () => {
-      (container.valkey.set as any).mockResolvedValue("OK");
+      (container.redis.set as any).mockResolvedValue("OK");
       const result = await service.onCreateCooldown(container, "guild-1", "user-1");
       expect(result).toBe(false);
     });
 
     it("returns true if NX set returns null (cooldown active)", async () => {
-      (container.valkey.set as any).mockResolvedValue(null);
+      (container.redis.set as any).mockResolvedValue(null);
       const result = await service.onCreateCooldown(container, "guild-1", "user-1");
       expect(result).toBe(true);
     });

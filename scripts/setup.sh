@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Interactive first-run setup wizard - `bun run setup`.
+# Interactive first-run setup wizard - `bash scripts/setup.sh`.
 #
 # Walks a new contributor through generating a working `.env` (based on
 # `.env.example` at the repo root), verifies the Discord bot token against
-# Discord's API, and optionally brings up the Postgres/Valkey services
+# Discord's API, and optionally brings up the Postgres/Redis services
 # from `docker-compose.yml`. Safe to re-run - it never overwrites an existing
 # `.env` without asking first.
 #
@@ -60,7 +60,7 @@ confirm() {
 }
 
 header "Lumi setup wizard"
-info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Valkey stack."
+info "This generates ${BOLD}.env${RESET} from ${BOLD}.env.example${RESET}, verifies your bot token, and can start the local Postgres/Redis stack."
 
 if [[ ! -f "$ENV_EXAMPLE" ]]; then
   err ".env.example not found at repo root (${ENV_EXAMPLE}) - can't continue."
@@ -70,7 +70,7 @@ fi
 if [[ -f "$ENV_FILE" ]]; then
   warn "${ENV_FILE} already exists."
   if ! confirm "Overwrite it?" "n"; then
-    info "Keeping the existing .env. Re-run 'bun run setup' any time to regenerate it."
+    info "Keeping the existing .env. Re-run 'bash scripts/setup.sh' any time to regenerate it."
     exit 0
   fi
 fi
@@ -103,12 +103,12 @@ ENV_VALUES[POSTGRES_URL]="postgresql://lumi:${PG_PASSWORD}@localhost:5432/lumi"
 ENV_VALUES[DIRECT_POSTGRES_URL]="postgresql://lumi:${PG_PASSWORD}@localhost:5432/lumi"
 ENV_VALUES[POSTGRES_POOL_MAX]="10"
 
-prompt "lumi" "Valkey password"
-ENV_VALUES[VALKEY_PASSWORD]="$PROMPT_RESULT"
-ENV_VALUES[VALKEY_HOST]="localhost"
-ENV_VALUES[VALKEY_PORT]="6379"
-ENV_VALUES[VALKEY_CACHE_DB]="0"
-ENV_VALUES[VALKEY_TASK_DB]="1"
+prompt "lumi" "Redis password"
+ENV_VALUES[REDIS_PASSWORD]="$PROMPT_RESULT"
+ENV_VALUES[REDIS_HOST]="localhost"
+ENV_VALUES[REDIS_PORT]="6379"
+ENV_VALUES[REDIS_CACHE_DB]="0"
+ENV_VALUES[REDIS_TASK_DB]="1"
 
 if command -v openssl >/dev/null 2>&1; then
   ENV_VALUES[APPEAL_TOKEN_SECRET]="$(openssl rand -hex 32)"
@@ -234,17 +234,17 @@ fi
 header "Local services"
 
 if ! command -v docker >/dev/null 2>&1; then
-  warn "docker not found - skipping. Install Docker to run Postgres/Valkey locally, or point .env at existing instances."
+  warn "docker not found - skipping. Install Docker to run Postgres/Redis locally, or point .env at existing instances."
 elif ! docker compose version >/dev/null 2>&1; then
   warn "'docker compose' not available - skipping."
 else
-  if confirm "Start Postgres, pgbouncer, and Valkey now (docker compose up -d)?" "y"; then
-    info "Running: docker compose up -d postgres pgbouncer valkey"
-    docker compose up -d postgres pgbouncer valkey
+  if confirm "Start Postgres, pgbouncer, and Redis now (docker compose up -d)?" "y"; then
+    info "Running: docker compose up -d postgres pgbouncer redis"
+    docker compose up -d postgres pgbouncer redis
     ok "Services starting in the background - 'docker compose ps' to check status."
   else
     info "Skipped. Run it yourself later with:"
-    info "  docker compose up -d postgres pgbouncer valkey"
+    info "  docker compose up -d postgres pgbouncer redis"
   fi
 fi
 

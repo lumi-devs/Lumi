@@ -1,10 +1,10 @@
 import { describe, expect, it, beforeAll, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   RegexTimeoutError,
   RegexWorkerHandler,
-} from "#src/lib/regex-worker/Handler.js";
-import { validateRegexPattern } from "#src/lib/regex-worker/Validate.js";
+} from "@lib/regex-worker/Handler.js";
+import { validateRegexPattern } from "@lib/regex-worker/Validate.js";
 
 const EVIL = "(a+)+$";
 

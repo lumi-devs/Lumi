@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { lockAllTextChannels, unlockAllTextChannels } from "#src/lib/discord/ChannelLocks.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { makeErrorCard } from "#src/lib/ui/Cards.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { lockAllTextChannels, unlockAllTextChannels } from "@discord/ChannelLocks.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { makeErrorCard } from "@ui/Cards.js";
 
 export const lockdownDef: CommandDef = {
   name: "lockdown",

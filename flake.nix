@@ -1,5 +1,5 @@
 {
-  description = "Lumi — Production-ready multi-platform dev shell (Bun / Node / Git / GH / JQ / Postgres / Valkey / RabbitMQ)";
+  description = "Lumi — Production-ready multi-platform dev shell (Bun / Node / Git / GH / JQ / Postgres / Redis / RabbitMQ)";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -23,7 +23,7 @@
             openssl
             prisma-engines
             postgresql
-            valkey
+            redis
             stdenv.cc.cc.lib
           ];
 

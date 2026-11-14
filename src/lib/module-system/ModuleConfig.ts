@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
-import { configLock } from "#src/lib/prisma/GuildTransaction.js";
-import type { ScopedConfigScope } from "#src/lib/prisma/repositories/ConfigRepository.js";
+import type { Container } from "@lib/Services.js";
+import { configLock } from "@db/GuildTransaction.js";
+import type { ScopedConfigScope } from "@db/repositories/ConfigRepository.js";
 
 export type { ScopedConfigScope };
 

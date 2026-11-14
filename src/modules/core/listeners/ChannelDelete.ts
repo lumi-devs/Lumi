@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { DMChannel, NonThreadGuildBasedChannel } from "discord.js";
-import { clearStaleConfigRefs } from "#src/modules/core/services/ConfigCleanup.js";
+import { clearStaleConfigRefs } from "@modules/core/services/ConfigCleanup.js";
 
 export const channelDeleteListener = defineListener({
   name: "channelDeleteListener",

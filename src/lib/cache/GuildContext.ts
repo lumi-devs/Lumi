@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { BrandColors } from "#src/lib/ui/Palette.js";
+import type { Container } from "@lib/Services.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { BrandColors } from "@ui/Palette.js";
 
 export interface GuildContextData {
   locale: string;

@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { makeCard } from "#src/lib/ui/Cards.js";
-import { getAfkStatsForGuild } from "#src/modules/afk/data/Afk.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { makeCard } from "@ui/Cards.js";
+import { getAfkStatsForGuild } from "@modules/afk/data/Afk.js";
 
 export const afkstatsDef: CommandDef = {
   name: "afkstats",

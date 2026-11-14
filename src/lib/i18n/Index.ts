@@ -5,17 +5,17 @@ import {
   Message,
   type Channel,
 } from "discord.js";
-import { getGuildContext } from "#src/lib/cache/GuildContext.js";
-import { container, type Container } from "#src/lib/Services.js";
-import afk from "#src/languages/en-US/afk.json";
-import commands from "#src/languages/en-US/commands.json";
-import common from "#src/languages/en-US/common.json";
-import core from "#src/languages/en-US/core.json";
-import filter from "#src/languages/en-US/filter.json";
-import logging from "#src/languages/en-US/logging.json";
-import panels from "#src/languages/en-US/panels.json";
-import preconditions from "#src/languages/en-US/preconditions.json";
-import tempvc from "#src/languages/en-US/tempvc.json";
+import { getGuildContext } from "@cache/GuildContext.js";
+import { container, type Container } from "@lib/Services.js";
+import afk from "@languages/en-US/afk.json";
+import commands from "@languages/en-US/commands.json";
+import common from "@languages/en-US/common.json";
+import core from "@languages/en-US/core.json";
+import filter from "@languages/en-US/filter.json";
+import logging from "@languages/en-US/logging.json";
+import panels from "@languages/en-US/panels.json";
+import preconditions from "@languages/en-US/preconditions.json";
+import tempvc from "@languages/en-US/tempvc.json";
 
 type LumiNamespaces = [
   "common",

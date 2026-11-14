@@ -1,17 +1,17 @@
 import type { GuildMember, ModalSubmitInteraction } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+import type { Container } from "@lib/Services.js";
+import { fetchTyped } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { getVcRecord, patchVcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import { TempVcPanelId } from "#src/modules/tempvc/Constants.js";
-import { resolveOwnedVc } from "#src/modules/tempvc/services/PanelGuard.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
-import { buildBackRows, buildPanel } from "#src/modules/tempvc/ui/Panel.js";
+} from "@interactions/InteractionDef.js";
+import { getUtility } from "@module-system/Utility.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@ui/Cards.js";
+import { getVcRecord, patchVcRecord } from "@modules/tempvc/data/Tempvc.js";
+import { TempVcPanelId } from "@modules/tempvc/Constants.js";
+import { resolveOwnedVc } from "@modules/tempvc/services/PanelGuard.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
+import { buildBackRows, buildPanel } from "@modules/tempvc/ui/Panel.js";
 
 const ModalKinds = new Set(["namem", "limitm"]);
 

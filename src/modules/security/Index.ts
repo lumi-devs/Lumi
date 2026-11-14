@@ -1,10 +1,10 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { NoEndUserData } from "#src/lib/module-system/Meta.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { registerCaseTypes } from "#src/lib/api/moderation/CaseTypes.js";
-import { handleVerifySweepFire } from "#src/modules/security/services/VerifySweepHandler.js";
-import { handleBackupSnapshotFire } from "#src/modules/security/services/BackupSnapshotHandler.js";
+import { defineModule } from "@module-system/Module.js";
+import { NoEndUserData } from "@module-system/Meta.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { registerCaseTypes } from "@api/moderation/CaseTypes.js";
+import { handleVerifySweepFire } from "@modules/security/services/VerifySweepHandler.js";
+import { handleBackupSnapshotFire } from "@modules/security/services/BackupSnapshotHandler.js";
 
 export const securityModule = defineModule({
   name: "security",

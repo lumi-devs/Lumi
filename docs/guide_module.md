@@ -33,7 +33,7 @@ const filter = getUtility("filter");
 ## Entrypoint
 
 ```ts
-import { defineModule } from "#lib/module-system/Module.js";
+import { defineModule } from "@lumi/module";
 
 export default defineModule({
   name: "my-module",
@@ -55,7 +55,7 @@ Scaffold one with `lumi addon create <name>`, check it with
 ## Commands
 
 ```ts
-import type { CommandDef } from "#lib/commands/CommandDef.js";
+import type { CommandDef } from "@lumi/commands";
 
 export const myDef: CommandDef = {
   name: "mycmd",
@@ -104,7 +104,7 @@ export const oneshots = {
 ## Listeners and tasks
 
 ```ts
-import { defineListener } from "#lib/listeners/ListenerDef.js";
+import { defineListener } from "@lumi/listeners";
 
 export const onJoin = defineListener({
   event: "guildMemberAdd",
@@ -114,7 +114,7 @@ export const onJoin = defineListener({
 ```
 
 ```ts
-import { LumiScheduledTask } from "#lib/scheduler/Tasks.js";
+import { LumiScheduledTask } from "@scheduler/Tasks.js";
 
 export class SweepTask extends LumiScheduledTask {
   public constructor() {

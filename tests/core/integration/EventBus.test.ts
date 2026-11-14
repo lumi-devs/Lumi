@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import type Valkey from "iovalkey";
-import { createEventBus, type OwnedEventBus } from "#src/lib/event-bus/Factory.js";
-import type { BusMessage } from "#src/lib/event-bus/Types.js";
-import { createTestValkey, integrationDescribe, parseTestValkeyOptions } from "./Setup.js";
+import type Redis from "ioredis";
+import { createEventBus, type OwnedEventBus } from "@event-bus/Factory.js";
+import type { BusMessage } from "@event-bus/Types.js";
+import { createTestRedis, integrationDescribe, parseTestRedisOptions } from "./Setup.js";
 
 const StreamPrefix = "lumi:test:int:events:";
 
@@ -10,16 +10,16 @@ function uniqueStream(): string {
   return `${StreamPrefix}${Date.now()}${Math.random().toString(36).slice(2, 8)}`;
 }
 
-integrationDescribe("StreamBus (real Valkey)", () => {
+integrationDescribe("StreamBus (real Redis)", () => {
   let owned: OwnedEventBus;
-  let valkey: Valkey;
+  let redis: Redis;
   const streams: string[] = [];
   const stops: Array<() => Promise<void>> = [];
 
   beforeAll(() => {
-    valkey = createTestValkey();
+    redis = createTestRedis();
     owned = createEventBus({
-      valkey: parseTestValkeyOptions(),
+      redis: parseTestRedisOptions(),
 
       claimIntervalMs: 0,
       statsIntervalMs: 0,
@@ -29,13 +29,13 @@ integrationDescribe("StreamBus (real Valkey)", () => {
   afterEach(async () => {
     await Promise.all(stops.splice(0).map((stop) => stop().catch(() => undefined)));
     await Promise.all(
-      streams.splice(0).map((stream) => valkey.del(stream, `${stream}:dlq`).catch(() => undefined)),
+      streams.splice(0).map((stream) => redis.del(stream, `${stream}:dlq`).catch(() => undefined)),
     );
   });
 
   afterAll(async () => {
     await owned.close();
-    await valkey.quit();
+    await redis.quit();
   });
 
   it("publish() returns an assigned message id and XADDs onto the stream", async () => {
@@ -45,7 +45,7 @@ integrationDescribe("StreamBus (real Valkey)", () => {
     const id = await owned.bus.publish(stream, { hello: "world" });
     expect(id).toMatch(/^\d+-\d+$/);
 
-    const len = await valkey.xlen(stream);
+    const len = await redis.xlen(stream);
     expect(len).toBe(1);
   });
 
@@ -79,7 +79,7 @@ integrationDescribe("StreamBus (real Valkey)", () => {
     expect(received[0]!.body).toEqual({ n: 1 });
     expect(received[0]!.deliveryCount).toBe(1);
 
-    const pending = (await valkey.xpending(stream, group)) as [number, ...unknown[]];
+    const pending = (await redis.xpending(stream, group)) as [number, ...unknown[]];
     expect(pending[0]).toBe(0);
   });
 

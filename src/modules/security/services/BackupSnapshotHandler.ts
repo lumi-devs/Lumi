@@ -1,8 +1,8 @@
-import { type Container } from "#src/lib/Services.js";
+import { type Container } from "@lib/Services.js";
 
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
-import { loadAntiNukeConfig } from "#src/modules/security/services/AntiNuke.js";
-import { loadBackupConfig, createBackup } from "#src/modules/security/services/Backup.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
+import { loadAntiNukeConfig } from "@modules/security/services/AntiNuke.js";
+import { loadBackupConfig, createBackup } from "@modules/security/services/Backup.js";
 
 const HourMs = 60 * 60 * 1000;
 

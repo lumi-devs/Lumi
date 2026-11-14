@@ -1,7 +1,7 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
-import { queueSend } from "#src/lib/outbound/SendQueue.js";
-import type { AuditEntry } from "#src/lib/outbound/Render.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import { queueSend } from "@lib/outbound/SendQueue.js";
+import type { AuditEntry } from "@lib/outbound/Render.js";
 
 export const guildLogUtility = defineUtility({
   name: "guild-log",
@@ -21,9 +21,7 @@ export const guildLogUtility = defineUtility({
   },
 });
 
-export type GuildLogUtility = typeof guildLogUtility;
-
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     "guild-log": typeof guildLogUtility;
   }

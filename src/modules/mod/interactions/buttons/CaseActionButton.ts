@@ -1,7 +1,7 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import { defineCustomId } from "#src/lib/interactions/CustomId.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import { defineCustomId } from "@interactions/CustomId.js";
+import type { Container } from "@lib/Services.js";
 
 export const CaseActionButtonId = defineCustomId("mod:case-action", [
   "action",

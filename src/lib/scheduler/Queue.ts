@@ -1,6 +1,6 @@
-import { parseValkeyConnectionOption } from "#src/lib/valkey/Store.js";
-import { envParseInteger } from "#src/lib/Env.js";
-import { QueuePriority } from "#src/lib/scheduler/Schedule.js";
+import { parseRedisConnectionOption } from "@redis/Store.js";
+import { envParseInteger } from "@lib/Env.js";
+import { QueuePriority } from "@scheduler/Schedule.js";
 import type { ConnectionOptions, JobsOptions } from "bullmq";
 
 export type QueueConnectionOptions = ConnectionOptions;
@@ -51,8 +51,8 @@ export function getQueuePrefix(): string {
 
 export function getScheduledTasksConnectionOptions(): ConnectionOptions {
   return {
-    ...parseValkeyConnectionOption(),
-    db: process.env["VALKEY_CLUSTER_NODES"] ? 0 : envParseInteger("VALKEY_TASK_DB", 1),
+    ...parseRedisConnectionOption(),
+    db: process.env["REDIS_CLUSTER_NODES"] ? 0 : envParseInteger("REDIS_TASK_DB", 1),
     enableOfflineQueue: false,
   };
 }

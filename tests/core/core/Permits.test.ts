@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 import {
   PermitResolver,
   evaluateNodeMatch,
-} from "#src/lib/api/permissions/PermitResolver.js";
-import { container } from "#src/lib/Services.js";
-import { UserError } from "#src/shared/Index.ts";
+} from "@api/permissions/PermitResolver.js";
+import { container } from "@lib/Services.js";
+import { UserError } from "@shared/Index.ts";
 
 describe("PermitResolver & Anti-Nuke Quarantine Interceptor", () => {
   let resolver: PermitResolver;

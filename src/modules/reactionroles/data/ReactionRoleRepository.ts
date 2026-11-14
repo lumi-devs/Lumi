@@ -3,13 +3,13 @@ import type {
   ReactionRoleOption as OptionRow,
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { clampMessageDocumentV2 } from "#src/contracts/Index.ts";
+import { Repository } from "@db/repositories/Repository.js";
+import { clampMessageDocumentV2 } from "@contracts/Index.ts";
 import type {
   ReactionRoleMenu,
   ReactionRoleMode,
   ReactionRoleOption,
-} from "#src/modules/reactionroles/data/Reactionroles.js";
+} from "@modules/reactionroles/data/Reactionroles.js";
 
 function toOption(row: OptionRow): ReactionRoleOption {
   return {

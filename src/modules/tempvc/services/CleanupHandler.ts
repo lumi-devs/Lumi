@@ -1,6 +1,6 @@
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
-import type { TempVcCleanupPayload } from "#src/modules/tempvc/tasks/Cleanup.js";
+import { tryGetUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import type { TempVcCleanupPayload } from "@modules/tempvc/tasks/Cleanup.js";
 
 export async function handleTempVcCleanupFire(
   services: Container,

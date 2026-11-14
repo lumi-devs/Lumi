@@ -1,4 +1,4 @@
-import { MaxLevel } from "#src/modules/leveling/Constants.js";
+import { MaxLevel } from "@modules/leveling/Constants.js";
 
 export const LevelFormulas = [
   "disgaea",

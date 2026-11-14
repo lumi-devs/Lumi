@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { CommandContext } from "@commands/Context.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { isSnowflakeId } from "@utilities/Snowflakes.js";
 
 export const svDef: CommandDef = {
   name: "sv",

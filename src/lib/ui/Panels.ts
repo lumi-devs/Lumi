@@ -19,8 +19,8 @@ import {
   parseEmoji,
   type APIMessageComponentEmoji,
 } from "discord.js";
-import { container } from "#src/lib/Services.js";
-import { formatPageFooter } from "#src/lib/ui/Layout.js";
+import { container } from "@lib/Services.js";
+import { formatPageFooter } from "@ui/Layout.js";
 
 export type Row = ActionRowBuilder<MessageActionRowComponentBuilder>;
 
@@ -52,7 +52,8 @@ function applySelectMenuOptions(
     | UserSelectMenuBuilder
     | RoleSelectMenuBuilder
     | ChannelSelectMenuBuilder
-    | MentionableSelectMenuBuilder,
+    | MentionableSelectMenuBuilder
+    | StringSelectMenuBuilder,
   opts: CreateUserSelectMenuOptions &
     CreateRoleSelectMenuOptions &
     CreateChannelSelectMenuOptions &
@@ -153,10 +154,7 @@ export function createStringSelectMenu(
   options: CreateStringSelectMenuOptions,
 ): StringSelectMenuBuilder {
   const menu = new StringSelectMenuBuilder().setCustomId(options.customId);
-  if (options.placeholder) menu.setPlaceholder(options.placeholder);
-  if (options.minValues !== undefined) menu.setMinValues(options.minValues);
-  if (options.maxValues !== undefined) menu.setMaxValues(options.maxValues);
-  if (options.disabled !== undefined) menu.setDisabled(options.disabled);
+  applySelectMenuOptions(menu, options);
 
   if (options.options && options.options.length > 0) {
     const formattedOptions = options.options.map((opt) => {

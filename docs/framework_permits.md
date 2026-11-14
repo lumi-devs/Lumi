@@ -34,7 +34,7 @@ const ok = await api.permits.allows("mod.ban", { userId });
 `check` throws a user-facing error on deny; `allows` returns a boolean.
 `requiredPermit` on a `CommandDef` enforces before `run`.
 
-Assignment chains are Valkey-cached per target with invalidation on
+Assignment chains are Redis-cached per target with invalidation on
 permit writes, so per-command evaluation stays off Postgres on the hot
 path.
 

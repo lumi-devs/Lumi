@@ -3,7 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { SlashCommandBuilder } from "discord.js";
-import { rpcRouter } from "#src/contracts/rpc/Index.ts";
+import { rpcRouter } from "@contracts/rpc/Index.ts";
 import {
   applyLocalizedBuilder,
   DefaultLanguage,
@@ -15,7 +15,7 @@ import {
   resolveKey,
   SupportedLanguages,
   translate,
-} from "#src/lib/i18n/Index.js";
+} from "@i18n/Index.js";
 
 interface IntrospectableEnum {
   readonly unwrap?: () => { readonly options?: readonly string[] };

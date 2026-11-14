@@ -1,22 +1,22 @@
-import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
+import type { ModuleMeta } from "@module-system/Meta.js";
 import type {
   ConfigHistoryEntry,
   ConfigOverrideEntry,
-} from "#src/lib/prisma/DatabaseService.js";
+} from "@db/DatabaseService.js";
 import {
   formatFieldValue,
   formatSubtitle,
   row,
   type Row,
-} from "#src/modules/onboarding/ui/Common.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+} from "@lib/hub/Common.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, noPingCard, type CardReply } from "@ui/Cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createBackButton,
   createStringSelectMenu,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
 import {
   channelMention,
@@ -25,9 +25,9 @@ import {
   TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "#src/shared/Index.ts";
+import { cutText } from "@shared/Index.ts";
 import { ButtonStyle } from "discord.js";
-import { ConfigButtonId } from "#src/modules/core/Constants.js";
+import { ConfigButtonId } from "@interactions/ModuleIds.js";
 
 const overrideTargetMention = (o: ConfigOverrideEntry) => {
   switch (o.modelType) {

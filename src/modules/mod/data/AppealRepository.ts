@@ -1,13 +1,13 @@
 import type { Appeal } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,
   type RetentionPurgeOptions,
-} from "#src/lib/Retention.js";
+} from "@lib/Retention.js";
 import {
   CreatedAtIdOrderBy,
   paginateCreatedAtId,
-} from "#src/lib/prisma/Cursor.js";
+} from "@db/Cursor.js";
 
 export type AppealStatus =
   | "pending"

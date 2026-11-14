@@ -1,13 +1,13 @@
-import { Time } from "#src/shared/Index.ts";
-import { getUtility, tryGetUtility } from "#src/lib/module-system/Utility.js";
+import { Time } from "@shared/Index.ts";
+import { getUtility, tryGetUtility } from "@module-system/Utility.js";
 import { Colors } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { LumiEvents } from "#src/lib/types/Common.js";
-import type { GuildMessage } from "#src/lib/types/Common.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
-import type { FilterUtility } from "#src/modules/filter/utilities/FilterUtility.js";
-import { enforceHit, runRules, shouldScreen } from "#src/modules/filter/services/Enforce.js";
+import { LumiEvents } from "@lib/types/Common.js";
+import type { GuildMessage } from "@lib/types/Common.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
+import type { FilterUtility } from "@modules/filter/utilities/FilterUtility.js";
+import { enforceHit, runRules, shouldScreen } from "@modules/filter/services/Enforce.js";
 import {
   containsLink,
   countEmoji,
@@ -15,14 +15,14 @@ import {
   heatAction,
   isZalgo,
   type HeatConfig,
-} from "#src/modules/filter/services/Heat.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
-import { lockAllTextChannels } from "#src/lib/discord/ChannelLocks.js";
-import { scheduleTask } from "#src/lib/scheduler/Schedule.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
-import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+} from "@modules/filter/services/Heat.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { isImmuneToAutomatedAction } from "@api/moderation/Immunity.js";
+import { lockAllTextChannels } from "@discord/ChannelLocks.js";
+import { scheduleTask } from "@scheduler/Schedule.js";
+import { swallow } from "@utilities/Errors.js";
+import { deleteMessageLater } from "@utilities/TemporaryMessage.js";
+import { fetchTyped } from "@i18n/Index.js";
 
 export const FilterMessageListener = defineListener({
   name: "filterMessageCreate",

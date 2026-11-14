@@ -1,7 +1,7 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { RESTJSONErrorCodes } from "discord.js";
 import { Routes, type APIGuild, type APIGuildMember } from "discord-api-types/v10";
-import { DiscordRestApiError, type DiscordRestPort } from "#src/lib/discord/RestPort.js";
+import { DiscordRestApiError, type DiscordRestPort } from "@discord/RestPort.js";
 
 function isConfirmedAbsent(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;

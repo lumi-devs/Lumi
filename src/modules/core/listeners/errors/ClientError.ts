@@ -1,6 +1,6 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import { DiscordAPIError, HTTPError } from "discord.js";
 
 export const clientErrorListener = defineListener({

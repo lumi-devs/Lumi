@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
 import {
   createdAtIdKeysetWhere,
   decodeCreatedAtIdCursor,
@@ -8,7 +8,7 @@ import {
   encodeSingleKeyCursor,
   singleKeyKeysetWhere,
   splitPage,
-} from "#src/lib/prisma/Cursor.js";
+} from "@db/Cursor.js";
 
 describe("createdAt/id cursor", () => {
   it("round-trips through encode/decode", () => {

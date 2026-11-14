@@ -1,9 +1,9 @@
 import { describe, expect, test, vi } from "bun:test";
-import { evictGuildValkeyState } from "#src/lib/valkey/GuildEviction.js";
+import { evictGuildRedisState } from "@redis/GuildEviction.js";
 
 function mocks() {
   const scanned: string[] = [];
-  const valkey = {
+  const redis = {
     scan: vi.fn((cursor: string, ..._rest: unknown[]) => {
       void cursor;
       return Promise.resolve(["0", []] as [string, string[]]);
@@ -17,14 +17,14 @@ function mocks() {
     }),
   };
   const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
-  return { valkey, invalidation, logger, scanned, invalidated };
+  return { redis, invalidation, logger, scanned, invalidated };
 }
 
-describe("evictGuildValkeyState", () => {
+describe("evictGuildRedisState", () => {
   test("evicts static keys and builder-derived patterns for the guild", async () => {
-    const { valkey, invalidation, logger, invalidated } = mocks();
+    const { redis, invalidation, logger, invalidated } = mocks();
 
-    await evictGuildValkeyState(valkey as any, invalidation as any, logger as any, "g1", "test");
+    await evictGuildRedisState(redis as any, invalidation as any, logger as any, "g1", "test");
 
     const all = invalidated.flat();
     expect(all).toContain("lumi:settings:guild:g1");
@@ -32,7 +32,7 @@ describe("evictGuildValkeyState", () => {
     expect(all).toContain("lumi:rest:guild:g1");
     expect(all).toContain("lumi:rest:guild:g1:roles");
 
-    const patterns = valkey.scan.mock.calls.map((c) => String(c[2]));
+    const patterns = redis.scan.mock.calls.map((c) => String(c[2]));
     expect(patterns).toContain("lumi:cfg:*:guild:g1");
     expect(patterns).toContain("lumi:module:enabled:*:g1");
     expect(patterns).toContain("lumi:kv:g1:*:*:*");
@@ -54,21 +54,21 @@ describe("evictGuildValkeyState", () => {
   });
 
   test("SCAN uses a raised COUNT hint to cut round trips per pattern", async () => {
-    const { valkey, invalidation, logger } = mocks();
+    const { redis, invalidation, logger } = mocks();
 
-    await evictGuildValkeyState(valkey as any, invalidation as any, logger as any, "g1", "test");
+    await evictGuildRedisState(redis as any, invalidation as any, logger as any, "g1", "test");
 
-    for (const call of valkey.scan.mock.calls) {
+    for (const call of redis.scan.mock.calls) {
       expect(call).toContain("COUNT");
       expect(call[call.indexOf("COUNT") + 1]).toBe(500);
     }
   });
 
   test("a SCAN failure for one pattern does not abort the eviction", async () => {
-    const { valkey, invalidation, logger, invalidated } = mocks();
-    valkey.scan.mockRejectedValueOnce(new Error("down"));
+    const { redis, invalidation, logger, invalidated } = mocks();
+    redis.scan.mockRejectedValueOnce(new Error("down"));
 
-    await evictGuildValkeyState(valkey as any, invalidation as any, logger as any, "g1", "test");
+    await evictGuildRedisState(redis as any, invalidation as any, logger as any, "g1", "test");
 
     expect(logger.warn).toHaveBeenCalled();
     expect(invalidated.flat()).toContain("lumi:settings:guild:g1");

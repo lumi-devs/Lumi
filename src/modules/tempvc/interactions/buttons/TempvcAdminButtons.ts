@@ -8,13 +8,13 @@ import { TextInputStyle } from "discord.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   assertTempvcAdmin,
   removeGenerator,
   renderAdminCard,
-} from "#src/modules/tempvc/commands/Tempvc.js";
+} from "@modules/tempvc/commands/Tempvc.js";
 
 function parseId(customId: string): { action: string; channelId: string } | null {
   const parts = customId.split(":");

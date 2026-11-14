@@ -1,6 +1,6 @@
 import type { Message, RepliableInteraction } from "discord.js";
 import { sleep } from "@sapphire/utilities";
-import { swallow } from "#src/lib/utilities/Errors.js";
+import { swallow } from "@utilities/Errors.js";
 
 export const TransientReplyTtl = 5_000;
 

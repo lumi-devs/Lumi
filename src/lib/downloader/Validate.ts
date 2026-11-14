@@ -2,9 +2,9 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
 import semver from "semver";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
-import { isValidDependencySpec } from "#src/lib/module-system/Dependencies.js";
-import { FieldType } from "#src/contracts/Config.js";
+import { LumiInfo } from "@utilities/Version.js";
+import { isValidDependencySpec } from "@module-system/Dependencies.js";
+import { FieldType } from "@contracts/Config.js";
 
 export interface ValidationResult {
   errors: string[];
@@ -102,6 +102,8 @@ const ReservedDeclKeywordRe =
 const ReservedMemberRe =
   /^\s*(?:(?:public|private|protected|static|async|readonly|get|set)\s+)*(lumi_\w+|__lumi\w*)\s*[(:=?;]/gm;
 const ReservedQuotedRe = /["'](lumi_\w+|__lumi\w*)["']\s*:/g;
+const InternalAliasRe =
+  /^@(?:lib|modules|contracts|observability|shared|cli|scripts|languages|api|cache|redis|db|rpc|ui|commands|listeners|interactions|module-system|utilities|i18n|scheduler|downloader|discord|event-bus)(?:\/|$)/;
 
 function checkReservedPrefixes(src: string, rel: string, warnings: string[]): void {
   const found = new Set<string>();
@@ -333,14 +335,20 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
     ImportRe.lastIndex = 0;
     while ((match = ImportRe.exec(src)) !== null) {
       const spec = match[1]!;
-      if (/^@lumi-devs\/lumi(\/|$)/.test(spec)) {
-        if (/^@lumi-devs\/lumi\/(src\/modules|modules)\//.test(spec)) {
+      if (InternalAliasRe.test(spec)) {
+        errors.push(
+          `${rel}: imports "${spec}", which does not resolve - repo aliases are not part of the addon API; import from "@lumi" instead.`,
+        );
+        continue;
+      }
+      if (/^@lumi(\/|$)/.test(spec)) {
+        if (/^@lumi\/(modules|lib\/modules)\//.test(spec)) {
           errors.push(
             `${rel}: imports another module via "${spec}" - addons must be self-contained.`,
           );
           continue;
         }
-        if (/^@lumi-devs\/lumi\/(src\/lib|lib)\/(prisma|database|rpc|client|event-bus|valkey|sharding)\//.test(spec)) {
+        if (/^@lumi\/lib\/(prisma|database|rpc|client|event-bus|redis|sharding)\//.test(spec)) {
           errors.push(
             `${rel}: imports bot internals via "${spec}" - go through the \`services\` argument your hooks receive instead of reaching into the database, RPC, or client wiring directly.`,
           );
@@ -348,21 +356,21 @@ export async function validateAddon(dir: string): Promise<ValidationResult> {
         }
         continue;
       }
-      if (/^(lumi|@lumi\/|@lumi-devs\/)/.test(spec)) {
+      if (/^(lumi|@lumi-devs\/)/.test(spec)) {
         errors.push(
-          `${rel}: imports "${spec}", which does not resolve - import from "@lumi-devs/lumi" instead.`,
+          `${rel}: imports "${spec}", which does not resolve - import from "@lumi" instead.`,
         );
         continue;
       }
       if (spec.startsWith("#")) {
         errors.push(
-          `${rel}: imports "${spec}", which does not resolve - addons must import from "@lumi-devs/lumi" instead of internal aliases.`,
+          `${rel}: imports "${spec}", which does not resolve - addons must import from "@lumi" instead of internal aliases.`,
         );
         continue;
       }
       if (spec.startsWith(".")) {
         const resolved = path.resolve(path.dirname(file), spec);
-        if (/\/src\/lib\/(prisma|database|rpc|client|event-bus|valkey|sharding)\//.test(resolved)) {
+        if (/\/src\/lib\/(prisma|database|rpc|client|event-bus|redis|sharding)\//.test(resolved)) {
           errors.push(
             `${rel}: imports bot internals via "${spec}" - go through the \`services\` argument your hooks receive instead of reaching into the database, RPC, or client wiring directly.`,
           );

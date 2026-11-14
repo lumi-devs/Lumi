@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { SoftbanAction } from "#src/modules/mod/services/actions/SoftbanAction.js";
+import { container } from "@lib/Services.js";
+import { SoftbanAction } from "@modules/mod/services/actions/SoftbanAction.js";
 
 Object.assign(container, {
   db: {
@@ -17,7 +17,7 @@ Object.assign(container, {
   },
 });
 
-vi.mock("#lib/api/moderation/ModLog.js", () => ({
+vi.mock("@api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn().mockResolvedValue(undefined),
 }));
 

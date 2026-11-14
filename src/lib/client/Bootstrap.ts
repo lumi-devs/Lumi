@@ -1,19 +1,19 @@
 process.env["NODE_ENV"] ??= "development";
 
 import { Client } from "discord.js";
-import { container, createServices, useServices } from "#src/lib/Services.js";
-import { shutdownTracing, runDrainSequence } from "#src/observability/Index.ts";
-import { attachClient, destroyLumi, loginLumi } from "#src/lib/client/LumiClient.js";
-import { buildClientOptions } from "#src/lib/client/ClientOptions.js";
+import { container, createServices, useServices } from "@lib/Services.js";
+import { shutdownTracing, runDrainSequence } from "@observability/Index.ts";
+import { attachClient, destroyLumi, loginLumi } from "@lib/client/LumiClient.js";
+import { buildClientOptions } from "@lib/client/ClientOptions.js";
 import {
   envParseString,
   validateAddonSignatureConfig,
   validateRequiredEnv,
-} from "#src/lib/Env.js";
-import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "#src/lib/sharding/ShardLease.js";
-import { logError, errorFrom } from "#src/lib/utilities/Errors.js";
-import { ExitCodes } from "#src/lib/ExitCodes.js";
-import { consumeRestartRequested } from "#src/lib/Restart.js";
+} from "@lib/Env.js";
+import { initializeShardLease, gracefulShutdown as clusterGracefulShutdown } from "@lib/sharding/ShardLease.js";
+import { logError, errorFrom } from "@utilities/Errors.js";
+import { ExitCodes } from "@lib/ExitCodes.js";
+import { consumeRestartRequested } from "@lib/Restart.js";
 
 export interface BootstrapAppOptions {
   onlineMessage?: string;
@@ -89,7 +89,7 @@ export async function bootstrapClientApp(
   if (process.env["LUMI_DRY_RUN"] === "1") {
     try {
       await container.db.probePrisma();
-      await container.valkey.ping();
+      await container.redis.ping();
     } catch (err: unknown) {
       console.error(
         `[DryRun] dependency check failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -100,8 +100,8 @@ export async function bootstrapClientApp(
     process.exit(0);
   }
 
-  if (container.valkey) {
-    await initializeShardLease(container.valkey).catch((err) => {
+  if (container.redis) {
+    await initializeShardLease(container.redis).catch((err) => {
       container.logger?.warn?.("[ShardLease] Failed to initialize shard lease:", err);
     });
   }

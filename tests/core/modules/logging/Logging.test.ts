@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { loggingModule } from "#src/modules/logging/Index.js";
+import { container } from "@lib/Services.js";
+import { loggingModule } from "@modules/logging/Index.js";
 
 describe("LoggingModule", () => {
   it("exposes module metadata", () => {

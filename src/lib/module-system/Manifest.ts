@@ -1,10 +1,10 @@
 import path from "node:path";
-import { fieldsFromSchema } from "#src/lib/module-system/ConfigSchema.js";
-import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
+import { fieldsFromSchema } from "@module-system/ConfigSchema.js";
+import type { ModuleDefinition, ModuleMeta } from "@module-system/Meta.js";
+import { LumiInfo } from "@utilities/Version.js";
 import {
   type ModuleManifest,
-} from "#src/contracts/Index.ts";
+} from "@contracts/Index.ts";
 
 export { type ModuleManifest };
 

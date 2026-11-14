@@ -1,6 +1,6 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { NoEndUserData } from "#src/lib/module-system/Meta.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
+import { defineModule } from "@module-system/Module.js";
+import { NoEndUserData } from "@module-system/Meta.js";
+import { cfg } from "@module-system/ConfigSchema.js";
 
 export const stickyModule = defineModule({
   name: "sticky",

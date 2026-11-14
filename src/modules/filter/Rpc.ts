@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
-import { filterRpc } from "#src/contracts/rpc/Index.ts";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { FilterUtility } from "#src/modules/filter/utilities/FilterUtility.js";
+import { container } from "@lib/Services.js";
+import { filterRpc } from "@contracts/rpc/Index.ts";
+import { implementRpc } from "@rpc/Implement.js";
+import { RedisKeys } from "@redis/Store.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { FilterUtility } from "@modules/filter/utilities/FilterUtility.js";
 
 function filterService(): FilterUtility {
   return getUtility("filter");
@@ -12,8 +12,8 @@ function filterService(): FilterUtility {
 export const filterRpcHandlers = implementRpc(filterRpc, {
   "guild.filter.status": async ({ guildId }) => {
     const [lockdown, panic] = await Promise.all([
-      container.valkey.exists(ValkeyKeys.filterAutoLockdown(guildId)),
-      container.valkey.exists(ValkeyKeys.filterHeatPanicActive(guildId)),
+      container.redis.exists(RedisKeys.filterAutoLockdown(guildId)),
+      container.redis.exists(RedisKeys.filterHeatPanicActive(guildId)),
     ]);
     return { lockdownActive: lockdown === 1, heatPanicActive: panic === 1 };
   },

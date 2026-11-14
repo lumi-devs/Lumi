@@ -1,12 +1,12 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { CommandContext } from "@commands/Context.js";
+import { fitLines, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "@ui/Cards.js";
 import {
   resolveAnnounceChannel,
   runGlobalAnnounce,
   type AnnounceSummary,
-} from "#src/modules/admin/services/GlobalAnnounce.js";
+} from "@lib/operations/GlobalAnnounce.js";
 
 const AnnounceChannelConfigKey = "announce_channel_id";
 const MaxFailedGuildsShown = 10;

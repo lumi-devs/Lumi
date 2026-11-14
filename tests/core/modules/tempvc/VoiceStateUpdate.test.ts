@@ -1,29 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import tempvcVoiceStateUpdate from "#src/modules/tempvc/listeners/VoiceStateUpdate.js";
+import tempvcVoiceStateUpdate from "@modules/tempvc/listeners/VoiceStateUpdate.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#src/modules/tempvc/data/Registry.js", () => ({
+vi.mock("@modules/tempvc/data/Registry.js", () => ({
   tempVcRegistry: {
     isManagedVc: vi.fn(),
     getGenerator: vi.fn(),
   },
 }));
 
-vi.mock("#src/modules/tempvc/services/VoiceOccupancy.js", () => ({
+vi.mock("@modules/tempvc/services/VoiceOccupancy.js", () => ({
   trackVoiceState: vi.fn(),
   isVoiceChannelEmpty: vi.fn(),
 }));
 
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
+import { getUtility } from "@module-system/Utility.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
 import {
   trackVoiceState,
   isVoiceChannelEmpty,
-} from "#src/modules/tempvc/services/VoiceOccupancy.js";
+} from "@modules/tempvc/services/VoiceOccupancy.js";
 
 function makeServices() {
   return {

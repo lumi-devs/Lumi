@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import type { Container } from "#src/lib/Services.js";
-import { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
+import type { Container } from "@lib/Services.js";
+import { EconomyRepository } from "@modules/economy/data/EconomyRepository.js";
 import {
   AbortPurchase,
   account,
   bankName,
   currencyName,
   withCost,
-} from "#src/lib/api/economy/Bank.js";
+} from "@api/economy/Bank.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 
 const mockLogger = {

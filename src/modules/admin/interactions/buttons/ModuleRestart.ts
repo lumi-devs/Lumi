@@ -1,16 +1,16 @@
-import { UserError } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
 import { type ButtonInteraction } from "discord.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { makeSuccessCard, makeInfoCard } from "#src/lib/ui/Cards.js";
-import { scheduleProcessRestart } from "#src/lib/Restart.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { ModuleRestartCancelId, ModuleRestartId } from "#src/modules/core/Constants.js";
+} from "@interactions/InteractionDef.js";
+import { makeSuccessCard, makeInfoCard } from "@ui/Cards.js";
+import { scheduleProcessRestart } from "@lib/Restart.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { ModuleRestartCancelId, ModuleRestartId } from "@interactions/ModuleIds.js";
 
 export const moduleRestart = defineInteraction({
   prefix: [ModuleRestartCancelId.prefix, ModuleRestartId.prefix],

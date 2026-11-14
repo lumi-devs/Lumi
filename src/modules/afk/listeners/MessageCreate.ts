@@ -5,17 +5,17 @@ import {
   SeparatorBuilder,
   TextDisplayBuilder,
 } from "@discordjs/builders";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { ButtonStyle, MessageFlags, PermissionsBitField, SeparatorSpacingSize } from "discord.js";
 import type { Message } from "discord.js";
-import { LumiEvents } from "#src/lib/types/Common.js";
-import type { GuildMessage } from "#src/lib/types/Common.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { isCommandMessage } from "#src/lib/commands/CommandDispatch.js";
-import { makeCard } from "#src/lib/ui/Cards.js";
-import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { scheduleTask } from "#src/lib/scheduler/Schedule.js";
+import { LumiEvents } from "@lib/types/Common.js";
+import type { GuildMessage } from "@lib/types/Common.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { isCommandMessage } from "@commands/CommandDispatch.js";
+import { makeCard } from "@ui/Cards.js";
+import { createActionButton, buildSafeActionRows } from "@ui/Panels.js";
+import { logError } from "@utilities/Errors.js";
+import { scheduleTask } from "@scheduler/Schedule.js";
 import {
   AfkKeys,
   AfkMentionCooldownMs,
@@ -23,8 +23,8 @@ import {
   AfkNickEditCooldownMs,
   AfkWelcomeCooldownMs,
   NickPrefix,
-} from "#src/modules/afk/Constants.js";
-import { afkDurationSince, sanitizeReason } from "#src/modules/afk/services/Format.js";
+} from "@modules/afk/Constants.js";
+import { afkDurationSince, sanitizeReason } from "@modules/afk/services/Format.js";
 import {
   getAfkEntry,
   getAfkEntriesBatch,
@@ -34,9 +34,9 @@ import {
   clearAfkEntry,
   clearAfkMentions,
   addAfkMentionsBatch,
-} from "#src/modules/afk/data/Afk.js";
+} from "@modules/afk/data/Afk.js";
 
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
 
 function canSendMessages(message: Message<true>): boolean {
   const { me } = message.guild.members;

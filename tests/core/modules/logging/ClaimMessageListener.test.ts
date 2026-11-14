@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import loggingClaimMessageListener from "#src/modules/logging/listeners/ClaimMessage.js";
+import loggingClaimMessageListener from "@modules/logging/listeners/ClaimMessage.js";
 
-vi.mock("#src/modules/logging/services/Claims.js", () => ({
+vi.mock("@modules/logging/services/Claims.js", () => ({
   normalizeLogClaimCode: vi.fn(),
   peekLogClaimCode: vi.fn(),
   consumeLogClaimCode: vi.fn(),
   registerLogClaim: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
@@ -17,7 +17,7 @@ import {
   peekLogClaimCode,
   consumeLogClaimCode,
   registerLogClaim,
-} from "#src/modules/logging/services/Claims.js";
+} from "@modules/logging/services/Claims.js";
 
 function makeServices(hasPermit = true) {
   return {

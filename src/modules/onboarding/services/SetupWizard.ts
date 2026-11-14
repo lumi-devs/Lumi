@@ -1,7 +1,7 @@
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import type { Container } from "#src/lib/Services.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { UserError } from "#src/shared/Index.ts";
+import { authorize } from "@api/permissions/Authorize.js";
+import type { Container } from "@lib/Services.js";
+import { getUtility } from "@module-system/Utility.js";
+import { UserError } from "@shared/Index.ts";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,

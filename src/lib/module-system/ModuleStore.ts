@@ -1,11 +1,11 @@
-import type { Container } from "#src/lib/Services.js";
-import type { ModuleObject } from "#src/lib/module-system/Module.js";
-import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
+import type { Container } from "@lib/Services.js";
+import type { ModuleObject } from "@module-system/Module.js";
+import type { ModuleMeta } from "@module-system/Meta.js";
 import {
   metaFromManifest,
   readManifest,
   type ModuleManifest,
-} from "#src/lib/module-system/Manifest.js";
+} from "@module-system/Manifest.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -13,16 +13,16 @@ import type { ZodType } from "zod";
 import {
   isDependencySatisfied,
   parseDependencySpec,
-} from "#src/lib/module-system/Dependencies.js";
-import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
-import { attachListeners } from "#src/lib/listeners/ListenerLoader.js";
-import { loadInteractionHandlers } from "#src/lib/interactions/InteractionDispatch.js";
-import { commandRegistry, loadCommandDefs } from "#src/lib/commands/CommandDef.js";
+} from "@module-system/Dependencies.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
+import { attachListeners } from "@listeners/ListenerLoader.js";
+import { loadInteractionHandlers } from "@interactions/InteractionDispatch.js";
+import { commandRegistry, loadCommandDefs } from "@commands/CommandDef.js";
 import {
   loadUtilities,
   unloadUtilitiesForDir,
-} from "#src/lib/module-system/Utility.js";
-import type { OneshotHandler } from "#src/lib/scheduler/Oneshot.js";
+} from "@module-system/Utility.js";
+import type { OneshotHandler } from "@scheduler/Oneshot.js";
 
 function collectOneshots(
   mod: Record<string, unknown>,
@@ -165,7 +165,7 @@ export class ModuleStore {
   public async unload(nameOrPiece: string | ModuleObject): Promise<ModuleObject | undefined> {
     const name =
       typeof nameOrPiece === "string" ? nameOrPiece : nameOrPiece.name;
-    const { unregisterDynamicRpc } = await import("#src/lib/rpc/Registry.js");
+    const { unregisterDynamicRpc } = await import("@rpc/Registry.js");
     unregisterDynamicRpc(name);
     const record = this.#records.get(name);
 
@@ -278,8 +278,12 @@ export class ModuleStore {
     await loadInteractionHandlers(record.dir);
     await loadCommandDefs(record.dir);
     await loadUtilities(record.dir);
-    const { loadScheduledTasks } = await import("#src/lib/scheduler/Tasks.js");
+    const { loadScheduledTasks } = await import("@scheduler/Tasks.js");
     await loadScheduledTasks(record.dir);
+  }
+
+  public async loadSharedUtilities(): Promise<void> {
+    await loadUtilities(fileURLToPath(new URL("..", import.meta.url)));
   }
 
   public detachModuleLoaders(dir: string): void {
@@ -314,7 +318,7 @@ export class ModuleStore {
   }
 
   async #finishLoad(record: ModuleRecord): Promise<void> {
-    const { restoreStaticRpcOwner } = await import("#src/lib/rpc/Registry.js");
+    const { restoreStaticRpcOwner } = await import("@rpc/Registry.js");
     restoreStaticRpcOwner(record.name);
     record.enabled = true;
     record.state = "loaded";

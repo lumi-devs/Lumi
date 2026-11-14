@@ -1,4 +1,5 @@
-import { UserError } from "#src/shared/Index.ts";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import {
   ActionRowBuilder,
   ModalBuilder,
@@ -10,9 +11,72 @@ import {
   type MessageComponentInteraction,
   type VoiceBasedChannel,
 } from "discord.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { TempVcPanelId } from "#src/modules/tempvc/Constants.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
+import type { LumiT } from "@i18n/Index.js";
+import { TempVcPanelId } from "@modules/tempvc/Constants.js";
+import type { VcRecord } from "@modules/tempvc/data/Tempvc.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
+import {
+  buildBlockView,
+  buildDeleteConfirmView,
+  buildKickView,
+  buildPanel,
+  buildTransferView,
+  buildTrustView,
+  buildUnblockView,
+  buildUntrustView,
+} from "@modules/tempvc/ui/Panel.js";
+
+export async function handlePanelMenuAction(
+  services: Container,
+  service: TempVcUtility,
+  interaction: MessageComponentInteraction,
+  channel: VoiceBasedChannel,
+  record: VcRecord,
+  action: string,
+  t: LumiT,
+): Promise<void> {
+  switch (action) {
+    case "name":
+      await showRenameModal(interaction, channel, t);
+      return;
+    case "limit":
+      await showLimitModal(interaction, channel, t);
+      return;
+    case "lock": {
+      const next = await service.setLock(services, channel, record, !record.locked);
+      await interaction.editReply(await buildPanel(services, channel, next, t));
+      return;
+    }
+    case "hide": {
+      const next = await service.setHide(services, channel, record, !record.hidden);
+      await interaction.editReply(await buildPanel(services, channel, next, t));
+      return;
+    }
+    case "kick":
+      await interaction.editReply(buildKickView(channel, record, t));
+      return;
+    case "trust":
+      await interaction.editReply(buildTrustView(channel, record, t));
+      return;
+    case "untrust":
+      await interaction.editReply(buildUntrustView(channel, record, t));
+      return;
+    case "block":
+      await interaction.editReply(buildBlockView(channel, record, t));
+      return;
+    case "unblock":
+      await interaction.editReply(buildUnblockView(channel, record, t));
+      return;
+    case "transfer":
+      await interaction.editReply(buildTransferView(channel, record, t));
+      return;
+    case "delete":
+      await interaction.editReply(buildDeleteConfirmView(channel, t));
+      return;
+    default:
+      return;
+  }
+}
 
 export function assertOwner(
   service: TempVcUtility,

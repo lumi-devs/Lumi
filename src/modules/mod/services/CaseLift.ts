@@ -1,8 +1,8 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import type { ModerationCase } from "@prisma/client";
-import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
-import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
-import { VoiceMuteAction } from "#src/modules/mod/services/actions/VoiceMuteAction.js";
+import { BanAction } from "@modules/mod/services/actions/BanAction.js";
+import { MuteAction } from "@modules/mod/services/actions/MuteAction.js";
+import { VoiceMuteAction } from "@modules/mod/services/actions/VoiceMuteAction.js";
 
 export async function liftModerationCaseWithUndo(
   moderationCase: ModerationCase,

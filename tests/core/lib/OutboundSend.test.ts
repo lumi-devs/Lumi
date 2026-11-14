@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   handleSendMessageFire,
   queueSend,
-} from "#src/lib/outbound/SendQueue.js";
+} from "@lib/outbound/SendQueue.js";
 
 const events: string[] = [];
 
@@ -65,7 +65,8 @@ describe("queueSend", () => {
   it("sends inline when the queue is unreachable", async () => {
     const channel = makeChannel("c1", 0);
     channels.set("c1", channel);
-    (container.tasks.create as any).mockRejectedValueOnce(new Error("valkey down"));
+    (container.client as any).channels.cache.get = () => undefined;
+    (container.tasks.create as any).mockRejectedValueOnce(new Error("redis down"));
 
     await queueSend(container, { channelId: "c1", content: "hello" });
 

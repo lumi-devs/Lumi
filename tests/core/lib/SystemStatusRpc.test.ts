@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
+import { container } from "@lib/Services.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";

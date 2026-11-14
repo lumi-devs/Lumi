@@ -1,8 +1,8 @@
-import { createEventBus } from "#src/lib/event-bus/Factory.js";
-import type { EventBus, BusMessage } from "#src/lib/event-bus/Types.js";
+import { createEventBus } from "@event-bus/Factory.js";
+import type { EventBus, BusMessage } from "@event-bus/Types.js";
 
-const VALKEY_HOST = process.env["VALKEY_HOST"] ?? "localhost";
-const VALKEY_PORT = Number(process.env["VALKEY_PORT"] ?? 6379);
+const REDIS_HOST = process.env["REDIS_HOST"] ?? "localhost";
+const REDIS_PORT = Number(process.env["REDIS_PORT"] ?? 6379);
 
 const GROUP_ALPHA = "verify-resilience-alpha";
 const GROUP_BETA = "verify-resilience-beta";
@@ -48,19 +48,19 @@ async function drainStream<T>(
   return collected.slice(0, limit);
 }
 
-const valkeyConfig = {
-  host: VALKEY_HOST,
-  port: VALKEY_PORT,
+const redisConfig = {
+  host: REDIS_HOST,
+  port: REDIS_PORT,
   db: 0,
   lazyConnect: true,
 };
 
-const valkeyScenarios: Scenario[] = [
+const redisScenarios: Scenario[] = [
   {
-    name: "Valkey Streams - basic publish & consume round-trip",
+    name: "Redis Streams - basic publish & consume round-trip",
     async run() {
       const { bus, close } = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       await bus.publish("verify.guild_create", { guildId: "resilience-test-1" });
       const msgs = await drainStream<{ guildId: string }>(
@@ -77,10 +77,10 @@ const valkeyScenarios: Scenario[] = [
     },
   },
   {
-    name: "Valkey Streams - sequential message ordering under queue load",
+    name: "Redis Streams - sequential message ordering under queue load",
     async run() {
       const { bus, close } = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       const itemCount = 10;
       for (let i = 0; i < itemCount; i++) {
@@ -100,10 +100,10 @@ const valkeyScenarios: Scenario[] = [
     },
   },
   {
-    name: "Valkey Streams - consumer group isolation & fanout",
+    name: "Redis Streams - consumer group isolation & fanout",
     async run() {
       const { bus, close } = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       await bus.publish("verify.broadcast", { broadcastId: "fanout-100" });
 
@@ -130,10 +130,10 @@ const valkeyScenarios: Scenario[] = [
     },
   },
   {
-    name: "Valkey Streams - high-throughput burst load (100 parallel dispatches)",
+    name: "Redis Streams - high-throughput burst load (100 parallel dispatches)",
     async run() {
       const { bus, close } = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       const TOTAL_BURST = 100;
       const pubPromises: Promise<string>[] = [];
@@ -159,24 +159,24 @@ const valkeyScenarios: Scenario[] = [
     },
   },
   {
-    name: "Valkey Streams - lifecycle initialization and graceful shutdown",
+    name: "Redis Streams - lifecycle initialization and graceful shutdown",
     async run() {
       const { close } = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       await close();
     },
   },
   {
-    name: "Valkey Streams - bus re-initialization after connection termination",
+    name: "Redis Streams - bus re-initialization after connection termination",
     async run() {
       const busInstanceA = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       await busInstanceA.close();
 
       const busInstanceB = createEventBus({
-        valkey: valkeyConfig,
+        redis: redisConfig,
       });
       await busInstanceB.bus.publish("verify.lifecycle_reopen", { active: true });
       await busInstanceB.close();
@@ -186,11 +186,11 @@ const valkeyScenarios: Scenario[] = [
 
 async function executeResilienceSuite(): Promise<void> {
   process.stdout.write(
-    `\n${DIM}[verify:resilience]${RESET} Running ${valkeyScenarios.length} scenario(s) (Valkey Streams)\n\n`,
+    `\n${DIM}[verify:resilience]${RESET} Running ${redisScenarios.length} scenario(s) (Redis Streams)\n\n`,
   );
 
   let failureCount = 0;
-  for (const scenario of valkeyScenarios) {
+  for (const scenario of redisScenarios) {
     try {
       await scenario.run();
       pass(scenario.name);
@@ -202,7 +202,7 @@ async function executeResilienceSuite(): Promise<void> {
 
   const badge = failureCount === 0 ? `${GREEN}PASSED${RESET}` : `${RED}FAILED${RESET}`;
   process.stdout.write(
-    `\n${DIM}[verify:resilience]${RESET} ${badge} - ${valkeyScenarios.length - failureCount}/${valkeyScenarios.length} scenario(s) succeeded\n\n`,
+    `\n${DIM}[verify:resilience]${RESET} ${badge} - ${redisScenarios.length - failureCount}/${redisScenarios.length} scenario(s) succeeded\n\n`,
   );
 
   process.exit(failureCount > 0 ? 1 : 0);

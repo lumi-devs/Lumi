@@ -1,5 +1,5 @@
 import type { MessageMentionOptions } from "discord.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
+import type { CardReply } from "@ui/Cards.js";
 
 function serializeAllowedMentions(mentions: MessageMentionOptions | undefined) {
   if (!mentions) return undefined;

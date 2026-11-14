@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "@opentelemetry/api";
-import { extractTraceContext, injectTraceContext } from "#src/observability/Index.ts";
+import { extractTraceContext, injectTraceContext } from "@observability/Index.ts";
 
 const OTEL_ENVELOPE_KEY = "__lumiOtel";
 

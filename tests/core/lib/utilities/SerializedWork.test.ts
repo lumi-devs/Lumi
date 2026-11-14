@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { withSerializedWork } from "#lib/utilities/SerializedWork.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
 
 describe("withSerializedWork", () => {
   it("serializes async work behind a key", async () => {

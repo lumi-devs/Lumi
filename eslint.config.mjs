@@ -56,12 +56,12 @@ export default tseslint.config(
             {
               name: 'discord.js',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @ui/Cards.js.',
             },
             {
               name: '@discordjs/builders',
               importNames: ['EmbedBuilder'],
-              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from #src/lib/ui/Cards.js.',
+              message: 'User-facing replies are Components-v2 cards — use the make*Card helpers from @ui/Cards.js.',
             },
           ],
           patterns: [
@@ -87,8 +87,8 @@ export default tseslint.config(
         {
           paths: [
             {
-              name: '#src/lib/api/permissions/PermitResolver.js',
-              message: 'Authorization decisions go through authorize() (#src/lib/api/permissions/Authorize.js), not PermitResolver directly.',
+              name: '@api/permissions/PermitResolver.js',
+              message: 'Authorization decisions go through authorize() (@api/permissions/Authorize.js), not PermitResolver directly.',
             },
           ],
         },

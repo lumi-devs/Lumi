@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { registerRpcHandlers, verifyRpcCompleteness, getRpcHandler } from "#lib/rpc/Registry.js";
-import { rpcRouter } from "#src/contracts/rpc/Index.ts";
+import { container } from "@lib/Services.js";
+import { registerRpcHandlers, verifyRpcCompleteness, getRpcHandler } from "@rpc/Registry.js";
+import { rpcRouter } from "@contracts/rpc/Index.ts";
 
 describe("RPC Registry & Completeness Verification", () => {
   beforeEach(() => {

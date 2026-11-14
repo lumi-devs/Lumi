@@ -1,16 +1,16 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { dispatchRpc } from "#src/lib/rpc/Dispatch.js";
-import { findGdprExportJob, verifyGdprExportToken } from "#src/lib/gdpr/ExportToken.js";
-import { loadOrMintKeyFile, dataFile, openSealedBytes } from "#src/lib/crypto/Seal.js";
-import { GdprExportSigningKeyUnavailable } from "#src/lib/gdpr/ExportToken.js";
-import { handleSseRequest } from "#src/lib/rpc/SseServer.js";
-import { logError } from "#src/lib/utilities/Errors.js";
+import { dispatchRpc } from "@rpc/Dispatch.js";
+import { findGdprExportJob, verifyGdprExportToken } from "@lib/gdpr/ExportToken.js";
+import { loadOrMintKeyFile, dataFile, openSealedBytes } from "@lib/crypto/Seal.js";
+import { GdprExportSigningKeyUnavailable } from "@lib/gdpr/ExportToken.js";
+import { handleSseRequest } from "@rpc/SseServer.js";
+import { logError } from "@utilities/Errors.js";
 import {
   envParseInteger,
   envParseString,
   getRpcInternalToken,
   isProduction,
-} from "#lib/Env.js";
+} from "@lib/Env.js";
 import {
   COMPATIBLE_CONTRACT_RANGE,
   CONTRACT_VERSION,
@@ -18,7 +18,7 @@ import {
   makeRpcFailure,
   RpcFailureCodes,
   type RpcRequest,
-} from "#src/contracts/rpc/Index.ts";
+} from "@contracts/rpc/Index.ts";
 
 const AuthHeader = "authorization";
 const BearerPrefix = "Bearer ";

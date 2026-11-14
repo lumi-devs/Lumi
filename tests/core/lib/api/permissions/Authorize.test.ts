@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { PermissionFlagsBits, PermissionsBitField } from "discord.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
 
 describe("authorize", () => {
   beforeEach(() => {

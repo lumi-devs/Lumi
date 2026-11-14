@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
+import { container } from "@lib/Services.js";
+import { commandRegistry } from "@commands/CommandDef.js";
 import {
   dispatchChatInput,
   dispatchMessage,
   onCommandError,
-} from "#src/lib/commands/CommandDispatch.js";
-import { resolveErrorCard, respond, respondMessage } from "#src/lib/utilities/CommandResponse.js";
+} from "@commands/CommandDispatch.js";
+import { resolveErrorCard, respond, respondMessage } from "@utilities/CommandResponse.js";
 
-vi.mock("#src/lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   handleDenied: vi.fn().mockResolvedValue(undefined),
   resolveErrorCard: vi.fn().mockReturnValue({ card: { mocked: true }, expected: false }),
   respond: vi.fn().mockResolvedValue(undefined),
@@ -16,7 +16,7 @@ vi.mock("#src/lib/utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#src/lib/Telemetry.js", () => ({
+vi.mock("@lib/Telemetry.js", () => ({
   instrumentedRun: vi.fn((_name: string, _kind: string, _target: unknown, fn: () => unknown) => fn()),
 }));
 

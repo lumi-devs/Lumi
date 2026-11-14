@@ -1,5 +1,5 @@
-import { Time } from "#src/shared/Index.ts";
-import { filterUrls } from "#src/lib/discord/Filters.js";
+import { Time } from "@shared/Index.ts";
+import { filterUrls } from "@discord/Filters.js";
 
 export interface HeatConfig {
   enabled: boolean;

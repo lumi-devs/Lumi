@@ -13,12 +13,12 @@ import {
   isAfkOnCooldown,
   setAfkCooldown,
   addAfkMentionsBatch,
-} from "#src/modules/afk/data/Afk.js";
-import { AfkKeys, AfkTTL } from "#src/modules/afk/Constants.js";
-import { container } from "#src/lib/Services.js";
+} from "@modules/afk/data/Afk.js";
+import { AfkKeys, AfkTTL } from "@modules/afk/Constants.js";
+import { container } from "@lib/Services.js";
 
 Object.assign(container, {
-  valkey: {
+  redis: {
     get: vi.fn(),
     setex: vi.fn(),
     del: vi.fn(),
@@ -52,7 +52,7 @@ Object.assign(container, {
   invalidation: undefined as any,
 });
 
-vi.mock("#src/modules/afk/services/Format.js", () => ({
+vi.mock("@modules/afk/services/Format.js", () => ({
   sanitizeReason: vi.fn((s) => s),
 }));
 
@@ -79,9 +79,9 @@ describe("AFK Module Tests", () => {
   });
 
   describe("getAfkEntry", () => {
-    it("returns cached entry if present in Valkey", async () => {
+    it("returns cached entry if present in Redis", async () => {
       const nowStr = new Date().toISOString();
-      (container.valkey.get as any).mockResolvedValue(
+      (container.redis.get as any).mockResolvedValue(
         JSON.stringify({ since: nowStr, reason: "lunch" })
       );
       const result = await getAfkEntry(container, "guild-1", "user-1");
@@ -91,35 +91,35 @@ describe("AFK Module Tests", () => {
       expect(container.db.afk.findEntry).not.toHaveBeenCalled();
     });
 
-    it("fetches from DB and sets Valkey cache on Valkey cache miss", async () => {
-      (container.valkey.get as any).mockResolvedValue(null);
+    it("fetches from DB and sets Redis cache on Redis cache miss", async () => {
+      (container.redis.get as any).mockResolvedValue(null);
       const mockDbEntry = { guildId: "g1", userId: "u1", reason: "sleeping", since: new Date() };
       (container.db.afk.findEntry as any).mockResolvedValue(mockDbEntry);
 
       const result = await getAfkEntry(container, "g1", "u1");
       expect(result).toEqual(mockDbEntry);
-      expect(container.valkey.setex).toHaveBeenCalledWith(
+      expect(container.redis.setex).toHaveBeenCalledWith(
         "lumi:afk:g1:u1",
         86400,
         JSON.stringify(mockDbEntry)
       );
     });
 
-    it("returns null if Valkey cache contains string 'null'", async () => {
-      (container.valkey.get as any).mockResolvedValue("null");
+    it("returns null if Redis cache contains string 'null'", async () => {
+      (container.redis.get as any).mockResolvedValue("null");
       const result = await getAfkEntry(container, "g1", "u1");
       expect(result).toBeNull();
     });
   });
 
   describe("setAfkEntry", () => {
-    it("upserts entry in DB and caches in Valkey", async () => {
+    it("upserts entry in DB and caches in Redis", async () => {
       const mockEntry = { guildId: "g1", userId: "u1", reason: "brb", since: new Date() };
       (container.db.afk.upsertEntry as any).mockResolvedValue(mockEntry);
 
       const result = await setAfkEntry(container, "g1", "u1", "brb");
       expect(result).toBe(mockEntry);
-      expect(container.valkey.setex).toHaveBeenCalledWith(
+      expect(container.redis.setex).toHaveBeenCalledWith(
         "lumi:afk:g1:u1",
         86400,
         JSON.stringify(mockEntry)
@@ -135,7 +135,7 @@ describe("AFK Module Tests", () => {
       const res = await clearAfkEntry(container, "g1", "u1");
       expect(res).toBe(true);
       expect(container.invalidation.invalidate).toHaveBeenCalledWith("lumi:afk:g1:u1");
-      expect(container.valkey.del).not.toHaveBeenCalled();
+      expect(container.redis.del).not.toHaveBeenCalled();
     });
 
     it("logs error and returns false on failure", async () => {
@@ -150,7 +150,7 @@ describe("AFK Module Tests", () => {
   describe("clearAllAfkForUser", () => {
     it("handles cursor scanning and invalidates user keys", async () => {
       (container.db.afk.deleteAllForUser as any).mockResolvedValue(2);
-      (container.valkey.scan as any)
+      (container.redis.scan as any)
         .mockResolvedValueOnce(["42", ["key1"]])
         .mockResolvedValueOnce(["0", ["key2"]]);
 
@@ -162,20 +162,20 @@ describe("AFK Module Tests", () => {
     it("uses invalidation service for user keys when available", async () => {
       (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
       (container.db.afk.deleteAllForUser as any).mockResolvedValue(1);
-      (container.valkey.scan as any).mockResolvedValueOnce(["0", ["key1"]]);
+      (container.redis.scan as any).mockResolvedValueOnce(["0", ["key1"]]);
 
       await clearAllAfkForUser(container, "u1");
       expect(container.invalidation.invalidate).toHaveBeenCalledWith("key1");
-      expect(container.valkey.del).not.toHaveBeenCalled();
+      expect(container.redis.del).not.toHaveBeenCalled();
     });
 
-    it("does nothing with valkey/invalidation if no keys matched", async () => {
+    it("does nothing with redis/invalidation if no keys matched", async () => {
       (container.db.afk.deleteAllForUser as any).mockResolvedValue(0);
-      (container.valkey.scan as any).mockResolvedValueOnce(["0", []]);
+      (container.redis.scan as any).mockResolvedValueOnce(["0", []]);
 
       const count = await clearAllAfkForUser(container, "u1");
       expect(count).toBe(0);
-      expect(container.valkey.del).not.toHaveBeenCalled();
+      expect(container.redis.del).not.toHaveBeenCalled();
     });
   });
 
@@ -204,7 +204,7 @@ describe("AFK Module Tests", () => {
 
     it("getAfkStatsForGuild counts this guild's entries and cooldown keys", async () => {
       (container.db.afk.countForGuild as any).mockResolvedValue(2);
-      (container.valkey.scan as any).mockResolvedValueOnce(["0", ["cd1"]]);
+      (container.redis.scan as any).mockResolvedValueOnce(["0", ["cd1"]]);
 
       const stats = await getAfkStatsForGuild(container, "G1");
       expect(stats).toEqual({ activeEntries: 2, activeCooldowns: 1 });
@@ -216,9 +216,9 @@ describe("AFK Module Tests", () => {
     it("adds and retrieves AFK mentions", async () => {
       const mockMention = { authorId: "u2", authorName: "Bob", channelId: "c1", messageId: "m1", ts: 100 };
       await addAfkMention(container, "g1", "u1", mockMention);
-      expect(container.valkey.multi).toHaveBeenCalled();
+      expect(container.redis.multi).toHaveBeenCalled();
 
-      (container.valkey.lrange as any).mockResolvedValue([
+      (container.redis.lrange as any).mockResolvedValue([
         JSON.stringify(mockMention),
         "null",
       ]);
@@ -235,13 +235,13 @@ describe("AFK Module Tests", () => {
 
       await addAfkMentionsBatch(container, "g1", mentions);
 
-      expect(container.valkey.pipeline).toHaveBeenCalled();
-      expect(container.valkey.lpush).toHaveBeenCalledTimes(mentions.length);
+      expect(container.redis.pipeline).toHaveBeenCalled();
+      expect(container.redis.lpush).toHaveBeenCalledTimes(mentions.length);
     });
 
     it("addAfkMentionsBatch returns early for empty mentions array", async () => {
       await addAfkMentionsBatch(container, "g1", []);
-      expect(container.valkey.multi).not.toHaveBeenCalled();
+      expect(container.redis.multi).not.toHaveBeenCalled();
     });
 
     it("clearAfkMentions invalidates the mentions key", async () => {
@@ -252,12 +252,12 @@ describe("AFK Module Tests", () => {
 
   describe("AFK Cooldowns", () => {
     it("checks and sets cooldowns", async () => {
-      (container.valkey.exists as any).mockResolvedValue(1);
+      (container.redis.exists as any).mockResolvedValue(1);
       const res = await isAfkOnCooldown(container, "cd-key");
       expect(res).toBe(true);
 
       await setAfkCooldown(container, "cd-key", 5000);
-      expect(container.valkey.set).toHaveBeenCalledWith("cd-key", "1", "PX", 5000);
+      expect(container.redis.set).toHaveBeenCalledWith("cd-key", "1", "PX", 5000);
     });
   });
 });

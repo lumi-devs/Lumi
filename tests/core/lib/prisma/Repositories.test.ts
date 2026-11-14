@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
-import { container } from "#src/lib/Services.js";
+import { DatabaseService } from "@db/DatabaseService.js";
+import { container } from "@lib/Services.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis, type MemoryRedis } from "../../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -11,34 +12,19 @@ vi.mock("#src/observability/Index.ts", () => ({
 describe("GdprExportJobRepository & GlobalRepository via DatabaseService", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let db: DatabaseService;
-  let mockValkey: any;
+  let redis: MemoryRedis;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    const store = new Map<string, string>();
-    mockValkey = {
-      get: vi.fn(async (key: string) => store.get(key) ?? null),
-      set: vi.fn(async (key: string, val: string) => {
-        store.set(key, val);
-        return "OK";
-      }),
-      setex: vi.fn(async (key: string, _ttl: number, val: string) => {
-        store.set(key, val);
-        return "OK";
-      }),
-      del: vi.fn(async (key: string) => {
-        store.delete(key);
-        return 1;
-      }),
-    };
-    (container as any).valkey = mockValkey;
+    redis = createMemoryRedis();
+    (container as any).redis = redis;
     (container as any).invalidation = {
       invalidate: vi.fn(async (...keys: string[]) => {
-        for (const k of keys) store.delete(k);
+        for (const k of keys) redis.$store.delete(k);
       }),
     };
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() };
-    db = new DatabaseService(prisma as any, mockValkey, mockLogger);
+    db = new DatabaseService(prisma as any, redis as any, mockLogger);
   });
 
   describe("GdprExportJobRepository", () => {

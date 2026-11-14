@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 
-vi.mock("#lib/outbound/SendQueue.js", () => ({
+vi.mock("@lib/outbound/SendQueue.js", () => ({
   queueSend: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { queueSend } from "#src/lib/outbound/SendQueue.js";
+import { queueSend } from "@lib/outbound/SendQueue.js";
 import {
   resolveLogChannel,
   sendLog,
-} from "#src/modules/logging/services/Send.js";
+} from "@modules/logging/services/Send.js";
 
 const GUILD_ID = "123456789012345678";
 const MESSAGE_CHANNEL = "111111111111111111";

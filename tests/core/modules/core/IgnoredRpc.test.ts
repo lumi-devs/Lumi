@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { AccessRepository } from "#src/lib/prisma/repositories/AccessRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { AccessRepository } from "@db/repositories/AccessRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -45,16 +46,11 @@ describe("core module ignored-channel RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-      set: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    };
-    (container as any).valkey = valkey;
+    const redis = createMemoryRedis();
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
     db.config = {
       getGuildSettings: vi.fn(async (id: string) =>
         prisma.$all("guild").find((g) => g["id"] === id) ?? { ignored: false },

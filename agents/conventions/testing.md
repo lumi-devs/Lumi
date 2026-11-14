@@ -29,23 +29,23 @@ touched `packages/core/src/modules/<x>/...` → `packages/core/tests/modules/<x>
 '**/tests/integration/**'` over `packages/**`, chained with `apps/api`'s and
 `apps/cli`'s own suites. The `--path-ignore-patterns` flag keeps it fully
 offline — nothing under any `tests/integration/` directory runs, so no live
-Postgres or Valkey is needed.
+Postgres or Redis is needed.
 
 ## Real-service integration tests
 
 `packages/core/tests/integration/` (5 files: `audit-keyset-pagination`,
 `event-bus`, `idempotency`, `moderation-repository`, `scheduler-lock`, plus
-`setup.ts`) exercises real Postgres and Valkey. Excluded from `bun run test`;
+`setup.ts`) exercises real Postgres and Redis. Excluded from `bun run test`;
 run via `bun run test:integration` (`bun test packages/*/tests/integration`).
 
-`setup.ts` reads `LUMI_TEST_DATABASE_URL` / `LUMI_TEST_VALKEY_URL` — never the
+`setup.ts` reads `LUMI_TEST_DATABASE_URL` / `LUMI_TEST_REDIS_URL` — never the
 app's own names — so a dev `.env` can't be picked up by accident. Each file
 wraps its suite in `integrationDescribe`, which skips (with the reason in the
 skip name) unless both vars are set.
 
-Local run: start `postgres` + `valkey` from `docker-compose.yml`, create a
+Local run: start `postgres` + `redis` from `docker-compose.yml`, create a
 separate database (e.g. `lumi_test`), apply the schema with Prisma pointed at
-it, and export the two vars on a non-default Valkey index. In CI the
+it, and export the two vars on a non-default Redis index. In CI the
 `integration` job runs the same suite against service containers and feeds the
 `ci-status` aggregator alongside the offline suite.
 

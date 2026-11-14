@@ -1,29 +1,24 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { deriveRepoNameFromUrl } from "#src/contracts/Index.ts";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { deriveRepoNameFromUrl } from "@contracts/Index.ts";
+import { getUtility } from "@module-system/Utility.js";
 
 import type { AutocompleteInteraction } from "discord.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { paginateList } from "#src/lib/utilities/Pagination.js";
-import { respondWithChoices } from "#src/lib/utilities/Autocomplete.js";
-import { repoNameChoices } from "#src/modules/admin/services/DownloaderAutocomplete.js";
+import { CommandContext } from "@commands/Context.js";
+import { paginateList } from "@utilities/Pagination.js";
+import { respondWithChoices } from "@utilities/Autocomplete.js";
+import { repoNameChoices } from "@modules/admin/services/DownloaderAutocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import { errorFrom } from "#src/lib/utilities/Errors.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-
-function downloaderService(): DownloaderUtility {
-  return getUtility("downloader");
-}
+import { makeInfoCard } from "@ui/Cards.js";
+import { componentEmoji } from "@ui/Panels.js";
+import { errorFrom } from "@utilities/Errors.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
 
 export const repoDef: CommandDef = {
   name: "repo",
@@ -133,7 +128,7 @@ export const repoDef: CommandDef = {
     );
 
     try {
-      const { signatureWarning, installMsg } = await downloaderService().addRepo(ctx.services, name, url, branch);
+      const { signatureWarning, installMsg } = await getUtility("downloader").addRepo(ctx.services, name, url, branch);
       ctx.services.logger.info(
         `[Repo] 📦 Added repository: ${name} (${url}@${branch}) by ${ctx.user.tag}`,
       );
@@ -159,7 +154,7 @@ export const repoDef: CommandDef = {
     );
 
     try {
-      await downloaderService().removeRepo(ctx.services, name);
+      await getUtility("downloader").removeRepo(ctx.services, name);
       ctx.services.logger.info(
         `[Repo] Removed repository: ${name} by ${ctx.user.tag}`,
       );
@@ -181,7 +176,7 @@ export const repoDef: CommandDef = {
     );
 
     try {
-      const result = await downloaderService().updateRepo(ctx.services, name);
+      const result = await getUtility("downloader").updateRepo(ctx.services, name);
       ctx.services.logger.info(
         `[Repo] 📦 Updated repository: ${name} by ${ctx.user.tag} (${result.oldSha ?? "?"} -> ${result.newSha})`,
       );
@@ -212,7 +207,7 @@ export const repoDef: CommandDef = {
   },
   "list": async (ctx: CommandContext) => {
     const t = await ctx.fetchT();
-    const repos = await downloaderService().listRepos(ctx.services);
+    const repos = await getUtility("downloader").listRepos(ctx.services);
     if (!repos.length) {
       await ctx.replyError(t("core:noReposTitle"), t("core:noReposText"));
       return;
@@ -236,8 +231,8 @@ export const repoDef: CommandDef = {
 
     try {
       const [modules, installed] = await Promise.all([
-        downloaderService().getModulesInRepo(repoName),
-        downloaderService().getInstalledModules(ctx.services),
+        getUtility("downloader").getModulesInRepo(repoName),
+        getUtility("downloader").getInstalledModules(ctx.services),
       ]);
 
       if (!modules.length) {
@@ -312,7 +307,7 @@ export const repoDef: CommandDef = {
         : undefined;
     return respondWithChoices(
       interaction,
-      await repoNameChoices(services, downloaderService(), focused.value, { extra })
+      await repoNameChoices(services, getUtility("downloader"), focused.value, { extra })
     );
   },
 };

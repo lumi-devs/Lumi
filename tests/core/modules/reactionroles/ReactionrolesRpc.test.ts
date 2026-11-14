@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { reactionrolesRpcHandlers } from "#src/modules/reactionroles/Rpc.js";
-import { container } from "#src/lib/Services.js";
+import { reactionrolesRpcHandlers } from "@modules/reactionroles/Rpc.js";
+import { container } from "@lib/Services.js";
 
-vi.mock("#lib/rpc/DiscordRestLookup.js", () => ({
+vi.mock("@rpc/DiscordRestLookup.js", () => ({
   checkGuildManagerRest: vi.fn().mockResolvedValue({ isManager: true }),
 }));
 
@@ -17,7 +17,7 @@ const mockUtility = {
   addOption: vi.fn(),
 };
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn().mockReturnValue(mockUtility),
 }));
 

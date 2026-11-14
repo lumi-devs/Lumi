@@ -3,21 +3,21 @@ import {
   type GuildMember,
   type ModalSubmitInteraction,
 } from "discord.js";
-import { fetchT } from "#src/lib/i18n/Index.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import { parseDuration } from "#src/lib/utilities/Time.js";
-import type { Container } from "#src/lib/Services.js";
+import { fetchT } from "@i18n/Index.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import { parseDuration } from "@utilities/Time.js";
+import type { Container } from "@lib/Services.js";
 import {
   checkDuplicateCase,
   checkHierarchy,
   type DuplicateCaseCheckContext,
-} from "#src/lib/api/moderation/ModerationFlow.js";
-import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
-import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
-import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { WarnAction } from "#src/modules/mod/services/actions/WarnAction.js";
-import { PunishAuthorModalId } from "#src/modules/mod/Constants.js";
+} from "@api/moderation/ModerationFlow.js";
+import { BanAction } from "@modules/mod/services/actions/BanAction.js";
+import { KickAction } from "@modules/mod/services/actions/KickAction.js";
+import { MuteAction } from "@modules/mod/services/actions/MuteAction.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { WarnAction } from "@modules/mod/services/actions/WarnAction.js";
+import { PunishAuthorModalId } from "@modules/mod/Constants.js";
 import type { CaseAction } from "@prisma/client";
 
 const DefaultReason = "No reason provided.";

@@ -3,11 +3,11 @@ import type {
   EconomyTransaction,
   EconomyTxnKind,
 } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 import {
   rankedAccountPage,
   rankPosition,
-} from "#src/lib/prisma/Ranking.js";
+} from "@db/Ranking.js";
 
 export interface EconomyBalance {
   guildId: string;

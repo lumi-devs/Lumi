@@ -13,7 +13,7 @@ export const help = `Usage: lumi start [--dry-run]
 Start the bot. Runs \`bun src/Index.ts\`, inheriting stdio and forwarding
 SIGINT/SIGTERM to the bot process.
 
-With --dry-run, boots services and checks Postgres/Valkey reachability,
+With --dry-run, boots services and checks Postgres/Redis reachability,
 then exits before Discord login.
 `;
 

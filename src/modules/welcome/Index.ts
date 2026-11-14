@@ -1,9 +1,9 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import type { Container } from "#src/lib/Services.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
+import { defineModule } from "@module-system/Module.js";
+import type { Container } from "@lib/Services.js";
+import { cfg } from "@module-system/ConfigSchema.js";
 import { ChannelType } from "discord.js";
-import { MessageTemplateDocs, MessageTemplateVars } from "#src/lib/utilities/MessageContent.js";
-import { WelcomeDefaults } from "#src/modules/welcome/services/Welcome.js";
+import { MessageTemplateDocs, MessageTemplateVars } from "@utilities/MessageContent.js";
+import { WelcomeDefaults } from "@modules/welcome/services/Welcome.js";
 
 export const welcomeModule = defineModule({
   name: "welcome",

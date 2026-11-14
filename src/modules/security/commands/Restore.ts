@@ -1,10 +1,10 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { restoreFromBackup } from "#src/modules/security/services/Backup.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { makeErrorCard } from "#src/lib/ui/Cards.js";
+import type { CommandContext } from "@commands/Context.js";
+import { restoreFromBackup } from "@modules/security/services/Backup.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { makeErrorCard } from "@ui/Cards.js";
 
 export const restoreDef: CommandDef = {
   name: "restore",

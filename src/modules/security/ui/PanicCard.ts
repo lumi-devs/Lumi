@@ -1,10 +1,10 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, makeSuccessCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { LumiT } from "@i18n/Index.js";
+import { createActionButton, buildSafeActionRows } from "@ui/Panels.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, makeSuccessCard, type CardReply } from "@ui/Cards.js";
 
 export const PanicRevertId = "sec:panic:revert";
 

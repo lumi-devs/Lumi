@@ -1,9 +1,9 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { LabelBuilder, ModalBuilder, TextInputBuilder } from "@discordjs/builders";
 import { TextInputStyle } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import { PunishAuthorModalId, PunishAuthorSelectId } from "#src/modules/mod/Constants.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import { PunishAuthorModalId, PunishAuthorSelectId } from "@modules/mod/Constants.js";
+import type { Container } from "@lib/Services.js";
 
 export const punishAuthorSelect = defineInteraction({
   prefix: PunishAuthorSelectId.prefix,

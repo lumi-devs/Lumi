@@ -1,15 +1,15 @@
-import { runValidateAddon } from "#src/scripts/ValidateAddon.ts";
+import { runValidateAddon } from "@scripts/ValidateAddon.ts";
 import { CliExitError, runCreateAddon } from "../../../scripts/CreateAddon.js";
 
 export const help = `Usage: lumi addon <create|validate> [args...]
 
   lumi addon create <name> [options]      Scaffold a new addon (same as
-                                           \`bun run addon:create\`).
+                                           \`bun scripts/CreateAddon.ts\`).
   lumi addon validate <addon-dir|repo>    Validate addon structure (same as
                                            \`bun run validate\`).
 
 \`create\` and \`validate\` share their implementation with the standalone
-\`bun run addon:create\` / \`bun run validate\` scripts - this is a thin
+\`bun scripts/CreateAddon.ts\` / \`bun run validate\` scripts - this is a thin
 wrapper, not a second copy. Run "lumi addon <subcommand> --help" for
 subcommand-specific options.
 `;

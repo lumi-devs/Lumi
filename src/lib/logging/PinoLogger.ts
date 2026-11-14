@@ -1,6 +1,6 @@
-import { LogLevel, type ILogger } from "#src/shared/Index.ts";
-import { createPinoLogger, type PinoLogger } from "#src/observability/Index.ts";
-import { isDevelopment } from "#src/lib/Env.js";
+import { LogLevel, type ILogger } from "@shared/Index.ts";
+import { createPinoLogger, type PinoLogger } from "@observability/Index.ts";
+import { isDevelopment } from "@lib/Env.js";
 
 type PinoMethod = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 

@@ -1,10 +1,10 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
-import { formatAuditReason } from "#src/lib/utilities/AuditReason.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
-import { acquireValkeyLock } from "#src/lib/valkey/Lock.js";
+import { tryParseJSON } from "@shared/Index.ts";
+import { formatAuditReason } from "@utilities/AuditReason.js";
+import { RedisKeys } from "@redis/Store.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
+import { acquireRedisLock } from "@redis/Lock.js";
 
 interface QuarantineOptions {
   guild: Guild;
@@ -26,10 +26,10 @@ export class QuarantineAction {
       throw new Error("UNCONFIGURED");
     }
 
-    const key = ValkeyKeys.quarantineState(guild.id, targetMember.id);
-    const { release } = await acquireValkeyLock(container.valkey, `${key}:lock`);
+    const key = RedisKeys.quarantineState(guild.id, targetMember.id);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
-      if (await container.valkey.exists(key)) {
+      if (await container.redis.exists(key)) {
         throw new Error("ALREADY_QUARANTINED");
       }
 
@@ -51,7 +51,7 @@ export class QuarantineAction {
         formatAuditReason(moderator, reason),
       );
 
-      await container.valkey.set(
+      await container.redis.set(
         key,
         JSON.stringify(savedRoles),
         "EX",
@@ -86,10 +86,10 @@ export class QuarantineAction {
   public static async undo(options: QuarantineOptions) {
     const { guild, targetMember, moderator, reason } = options;
 
-    const key = ValkeyKeys.quarantineState(guild.id, targetMember.id);
-    const { release } = await acquireValkeyLock(container.valkey, `${key}:lock`);
+    const key = RedisKeys.quarantineState(guild.id, targetMember.id);
+    const { release } = await acquireRedisLock(container.redis, `${key}:lock`);
     try {
-      const saved = await container.valkey.get(key);
+      const saved = await container.redis.get(key);
       if (!saved) {
         throw new Error("NOT_QUARANTINED");
       }
@@ -106,7 +106,7 @@ export class QuarantineAction {
         formatAuditReason(moderator, reason),
       );
 
-      const permKey = ValkeyKeys.targetPermits(guild.id, "user", targetMember.id);
+      const permKey = RedisKeys.targetPermits(guild.id, "user", targetMember.id);
       await container.invalidation.invalidate(key, permKey);
 
       const activeCases = await container.db.moderation.getActiveCases(

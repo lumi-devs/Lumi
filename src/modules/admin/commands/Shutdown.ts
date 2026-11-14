@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { destroyLumi } from "#src/lib/client/LumiClient.js";
-import { container } from "#src/lib/Services.js";
-import { scheduleProcessRestart } from "#src/lib/Restart.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { destroyLumi } from "@lib/client/LumiClient.js";
+import { container } from "@lib/Services.js";
+import { scheduleProcessRestart } from "@lib/Restart.js";
 
 export const shutdownDef: CommandDef = {
   name: "shutdown",

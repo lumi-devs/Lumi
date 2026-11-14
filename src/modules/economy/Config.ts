@@ -1,11 +1,11 @@
-import type { Container } from "#src/lib/Services.js";
-import { parseDuration } from "#src/lib/utilities/Time.js";
+import type { Container } from "@lib/Services.js";
+import { parseDuration } from "@utilities/Time.js";
 import {
   defaultSlotPayoutEntries,
   parseSlotPayouts,
   type SlotPayoutKey,
-} from "#src/modules/economy/services/Slots.js";
-import { EconomyModuleName } from "#src/modules/economy/Constants.js";
+} from "@modules/economy/services/Slots.js";
+import { EconomyModuleName } from "@modules/economy/Constants.js";
 
 export interface EconomyConfig {
   currencyName: string;

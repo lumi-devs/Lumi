@@ -1,5 +1,5 @@
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { memberRoleIds } from "@api/permissions/Subject.js";
 
 export async function hasRequiredPermit(
   target: unknown,

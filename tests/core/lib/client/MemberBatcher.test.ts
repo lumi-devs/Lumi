@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { createMemberBatcher } from "#src/lib/client/MemberBatcher.js";
+import { createMemberBatcher } from "@lib/client/MemberBatcher.js";
 import { Guild, GuildMember } from "discord.js";
 
 describe("createMemberBatcher", () => {

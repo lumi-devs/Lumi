@@ -1,12 +1,12 @@
-import { FieldType, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
-import { formatSubtitle, formatPageFooter } from "#src/lib/ui/Layout.js";
-import { row, type Row } from "#src/lib/ui/Panels.js";
+import { FieldType, type ConfigField } from "@module-system/ConfigSchema.js";
+import { formatSubtitle, formatPageFooter } from "@ui/Layout.js";
+import { row, type Row } from "@ui/Panels.js";
 import {
   channelMention,
   roleMention,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "#src/shared/Index.ts";
+import { cutText } from "@shared/Index.ts";
 
 export { row, type Row };
 

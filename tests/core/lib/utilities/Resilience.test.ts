@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   TimeoutError,
   withTimeout,
-} from "#lib/utilities/Resilience.js";
+} from "@utilities/Resilience.js";
 
 describe("withTimeout", () => {
   it("resolves with the value when fn settles before the deadline", async () => {

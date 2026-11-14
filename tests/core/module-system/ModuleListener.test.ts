@@ -4,9 +4,9 @@ import { EventEmitter } from "node:events";
 import {
   addListenerDef,
   defineListener,
-} from "#src/lib/listeners/ListenerDef.js";
-import { attachDefs } from "#src/lib/listeners/ListenerLoader.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@listeners/ListenerDef.js";
+import { attachDefs } from "@listeners/ListenerLoader.js";
+import type { Container } from "@lib/Services.js";
 
 const isModuleEnabled = vi.fn();
 const services = {

@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
-import { coreRpc, downloaderRpc } from "#src/contracts/rpc/Index.ts";
-import { resolver } from "#src/lib/downloader/Resolver.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
-import { paginate } from "#src/lib/rpc/Validation.js";
+import { container } from "@lib/Services.js";
+import { coreRpc, downloaderRpc } from "@contracts/rpc/Index.ts";
+import { resolver } from "@downloader/Resolver.js";
+import { getUtility } from "@module-system/Utility.js";
+import { implementRpc } from "@rpc/Implement.js";
+import { paginate } from "@rpc/Validation.js";
 
 export const coreRpcHandlers = implementRpc(coreRpc, {
   "guild.permits.list": async ({ guildId }) => ({

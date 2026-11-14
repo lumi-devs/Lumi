@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   trace,
   context as otelContext,
   TraceFlags,
   type SpanContext,
 } from "@opentelemetry/api";
-import { startTracing, shutdownTracing } from "#src/observability/Index.ts";
-import { shouldRunNow, RelayTask } from "#src/lib/scheduler/Tasks.js";
-import { taskFireStream } from "#src/lib/scheduler/Bus.js";
-import { wrapWithTraceContext } from "#src/lib/scheduler/Otel.js";
+import { startTracing, shutdownTracing } from "@observability/Index.ts";
+import { shouldRunNow, RelayTask } from "@scheduler/Tasks.js";
+import { taskFireStream } from "@scheduler/Bus.js";
+import { wrapWithTraceContext } from "@scheduler/Otel.js";
 
 describe("shouldRunNow", () => {
   it("runs when no payload is given", () => {

@@ -1,6 +1,17 @@
 import type { Prisma } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { Repository } from "@db/repositories/Repository.js";
+import { RedisKeys } from "@redis/Store.js";
+
+function dataWhere(guildId: string, module: string, targetId: string, key: string) {
+  return {
+    guildId_moduleName_targetId_key: {
+      guildId,
+      moduleName: module,
+      targetId,
+      key,
+    },
+  };
+}
 
 export class GuildKVRepository extends Repository {
   public async getModuleData<T = unknown>(
@@ -10,28 +21,12 @@ export class GuildKVRepository extends Repository {
     key: string,
   ): Promise<T | null> {
     const row = await this.prisma.moduleData.findUnique({
-      where: {
-        guildId_moduleName_targetId_key: {
-          guildId,
-          moduleName: module,
-          targetId,
-          key,
-        },
-      },
+      where: dataWhere(guildId, module, targetId, key),
     });
     if (!row) return null;
     if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) {
       await this.prisma.moduleData
-        .delete({
-          where: {
-            guildId_moduleName_targetId_key: {
-              guildId,
-              moduleName: module,
-              targetId,
-              key,
-            },
-          },
-        })
+        .delete({ where: dataWhere(guildId, module, targetId, key) })
         .catch(() => undefined);
       return null;
     }
@@ -76,14 +71,7 @@ export class GuildKVRepository extends Repository {
         ? new Date(Date.now() + Math.max(0, opts.ttlMs))
         : null;
     await this.prisma.moduleData.upsert({
-      where: {
-        guildId_moduleName_targetId_key: {
-          guildId,
-          moduleName: module,
-          targetId,
-          key,
-        },
-      },
+      where: dataWhere(guildId, module, targetId, key),
       update: { value: value as Prisma.InputJsonValue, expiresAt },
       create: {
         guildId,
@@ -177,14 +165,7 @@ export class GuildKVRepository extends Repository {
   ): Promise<T | null> {
     try {
       const row = await this.prisma.moduleData.delete({
-        where: {
-          guildId_moduleName_targetId_key: {
-            guildId,
-            moduleName: module,
-            targetId,
-            key,
-          },
-        },
+        where: dataWhere(guildId, module, targetId, key),
       });
       if (row.expiresAt && row.expiresAt.getTime() <= Date.now()) return null;
       return row.value as T;
@@ -232,13 +213,11 @@ export class GuildKVRepository extends Repository {
     key: string,
     delta = 1,
   ): Promise<number> {
-    const valkeyKey = ValkeyKeys.moduleData(guildId, module, targetId, key);
-    const newValue = await this.valkey.hincrby(valkeyKey, "value", delta);
+    const redisKey = RedisKeys.moduleData(guildId, module, targetId, key);
+    const newValue = await this.redis.hincrby(redisKey, "value", delta);
 
     await this.prisma.moduleData.upsert({
-      where: {
-        guildId_moduleName_targetId_key: { guildId, moduleName: module, targetId, key },
-      },
+      where: dataWhere(guildId, module, targetId, key),
       update: { value: newValue },
       create: { guildId, moduleName: module, targetId, key, value: newValue },
     });

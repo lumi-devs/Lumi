@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SnowflakeSchema, ModuleNameSchema, ConfigKeySchema } from "#src/contracts/rpc/Schemas.js";
+import { SnowflakeSchema, ModuleNameSchema, ConfigKeySchema } from "@contracts/rpc/Schemas.js";
 
 export const DashboardEventStream = "lumi:dashboard-events";
 

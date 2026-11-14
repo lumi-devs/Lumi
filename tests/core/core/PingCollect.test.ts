@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, spyOn } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   collectPingData,
   getRuntimeLabel,
   resetPingCachesForTests,
-} from "#src/modules/onboarding/services/PingCollect.js";
+} from "@modules/onboarding/services/PingCollect.js";
 
 const Semver = /^\d+\.\d+\.\d+/;
 
@@ -33,8 +33,8 @@ describe("collectPingData", () => {
         displayAvatarURL: () => "https://cdn/bot.png",
       },
     };
-    (container as any).valkey = {
-      info: vi.fn().mockResolvedValue("valkey_version:9.0.5\nuptime_in_seconds:10\n"),
+    (container as any).redis = {
+      info: vi.fn().mockResolvedValue("redis_version:9.0.5\nuptime_in_seconds:10\n"),
       dbsize: vi.fn().mockResolvedValue(0),
       ping: vi.fn().mockResolvedValue("PONG"),
       get: vi.fn().mockResolvedValue(null),

@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import {
   GuildFeature,
@@ -7,10 +7,10 @@ import {
   type APIChannel,
   type APIOverwrite,
 } from "discord-api-types/v10";
-import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
-import type { LockedChannelSnapshot } from "#src/modules/security/data/SecurityRepository.js";
-import { fetchGuildChannelsRest, fetchGuildRestUncached } from "#src/lib/rpc/DiscordRestLookup.js";
-import { isRestorePending, restoreFromBackup, clearRestorePending } from "#src/modules/security/services/Backup.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
+import type { LockedChannelSnapshot } from "@modules/security/data/SecurityRepository.js";
+import { fetchGuildChannelsRest, fetchGuildRestUncached } from "@rpc/DiscordRestLookup.js";
+import { isRestorePending, restoreFromBackup, clearRestorePending } from "@modules/security/services/Backup.js";
 
 interface PanicResult {
   invitesPaused: boolean;

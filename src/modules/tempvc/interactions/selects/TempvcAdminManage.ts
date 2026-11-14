@@ -2,12 +2,12 @@ import type { StringSelectMenuInteraction } from "discord.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   assertTempvcAdmin,
   renderGeneratorCard,
-} from "#src/modules/tempvc/commands/Tempvc.js";
+} from "@modules/tempvc/commands/Tempvc.js";
 
 export const tempvcAdminManageSelect = defineInteraction({
   prefix: "tempvc:admin:manage",

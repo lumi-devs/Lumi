@@ -17,7 +17,7 @@ Repo-specific rules that matter day to day:
   — the zero-cross-module-import law and the Components-v2-cards-only rule from
   `AGENTS.md`.
 - A second `no-restricted-imports` (`eslint.config.mjs:92`) forbidding
-  `@lumi/lib/permissions/permit-resolver.js` from `permissions/**`, `rpc/**`, and
+  `@api/permissions/PermitResolver.js` from `permissions/**`, `rpc/**`, and
   `addon-sandbox/**` — those ask `authorize()` instead.
 - `no-restricted-syntax` scoped to `packages/core/src/**/commands/*.ts`
   (`eslint.config.mjs:126`) banning raw `interaction.reply/editReply/followUp`
@@ -29,7 +29,7 @@ Repo-specific rules that matter day to day:
 `tsconfig.base.json` is the shared base: `strict`, `noUncheckedIndexedAccess`,
 `noImplicitOverride`, `verbatimModuleSyntax`, `experimentalDecorators`.
 Path aliases all live in `tsconfig.base.json` paths (typecheck) and are honored
-by Bun at runtime: `@lumi/lib/*.js` + `@lumi/modules/*.js` point into
+by Bun at runtime: `@lib/*.js` + `@modules/*.js` point into
 `packages/core/src/`; `@lumi/*` cross-package aliases point at their owning
 packages. No `"imports"` map anywhere in the tree. The dashboard (own repo) has its own tsconfig and
 `typecheck` script.

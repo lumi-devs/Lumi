@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { DownloaderRepoView, RepoModuleView } from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
+import type { DownloaderRepoView, RepoModuleView } from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
 
 const SafeNameSchema = z.string().regex(/^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/);
 

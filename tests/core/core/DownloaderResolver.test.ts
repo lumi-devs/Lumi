@@ -3,12 +3,13 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-vi.mock("#lib/downloader/Validate.js", () => ({
+vi.mock("@downloader/Validate.js", () => ({
   validateAddon: vi.fn(),
 }));
 
-import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "#src/lib/downloader/Resolver.js";
-import { validateAddon } from "#src/lib/downloader/Validate.js";
+import { DownloadResolver, ModuleRoot, AddonModulesRoot } from "@downloader/Resolver.js";
+import { validateAddon } from "@downloader/Validate.js";
+import { container } from "@lib/Services.js";
 import { fakeSpawnResult } from "../helpers/MockBunSpawn.js";
 
 describe("DownloadResolver Edge Cases", () => {
@@ -86,25 +87,36 @@ describe("DownloadResolver Edge Cases", () => {
     const rmSpy = vi.spyOn(fs, "rm").mockResolvedValue(undefined);
 
     spawnSpy.mockImplementation(() => fakeSpawnResult("deadbeefcafe") as any);
+    (container as any).db = {
+      downloader: {
+        readDownloaderRepo: vi.fn().mockResolvedValue({
+          name: repoName,
+          url: "https://github.com/some-org/existing-repo.git",
+        }),
+      },
+    };
 
-    await expect(
-      resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git"),
-    ).rejects.toMatchObject({
-      name: "RepoAlreadyInstalledError",
-      sha: "deadbeefcafe",
-    });
+    try {
+      await expect(
+        resolver.addRepo(repoName, "https://github.com/some-org/existing-repo.git"),
+      ).rejects.toMatchObject({
+        name: "RepoAlreadyInstalledError",
+        sha: "deadbeefcafe",
+      });
 
-    expect(spawnSpy).toHaveBeenCalledWith(
-      ["git", "-C", repoPath, "rev-parse", "HEAD"],
-      expect.any(Object),
-    );
-    expect(spawnSpy).not.toHaveBeenCalledWith(
-      ["git", "-C", repoPath, "pull"],
-      expect.any(Object),
-    );
-    expect(rmSpy).not.toHaveBeenCalled();
-
-    vi.restoreAllMocks();
+      expect(spawnSpy).toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "rev-parse", "HEAD"],
+        expect.any(Object),
+      );
+      expect(spawnSpy).not.toHaveBeenCalledWith(
+        ["git", "-C", repoPath, "pull"],
+        expect.any(Object),
+      );
+      expect(rmSpy).not.toHaveBeenCalled();
+    } finally {
+      delete (container as any).db;
+      vi.restoreAllMocks();
+    }
   });
 
   describe("updateRepo()", () => {
@@ -241,14 +253,25 @@ describe("DownloadResolver Edge Cases", () => {
       vi.clearAllMocks();
     });
 
-    it("refuses to update a repo that isn't cloned locally", async () => {
+    it("auto-restores a missing clone from the remote instead of failing", async () => {
+      const repoName = "missing_repo";
       vi.spyOn(fs, "access").mockRejectedValue(
         Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
       );
+      vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+      spawnSpy.mockImplementation(() => fakeSpawnResult("restoredsha1234") as any);
 
-      await expect(
-        resolver.updateRepo("not_cloned", "https://github.com/some-org/repo.git"),
-      ).rejects.toThrow(/not cloned locally/);
+      const result = await resolver.updateRepo(
+        repoName,
+        "https://github.com/some-org/repo.git",
+      );
+
+      expect(result).toMatchObject({
+        oldSha: null,
+        newSha: "restoredsha1234",
+        changed: true,
+        recloned: true,
+      });
 
       vi.restoreAllMocks();
     });
@@ -377,11 +400,9 @@ describe("DownloadResolver Edge Cases", () => {
       };
 
       mockExistingPaths(new Set([sourcePath, manifestPath]));
-      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
-        if (String(p) === manifestPath) return Promise.resolve(JSON.stringify(manifest));
-        throw new Error(`unexpected readFile: ${p}`);
-      });
-      vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+      vi.spyOn(Bun, "file").mockImplementation(
+        () => ({ json: () => Promise.resolve(manifest) }) as any,
+      );      vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
       vi.spyOn(fs, "symlink").mockResolvedValue(undefined);
       (validateAddon as any).mockResolvedValue({ errors: [] });
 
@@ -394,11 +415,9 @@ describe("DownloadResolver Edge Cases", () => {
       const info = { name: moduleName, version: "1.0.0" };
 
       mockExistingPaths(new Set([sourcePath, manifestPath]));
-      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
-        if (String(p) === manifestPath) return Promise.resolve(JSON.stringify(info));
-        throw new Error(`unexpected readFile: ${p}`);
-      });
-      vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
+      vi.spyOn(Bun, "file").mockImplementation(
+        () => ({ json: () => Promise.resolve(info) }) as any,
+      );      vi.spyOn(fs, "mkdir").mockResolvedValue(undefined);
       const symlinkSpy = vi.spyOn(fs, "symlink").mockResolvedValue(undefined);
       (validateAddon as any).mockResolvedValue({ errors: [] });
 
@@ -411,11 +430,9 @@ describe("DownloadResolver Edge Cases", () => {
     it("throws with the validation errors when the addon fails validation", async () => {
       const info = { name: moduleName, version: "1.0.0" };
       mockExistingPaths(new Set([sourcePath, manifestPath]));
-      vi.spyOn<{ readFile: (path: string, encoding: BufferEncoding) => Promise<string> }, "readFile">(fs, "readFile").mockImplementation((p: any) => {
-        if (String(p) === manifestPath) return Promise.resolve(JSON.stringify(info));
-        throw new Error(`unexpected readFile: ${p}`);
-      });
-      (validateAddon as any).mockResolvedValue({ errors: ["Index.ts is missing"] });
+      vi.spyOn(Bun, "file").mockImplementation(
+        () => ({ json: () => Promise.resolve(info) }) as any,
+      );      (validateAddon as any).mockResolvedValue({ errors: ["Index.ts is missing"] });
 
       await expect(resolver.installModule(repoName, moduleName)).rejects.toThrow(
         /failed validation/,

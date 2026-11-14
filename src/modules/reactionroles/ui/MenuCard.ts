@@ -5,16 +5,16 @@ import {
   TextDisplayBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, roleMention } from "discord.js";
-import { ReactionRolePickId, ReactionRoleSelectId } from "#src/modules/reactionroles/Constants.js";
-import type { ReactionRoleMenu, ReactionRoleOption } from "#src/modules/reactionroles/data/Reactionroles.js";
-import { parseHexColor } from "#src/lib/utilities/MessageContent.js";
-import { makeCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { ReactionRolePickId, ReactionRoleSelectId } from "@modules/reactionroles/Constants.js";
+import type { ReactionRoleMenu, ReactionRoleOption } from "@modules/reactionroles/data/Reactionroles.js";
+import { parseHexColor } from "@utilities/MessageContent.js";
+import { makeCard, type CardReply } from "@ui/Cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createStringSelectMenu,
-} from "#src/lib/ui/Panels.js";
-import { renderMessageBlocksV2Container } from "#src/lib/utilities/MessageBlocksV2.js";
+} from "@ui/Panels.js";
+import { renderMessageBlocksV2Container } from "@utilities/MessageBlocksV2.js";
 
 function safeEmoji(emoji: string | null) {
   return emoji || undefined;

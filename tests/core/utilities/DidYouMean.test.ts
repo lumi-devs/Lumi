@@ -3,7 +3,7 @@ import {
   didYouMean,
   editDistance,
   suggestSimilar,
-} from "#src/lib/utilities/DidYouMean.js";
+} from "@utilities/DidYouMean.js";
 
 describe("editDistance", () => {
   it("scores identical strings as zero", () => {

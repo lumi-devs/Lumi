@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { AuditLogEvent, type Guild } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { resolveAuditLogExecutor } from "#src/modules/security/services/Audit.js";
-import { evaluateNukeEvent } from "#src/modules/security/services/AntiNuke.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { resolveAuditLogExecutor } from "@modules/security/services/Audit.js";
+import { evaluateNukeEvent } from "@modules/security/services/AntiNuke.js";
 
 export const SecurityGuildUpdateListener = defineListener({
   name: "securityGuildUpdate",

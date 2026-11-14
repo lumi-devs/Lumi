@@ -50,7 +50,7 @@ When config is the wrong shape, step down exactly one rung:
 1. `api.kv` - per-target runtime state (`set(userId, key, value, { ttlMs })`).
 2. `api.files` - bytes on disk under `data/files/<module>/` (exports, snapshots).
 3. `api.tokens` - centrally owned third-party keys.
-4. `services.valkey` - hot ephemeral state (cooldowns, windows).
+4. `services.redis` - hot ephemeral state (cooldowns, windows).
 5. `services.db.*` repositories - relational data with queries and indexes.
 
 Never store bytes in config/KV, never store operator tunables in KV.

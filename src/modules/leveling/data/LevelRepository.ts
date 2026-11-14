@@ -1,16 +1,16 @@
 import type { LevelAccount } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 import {
   rankedAccountPage,
   rankedGainWindow,
   rankPosition,
   type AccountRankRow,
-} from "#src/lib/prisma/Ranking.js";
-import { MaxLevel, StartLevel } from "#src/modules/leveling/Constants.js";
+} from "@db/Ranking.js";
+import { MaxLevel, StartLevel } from "@modules/leveling/Constants.js";
 import {
   xpForLevel,
   type LevelFormula,
-} from "#src/modules/leveling/services/Formulas.js";
+} from "@modules/leveling/services/Formulas.js";
 
 interface AwardXpInput {
   guildId: string;

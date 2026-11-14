@@ -7,7 +7,7 @@ import {
   MaxAttempts,
   SequenceLength,
   type CaptchaState,
-} from "#src/modules/security/services/Captcha.js";
+} from "@modules/security/services/Captcha.js";
 
 function freshState(): CaptchaState {
   const { sequence, buttons } = buildChallenge();

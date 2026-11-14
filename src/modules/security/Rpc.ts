@@ -1,15 +1,15 @@
-import { container } from "#src/lib/Services.js";
-import { SnowflakeSchema, securityRpc } from "#src/contracts/rpc/Index.ts";
-import type { GuildBackupData } from "#src/modules/security/data/BackupTypes.js";
-import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
-import { enterPanic, revertPanic } from "#src/modules/security/services/Panic.js";
+import { container } from "@lib/Services.js";
+import { SnowflakeSchema, securityRpc } from "@contracts/rpc/Index.ts";
+import type { GuildBackupData } from "@modules/security/data/BackupTypes.js";
+import { restoreGuildFromBackup } from "@modules/security/services/RestoreGuild.js";
+import { enterPanic, revertPanic } from "@modules/security/services/Panic.js";
 import {
   postOrEditVerifyPanel,
   loadVerificationConfig,
   grantVerified,
-} from "#src/modules/security/services/Verification.js";
-import { implementRpc, requireGuildId } from "#src/lib/rpc/Implement.js";
-import { withIdempotency } from "#src/lib/rpc/Idempotency.js";
+} from "@modules/security/services/Verification.js";
+import { implementRpc, requireGuildId } from "@rpc/Implement.js";
+import { withIdempotency } from "@rpc/Idempotency.js";
 
 export const securityRpcHandlers = implementRpc(securityRpc, {
   "guild.panic.get": async ({ guildId }) => {

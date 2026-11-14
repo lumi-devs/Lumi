@@ -14,13 +14,13 @@ declare module "discord.js" {
   }
 }
 
-import type { OutboundSendPayload } from "#src/lib/outbound/SendQueue.js";
-import type { GdprExportFirePayload } from "#src/modules/core/services/GdprExportTask.js";
-import type { ModLiftPayload } from "#src/modules/mod/tasks/ModLift.js";
-import type { WarnDecayPayload } from "#src/modules/mod/tasks/WarnDecay.js";
-import type { AutoLockdownUnlockPayload } from "#src/modules/filter/tasks/AutoLockdownUnlock.js";
-import type { AfkDeleteMessagePayload } from "#src/modules/afk/tasks/AfkDeleteMessage.js";
-import type { TempVcCleanupPayload } from "#src/modules/tempvc/tasks/Cleanup.js";
+import type { OutboundSendPayload } from "@lib/outbound/SendQueue.js";
+import type { GdprExportFirePayload } from "@modules/core/services/GdprExportTask.js";
+import type { ModLiftPayload } from "@modules/mod/tasks/ModLift.js";
+import type { WarnDecayPayload } from "@modules/mod/tasks/WarnDecay.js";
+import type { AutoLockdownUnlockPayload } from "@modules/filter/tasks/AutoLockdownUnlock.js";
+import type { AfkDeleteMessagePayload } from "@modules/afk/tasks/AfkDeleteMessage.js";
+import type { TempVcCleanupPayload } from "@modules/tempvc/tasks/Cleanup.js";
 
 export interface ModuleOneshotPayload {
   module: string;

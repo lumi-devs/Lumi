@@ -2,14 +2,14 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { JobsOptions } from "bullmq";
-import { container } from "#src/lib/Services.js";
-import { Time } from "#src/shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { Time } from "@shared/Index.ts";
 import { SpanKind } from "@opentelemetry/api";
-import { otelContext, withSpan } from "#src/observability/Index.ts";
-import type { ScheduledTasks } from "#src/lib/types/Common.js";
-import { publishTaskFire } from "#src/lib/scheduler/Bus.js";
-import { unwrapTraceContext } from "#src/lib/scheduler/Otel.js";
-import { SCHEDULED_TASKS_QUEUE_NAME } from "#src/lib/scheduler/Queue.js";
+import { otelContext, withSpan } from "@observability/Index.ts";
+import type { ScheduledTasks } from "@lib/types/Common.js";
+import { publishTaskFire } from "@scheduler/Bus.js";
+import { unwrapTraceContext } from "@scheduler/Otel.js";
+import { SCHEDULED_TASKS_QUEUE_NAME } from "@scheduler/Queue.js";
 
 export interface CatchUpMeta {
 

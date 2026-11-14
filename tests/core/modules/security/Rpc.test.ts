@@ -1,28 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { SecurityRepository } from "#src/modules/security/data/SecurityRepository.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { SecurityRepository } from "@modules/security/data/SecurityRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { enterPanic, revertPanic } from "#src/modules/security/services/Panic.js";
-import { postOrEditVerifyPanel } from "#src/modules/security/services/Verification.js";
-import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { createMemoryValkey } from "../../mocks/MemoryValkey.js";
+import { enterPanic, revertPanic } from "@modules/security/services/Panic.js";
+import { postOrEditVerifyPanel } from "@modules/security/services/Verification.js";
+import { restoreGuildFromBackup } from "@modules/security/services/RestoreGuild.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
-vi.mock("#src/modules/security/services/Panic.js", () => ({
+vi.mock("@modules/security/services/Panic.js", () => ({
   enterPanic: vi.fn(),
   revertPanic: vi.fn(),
 }));
 
-vi.mock("#src/modules/security/services/Verification.js", () => ({
+vi.mock("@modules/security/services/Verification.js", () => ({
   postOrEditVerifyPanel: vi.fn(),
   loadVerificationConfig: vi.fn(),
   grantVerified: vi.fn(),
 }));
 
-vi.mock("#src/modules/security/services/RestoreGuild.js", () => ({
+vi.mock("@modules/security/services/RestoreGuild.js", () => ({
   restoreGuildFromBackup: vi.fn(),
 }));
 
@@ -74,7 +74,7 @@ describe("security module RPC handlers", () => {
     (container as any).discordRest = mockRest({ ownerId: OWNER_ID });
 
     repositoryCache.clear();
-    (container as any).valkey = createMemoryValkey();
+    (container as any).redis = createMemoryRedis();
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),

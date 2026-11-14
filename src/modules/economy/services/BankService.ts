@@ -1,15 +1,15 @@
-import { container } from "#src/lib/Services.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
-import { EconomyKeys } from "#src/modules/economy/Constants.js";
+import { container } from "@lib/Services.js";
+import { claimCooldown } from "@redis/Cooldown.js";
+import { EconomyKeys } from "@modules/economy/Constants.js";
 import type { EconomyTxnKind } from "@prisma/client";
-import type { EconomyBalance } from "#src/modules/economy/data/EconomyRepository.js";
-import type { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
+import type { EconomyBalance } from "@modules/economy/data/EconomyRepository.js";
+import type { EconomyRepository } from "@modules/economy/data/EconomyRepository.js";
 import {
   resolveSlotPayout,
   spinSlots,
   type SlotSpin,
-} from "#src/modules/economy/services/Slots.js";
-import type { EconomyConfig } from "#src/modules/economy/Config.js";
+} from "@modules/economy/services/Slots.js";
+import type { EconomyConfig } from "@modules/economy/Config.js";
 
 export class EconomyError extends Error {
   public readonly code: string;

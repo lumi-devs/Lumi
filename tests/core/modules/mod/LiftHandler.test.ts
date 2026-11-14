@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'bun:test';
-import { container } from "#src/lib/Services.js";
-import { handleModLiftFire } from '#src/modules/mod/services/LiftHandler.js';
+import { container } from "@lib/Services.js";
+import { handleModLiftFire } from '@modules/mod/services/LiftHandler.js';
 import { FakeDiscordRestPort } from '../../helpers/FakeRestPort.js';
 
 const discordRest = new FakeDiscordRestPort();
@@ -9,7 +9,7 @@ Object.assign(container, {
   invalidation: {
     invalidate: vi.fn().mockResolvedValue(undefined)
   },
-  valkey: {
+  redis: {
     del: vi.fn(),
     set: vi.fn().mockResolvedValue('OK'),
     eval: vi.fn().mockResolvedValue(1)

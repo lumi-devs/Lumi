@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { Prisma } from "@prisma/client";
 import {
   extractTraceContext,
@@ -8,7 +8,7 @@ import {
   semaphoreInFlight,
   semaphoreQueued,
   semaphoreRejectedTotal,
-} from "#src/observability/Index.ts";
+} from "@observability/Index.ts";
 import {
   CodedRpcError,
   makeRpcFailure,
@@ -17,14 +17,14 @@ import {
   RpcRetryableByDefault,
   type RpcRequest,
   type RpcResponse,
-} from "#src/contracts/rpc/Index.ts";
+} from "@contracts/rpc/Index.ts";
 import {
   resolveRpcDiscordBulkheadQueueLimit,
   resolveRpcDiscordBulkheadSize,
-} from "#src/lib/Env.js";
-import { getRpcHandler } from "#src/lib/rpc/Registry.js";
-import { Semaphore, SemaphoreQueueFullError } from "#src/lib/utilities/Concurrency.js";
-import { errorFrom, logError } from "#src/lib/utilities/Errors.js";
+} from "@lib/Env.js";
+import { getRpcHandler } from "@rpc/Registry.js";
+import { Semaphore, SemaphoreQueueFullError } from "@utilities/Concurrency.js";
+import { errorFrom, logError } from "@utilities/Errors.js";
 
 const DiscordBulkheadName = "rpc-discord";
 let discordBulkhead = new Semaphore(resolveRpcDiscordBulkheadSize(), {

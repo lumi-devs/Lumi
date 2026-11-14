@@ -1,6 +1,6 @@
-import { startTracing } from "#src/observability/Tracing.js";
-import { startEventLoopMonitor } from "#src/observability/EventLoop.js";
-import { initMetrics, startMetricsServer } from "#src/observability/Metrics.js";
+import { startTracing } from "@observability/Tracing.js";
+import { startEventLoopMonitor } from "@observability/EventLoop.js";
+import { initMetrics, startMetricsServer } from "@observability/Metrics.js";
 
 function resolveMetricsPort(service: string | undefined): number {
   const scoped = service

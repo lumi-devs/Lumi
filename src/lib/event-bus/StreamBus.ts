@@ -1,12 +1,12 @@
 
 
-import type Valkey from "iovalkey";
+import type Redis from "ioredis";
 import type {
   BusMessage,
   ConsumeOptions,
   EventBus,
   PublishOptions,
-} from "#src/lib/event-bus/Types.js";
+} from "@event-bus/Types.js";
 
 export interface StreamStats {
 
@@ -23,9 +23,9 @@ export interface StreamStats {
 
 export interface StreamBusOptions {
 
-  publisher: Valkey;
+  publisher: Redis;
 
-  subscriber: Valkey;
+  subscriber: Redis;
 
   defaultMaxLen?: number | undefined;
 
@@ -49,8 +49,8 @@ interface StreamCommands {
 }
 
 export class StreamBus implements EventBus {
-  private readonly publisher: Valkey;
-  private readonly subscriber: Valkey;
+  private readonly publisher: Redis;
+  private readonly subscriber: Redis;
 
   private readonly pubStream: StreamCommands;
   private readonly defaultMaxLen: number;

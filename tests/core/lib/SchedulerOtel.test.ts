@@ -5,8 +5,8 @@ import {
   TraceFlags,
   type SpanContext,
 } from "@opentelemetry/api";
-import { startTracing, shutdownTracing } from "#src/observability/Index.ts";
-import { wrapWithTraceContext, unwrapTraceContext } from "#src/lib/scheduler/Otel.js";
+import { startTracing, shutdownTracing } from "@observability/Index.ts";
+import { wrapWithTraceContext, unwrapTraceContext } from "@scheduler/Otel.js";
 
 const fakeProducerSpanContext: SpanContext = {
   traceId: "0af7651916cd43dd8448eb211c80319c",

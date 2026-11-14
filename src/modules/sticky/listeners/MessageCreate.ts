@@ -1,17 +1,17 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { PermissionFlagsBits } from "discord.js";
-import { renderMessageContent } from "#src/lib/utilities/MessageContent.js";
-import { LumiEvents } from "#src/lib/types/Common.js";
-import type { GuildMessage } from "#src/lib/types/Common.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
-import { renderMessageBlocksV2 } from "#src/lib/utilities/MessageBlocksV2.js";
+import { renderMessageContent } from "@utilities/MessageContent.js";
+import { LumiEvents } from "@lib/types/Common.js";
+import type { GuildMessage } from "@lib/types/Common.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { swallow } from "@utilities/Errors.js";
+import { renderMessageBlocksV2 } from "@utilities/MessageBlocksV2.js";
 import {
   getStickyMessageId,
   isStickyOnCooldown,
   setStickyMessageId,
-} from "#src/modules/sticky/data/StickyStore.js";
-import { stickyIndex } from "#src/modules/sticky/data/StickyIndex.js";
+} from "@modules/sticky/data/StickyStore.js";
+import { stickyIndex } from "@modules/sticky/data/StickyIndex.js";
 
 export const StickyMessageListener = defineListener({
   name: "stickyMessageCreate",

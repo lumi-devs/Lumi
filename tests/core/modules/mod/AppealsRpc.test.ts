@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
-import { AppealRepository } from "#src/modules/mod/data/AppealRepository.js";
-import { AccessRepository } from "#src/lib/prisma/repositories/AccessRepository.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
+import { AppealRepository } from "@modules/mod/data/AppealRepository.js";
+import { AccessRepository } from "@db/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -56,11 +57,11 @@ function makeCase(overrides: Record<string, unknown> = {}) {
 
 describe("mod module appeals RPC handlers", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
-  let generateAppealToken: (typeof import("#src/modules/mod/services/AppealToken.js"))["generateAppealToken"];
+  let generateAppealToken: (typeof import("@modules/mod/services/AppealToken.js"))["generateAppealToken"];
 
   beforeAll(async () => {
     process.env["APPEAL_TOKEN_SECRET"] = "test-appeal-secret";
-    ({ generateAppealToken } = await import("#src/modules/mod/services/AppealToken.js"));
+    ({ generateAppealToken } = await import("@modules/mod/services/AppealToken.js"));
   });
 
   beforeEach(() => {
@@ -84,18 +85,13 @@ describe("mod module appeals RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue(undefined),
-      del: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    } as any;
-    (container as any).valkey = valkey;
+    const redis = createMemoryRedis() as any;
+    (container as any).redis = redis;
 
     const db: any = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
-    db.moderation = new ModerationRepository(prisma as any, valkey, container.logger, db);
-    db.appeals = new AppealRepository(prisma as any, valkey, container.logger, db);
-    db.access = new AccessRepository(prisma as any, valkey, container.logger, db);
+    db.moderation = new ModerationRepository(prisma as any, redis, container.logger, db);
+    db.appeals = new AppealRepository(prisma as any, redis, container.logger, db);
+    db.access = new AccessRepository(prisma as any, redis, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();

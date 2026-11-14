@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { ComponentType, MessageFlags } from "discord.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
-import { getCategories, buildHelpPages, firstPageOfCategory, renderHelpCard, helpDef, HelpCommandsPerPage } from "#src/modules/onboarding/commands/Help.js";
-import { timeoutDef } from "#src/modules/mod/commands/Timeout.js";
+import { CommandContext } from "@commands/Context.js";
+import { asHandler } from "@commands/CommandDef.js";
+import { commandRegistry } from "@commands/CommandDef.js";
+import { getCategories, buildHelpPages, firstPageOfCategory, renderHelpCard, helpDef, HelpCommandsPerPage } from "@modules/onboarding/commands/Help.js";
+import { timeoutDef } from "@modules/mod/commands/Timeout.js";
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));

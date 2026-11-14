@@ -1,12 +1,12 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { container, type Container } from "#src/lib/Services.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { registerCaseTypes } from "#src/lib/api/moderation/CaseTypes.js";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { invalidateThresholds } from "#src/modules/mod/data/ThresholdRules.js";
-import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";
-import { handleModLiftFire } from "#src/modules/mod/services/LiftHandler.js";
-import { handleWarnDecayFire } from "#src/modules/mod/services/WarnDecayHandler.js";
+import { defineModule } from "@module-system/Module.js";
+import { container, type Container } from "@lib/Services.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { registerCaseTypes } from "@api/moderation/CaseTypes.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { invalidateThresholds } from "@modules/mod/data/ThresholdRules.js";
+import { scheduleCaseLift } from "@modules/mod/services/Helpers.js";
+import { handleModLiftFire } from "@modules/mod/services/LiftHandler.js";
+import { handleWarnDecayFire } from "@modules/mod/services/WarnDecayHandler.js";
 
 export const modModule = defineModule({
   name: "mod",

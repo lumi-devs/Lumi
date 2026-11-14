@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { welcomeRpcHandlers } from "#src/modules/welcome/Rpc.js";
-import { container } from "#src/lib/Services.js";
+import { welcomeRpcHandlers } from "@modules/welcome/Rpc.js";
+import { container } from "@lib/Services.js";
 
-vi.mock("#lib/rpc/DiscordRestLookup.js", () => ({
+vi.mock("@rpc/DiscordRestLookup.js", () => ({
   fetchChannelRest: vi.fn(),
   fetchGuildMemberRest: vi.fn(),
   fetchGuildRest: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock("#lib/rpc/DiscordRestLookup.js", () => ({
   memberAvatarUrl: vi.fn().mockReturnValue("https://avatar.test"),
 }));
 
-vi.mock("#src/modules/welcome/services/Welcome.js", () => ({
+vi.mock("@modules/welcome/services/Welcome.js", () => ({
   loadWelcomeConfig: vi.fn(),
   renderWelcomeCard: vi.fn().mockReturnValue({ components: [] }),
   renderGoodbyeCard: vi.fn().mockReturnValue({ components: [] }),
@@ -23,8 +23,8 @@ import {
   fetchChannelRest,
   fetchGuildMemberRest,
   fetchGuildRest,
-} from "#src/lib/rpc/DiscordRestLookup.js";
-import { loadWelcomeConfig } from "#src/modules/welcome/services/Welcome.js";
+} from "@rpc/DiscordRestLookup.js";
+import { loadWelcomeConfig } from "@modules/welcome/services/Welcome.js";
 
 describe("Welcome RPC Handlers", () => {
   const handler = welcomeRpcHandlers.get("guild.welcome.sendTest");

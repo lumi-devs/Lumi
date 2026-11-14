@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 
 import { userMention } from "@discordjs/formatters";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { paginateList } from "#src/lib/utilities/Pagination.js";
-import { afkDurationSince } from "#src/modules/afk/services/Format.js";
-import { getAfkEntriesForGuild } from "#src/modules/afk/data/Afk.js";
+import type { CommandContext } from "@commands/Context.js";
+import { paginateList } from "@utilities/Pagination.js";
+import { afkDurationSince } from "@modules/afk/services/Format.js";
+import { getAfkEntriesForGuild } from "@modules/afk/data/Afk.js";
 
 export const afklistDef: CommandDef = {
   name: "afklist",

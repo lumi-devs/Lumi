@@ -1,27 +1,27 @@
-import { container, type Container } from "#src/lib/Services.js";
+import { container, type Container } from "@lib/Services.js";
 import { ChannelType, type Guild, type GuildMember } from "discord.js";
 import { Routes, type APIChannel, type APIMessage } from "discord-api-types/v10";
-import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { isNullish, tryParseJSON } from "@shared/Index.ts";
+import { fetchTyped } from "@i18n/Index.js";
+import { RedisKeys } from "@redis/Store.js";
 import {
   fetchChannelMessageRest,
   fetchChannelRest,
   fetchGuildMemberRestUncached,
   fetchGuildRest,
   GuildTextBasedChannelTypes,
-} from "#src/lib/rpc/DiscordRestLookup.js";
-import { serializeCard } from "#src/lib/rpc/CardSerialize.js";
-import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
+} from "@rpc/DiscordRestLookup.js";
+import { serializeCard } from "@rpc/CardSerialize.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
 import {
   advanceCaptcha,
   buildChallenge,
   MaxAttempts,
   type CaptchaOutcome,
   type CaptchaState,
-} from "#src/modules/security/services/Captcha.js";
-import { getConfigNumber, getConfigString } from "#src/modules/security/services/ConfigHelpers.js";
-import { buildVerifyPanel, type VerifyPanelContent } from "#src/modules/security/ui/VerifyPanel.js";
+} from "@modules/security/services/Captcha.js";
+import { getConfigNumber, getConfigString } from "@modules/security/services/ConfigHelpers.js";
+import { buildVerifyPanel, type VerifyPanelContent } from "@modules/security/ui/VerifyPanel.js";
 
 interface VerifyPanelSetResult {
   channelId: string;
@@ -220,15 +220,15 @@ export async function startChallenge(
     attempts: MaxAttempts,
     expiresAt,
   };
-  await container.valkey
+  await container.redis
     .multi()
     .set(
-      ValkeyKeys.verifyChallenge(guildId, userId),
+      RedisKeys.verifyChallenge(guildId, userId),
       JSON.stringify(state),
       "EXAT",
       Math.floor(expiresAt / 1000),
     )
-    .zadd(ValkeyKeys.verifyPending(guildId), expiresAt, userId)
+    .zadd(RedisKeys.verifyPending(guildId), expiresAt, userId)
     .exec();
   return state;
 }
@@ -237,7 +237,7 @@ async function getChallenge(
   guildId: string,
   userId: string,
 ): Promise<CaptchaState | null> {
-  const raw = await container.valkey.get(ValkeyKeys.verifyChallenge(guildId, userId));
+  const raw = await container.redis.get(RedisKeys.verifyChallenge(guildId, userId));
   if (isNullish(raw)) return null;
   return tryParseJSON(raw) as CaptchaState | null;
 }
@@ -247,8 +247,8 @@ async function saveChallenge(
   userId: string,
   state: CaptchaState,
 ): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.verifyChallenge(guildId, userId),
+  await container.redis.set(
+    RedisKeys.verifyChallenge(guildId, userId),
     JSON.stringify(state),
     "EXAT",
     Math.floor(state.expiresAt / 1000),
@@ -276,9 +276,9 @@ export async function advanceChallenge(
 
 async function clearChallenge(guildId: string, userId: string): Promise<void> {
   await container.invalidation.invalidate(
-    ValkeyKeys.verifyChallenge(guildId, userId),
+    RedisKeys.verifyChallenge(guildId, userId),
   );
-  await container.valkey.zrem(ValkeyKeys.verifyPending(guildId), userId);
+  await container.redis.zrem(RedisKeys.verifyPending(guildId), userId);
 }
 
 export async function grantVerified(guildId: string, userId: string): Promise<boolean> {
@@ -314,8 +314,8 @@ export async function assignPending(
       .catch(() => null);
   }
   const expiresAt = Date.now() + config.timeoutMinutes * 60 * 1000;
-  await container.valkey.zadd(
-    ValkeyKeys.verifyPending(member.guild.id),
+  await container.redis.zadd(
+    RedisKeys.verifyPending(member.guild.id),
     expiresAt,
     member.id,
   );
@@ -330,8 +330,8 @@ export async function sweepExpiredPending(
     : [container, guildOrServices as Guild];
   const config = await loadVerificationConfig(services, guild.id);
   if (!config.enabled) return;
-  const expired = await services.valkey.zrangebyscore(
-    ValkeyKeys.verifyPending(guild.id),
+  const expired = await services.redis.zrangebyscore(
+    RedisKeys.verifyPending(guild.id),
     0,
     Date.now(),
   );

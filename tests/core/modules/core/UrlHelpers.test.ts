@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { deriveRepoNameFromUrl } from "#src/contracts/Index.ts";
+import { deriveRepoNameFromUrl } from "@contracts/Index.ts";
 
 const NameRe = /^[a-zA-Z0-9_][a-zA-Z0-9_-]*$/;
 

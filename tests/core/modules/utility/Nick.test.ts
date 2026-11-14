@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { nickDef } from "#src/modules/utility/commands/Nick.js";
+import { CommandContext } from "@commands/Context.js";
+import { nickDef } from "@modules/utility/commands/Nick.js";
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
 
 function makeServices() {
   return {

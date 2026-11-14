@@ -1,5 +1,5 @@
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
+import { tryGetUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
 import type { User } from "discord.js";
 
 export async function logToChannel(

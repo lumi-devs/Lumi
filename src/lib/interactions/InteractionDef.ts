@@ -3,7 +3,7 @@ import {
   RESTJSONErrorCodes,
   type Interaction,
 } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 
 export type InteractionKind = "button" | "select" | "modal";
 

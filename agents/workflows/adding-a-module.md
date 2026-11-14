@@ -10,9 +10,9 @@ command, listeners, scheduled tasks, KV data, and both GDPR hooks. Background:
 packages/core/src/modules/<name>/
   index.ts                     # export const <name>Module = defineModule({...})
   manifest.json                # generated/kept in sync, see step 5
-  constants.ts                 # Valkey key builders + TTLs
+  constants.ts                 # Redis key builders + TTLs
   config.ts                    # typed config readers (optional)
-  data/<name>.ts               # Valkey/Prisma read-write functions
+  data/<name>.ts               # Redis/Prisma read-write functions
   commands/<name>.ts
   listeners/<event>.ts         # optional
   interactions/...             # optional buttons/selects/modals

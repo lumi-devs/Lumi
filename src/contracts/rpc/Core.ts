@@ -1,13 +1,13 @@
 import { z } from "zod";
-import type { BlocklistListData, IgnoredChannelView } from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
+import type { BlocklistListData, IgnoredChannelView } from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
 import {
   BlocklistAddSchema,
   BlocklistRemoveSchema,
   boundedArray,
   PaginationSchema,
   SnowflakeSchema,
-} from "#src/contracts/rpc/Schemas.js";
+} from "@contracts/rpc/Schemas.js";
 
 export const PermitKinds = ["enforced", "custom"] as const;
 export type PermitKind = (typeof PermitKinds)[number];

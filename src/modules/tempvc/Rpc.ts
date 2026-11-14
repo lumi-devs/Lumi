@@ -1,7 +1,7 @@
-import { container } from "#src/lib/Services.js";
-import { tempvcRpc } from "#src/contracts/rpc/Index.ts";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
+import { container } from "@lib/Services.js";
+import { tempvcRpc } from "@contracts/rpc/Index.ts";
+import { getUtility } from "@module-system/Utility.js";
+import { implementRpc } from "@rpc/Implement.js";
 
 export const tempvcRpcHandlers = implementRpc(tempvcRpc, {
   "guild.tempvc.generators.list": async ({ guildId }) => {

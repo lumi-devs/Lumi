@@ -1,6 +1,6 @@
-import { container } from "#src/lib/Services.js";
-import type { ScheduledTasks } from "#src/lib/types/Common.js";
-import { injectTraceContext } from "#src/observability/Index.ts";
+import { container } from "@lib/Services.js";
+import type { ScheduledTasks } from "@lib/types/Common.js";
+import { injectTraceContext } from "@observability/Index.ts";
 
 export const taskFireStream = (name: string) => `lumi.scheduler.fire:${name}`;
 

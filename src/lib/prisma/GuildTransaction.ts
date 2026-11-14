@@ -1,13 +1,13 @@
-import { container } from "#src/lib/Services.js";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
+import { container } from "@lib/Services.js";
+import type {RedisClient} from "@redis/Cluster.js";
 import type { Guild } from "@prisma/client";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import {acquireValkeyLock, verifyValkeyLock} from "#src/lib/valkey/Lock.js";
+import type { DatabaseClient } from "@db/Client.js";
+import {acquireRedisLock, verifyRedisLock} from "@redis/Lock.js";
 
 const GuildLock = (guildId: string) => `lumi:lock:guild:${guildId}`;
 
 export async function configLock(guildId: string): Promise<() => void> {
-  const { release } = await acquireValkeyLock(container.valkey, GuildLock(guildId), {
+  const { release } = await acquireRedisLock(container.redis, GuildLock(guildId), {
     ttlMs: 10_000,
     acquireTimeoutMs: 20_000,
   });
@@ -27,13 +27,9 @@ export class GuildWriteTransaction {
     private readonly release: () => Promise<void>,
     private readonly guildId: string,
     private readonly prisma: DatabaseClient,
-    private readonly valkey: ValkeyClient,
+    private readonly redis: RedisClient,
     private readonly lockToken: string,
   ) {}
-
-  public get hasChanges() {
-    return this.#hasChanges;
-  }
 
   public get locking() {
     return this.#locking;
@@ -60,7 +56,7 @@ export class GuildWriteTransaction {
 
     try {
       const key = GuildLock(this.guildId);
-      const stillHeld = await verifyValkeyLock(this.valkey, key, this.lockToken);
+      const stillHeld = await verifyRedisLock(this.redis, key, this.lockToken);
       if (!stillHeld) {
         throw new Error(
           `Lock lost before write for guild ${this.guildId}; refusing to write unlocked`,
@@ -87,10 +83,6 @@ export class GuildWriteTransaction {
     this.#releaseQuietly();
   }
 
-  public [Symbol.dispose](): void {
-    this.#releaseQuietly();
-  }
-
   #releaseQuietly(): void {
     this.#release().catch((err: unknown) =>
       container.logger.error("[GuildWriteTransaction] release failed", err),
@@ -107,10 +99,10 @@ export class GuildWriteTransaction {
 
 export async function createGuildTransaction(
   guildId: string,
-  valkey: ValkeyClient,
+  redis: RedisClient,
   prisma: DatabaseClient,
 ): Promise<GuildWriteTransaction> {
-  const { release, token } = await acquireValkeyLock(valkey, GuildLock(guildId), {
+  const { release, token } = await acquireRedisLock(redis, GuildLock(guildId), {
     ttlMs: 15_000,
     acquireTimeoutMs: 30_000,
   });
@@ -121,7 +113,7 @@ export async function createGuildTransaction(
       settings = await prisma.guild.create({ data: { id: guildId } });
     }
 
-    return new GuildWriteTransaction(settings, release, guildId, prisma, valkey, token);
+    return new GuildWriteTransaction(settings, release, guildId, prisma, redis, token);
   } catch (err) {
     await release();
     throw err;

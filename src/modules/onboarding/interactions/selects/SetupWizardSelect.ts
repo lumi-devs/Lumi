@@ -1,17 +1,17 @@
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   VerificationModes,
   emptySetupState,
   hasSetupAccess,
   setupAccessDenied,
   stateFromSegments,
-} from "#src/modules/onboarding/services/SetupWizard.js";
-import { buildSetupStepView } from "#src/modules/onboarding/ui/SetupWizard.js";
-import { SetupStepId } from "#src/modules/core/Constants.js";
+} from "@modules/onboarding/services/SetupWizard.js";
+import { buildSetupStepView } from "@modules/onboarding/ui/SetupWizard.js";
+import { SetupStepId } from "@interactions/ModuleIds.js";
 import type { AnySelectMenuInteraction } from "discord.js";
 
 export const setupWizardSelect = defineInteraction({

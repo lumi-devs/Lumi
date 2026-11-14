@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js";
-import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ConfigOverrideRepository } from "#src/lib/prisma/repositories/ConfigOverrideRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { AuditRepository } from "@db/repositories/AuditRepository.js";
+import { ConfigHistoryRepository } from "@db/repositories/ConfigHistoryRepository.js";
+import { ConfigOverrideRepository } from "@db/repositories/ConfigOverrideRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../../../mocks/MemoryRedis.js";
 import { createMockPrismaClient } from "../../../mocks/Prisma.js";
 import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 let config: { setConfig: ReturnType<typeof vi.fn> };
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn().mockImplementation(() => config),
   tryGetUtility: vi.fn().mockImplementation(() => config),
 }));
@@ -77,7 +78,7 @@ describe("dashboard module audit + history + override RPC handlers", () => {
     discordRest = new FakeDiscordRestPort();
     seedGuildManager();
     (container as any).discordRest = discordRest;
-    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).redis = createMemoryRedis();
 
     const db = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),

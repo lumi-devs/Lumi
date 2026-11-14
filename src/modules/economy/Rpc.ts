@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
-import { economyRpc } from "#src/contracts/rpc/Index.ts";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
-import { resolvePageSize } from "#src/lib/rpc/Validation.js";
-import { BankService } from "#src/modules/economy/services/BankService.js";
-import { getEconomyConfig } from "#src/modules/economy/Config.js";
+import { container } from "@lib/Services.js";
+import { economyRpc } from "@contracts/rpc/Index.ts";
+import { implementRpc } from "@rpc/Implement.js";
+import { resolvePageSize } from "@rpc/Validation.js";
+import { BankService } from "@modules/economy/services/BankService.js";
+import { getEconomyConfig } from "@modules/economy/Config.js";
 
 export const economyRpcHandlers = implementRpc(economyRpc, {
   "guild.economy.balance": async ({ guildId, input }) => {

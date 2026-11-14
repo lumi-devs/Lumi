@@ -1,10 +1,10 @@
 import type { AutocompleteInteraction } from "discord.js";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   respondWithChoices,
   filterAutocompleteChoices,
-} from "#src/lib/utilities/Autocomplete.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
+} from "@utilities/Autocomplete.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
 
 const DefaultReasonPresets = [
   "⚠️ Ban evasion",

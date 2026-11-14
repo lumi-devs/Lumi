@@ -1,11 +1,11 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import {
   BankService,
   InvalidAmountError,
   type LeaderboardEntry,
-} from "#src/modules/economy/services/BankService.js";
-import { getEconomyConfig } from "#src/modules/economy/Config.js";
-import { EconomyModuleName } from "#src/modules/economy/Constants.js";
+} from "@modules/economy/services/BankService.js";
+import { getEconomyConfig } from "@modules/economy/Config.js";
+import { EconomyModuleName } from "@modules/economy/Constants.js";
 
 export type { LeaderboardEntry };
 
@@ -53,17 +53,9 @@ export async function account(
     config.startingBank,
   );
   return {
-    name: await getBankName(services, guildId),
+    name: await bankName(services, guildId),
     balance: record.wallet + record.bank,
   };
-}
-
-export async function currencyName(services: Container, guildId: string): Promise<string> {
-  return getCurrencyName(services, guildId);
-}
-
-export async function bankName(services: Container, guildId: string): Promise<string> {
-  return getBankName(services, guildId);
 }
 
 export async function deposit(
@@ -138,11 +130,11 @@ export function cost(amount: number) {
   ): Promise<T> => withCost(services, guildId, userId, amount, run);
 }
 
-export async function getCurrencyName(services: Container, guildId: string): Promise<string> {
+export async function currencyName(services: Container, guildId: string): Promise<string> {
   return (await getEconomyConfig(services, guildId)).currencyName;
 }
 
-export async function getBankName(services: Container, guildId: string): Promise<string> {
+export async function bankName(services: Container, guildId: string): Promise<string> {
   const stored = await services.db.config.getModuleConfig(guildId, EconomyModuleName, "bank_name");
   return typeof stored === "string" && stored.length > 0 ? stored : "Bank";
 }

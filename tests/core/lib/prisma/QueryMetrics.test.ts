@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { dbQueryDuration, dbSlowQueriesTotal } from "#src/observability/Index.ts";
-import { recordQueryMetrics } from "#src/lib/prisma/QueryMetrics.js";
+import { container } from "@lib/Services.js";
+import { dbQueryDuration, dbSlowQueriesTotal } from "@observability/Index.ts";
+import { recordQueryMetrics } from "@db/QueryMetrics.js";
 
 describe("recordQueryMetrics", () => {
   let observeSpy: ReturnType<typeof spyOn>;

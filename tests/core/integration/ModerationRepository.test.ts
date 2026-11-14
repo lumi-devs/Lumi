@@ -2,10 +2,10 @@ import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import type Valkey from "iovalkey";
-import { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import { createTestValkey, integrationDescribe, requireTestDatabaseUrl } from "./Setup.js";
+import type Redis from "ioredis";
+import { DatabaseService } from "@db/DatabaseService.js";
+import type { DatabaseClient } from "@db/Client.js";
+import { createTestRedis, integrationDescribe, requireTestDatabaseUrl } from "./Setup.js";
 
 const noopLogger = {
   info: () => undefined,
@@ -14,7 +14,7 @@ const noopLogger = {
   debug: () => undefined,
   trace: () => undefined,
   fatal: () => undefined,
-} as unknown as import("#src/shared/Index.ts").ILogger;
+} as unknown as import("@shared/Index.ts").ILogger;
 
 let guildIdCounter = 0;
 
@@ -27,15 +27,15 @@ function uniqueGuildId(): string {
 integrationDescribe("ModerationRepository (real Postgres)", () => {
   let pool: Pool;
   let prisma: DatabaseClient;
-  let valkey: Valkey;
+  let redis: Redis;
   let db: DatabaseService;
   const guildIds: string[] = [];
 
   beforeAll(() => {
     pool = new Pool({ connectionString: requireTestDatabaseUrl() });
     prisma = new PrismaClient({ adapter: new PrismaPg(pool) }) as unknown as DatabaseClient;
-    valkey = createTestValkey();
-    db = new DatabaseService(prisma, valkey, noopLogger);
+    redis = createTestRedis();
+    db = new DatabaseService(prisma, redis, noopLogger);
   });
 
   afterEach(async () => {
@@ -49,7 +49,7 @@ integrationDescribe("ModerationRepository (real Postgres)", () => {
   afterAll(async () => {
     await prisma.$disconnect().catch(() => undefined);
     await pool.end().catch(() => undefined);
-    await valkey.quit();
+    await redis.quit();
   });
 
   function trackedGuildId(): string {

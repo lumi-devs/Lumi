@@ -1,23 +1,23 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import type { ModerationCase } from "@prisma/client";
-import { isCaseAction } from "#src/modules/mod/commands/Cases.js";
+import { isCaseAction } from "@modules/mod/commands/Cases.js";
 import {
   CodedRpcError,
   modRpc,
   RpcFailureCodes,
   warnThresholdNeedsDuration,
-} from "#src/contracts/rpc/Index.ts";
-import type { AppealVerifyResult } from "#src/contracts/Views.js";
-import { verifyAppealToken } from "#src/modules/mod/services/AppealToken.js";
-import { liftModerationCaseWithUndo } from "#src/modules/mod/services/CaseLift.js";
-import { implementRpc, requireGuildId } from "#src/lib/rpc/Implement.js";
-import { resolvePageSize } from "#src/lib/rpc/Validation.js";
-import { formatDuration, parseDuration } from "#src/lib/utilities/Time.js";
-import { errorCode } from "#src/lib/utilities/Errors.js";
+} from "@contracts/rpc/Index.ts";
+import type { AppealVerifyResult } from "@contracts/Views.js";
+import { verifyAppealToken } from "@modules/mod/services/AppealToken.js";
+import { liftModerationCaseWithUndo } from "@modules/mod/services/CaseLift.js";
+import { implementRpc, requireGuildId } from "@rpc/Implement.js";
+import { resolvePageSize } from "@rpc/Validation.js";
+import { formatDuration, parseDuration } from "@utilities/Time.js";
+import { errorCode } from "@utilities/Errors.js";
 import {
   removeThresholdRule,
   setThresholdRule,
-} from "#src/modules/mod/data/ThresholdRules.js";
+} from "@modules/mod/data/ThresholdRules.js";
 
 const AppealableCaseActions = new Set(["ban", "mute"]);
 

@@ -1,5 +1,5 @@
-import { RelayTask } from "#src/lib/scheduler/Tasks.js";
-import { QueuePriority } from "#src/lib/scheduler/Schedule.js";
+import { RelayTask } from "@scheduler/Tasks.js";
+import { QueuePriority } from "@scheduler/Schedule.js";
 
 export class GdprExportCleanupTask extends RelayTask<"gdpr-export-cleanup"> {
   public constructor() {

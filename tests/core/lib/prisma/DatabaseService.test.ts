@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
+import { DatabaseService } from "@db/DatabaseService.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -13,13 +14,9 @@ describe("DatabaseService guild lifecycle", () => {
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    const mockValkey: any = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue("OK"),
-      del: vi.fn().mockResolvedValue(1),
-    };
+    const mockRedis: any = createMemoryRedis();
     const mockLogger: any = { warn: vi.fn(), error: vi.fn(), debug: vi.fn(), info: vi.fn() };
-    db = new DatabaseService(prisma as any, mockValkey, mockLogger);
+    db = new DatabaseService(prisma as any, mockRedis, mockLogger);
   });
 
   it("markGuildLeft sets leftAt on an existing guild row", async () => {

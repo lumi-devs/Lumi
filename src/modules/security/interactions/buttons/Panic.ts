@@ -1,14 +1,14 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { ButtonInteraction } from "discord.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { revertPanic } from "#src/modules/security/services/Panic.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
-import { PanicRevertId, buildPanicRevertedCard } from "#src/modules/security/ui/PanicCard.js";
+} from "@interactions/InteractionDef.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { revertPanic } from "@modules/security/services/Panic.js";
+import { ephemeralCard, makeErrorCard } from "@ui/Cards.js";
+import { memberRoleIds } from "@api/permissions/Subject.js";
+import { PanicRevertId, buildPanicRevertedCard } from "@modules/security/ui/PanicCard.js";
 
 export const panicRevert = defineInteraction({
   prefix: PanicRevertId,

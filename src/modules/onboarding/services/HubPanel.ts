@@ -1,21 +1,21 @@
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { hasRequiredPermit } from "#src/lib/api/permissions/Index.js";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import { loadFeatures } from "#src/modules/admin/services/ConfigPanel.js";
-import { buildAddonRepoModulesView } from "#src/modules/admin/ui/Addons.js";
-import { buildHubView, buildSettingsView } from "#src/modules/onboarding/ui/Hub.js";
+import type { LumiT } from "@i18n/Index.js";
+import { getUtility } from "@module-system/Utility.js";
+import { hasRequiredPermit } from "@api/permissions/Index.js";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
+import { loadFeatures } from "@lib/hub/ConfigPanel.js";
+import { buildAddonRepoModulesView } from "@lib/hub/Addons.js";
+import { buildHubView, buildSettingsView } from "@lib/hub/Hub.js";
 import {
   buildPermitExplainPickerView,
   buildPermitExplainView,
   buildPermissionsView,
   buildPermitOrderView,
   type PermitAssignmentRow,
-} from "#src/modules/admin/ui/Permissions.js";
-import { explainPermit } from "#src/lib/api/permissions/PermitResolver.js";
-import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
-import { UserError } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+} from "@lib/hub/Permissions.js";
+import { explainPermit } from "@api/permissions/PermitResolver.js";
+import { memberRoleIds } from "@api/permissions/Subject.js";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,

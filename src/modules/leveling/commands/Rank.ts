@@ -1,12 +1,12 @@
 import { SlashCommandBuilder } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { AttachmentBuilder, ButtonStyle } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
-import { LevelService } from "#src/modules/leveling/services/LevelService.js";
-import { xpForLevel } from "#src/modules/leveling/services/Formulas.js";
-import { renderRankCard } from "#src/modules/leveling/services/RankCard.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
+import { LevelService } from "@modules/leveling/services/LevelService.js";
+import { xpForLevel } from "@modules/leveling/services/Formulas.js";
+import { renderRankCard } from "@modules/leveling/services/RankCard.js";
 
 export const rankDef: CommandDef = {
   name: "rank",

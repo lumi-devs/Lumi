@@ -1,38 +1,38 @@
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import type { ValkeyClient } from "#src/lib/valkey/Cluster.js";
-import type { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
-import type { DiscordRestPort } from "#src/lib/discord/RestPort.js";
-import type { EventBus } from "#src/lib/event-bus/Types.js";
-import type { ModuleStore } from "#src/lib/module-system/ModuleStore.js";
-import type { TaskQueue } from "#src/lib/scheduler/Runner.js";
-import type { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import type { ILogger } from "#src/shared/Index.ts";
+import type { DatabaseClient } from "@db/Client.js";
+import type { RedisClient } from "@redis/Cluster.js";
+import type { DatabaseService } from "@db/DatabaseService.js";
+import type { DiscordRestPort } from "@discord/RestPort.js";
+import type { EventBus } from "@event-bus/Types.js";
+import type { ModuleStore } from "@module-system/ModuleStore.js";
+import type { TaskQueue } from "@scheduler/Runner.js";
+import type { PermitResolver } from "@api/permissions/PermitResolver.js";
+import type { ILogger } from "@shared/Index.ts";
 import type { Client } from "discord.js";
 import {
-  createValkeyClient,
-  valkeyConnectionOptions,
+  createRedisClient,
+  redisConnectionOptions,
   InvalidationBus,
   SignalBus,
-} from "#src/lib/valkey/Store.js";
-import { AddonModulesRoot } from "#src/lib/downloader/Resolver.js";
-import { DiscordRestAdapter } from "#src/lib/discord/RestAdapter.js";
+} from "@redis/Store.js";
+import { AddonModulesRoot } from "@downloader/Resolver.js";
+import { DiscordRestAdapter } from "@discord/RestAdapter.js";
 import {
   envParseInteger,
   envParseString,
   getDevModulePaths,
-} from "#src/lib/Env.js";
-import { LumiPinoLogger } from "#src/lib/logging/PinoLogger.js";
-import { ModuleStore as ModuleStoreImpl } from "#src/lib/module-system/ModuleStore.js";
-import { permitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import { prisma, prismaReader } from "#src/lib/prisma/Client.js";
-import { DatabaseService as DatabaseServiceImpl } from "#src/lib/prisma/DatabaseService.js";
-import { createEventBus, type OwnedEventBus } from "#src/lib/event-bus/Factory.js";
+} from "@lib/Env.js";
+import { LumiPinoLogger } from "@lib/logging/PinoLogger.js";
+import { ModuleStore as ModuleStoreImpl } from "@module-system/ModuleStore.js";
+import { permitResolver } from "@api/permissions/PermitResolver.js";
+import { prisma, prismaReader } from "@db/Client.js";
+import { DatabaseService as DatabaseServiceImpl } from "@db/DatabaseService.js";
+import { createEventBus, type OwnedEventBus } from "@event-bus/Factory.js";
 import {
   streamConsumerLag,
   streamDlqLength,
   streamLength,
-} from "#src/observability/Index.ts";
-import { Time } from "#src/shared/Index.ts";
+} from "@observability/Index.ts";
+import { Time } from "@shared/Index.ts";
 import { pathToFileURL } from "node:url";
 
 export type ConfigChangeHook = (guildId: string, key: string) => Promise<void>;
@@ -45,7 +45,7 @@ export interface Container {
   client: Client;
   logger: ILogger;
   prisma: DatabaseClient;
-  valkey: ValkeyClient;
+  redis: RedisClient;
   invalidation: InvalidationBus;
   signals: SignalBus;
   db: DatabaseService;
@@ -83,11 +83,11 @@ export function createServices(
 ): Container {
   const logger = new LumiPinoLogger(service);
 
-  const valkey = createValkeyClient();
+  const redis = createRedisClient();
   const ownedEventBus = createEventBus({
-    valkey: {
-      ...valkeyConnectionOptions(),
-      db: envParseInteger("VALKEY_CACHE_DB", 0),
+    redis: {
+      ...redisConnectionOptions(),
+      db: envParseInteger("REDIS_CACHE_DB", 0),
     },
     defaultMaxLen: envParseInteger("EVENT_STREAM_MAXLEN", 100_000),
     maxDeliveries: envParseInteger("EVENT_STREAM_MAX_DELIVERIES", 5),
@@ -106,10 +106,10 @@ export function createServices(
     client,
     logger,
     prisma,
-    valkey,
-    invalidation: new InvalidationBus(createValkeyClient(), valkey, logger),
-    signals: new SignalBus(createValkeyClient(), valkey, logger),
-    db: new DatabaseServiceImpl(prisma, valkey, logger, prismaReader),
+    redis,
+    invalidation: new InvalidationBus(createRedisClient(), redis, logger),
+    signals: new SignalBus(createRedisClient(), redis, logger),
+    db: new DatabaseServiceImpl(prisma, redis, logger, prismaReader),
     discordRest: new DiscordRestAdapter(),
     eventBus: ownedEventBus.bus,
     moduleStore: undefined as unknown as ModuleStore,

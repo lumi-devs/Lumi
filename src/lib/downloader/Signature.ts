@@ -1,4 +1,4 @@
-import { execFileAsync } from "#src/lib/utilities/ExecFile.js";
+import { execFileAsync } from "@utilities/ExecFile.js";
 
 export type SignatureVerification =
   | { status: "valid"; signer: string }

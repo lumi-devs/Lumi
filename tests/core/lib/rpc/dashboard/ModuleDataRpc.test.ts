@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { GuildKVRepository } from "#src/lib/prisma/repositories/GuildKvRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { GuildKVRepository } from "@db/repositories/GuildKvRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../../../mocks/Prisma.js";
+import { createMemoryRedis } from "../../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -38,17 +39,12 @@ describe("dashboard module data inspector RPC handler", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-      set: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    };
+    const redis = createMemoryRedis();
 
-    (container as any).valkey = valkey;
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.guildKV = new GuildKVRepository(prisma as any, valkey as any, container.logger, db);
+    db.guildKV = new GuildKVRepository(prisma as any, redis as any, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();

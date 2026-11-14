@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { ReactionRoleMenuView } from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { boundedArray, SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+import type { ReactionRoleMenuView } from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { boundedArray, SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export const ReactionRoleMenuModes = ["buttons", "select", "reactions"] as const;
 

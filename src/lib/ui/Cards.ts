@@ -9,12 +9,12 @@ import {
 
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { cutText } from "#src/shared/Index.ts";
+import { cutText } from "@shared/Index.ts";
 import type { MessageMentionOptions } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { resolveCardColor, BrandColors } from "#src/lib/ui/Palette.js";
+import { resolveCardColor, BrandColors } from "@ui/Palette.js";
 export { resolveCardColor, BrandColors };
-import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "#src/lib/ui/Layout.js";
+import { formatBreadcrumbs, formatStatusBadge, formatSubtitle } from "@ui/Layout.js";
 
 export interface CardReply {
   readonly flags?: number;

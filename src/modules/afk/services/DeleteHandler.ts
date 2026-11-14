@@ -1,8 +1,8 @@
-import { type Container } from "#src/lib/Services.js";
-import { errorCode } from "#src/lib/utilities/Errors.js";
-import { coalesceMessageDelete } from "#src/lib/discord/Coalesce.js";
-import { clearAfkMentions } from "#src/modules/afk/data/Afk.js";
-import type { AfkDeleteMessagePayload } from "#src/modules/afk/tasks/AfkDeleteMessage.js";
+import { type Container } from "@lib/Services.js";
+import { errorCode } from "@utilities/Errors.js";
+import { coalesceMessageDelete } from "@discord/Coalesce.js";
+import { clearAfkMentions } from "@modules/afk/data/Afk.js";
+import type { AfkDeleteMessagePayload } from "@modules/afk/tasks/AfkDeleteMessage.js";
 
 export async function handleAfkDeleteMessageFire(
   services: Container,

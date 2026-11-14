@@ -1,5 +1,5 @@
-import { container } from "#src/lib/Services.js";
-import type { StickyEntry } from "#src/modules/sticky/Config.js";
+import { container } from "@lib/Services.js";
+import type { StickyEntry } from "@modules/sticky/Config.js";
 
 function parseStickyEntry(raw: unknown): StickyEntry | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -46,12 +46,13 @@ interface GuildIndex {
 
 class StickyIndex {
   readonly #byGuild = new Map<string, GuildIndex>();
-  #wired = false;
+  #wiredTo: unknown = null;
 
   public wire(): void {
-    if (this.#wired) return;
-    this.#wired = true;
-    container.invalidation.onResync(() => {
+    const bus = container.invalidation;
+    if (this.#wiredTo === bus) return;
+    this.#wiredTo = bus;
+    bus.onResync(() => {
       this.#byGuild.clear();
     });
   }

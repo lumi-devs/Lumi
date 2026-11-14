@@ -4,8 +4,8 @@ import {
   buildPermitExplainPickerView,
   buildPermitExplainView,
   PermitExplainNodesPerPage,
-} from "#src/modules/admin/ui/Permissions.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
+} from "@lib/hub/Permissions.js";
+import type { CardReply } from "@ui/Cards.js";
 
 type ComponentJson = {
   type: number;
@@ -104,7 +104,7 @@ const listPermits = mock(() =>
   Promise.resolve([{ name: "mod.ban" }, { name: "admin.*" }]),
 );
 
-mock.module("#src/lib/module-system/Utility.js", () => ({
+mock.module("@module-system/Utility.js", () => ({
   getUtility: () => ({ listPermits }),
 }));
 
@@ -115,7 +115,7 @@ describe("renderPermitExplain", () => {
 
   it("renders the picker when nothing is picked yet", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/onboarding/services/HubPanel.js"
+      "@modules/onboarding/services/HubPanel.js"
     );
     const editReply = vi.fn();
     await renderPermitExplain(
@@ -130,9 +130,9 @@ describe("renderPermitExplain", () => {
 
   it("renders the explanation when member and node are picked", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/onboarding/services/HubPanel.js"
+      "@modules/onboarding/services/HubPanel.js"
     );
-    const { container } = await import("#src/lib/Services.js");
+    const { container } = await import("@lib/Services.js");
     (container as any).db = {
       permissions: {
         getPermitChain: vi.fn().mockResolvedValue({
@@ -161,7 +161,7 @@ describe("renderPermitExplain", () => {
 
   it("falls back to the picker for an unknown node", async () => {
     const { renderPermitExplain } = await import(
-      "#src/modules/onboarding/services/HubPanel.js"
+      "@modules/onboarding/services/HubPanel.js"
     );
     const editReply = vi.fn();
     await renderPermitExplain(

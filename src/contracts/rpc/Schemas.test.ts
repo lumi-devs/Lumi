@@ -7,7 +7,7 @@ import {
   PageSchema,
   PageSizeSchema,
   SnowflakeSchema,
-} from "#src/contracts/rpc/Schemas.js";
+} from "@contracts/rpc/Schemas.js";
 
 const MaxPageSize = 100;
 

@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { CloseEvent } from "discord.js";
-import { shardStatus } from "#src/observability/Index.ts";
+import { shardStatus } from "@observability/Index.ts";
 
 export const shardDisconnectListener = defineListener({
   name: "shardDisconnectListener",

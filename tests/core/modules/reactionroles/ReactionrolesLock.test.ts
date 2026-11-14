@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import ReactionRolesUtility, {
   ReactionRoleMenuLockedError,
-} from "#src/modules/reactionroles/utilities/ReactionRolesUtility.js";
-import { ReactionRoleRepository } from "#src/modules/reactionroles/data/ReactionRoleRepository.js";
+} from "@modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleRepository } from "@modules/reactionroles/data/ReactionRoleRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 
-function mockValkey() {
+function mockRedis() {
   const store = new Map<string, string>();
   return {
     store,
@@ -55,12 +55,12 @@ function installMockDb() {
 
 describe("ReactionRolesUtility menu-write locking", () => {
   let service: typeof ReactionRolesUtility;
-  let valkey: ReturnType<typeof mockValkey>;
+  let redis: ReturnType<typeof mockRedis>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    valkey = mockValkey();
-    (container as any).valkey = valkey;
+    redis = mockRedis();
+    (container as any).redis = redis;
     (container as any).signals = {
       publish: vi.fn().mockResolvedValue(undefined),
     };
@@ -97,7 +97,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
 
   it("loses an update when two writers race directly against the repository without the lock", async () => {
 
-    const { saveMenu, getMenu: rawGetMenu } = await import("#src/modules/reactionroles/data/Reactionroles.js");
+    const { saveMenu, getMenu: rawGetMenu } = await import("@modules/reactionroles/data/Reactionroles.js");
     await saveMenu(container, {
       id: "unlocked",
       guildId: "guild-1",
@@ -134,7 +134,7 @@ describe("ReactionRolesUtility menu-write locking", () => {
 
   it("throws ReactionRoleMenuLockedError when the lock can't be acquired in time", async () => {
 
-    valkey.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
+    redis.store.set("lumi:reactionroles:write:guild-1:game-night", "someone-else");
 
     const pending = service.updateMenu(container, "guild-1", "game-night", { title: "Renamed" });
     await expect(pending).rejects.toBeInstanceOf(ReactionRoleMenuLockedError);

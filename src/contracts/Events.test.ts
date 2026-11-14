@@ -3,7 +3,7 @@ import {
   ConfigChangedEventSchema,
   DashboardEventSchema,
   ModuleStateChangedEventSchema,
-} from "#src/contracts/Events.js";
+} from "@contracts/Events.js";
 
 const guildId = "111111111111111111";
 const actorId = "222222222222222222";

@@ -3,7 +3,7 @@
 Third-party addons are downloaded git repos managed by the downloader
 (`packages/core/src/lib/downloader/`), installed under `data/` and enabled per
 guild. Their only supported import surface is the `lumi` package — never
-`@lumi/lib/*`, `@lumi/modules/*`, `discord.js`, or `node:*` builtins. Enforced three
+`@lib/*`, `@modules/*`, `discord.js`, or `node:*` builtins. Enforced three
 ways: static analysis at install time (`validate.ts`), capability-gated host
 RPC at runtime (`host/capabilities.ts`), and the isolate itself (no fs/network/
 process globals exist to abuse).
@@ -37,7 +37,7 @@ scopes.
 ## The `lumi` surface (root `package.json` exports)
 
 `lumi`, `lumi/commands`, `lumi/config`, `lumi/discord`, `lumi/events`,
-`lumi/interactions`, `lumi/kv`, `lumi/net`, `lumi/permissions`, `lumi/valkey`,
+`lumi/interactions`, `lumi/kv`, `lumi/net`, `lumi/permissions`, `lumi/redis`,
 `lumi/scheduling`, `lumi/ui`, `lumi/utils` → `packages/core/src/lib/addon-sandbox/sdk/*.ts`.
 
 `node_modules/lumi` inside each addon dir symlinks the repo root
@@ -57,25 +57,25 @@ and only subpath table. Notable surface points:
   undefined.
 - `lumi/utils` — `randomHex`, `sha256Hex`, `sleep` (host CSPRNG/crypto/timers;
   the isolate has none of these globals), plus pure time/error helpers
-  (`errorFrom`/`swallow` live in `@lumi/shared`).
+  (`errorFrom`/`swallow` live in `@shared`).
 - `lumi/net` — `fetchUrl`/`fetchText`/`fetchJson`, backed by SSRF-guarded
   `net.fetch` (http(s) only, DNS-resolved IP denylist per redirect hop, 10s
   timeout, 5MB cap, text or base64 by content type).
-- `lumi/config`, `lumi/kv`, `lumi/valkey`, `lumi/scheduling`, `lumi/discord`,
+- `lumi/config`, `lumi/kv`, `lumi/redis`, `lumi/scheduling`, `lumi/discord`,
   `lumi/events`, `lumi/interactions`, `lumi/permissions` — thin `call()`
   wrappers; check `sdk/*.ts` (each is one import deep).
 
 Discord enums the bundle needs (`MessageFlags`, `ActivityType`) are repo-owned
-copies in `@lumi/lib/discord/constants.js`, drift-tested against the installed
+copies in `@lib/discord/constants.js`, drift-tested against the installed
 `discord.js` (`constants.test.ts`) — `discord.js` itself can never enter the
 bundle (drags `@discordjs/ws` + node builtins). Same story for card colors
-(`@lumi/lib/ui/palette.js`, operator overrides baked at build time).
+(`@ui/Palette.js`, operator overrides baked at build time).
 
 ## Capabilities (`host/capabilities.ts`, contracts `addon-sandbox.ts`)
 
 Every host method declares one requirement; unknown methods deny by default
 (`isMethodAllowed`). `discord[]` scopes map to Discord powers, `scheduling` /
-`valkey` default off, `kv` defaults on, `network` (for `net.fetch`) defaults
+`redis` default off, `kv` defaults on, `network` (for `net.fetch`) defaults
 off. `util.randomHex` / `util.sha256Hex` / `util.sleep`, `config.get`, `log`,
 and read-only Discord getters require nothing. Manifests declare them under
 `capabilities` (validated names only — unknown discord names are install

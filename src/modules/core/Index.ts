@@ -1,11 +1,11 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
+import { defineModule } from "@module-system/Module.js";
 
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { handleDataRetentionFire } from "#src/modules/core/services/DataRetention.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { handleDataRetentionFire } from "@modules/core/services/DataRetention.js";
 import {
   handleGdprExportCleanupFire,
   handleGdprExportFire,
-} from "#src/modules/core/services/GdprExportTask.js";
+} from "@modules/core/services/GdprExportTask.js";
 
 export const coreModule = defineModule({
   name: "core",

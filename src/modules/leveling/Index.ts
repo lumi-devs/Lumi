@@ -1,9 +1,9 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import type { Container } from "#src/lib/Services.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { LevelingModuleName } from "#src/modules/leveling/Constants.js";
-import { AnnounceMessageDefault } from "#src/modules/leveling/Config.js";
-import { LevelFormulas } from "#src/modules/leveling/services/Formulas.js";
+import { defineModule } from "@module-system/Module.js";
+import type { Container } from "@lib/Services.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { LevelingModuleName } from "@modules/leveling/Constants.js";
+import { AnnounceMessageDefault } from "@modules/leveling/Config.js";
+import { LevelFormulas } from "@modules/leveling/services/Formulas.js";
 
 export const levelingModule = defineModule({
   name: LevelingModuleName,

@@ -1,5 +1,5 @@
-import { container } from "#src/lib/Services.js";
-import { pipelineBySlot } from "#src/lib/valkey/Cluster.js";
+import { container } from "@lib/Services.js";
+import { pipelineBySlot } from "@redis/Cluster.js";
 
 const TtlSeconds = 24 * 60 * 60;
 
@@ -29,7 +29,7 @@ export async function trackVoiceState(
   userId: string,
   newChannelId: string | null,
 ): Promise<{ prevChannelId: string | null }> {
-  const prev = (await container.valkey.eval(
+  const prev = (await container.redis.eval(
     TrackScript,
     1,
     userKey(userId),
@@ -42,7 +42,7 @@ export async function trackVoiceState(
 }
 
 export async function isVoiceChannelEmpty(channelId: string): Promise<boolean> {
-  const n = await container.valkey.scard(occKey(channelId));
+  const n = await container.redis.scard(occKey(channelId));
   return n === 0;
 }
 
@@ -59,7 +59,7 @@ export async function seedVoiceStates(
   }>,
 ): Promise<void> {
   if (voiceStates.length === 0) return;
-  const { valkey } = container;
+  const { redis } = container;
 
   type Write =
     | { key: string; kind: "occupancy"; channelId: string; userId: string }
@@ -83,7 +83,7 @@ export async function seedVoiceStates(
   }
 
   await pipelineBySlot(
-    valkey,
+    redis,
     writes,
     (w) => w.key,
     (pipe, w) => {

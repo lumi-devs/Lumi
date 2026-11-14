@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 import { userMention } from "@discordjs/formatters";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { BankService } from "#src/modules/economy/services/BankService.js";
-import { formatAmount, getEconomyConfig } from "#src/modules/economy/Config.js";
-import { bankName } from "#src/lib/api/economy/Bank.js";
-import { reportEconomyError } from "#src/modules/economy/services/Respond.js";
+import type { CommandContext } from "@commands/Context.js";
+import { BankService } from "@modules/economy/services/BankService.js";
+import { formatAmount, getEconomyConfig } from "@modules/economy/Config.js";
+import { bankName } from "@api/economy/Bank.js";
+import { reportEconomyError } from "@modules/economy/services/Respond.js";
 
 type Vault = "wallet" | "bank";
 
@@ -42,6 +42,33 @@ async function adjust(
     await ctx.replySuccess(
       `Balance ${verb}`,
       `${verb === "set" ? "Set" : verb === "add" ? "Added to" : "Removed from"} ${userMention(target!.id)}'s ${vault} ${operation === "set" ? `to **${formatAmount(config, amount!)}**` : `**${formatAmount(config, amount!)}**`} (${reason}).\nNew total: **${formatAmount(config, balance.total)}**`,
+      { ephemeral: false },
+    );
+  } catch (err) {
+    await reportEconomyError(ctx, err);
+  }
+}
+
+async function move(
+  ctx: CommandContext,
+  kind: "deposit" | "withdraw",
+): Promise<void> {
+  const guildId = ctx.guildId!;
+  const [config, vaultName] = await Promise.all([
+    getEconomyConfig(ctx.services, guildId),
+    bankName(ctx.services, guildId),
+  ]);
+  const amount = await ctx.getInteger("amount", { required: true });
+  try {
+    const service = new BankService();
+    const balance =
+      kind === "deposit"
+        ? await service.deposit(guildId, ctx.user.id, amount!, config)
+        : await service.withdraw(guildId, ctx.user.id, amount!, config);
+    const destination = kind === "deposit" ? "bank" : "wallet";
+    await ctx.replySuccess(
+      kind === "deposit" ? "Deposited" : "Withdrawn",
+      `Moved **${formatAmount(config, amount!)}** to your ${destination}.\nWallet: **${formatAmount(config, balance.wallet)}** · ${vaultName}: **${formatAmount(config, balance.bank)}**`,
       { ephemeral: false },
     );
   } catch (err) {
@@ -183,50 +210,10 @@ export const bankDef: CommandDef = {
   },
   handlers: {
   "deposit": async (ctx: CommandContext) => {
-    const guildId = ctx.guildId!;
-    const [config, vaultName] = await Promise.all([
-      getEconomyConfig(ctx.services, guildId),
-      bankName(ctx.services, guildId),
-    ]);
-    const amount = await ctx.getInteger("amount", { required: true });
-    try {
-      const balance = await new BankService().deposit(
-        guildId,
-        ctx.user.id,
-        amount!,
-        config,
-      );
-      await ctx.replySuccess(
-        "Deposited",
-        `Moved **${formatAmount(config, amount!)}** to your bank.\nWallet: **${formatAmount(config, balance.wallet)}** · ${vaultName}: **${formatAmount(config, balance.bank)}**`,
-        { ephemeral: false },
-      );
-    } catch (err) {
-      await reportEconomyError(ctx, err);
-    }
+    await move(ctx, "deposit");
   },
   "withdraw": async (ctx: CommandContext) => {
-    const guildId = ctx.guildId!;
-    const [config, vaultName] = await Promise.all([
-      getEconomyConfig(ctx.services, guildId),
-      bankName(ctx.services, guildId),
-    ]);
-    const amount = await ctx.getInteger("amount", { required: true });
-    try {
-      const balance = await new BankService().withdraw(
-        guildId,
-        ctx.user.id,
-        amount!,
-        config,
-      );
-      await ctx.replySuccess(
-        "Withdrawn",
-        `Moved **${formatAmount(config, amount!)}** to your wallet.\nWallet: **${formatAmount(config, balance.wallet)}** · ${vaultName}: **${formatAmount(config, balance.bank)}**`,
-        { ephemeral: false },
-      );
-    } catch (err) {
-      await reportEconomyError(ctx, err);
-    }
+    await move(ctx, "withdraw");
   },
   "set": async (ctx: CommandContext) => {
     await adjust(ctx, "set", "set");

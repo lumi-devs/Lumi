@@ -1,9 +1,9 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { container, type Container } from "#src/lib/Services.js";
-import { clearAllAfkForUser } from "#src/modules/afk/data/Afk.js";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { handleAfkDeleteMessageFire } from "#src/modules/afk/services/DeleteHandler.js";
+import { defineModule } from "@module-system/Module.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { container, type Container } from "@lib/Services.js";
+import { clearAllAfkForUser } from "@modules/afk/data/Afk.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { handleAfkDeleteMessageFire } from "@modules/afk/services/DeleteHandler.js";
 
 export const afkModule = defineModule({
   name: "afk",

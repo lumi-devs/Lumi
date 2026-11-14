@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import type { TargetPermitPayload } from "#src/lib/prisma/repositories/PermissionRepository.js";
+import { container } from "@lib/Services.js";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
+import type { TargetPermitPayload } from "@db/repositories/PermissionRepository.js";
 
 function bucket(grant: string[] = [], deny: string[] = []): TargetPermitPayload {
   return { custom: { grant, deny }, enforced: { grant: [], deny: [] } };

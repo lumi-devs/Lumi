@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember } from "discord.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
 
 export async function isImmuneToAutomatedAction(
   services: Container,

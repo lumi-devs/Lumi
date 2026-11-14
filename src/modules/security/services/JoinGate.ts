@@ -1,11 +1,11 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { Colors, type Guild, type GuildMember } from "discord.js";
-import { isNullish, tryParseJSON } from "#src/shared/Index.ts";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
+import { isNullish, tryParseJSON } from "@shared/Index.ts";
+import { RedisKeys } from "@redis/Store.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
+import { tryGetUtility } from "@module-system/Utility.js";
 import {
   hasNoAvatar,
   isUnverifiedBot,
@@ -14,8 +14,8 @@ import {
   hasSimilarRecentJoiner,
   isCreationClustered,
   type RecentJoiner,
-} from "#src/modules/security/services/JoinHeuristics.js";
-import { getConfigNumber, getConfigAction } from "#src/modules/security/services/ConfigHelpers.js";
+} from "@modules/security/services/JoinHeuristics.js";
+import { getConfigNumber, getConfigAction } from "@modules/security/services/ConfigHelpers.js";
 
 export type GateAction = "log" | "kick" | "timeout" | "quarantine";
 
@@ -140,8 +140,8 @@ export function evaluateJoinFilters(
 }
 
 export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner): Promise<void> {
-  const key = ValkeyKeys.recentJoiners(guildId);
-  await container.valkey
+  const key = RedisKeys.recentJoiners(guildId);
+  await container.redis
     .multi()
     .lpush(key, JSON.stringify(joiner))
     .ltrim(key, 0, RecentJoinersCap - 1)
@@ -150,7 +150,7 @@ export async function recordRecentJoiner(guildId: string, joiner: RecentJoiner):
 }
 
 async function getRecentJoiners(guildId: string): Promise<RecentJoiner[]> {
-  const raw = await container.valkey.lrange(ValkeyKeys.recentJoiners(guildId), 0, -1);
+  const raw = await container.redis.lrange(RedisKeys.recentJoiners(guildId), 0, -1);
   return raw
     .map((r: string) => tryParseJSON(r) as RecentJoiner | null)
     .filter((j: RecentJoiner | null): j is RecentJoiner => j !== null);
@@ -174,8 +174,8 @@ export async function recordJoin(
   guildId: string,
   config: JoinGateConfig,
 ): Promise<boolean> {
-  const key = ValkeyKeys.joinBurst(guildId);
-  const results = await container.valkey
+  const key = RedisKeys.joinBurst(guildId);
+  const results = await container.redis
     .multi()
     .incr(key)
     .expire(key, config.raidWindowSeconds, "NX")
@@ -183,8 +183,8 @@ export async function recordJoin(
   const count = results?.[0]?.[1] as number;
   if (count < config.raidJoinCount) return false;
 
-  const started = await container.valkey.set(
-    ValkeyKeys.raidMode(guildId),
+  const started = await container.redis.set(
+    RedisKeys.raidMode(guildId),
     String(Date.now()),
     "EX",
     RaidModeSeconds,
@@ -194,7 +194,7 @@ export async function recordJoin(
 }
 
 export async function isRaidActive(guildId: string): Promise<boolean> {
-  return (await container.valkey.exists(ValkeyKeys.raidMode(guildId))) === 1;
+  return (await container.redis.exists(RedisKeys.raidMode(guildId))) === 1;
 }
 
 export async function applyGateAction(

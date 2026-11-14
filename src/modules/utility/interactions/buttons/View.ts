@@ -1,8 +1,8 @@
 import { ButtonInteraction, MessageFlags } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { handleMediaRequest } from "#src/modules/utility/services/MediaUtils.js";
-import { UserMediaViewId } from "#src/modules/utility/Constants.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { handleMediaRequest } from "@modules/utility/services/MediaUtils.js";
+import { UserMediaViewId } from "@modules/utility/Constants.js";
 
 export default defineInteraction({
   prefix: UserMediaViewId.prefix,

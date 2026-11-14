@@ -1,5 +1,5 @@
 import semver from "semver";
-import { MIN_COMPATIBLE_CONTRACT_VERSION } from "#src/contracts/Version.js";
+import { MIN_COMPATIBLE_CONTRACT_VERSION } from "@contracts/Version.js";
 
 export interface ContractCompatibilityOptions {
 

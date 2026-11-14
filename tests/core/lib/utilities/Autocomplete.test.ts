@@ -3,7 +3,7 @@ import {
   AutocompleteChoiceLimit,
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#src/lib/utilities/Autocomplete.js";
+} from "@utilities/Autocomplete.js";
 
 describe("filterAutocompleteChoices", () => {
   it("returns all values when the query is empty", () => {

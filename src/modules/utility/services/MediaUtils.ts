@@ -13,30 +13,27 @@ import {
   MediaGalleryItemBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { makeErrorCard, makeInfoCard } from "#src/lib/ui/Cards.js";
-import { container, type Container } from "#src/lib/Services.js";
-import { capitalizeFirstLetter } from "#src/shared/Index.ts";
-import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
-import { fetchT } from "#src/lib/i18n/Index.js";
-import { UserMediaViewId } from "#src/modules/utility/Constants.js";
+import { makeErrorCard, makeInfoCard } from "@ui/Cards.js";
+import { type Container } from "@lib/Services.js";
+import { capitalizeFirstLetter } from "@shared/Index.ts";
+import { deleteMessageLater } from "@utilities/TemporaryMessage.js";
+import { claimCooldown } from "@redis/Cooldown.js";
+import { fetchT } from "@i18n/Index.js";
+import { UserMediaViewId } from "@modules/utility/Constants.js";
 
 interface MediaRequestContext {
   context: Message | RepliableInteraction;
   targetUser: User;
   mediaType: "avatar" | "banner";
-  services?: Container;
-  container?: Container;
+  container: Container;
 }
 
 export async function handleMediaRequest({
   context,
   targetUser,
   mediaType,
-  services,
-  container: containerParam,
+  container: svc,
 }: MediaRequestContext) {
-  const svc = services ?? containerParam ?? container;
   const t = await fetchT(context, svc);
   const interactionUser =
     context instanceof Message ? context.author : context.user;
@@ -58,7 +55,7 @@ export async function handleMediaRequest({
     const claimed = await claimCooldown(svc, cooldownKey, cooldownMs);
 
     if (!claimed) {
-      const remainingMs = await svc.valkey.pttl(cooldownKey);
+      const remainingMs = await svc.redis.pttl(cooldownKey);
       const timeLeft = (Math.max(remainingMs, 0) / 1000).toFixed(1);
       const title = t("commands:mediaCooldownTitle");
       const reply = t("commands:mediaCooldown", { timeLeft });

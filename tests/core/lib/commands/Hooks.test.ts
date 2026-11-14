@@ -3,7 +3,7 @@ import {
   addBeforeInvokeHook,
   removeBeforeInvokeHook,
   runBeforeInvokeHooks,
-} from "#src/lib/commands/Hooks.js";
+} from "@commands/Hooks.js";
 
 const ctx = {} as any;
 

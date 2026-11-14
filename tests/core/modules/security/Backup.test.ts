@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { Collection } from "discord.js";
 import {
   loadBackupConfig,
   createBackup,
   flagRestorePending,
   isRestorePending,
-} from "#src/modules/security/services/Backup.js";
+} from "@modules/security/services/Backup.js";
 
 function setContainer(overrides: {
-  valkey?: Record<string, unknown>;
+  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).valkey = {
+  (container as any).redis = {
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
-    ...overrides.valkey,
+    ...overrides.redis,
   };
   (container as any).db = {
     ...overrides.db,
@@ -74,7 +74,7 @@ describe("createBackup", () => {
 describe("flagRestorePending / isRestorePending", () => {
   it("flags restore pending with a 24h expiry", async () => {
     const set = vi.fn().mockResolvedValue(undefined);
-    setContainer({ valkey: { set } });
+    setContainer({ redis: { set } });
 
     await flagRestorePending("g1");
 
@@ -86,9 +86,9 @@ describe("flagRestorePending / isRestorePending", () => {
     );
   });
 
-  it("reports pending state from valkey", async () => {
+  it("reports pending state from redis", async () => {
     const exists = vi.fn().mockResolvedValue(1);
-    setContainer({ valkey: { exists } });
+    setContainer({ redis: { exists } });
 
     const result = await isRestorePending("g1");
 

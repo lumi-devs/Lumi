@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { parseDuration, formatDuration } from "#src/lib/utilities/Time.js";
+import { parseDuration, formatDuration } from "@utilities/Time.js";
 
 describe("time utilities", () => {
   it("formatDuration", () => {

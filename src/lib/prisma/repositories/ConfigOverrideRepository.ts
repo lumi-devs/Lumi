@@ -1,5 +1,5 @@
 import type { OverrideTargetType, Prisma } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 
 export interface ConfigOverrideEntry {
   id: number;

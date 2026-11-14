@@ -1,4 +1,4 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 
 const FnvOffsetBasis = 0x811c9dc5;
 const FnvPrime = 0x01000193;

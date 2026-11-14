@@ -1,19 +1,19 @@
-import { bootstrapTelemetry } from "#src/observability/Index.ts";
-import { bootstrapClientApp } from "#src/lib/client/Bootstrap.js";
-import { container } from "#src/lib/Services.js";
-import { registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { startRpcHttpServer } from "#src/lib/rpc/HttpServer.js";
-import { loadScheduledTasks } from "#src/lib/scheduler/Tasks.js";
-import { registerBuiltinTasks } from "#src/lib/scheduler/Oneshot.js";
-import { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
-import { acquireSchedulerLock } from "#src/lib/scheduler/Lock.js";
-import { watchFailedJobs } from "#src/lib/scheduler/QueueEvents.js";
-import { watchQueueDepth } from "#src/lib/scheduler/QueueMetrics.js";
-import { publishSchedulerHeartbeat } from "#src/lib/scheduler/Heartbeat.js";
-import { getConsumerId, getDefaultPrefix } from "#src/lib/Env.js";
-import { printBootBanner } from "#src/lib/Branding.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
+import { bootstrapTelemetry } from "@observability/Index.ts";
+import { bootstrapClientApp } from "@lib/client/Bootstrap.js";
+import { container } from "@lib/Services.js";
+import { registerRpcHandlers } from "@rpc/Registry.js";
+import { startRpcHttpServer } from "@rpc/HttpServer.js";
+import { loadScheduledTasks } from "@scheduler/Tasks.js";
+import { registerBuiltinTasks } from "@scheduler/Oneshot.js";
+import { ScheduledTaskRunner } from "@scheduler/Runner.js";
+import { acquireSchedulerLock } from "@scheduler/Lock.js";
+import { watchFailedJobs } from "@scheduler/QueueEvents.js";
+import { watchQueueDepth } from "@scheduler/QueueMetrics.js";
+import { publishSchedulerHeartbeat } from "@scheduler/Heartbeat.js";
+import { getConsumerId, getDefaultPrefix } from "@lib/Env.js";
+import { printBootBanner } from "@lib/Branding.js";
+import { commandRegistry } from "@commands/CommandDef.js";
+import { LumiInfo } from "@utilities/Version.js";
 import type { Client } from "discord.js";
 
 bootstrapTelemetry("bot");
@@ -51,7 +51,7 @@ const tasks = new ScheduledTaskRunner();
 container.tasks = tasks;
 
 await acquireSchedulerLock(
-  container.valkey,
+  container.redis,
   () => {
     container.logger.error("[Scheduler] Lost scheduler lock, exiting");
     process.exit(1);
@@ -61,7 +61,7 @@ await acquireSchedulerLock(
 await tasks.createRepeated();
 watchFailedJobs(tasks);
 watchQueueDepth(tasks);
-publishSchedulerHeartbeat(container.valkey, getConsumerId());
+publishSchedulerHeartbeat(container.redis, getConsumerId());
 
 container.logger.info("[Bot] Online");
 

@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { TempvcCreateCooldownMs, TempvcMaxGenerators } from "#src/modules/tempvc/Constants.js";
+import type { Container } from "@lib/Services.js";
+import { TempvcCreateCooldownMs, TempvcMaxGenerators } from "@modules/tempvc/Constants.js";
 
 export async function getCreateCooldownMs(services: Container, guildId: string): Promise<number> {
   const value = await services.db.config.getModuleConfig(

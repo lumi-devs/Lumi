@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { Interaction } from "discord.js";
 import {
   addInteractionDef,
@@ -11,9 +11,9 @@ import {
   matchesPrefix,
   type InteractionDef,
   type InteractionKind,
-} from "#src/lib/interactions/InteractionDef.js";
-import { resolveErrorCard, respond } from "#src/lib/utilities/CommandResponse.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
+} from "@interactions/InteractionDef.js";
+import { resolveErrorCard, respond } from "@utilities/CommandResponse.js";
+import { ephemeralCard, makeErrorCard } from "@ui/Cards.js";
 
 export async function loadInteractionHandlers(
   moduleDir: string,

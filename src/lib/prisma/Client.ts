@@ -1,15 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "#src/observability/Index.ts";
-import { recordQueryMetrics } from "#src/lib/prisma/QueryMetrics.js";
+import { pgPoolSize, pgPoolUsed, pgPoolWaiting } from "@observability/Index.ts";
+import { recordQueryMetrics } from "@db/QueryMetrics.js";
 
 import {
   getPostgresAppName,
   getPostgresReplicaUrl,
   getPostgresUrl,
   resolvePgPoolSize,
-} from "#src/lib/Env.js";
+} from "@lib/Env.js";
 
 const PoolMax = resolvePgPoolSize();
 

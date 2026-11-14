@@ -4,8 +4,8 @@ import {
   buildPanicStatusCard,
   buildPanicAlreadyActiveCard,
   buildPanicRevertedCard,
-} from "#src/modules/security/ui/PanicCard.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+} from "@modules/security/ui/PanicCard.js";
+import type { LumiT } from "@i18n/Index.js";
 
 describe("Panic Mode Card Builders", () => {
   const fakeT: LumiT = ((key: string, opts?: any) => {

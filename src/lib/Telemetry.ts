@@ -5,7 +5,7 @@ import {
   commandsTotal,
   runWithContext,
   withSpan,
-} from "#src/observability/Index.ts";
+} from "@observability/Index.ts";
 
 interface IdSource {
   guildId?: unknown;

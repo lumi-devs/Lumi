@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { GuildKVRepository } from "#src/lib/prisma/repositories/GuildKvRepository.js";
+import { GuildKVRepository } from "@db/repositories/GuildKvRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -11,14 +11,14 @@ describe("GuildKVRepository", () => {
   let prisma: any;
   let repo: GuildKVRepository;
   let mockDb: any;
-  let mockValkey: any;
+  let mockRedis: any;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
     mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
-    mockValkey = { hincrby: vi.fn().mockResolvedValue(1) };
+    mockRedis = { hincrby: vi.fn().mockResolvedValue(1) };
     const mockLogger = { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() };
-    repo = new GuildKVRepository(prisma, mockValkey, mockLogger as any, mockDb);
+    repo = new GuildKVRepository(prisma, mockRedis, mockLogger as any, mockDb);
   });
 
   it("stores, retrieves, and checks single module data entries", async () => {
@@ -74,23 +74,23 @@ describe("GuildKVRepository", () => {
   });
 
   it("atomically increments a counter and persists to DB", async () => {
-    mockValkey.hincrby.mockResolvedValueOnce(5);
+    mockRedis.hincrby.mockResolvedValueOnce(5);
 
     const result = await repo.incrModuleData("g1", "mod", "t1", "counter", 2);
 
     expect(result).toBe(5);
-    expect(mockValkey.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 2);
+    expect(mockRedis.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 2);
     const stored = await repo.getModuleData("g1", "mod", "t1", "counter");
     expect(stored).toBe(5);
   });
 
   it("defaults delta to 1", async () => {
-    mockValkey.hincrby.mockResolvedValueOnce(1);
+    mockRedis.hincrby.mockResolvedValueOnce(1);
 
     const result = await repo.incrModuleData("g1", "mod", "t1", "counter");
 
     expect(result).toBe(1);
-    expect(mockValkey.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 1);
+    expect(mockRedis.hincrby).toHaveBeenCalledWith("lumi:kv:g1:mod:t1:counter", "value", 1);
     const stored = await repo.getModuleData("g1", "mod", "t1", "counter");
     expect(stored).toBe(1);
   });

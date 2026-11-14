@@ -1,7 +1,7 @@
-import { container, type Container } from "#src/lib/Services.js";
-import { LumiScheduledTask, registerScheduledTask } from "#src/lib/scheduler/Tasks.js";
-import { scheduleTask } from "#src/lib/scheduler/Schedule.js";
-import type { ModuleOneshotPayload } from "#src/lib/types/Common.js";
+import { container, type Container } from "@lib/Services.js";
+import { LumiScheduledTask, registerScheduledTask } from "@scheduler/Tasks.js";
+import { scheduleTask } from "@scheduler/Schedule.js";
+import type { ModuleOneshotPayload } from "@lib/types/Common.js";
 
 export type OneshotContext = {
   guildId: string;

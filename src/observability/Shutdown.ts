@@ -1,4 +1,4 @@
-import { markDraining } from "#src/observability/Readiness.js";
+import { markDraining } from "@observability/Readiness.js";
 
 export interface DrainStep {
   name: string;

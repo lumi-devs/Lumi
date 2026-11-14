@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   handleSseRequest,
   closeAllSseConnections,
   _activeSseConnectionCount,
   MaxSseConnections,
-} from "#src/lib/rpc/SseServer.js";
-import { dashboardEventPublishFailures } from "#src/observability/Index.ts";
+} from "@rpc/SseServer.js";
+import { dashboardEventPublishFailures } from "@observability/Index.ts";
 import { FakeDiscordRestPort } from "../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";

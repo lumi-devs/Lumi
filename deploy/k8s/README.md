@@ -20,7 +20,7 @@ flowchart TD
     subgraph External Services
         Discord[Discord Gateway / REST API]
         DB[(PostgreSQL)]
-        Valkey[(Valkey)]
+        Redis[(Redis)]
         Prometheus[Prometheus Server]
     end
 
@@ -37,7 +37,7 @@ flowchart TD
     B -->|REST via DISCORD_PROXY_URL| NP
     NP -->|REST| Discord
     B <-->|Queries| DB
-    B <-->|BullMQ| Valkey
+    B <-->|BullMQ| Redis
     Prometheus -->|Scrape :9090| BH
     B <-->|Data Mount| PVC
 ```
@@ -47,7 +47,7 @@ flowchart TD
 1. **Kubernetes Cluster**: Version `1.28` or higher.
 2. **`kubectl` CLI**: Installed and configured with cluster admin permissions.
 3. **Prometheus Operator / Server**: Configured to scrape pods annotated with `prometheus.io/scrape: "true"`.
-4. **External Data Plane**: PostgreSQL and Valkey reachable from inside the
+4. **External Data Plane**: PostgreSQL and Redis reachable from inside the
    cluster. The dashboard talks to the `bot` service over internal HTTP RPC
    (`RPC_HTTP_PORT`, default 8091).
 

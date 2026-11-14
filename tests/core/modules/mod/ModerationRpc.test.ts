@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -73,11 +74,7 @@ describe("mod module cases and warn-threshold RPC handlers", () => {
       member: memberWith([]),
     });
 
-    (container as any).valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue(undefined),
-      del: vi.fn(),
-    } as any;
+    (container as any).redis = createMemoryRedis();
 
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),

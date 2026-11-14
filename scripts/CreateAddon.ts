@@ -30,7 +30,7 @@ export class CliExitError extends Error {
 function usage(): never {
   console.error(
     [
-      "Usage: bun run addon:create <name> [options]",
+      "Usage: bun scripts/CreateAddon.ts <name> [options]",
       "",
       "Options:",
       "  --dir <path>           Parent directory to scaffold into (default: ./addons)",
@@ -39,7 +39,7 @@ function usage(): never {
       "  --force                Overwrite an existing directory",
       "",
       "Example:",
-      "  bun run addon:create welcome-messages",
+      "  bun scripts/CreateAddon.ts welcome-messages",
     ].join("\n"),
   );
   throw new CliExitError(2);
@@ -129,7 +129,7 @@ function manifestJson(args: Args): string {
 }
 
 function indexTs(args: Args): string {
-  return `import { defineModule } from "#src/lib/module-system/Module.js";
+  return `import { defineModule } from "@module-system/Module.js";
 
 export default defineModule({
   name: "${args.name}",
@@ -148,7 +148,7 @@ export default defineModule({
 function commandTs(args: Args): string {
   const commandName = args.name.replace(/-/g, "_").slice(0, 32);
   return `import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 
 export const ${commandName}Def: CommandDef = {
   name: "${commandName}",
@@ -179,7 +179,7 @@ ${args.displayName} - describe what this addon does.
 
 ## Installing locally for testing
 
-This directory was scaffolded by \`bun run addon:create\`. Point \`LUMI_DEV_PATHS\` at its
+This directory was scaffolded by \`bun scripts/CreateAddon.ts\`. Point \`LUMI_DEV_PATHS\` at its
 parent directory in \`.env\` (created for you at \`./addons\` by default):
 
 \`\`\`sh

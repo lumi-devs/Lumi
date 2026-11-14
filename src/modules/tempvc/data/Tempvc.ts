@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { TempVcRecord } from "@prisma/client";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
 
 export interface GeneratorConfig {
   name: string;

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js";
-import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
-import { AppealRepository } from "#src/modules/mod/data/AppealRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { AuditRepository } from "@db/repositories/AuditRepository.js";
+import { ConfigHistoryRepository } from "@db/repositories/ConfigHistoryRepository.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
+import { AppealRepository } from "@modules/mod/data/AppealRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../mocks/Prisma.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -44,7 +45,7 @@ describe("keyset pagination - AuditRepository.listAuditLogs", () => {
 
   beforeEach(() => {
     prisma = freshPrisma();
-    repo = new AuditRepository(prisma as any, {} as any, noopLogger, noDb);
+    repo = new AuditRepository(prisma as any, createMemoryRedis() as any, noopLogger, noDb);
   });
 
   function seed(count: number, tieEvery = 0) {
@@ -133,7 +134,7 @@ describe("keyset pagination - ModerationRepository.listCases (single-key caseNum
 
   beforeEach(() => {
     prisma = freshPrisma();
-    repo = new ModerationRepository(prisma as any, {} as any, noopLogger, noDb);
+    repo = new ModerationRepository(prisma as any, createMemoryRedis() as any, noopLogger, noDb);
   });
 
   function seed(count: number) {
@@ -180,7 +181,7 @@ describe("keyset pagination - AppealRepository.listForGuild", () => {
 
   beforeEach(() => {
     prisma = freshPrisma();
-    repo = new AppealRepository(prisma as any, {} as any, noopLogger, noDb);
+    repo = new AppealRepository(prisma as any, createMemoryRedis() as any, noopLogger, noDb);
   });
 
   function seed(count: number, tieEvery = 0) {
@@ -226,7 +227,7 @@ describe("keyset pagination - ConfigHistoryRepository.listGuildConfigHistory", (
 
   beforeEach(() => {
     prisma = freshPrisma();
-    repo = new ConfigHistoryRepository(prisma as any, {} as any, noopLogger, noDb);
+    repo = new ConfigHistoryRepository(prisma as any, createMemoryRedis() as any, noopLogger, noDb);
   });
 
   function seed(count: number, tieEvery = 0) {

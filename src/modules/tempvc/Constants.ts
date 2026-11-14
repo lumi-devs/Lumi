@@ -1,4 +1,4 @@
-import { defineCustomId } from "#src/lib/interactions/CustomId.js";
+import { defineCustomId } from "@interactions/CustomId.js";
 
 export const TempvcCreateCooldownMs = 30_000;
 export const TempvcCleanupDelayMs = 8_000;

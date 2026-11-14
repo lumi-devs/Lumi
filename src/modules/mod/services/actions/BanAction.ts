@@ -1,8 +1,8 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { type Guild, type User, Colors } from "discord.js";
-import { formatAuditReason } from "#src/lib/utilities/AuditReason.js";
-import { sendModActionDm } from "#src/modules/mod/services/Notify.js";
-import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+import { formatAuditReason } from "@utilities/AuditReason.js";
+import { sendModActionDm } from "@modules/mod/services/Notify.js";
+import { runModerationAction } from "@modules/mod/services/RunModerationAction.js";
 
 export interface BanApplyOptions {
   guild: Guild;

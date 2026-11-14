@@ -1,10 +1,10 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
   type DashboardEvent,
-} from "#src/contracts/Events.js";
-import { dashboardEventPublishFailures } from "#src/observability/Index.ts";
+} from "@contracts/Events.js";
+import { dashboardEventPublishFailures } from "@observability/Index.ts";
 
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
 export type DashboardEventInput = DistributiveOmit<DashboardEvent, "v">;

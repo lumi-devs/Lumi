@@ -1,26 +1,26 @@
 import { describe, it, expect } from "bun:test";
 import { PermissionFlagsBits } from "discord.js";
-import { asHandler, type CommandDef } from "#src/lib/commands/CommandDef.js";
-import { finalizeBuilder } from "#src/lib/commands/CommandDispatch.js";
-import { banDef } from "#src/modules/mod/commands/Ban.js";
-import { kickDef } from "#src/modules/mod/commands/Kick.js";
-import { timeoutDef } from "#src/modules/mod/commands/Timeout.js";
-import { warnDef } from "#src/modules/mod/commands/Warn.js";
-import { softbanDef } from "#src/modules/mod/commands/Softban.js";
-import { quarantineDef } from "#src/modules/mod/commands/Quarantine.js";
-import { lockdownDef } from "#src/modules/mod/commands/Lockdown.js";
-import { lockDef } from "#src/modules/mod/commands/Lock.js";
-import { sayDef } from "#src/modules/mod/commands/Say.js";
-import { dmDef } from "#src/modules/mod/commands/Dm.js";
-import { notesDef } from "#src/modules/mod/commands/Notes.js";
-import { casesDef } from "#src/modules/mod/commands/Cases.js";
-import { sanitizeDef } from "#src/modules/mod/commands/Sanitize.js";
-import { vcmuteDef } from "#src/modules/mod/commands/Vcmute.js";
-import { lumiDef } from "#src/modules/onboarding/commands/Lumi.js";
-import { repoDef } from "#src/modules/admin/commands/Repo.js";
-import { downloadDef } from "#src/modules/admin/commands/Download.js";
-import { helpDef } from "#src/modules/onboarding/commands/Help.js";
-import { mydataDef } from "#src/modules/onboarding/commands/Mydata.js";
+import { asHandler, type CommandDef } from "@commands/CommandDef.js";
+import { finalizeBuilder } from "@commands/CommandDispatch.js";
+import { banDef } from "@modules/mod/commands/Ban.js";
+import { kickDef } from "@modules/mod/commands/Kick.js";
+import { timeoutDef } from "@modules/mod/commands/Timeout.js";
+import { warnDef } from "@modules/mod/commands/Warn.js";
+import { softbanDef } from "@modules/mod/commands/Softban.js";
+import { quarantineDef } from "@modules/mod/commands/Quarantine.js";
+import { lockdownDef } from "@modules/mod/commands/Lockdown.js";
+import { lockDef } from "@modules/mod/commands/Lock.js";
+import { sayDef } from "@modules/mod/commands/Say.js";
+import { dmDef } from "@modules/mod/commands/Dm.js";
+import { notesDef } from "@modules/mod/commands/Notes.js";
+import { casesDef } from "@modules/mod/commands/Cases.js";
+import { sanitizeDef } from "@modules/mod/commands/Sanitize.js";
+import { vcmuteDef } from "@modules/mod/commands/Vcmute.js";
+import { lumiDef } from "@modules/onboarding/commands/Lumi.js";
+import { repoDef } from "@modules/admin/commands/Repo.js";
+import { downloadDef } from "@modules/admin/commands/Download.js";
+import { helpDef } from "@modules/onboarding/commands/Help.js";
+import { mydataDef } from "@modules/onboarding/commands/Mydata.js";
 
 const destructiveModCommands: { name: string; def: CommandDef; permit: string }[] = [
   { name: "ban", def: banDef, permit: "mod.*" },

@@ -3,7 +3,7 @@ import {
   mapWithConcurrency,
   Semaphore,
   SemaphoreQueueFullError,
-} from "#lib/utilities/Concurrency.js";
+} from "@utilities/Concurrency.js";
 
 const tick = () => new Promise((r) => setTimeout(r, 1));
 

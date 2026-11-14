@@ -1,26 +1,26 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+} from "@interactions/InteractionDef.js";
+import { fetchTyped } from "@i18n/Index.js";
 import {
   loadVerificationConfig,
   grantVerified,
   startChallenge,
   advanceChallenge,
-} from "#src/modules/security/services/Verification.js";
-import { getDashboardPublicUrl } from "#src/lib/Env.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { CaptchaButtonId } from "#src/modules/security/Constants.js";
+} from "@modules/security/services/Verification.js";
+import { getDashboardPublicUrl } from "@lib/Env.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@ui/Cards.js";
+import { CaptchaButtonId } from "@modules/security/Constants.js";
 import {
   VerifyButtonId,
   buildChallengeCard,
   buildProgressCard,
   buildWebPromptCard,
   buildWrongCard,
-} from "#src/modules/security/ui/VerifyPanel.js";
+} from "@modules/security/ui/VerifyPanel.js";
 
 type Parsed = { kind: "start" } | { kind: "step"; idx: number };
 

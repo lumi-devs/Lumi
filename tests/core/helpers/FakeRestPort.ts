@@ -1,5 +1,5 @@
 import type { APIGuild, APIGuildMember } from "discord-api-types/v10";
-import type { DiscordRestPort } from "#src/lib/discord/RestPort.js";
+import type { DiscordRestPort } from "@discord/RestPort.js";
 
 type PortMethod = keyof DiscordRestPort;
 

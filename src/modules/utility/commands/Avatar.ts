@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { handleMediaRequest } from "#src/modules/utility/services/MediaUtils.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { handleMediaRequest } from "@modules/utility/services/MediaUtils.js";
 
 export const avatarDef: CommandDef = {
   name: "avatar",

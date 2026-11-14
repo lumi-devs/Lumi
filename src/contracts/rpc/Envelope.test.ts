@@ -5,7 +5,7 @@ import {
   RpcRetryableByDefault,
   makeRpcFailure,
   parseRpcResponse,
-} from "#src/contracts/rpc/Envelope.js";
+} from "@contracts/rpc/Envelope.js";
 
 describe("parseRpcResponse", () => {
   it("accepts ok:true with data", () => {

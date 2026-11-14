@@ -14,11 +14,11 @@ import {
   clampMessageDocumentV2,
   type MessageBlockButton,
   type MessageDocumentV2,
-} from "#src/contracts/Index.ts";
-import { parseHexColor } from "#src/lib/utilities/MessageContent.js";
-import { renderTemplate } from "#src/lib/utilities/Template.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
+} from "@contracts/Index.ts";
+import { parseHexColor } from "@utilities/MessageContent.js";
+import { renderTemplate } from "@utilities/Template.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import type { CardReply } from "@ui/Cards.js";
 
 const buttonStyleMap: Record<Exclude<MessageBlockButton["style"], "link">, ButtonStyle> = {
   primary: ButtonStyle.Primary,

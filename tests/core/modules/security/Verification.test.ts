@@ -1,41 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ChannelType } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import {
   grantVerified,
   advanceChallenge,
   postOrEditVerifyPanel,
-} from "#src/modules/security/services/Verification.js";
-import { MaxAttempts, type CaptchaState } from "#src/modules/security/services/Captcha.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+} from "@modules/security/services/Verification.js";
+import { MaxAttempts, type CaptchaState } from "@modules/security/services/Captcha.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { RedisKeys } from "@redis/Store.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-function makeMultiMock(count: number) {
-  return {
-    incr: vi.fn().mockReturnThis(),
-    expire: vi.fn().mockReturnThis(),
-    exec: vi.fn().mockResolvedValue([[null, count]]),
-  };
-}
-
 function setContainer(overrides: {
-  valkey?: Record<string, unknown>;
+  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).valkey = {
-    incr: vi.fn(),
-    expire: vi.fn(),
-    set: vi.fn(),
-    exists: vi.fn().mockResolvedValue(0),
-    multi: vi.fn(() => makeMultiMock(1)),
-    get: vi.fn().mockResolvedValue(null),
-    setex: vi.fn(),
-    ...overrides.valkey,
+  (container as any).redis = {
+    ...createMemoryRedis(),
+    ...overrides.redis,
   };
   (container as any).db = {
     ...overrides.db,
@@ -100,20 +88,20 @@ describe("grantVerified", () => {
 });
 
 describe("advanceChallenge", () => {
-  function makeChallengeValkey(initial: CaptchaState) {
-    let stored: string | null = JSON.stringify(initial);
-    const get = vi.fn(async () => {
+  function makeChallengeRedis(initial: CaptchaState) {
+    const redis = createMemoryRedis();
+    const key = RedisKeys.verifyChallenge("g1", "u1");
+    redis.$store.set(key, JSON.stringify(initial));
+    redis.get.mockImplementation(async (requested: string) => {
       await new Promise((resolve) => setTimeout(resolve, 10));
-      return stored;
-    });
-    const set = vi.fn((_key: string, value: string) => {
-      stored = value;
-      return Promise.resolve();
+      return redis.$store.get(requested) ?? null;
     });
     return {
-      get,
-      set,
-      read: (): CaptchaState | null => (stored ? JSON.parse(stored) : null),
+      ...redis,
+      read: (): CaptchaState | null => {
+        const stored = redis.$store.get(key);
+        return stored ? (JSON.parse(stored) as CaptchaState) : null;
+      },
     };
   }
 
@@ -125,8 +113,8 @@ describe("advanceChallenge", () => {
       attempts: MaxAttempts,
       expiresAt: Date.now() + 60_000,
     };
-    const valkey = makeChallengeValkey(initial);
-    setContainer({ valkey });
+    const redis = makeChallengeRedis(initial);
+    setContainer({ redis });
 
     const [r1, r2] = await Promise.all([
       advanceChallenge("g1", "u1", 7),
@@ -135,12 +123,12 @@ describe("advanceChallenge", () => {
 
     expect(r1?.outcome).toBe("wrong");
     expect(r2?.outcome).toBe("wrong");
-    expect(valkey.read()?.attempts).toBe(MaxAttempts - 2);
+    expect(redis.read()?.attempts).toBe(MaxAttempts - 2);
   });
 
   it("returns null when there is no active challenge to advance", async () => {
     const get = vi.fn().mockResolvedValue(null);
-    setContainer({ valkey: { get } });
+    setContainer({ redis: { get } });
 
     const result = await advanceChallenge("g1", "u1", 0);
 

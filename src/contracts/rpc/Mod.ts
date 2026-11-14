@@ -5,9 +5,9 @@ import type {
   CasesListData,
   ModNoteView,
   WarnThresholdView,
-} from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { CursorSchema, PageSizeSchema, SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+} from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { CursorSchema, PageSizeSchema, SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export const WarnThresholdActions = [
   "mute",

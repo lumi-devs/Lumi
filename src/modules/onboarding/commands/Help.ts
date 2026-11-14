@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { toTitleCase } from "#src/shared/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { toTitleCase } from "@shared/Index.ts";
 import {
   SeparatorBuilder,
   TextDisplayBuilder,
@@ -19,14 +19,14 @@ import {
   type StringSelectMenuInteraction,
   type ButtonInteraction,
 } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
-import { componentEmoji, createCategorySubmenuRow } from "#src/lib/ui/Panels.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
-import { Time } from "#src/shared/Index.ts";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { commandRegistry } from "@commands/CommandDef.js";
+import { componentEmoji, createCategorySubmenuRow } from "@ui/Panels.js";
+import type { CardReply } from "@ui/Cards.js";
+import { Time } from "@shared/Index.ts";
+import type { LumiT } from "@i18n/Index.js";
 
 export const HelpCommandsPerPage = 8;
 

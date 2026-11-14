@@ -1,10 +1,10 @@
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { GatewayDispatchPayload } from "discord-api-types/v10";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { planToggle } from "#src/modules/reactionroles/data/Reactionroles.js";
-import type { ReactionRolesUtility } from "#src/modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { logError } from "@utilities/Errors.js";
+import { getUtility } from "@module-system/Utility.js";
+import { planToggle } from "@modules/reactionroles/data/Reactionroles.js";
+import type { ReactionRolesUtility } from "@modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 interface ReactionPacket {
   user_id: string;

@@ -6,7 +6,7 @@ import {
   snowflakeString,
   durationString,
   choiceEnum,
-} from "#src/lib/module-system/ConfigSchema.js";
+} from "@module-system/ConfigSchema.js";
 
 describe("snowflakeString (property)", () => {
   const validator = snowflakeString();

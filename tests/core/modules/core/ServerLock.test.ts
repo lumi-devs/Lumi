@@ -3,7 +3,7 @@ import {
   getServerLockState,
   setServerLockState,
   shouldLeaveOnJoin,
-} from "#src/modules/admin/services/ServerLock.js";
+} from "@lib/operations/ServerLock.js";
 
 describe("shouldLeaveOnJoin", () => {
   it("leaves only locked-out guilds while enabled", () => {

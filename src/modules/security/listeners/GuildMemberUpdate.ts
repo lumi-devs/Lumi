@@ -1,10 +1,10 @@
 import { Events } from "discord.js";
 import { AuditLogEvent, type GuildMember } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
-import { resolveAuditLogExecutor } from "#src/modules/security/services/Audit.js";
-import { evaluateNukeEvent, isQuarantined } from "#src/modules/security/services/AntiNuke.js";
+import type { Container } from "@lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { swallow } from "@utilities/Errors.js";
+import { resolveAuditLogExecutor } from "@modules/security/services/Audit.js";
+import { evaluateNukeEvent, isQuarantined } from "@modules/security/services/AntiNuke.js";
 
 function roleSet(member: GuildMember): Set<string> {
   return new Set(member.roles.cache.keys());

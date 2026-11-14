@@ -1,16 +1,16 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/api/moderation/ModerationFlow.js";
+} from "@api/moderation/ModerationFlow.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { ConfirmPromptOptions } from "#src/lib/utilities/Confirm.js";
-import { SoftbanAction } from "#src/modules/mod/services/actions/SoftbanAction.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { ConfirmPromptOptions } from "@utilities/Confirm.js";
+import { SoftbanAction } from "@modules/mod/services/actions/SoftbanAction.js";
+import type { LumiT } from "@i18n/Index.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { Result } from "#src/shared/Index.ts";
+import { Result } from "@shared/Index.ts";
 
 const softbanDefFlow: MC.Flow<User, ModerationCase, number> = {
   logScope: "softban",

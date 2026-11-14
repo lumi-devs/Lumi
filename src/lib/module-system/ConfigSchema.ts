@@ -5,8 +5,8 @@ import {
   type ConfigField,
   type ConfigWidget,
   type MessageDocumentV2,
-} from "#src/contracts/Index.ts";
-import { defineModuleConfig } from "#src/lib/module-system/ModuleConfig.js";
+} from "@contracts/Index.ts";
+import { defineModuleConfig } from "@module-system/ModuleConfig.js";
 
 export { FieldType, type ConfigField, defineModuleConfig };
 

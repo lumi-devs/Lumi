@@ -14,7 +14,7 @@ Two gates, one per surface:
 - **Third-party addons**: the validator regex-scans every file at install/update
   (`EmbedImportRe`, `validate.ts:105`; the `new EmbedBuilder(` check at `:469`).
 
-Every reply goes through `@lumi/lib/ui/cards.js`, built entirely on Components V2
+Every reply goes through `@ui/Cards.js`, built entirely on Components V2
 primitives — a V2 message has no `embeds` field at all.
 
 ## Components V2 in this codebase
@@ -25,12 +25,12 @@ a `ContainerBuilder` (`buildContainer`) of `TextDisplay` blocks, `Section`s
 helper (`cards.ts:164`) sets `flags: MessageFlags.IsComponentsV2`;
 `ephemeralCard` (`:41`) ORs in `Ephemeral`.
 
-## Card builders (`@lumi/lib/ui/cards.js`)
+## Card builders (`@ui/Cards.js`)
 
 `makeSuccessCard` / `makeErrorCard` / `makeWarningCard` / `makeInfoCard` /
 `makeListCard` / `makeEmptyCard` are one-liners over `makeCard` (`:194`),
 differing only in accent color (`resolveCardColor`, now in
-`@lumi/lib/ui/palette.js`). `CardOptions` covers subtitle, breadcrumbs, status
+`@ui/Palette.js`). `CardOptions` covers subtitle, breadcrumbs, status
 badge, footer, thumbnail, pre-built `sections`, `actionRows`, and
 `headerImages`. `makeListCard` packs via `fitLines`, which truncates with a
 `"-# ...and N more item(s)."` notice before the 4000-char `TextDisplayLimit`
@@ -39,7 +39,7 @@ badge, footer, thumbnail, pre-built `sections`, `actionRows`, and
 `ctx.replySuccess/replyError/...` wrap these; on slash they ephemeral-wrap,
 on prefix they edit the last reply in place instead of spamming messages.
 
-## Panel kit (`@lumi/lib/ui/panels.js`)
+## Panel kit (`@ui/Panels.js`)
 
 Row builders live directly in `panels.ts` (no separate kit module):
 `settingRow` (label + value + button), `thumbRow`, `tabRow` (active tab

@@ -6,10 +6,10 @@ import {
   type PermitRecord,
   type PermitTargetType,
   type PermitWithAssignments,
-} from "#src/lib/prisma/repositories/PermissionRepository.js";
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
-import { cleanMention, isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+} from "@db/repositories/PermissionRepository.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import { cleanMention, isSnowflakeId } from "@utilities/Snowflakes.js";
 
 const ValidKinds: ReadonlySet<string> = new Set(["enforced", "custom"]);
 
@@ -318,7 +318,7 @@ interface PermitImportResult {
   skipped: Array<{ name: string; reason: string }>;
 }
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     permissions: typeof permissionUtility;
   }

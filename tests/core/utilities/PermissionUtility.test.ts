@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { permissionUtility } from "#src/modules/admin/utilities/PermissionUtility.js";
+import { container } from "@lib/Services.js";
+import { permissionUtility } from "@utilities/PermissionUtility.js";
 
 describe("PermissionUtility", () => {
   let service: typeof permissionUtility;

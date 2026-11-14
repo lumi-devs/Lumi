@@ -1,5 +1,5 @@
 import { parentPort } from "node:worker_threads";
-import type { WorkerRequest, WorkerResponse } from "#src/lib/regex-worker/Protocol.js";
+import type { WorkerRequest, WorkerResponse } from "@lib/regex-worker/Protocol.js";
 
 const MaxSets = 2_000;
 

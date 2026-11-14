@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { pino, type Logger as PinoLogger } from "pino";
-import { activeTraceIds, getRequestContext } from "#src/observability/Context.js";
+import { activeTraceIds, getRequestContext } from "@observability/Context.js";
 
 export interface PinoLoggerOptions {
   service: string;

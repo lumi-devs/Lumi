@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { container } from "#src/lib/Services.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import { container } from "@lib/Services.js";
+import { tryParseJSON } from "@shared/Index.ts";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -40,10 +40,10 @@ export async function withIdempotency<T>(
   idempotencyKey?: string,
 ): Promise<T> {
   const token = idempotencyKey ? `key:${idempotencyKey}` : hashInput(input);
-  const key = ValkeyKeys.rpcIdempotency(action, guildId, token);
+  const key = RedisKeys.rpcIdempotency(action, guildId, token);
   const pendingTtlMs = timeoutMs + marginMs;
   const pending: IdempotencyRecord = { status: "pending" };
-  const acquired = await container.valkey.set(
+  const acquired = await container.redis.set(
     key,
     JSON.stringify(pending),
     "PX",
@@ -52,7 +52,7 @@ export async function withIdempotency<T>(
   );
 
   if (acquired !== "OK") {
-    const raw = await container.valkey.get(key);
+    const raw = await container.redis.get(key);
     const record = raw
       ? (tryParseJSON(raw) as IdempotencyRecord | null)
       : null;
@@ -65,7 +65,7 @@ export async function withIdempotency<T>(
 
   const refresh = setInterval(
     () => {
-      container.valkey.pexpire(key, pendingTtlMs).catch(() => undefined);
+      container.redis.pexpire(key, pendingTtlMs).catch(() => undefined);
     },
     Math.max(1, Math.floor(pendingTtlMs / 2)),
   );
@@ -74,15 +74,15 @@ export async function withIdempotency<T>(
   try {
     const result = await fn();
     const done: IdempotencyRecord = { status: "done", result };
-    await container.valkey.set(
+    await container.redis.set(
       key,
       JSON.stringify(done),
       "PX",
-      ValkeyTTL.rpcIdempotencyDone * 1000,
+      RedisTTL.rpcIdempotencyDone * 1000,
     );
     return result;
   } catch (err) {
-    await container.valkey.del(key).catch(() => null);
+    await container.redis.del(key).catch(() => null);
     throw err;
   } finally {
     clearInterval(refresh);

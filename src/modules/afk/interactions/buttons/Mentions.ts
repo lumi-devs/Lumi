@@ -6,19 +6,19 @@ import {
   hyperlink,
   messageLink,
 } from "@discordjs/formatters";
-import { formatDuration } from "#src/lib/utilities/Time.js";
-import { makeErrorCard, makeListCard, ephemeralCard } from "#src/lib/ui/Cards.js";
+import { formatDuration } from "@utilities/Time.js";
+import { makeErrorCard, makeListCard, ephemeralCard } from "@ui/Cards.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import { getAfkMentions } from "#src/modules/afk/data/Afk.js";
-import { AfkMentionsId } from "#src/modules/afk/Constants.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { componentEmoji } from "@ui/Panels.js";
+import { getAfkMentions } from "@modules/afk/data/Afk.js";
+import { AfkMentionsId } from "@modules/afk/Constants.js";
 
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
 
 const PageSize = 5;
 

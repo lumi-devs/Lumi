@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { createGuildTransaction } from "#src/lib/prisma/GuildTransaction.js";
+import { container } from "@lib/Services.js";
+import { createGuildTransaction } from "@db/GuildTransaction.js";
 
 Object.assign(container, {
   invalidation: { invalidate: vi.fn().mockResolvedValue(undefined) },
@@ -11,7 +11,7 @@ Object.assign(container, {
   },
 });
 
-function mockValkey() {
+function mockRedis() {
   const store = new Map<string, string>();
   return {
     store,
@@ -35,26 +35,32 @@ function mockValkey() {
 }
 
 function mockPrisma(existing: { id: string } | null) {
+  const guild = {
+    findUnique: vi.fn().mockResolvedValue(existing),
+    create: vi.fn().mockResolvedValue({ id: "g-1" }),
+    update: vi.fn().mockResolvedValue({}),
+  };
+  const $executeRaw = vi.fn().mockResolvedValue(1);
   return {
-    guild: {
-      findUnique: vi.fn().mockResolvedValue(existing),
-      create: vi.fn().mockResolvedValue({ id: "g-1" }),
-      update: vi.fn().mockResolvedValue({}),
-    },
+    guild,
+    $executeRaw,
+    $transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) =>
+      run({ guild, $executeRaw }),
+    ),
   };
 }
 
 describe("GuildWriteTransaction", () => {
-  let valkey: ReturnType<typeof mockValkey>;
+  let redis: ReturnType<typeof mockRedis>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    valkey = mockValkey();
+    redis = mockRedis();
   });
 
   it("writes changes and releases the lock on submit", async () => {
     const prisma = mockPrisma({ id: "g-1" });
-    const txn = await createGuildTransaction("g-1", valkey as any, prisma as any);
+    const txn = await createGuildTransaction("g-1", redis as any, prisma as any);
 
     txn.write({ prefix: "!" });
     await txn.submit();
@@ -71,7 +77,7 @@ describe("GuildWriteTransaction", () => {
 
   it("throws instead of writing when submit is called twice", async () => {
     const prisma = mockPrisma({ id: "g-1" });
-    const txn = await createGuildTransaction("g-1", valkey as any, prisma as any);
+    const txn = await createGuildTransaction("g-1", redis as any, prisma as any);
 
     txn.write({ prefix: "!" });
     await txn.submit();
@@ -83,9 +89,9 @@ describe("GuildWriteTransaction", () => {
 
   it("refuses to write when the lock was lost before submit", async () => {
     const prisma = mockPrisma({ id: "g-1" });
-    const txn = await createGuildTransaction("g-1", valkey as any, prisma as any);
+    const txn = await createGuildTransaction("g-1", redis as any, prisma as any);
 
-    valkey.store.delete("lumi:lock:guild:g-1");
+    redis.store.delete("lumi:lock:guild:g-1");
 
     txn.write({ prefix: "!" });
     await expect(txn.submit()).rejects.toThrow(/Lock lost/);
@@ -94,7 +100,7 @@ describe("GuildWriteTransaction", () => {
 
   it("skips the write and releases the lock when there are no changes", async () => {
     const prisma = mockPrisma({ id: "g-1" });
-    const txn = await createGuildTransaction("g-1", valkey as any, prisma as any);
+    const txn = await createGuildTransaction("g-1", redis as any, prisma as any);
 
     await txn.submit();
 

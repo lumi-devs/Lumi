@@ -85,6 +85,6 @@ Sentry is opt-in via `SENTRY_DSN` (off when unset). Enabling it ships error payl
 ## Security Best Practices for Operators
 
 - Store all secrets (bot token, DB credentials, `RPC_INTERNAL_TOKEN`, `DASHBOARD_SESSION_SECRET`, `APPEAL_TOKEN_SECRET`, `SENTRY_DSN`) in environment variables or `.env` files with restricted file permissions (`600`). `.env` is gitignored — never commit it.
-- Ensure Valkey and PostgreSQL instances require authentication and are network-isolated.
+- Ensure Redis and PostgreSQL instances require authentication and are network-isolated.
 - Keep `RPC_HTTP_HOST` and `METRICS_HOST` on loopback unless cross-container scraping/access is required.
 - Keep dependencies updated via Dependabot alerts.

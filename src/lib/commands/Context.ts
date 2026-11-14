@@ -1,7 +1,7 @@
-import { UserError } from "#src/shared/Index.ts";
-import { container, type Container } from "#src/lib/Services.js";
-import type { PrefixArgs } from "#src/lib/commands/PrefixArgs.js";
-import { fetchT } from "#src/lib/i18n/Index.js";
+import { UserError } from "@shared/Index.ts";
+import { container, type Container } from "@lib/Services.js";
+import type { PrefixArgs } from "@commands/PrefixArgs.js";
+import { fetchT } from "@i18n/Index.js";
 import {
   GuildMember,
   MessageFlags,
@@ -12,12 +12,12 @@ import {
   type Role,
   type User,
 } from "discord.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
-import { permitSubject } from "#src/lib/api/permissions/Subject.js";
-import { BrandColors } from "#src/lib/ui/Palette.js";
-import { getGuildContext } from "#src/lib/cache/GuildContext.js";
+import type { LumiT } from "@i18n/Index.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, makeEmptyCard, type CardReply } from "@ui/Cards.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
+import { permitSubject } from "@api/permissions/Subject.js";
+import { BrandColors } from "@ui/Palette.js";
+import { getGuildContext } from "@cache/GuildContext.js";
 
 export interface CtxOptionSpec {
   required?: boolean;

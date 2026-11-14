@@ -1,9 +1,9 @@
-import type { ModuleRecord } from "#src/lib/module-system/ModuleStore.js";
-import { restartChoiceRow } from "#src/lib/Restart.js";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
-import type { ModulePiecesInfo } from "#src/modules/admin/services/Pieces.js";
-import { ModuleUpdateId } from "#src/modules/core/Constants.js";
+import type { ModuleRecord } from "@module-system/ModuleStore.js";
+import { restartChoiceRow } from "@lib/Restart.js";
+import { componentEmoji } from "@ui/Panels.js";
+import { makeErrorCard, makeInfoCard, makeSuccessCard, makeWarningCard, type CardReply } from "@ui/Cards.js";
+import type { ModulePiecesInfo } from "@modules/admin/services/Pieces.js";
+import { ModuleUpdateId } from "@interactions/ModuleIds.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 

@@ -1,12 +1,12 @@
-import Valkey, { Cluster, Command, type RedisOptions } from "iovalkey";
+import Redis, { Cluster, Command, type RedisOptions } from "ioredis";
 import { performance } from "perf_hooks";
-import { delSafe, type ValkeyClient } from "#src/lib/valkey/Cluster.js";
-import { valkeyCommandDuration } from "#src/observability/Metrics.js";
+import { delSafe, type RedisClient } from "@redis/Cluster.js";
+import { redisCommandDuration } from "@observability/Metrics.js";
 
 const MAX_KEYS_PER_INVALIDATION = 500;
 
-function observeValkeyDuration(command: string, seconds: number): void {
-  valkeyCommandDuration.observe({ command }, seconds);
+function observeRedisDuration(command: string, seconds: number): void {
+  redisCommandDuration.observe({ command }, seconds);
 }
 
 export interface CacheLogger {
@@ -16,7 +16,7 @@ export interface CacheLogger {
   error?(message: string, ...args: unknown[]): void;
 }
 
-export interface ValkeyConnectionConfig {
+export interface RedisConnectionConfig {
   url?: string;
   host?: string;
   port?: number;
@@ -33,8 +33,8 @@ export interface ResyncContext {
   cutoff: number;
 }
 
-export type ValkeyOptions = RedisOptions;
-export type { ValkeyClient };
+
+export type { RedisClient };
 
 function tryParseJSON(payload: string): unknown {
   try {
@@ -44,7 +44,7 @@ function tryParseJSON(payload: string): unknown {
   }
 }
 
-export const ValkeyKeys = {
+export const RedisKeys = {
   guildSettings: (guildId: string) => `lumi:settings:guild:${guildId}`,
   guildConfig: (module: string, guildId: string) =>
     `lumi:cfg:${module}:guild:${guildId}`,
@@ -55,8 +55,6 @@ export const ValkeyKeys = {
     `lumi:cfg:${module}:${scope}:${scopeId || "-"}:guild:${guildId || "-"}`,
   accessAllow: (guildId: string | null, userId: string) =>
     `lumi:allow:${guildId ?? "global"}:${userId}`,
-  kvEntry: (guildId: string, module: string, targetId: string, key: string) =>
-    `lumi:kvcache:${guildId}:${module}:${targetId}:${key}`,
 
   moduleEnabled: (module: string, guildId: string) =>
     `lumi:module:enabled:${module}:${guildId}`,
@@ -146,27 +144,20 @@ export const ValkeyKeys = {
     `lumi:flags:override:${key}:${guildId}`,
 } as const;
 
-export const ValkeyTTL = {
+export const RedisTTL = {
   guildConfig: 60,
   scopedConfig: 60,
   guildAllModuleConfigs: 60,
   globalConfig: 120,
-  guildPrefix: 60,
-  permOverrides: 120,
   permits: 120,
   moduleEnabledCache: 30,
   blockedCache: 300,
   allowCache: 300,
-  kvCache: 60,
   ignoreCache: 300,
   botStats: 15,
   voiceMute: 300,
   panicState: 60,
-  quarantine: 30 * 24 * 60 * 60,
   quarantineNegative: 60,
-  warnThresholds: 300,
-  warnCount: 365 * 24 * 3600,
-  voiceOccupancy: 24 * 60 * 60,
   addonUpdateCheck: 300,
   logClaimCode: 600,
   logClaim: 24 * 60 * 60,
@@ -184,35 +175,32 @@ export const ValkeyTTL = {
   featureFlagOverride: 30,
 } as const;
 
-export function valkeyConnectionOptions(
-  config?: ValkeyConnectionConfig,
-): ValkeyOptions {
+export function redisConnectionOptions(
+  config?: RedisConnectionConfig,
+): RedisOptions {
   const url = config?.url;
-  if (url) {
-    try {
-      const parsed = new URL(url);
-      const isTls = parsed.protocol === "rediss:" || parsed.protocol === "valkeys:";
-      const host = parsed.hostname || "localhost";
-      const port = parsed.port ? parseInt(parsed.port, 10) : 6379;
-      const username = parsed.username ? decodeURIComponent(parsed.username) : undefined;
-      const password = parsed.password ? decodeURIComponent(parsed.password) : undefined;
-      const dbMatch = parsed.pathname.match(/^\/(\d+)$/);
-      const db = dbMatch ? parseInt(dbMatch[1]!, 10) : undefined;
+  if (url && URL.canParse(url)) {
+    const parsed = new URL(url);
+    const isTls = parsed.protocol === "rediss:";
+    const host = parsed.hostname || "localhost";
+    const port = parsed.port ? parseInt(parsed.port, 10) : 6379;
+    const username = parsed.username ? decodeURIComponent(parsed.username) : undefined;
+    const password = parsed.password ? decodeURIComponent(parsed.password) : undefined;
+    const dbMatch = parsed.pathname.match(/^\/(\d+)$/);
+    const db = dbMatch ? parseInt(dbMatch[1]!, 10) : undefined;
 
-      return {
-        host,
-        port,
-        ...(username && { username }),
-        ...(password && { password }),
-        ...(db !== undefined && { db }),
-        ...(isTls && { tls: {} }),
-      };
-    } catch {
-    }
+    return {
+      host,
+      port,
+      ...(username && { username }),
+      ...(password && { password }),
+      ...(db !== undefined && { db }),
+      ...(isTls && { tls: {} }),
+    };
   }
 
-  const envSentinels = config?.sentinels ?? process.env.VALKEY_SENTINELS;
-  const envPassword = config?.password ?? process.env.VALKEY_PASSWORD ?? "";
+  const envSentinels = config?.sentinels ?? process.env.REDIS_SENTINELS;
+  const envPassword = config?.password ?? process.env.REDIS_PASSWORD ?? "";
   const password = envPassword.length > 0 ? envPassword : undefined;
 
   if (envSentinels) {
@@ -223,22 +211,22 @@ export function valkeyConnectionOptions(
       .map((entry) => {
         const [host, port] = entry.split(":");
         if (!host || !port) {
-          throw new Error(`[Valkey] Invalid VALKEY_SENTINELS entry: ${entry}`);
+          throw new Error(`[Redis] Invalid REDIS_SENTINELS entry: ${entry}`);
         }
         const portNum = Number(port);
         if (!Number.isFinite(portNum)) {
-          throw new Error(`[Valkey] Invalid VALKEY_SENTINELS port: ${entry}`);
+          throw new Error(`[Redis] Invalid REDIS_SENTINELS port: ${entry}`);
         }
         return { host, port: portNum };
       });
     if (sentinels.length === 0) {
-      throw new Error("[Valkey] VALKEY_SENTINELS is empty");
+      throw new Error("[Redis] REDIS_SENTINELS is empty");
     }
     const sentinelPassword =
-      config?.sentinelPassword ?? process.env.VALKEY_SENTINEL_PASSWORD ?? undefined;
+      config?.sentinelPassword ?? process.env.REDIS_SENTINEL_PASSWORD ?? undefined;
     return {
       sentinels,
-      name: config?.sentinelName ?? process.env.VALKEY_SENTINEL_NAME ?? "mymaster",
+      name: config?.sentinelName ?? process.env.REDIS_SENTINEL_NAME ?? "mymaster",
       ...(password && { password }),
       ...(sentinelPassword && { sentinelPassword }),
     };
@@ -246,20 +234,20 @@ export function valkeyConnectionOptions(
 
   const portVal =
     config?.port ??
-    (process.env.VALKEY_PORT ? parseInt(process.env.VALKEY_PORT, 10) : 6379);
+    (process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379);
 
   return {
-    host: config?.host ?? process.env.VALKEY_HOST ?? "localhost",
+    host: config?.host ?? process.env.REDIS_HOST ?? "localhost",
     port: Number.isFinite(portVal) ? portVal : 6379,
     ...(password && { password }),
   };
 }
 
-export function parseValkeyConnectionOption(
-  config?: ValkeyConnectionConfig,
-): ValkeyOptions {
+export function parseRedisConnectionOption(
+  config?: RedisConnectionConfig,
+): RedisOptions {
   return {
-    ...valkeyConnectionOptions(config),
+    ...redisConnectionOptions(config),
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   };
@@ -277,10 +265,10 @@ const BLOCKING_COMMANDS = new Set([
   "wait",
 ]);
 
-export function instrumentValkeyLatency(
-  client: ValkeyClient,
-  onDuration: (command: string, seconds: number) => void = observeValkeyDuration,
-): ValkeyClient {
+export function instrumentRedisLatency(
+  client: RedisClient,
+  onDuration: (command: string, seconds: number) => void = observeRedisDuration,
+): RedisClient {
   const sendCommand = client.sendCommand.bind(client);
   client.sendCommand = (command: Command, stream?: unknown, node?: unknown) => {
     if (command.name && BLOCKING_COMMANDS.has(command.name.toLowerCase())) {
@@ -296,17 +284,17 @@ export function instrumentValkeyLatency(
   return client;
 }
 
-export interface CreateValkeyClientOptions {
-  config?: ValkeyConnectionConfig | undefined;
+export interface CreateRedisClientOptions {
+  config?: RedisConnectionConfig | undefined;
   logger?: CacheLogger | undefined;
   onDuration?: ((command: string, seconds: number) => void) | undefined;
 }
 
-export function createValkeyClient(
-  options: CreateValkeyClientOptions = {},
-): ValkeyClient {
-  const { config, logger, onDuration = observeValkeyDuration } = options;
-  const clusterNodesEnv = config?.clusterNodes ?? process.env.VALKEY_CLUSTER_NODES;
+export function createRedisClient(
+  options: CreateRedisClientOptions = {},
+): RedisClient {
+  const { config, logger, onDuration = observeRedisDuration } = options;
+  const clusterNodesEnv = config?.clusterNodes ?? process.env.REDIS_CLUSTER_NODES;
   const nodes = clusterNodesEnv
     ? clusterNodesEnv
         .split(",")
@@ -320,27 +308,27 @@ export function createValkeyClient(
 
   const cacheDbVal =
     config?.cacheDb ??
-    (process.env.VALKEY_CACHE_DB ? parseInt(process.env.VALKEY_CACHE_DB, 10) : 0);
+    (process.env.REDIS_CACHE_DB ? parseInt(process.env.REDIS_CACHE_DB, 10) : 0);
 
-  const client: ValkeyClient = nodes && nodes.length > 0
+  const client: RedisClient = nodes && nodes.length > 0
     ? new Cluster(nodes, {
         lazyConnect: true,
         scaleReads:
           config?.clusterScaleReads ??
-          (process.env.VALKEY_CLUSTER_SCALE_READS as "master" | "slave" | "all" | undefined) ??
+          (process.env.REDIS_CLUSTER_SCALE_READS as "master" | "slave" | "all" | undefined) ??
           "master",
         slotsRefreshTimeout: 2000,
         clusterRetryStrategy: (times: number) =>
           Math.min(100 * Math.pow(2, times), 2000),
         redisOptions: {
-          ...valkeyConnectionOptions(config),
+          ...redisConnectionOptions(config),
           maxRetriesPerRequest: 3,
           offlineQueue: false,
           commandTimeout: 5000,
         },
       })
-    : new Valkey({
-        ...valkeyConnectionOptions(config),
+    : new Redis({
+        ...redisConnectionOptions(config),
         db: Number.isFinite(cacheDbVal) ? cacheDbVal : 0,
         lazyConnect: true,
         maxRetriesPerRequest: 3,
@@ -349,18 +337,18 @@ export function createValkeyClient(
         commandTimeout: 5000,
       });
 
-  client.on("error", (err: unknown) => logger?.error?.("[Valkey] Error:", err));
-  client.on("connect", () => logger?.debug?.("[Valkey] Connected"));
-  client.on("reconnecting", () => logger?.warn?.("[Valkey] Reconnecting..."));
+  client.on("error", (err: unknown) => logger?.error?.("[Redis] Error:", err));
+  client.on("connect", () => logger?.debug?.("[Redis] Connected"));
+  client.on("reconnecting", () => logger?.warn?.("[Redis] Reconnecting..."));
 
-  return instrumentValkeyLatency(client, onDuration);
+  return instrumentRedisLatency(client, onDuration);
 }
 
 const InvalidationChannel = "lumi:cache:invalidate";
 
 export class InvalidationBus {
-  readonly #subscriber: ValkeyClient;
-  #publisher: ValkeyClient | null;
+  readonly #subscriber: RedisClient;
+  #publisher: RedisClient | null;
   readonly #logger?: CacheLogger | undefined;
   #listeners = new Set<(keys: string[]) => void>();
   #resyncListeners = new Set<(ctx: ResyncContext) => void | Promise<void>>();
@@ -371,8 +359,8 @@ export class InvalidationBus {
   #lastInvalidationTime = 0;
 
   public constructor(
-    subscriber: ValkeyClient,
-    publisher?: ValkeyClient | null,
+    subscriber: RedisClient,
+    publisher?: RedisClient | null,
     logger?: CacheLogger,
   ) {
     this.#subscriber = subscriber;
@@ -425,7 +413,7 @@ export class InvalidationBus {
     if (!this.#started) return;
     await this.#subscriber
       .unsubscribe(InvalidationChannel)
-      .catch((err: unknown) => this.#logger?.error?.("Valkey: unsubscribe failed", err));
+      .catch((err: unknown) => this.#logger?.error?.("Redis: unsubscribe failed", err));
     this.#started = false;
   }
 
@@ -441,7 +429,7 @@ export class InvalidationBus {
     this.#resyncListeners.clear();
     await this.#subscriber
       .quit()
-      .catch((err: unknown) => this.#logger?.error?.("Valkey: quit failed", err));
+      .catch((err: unknown) => this.#logger?.error?.("Redis: quit failed", err));
   }
 
   async #doStart(): Promise<void> {
@@ -485,7 +473,7 @@ export class InvalidationBus {
     const ctx: ResyncContext = { cutoff: this.#lastInvalidationTime };
     for (const fn of this.#resyncListeners) {
       Promise.resolve(fn(ctx)).catch((err: unknown) =>
-        this.#logger?.error?.("Valkey: invalidation resync failed", err),
+        this.#logger?.error?.("Redis: invalidation resync failed", err),
       );
     }
   };
@@ -494,8 +482,8 @@ export class InvalidationBus {
 const SignalsChannel = "lumi:signals";
 
 export class SignalBus {
-  readonly #subscriber: ValkeyClient;
-  #publisher: ValkeyClient | null;
+  readonly #subscriber: RedisClient;
+  #publisher: RedisClient | null;
   readonly #logger?: CacheLogger | undefined;
   #listeners = new Set<
     (topic: string, payload: Record<string, string | number>) => void
@@ -505,8 +493,8 @@ export class SignalBus {
   #handlerAttached = false;
 
   public constructor(
-    subscriber: ValkeyClient,
-    publisher?: ValkeyClient | null,
+    subscriber: RedisClient,
+    publisher?: RedisClient | null,
     logger?: CacheLogger,
   ) {
     this.#subscriber = subscriber;
@@ -548,7 +536,7 @@ export class SignalBus {
     if (!this.#started) return;
     await this.#subscriber
       .unsubscribe(SignalsChannel)
-      .catch((err: unknown) => this.#logger?.error?.("Valkey: unsubscribe failed", err));
+      .catch((err: unknown) => this.#logger?.error?.("Redis: unsubscribe failed", err));
     this.#started = false;
   }
 
@@ -561,7 +549,7 @@ export class SignalBus {
     this.#listeners.clear();
     await this.#subscriber
       .quit()
-      .catch((err: unknown) => this.#logger?.error?.("Valkey: quit failed", err));
+      .catch((err: unknown) => this.#logger?.error?.("Redis: quit failed", err));
   }
 
   async #doStart(): Promise<void> {

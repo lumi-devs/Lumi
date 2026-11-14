@@ -1,4 +1,4 @@
-import type { ConfigField } from "#src/contracts/Config.js";
+import type { ConfigField } from "@contracts/Config.js";
 
 const DefaultPickableChannelTypeIds = [0] as const;
 

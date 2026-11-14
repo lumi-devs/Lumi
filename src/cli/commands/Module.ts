@@ -1,7 +1,7 @@
 import path from "node:path";
-import { getDevModulePaths } from "#lib/Env.js";
-import { readManifest } from "#lib/module-system/Manifest.js";
-import { DefaultModuleRoot, walk } from "#src/scripts/GenerateManifests.ts";
+import { getDevModulePaths } from "@lib/Env.js";
+import { readManifest } from "@module-system/Manifest.js";
+import { DefaultModuleRoot, walk } from "@scripts/GenerateManifests.ts";
 
 export const help = `Usage: lumi module list
 

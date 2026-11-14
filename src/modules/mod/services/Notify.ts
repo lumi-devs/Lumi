@@ -1,5 +1,5 @@
 import type { Guild, User, GuildMember } from "discord.js";
-import { makeErrorCard } from "#src/lib/ui/Cards.js";
+import { makeErrorCard } from "@ui/Cards.js";
 
 export async function sendModActionDm(
   target: User | GuildMember,

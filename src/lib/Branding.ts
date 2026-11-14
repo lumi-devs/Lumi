@@ -1,4 +1,4 @@
-import { LumiInfo } from "#src/lib/utilities/Version.js";
+import { LumiInfo } from "@utilities/Version.js";
 
 export const LUMI_ART = [
   "      ___       ___           ___",

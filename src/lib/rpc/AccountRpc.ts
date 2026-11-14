@@ -1,17 +1,17 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
   accountRpc,
-} from "#src/contracts/rpc/Index.ts";
+} from "@contracts/rpc/Index.ts";
 import {
   executeGdprDeletion,
   executeGdprExport,
   startGdprExportJob,
-} from "#src/lib/gdpr/Requests.js";
-import { signGdprExportToken } from "#src/lib/gdpr/ExportToken.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
+} from "@lib/gdpr/Requests.js";
+import { signGdprExportToken } from "@lib/gdpr/ExportToken.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { implementRpc } from "@rpc/Implement.js";
 
 async function canAccessUserData(
   actorId: string,

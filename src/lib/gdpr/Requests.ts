@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { QueuePriority, scheduleTask } from "#src/lib/scheduler/Schedule.js";
+import type { Container } from "@lib/Services.js";
+import { QueuePriority, scheduleTask } from "@scheduler/Schedule.js";
 
 export interface GdprDeletionResult {
 

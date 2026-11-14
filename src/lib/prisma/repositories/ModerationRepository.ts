@@ -1,16 +1,16 @@
 import { Prisma, type CaseAction, type CaseTypeSetting, type ModerationCase } from "@prisma/client";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import { Repository } from "@db/repositories/Repository.js";
 import {
   purgeInBatchesWithArchive,
   type RetentionPurgeOptions,
-} from "#src/lib/Retention.js";
+} from "@lib/Retention.js";
 import {
   decodeSingleKeyCursor,
   encodeSingleKeyCursor,
   singleKeyKeysetWhere,
   splitPage,
-} from "#src/lib/prisma/Cursor.js";
+} from "@db/Cursor.js";
 
 const SweepPageSize = 500;
 
@@ -188,8 +188,8 @@ export class ModerationRepository extends Repository {
 
   public isVoiceMuted(guildId: string, userId: string): Promise<boolean> {
     return this.getOrSet(
-      ValkeyKeys.voiceMuteState(guildId, userId),
-      ValkeyTTL.voiceMute,
+      RedisKeys.voiceMuteState(guildId, userId),
+      RedisTTL.voiceMute,
       () =>
         this.prisma.moderationCase
           .count({
@@ -348,26 +348,6 @@ export class ModerationRepository extends Repository {
   public resetWarnThresholds(guildId: string) {
     return this.prisma.warnThreshold.deleteMany({
       where: { guildId },
-    });
-  }
-
-  public async setBulkWarnThresholds(
-    guildId: string,
-    thresholds: Array<{ warnCount: number; action: CaseAction; duration?: number | undefined }>,
-  ) {
-    await this.db.ensureGuild(guildId);
-    return this.prisma.$transaction(async (tx) => {
-      await tx.warnThreshold.deleteMany({ where: { guildId } });
-      if (thresholds.length > 0) {
-        await tx.warnThreshold.createMany({
-          data: thresholds.map((t) => ({
-            guildId,
-            warnCount: t.warnCount,
-            action: t.action,
-            duration: t.duration ?? null,
-          })),
-        });
-      }
     });
   }
 

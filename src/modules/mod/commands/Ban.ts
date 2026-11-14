@@ -1,21 +1,21 @@
-import { respondWithReasonChoices } from "#src/modules/mod/services/ReasonAutocomplete.js";
-import type { Container } from "#src/lib/Services.js";
+import { respondWithReasonChoices } from "@modules/mod/services/ReasonAutocomplete.js";
+import type { Container } from "@lib/Services.js";
 import type { AutocompleteInteraction } from "discord.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/api/moderation/ModerationFlow.js";
-import { parseSnowflakeList, resolveUsers } from "#src/lib/discord/MassTargets.js";
-import { Result } from "#src/shared/Index.ts";
-import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
+} from "@api/moderation/ModerationFlow.js";
+import { parseSnowflakeList, resolveUsers } from "@discord/MassTargets.js";
+import { Result } from "@shared/Index.ts";
+import { applyLocalizedBuilder } from "@i18n/Index.js";
 import { userMention } from "@discordjs/formatters";
-import { isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+import { isSnowflakeId } from "@utilities/Snowflakes.js";
 import type { ModerationCase } from "@prisma/client";
 import type { User } from "discord.js";
-import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
+import { BanAction } from "@modules/mod/services/actions/BanAction.js";
 
 const Root = "commands";
 const SecondsPerDay = 86400;

@@ -6,7 +6,7 @@ import {
 } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { getRepoRoot } from "#src/lib/Env.js";
+import { getRepoRoot } from "@lib/Env.js";
 
 export function dataFile(...parts: string[]): string {
   const base =

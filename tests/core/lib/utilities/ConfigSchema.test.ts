@@ -10,7 +10,7 @@ import {
   durationString,
   choiceEnum,
   FieldType,
-} from "#src/lib/module-system/ConfigSchema.js";
+} from "@module-system/ConfigSchema.js";
 
 describe("Config Schema Utilities", () => {
   describe("cfg builders & fieldsFromSchema", () => {

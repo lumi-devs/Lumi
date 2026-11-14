@@ -38,7 +38,7 @@ checks. Each hook receives the `CommandContext` and returns a
 first denial in registration order:
 
 ```ts
-import { addBeforeInvokeHook, removeBeforeInvokeHook } from "#lib/commands/Hooks.js";
+import { addBeforeInvokeHook, removeBeforeInvokeHook } from "@commands/Hooks.js";
 
 addBeforeInvokeHook("my-check", (ctx) => null);
 removeBeforeInvokeHook("my-check");
@@ -68,7 +68,7 @@ error). It returns an unsubscribe function. With no handler registered,
 global behavior is identical.
 
 ```ts
-import { onCommandError } from "#src/lib/commands/CommandDispatch.js";
+import { onCommandError } from "@commands/CommandDispatch.js";
 
 const off = onCommandError("ban", async (error) => {
   if ((error as Error).message.includes("hierarchy")) {

@@ -1,11 +1,11 @@
-import { moduleUpdateResultCard } from "#src/modules/admin/ui/ModuleUpdateCard.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import { moduleUpdateResultCard } from "@modules/admin/ui/ModuleUpdateCard.js";
+import { getUtility } from "@module-system/Utility.js";
 import {
   ModuleAlreadyInstalledError,
   type DownloaderUtility,
-} from "#src/modules/admin/utilities/DownloaderUtility.js";
-import { makeErrorCard, makeSuccessCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { errorFrom } from "#src/lib/utilities/Errors.js";
+} from "@utilities/DownloaderUtility.js";
+import { makeErrorCard, makeSuccessCard, type CardReply } from "@ui/Cards.js";
+import { errorFrom } from "@utilities/Errors.js";
 import {
   moduleAlreadyInstalledCard,
   moduleNotFoundCard,
@@ -14,8 +14,8 @@ import {
   multiUpdateReportCard,
   noInstalledModulesCard,
   type ModuleUpdateOutcome,
-} from "#src/modules/admin/ui/ModuleCommandCards.js";
-import { container } from "#src/lib/Services.js";
+} from "@modules/admin/ui/ModuleCommandCards.js";
+import { container } from "@lib/Services.js";
 import type { User } from "discord.js";
 
 function downloader(): DownloaderUtility {

@@ -1,5 +1,5 @@
-import { makeSuccessCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { restartChoiceRow } from "#src/lib/Restart.js";
+import { makeSuccessCard, type CardReply } from "@ui/Cards.js";
+import { restartChoiceRow } from "@lib/Restart.js";
 
 interface ModuleUpdateResult {
   updated: boolean;

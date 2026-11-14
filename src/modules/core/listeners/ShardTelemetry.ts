@@ -1,17 +1,17 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import { Status } from "discord.js";
-import { getEventLoopLagP99Ms } from "#src/observability/Index.ts";
+import { getEventLoopLagP99Ms } from "@observability/Index.ts";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,
   ShardTelemetryPublisher,
   getLastReadyAt,
   type ShardTelemetrySample,
-} from "#src/lib/sharding/ShardTelemetry.js";
-import { LumiPinoLogger } from "#src/lib/logging/PinoLogger.js";
-import { getClusterName, getConsumerId } from "#src/lib/Env.js";
+} from "@lib/sharding/ShardTelemetry.js";
+import { LumiPinoLogger } from "@lib/logging/PinoLogger.js";
+import { getClusterName, getConsumerId } from "@lib/Env.js";
 
 const BytesPerMb = 1024 * 1024;
 
@@ -23,7 +23,7 @@ export const shardTelemetryListener = defineListener({
   event: Events.ClientReady,
   execute(services: Container) {
     if (publisher) return;
-    const { client, valkey, logger } = services;
+    const { client, redis, logger } = services;
 
     const cluster = getClusterName() ?? DefaultClusterName;
     const shardIds = client.ws.shards.size > 0 ? [...client.ws.shards.keys()] : [0];
@@ -32,7 +32,7 @@ export const shardTelemetryListener = defineListener({
     for (const id of shardIds) {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
       for (const entry of initialLogs) {
-        void valkey.rpush(key, JSON.stringify(entry));
+        void redis.rpush(key, JSON.stringify(entry));
       }
       const shard = client.ws.shards.get(id);
       const readyMsg = JSON.stringify({
@@ -40,9 +40,9 @@ export const shardTelemetryListener = defineListener({
         level: "info",
         message: `[Shard ${id}] Gateway connected and ready (status: ${shard ? Status[shard.status] : "Ready"}, ${client.guilds.cache.size} guilds cached)`,
       });
-      void valkey.rpush(key, readyMsg);
-      void valkey.ltrim(key, -100, -1);
-      void valkey.expire(key, 86400);
+      void redis.rpush(key, readyMsg);
+      void redis.ltrim(key, -100, -1);
+      void redis.expire(key, 86400);
     }
 
     removeLogListener = LumiPinoLogger.addListener((entry) => {
@@ -50,11 +50,11 @@ export const shardTelemetryListener = defineListener({
       const raw = JSON.stringify(entry);
       for (const id of currentShards) {
         const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
-        void valkey
+        void redis
           .rpush(key, raw)
           .then(() => {
-            void valkey.ltrim(key, -100, -1);
-            void valkey.expire(key, 86400);
+            void redis.ltrim(key, -100, -1);
+            void redis.expire(key, 86400);
           })
           .catch(() => {});
       }
@@ -62,7 +62,7 @@ export const shardTelemetryListener = defineListener({
 
     client.on("shardDisconnect", (event, id) => {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
-      void valkey.rpush(
+      void redis.rpush(
         key,
         JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -70,12 +70,12 @@ export const shardTelemetryListener = defineListener({
           message: `[Shard ${id}] Disconnected from Discord gateway (code: ${event.code}, reason: ${event.reason || "unknown"})`,
         }),
       );
-      void valkey.ltrim(key, -100, -1);
+      void redis.ltrim(key, -100, -1);
     });
 
     client.on("shardReconnecting", (id) => {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
-      void valkey.rpush(
+      void redis.rpush(
         key,
         JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -83,12 +83,12 @@ export const shardTelemetryListener = defineListener({
           message: `[Shard ${id}] Reconnecting to Discord gateway...`,
         }),
       );
-      void valkey.ltrim(key, -100, -1);
+      void redis.ltrim(key, -100, -1);
     });
 
     client.on("shardResume", (id, replayedEvents) => {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
-      void valkey.rpush(
+      void redis.rpush(
         key,
         JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -96,12 +96,12 @@ export const shardTelemetryListener = defineListener({
           message: `[Shard ${id}] Resumed gateway session (${replayedEvents} events replayed)`,
         }),
       );
-      void valkey.ltrim(key, -100, -1);
+      void redis.ltrim(key, -100, -1);
     });
 
     client.on("shardError", (error, id) => {
       const key = `lumi:cluster:${cluster}:shardlogs:${id}`;
-      void valkey.rpush(
+      void redis.rpush(
         key,
         JSON.stringify({
           timestamp: new Date().toISOString(),
@@ -109,7 +109,7 @@ export const shardTelemetryListener = defineListener({
           message: `[Shard ${id}] Gateway error: ${error.message || String(error)}`,
         }),
       );
-      void valkey.ltrim(key, -100, -1);
+      void redis.ltrim(key, -100, -1);
     });
 
     const sample = (): ShardTelemetrySample[] => {
@@ -140,7 +140,7 @@ export const shardTelemetryListener = defineListener({
     };
 
     publisher = new ShardTelemetryPublisher({
-      valkey,
+      redis,
       clusterName: getClusterName() ?? DefaultClusterName,
       replicaId: getConsumerId(),
       sample,

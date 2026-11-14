@@ -1,7 +1,7 @@
-import { container } from "#src/lib/Services.js";
-import { welcomeRpc } from "#src/contracts/rpc/Index.ts";
+import { container } from "@lib/Services.js";
+import { welcomeRpc } from "@contracts/rpc/Index.ts";
 import { Routes } from "discord-api-types/v10";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
+import { implementRpc } from "@rpc/Implement.js";
 import {
   fetchChannelRest,
   fetchGuildMemberRest,
@@ -9,15 +9,15 @@ import {
   GuildTextBasedChannelTypes,
   guildIconUrl,
   memberAvatarUrl,
-} from "#src/lib/rpc/DiscordRestLookup.js";
-import { serializeCard } from "#src/lib/rpc/CardSerialize.js";
-import { logError } from "#src/lib/utilities/Errors.js";
+} from "@rpc/DiscordRestLookup.js";
+import { serializeCard } from "@rpc/CardSerialize.js";
+import { logError } from "@utilities/Errors.js";
 import {
   loadWelcomeConfig,
   renderGoodbyeCard,
   renderWelcomeCard,
   templateVarsFor,
-} from "#src/modules/welcome/services/Welcome.js";
+} from "@modules/welcome/services/Welcome.js";
 
 export const welcomeRpcHandlers = implementRpc(welcomeRpc, {
   "guild.welcome.sendTest": async ({ guildId, actorId, input }) => {

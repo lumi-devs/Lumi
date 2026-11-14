@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { ModuleRepository } from "#src/lib/prisma/repositories/ModuleRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { ModuleRepository } from "@db/repositories/ModuleRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis, type MemoryRedis } from "../../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -12,40 +13,24 @@ vi.mock("#src/observability/Index.ts", () => ({
 describe("ModuleRepository", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let repo: ModuleRepository;
-  let mockValkey: any;
-  let store: Map<string, string>;
+  let redis: MemoryRedis;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    store = new Map();
+    redis = createMemoryRedis();
     repositoryCache.clear();
-    mockValkey = {
-      get: vi.fn(async (k: string) => store.get(k) ?? null),
-      set: vi.fn(async (k: string, v: string) => {
-        store.set(k, v);
-        return "OK";
-      }),
-      setex: vi.fn(async (k: string, _ttl: number, v: string) => {
-        store.set(k, v);
-        return "OK";
-      }),
-      del: vi.fn(async (k: string) => {
-        store.delete(k);
-        return 1;
-      }),
-    };
-    (container as any).valkey = mockValkey;
+    (container as any).redis = redis;
     (container as any).invalidation = {
       invalidate: vi.fn(async (...keys: string[]) => {
         for (const k of keys) {
-          store.delete(k);
+          redis.$store.delete(k);
           repositoryCache.delete(k);
         }
       }),
     };
     const mockDb = { ensureGuild: vi.fn().mockResolvedValue(undefined) };
     const mockLogger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
-    repo = new ModuleRepository(prisma as any, mockValkey, mockLogger as any, mockDb as any, prisma as any);
+    repo = new ModuleRepository(prisma as any, redis as any, mockLogger as any, mockDb as any, prisma as any);
   });
 
   it("manages global module state overrides", async () => {

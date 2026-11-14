@@ -1,16 +1,16 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember, User } from "discord.js";
-import { NickPrefix, AfkRemovalCooldownMs, AfkKeys } from "#src/modules/afk/Constants.js";
-import { isAfkNickPrefixEnabled } from "#src/modules/afk/Config.js";
+import { NickPrefix, AfkRemovalCooldownMs, AfkKeys } from "@modules/afk/Constants.js";
+import { isAfkNickPrefixEnabled } from "@modules/afk/Config.js";
 import {
   getAfkEntry,
   setAfkEntry,
   setAfkCooldown,
   iterateAllAfkEntries,
   clearAfkEntry,
-} from "#src/modules/afk/data/Afk.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
+} from "@modules/afk/data/Afk.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
 
 const SweepConcurrency = 10;
 
@@ -99,7 +99,7 @@ export default afkUtility;
 
 export type AfkUtility = typeof afkUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     afk: typeof afkUtility;
   }

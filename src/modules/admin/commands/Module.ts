@@ -1,7 +1,7 @@
-import type { Container } from "#src/lib/Services.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { paginateList } from "#src/lib/utilities/Pagination.js";
+import type { Container } from "@lib/Services.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { paginateList } from "@utilities/Pagination.js";
 import {
   installProgressCard,
   loadProgressCard,
@@ -15,7 +15,7 @@ import {
   unloadProgressCard,
   updateAllProgressCard,
   updateProgressCard,
-} from "#src/modules/admin/ui/ModuleCommandCards.js";
+} from "@modules/admin/ui/ModuleCommandCards.js";
 import {
   installModule,
   loadModuleOnce,
@@ -27,25 +27,20 @@ import {
   unpinModule,
   updateAllModules,
   updateModule,
-} from "#src/modules/admin/services/Operations.js";
-import { getModulePiecesInfo } from "#src/modules/admin/services/Pieces.js";
-import { buildModuleCommand } from "#src/modules/admin/services/Registry.js";
+} from "@modules/admin/services/Operations.js";
+import { getModulePiecesInfo } from "@modules/admin/services/Pieces.js";
+import { buildModuleCommand } from "@modules/admin/services/Registry.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
+import { getUtility } from "@module-system/Utility.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#src/lib/utilities/Autocomplete.js";
+} from "@utilities/Autocomplete.js";
 import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#src/modules/admin/services/DownloaderAutocomplete.js";
-
-function downloaderService(): DownloaderUtility {
-  return getUtility("downloader");
-}
+} from "@modules/admin/services/DownloaderAutocomplete.js";
 
 async function list(ctx: CommandContext): Promise<void> {
   const records = ctx.services.moduleStore.all();
@@ -71,7 +66,7 @@ async function info(ctx: CommandContext): Promise<void> {
     await ctx.reply(moduleNotFoundCard(name));
     return;
   }
-  const installed = await downloaderService()
+  const installed = await getUtility("downloader")
     .getInstalledModules(ctx.services)
     .catch(() => []);
   const pinned =
@@ -228,7 +223,7 @@ export const moduleDef: CommandDef = {
     if (focused.name === "repo") {
       return respondWithChoices(
         interaction,
-        await repoNameChoices(services, downloaderService(), focused.value),
+        await repoNameChoices(services, getUtility("downloader"), focused.value),
       );
     }
 
@@ -239,7 +234,7 @@ export const moduleDef: CommandDef = {
         interaction,
         await repoModuleChoices(
           services,
-          downloaderService(),
+          getUtility("downloader"),
           interaction,
           "repo",
           focused.value,
@@ -253,7 +248,7 @@ export const moduleDef: CommandDef = {
       else if (subcommand === "unpin") pinned = true;
       return respondWithChoices(
         interaction,
-        await installedModuleChoices(services, downloaderService(), focused.value, {
+        await installedModuleChoices(services, getUtility("downloader"), focused.value, {
           pinned,
         }),
       );

@@ -1,12 +1,12 @@
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import { type ILogger } from "#src/shared/Index.ts";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import type { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
+import type {RedisClient} from "@redis/Cluster.js";
+import { type ILogger } from "@shared/Index.ts";
+import type { DatabaseClient } from "@db/Client.js";
+import type { DatabaseService } from "@db/DatabaseService.js";
 
 export abstract class Repository {
   public constructor(
     protected readonly prisma: DatabaseClient,
-    protected readonly valkey: ValkeyClient,
+    protected readonly redis: RedisClient,
     protected readonly logger: ILogger,
     protected readonly db: DatabaseService,
 
@@ -15,7 +15,7 @@ export abstract class Repository {
 
   protected async invalidate(...keys: string[]): Promise<void> {
 
-    const { container } = await import("#src/lib/Services.js");
+    const { container } = await import("@lib/Services.js");
     await container.invalidation.invalidate(...keys);
   }
 
@@ -26,7 +26,7 @@ export abstract class Repository {
     parser: (data: string) => T = JSON.parse,
     serializer: (data: T) => string = JSON.stringify,
   ): Promise<T> {
-    const { repositoryCache } = await import("#src/lib/cache/CacheStore.js");
+    const { repositoryCache } = await import("@cache/CacheStore.js");
     const parseOrWarn = (data: string): T => {
       try {
         return parser(data);

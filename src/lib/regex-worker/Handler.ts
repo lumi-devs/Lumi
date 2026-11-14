@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 import { AsyncQueue } from "@sapphire/async-queue";
-import { container } from "#src/lib/Services.js";
-import type { WorkerRequest, WorkerResponse } from "#src/lib/regex-worker/Protocol.js";
+import { container } from "@lib/Services.js";
+import type { WorkerRequest, WorkerResponse } from "@lib/regex-worker/Protocol.js";
 
 const DefaultEvalTimeoutMs = 250;
 

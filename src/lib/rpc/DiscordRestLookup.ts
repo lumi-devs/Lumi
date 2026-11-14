@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ChannelType, PermissionsBitField, RESTJSONErrorCodes } from "discord.js";
 import { calculateUserDefaultAvatarIndex } from "@discordjs/rest";
 import {
@@ -9,10 +9,10 @@ import {
   type APIMessage,
   type APIRole,
 } from "discord-api-types/v10";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { swallow } from "@utilities/Errors.js";
 
 export async function fetchGuildRest(guildId: string): Promise<APIGuild | null> {
   const cached = container.client?.guilds?.cache?.get(guildId);
@@ -28,8 +28,8 @@ export async function fetchGuildRest(guildId: string): Promise<APIGuild | null> 
   }
 
   return repositoryCache.getOrLoad<APIGuild | null>(
-    ValkeyKeys.restGuild(guildId),
-    ValkeyTTL.restGuild * 1000,
+    RedisKeys.restGuild(guildId),
+    RedisTTL.restGuild * 1000,
     () =>
       container.client.rest.get(Routes.guild(guildId), {
         query: new URLSearchParams({ with_counts: "true" }),
@@ -48,8 +48,8 @@ export async function fetchGuildMemberRest(
   }
 
   return repositoryCache.getOrLoad<APIGuildMember | null>(
-    ValkeyKeys.restMember(guildId, userId),
-    ValkeyTTL.restMember * 1000,
+    RedisKeys.restMember(guildId, userId),
+    RedisTTL.restMember * 1000,
     () =>
       container.client.rest.get(
         Routes.guildMember(guildId, userId),
@@ -81,8 +81,8 @@ export async function fetchGuildMemberRestUncached(
 
 export async function fetchChannelRest(channelId: string): Promise<APIChannel | null> {
   return repositoryCache.getOrLoad<APIChannel | null>(
-    ValkeyKeys.restChannel(channelId),
-    ValkeyTTL.restChannel * 1000,
+    RedisKeys.restChannel(channelId),
+    RedisTTL.restChannel * 1000,
     () => container.client.rest.get(Routes.channel(channelId)) as Promise<APIChannel>,
     (data) => JSON.parse(data) as APIChannel,
   ).catch(swallow("discord-rest-lookup: channel fetch failed"));
@@ -111,8 +111,8 @@ export const GuildTextBasedChannelTypes = new Set<ChannelType>([
 
 export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | null> {
   return repositoryCache.getOrLoad<APIRole[] | null>(
-    ValkeyKeys.restGuildRoles(guildId),
-    ValkeyTTL.restGuildRoles * 1000,
+    RedisKeys.restGuildRoles(guildId),
+    RedisTTL.restGuildRoles * 1000,
     () => container.client.rest.get(Routes.guildRoles(guildId)) as Promise<APIRole[]>,
     (data) => JSON.parse(data) as APIRole[],
   ).catch(swallow("discord-rest-lookup: guild roles fetch failed"));
@@ -120,8 +120,8 @@ export async function fetchGuildRolesRest(guildId: string): Promise<APIRole[] | 
 
 export async function fetchGuildChannelsRest(guildId: string): Promise<APIChannel[] | null> {
   return repositoryCache.getOrLoad<APIChannel[] | null>(
-    ValkeyKeys.restGuildChannels(guildId),
-    ValkeyTTL.restGuildChannels * 1000,
+    RedisKeys.restGuildChannels(guildId),
+    RedisTTL.restGuildChannels * 1000,
     () => container.client.rest.get(Routes.guildChannels(guildId)) as Promise<APIChannel[]>,
     (data) => JSON.parse(data) as APIChannel[],
   ).catch(swallow("discord-rest-lookup: guild channels fetch failed"));
@@ -152,8 +152,8 @@ export async function fetchGuildMembersSampleRest(
   limit: number,
 ): Promise<APIGuildMember[] | null> {
   return repositoryCache.getOrLoad<APIGuildMember[] | null>(
-    ValkeyKeys.restGuildMembersSample(guildId, limit),
-    ValkeyTTL.restGuildMembersSample * 1000,
+    RedisKeys.restGuildMembersSample(guildId, limit),
+    RedisTTL.restGuildMembersSample * 1000,
     () =>
       container.client.rest.get(Routes.guildMembers(guildId), {
         query: new URLSearchParams({ limit: String(limit) }),

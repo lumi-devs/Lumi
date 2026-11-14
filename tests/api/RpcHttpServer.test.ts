@@ -5,10 +5,10 @@ import {
   tokenMatches,
   presentedToken,
   readInternalToken,
-} from "#src/lib/rpc/HttpServer.js";
-import { container } from "#src/lib/Services.js";
-import { registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { CONTRACT_VERSION } from "#src/contracts/rpc/Index.ts";
+} from "@rpc/HttpServer.js";
+import { container } from "@lib/Services.js";
+import { registerRpcHandlers } from "@rpc/Registry.js";
+import { CONTRACT_VERSION } from "@contracts/rpc/Index.ts";
 
 describe("RPC HTTP Server & Auth Verification", () => {
   const originalEnv = { ...process.env };

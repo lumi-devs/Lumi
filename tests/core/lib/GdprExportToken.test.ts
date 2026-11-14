@@ -4,7 +4,7 @@ import {
   resolveGdprExportSigningKey,
   signGdprExportToken,
   verifyGdprExportToken,
-} from "#src/lib/gdpr/ExportToken.js";
+} from "@lib/gdpr/ExportToken.js";
 
 describe("gdpr export download token", () => {
   const originalEnv = { ...process.env };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { container } from "@lib/Services.js";
+import { RedisKeys } from "@redis/Store.js";
 import {
   consumeLogClaimCode,
   dismissLogClaim,
@@ -9,12 +9,12 @@ import {
   normalizeLogClaimCode,
   peekLogClaimCode,
   registerLogClaim,
-} from "#src/modules/logging/services/Claims.js";
+} from "@modules/logging/services/Claims.js";
 
 const GUILD_ID = "123456789012345678";
 const ISSUER_ID = "111111111111111111";
 
-function createFakeValkey() {
+function createFakeRedis() {
   const strings = new Map<string, string>();
   const sets = new Map<string, Set<string>>();
   const setCalls: unknown[][] = [];
@@ -85,17 +85,17 @@ function createFakeValkey() {
   };
 }
 
-type FakeValkey = ReturnType<typeof createFakeValkey>;
+type FakeRedis = ReturnType<typeof createFakeRedis>;
 
 describe("logging claim store", () => {
-  let valkey: FakeValkey;
+  let redis: FakeRedis;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    valkey = createFakeValkey();
-    (container as any).valkey = valkey;
+    redis = createFakeRedis();
+    (container as any).redis = redis;
     (container as any).invalidation = {
-      invalidate: (...keys: string[]) => valkey.del(...keys),
+      invalidate: (...keys: string[]) => redis.del(...keys),
     };
   });
 
@@ -119,8 +119,8 @@ describe("logging claim store", () => {
       const code = await issueLogClaimCode(GUILD_ID, ISSUER_ID);
 
       expect(code).toMatch(/^[A-Z2-9]{6}$/);
-      expect(valkey.setCalls[0]).toEqual([
-        ValkeyKeys.logClaimCode(GUILD_ID, code),
+      expect(redis.setCalls[0]).toEqual([
+        RedisKeys.logClaimCode(GUILD_ID, code),
         ISSUER_ID,
         "PX",
         expect.any(Number),
@@ -137,7 +137,7 @@ describe("logging claim store", () => {
 
     it("does not overwrite a live code", async () => {
       const code = await issueLogClaimCode(GUILD_ID, ISSUER_ID);
-      valkey.strings.set(ValkeyKeys.logClaimCode(GUILD_ID, code), "other");
+      redis.strings.set(RedisKeys.logClaimCode(GUILD_ID, code), "other");
 
       await expect(peekLogClaimCode(GUILD_ID, code)).resolves.toBe("other");
     });
@@ -179,11 +179,11 @@ describe("logging claim store", () => {
 
     it("skips malformed claim payloads", async () => {
       const channelId = "111111111111111111";
-      valkey.strings.set(
-        ValkeyKeys.logClaim(GUILD_ID, channelId),
+      redis.strings.set(
+        RedisKeys.logClaim(GUILD_ID, channelId),
         "{not json",
       );
-      valkey.sets.set(ValkeyKeys.logClaimIndex(GUILD_ID), new Set([channelId]));
+      redis.sets.set(RedisKeys.logClaimIndex(GUILD_ID), new Set([channelId]));
 
       await expect(listLogClaims(GUILD_ID)).resolves.toEqual([]);
     });

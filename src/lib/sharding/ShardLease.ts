@@ -1,4 +1,4 @@
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
+import type {RedisClient} from "@redis/Cluster.js";
 
 const NODE_TTL_MS = 30_000;
 const HEARTBEAT_INTERVAL_MS = 10_000;
@@ -19,7 +19,7 @@ export interface NodeRegistration {
 }
 
 let nodeId: string;
-let valkey: ValkeyClient;
+let redis: RedisClient;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let isShuttingDown = false;
 
@@ -28,10 +28,10 @@ function generateNodeId(): string {
 }
 
 export async function initializeShardLease(
-  client: ValkeyClient,
+  client: RedisClient,
   opts: { shardCapacity?: number } = {}
 ): Promise<void> {
-  valkey = client;
+  redis = client;
   nodeId = generateNodeId();
 
   const nodeReg: NodeRegistration = {
@@ -51,7 +51,7 @@ export async function initializeShardLease(
   heartbeatTimer = setInterval(async () => {
     if (isShuttingDown) return;
     try {
-      await valkey.zadd(NODES_KEY, Date.now() + NODE_TTL_MS, nodeId);
+      await redis.zadd(NODES_KEY, Date.now() + NODE_TTL_MS, nodeId);
     } catch {
       /* ignore heartbeat failures */
     }
@@ -62,7 +62,7 @@ export async function initializeShardLease(
 }
 
 async function registerNode(node: NodeRegistration): Promise<void> {
-  const multi = valkey.multi();
+  const multi = redis.multi();
   multi.zadd(NODES_KEY, Date.now() + NODE_TTL_MS, node.nodeId);
   multi.hset(`lumi:cluster:node:${node.nodeId}`, {
     startedAt: String(node.startedAt),
@@ -77,7 +77,7 @@ async function claimShards(): Promise<number[]> {
   const myShards: number[] = [];
 
   for (let shardId = 0; shardId < totalShards; shardId++) {
-    const claimed = await valkey.hsetnx(LEASE_KEY, String(shardId), nodeId);
+    const claimed = await redis.hsetnx(LEASE_KEY, String(shardId), nodeId);
     if (claimed === 1) {
       myShards.push(shardId);
     }
@@ -86,7 +86,7 @@ async function claimShards(): Promise<number[]> {
   if (myShards.length === 0) {
     await rebalanceLeases(totalShards);
     for (let shardId = 0; shardId < totalShards; shardId++) {
-      const owner = await valkey.hget(LEASE_KEY, String(shardId));
+      const owner = await redis.hget(LEASE_KEY, String(shardId));
       if (owner === nodeId) myShards.push(shardId);
     }
   }
@@ -95,12 +95,12 @@ async function claimShards(): Promise<number[]> {
 }
 
 async function rebalanceLeases(totalShards: number): Promise<void> {
-  const nodes = await valkey.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
+  const nodes = await redis.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
   if (nodes.length === 0) return;
 
   const nodeCapacities = new Map<string, number>();
   for (const n of nodes) {
-    const cap = await valkey.hget(`lumi:cluster:node:${n}`, "capacity");
+    const cap = await redis.hget(`lumi:cluster:node:${n}`, "capacity");
     const capacity = cap ? Number(cap) : totalShards;
     nodeCapacities.set(n, Number.isFinite(capacity) ? capacity : 1);
   }
@@ -112,7 +112,7 @@ async function rebalanceLeases(totalShards: number): Promise<void> {
 
   let nodeIndex = 0;
   for (let shardId = 0; shardId < totalShards; shardId++) {
-    const currentOwner = await valkey.hget(LEASE_KEY, String(shardId));
+    const currentOwner = await redis.hget(LEASE_KEY, String(shardId));
     if (currentOwner && nodeCapacities.has(currentOwner)) {
       assignments.get(currentOwner)!.push(shardId);
       continue;
@@ -124,7 +124,7 @@ async function rebalanceLeases(totalShards: number): Promise<void> {
     }
   }
 
-  const multi = valkey.multi();
+  const multi = redis.multi();
   for (const [n, shards] of assignments) {
     for (const shardId of shards) {
       multi.hset(LEASE_KEY, String(shardId), n);
@@ -145,7 +145,7 @@ export async function gracefulShutdown(): Promise<void> {
 
   const myShards: number[] = [];
   for (let shardId = 0; shardId < getClusterTotalShards(); shardId++) {
-    const owner = await valkey.hget(LEASE_KEY, String(shardId));
+    const owner = await redis.hget(LEASE_KEY, String(shardId));
     if (owner && owner === nodeId) myShards.push(shardId);
   }
 
@@ -153,17 +153,17 @@ export async function gracefulShutdown(): Promise<void> {
     await handoffShards(myShards);
   }
 
-  await valkey.zrem(NODES_KEY, nodeId);
-  await valkey.del(`lumi:cluster:node:${nodeId}`);
+  await redis.zrem(NODES_KEY, nodeId);
+  await redis.del(`lumi:cluster:node:${nodeId}`);
   process.exit(0);
 }
 
 async function handoffShards(shards: number[]): Promise<void> {
-  const nodes = await valkey.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
+  const nodes = await redis.zrangebyscore(NODES_KEY, Date.now(), "+inf", "LIMIT", 0, 100);
   const otherNodes = nodes.filter((n) => n !== nodeId);
   if (otherNodes.length === 0) return;
 
-  const multi = valkey.multi();
+  const multi = redis.multi();
   for (let i = 0; i < shards.length; i++) {
     const targetNode = otherNodes[i % otherNodes.length];
     multi.hset(LEASE_KEY, { [String(shards[i])]: targetNode });

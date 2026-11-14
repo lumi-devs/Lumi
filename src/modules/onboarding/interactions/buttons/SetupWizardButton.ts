@@ -1,8 +1,8 @@
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   emptySetupState,
   finishSetupWizard,
@@ -10,14 +10,14 @@ import {
   normalizeSetupState,
   setupAccessDenied,
   stateFromSegments,
-} from "#src/modules/onboarding/services/SetupWizard.js";
+} from "@modules/onboarding/services/SetupWizard.js";
 import {
   buildSetupAgeModal,
   buildSetupReviewView,
   buildSetupStepView,
   buildSetupSuccessCard,
-} from "#src/modules/onboarding/ui/SetupWizard.js";
-import { SetupId } from "#src/modules/core/Constants.js";
+} from "@modules/onboarding/ui/SetupWizard.js";
+import { SetupId } from "@interactions/ModuleIds.js";
 import type { ButtonInteraction } from "discord.js";
 
 export const setupWizardButton = defineInteraction({

@@ -1,5 +1,5 @@
-import { container } from "#src/lib/Services.js";
-import { errorFrom, swallow as swallowWith } from "#src/shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { errorFrom, swallow as swallowWith } from "@shared/Index.ts";
 
 export { errorFrom };
 

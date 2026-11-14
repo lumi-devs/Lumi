@@ -3,22 +3,22 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 
-vi.mock("#lib/gdpr/Requests.js", () => ({
+vi.mock("@lib/gdpr/Requests.js", () => ({
   executeGdprExport: vi.fn(),
 }));
 
-import { executeGdprExport } from "#src/lib/gdpr/Requests.js";
+import { executeGdprExport } from "@lib/gdpr/Requests.js";
 import {
   dataFile,
   loadOrMintKeyFile,
   openSealedBytes,
-} from "#src/lib/crypto/Seal.js";
+} from "@lib/crypto/Seal.js";
 import {
   handleGdprExportCleanupFire,
   handleGdprExportFire,
-} from "#src/modules/core/services/GdprExportTask.js";
+} from "@modules/core/services/GdprExportTask.js";
 
 function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {
   return fn as unknown as Mock<T>;

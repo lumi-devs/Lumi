@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { publishDashboardEvent } from "#src/lib/rpc/DashboardEvents.js";
-import { DashboardEventStream } from "#src/contracts/Events.js";
-import { dashboardEventPublishFailures } from "#src/observability/Index.ts";
+import { container } from "@lib/Services.js";
+import { publishDashboardEvent } from "@rpc/DashboardEvents.js";
+import { DashboardEventStream } from "@contracts/Events.js";
+import { dashboardEventPublishFailures } from "@observability/Index.ts";
 
 describe("publishDashboardEvent", () => {
   beforeEach(() => {
@@ -34,7 +34,7 @@ describe("publishDashboardEvent", () => {
 
   it("swallows publish errors instead of throwing, and counts the failure", async () => {
     (container as any).eventBus = {
-      publish: vi.fn().mockRejectedValue(new Error("valkey down")),
+      publish: vi.fn().mockRejectedValue(new Error("redis down")),
     };
 
     await expect(

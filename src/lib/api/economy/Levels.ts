@@ -1,11 +1,11 @@
-import type { Container } from "#src/lib/Services.js";
-import type { LevelBalance } from "#src/modules/leveling/data/LevelRepository.js";
+import type { Container } from "@lib/Services.js";
+import type { LevelBalance } from "@modules/leveling/data/LevelRepository.js";
 import {
   LevelService,
   type BoardEntry,
   type BoardKind,
-} from "#src/modules/leveling/services/LevelService.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
+} from "@modules/leveling/services/LevelService.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
 
 export type { BoardEntry, BoardKind, LevelBalance as LevelAccount };
 

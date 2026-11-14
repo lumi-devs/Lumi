@@ -1,24 +1,24 @@
-import { container } from "#src/lib/Services.js";
-import { systemRpc, type SystemStatusData } from "#src/contracts/rpc/Index.ts";
-import { streamConsumerLag, getEventLoopLagP99Ms } from "#src/observability/Index.ts";
+import { container } from "@lib/Services.js";
+import { systemRpc, type SystemStatusData } from "@contracts/rpc/Index.ts";
+import { streamConsumerLag, getEventLoopLagP99Ms } from "@observability/Index.ts";
 import { Queue } from "bullmq";
 import {
   getQueuePrefix,
   getScheduledTasksConnectionOptions,
   SCHEDULED_TASKS_QUEUE_NAME,
-} from "#src/lib/scheduler/Queue.js";
-import { getClusterName } from "#src/lib/Env.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
-import { paginate, resolvePageSize } from "#src/lib/rpc/Validation.js";
-import { readSchedulerHeartbeat } from "#src/lib/scheduler/Heartbeat.js";
+} from "@scheduler/Queue.js";
+import { getClusterName } from "@lib/Env.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { implementRpc } from "@rpc/Implement.js";
+import { paginate, resolvePageSize } from "@rpc/Validation.js";
+import { readSchedulerHeartbeat } from "@scheduler/Heartbeat.js";
 import {
   DefaultClusterName,
   DefaultPublishIntervalMs,
   isShardStale,
   readClusterShards,
-} from "#src/lib/sharding/ShardTelemetry.js";
-import { getSystemStatus, type SystemStatusDeps } from "#src/lib/rpc/SystemStatus.js";
+} from "@lib/sharding/ShardTelemetry.js";
+import { getSystemStatus, type SystemStatusDeps } from "@rpc/SystemStatus.js";
 
 const StaleAfterMs = DefaultPublishIntervalMs * 3;
 
@@ -30,13 +30,6 @@ function getScheduledTasksQueue(): Queue {
     connection: getScheduledTasksConnectionOptions(),
   });
   return scheduledTasksQueue;
-}
-
-export async function closeSystemStatusResources(): Promise<void> {
-  if (scheduledTasksQueue) {
-    await scheduledTasksQueue.close();
-    scheduledTasksQueue = null;
-  }
 }
 
 async function readEventBusStats(): Promise<{ pending: number | null; lag: number | null }> {
@@ -54,9 +47,9 @@ function buildSystemStatusDeps(): SystemStatusDeps {
     uptimeSec: () => Math.round(process.uptime()),
     eventLoopLagP99Ms: () => getEventLoopLagP99Ms(),
     probePostgresLatencyMs: () => container.db.probePrisma(),
-    pingValkey: () => container.valkey.ping(),
+    pingRedis: () => container.redis.ping(),
     readSchedulerHeartbeat: async () => {
-      const heartbeat = await readSchedulerHeartbeat(container.valkey);
+      const heartbeat = await readSchedulerHeartbeat(container.redis);
       if (!heartbeat) return null;
       return { holder: heartbeat.holder, ageMs: Date.now() - heartbeat.updatedAt };
     },
@@ -76,7 +69,7 @@ function buildSystemStatusDeps(): SystemStatusDeps {
     },
     readShardsSnapshot: async () => {
       const snapshot = await readClusterShards({
-        valkey: container.valkey,
+        redis: container.redis,
         clusterName: getClusterName() ?? DefaultClusterName,
       });
       const now = Date.now();
@@ -103,7 +96,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
       container.db.global.getGlobalConfig(),
       container.db.modules.getGlobalModuleStatesDetailed(),
       readClusterShards({
-        valkey: container.valkey,
+        redis: container.redis,
         clusterName: getClusterName() ?? DefaultClusterName,
       }),
     ]);
@@ -237,7 +230,7 @@ export const systemRpcHandlers = implementRpc(systemRpc, {
 
   "system.shards.get": async () => {
     const snapshot = await readClusterShards({
-      valkey: container.valkey,
+      redis: container.redis,
       clusterName: getClusterName() ?? DefaultClusterName,
     });
     const now = Date.now();

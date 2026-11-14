@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { dispatchRpc, resetDiscordBulkheadForTests } from "#src/lib/rpc/Dispatch.js";
-import { registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { registry } from "#src/observability/Index.ts";
+import { container } from "@lib/Services.js";
+import { dispatchRpc, resetDiscordBulkheadForTests } from "@rpc/Dispatch.js";
+import { registerRpcHandlers } from "@rpc/Registry.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
+import { registry } from "@observability/Index.ts";
 
 const GUILD_ID = "123456789012345678";
 const ACTOR_ID = "222222222222222222";
@@ -38,7 +39,7 @@ describe("RPC dispatch: Discord bulkhead", () => {
       error: vi.fn(),
       debug: vi.fn(),
     } as any;
-    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).redis = createMemoryRedis();
     (container as any).db = {
       config: { isDashboardEnabled: vi.fn().mockResolvedValue(true) },
       security: { getPanicState: vi.fn().mockResolvedValue(null) },

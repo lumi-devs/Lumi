@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { contractVersionsCompatible } from "#src/contracts/rpc/ContractVersion.js";
+import { contractVersionsCompatible } from "@contracts/rpc/ContractVersion.js";
 
 describe("contractVersionsCompatible", () => {
   it("accepts identical versions", () => {

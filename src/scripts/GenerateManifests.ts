@@ -6,8 +6,8 @@ import {
   manifestFromMeta,
   writeManifest,
   type ModuleManifest,
-} from "#src/lib/module-system/Manifest.js";
-import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
+} from "@module-system/Manifest.js";
+import type { ModuleDefinition, ModuleMeta } from "@module-system/Meta.js";
 
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";

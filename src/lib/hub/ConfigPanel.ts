@@ -1,13 +1,20 @@
-import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
-import { hasRequiredPermit } from "#src/lib/api/permissions/Index.js";
-import type { FeatureListEntry } from "#src/modules/admin/ui/Modules.js";
-import { UserError } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+import type { ModuleMeta } from "@module-system/Meta.js";
+import { hasRequiredPermit } from "@api/permissions/Index.js";
+import type { FeatureListEntry } from "@lib/hub/Modules.js";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { OverrideTargetType, type $Enums } from "@prisma/client";
 import type {
   AnySelectMenuInteraction,
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
+
+export function isOverrideTargetType(
+  value: string,
+): value is $Enums.OverrideTargetType {
+  return (Object.values(OverrideTargetType) as string[]).includes(value);
+}
 
 export interface FeatureDetail {
   meta: ModuleMeta;

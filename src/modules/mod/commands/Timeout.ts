@@ -1,19 +1,19 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/api/moderation/ModerationFlow.js";
-import type { Container } from "#src/lib/Services.js";
-import { formatDuration, parseDuration } from "#src/lib/utilities/Time.js";
-import { Result, Time } from "#src/shared/Index.ts";
+} from "@api/moderation/ModerationFlow.js";
+import type { Container } from "@lib/Services.js";
+import { formatDuration, parseDuration } from "@utilities/Time.js";
+import { Result, Time } from "@shared/Index.ts";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { applyLocalizedBuilder } from "@i18n/Index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
-import { respondWithReasonChoices } from "#src/modules/mod/services/ReasonAutocomplete.js";
+import { MuteAction } from "@modules/mod/services/actions/MuteAction.js";
+import { respondWithReasonChoices } from "@modules/mod/services/ReasonAutocomplete.js";
 
 const Root = "commands";
 const MaxTimeoutMs = 28 * Time.Day;

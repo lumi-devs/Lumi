@@ -1,11 +1,11 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import type { Container } from "#src/lib/Services.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { defaultSlotPayoutEntries } from "#src/modules/economy/services/Slots.js";
-import { EconomyModuleName } from "#src/modules/economy/Constants.js";
-import { onCommandError } from "#src/lib/commands/CommandDispatch.js";
-import { InsufficientFundsError } from "#src/modules/economy/services/BankService.js";
-import { ephemeralCard, makeWarningCard } from "#src/lib/ui/Cards.js";
+import { defineModule } from "@module-system/Module.js";
+import type { Container } from "@lib/Services.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { defaultSlotPayoutEntries } from "@modules/economy/services/Slots.js";
+import { EconomyModuleName } from "@modules/economy/Constants.js";
+import { onCommandError } from "@commands/CommandDispatch.js";
+import { InsufficientFundsError } from "@modules/economy/services/BankService.js";
+import { ephemeralCard, makeWarningCard } from "@ui/Cards.js";
 
 let removeErrorHandler: (() => void) | null = null;
 

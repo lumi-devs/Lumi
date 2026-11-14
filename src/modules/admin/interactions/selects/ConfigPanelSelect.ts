@@ -1,32 +1,26 @@
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { LumiT } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { ConfigUtility } from "#src/modules/admin/utilities/ConfigUtility.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { FieldType } from "@module-system/ConfigSchema.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { ConfigUtility } from "@modules/admin/utilities/ConfigUtility.js";
 import {
   configAccessDenied,
   hasPanelAccess,
+  isOverrideTargetType,
   loadDetail,
-} from "#src/modules/admin/services/ConfigPanel.js";
-import { buildFeatureDetailView } from "#src/modules/admin/ui/Modules.js";
+} from "@lib/hub/ConfigPanel.js";
+import { buildFeatureDetailView } from "@lib/hub/Modules.js";
 import {
   buildHistoryView,
   buildOverridesView,
-} from "#src/modules/admin/ui/Overrides.js";
-import { ConfigSelectId } from "#src/modules/core/Constants.js";
+} from "@modules/admin/ui/Overrides.js";
+import { ConfigSelectId } from "@interactions/ModuleIds.js";
 import type { AnySelectMenuInteraction } from "discord.js";
-import { OverrideTargetType, type $Enums } from "@prisma/client";
-
-function isOverrideTargetType(
-  value: string,
-): value is $Enums.OverrideTargetType {
-  return (Object.values(OverrideTargetType) as string[]).includes(value);
-}
 
 export const configPanelSelect = defineInteraction({
   prefix: ConfigSelectId.prefix,

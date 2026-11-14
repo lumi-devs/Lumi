@@ -1,39 +1,39 @@
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import {scanKeysSafe} from "#src/lib/valkey/Cluster.js";
-import { type ILogger } from "#src/shared/Index.ts";
-import { container } from "#src/lib/Services.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
+import type {RedisClient} from "@redis/Cluster.js";
+import {scanKeysSafe} from "@redis/Cluster.js";
+import { type ILogger } from "@shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
 import { Prisma } from "@prisma/client";
 import {
   createGuildTransaction,
   GuildWriteTransaction,
-} from "#src/lib/prisma/GuildTransaction.js";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import { ConfigRepository } from "#src/lib/prisma/repositories/ConfigRepository.js";
-import { ModuleRepository } from "#src/lib/prisma/repositories/ModuleRepository.js";
-import { GuildKVRepository } from "#src/lib/prisma/repositories/GuildKvRepository.js";
-import { AccessRepository } from "#src/lib/prisma/repositories/AccessRepository.js";
-import { PermissionRepository } from "#src/lib/prisma/repositories/PermissionRepository.js";
-import { DownloaderRepository } from "#src/modules/admin/data/DownloaderRepository.js";
-import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
-import { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
-import { ConfigOverrideRepository } from "#src/lib/prisma/repositories/ConfigOverrideRepository.js";
-import { AfkRepository } from "#src/modules/afk/data/AfkRepository.js";
-import { ModNoteRepository } from "#src/modules/mod/data/ModNoteRepository.js";
-import { AppealRepository } from "#src/modules/mod/data/AppealRepository.js";
-import { GlobalRepository } from "#src/lib/prisma/repositories/GlobalRepository.js";
-import { SecurityRepository } from "#src/modules/security/data/SecurityRepository.js";
-import { TempVcRepository } from "#src/modules/tempvc/data/TempVcRepository.js";
-import { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
-import { LevelRepository } from "#src/modules/leveling/data/LevelRepository.js";
-import { ReactionRoleRepository } from "#src/modules/reactionroles/data/ReactionRoleRepository.js";
-import { GdprExportJobRepository } from "#src/lib/prisma/repositories/GdprExportJobRepository.js";
-import { FeatureFlagRepository } from "#src/lib/prisma/repositories/FeatureFlagRepository.js";
-import { SharedTokenRepository } from "#src/lib/prisma/repositories/SharedTokenRepository.js";
+} from "@db/GuildTransaction.js";
+import type { DatabaseClient } from "@db/Client.js";
+import { ConfigRepository } from "@db/repositories/ConfigRepository.js";
+import { ModuleRepository } from "@db/repositories/ModuleRepository.js";
+import { GuildKVRepository } from "@db/repositories/GuildKvRepository.js";
+import { AccessRepository } from "@db/repositories/AccessRepository.js";
+import { PermissionRepository } from "@db/repositories/PermissionRepository.js";
+import { DownloaderRepository } from "@modules/admin/data/DownloaderRepository.js";
+import { AuditRepository } from "@db/repositories/AuditRepository.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
+import { ConfigHistoryRepository } from "@db/repositories/ConfigHistoryRepository.js";
+import { ConfigOverrideRepository } from "@db/repositories/ConfigOverrideRepository.js";
+import { AfkRepository } from "@modules/afk/data/AfkRepository.js";
+import { ModNoteRepository } from "@modules/mod/data/ModNoteRepository.js";
+import { AppealRepository } from "@modules/mod/data/AppealRepository.js";
+import { GlobalRepository } from "@db/repositories/GlobalRepository.js";
+import { SecurityRepository } from "@modules/security/data/SecurityRepository.js";
+import { TempVcRepository } from "@modules/tempvc/data/TempVcRepository.js";
+import { EconomyRepository } from "@modules/economy/data/EconomyRepository.js";
+import { LevelRepository } from "@modules/leveling/data/LevelRepository.js";
+import { ReactionRoleRepository } from "@modules/reactionroles/data/ReactionRoleRepository.js";
+import { GdprExportJobRepository } from "@db/repositories/GdprExportJobRepository.js";
+import { FeatureFlagRepository } from "@db/repositories/FeatureFlagRepository.js";
+import { SharedTokenRepository } from "@db/repositories/SharedTokenRepository.js";
 
-export type { ConfigHistoryEntry } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
-export type { ConfigOverrideEntry } from "#src/lib/prisma/repositories/ConfigOverrideRepository.js";
+export type { ConfigHistoryEntry } from "@db/repositories/ConfigHistoryRepository.js";
+export type { ConfigOverrideEntry } from "@db/repositories/ConfigOverrideRepository.js";
 
 export class DatabaseService {
   public readonly global: GlobalRepository;
@@ -61,55 +61,55 @@ export class DatabaseService {
 
   public constructor(
     private readonly prisma: DatabaseClient,
-    private readonly valkey: ValkeyClient,
+    private readonly redis: RedisClient,
     logger: ILogger,
 
     reader: DatabaseClient = prisma,
   ) {
-    this.global = new GlobalRepository(prisma, valkey, logger, this);
+    this.global = new GlobalRepository(prisma, redis, logger, this);
     this.configHistory = new ConfigHistoryRepository(
       prisma,
-      valkey,
+      redis,
       logger,
       this,
     );
     this.config = new ConfigRepository(
       prisma,
-      valkey,
+      redis,
       logger,
       this,
       this.configHistory,
     );
     this.modules = new ModuleRepository(
       prisma,
-      valkey,
+      redis,
       logger,
       this,
       this.config,
     );
-    this.guildKV = new GuildKVRepository(prisma, valkey, logger, this);
-    this.access = new AccessRepository(prisma, valkey, logger, this);
-    this.permissions = new PermissionRepository(prisma, valkey, logger, this);
-    this.downloader = new DownloaderRepository(prisma, valkey, logger, this);
-    this.audit = new AuditRepository(prisma, valkey, logger, this);
-    this.moderation = new ModerationRepository(prisma, valkey, logger, this, reader);
+    this.guildKV = new GuildKVRepository(prisma, redis, logger, this);
+    this.access = new AccessRepository(prisma, redis, logger, this);
+    this.permissions = new PermissionRepository(prisma, redis, logger, this);
+    this.downloader = new DownloaderRepository(prisma, redis, logger, this);
+    this.audit = new AuditRepository(prisma, redis, logger, this);
+    this.moderation = new ModerationRepository(prisma, redis, logger, this, reader);
     this.configOverrides = new ConfigOverrideRepository(
       prisma,
-      valkey,
+      redis,
       logger,
       this,
     );
-    this.afk = new AfkRepository(prisma, valkey, logger, this, reader);
-    this.modNotes = new ModNoteRepository(prisma, valkey, logger, this);
-    this.appeals = new AppealRepository(prisma, valkey, logger, this);
-    this.security = new SecurityRepository(prisma, valkey, logger, this);
-    this.tempvc = new TempVcRepository(prisma, valkey, logger, this);
-    this.economy = new EconomyRepository(prisma, valkey, logger, this);
-    this.leveling = new LevelRepository(prisma, valkey, logger, this);
-    this.reactionRoles = new ReactionRoleRepository(prisma, valkey, logger, this);
-    this.gdprExportJobs = new GdprExportJobRepository(prisma, valkey, logger, this);
-    this.featureFlags = new FeatureFlagRepository(prisma, valkey, logger, this);
-    this.sharedTokens = new SharedTokenRepository(prisma, valkey, logger, this);
+    this.afk = new AfkRepository(prisma, redis, logger, this, reader);
+    this.modNotes = new ModNoteRepository(prisma, redis, logger, this);
+    this.appeals = new AppealRepository(prisma, redis, logger, this);
+    this.security = new SecurityRepository(prisma, redis, logger, this);
+    this.tempvc = new TempVcRepository(prisma, redis, logger, this);
+    this.economy = new EconomyRepository(prisma, redis, logger, this);
+    this.leveling = new LevelRepository(prisma, redis, logger, this);
+    this.reactionRoles = new ReactionRoleRepository(prisma, redis, logger, this);
+    this.gdprExportJobs = new GdprExportJobRepository(prisma, redis, logger, this);
+    this.featureFlags = new FeatureFlagRepository(prisma, redis, logger, this);
+    this.sharedTokens = new SharedTokenRepository(prisma, redis, logger, this);
   }
 
   public async ensureGuild(guildId: string): Promise<void> {
@@ -171,9 +171,9 @@ export class DatabaseService {
   }
 
   public async publishBotStats(stats: Record<string, unknown>): Promise<void> {
-    await this.valkey.setex(
-      ValkeyKeys.botStats(),
-      ValkeyTTL.botStats,
+    await this.redis.setex(
+      RedisKeys.botStats(),
+      RedisTTL.botStats,
       JSON.stringify(stats),
     );
   }
@@ -189,8 +189,8 @@ export class DatabaseService {
     ]);
 
     const keys = await scanKeysSafe(
-      this.valkey,
-      ValkeyKeys.blockedPattern(userId),
+      this.redis,
+      RedisKeys.blockedPattern(userId),
     );
 
     if (keys.length) {
@@ -215,7 +215,7 @@ export class DatabaseService {
   }
 
   public transaction(guildId: string): Promise<GuildWriteTransaction> {
-    return createGuildTransaction(guildId, this.valkey, this.prisma);
+    return createGuildTransaction(guildId, this.redis, this.prisma);
   }
 
   public async probePrisma(): Promise<number> {

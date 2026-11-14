@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { registerRpcReadinessProbe } from "#src/lib/client/ReadinessProbes.js";
-import { runReadinessProbes } from "#src/observability/Index.ts";
+import { registerRpcReadinessProbe } from "@lib/client/ReadinessProbes.js";
+import { runReadinessProbes } from "@observability/Index.ts";
 
 describe("Chaos Suite: Shard 0 SIGKILL Respawn & RPC Re-bind", () => {
   it("reflects RPC unreadiness during probe checks when RPC server is starting up", async () => {

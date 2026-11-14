@@ -1,19 +1,19 @@
-import { rpcRouter } from "#src/contracts/rpc/Index.ts";
-import { container } from "#src/lib/Services.js";
-import { accountRpcHandlers } from "#src/lib/rpc/AccountRpc.js";
-import type { RpcBoundHandler, RpcImplementation } from "#src/lib/rpc/Implement.js";
-import { systemRpcHandlers } from "#src/lib/rpc/SystemRpc.js";
-import { afkRpcHandlers } from "#src/modules/afk/Rpc.js";
-import { coreRpcHandlers, downloaderRpcHandlers } from "#src/modules/core/Rpc.js";
-import { dashboardRpcHandlers } from "#src/lib/rpc/DashboardRpc.js";
-import { loggingRpcHandlers } from "#src/modules/logging/Rpc.js";
-import { modRpcHandlers } from "#src/modules/mod/Rpc.js";
-import { reactionrolesRpcHandlers } from "#src/modules/reactionroles/Rpc.js";
-import { securityRpcHandlers } from "#src/modules/security/Rpc.js";
-import { tempvcRpcHandlers } from "#src/modules/tempvc/Rpc.js";
-import { welcomeRpcHandlers } from "#src/modules/welcome/Rpc.js";
-import { economyRpcHandlers } from "#src/modules/economy/Rpc.js";
-import { filterRpcHandlers } from "#src/modules/filter/Rpc.js";
+import { rpcRouter } from "@contracts/rpc/Index.ts";
+import { container } from "@lib/Services.js";
+import { accountRpcHandlers } from "@rpc/AccountRpc.js";
+import type { RpcBoundHandler, RpcImplementation } from "@rpc/Implement.js";
+import { systemRpcHandlers } from "@rpc/SystemRpc.js";
+import { afkRpcHandlers } from "@modules/afk/Rpc.js";
+import { coreRpcHandlers, downloaderRpcHandlers } from "@modules/core/Rpc.js";
+import { dashboardRpcHandlers } from "@rpc/DashboardRpc.js";
+import { loggingRpcHandlers } from "@modules/logging/Rpc.js";
+import { modRpcHandlers } from "@modules/mod/Rpc.js";
+import { reactionrolesRpcHandlers } from "@modules/reactionroles/Rpc.js";
+import { securityRpcHandlers } from "@modules/security/Rpc.js";
+import { tempvcRpcHandlers } from "@modules/tempvc/Rpc.js";
+import { welcomeRpcHandlers } from "@modules/welcome/Rpc.js";
+import { economyRpcHandlers } from "@modules/economy/Rpc.js";
+import { filterRpcHandlers } from "@modules/filter/Rpc.js";
 
 const staticOwners: ReadonlyArray<readonly [string, RpcImplementation]> = [
   ["account", accountRpcHandlers],

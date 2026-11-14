@@ -1,22 +1,22 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { Container } from "#src/lib/Services.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { Container } from "@lib/Services.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 import {
   filterAutocompleteChoices,
   respondWithChoices,
-} from "#src/lib/utilities/Autocomplete.js";
+} from "@utilities/Autocomplete.js";
 import type { AutocompleteInteraction } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
 import {
   ChannelType,
   channelMention,
   type ChatInputCommandInteraction,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { ReactionRolesUtility } from "#src/modules/reactionroles/utilities/ReactionRolesUtility.js";
-import { ReactionRoleMenuLockedError } from "#src/modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { ReactionRolesUtility } from "@modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { ReactionRoleMenuLockedError } from "@modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 function service(): ReactionRolesUtility {
   return getUtility("reactionroles");

@@ -1,6 +1,6 @@
-import { container } from "#src/lib/Services.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { findMenuByMessage, getMenu, listMenus, type ReactionRoleMenu } from "#src/modules/reactionroles/data/Reactionroles.js";
+import { container } from "@lib/Services.js";
+import { logError } from "@utilities/Errors.js";
+import { findMenuByMessage, getMenu, listMenus, type ReactionRoleMenu } from "@modules/reactionroles/data/Reactionroles.js";
 
 class ReactionRoleRegistry {
   readonly #menus = new Map<string, Map<string, ReactionRoleMenu>>();

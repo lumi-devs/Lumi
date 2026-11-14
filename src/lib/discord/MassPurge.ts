@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
-import { errorCode, logError } from "#src/lib/utilities/Errors.js";
-import { Time } from "#src/shared/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { errorCode, logError } from "@utilities/Errors.js";
+import { Time } from "@shared/Index.ts";
 import {
   type Collection,
   type FetchMessagesOptions,

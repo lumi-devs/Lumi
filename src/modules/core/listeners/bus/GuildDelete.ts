@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { evictGuildValkeyState } from "#src/lib/valkey/GuildEviction.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
+import { evictGuildRedisState } from "@redis/GuildEviction.js";
+import { tryGetUtility } from "@module-system/Utility.js";
 import type { Guild } from "discord.js";
 
 export const guildDeleteEventBusListener = defineListener({
@@ -14,8 +14,8 @@ export const guildDeleteEventBusListener = defineListener({
 
     await services.db.markGuildLeft(guild.id);
 
-    await evictGuildValkeyState(
-      services.valkey,
+    await evictGuildRedisState(
+      services.redis,
       services.invalidation,
       services.logger,
       guild.id,

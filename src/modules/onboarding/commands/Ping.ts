@@ -1,13 +1,13 @@
-import { Time } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+import { Time } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import { SlashCommandBuilder, type Message } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { collectPingData } from "#src/modules/onboarding/services/PingCollect.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { collectPingData } from "@modules/onboarding/services/PingCollect.js";
 import {
   buildOverviewCard,
   PingFlags,
   EphemeralFlags,
-} from "#src/modules/onboarding/ui/PingCards.js";
+} from "@modules/onboarding/ui/PingCards.js";
 
 const LiveUpdatesDuration = Time.Minute;
 const LiveUpdateInterval = Time.Second * 10;
@@ -15,7 +15,7 @@ const LiveUpdateInterval = Time.Second * 10;
 const activeIntervals = new Map<string, ReturnType<typeof setInterval>>();
 export const pingViewStates = new Map<
   string,
-  import("#src/modules/onboarding/ui/PingCards.js").PingCategory | "overview"
+  import("@modules/onboarding/ui/PingCards.js").PingCategory | "overview"
 >();
 
 function stopLiveUpdates(userId: string, interval?: ReturnType<typeof setInterval>) {
@@ -40,7 +40,7 @@ function startLiveUpdates(services: Container, userId: string, msg: Message) {
       const data = await collectPingData(services);
       const state = pingViewStates.get(userId) || "overview";
       const { buildDetailCard } =
-        await import("#src/modules/onboarding/ui/PingCards.js");
+        await import("@modules/onboarding/ui/PingCards.js");
       const card =
         state === "overview"
           ? buildOverviewCard({ roundTrip: null, ...data }, userId)

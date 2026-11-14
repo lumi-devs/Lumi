@@ -14,7 +14,7 @@ import {
   HubTabs,
   SectionLineLimit,
   ButtonLabelLimit,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 
 describe("panel kit", () => {
   it("settingRow renders text lines with a button accessory", () => {

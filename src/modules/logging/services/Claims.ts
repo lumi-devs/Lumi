@@ -1,10 +1,10 @@
 import { randomInt } from "node:crypto";
-import { container } from "#src/lib/Services.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { mgetSafe } from "#src/lib/valkey/Cluster.js";
+import { container } from "@lib/Services.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import { mgetSafe } from "@redis/Cluster.js";
 
 const LogClaimCodeLength = 6;
-export const LogClaimCodeTtlMs = ValkeyTTL.logClaimCode * 1000;
+export const LogClaimCodeTtlMs = RedisTTL.logClaimCode * 1000;
 
 const CodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
@@ -41,8 +41,8 @@ export async function issueLogClaimCode(
 ): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = randomLogClaimCode();
-    const set = await container.valkey.set(
-      ValkeyKeys.logClaimCode(guildId, code),
+    const set = await container.redis.set(
+      RedisKeys.logClaimCode(guildId, code),
       issuerId,
       "PX",
       LogClaimCodeTtlMs,
@@ -57,38 +57,38 @@ export async function peekLogClaimCode(
   guildId: string,
   code: string,
 ): Promise<string | null> {
-  return container.valkey.get(ValkeyKeys.logClaimCode(guildId, code));
+  return container.redis.get(RedisKeys.logClaimCode(guildId, code));
 }
 
 export async function consumeLogClaimCode(
   guildId: string,
   code: string,
 ): Promise<string | null> {
-  return container.valkey.getdel(ValkeyKeys.logClaimCode(guildId, code));
+  return container.redis.getdel(RedisKeys.logClaimCode(guildId, code));
 }
 
 export async function registerLogClaim(
   guildId: string,
   claim: LogClaim,
 ): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.logClaim(guildId, claim.channelId),
+  await container.redis.set(
+    RedisKeys.logClaim(guildId, claim.channelId),
     JSON.stringify(claim),
     "EX",
-    ValkeyTTL.logClaim,
+    RedisTTL.logClaim,
   );
-  await container.valkey.sadd(ValkeyKeys.logClaimIndex(guildId), claim.channelId);
-  await container.valkey.expire(ValkeyKeys.logClaimIndex(guildId), ValkeyTTL.logClaim);
+  await container.redis.sadd(RedisKeys.logClaimIndex(guildId), claim.channelId);
+  await container.redis.expire(RedisKeys.logClaimIndex(guildId), RedisTTL.logClaim);
 }
 
 export async function listLogClaims(guildId: string): Promise<LogClaim[]> {
-  const channelIds = await container.valkey.smembers(
-    ValkeyKeys.logClaimIndex(guildId),
+  const channelIds = await container.redis.smembers(
+    RedisKeys.logClaimIndex(guildId),
   );
   if (channelIds.length === 0) return [];
   const raws = await mgetSafe(
-    container.valkey,
-    channelIds.map((channelId) => ValkeyKeys.logClaim(guildId, channelId)),
+    container.redis,
+    channelIds.map((channelId) => RedisKeys.logClaim(guildId, channelId)),
   );
   const claims: LogClaim[] = [];
   for (const raw of raws) {
@@ -103,11 +103,11 @@ export async function dismissLogClaim(
   guildId: string,
   channelId: string,
 ): Promise<LogClaim | null> {
-  const key = ValkeyKeys.logClaim(guildId, channelId);
-  const claim = parseLogClaim(await container.valkey.get(key));
+  const key = RedisKeys.logClaim(guildId, channelId);
+  const claim = parseLogClaim(await container.redis.get(key));
   await Promise.all([
     container.invalidation.invalidate(key),
-    container.valkey.srem(ValkeyKeys.logClaimIndex(guildId), channelId),
+    container.redis.srem(RedisKeys.logClaimIndex(guildId), channelId),
   ]);
   return claim;
 }

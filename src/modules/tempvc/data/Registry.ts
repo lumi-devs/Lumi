@@ -1,6 +1,6 @@
-import { container } from "#src/lib/Services.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import type { GeneratorConfig } from "#src/modules/tempvc/data/Tempvc.js";
+import { container } from "@lib/Services.js";
+import { logError } from "@utilities/Errors.js";
+import type { GeneratorConfig } from "@modules/tempvc/data/Tempvc.js";
 
 interface ManagedVc {
   generatorId: string;

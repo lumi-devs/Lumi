@@ -4,7 +4,7 @@ import {
   defineEnv,
   envField,
   resolveDbSlowQueryThresholdMs,
-} from "#src/lib/Env.js";
+} from "@lib/Env.js";
 
 describe("validateRequiredEnv", () => {
   const original: Record<string, string | undefined> = {};

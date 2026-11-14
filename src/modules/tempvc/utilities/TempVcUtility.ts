@@ -1,5 +1,5 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import { type Container } from "#src/lib/Services.js";
+import { defineUtility } from "@module-system/Utility.js";
+import { type Container } from "@lib/Services.js";
 import { AsyncQueue } from "@sapphire/async-queue";
 import {
   ChannelType,
@@ -10,16 +10,16 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { errorCode, logError } from "#src/lib/utilities/Errors.js";
-import { renderTemplate } from "#src/lib/utilities/Template.js";
-import { scheduleTask, QueuePriority } from "#src/lib/scheduler/Schedule.js";
-import { claimCooldown } from "#src/lib/valkey/Cooldown.js";
+import { errorCode, logError } from "@utilities/Errors.js";
+import { renderTemplate } from "@utilities/Template.js";
+import { scheduleTask, QueuePriority } from "@scheduler/Schedule.js";
+import { claimCooldown } from "@redis/Cooldown.js";
 import {
   clearVoiceChannelOccupancy,
   isVoiceChannelEmpty,
-} from "#src/modules/tempvc/services/VoiceOccupancy.js";
-import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "#src/modules/tempvc/Constants.js";
-import { getCreateCooldownMs, getMaxGenerators } from "#src/modules/tempvc/Config.js";
+} from "@modules/tempvc/services/VoiceOccupancy.js";
+import { TempvcCleanupDelayMs, ModuleName, TempVcKeys } from "@modules/tempvc/Constants.js";
+import { getCreateCooldownMs, getMaxGenerators } from "@modules/tempvc/Config.js";
 import {
   getVcRecord,
   listVcRecords,
@@ -31,9 +31,9 @@ import {
   removeGenerator,
   type GeneratorConfig,
   type VcRecord,
-} from "#src/modules/tempvc/data/Tempvc.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
-import { buildPanel } from "#src/modules/tempvc/ui/Panel.js";
+} from "@modules/tempvc/data/Tempvc.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
+import { buildPanel } from "@modules/tempvc/ui/Panel.js";
 
 const creationQueues = new Collection<string, AsyncQueue>();
 
@@ -406,7 +406,7 @@ export default tempVcUtility;
 
 export type TempVcUtility = typeof tempVcUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     tempvc: typeof tempVcUtility;
   }

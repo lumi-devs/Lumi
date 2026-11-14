@@ -6,9 +6,9 @@ import {
   type RepliableInteraction,
   type User,
 } from "discord.js";
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
-import { confirmRow } from "#src/lib/ui/Panels.js";
-import { makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
+import { confirmRow } from "@ui/Panels.js";
+import { makeWarningCard, type CardReply } from "@ui/Cards.js";
 
 export interface ConfirmPromptContext {
   user: User;

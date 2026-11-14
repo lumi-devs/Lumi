@@ -1,7 +1,7 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember } from "discord.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import { defineListener } from "@listeners/ListenerDef.js";
 
 export const QuarantineMemberAddListener = defineListener({
   name: "quarantineMemberAdd",
@@ -10,8 +10,8 @@ export const QuarantineMemberAddListener = defineListener({
     const guildId = member.guild.id;
     const userId = member.id;
 
-    const quarantineState = await services.valkey.get(
-      ValkeyKeys.quarantineState(guildId, userId),
+    const quarantineState = await services.redis.get(
+      RedisKeys.quarantineState(guildId, userId),
     );
 
     if (quarantineState === "0") return;
@@ -23,9 +23,9 @@ export const QuarantineMemberAddListener = defineListener({
         "quarantine",
       );
       if (activeCases.length === 0) {
-        await services.valkey.setex(
-          ValkeyKeys.quarantineState(guildId, userId),
-          ValkeyTTL.quarantineNegative,
+        await services.redis.setex(
+          RedisKeys.quarantineState(guildId, userId),
+          RedisTTL.quarantineNegative,
           "0",
         );
         return;

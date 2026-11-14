@@ -1,4 +1,4 @@
-import type { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
+import type { DatabaseService } from "@db/DatabaseService.js";
 
 interface ServerLockState {
   enabled: boolean;

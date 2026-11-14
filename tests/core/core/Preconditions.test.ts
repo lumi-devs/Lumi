@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   preconditionChecks,
   type GateCheck,
   type GateSource,
-} from "#src/lib/api/permissions/PreconditionChecks.js";
-import { denyGated } from "#src/lib/api/permissions/PreconditionChecks.js";
+} from "@api/permissions/PreconditionChecks.js";
+import { denyGated } from "@api/permissions/PreconditionChecks.js";
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   handleDenied: vi.fn().mockResolvedValue(undefined),
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
@@ -186,7 +186,7 @@ describe("precondition gates", () => {
   describe("denyGated", () => {
     it("lets the run through when every gate passes", async () => {
       const { handleDenied } = await import(
-        "#src/lib/utilities/CommandResponse.js"
+        "@utilities/CommandResponse.js"
       );
       const passed = await denyGated(container, {} as any, source(), {
         names: ["MaintenanceMode", "ModuleEnabled"],
@@ -198,7 +198,7 @@ describe("precondition gates", () => {
 
     it("stops on the first denial", async () => {
       const { handleDenied } = await import(
-        "#src/lib/utilities/CommandResponse.js"
+        "@utilities/CommandResponse.js"
       );
       const stopped = await denyGated(
         container,

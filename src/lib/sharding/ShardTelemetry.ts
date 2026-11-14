@@ -1,11 +1,11 @@
-import type { Cluster } from "iovalkey";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
+import type { Cluster } from "ioredis";
+import type {RedisClient} from "@redis/Cluster.js";
+import { tryParseJSON } from "@shared/Index.ts";
 
-function isClusterClient(valkey: ValkeyClient): boolean {
+function isClusterClient(redis: RedisClient): boolean {
   return (
-    typeof (valkey as { nodes?: unknown }).nodes === "function" &&
-    (valkey as Cluster).nodes("master").length > 0
+    typeof (redis as { nodes?: unknown }).nodes === "function" &&
+    (redis as Cluster).nodes("master").length > 0
   );
 }
 
@@ -51,7 +51,7 @@ export type ShardTelemetrySample = Omit<
 >;
 
 export interface ShardTelemetryPublisherOptions {
-  valkey: ValkeyClient;
+  redis: RedisClient;
   clusterName: string;
   replicaId: string;
   sample: () => readonly ShardTelemetrySample[];
@@ -92,7 +92,7 @@ export class ShardTelemetryPublisher {
     for (const row of rows) {
       seen.add(row.shardId);
       writes.push(
-        this.opts.valkey.set(
+        this.opts.redis.set(
           shardKey(this.opts.clusterName, row.shardId),
           JSON.stringify({
             ...row,
@@ -106,7 +106,7 @@ export class ShardTelemetryPublisher {
     }
     for (const shardId of this.published) {
       if (!seen.has(shardId)) {
-        writes.push(this.opts.valkey.del(shardKey(this.opts.clusterName, shardId)));
+        writes.push(this.opts.redis.del(shardKey(this.opts.clusterName, shardId)));
       }
     }
     this.published = seen;
@@ -122,7 +122,7 @@ export class ShardTelemetryPublisher {
     );
     this.published = new Set();
     try {
-      await Promise.all(keys.map((key) => this.opts.valkey.del(key)));
+      await Promise.all(keys.map((key) => this.opts.redis.del(key)));
     } catch (err) {
       this.opts.log?.("warn", "shard telemetry cleanup failed", {
         err: String(err),
@@ -168,7 +168,7 @@ export interface ClusterShardsSnapshot {
 const GlobSpecials = /[*?[\]\\]/g;
 
 export interface ReadClusterShardsOptions {
-  valkey: ValkeyClient;
+  redis: RedisClient;
   clusterName: string;
 
   scanCount?: number;
@@ -177,18 +177,18 @@ export interface ReadClusterShardsOptions {
 export async function readClusterShards(
   opts: ReadClusterShardsOptions,
 ): Promise<ClusterShardsSnapshot> {
-  const { valkey, clusterName } = opts;
+  const { redis, clusterName } = opts;
   const pattern = `lumi:cluster:${clusterName.replace(GlobSpecials, "\\$&")}:shard:*`;
 
-  const shardKeys = await scanKeys(valkey, pattern, opts.scanCount ?? 200);
+  const shardKeys = await scanKeys(redis, pattern, opts.scanCount ?? 200);
 
   const rows: ShardTelemetry[] = [];
   if (shardKeys.length > 0) {
     let values: (string | null)[];
     try {
-      values = await valkey.mget(...shardKeys);
+      values = await redis.mget(...shardKeys);
     } catch {
-      values = await Promise.all(shardKeys.map((key) => valkey.get(key)));
+      values = await Promise.all(shardKeys.map((key) => redis.get(key)));
     }
     for (const raw of values) {
       if (!raw) continue;
@@ -202,7 +202,7 @@ export async function readClusterShards(
     try {
       const rawLogs = await Promise.all(
         rows.map((r) =>
-          valkey.lrange(`lumi:cluster:${clusterName}:shardlogs:${r.shardId}`, -50, -1),
+          redis.lrange(`lumi:cluster:${clusterName}:shardlogs:${r.shardId}`, -50, -1),
         ),
       );
       for (let i = 0; i < rows.length; i++) {
@@ -220,7 +220,7 @@ export async function readClusterShards(
         });
       }
     } catch {
-      // Valkey lrange failure shouldn't prevent shard telemetry from returning
+      // Redis lrange failure shouldn't prevent shard telemetry from returning
     }
   }
 
@@ -257,19 +257,19 @@ export async function readClusterShards(
 }
 
 async function scanKeys(
-  valkey: ValkeyClient,
+  redis: RedisClient,
   pattern: string,
   count: number,
 ): Promise<string[]> {
-  if (isClusterClient(valkey)) {
+  if (isClusterClient(redis)) {
     const perNode = await Promise.all(
-      (valkey as Cluster)
+      (redis as Cluster)
         .nodes("master")
         .map((node) => scanNode(node, pattern, count)),
     );
     return perNode.flat();
   }
-  return scanNode(valkey, pattern, count);
+  return scanNode(redis, pattern, count);
 }
 
 async function scanNode(

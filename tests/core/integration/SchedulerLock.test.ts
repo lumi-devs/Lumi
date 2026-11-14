@@ -1,10 +1,10 @@
 import { afterAll, afterEach, beforeAll, expect, it } from "bun:test";
-import type Valkey from "iovalkey";
-import {acquireValkeyLock} from "#src/lib/valkey/Lock.js";
-import { type ValkeyLock } from "#src/lib/valkey/Lock.js";
-import { acquireSchedulerLock } from "#src/lib/scheduler/Lock.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { createTestValkey, deleteByPrefix, integrationDescribe } from "./Setup.js";
+import type Redis from "ioredis";
+import {acquireRedisLock} from "@redis/Lock.js";
+import { type RedisLock } from "@redis/Lock.js";
+import { acquireSchedulerLock } from "@scheduler/Lock.js";
+import { RedisKeys } from "@redis/Store.js";
+import { createTestRedis, deleteByPrefix, integrationDescribe } from "./Setup.js";
 
 const TestLockPrefix = "lumi:test:int:lock:";
 
@@ -12,61 +12,61 @@ function uniqueLockKey(): string {
   return `${TestLockPrefix}${Date.now()}:${Math.random().toString(36).slice(2)}:`;
 }
 
-integrationDescribe("scheduler-lock (real Valkey)", () => {
-  let valkey: Valkey;
-  let held: ValkeyLock[] = [];
+integrationDescribe("scheduler-lock (real Redis)", () => {
+  let redis: Redis;
+  let held: RedisLock[] = [];
 
   beforeAll(() => {
-    valkey = createTestValkey();
+    redis = createTestRedis();
   });
 
   afterEach(async () => {
     await Promise.all(held.map((lock) => lock.release().catch(() => undefined)));
     held = [];
-    await deleteByPrefix(valkey, TestLockPrefix);
-    await valkey.del(ValkeyKeys.schedulerLeader());
+    await deleteByPrefix(redis, TestLockPrefix);
+    await redis.del(RedisKeys.schedulerLeader());
   });
 
   afterAll(async () => {
-    await valkey.quit();
+    await redis.quit();
   });
 
   it("acquires an uncontended lock and sets a value readable back via GET", async () => {
     const key = uniqueLockKey();
-    const lock = await acquireValkeyLock(valkey, key);
+    const lock = await acquireRedisLock(redis, key);
     held.push(lock);
 
-    const stored = await valkey.get(key);
+    const stored = await redis.get(key);
     expect(stored).toBe(lock.token);
   });
 
   it("release() clears the key so a later acquire on the same key succeeds", async () => {
     const key = uniqueLockKey();
-    const first = await acquireValkeyLock(valkey, key);
+    const first = await acquireRedisLock(redis, key);
     await first.release();
 
-    expect(await valkey.get(key)).toBeNull();
+    expect(await redis.get(key)).toBeNull();
 
-    const second = await acquireValkeyLock(valkey, key);
+    const second = await acquireRedisLock(redis, key);
     held.push(second);
     expect(second.token).not.toBe(first.token);
   });
 
   it("a contending acquire with acquireTimeoutMs=0 fails fast while the lock is held", async () => {
     const key = uniqueLockKey();
-    const first = await acquireValkeyLock(valkey, key, { ttlMs: 5000 });
+    const first = await acquireRedisLock(redis, key, { ttlMs: 5000 });
     held.push(first);
 
     await expect(
-      acquireValkeyLock(valkey, key, { acquireTimeoutMs: 0, retryDelayMs: 5 }),
-    ).rejects.toThrow(/Timeout acquiring Valkey lock/);
+      acquireRedisLock(redis, key, { acquireTimeoutMs: 0, retryDelayMs: 5 }),
+    ).rejects.toThrow(/Timeout acquiring Redis lock/);
   });
 
   it("a contending acquire with a positive timeout succeeds once the holder releases", async () => {
     const key = uniqueLockKey();
-    const first = await acquireValkeyLock(valkey, key, { ttlMs: 5000 });
+    const first = await acquireRedisLock(redis, key, { ttlMs: 5000 });
 
-    const waiter = acquireValkeyLock(valkey, key, {
+    const waiter = acquireRedisLock(redis, key, {
       acquireTimeoutMs: 2000,
       retryDelayMs: 10,
       maxRetryDelayMs: 50,
@@ -83,28 +83,28 @@ integrationDescribe("scheduler-lock (real Valkey)", () => {
   it("renews the lease past its original TTL while still held", async () => {
     const key = uniqueLockKey();
     const ttlMs = 200;
-    const lock = await acquireValkeyLock(valkey, key, { ttlMs });
+    const lock = await acquireRedisLock(redis, key, { ttlMs });
     held.push(lock);
 
     await Bun.sleep(ttlMs + 150);
 
-    const pttl = await valkey.pttl(key);
+    const pttl = await redis.pttl(key);
     expect(pttl).toBeGreaterThan(0);
-    expect(await valkey.get(key)).toBe(lock.token);
+    expect(await redis.get(key)).toBe(lock.token);
   });
 
   it("acquireSchedulerLock takes the fleet-wide leader key", async () => {
-    const lock = await acquireSchedulerLock(valkey, () => undefined);
+    const lock = await acquireSchedulerLock(redis, () => undefined);
     held.push(lock);
 
-    expect(await valkey.get(ValkeyKeys.schedulerLeader())).toBe(lock.token);
+    expect(await redis.get(RedisKeys.schedulerLeader())).toBe(lock.token);
   });
 
   it("a second acquireSchedulerLock call fails fast while the leader lease is held", async () => {
-    const lock = await acquireSchedulerLock(valkey, () => undefined);
+    const lock = await acquireSchedulerLock(redis, () => undefined);
     held.push(lock);
 
-    await expect(acquireSchedulerLock(valkey, () => undefined)).rejects.toThrow(
+    await expect(acquireSchedulerLock(redis, () => undefined)).rejects.toThrow(
       /Failed to acquire scheduler lock/,
     );
   });

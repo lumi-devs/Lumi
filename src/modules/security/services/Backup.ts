@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import type { Guild } from "discord.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { snapshotGuild } from "#src/modules/security/data/BackupTypes.js";
-import { restoreGuildFromBackup } from "#src/modules/security/services/RestoreGuild.js";
-import { getConfigNumber } from "#src/modules/security/services/ConfigHelpers.js";
+import { RedisKeys } from "@redis/Store.js";
+import { snapshotGuild } from "@modules/security/data/BackupTypes.js";
+import { restoreGuildFromBackup } from "@modules/security/services/RestoreGuild.js";
+import { getConfigNumber } from "@modules/security/services/ConfigHelpers.js";
 
 export async function loadBackupConfig(
   guildId: string,
@@ -23,8 +23,8 @@ export async function createBackup(guild: Guild, keepCount: number): Promise<num
 }
 
 export async function flagRestorePending(guildId: string): Promise<void> {
-  await container.valkey.set(
-    ValkeyKeys.securityRestorePending(guildId),
+  await container.redis.set(
+    RedisKeys.securityRestorePending(guildId),
     "1",
     "EX",
     24 * 60 * 60,
@@ -33,13 +33,13 @@ export async function flagRestorePending(guildId: string): Promise<void> {
 
 export async function isRestorePending(guildId: string): Promise<boolean> {
   return (
-    (await container.valkey.exists(ValkeyKeys.securityRestorePending(guildId))) === 1
+    (await container.redis.exists(RedisKeys.securityRestorePending(guildId))) === 1
   );
 }
 
 export async function clearRestorePending(guildId: string): Promise<void> {
   await container.invalidation.invalidate(
-    ValkeyKeys.securityRestorePending(guildId),
+    RedisKeys.securityRestorePending(guildId),
   );
 }
 

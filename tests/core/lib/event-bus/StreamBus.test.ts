@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { StreamBus } from "#src/lib/event-bus/StreamBus.js";
+import { StreamBus } from "@event-bus/StreamBus.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -52,7 +52,7 @@ describe("StreamBus", () => {
   };
 
   describe("publish", () => {
-    it("publishes JSON-encoded message to Valkey stream with MAXLEN ~ cap", async () => {
+    it("publishes JSON-encoded message to Redis stream with MAXLEN ~ cap", async () => {
       const bus = createBus({ defaultMaxLen: 5000 });
       const id = await bus.publish("test-stream", { hello: "world" });
 
@@ -762,7 +762,7 @@ describe("StreamBus", () => {
         statsIntervalMs: 2000,
       });
 
-      publisherMock.xlen.mockRejectedValue(new Error("Valkey error"));
+      publisherMock.xlen.mockRejectedValue(new Error("Redis error"));
       publisherMock.xpending.mockRejectedValue(new Error("Pending error"));
 
       const stop = await bus.consume(

@@ -3,7 +3,7 @@ import {
   cleanMention,
   fmtId,
   isSnowflakeId,
-} from "#lib/utilities/Snowflakes.js";
+} from "@utilities/Snowflakes.js";
 
 describe("snowflakes", () => {
   it("fmtId converts id to string or returns 'unknown'", () => {

@@ -1,27 +1,24 @@
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { ConfigUtility } from "#src/modules/admin/utilities/ConfigUtility.js";
-import { hasPanelAccess, loadDetail } from "#src/modules/admin/services/ConfigPanel.js";
-import { buildFeatureDetailView } from "#src/modules/admin/ui/Modules.js";
-import { buildOverridesView } from "#src/modules/admin/ui/Overrides.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import { cleanMention, isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { FieldType } from "@module-system/ConfigSchema.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { ConfigUtility } from "@modules/admin/utilities/ConfigUtility.js";
+import {
+  hasPanelAccess,
+  isOverrideTargetType,
+  loadDetail,
+} from "@lib/hub/ConfigPanel.js";
+import { buildFeatureDetailView } from "@lib/hub/Modules.js";
+import { buildOverridesView } from "@modules/admin/ui/Overrides.js";
+import { ephemeralCard, makeErrorCard } from "@ui/Cards.js";
+import { cleanMention, isSnowflakeId } from "@utilities/Snowflakes.js";
 import {
   ConfigFieldModalId,
   ConfigModalId,
   ConfigOverrideModalId,
-} from "#src/modules/core/Constants.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@interactions/ModuleIds.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
 import type { ModalSubmitInteraction } from "discord.js";
-import { OverrideTargetType, type $Enums } from "@prisma/client";
-
-function isOverrideTargetType(
-  value: string,
-): value is $Enums.OverrideTargetType {
-  return (Object.values(OverrideTargetType) as string[]).includes(value);
-}
 
 export const configPanelModal = defineInteraction({
   prefix: [

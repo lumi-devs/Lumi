@@ -1,15 +1,15 @@
 import {
   runModerationFlow,
   type ModerationCommand as MC,
-} from "#src/lib/api/moderation/ModerationFlow.js";
+} from "@api/moderation/ModerationFlow.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { VoiceMuteAction } from "#src/modules/mod/services/actions/VoiceMuteAction.js";
-import { formatDuration, parseDuration } from "#src/lib/utilities/Time.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { VoiceMuteAction } from "@modules/mod/services/actions/VoiceMuteAction.js";
+import { formatDuration, parseDuration } from "@utilities/Time.js";
 import type { ModerationCase } from "@prisma/client";
 import type { GuildMember } from "discord.js";
-import { Result } from "#src/shared/Index.ts";
+import { Result } from "@shared/Index.ts";
 
 const DefaultDurationMs = 24 * 3600 * 1000;
 

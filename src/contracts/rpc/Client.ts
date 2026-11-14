@@ -1,12 +1,12 @@
-import { CONTRACT_VERSION } from "#src/contracts/Version.js";
+import { CONTRACT_VERSION } from "@contracts/Version.js";
 import {
   parseRpcResponse,
   RpcFailureCodes,
   RpcRetryableByDefault,
   type RpcFailureCode,
   type RpcRequest,
-} from "#src/contracts/rpc/Envelope.js";
-import { rpcRouter, type RpcActionName, type RpcInput, type RpcOutput } from "#src/contracts/rpc/Router.js";
+} from "@contracts/rpc/Envelope.js";
+import { rpcRouter, type RpcActionName, type RpcInput, type RpcOutput } from "@contracts/rpc/Router.js";
 
 export type RpcErrorCode = "TIMEOUT" | "WORKER_DOWN" | "MALFORMED" | RpcFailureCode;
 

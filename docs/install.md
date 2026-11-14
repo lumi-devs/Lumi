@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Bun 1.x.
-- Postgres 16+, Valkey 7+.
+- Postgres 16+, Redis 7+.
 - A Discord application token with the `bot` scope and these intents:
   `Guilds`, `GuildMembers` (privileged), `GuildMessages`,
   `MessageContent` (privileged), `GuildVoiceStates`, `GuildModeration`.
@@ -15,8 +15,8 @@ cp .env.example .env   # if present, otherwise create .env
 ```
 
 Required keys: `BOT_TOKEN`, `APPEAL_TOKEN_SECRET`, `POSTGRES_URL`,
-`OWNER_IDS` (comma-separated user IDs). Valkey via `VALKEY_HOST` /
-`VALKEY_PORT` (see `.env.example`; `VALKEY_URL` override supported).
+`OWNER_IDS` (comma-separated user IDs). Redis via `REDIS_HOST` /
+`REDIS_PORT` (see `.env.example`; `REDIS_URL` override supported).
 `lumi config` prints the resolved configuration without starting
 anything.
 
@@ -30,7 +30,7 @@ bun src/Index.ts     # the bot: db -> modules -> slash -> RPC -> gateway
 With Docker:
 
 ```sh
-docker compose up bot   # bot + postgres + valkey
+docker compose up bot   # bot + postgres + redis
 ```
 
 The `migrate` one-shot service runs `prisma migrate deploy` before the

@@ -15,14 +15,14 @@
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4%2B-000000?style=flat-square&logo=bun&logoColor=white" alt="Bun"></a>
     <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-6.x-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
     <a href="https://www.postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-16%2B-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>
-    <a href="https://valkey.io"><img src="https://img.shields.io/badge/Valkey-7%2B-blue?style=flat-square&logo=valkey&logoColor=white" alt="Valkey"></a>
+    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-7%2B-blue?style=flat-square&logo=redis&logoColor=white" alt="Redis"></a>
     <a href="https://discord.js.org"><img src="https://img.shields.io/badge/discord.js-v14-5865F2?style=flat-square&logo=discord&logoColor=white" alt="discord.js"></a>
   </p>
 </div>
 
 ---
 
-Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Valkey. It runs as a single process: one Discord gateway client, an embedded RPC bridge, and in-process BullMQ scheduling.
+Lumi is a modular Discord bot built with Bun, TypeScript, Prisma, and Redis. It runs as a single process: one Discord gateway client, an embedded RPC bridge, and in-process BullMQ scheduling.
 
 Documentation site: **[https://lumi-devs.github.io/Lumi-docs](https://lumi-devs.github.io/Lumi-docs)** (source repo: [lumi-devs/Lumi-docs](https://github.com/lumi-devs/Lumi-docs)).
 
@@ -41,7 +41,7 @@ Lumi is a single-package monolith under `src/`:
 | `src/contracts` | Typed RPC router and schemas for the RPC bridge. |
 | `data/addons` | Third-party addon root. Addons load in-process through the same module loader. |
 
-Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
+Import aliases: internal code uses the domain aliases in `tsconfig.base.json` (`@lib/*`, `@modules/*`, `@api/*`, `@cache/*`, `@db/*`, ...); addons import the public surface `@lumi/*`.
 
 ---
 
@@ -53,7 +53,7 @@ Import aliases: `#lib/*` maps to `src/lib/*`, `#src/*` maps to `src/*`.
 - **Leveling**: Message and voice XP with 7 selectable level formulas, image rank cards, and Overall / Voice / Weekly / Monthly image leaderboards.
 - **Guild Economy**: Wallet + bank balances with payday, taxed transfers, slots, and a fully audited transaction ledger.
 - **Observability Built-in**: OpenTelemetry tracing and Prometheus metrics.
-- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Valkey for caching, locks, and queues.
+- **Robust Storage**: PostgreSQL with Prisma ORM for structured state; Redis for caching, locks, and queues.
 
 ---
 
@@ -75,7 +75,7 @@ No clone, no build. Two commands:
    docker run --rm -it -v .:/setup ghcr.io/lumi-devs/lumi:latest lumi-setup init /setup
    ```
 
-2. **Start everything** (pulls Postgres, Valkey, and the bot; migrations run automatically):
+2. **Start everything** (pulls Postgres, Redis, and the bot; migrations run automatically):
    ```bash
    docker compose up -d
    docker logs -f lumi-bot

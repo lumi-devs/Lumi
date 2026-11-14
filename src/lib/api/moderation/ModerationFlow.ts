@@ -1,16 +1,16 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { LumiT } from "@i18n/Index.js";
 import {
   confirmPrompt,
   type ConfirmPromptContext,
   type ConfirmPromptOptions,
-} from "#src/lib/utilities/Confirm.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
-import { isNullish } from "#src/shared/Index.ts";
-import { Time } from "#src/shared/Index.ts";
-import { Result, type Awaitable } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+} from "@utilities/Confirm.js";
+import { logError } from "@utilities/Errors.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
+import { isNullish } from "@shared/Index.ts";
+import { Time } from "@shared/Index.ts";
+import { Result, type Awaitable } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import type { Guild, GuildMember, User } from "discord.js";
 import type { CaseAction } from "@prisma/client";
 

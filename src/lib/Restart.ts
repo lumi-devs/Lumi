@@ -1,10 +1,10 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
 import {
   ModuleRestartCancelId,
   ModuleRestartId,
-} from "#src/modules/core/Constants.js";
+} from "@interactions/ModuleIds.js";
 
 export function restartChoiceRow(
   userId: string,

@@ -1,22 +1,22 @@
-import { container } from "#src/lib/Services.js";
-import type { LevelBalance } from "#src/modules/leveling/data/LevelRepository.js";
+import { container } from "@lib/Services.js";
+import type { LevelBalance } from "@modules/leveling/data/LevelRepository.js";
 import {
   PermissionsBitField,
   type Guild,
   type GuildMember,
   type TextBasedChannel,
 } from "discord.js";
-import type { LevelRepository } from "#src/modules/leveling/data/LevelRepository.js";
-import type { LevelBoardEntry } from "#src/modules/leveling/data/LevelRepository.js";
+import type { LevelRepository } from "@modules/leveling/data/LevelRepository.js";
+import type { LevelBoardEntry } from "@modules/leveling/data/LevelRepository.js";
 import {
   applyMultipliers,
   type LevelingConfig,
-} from "#src/modules/leveling/Config.js";
+} from "@modules/leveling/Config.js";
 import {
   levelForTotalXp,
   totalXpForLevel,
   xpForLevel,
-} from "#src/modules/leveling/services/Formulas.js";
+} from "@modules/leveling/services/Formulas.js";
 
 export class LevelError extends Error {
   public readonly code: string;
@@ -183,11 +183,7 @@ export class LevelService {
     const total = Math.max(0, before + delta);
     const { level, xp } = levelForTotalXp(config.formula, total);
     const account = await this.store.setLevelXp(guildId, userId, level, xp, total);
-    if (total !== before) {
-      await this.store
-        .recordGain(guildId, userId, total - before, "admin")
-        .catch(() => null);
-    }
+    await this.recordAdminGain(guildId, userId, total - before);
     return account;
   }
 
@@ -215,11 +211,7 @@ export class LevelService {
       current.xp,
       after,
     );
-    if (after !== before) {
-      await this.store
-        .recordGain(guildId, userId, after - before, "admin")
-        .catch(() => null);
-    }
+    await this.recordAdminGain(guildId, userId, after - before);
     return account;
   }
 
@@ -250,12 +242,19 @@ export class LevelService {
       clamped,
       after,
     );
-    if (after !== before) {
-      await this.store
-        .recordGain(guildId, userId, after - before, "admin")
-        .catch(() => null);
-    }
+    await this.recordAdminGain(guildId, userId, after - before);
     return account;
+  }
+
+  private async recordAdminGain(
+    guildId: string,
+    userId: string,
+    delta: number,
+  ): Promise<void> {
+    if (delta === 0) return;
+    await this.store
+      .recordGain(guildId, userId, delta, "admin")
+      .catch(() => null);
   }
 
   public async restoreEarnedRoles(

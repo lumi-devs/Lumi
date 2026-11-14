@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { paginate } from "#src/lib/rpc/Validation.js";
+import { paginate } from "@rpc/Validation.js";
 
 describe("paginate", () => {
   it("defaults to the first page of twenty-five", () => {

@@ -3,8 +3,8 @@ import type {
   AuditListData,
   BlocklistListData,
   SystemDashboardData,
-} from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
+} from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
 import {
   AuditFilterShape,
   BlocklistAddSchema,
@@ -13,9 +13,9 @@ import {
   PaginationSchema,
   RolloutPercentSchema,
   SnowflakeSchema,
-} from "#src/contracts/rpc/Schemas.js";
+} from "@contracts/rpc/Schemas.js";
 
-import type { FeatureFlagView, FeatureFlagOverrideView } from "#src/contracts/Views.js";
+import type { FeatureFlagView, FeatureFlagOverrideView } from "@contracts/Views.js";
 
 export interface ShardStateView {
   shardId: number;
@@ -116,7 +116,7 @@ export interface SystemStatusData {
   components: {
     api: SystemApiHealth;
     postgres: SystemLatencyHealth;
-    valkey: SystemLatencyHealth;
+    redis: SystemLatencyHealth;
     scheduler: SystemSchedulerHealth;
     shards: SystemShardsHealth;
     eventBus: SystemEventBusHealth;
@@ -270,7 +270,7 @@ export const systemRpc = {
   "system.status.get": rpcAction<SystemStatusData>()({
     auth: "botOwner",
     timeoutMs: RpcTimeouts.short,
-    summary: "Fleet-wide status page snapshot: api, postgres, valkey, scheduler, shards, event bus.",
+    summary: "Fleet-wide status page snapshot: api, postgres, redis, scheduler, shards, event bus.",
     readOnly: true,
   }),
 };

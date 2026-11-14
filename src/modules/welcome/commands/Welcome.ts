@@ -1,7 +1,7 @@
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 import { SlashCommandBuilder, ChannelType } from "discord.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { buildDmWelcomeCard, loadWelcomeConfig, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, sendWelcomeCard, templateVarsFor } from "#src/modules/welcome/services/Welcome.js";
+import type { CommandContext } from "@commands/Context.js";
+import { buildDmWelcomeCard, loadWelcomeConfig, renderGoodbyeCard, renderWelcomeCard, renderWelcomeTemplate, sendWelcomeCard, templateVarsFor } from "@modules/welcome/services/Welcome.js";
 
 const PreviewKinds = ["welcome", "goodbye", "dm"] as const;
 type PreviewKind = (typeof PreviewKinds)[number];

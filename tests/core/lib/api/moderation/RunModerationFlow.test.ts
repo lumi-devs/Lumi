@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "bun:test";
-import { Result } from "#src/shared/Index.ts";
-import { runModerationFlow } from "#src/lib/api/moderation/ModerationFlow.js";
+import { Result } from "@shared/Index.ts";
+import { runModerationFlow } from "@api/moderation/ModerationFlow.js";
 
 function fakeContext() {
   return {

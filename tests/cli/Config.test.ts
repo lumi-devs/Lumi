@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { discoverEnvKeys, redactValue } from "#src/cli/commands/Config.js";
+import { discoverEnvKeys, redactValue } from "@cli/commands/Config.js";
 
 describe("redactValue", () => {
   it("redacts values whose key name looks secret-ish", () => {

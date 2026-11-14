@@ -1,14 +1,14 @@
-import { SupportedLanguages, type LumiT } from "#src/lib/i18n/Index.js";
-import { row, type Row } from "#src/modules/onboarding/ui/Common.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { SupportedLanguages, type LumiT } from "@i18n/Index.js";
+import { row, type Row } from "@lib/hub/Common.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, type CardReply } from "@ui/Cards.js";
 import {
   componentEmoji,
   createStringSelectMenu,
   settingRow,
   tabRow,
   type Tab,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import {
   ButtonBuilder,
   SectionBuilder,

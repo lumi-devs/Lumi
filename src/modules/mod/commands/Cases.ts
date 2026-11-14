@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { applyLocalizedBuilder } from "@i18n/Index.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
-import { chunk } from "#src/shared/Index.ts";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
-import { decrementWarnCount } from "#src/modules/mod/services/Thresholds.js";
+import { chunk } from "@shared/Index.ts";
+import { makeInfoCard } from "@ui/Cards.js";
+import { decrementWarnCount } from "@modules/mod/services/Thresholds.js";
 import { CaseAction, type $Enums } from "@prisma/client";
 
 export function isCaseAction(value: string): value is $Enums.CaseAction {

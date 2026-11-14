@@ -1,26 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
+import { container } from "@lib/Services.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
 const CLUSTER = "prod";
-
-function fakeValkey(store: Map<string, string>) {
-  return {
-    get: vi.fn((key: string) => Promise.resolve(store.get(key) ?? null)),
-    mget: vi.fn((...keys: string[]) =>
-      Promise.resolve(keys.map((k) => store.get(k) ?? null)),
-    ),
-    scan: vi.fn((_cursor: string, _match: string, pattern: string) => {
-      const prefix = pattern.replace(/\\(.)/g, "$1").replace(/\*$/, "");
-      return Promise.resolve([
-        "0",
-        [...store.keys()].filter((k) => k.startsWith(prefix)),
-      ]);
-    }),
-  };
-}
 
 function shardRow(
   shardId: number,
@@ -53,7 +38,8 @@ describe("system.shards.get RPC handler", () => {
     vi.clearAllMocks();
     process.env["CLUSTER_NAME"] = CLUSTER;
 
-    store = new Map();
+    const memory = createMemoryRedis();
+    store = memory.$store;
 
     container.logger = {
       info: vi.fn(),
@@ -65,7 +51,7 @@ describe("system.shards.get RPC handler", () => {
       application: { owner: { id: BOT_OWNER_ID } },
       guilds: { cache: new Map() },
     } as any;
-    (container as any).valkey = fakeValkey(store);
+    (container as any).redis = memory;
 
     registerRpcHandlers();
   });

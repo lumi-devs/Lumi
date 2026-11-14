@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
+import type { DatabaseClient } from "@db/Client.js";
 
 export type RankAccountTable = "economy_accounts" | "level_accounts";
 

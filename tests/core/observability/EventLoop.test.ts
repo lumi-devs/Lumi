@@ -3,7 +3,7 @@ import {
   eventLoopDelay,
   startEventLoopMonitor,
   stopEventLoopMonitor,
-} from "#src/observability/Index.ts";
+} from "@observability/Index.ts";
 
 afterEach(() => {
   stopEventLoopMonitor();

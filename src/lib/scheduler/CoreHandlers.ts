@@ -1,9 +1,9 @@
-import { type Container } from "#src/lib/Services.js";
-import { Time } from "#src/shared/Index.ts";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
-import { handleSendMessageFire } from "#src/lib/outbound/SendQueue.js";
-import { scheduleProcessRestart } from "#src/lib/Restart.js";
+import { type Container } from "@lib/Services.js";
+import { Time } from "@shared/Index.ts";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { tryGetUtility } from "@module-system/Utility.js";
+import { handleSendMessageFire } from "@lib/outbound/SendQueue.js";
+import { scheduleProcessRestart } from "@lib/Restart.js";
 
 async function handleFlushLogsFire(services: Container): Promise<void> {
   try {

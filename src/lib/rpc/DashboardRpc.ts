@@ -1,14 +1,14 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   CodedRpcError,
   RpcFailureCodes,
   dashboardRpc,
-} from "#src/contracts/rpc/Index.ts";
-import type { DashboardModuleSummaryView } from "#src/contracts/Views.js";
+} from "@contracts/rpc/Index.ts";
+import type { DashboardModuleSummaryView } from "@contracts/Views.js";
 import { ChannelType } from "discord.js";
-import type { ModuleRecord } from "#src/lib/module-system/ModuleStore.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { implementRpc, requireGuildManager } from "#src/lib/rpc/Implement.js";
+import type { ModuleRecord } from "@module-system/ModuleStore.js";
+import { getUtility } from "@module-system/Utility.js";
+import { implementRpc, requireGuildManager } from "@rpc/Implement.js";
 import {
   fetchBotMemberRest,
   fetchGuildChannelsRest,
@@ -17,9 +17,9 @@ import {
   fetchGuildRolesRest,
   guildBannerUrl,
   guildIconUrl,
-} from "#src/lib/rpc/DiscordRestLookup.js";
-import { paginate, resolvePageSize } from "#src/lib/rpc/Validation.js";
-import { publishDashboardEvent } from "#src/lib/rpc/DashboardEvents.js";
+} from "@rpc/DiscordRestLookup.js";
+import { paginate, resolvePageSize } from "@rpc/Validation.js";
+import { publishDashboardEvent } from "@rpc/DashboardEvents.js";
 import type { APIRole } from "discord-api-types/v10";
 
 const GuildSummariesMax = 200;

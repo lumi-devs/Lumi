@@ -1,10 +1,10 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
-import { FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { validateModuleConfigValue } from "#src/lib/module-system/ConfigSchema.js";
-import { cleanMention, isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import { FieldType } from "@module-system/ConfigSchema.js";
+import { validateModuleConfigValue } from "@module-system/ConfigSchema.js";
+import { cleanMention, isSnowflakeId } from "@utilities/Snowflakes.js";
 import type { Prisma } from "@prisma/client";
-import { configLock } from "#src/lib/prisma/GuildTransaction.js";
+import { configLock } from "@db/GuildTransaction.js";
 
 async function write(
   services: Container,
@@ -183,20 +183,6 @@ export const configUtility = defineUtility({
     }
   },
 
-  async toggleGlobalModule(services: Container, name: string, enable: boolean) {
-    if (name === "core" || name === "admin") {
-      throw new Error("System modules cannot be disabled.");
-    }
-
-    const record = services.moduleStore.getRecord(name);
-    if (!record) {
-      throw new Error(`No module named \`${name}\`.`);
-    }
-
-    await services.moduleStore.setEnabled(name, enable);
-    return record;
-  },
-
   async flipGuildModule(services: Container, guildId: string, name: string) {
     const record = services.moduleStore.getRecord(name);
     if (!record) {
@@ -218,94 +204,12 @@ export const configUtility = defineUtility({
     } finally {
       release();
     }
-  },
-
-  async toggleGuildModule(
-    services: Container,
-    guildId: string,
-    name: string,
-    enable: boolean,
-  ) {
-    const record = services.moduleStore.getRecord(name);
-    if (!record) {
-      throw new Error(`No module named \`${name}\`.`);
-    }
-
-    const isEnabled = await services.db.modules.isModuleGuildEnabled(
-      guildId,
-      name,
-    );
-    if (isEnabled === enable) {
-      return { changed: false, record };
-    }
-
-    await services.db.modules.setModuleGuildEnabled(
-      guildId,
-      name,
-      enable,
-    );
-    return { changed: true, record };
-  },
-
-  async getConfig(
-    services: Container,
-    guildId: string,
-    moduleName: string,
-    key: string,
-    ctx?: {
-      userId?: string;
-      channelId?: string;
-      roleIds?: string[];
-      categoryId?: string;
-    },
-  ): Promise<unknown> {
-    if (!ctx) {
-      return services.db.config.getModuleConfig(guildId, moduleName, key);
-    }
-
-    const [base, overrides] = await Promise.all([
-      services.db.config.getModuleConfig(guildId, moduleName, key),
-      services.db.configOverrides.getConfigOverrides(
-        guildId,
-        moduleName,
-        key,
-      ),
-    ]);
-    if (overrides.length === 0) return base;
-
-    const Priority: Record<string, number> = {
-      user: 0,
-      channel: 1,
-      role: 2,
-      category: 3,
-    };
-    let bestPriority = Infinity;
-    let bestValue: unknown = base;
-
-    for (const o of overrides) {
-      const p = Priority[o.modelType];
-      if (p === undefined || p >= bestPriority) continue;
-
-      const matches =
-        (o.modelType === "user" && ctx.userId === o.modelId) ||
-        (o.modelType === "channel" && ctx.channelId === o.modelId) ||
-        (o.modelType === "role" && ctx.roleIds?.includes(o.modelId)) ||
-        (o.modelType === "category" && ctx.categoryId === o.modelId);
-
-      if (matches) {
-        bestPriority = p;
-        bestValue = o.value;
-        if (p === 0) break;
-      }
-    }
-
-    return bestValue;
   }
 });
 
 export type ConfigUtility = typeof configUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     config: typeof configUtility;
   }

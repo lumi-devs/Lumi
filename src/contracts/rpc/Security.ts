@@ -3,9 +3,9 @@ import type {
   PanicStateView,
   VerificationPanelSetResult,
   VerificationPanelView,
-} from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+} from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export interface GuildBackupView {
   id: number;

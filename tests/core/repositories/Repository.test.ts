@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { container } from "#src/lib/Services.js";
-import { cacheHits, cacheMisses } from "#src/observability/Index.ts";
+import { Repository } from "@db/repositories/Repository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { cacheHits, cacheMisses } from "@observability/Index.ts";
+import { createMemoryRedis, type MemoryRedis } from "../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -27,7 +28,7 @@ class ConcreteRepository extends Repository {
 describe("Base Repository", () => {
   let repo: ConcreteRepository;
   let mockPrisma: any;
-  let mockValkey: any;
+  let redis: MemoryRedis;
   let mockLogger: any;
   let mockDb: any;
   let mockInvalidation: any;
@@ -36,10 +37,7 @@ describe("Base Repository", () => {
     vi.clearAllMocks();
 
     mockPrisma = {};
-    mockValkey = {
-      get: vi.fn(),
-      setex: vi.fn().mockResolvedValue("OK"),
-    };
+    redis = createMemoryRedis();
     mockLogger = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -52,10 +50,10 @@ describe("Base Repository", () => {
     };
 
     (container as any).invalidation = mockInvalidation;
-    (container as any).valkey = mockValkey;
+    (container as any).redis = redis;
     repositoryCache.clear();
 
-    repo = new ConcreteRepository(mockPrisma, mockValkey, mockLogger, mockDb);
+    repo = new ConcreteRepository(mockPrisma, redis as any, mockLogger, mockDb);
   });
 
   describe("invalidate", () => {
@@ -67,7 +65,7 @@ describe("Base Repository", () => {
 
   describe("getOrSet", () => {
     it("returns cached value on hit and increments cacheHits metric", async () => {
-      mockValkey.get.mockResolvedValue(JSON.stringify({ name: "cached" }));
+      redis.$store.set("prefix:mycache:1", JSON.stringify({ name: "cached" }));
       const fetcher = vi.fn();
 
       const result = await repo.callGetOrSet("prefix:mycache:1", 60, fetcher);
@@ -75,11 +73,11 @@ describe("Base Repository", () => {
       expect(result).toEqual({ name: "cached" });
       expect(fetcher).not.toHaveBeenCalled();
       expect(cacheHits.inc).toHaveBeenCalledWith({ cache: "mycache" });
-      expect(mockValkey.setex).not.toHaveBeenCalled();
+      expect(redis.setex).not.toHaveBeenCalled();
     });
 
     it("uses custom parser when provided on cache hit", async () => {
-      mockValkey.get.mockResolvedValue("12345");
+      redis.$store.set("prefix:user:1", "12345");
       const fetcher = vi.fn();
       const customParser = (val: string) => parseInt(val, 10);
 
@@ -90,7 +88,7 @@ describe("Base Repository", () => {
     });
 
     it("logs warning and falls back to fetcher when cached content is unparseable", async () => {
-      mockValkey.get.mockResolvedValue("invalid-json{");
+      redis.$store.set("prefix:data:1", "invalid-json{");
       const fetcher = vi.fn().mockResolvedValue({ name: "fresh" });
 
       const result = await repo.callGetOrSet("prefix:data:1", 60, fetcher);
@@ -101,24 +99,22 @@ describe("Base Repository", () => {
       );
       expect(cacheMisses.inc).toHaveBeenCalledWith({ cache: "data" });
       expect(fetcher).toHaveBeenCalled();
-      expect(mockValkey.setex).toHaveBeenCalledWith("prefix:data:1", 60, JSON.stringify({ name: "fresh" }));
+      expect(redis.setex).toHaveBeenCalledWith("prefix:data:1", 60, JSON.stringify({ name: "fresh" }));
       expect(result).toEqual({ name: "fresh" });
     });
 
     it("fetches data and sets cache on cache miss", async () => {
-      mockValkey.get.mockResolvedValue(null);
       const fetcher = vi.fn().mockResolvedValue({ name: "fetched" });
 
       const result = await repo.callGetOrSet("prefix:session:10", 120, fetcher);
 
       expect(cacheMisses.inc).toHaveBeenCalledWith({ cache: "session" });
       expect(fetcher).toHaveBeenCalled();
-      expect(mockValkey.setex).toHaveBeenCalledWith("prefix:session:10", 120, JSON.stringify({ name: "fetched" }));
+      expect(redis.setex).toHaveBeenCalledWith("prefix:session:10", 120, JSON.stringify({ name: "fetched" }));
       expect(result).toEqual({ name: "fetched" });
     });
 
     it("defaults cache name to 'unknown' when key has no colon delimiter", async () => {
-      mockValkey.get.mockResolvedValue(null);
       const fetcher = vi.fn().mockResolvedValue("value");
 
       await repo.callGetOrSet("nocolonkey", 60, fetcher);
@@ -127,7 +123,6 @@ describe("Base Repository", () => {
     });
 
     it("dedupes concurrent misses for the same key into one fetch", async () => {
-      mockValkey.get.mockResolvedValue(null);
       let resolveFetch!: (v: string) => void;
       const fetcher = vi.fn().mockReturnValue(
         new Promise<string>((resolve) => {
@@ -144,14 +139,13 @@ describe("Base Repository", () => {
       expect(fetcher).toHaveBeenCalledTimes(1);
     });
 
-    it("does not cache undefined fetcher results", async () => {
-      mockValkey.get.mockResolvedValue(null);
+    it("negatively caches undefined fetcher results", async () => {
       const fetcher = vi.fn().mockResolvedValue(undefined);
 
       const result = await repo.callGetOrSet("prefix:none:1", 60, fetcher);
 
-      expect(result).toBeUndefined();
-      expect(mockValkey.setex).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(redis.setex).toHaveBeenCalledWith("neg:prefix:none:1", 15, "1");
     });
   });
 });

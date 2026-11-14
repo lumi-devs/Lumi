@@ -1,60 +1,71 @@
-import { CacheStore } from "#src/lib/cache/CacheStore.js";
-import { InvalidationBus } from "#src/lib/valkey/Store.js";
-import { container } from "#src/lib/Services.js";
+import { CacheStore } from "@cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { createMemoryRedis, type MemoryRedis } from "../../mocks/MemoryRedis.js";
 import { describe, expect, test, vi, beforeEach } from "bun:test";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
 
 describe("CacheStore", () => {
-  let mockValkey: any;
+  let redis: MemoryRedis;
 
   beforeEach(() => {
-    mockValkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue("OK"),
-      del: vi.fn().mockResolvedValue(1),
-    };
-    (container as any).valkey = mockValkey;
+    redis = createMemoryRedis();
+    (container as any).redis = redis;
+    (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
   });
 
-  test("L1 hit avoids a second valkey.get call", async () => {
-    const cache = new CacheStore();
-    const loader = vi.fn().mockResolvedValue({ n: 1 });
+  test("returns a Redis hit without invoking the loader", async () => {
+    redis.mget.mockResolvedValue([JSON.stringify({ n: 1 }), null]);
+    const loader = vi.fn().mockResolvedValue({ n: 2 });
 
-    const first = await cache.getOrLoad("prefix:key:1", 60_000, loader);
-    expect(first).toEqual({ n: 1 });
-    expect(mockValkey.get).toHaveBeenCalledTimes(1);
+    const value = await new CacheStore().getOrLoad("prefix:key:1", 60_000, loader);
 
-    const second = await cache.getOrLoad("prefix:key:1", 60_000, loader);
-    expect(second).toEqual({ n: 1 });
-    expect(mockValkey.get).toHaveBeenCalledTimes(1);
-    expect(loader).toHaveBeenCalledTimes(1);
+    expect(value).toEqual({ n: 1 });
+    expect(loader).not.toHaveBeenCalled();
+    expect(redis.setex).not.toHaveBeenCalled();
   });
 
-  test("a confirmed-null loader result negatively caches", async () => {
-    const cache = new CacheStore({ negativeTtlMs: 60_000 });
+  test("loads on a miss and writes the value with a TTL in seconds", async () => {
+    const loader = vi.fn().mockResolvedValue({ n: 2 });
+
+    const value = await new CacheStore().getOrLoad("prefix:key:1", 60_000, loader);
+
+    expect(value).toEqual({ n: 2 });
+    expect(redis.setex).toHaveBeenCalledWith("prefix:key:1", 60, JSON.stringify({ n: 2 }));
+  });
+
+  test("clamps sub-second TTLs to one second", async () => {
+    await new CacheStore().getOrLoad("prefix:subsecond:1", 500, async () => "v");
+
+    expect(redis.setex).toHaveBeenCalledWith("prefix:subsecond:1", 1, JSON.stringify("v"));
+  });
+
+  test("negatively caches a null loader result under a separate key", async () => {
+    const cache = new CacheStore({ negativeTtlSeconds: 60 });
     const loader = vi.fn().mockResolvedValue(null);
 
     const first = await cache.getOrLoad("prefix:missing:1", 60_000, loader);
     expect(first).toBeNull();
-    expect(loader).toHaveBeenCalledTimes(1);
+    expect(redis.setex).toHaveBeenCalledWith("neg:prefix:missing:1", 60, "1");
 
+    redis.mget.mockResolvedValue([null, "1"]);
     const second = await cache.getOrLoad("prefix:missing:1", 60_000, loader);
+
     expect(second).toBeNull();
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
-  test("concurrent getOrLoad calls for the same key share one in-flight promise", async () => {
-    const cache = new CacheStore();
-    let resolveLoader!: (v: { n: number }) => void;
+  test("shares one in-flight promise for concurrent misses", async () => {
+    let resolveLoader!: (value: { n: number }) => void;
     const loader = vi.fn().mockReturnValue(
       new Promise<{ n: number }>((resolve) => {
         resolveLoader = resolve;
       }),
     );
+    const cache = new CacheStore();
 
     const first = cache.getOrLoad("prefix:concurrent:1", 60_000, loader);
     const second = cache.getOrLoad("prefix:concurrent:1", 60_000, loader);
@@ -65,144 +76,60 @@ describe("CacheStore", () => {
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
-  test("the generation check: a delete during a pending load discards the write", async () => {
-    const cache = new CacheStore();
-    let resolveLoader!: (v: { n: number }) => void;
+  test("a delete during a pending load discards the write", async () => {
+    let resolveLoader!: (value: { n: number }) => void;
     const loader = vi.fn().mockReturnValue(
       new Promise<{ n: number }>((resolve) => {
         resolveLoader = resolve;
       }),
     );
+    const cache = new CacheStore();
 
     const flight = cache.getOrLoad("prefix:race:1", 60_000, loader);
     cache.delete("prefix:race:1");
     resolveLoader({ n: 7 });
 
-    const result = await flight;
-    expect(result).toEqual({ n: 7 });
-    expect(cache.peek("prefix:race:1")).toBeUndefined();
-    expect(mockValkey.setex).not.toHaveBeenCalledWith(
-      "prefix:race:1",
-      expect.anything(),
-      expect.stringContaining("7"),
-    );
+    await expect(flight).resolves.toEqual({ n: 7 });
+    expect(redis.setex).not.toHaveBeenCalled();
   });
 
-  test("maxEntries eviction: filling past the cap evicts the oldest key (FIFO)", async () => {
-    const cache = new CacheStore({ maxEntries: 2 });
+  test("delete removes the entry and its negative marker", () => {
+    new CacheStore().delete("prefix:stale:1");
 
-    await cache.getOrLoad("prefix:a:1", 60_000, async () => "a");
-    await cache.getOrLoad("prefix:b:1", 60_000, async () => "b");
-    await cache.getOrLoad("prefix:c:1", 60_000, async () => "c");
-
-    expect(cache.peek<string>("prefix:a:1")).toBeUndefined();
-    expect(cache.peek<string>("prefix:b:1")).toBe("b");
-    expect(cache.peek<string>("prefix:c:1")).toBe("c");
+    expect(redis.del).toHaveBeenCalledWith("prefix:stale:1", "neg:prefix:stale:1");
   });
 
-  test("attachToInvalidationBus: onInvalidate evicts one key, onResync clears everything", async () => {
-    const fakeSubscriber = {
-      on: vi.fn((event: string, fn: any) => {
-        (fakeSubscriber as any)[`_${event}`] = fn;
-      }),
-      subscribe: vi.fn().mockResolvedValue(undefined),
-      unsubscribe: vi.fn().mockResolvedValue(undefined),
-      quit: vi.fn().mockResolvedValue("OK"),
-    };
-
-    const bus = new InvalidationBus(fakeSubscriber as any);
+  test("clear drops in-flight flights so the next call reloads", async () => {
     const cache = new CacheStore();
+    const loader = vi.fn().mockResolvedValue("v");
+    void cache.getOrLoad("prefix:clear:1", 60_000, loader);
+    cache.clear();
 
-    await cache.getOrLoad("prefix:x:1", 60_000, async () => "x");
-    await cache.getOrLoad("prefix:y:1", 60_000, async () => "y");
+    await cache.getOrLoad("prefix:clear:1", 60_000, loader);
 
-    cache.attachToInvalidationBus(bus);
-    await bus.start();
-
-    const messageListener = (fakeSubscriber as any)._message;
-    messageListener(
-      "lumi:cache:invalidate",
-      JSON.stringify({ keys: ["prefix:x:1"] }),
-    );
-
-    expect(cache.peek<string>("prefix:x:1")).toBeUndefined();
-    expect(cache.peek<string>("prefix:y:1")).toBe("y");
-
-    (fakeSubscriber as any)._close();
-    (fakeSubscriber as any)._ready();
-
-    expect(cache.peek<string>("prefix:y:1")).toBeUndefined();
+    expect(loader).toHaveBeenCalledTimes(2);
   });
 
-  test("an explicitly injected valkey client is used instead of the global", async () => {
+  test("uses an injected Redis client instead of the container client", async () => {
     const injected = {
-      get: vi.fn().mockResolvedValue(null),
+      mget: vi.fn().mockResolvedValue([null, null]),
       setex: vi.fn().mockResolvedValue("OK"),
+      del: vi.fn(),
     };
-    const cache = new CacheStore({ valkey: injected as any });
+    const cache = new CacheStore({ redis: injected as any });
 
     await cache.getOrLoad("prefix:injected:1", 60_000, async () => "v");
 
-    expect(injected.get).toHaveBeenCalledTimes(1);
+    expect(injected.mget).toHaveBeenCalledWith("prefix:injected:1", "neg:prefix:injected:1");
     expect(injected.setex).toHaveBeenCalledTimes(1);
-    expect(mockValkey.get).not.toHaveBeenCalled();
+    expect(redis.mget).not.toHaveBeenCalled();
   });
 
-  test("setValkeyClient overrides the L2 client after construction", async () => {
-    const injected = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue("OK"),
-    };
-    const cache = new CacheStore();
-    cache.setValkeyClient(injected as any);
+  test("a hung write does not block or fail the read", async () => {
+    redis.setex.mockReturnValue(new Promise(() => {}));
 
-    await cache.getOrLoad("prefix:override:1", 60_000, async () => "v");
+    const value = await new CacheStore().getOrLoad("prefix:slow:1", 60_000, async () => "v");
 
-    expect(injected.get).toHaveBeenCalledTimes(1);
-    expect(mockValkey.get).not.toHaveBeenCalled();
-  });
-
-  test("set with null also deletes the L2 entry so peers never read it stale", () => {
-    const cache = new CacheStore();
-
-    cache.set("prefix:stale:1", null, 60_000);
-
-    expect(mockValkey.del).toHaveBeenCalledWith("prefix:stale:1");
-    expect(cache.peek("prefix:stale:1")).toBeNull();
-  });
-
-  test("sub-second TTLs clamp to 1s instead of sending SETEX 0", async () => {
-    const cache = new CacheStore();
-
-    await cache.getOrLoad("prefix:subsecond:1", 500, async () => "v");
-
-    expect(mockValkey.setex).toHaveBeenCalledWith(
-      "prefix:subsecond:1",
-      1,
-      expect.anything(),
-    );
-  });
-
-  test("a hung L2 fill does not block or fail the read-miss path", async () => {
-    mockValkey.setex.mockReturnValue(new Promise(() => {}));
-    const cache = new CacheStore();
-
-    const result = await cache.getOrLoad("prefix:slow-l2:1", 60_000, async () => "v");
-
-    expect(result).toBe("v");
-    expect(cache.peek<string>("prefix:slow-l2:1")).toBe("v");
-  });
-
-  test("negative entries are capped at maxEntries instead of growing forever", async () => {
-    const cache = new CacheStore({ maxEntries: 2 });
-    const loader = vi.fn().mockResolvedValue(null);
-
-    await cache.getOrLoad("prefix:n:a", 60_000, loader);
-    await cache.getOrLoad("prefix:n:b", 60_000, loader);
-    await cache.getOrLoad("prefix:n:c", 60_000, loader);
-
-    await cache.getOrLoad("prefix:n:a", 60_000, loader);
-
-    expect(loader).toHaveBeenCalledTimes(4);
+    expect(value).toBe("v");
   });
 });

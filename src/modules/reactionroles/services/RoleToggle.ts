@@ -1,11 +1,11 @@
 import type { Guild, GuildMember } from "discord.js";
-import { logError } from "#src/lib/utilities/Errors.js";
+import { logError } from "@utilities/Errors.js";
 import {
   planToggle,
   toggleBlockedMessage,
   type ReactionRoleMenu,
   type TogglePlan,
-} from "#src/modules/reactionroles/data/Reactionroles.js";
+} from "@modules/reactionroles/data/Reactionroles.js";
 
 export interface RoleToggleResult {
   plan: TogglePlan;

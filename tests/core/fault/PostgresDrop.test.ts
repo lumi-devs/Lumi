@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { ConfigRepository } from "#src/lib/prisma/repositories/ConfigRepository.js";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { container } from "#src/lib/Services.js";
+import { ConfigRepository } from "@db/repositories/ConfigRepository.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { createMemoryRedis, type MemoryRedis } from "../mocks/MemoryRedis.js";
 
 interface SimulatedDbState {
   isOnline: boolean;
@@ -114,29 +115,25 @@ function createChaosPrisma() {
 
 describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
   let prisma: ReturnType<typeof createChaosPrisma>;
-  let valkey: any;
+  let redis: MemoryRedis;
   let configRepo: ConfigRepository;
   let modRepo: ModerationRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
     prisma = createChaosPrisma();
-    valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn().mockResolvedValue("OK"),
-      del: vi.fn().mockResolvedValue(1),
-    };
-    (container as any).valkey = valkey;
+    redis = createMemoryRedis();
+    (container as any).redis = redis;
     repositoryCache.clear();
     const db = {
       ensureGuild: async (guildId: string) => {
         await prisma.guild.upsert({ where: { id: guildId }, create: { id: guildId }, update: {} });
       },
     } as any;
-    configRepo = new ConfigRepository(prisma as any, valkey, {} as any, db, {
+    configRepo = new ConfigRepository(prisma as any, redis as any, {} as any, db, {
       logConfigChange: async () => {},
     } as any);
-    modRepo = new ModerationRepository(prisma as any, valkey, {} as any, db);
+    modRepo = new ModerationRepository(prisma as any, redis as any, {} as any, db);
   });
 
   it("handles transient database drop gracefully without unhandled crashes", async () => {
@@ -145,11 +142,13 @@ describe("Chaos Suite: PostgreSQL Hard Drop & Pool Exhaustion", () => {
 
     prisma.simulateHardDrop();
     repositoryCache.clear();
+    redis.$store.clear();
 
     await expect(configRepo.getGuildSettings("guild-drop-1")).rejects.toThrow(/ECONNREFUSED/);
 
     prisma.simulateRecovery();
     repositoryCache.clear();
+    redis.$store.clear();
 
     await expect(configRepo.getGuildSettings("guild-drop-1")).resolves.toBeDefined();
     expect(prisma.guild.upsert).toHaveBeenCalledTimes(3);

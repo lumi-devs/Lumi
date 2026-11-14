@@ -1,6 +1,6 @@
-import { container } from "#src/lib/Services.js";
-import { dbQueryDuration, dbSlowQueriesTotal } from "#src/observability/Index.ts";
-import { resolveDbSlowQueryThresholdMs } from "#src/lib/Env.js";
+import { container } from "@lib/Services.js";
+import { dbQueryDuration, dbSlowQueriesTotal } from "@observability/Index.ts";
+import { resolveDbSlowQueryThresholdMs } from "@lib/Env.js";
 
 const SlowQueryThresholdMs = resolveDbSlowQueryThresholdMs();
 

@@ -1,7 +1,7 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { Routes } from "discord-api-types/v10";
 import { SnowflakeUtil } from "discord.js";
-import { Time } from "#src/shared/Index.ts";
+import { Time } from "@shared/Index.ts";
 
 const MaxBatch = 100;
 const FlushDelayMs = Time.Second * 1.5;

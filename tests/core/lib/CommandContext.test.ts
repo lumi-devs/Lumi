@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { UserError } from "#src/shared/Index.ts";
-import * as i18n from "#src/lib/i18n/Index.js";
+import { container } from "@lib/Services.js";
+import { UserError } from "@shared/Index.ts";
+import * as i18n from "@i18n/Index.js";
 import { MessageFlags } from "discord.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import * as commandResponse from "#src/lib/utilities/CommandResponse.js";
+import { CommandContext } from "@commands/Context.js";
+import * as commandResponse from "@utilities/CommandResponse.js";
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 

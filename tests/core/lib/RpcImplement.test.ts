@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { PermissionFlagsBits } from "discord.js";
-import { container } from "#src/lib/Services.js";
-import { rpcRouter, type RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
-import { dispatchRpc } from "#src/lib/rpc/Dispatch.js";
-import { requireGuildId, requireGuildManager } from "#src/lib/rpc/Implement.js";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import { rpcRouter, type RpcActionName } from "@contracts/rpc/Index.ts";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
+import { dispatchRpc } from "@rpc/Dispatch.js";
+import { requireGuildId, requireGuildManager } from "@rpc/Implement.js";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -83,8 +84,8 @@ function ownerOnlyRest(guildId: string, ownerId: string): FakeDiscordRestPort {
   return fake;
 }
 
-function mockValkeyCacheMiss() {
-  (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+function mockRedisCacheMiss() {
+  (container as any).redis = createMemoryRedis();
 }
 
 describe("RPC guild access under Discord API failures", () => {
@@ -92,7 +93,7 @@ describe("RPC guild access under Discord API failures", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockValkeyCacheMiss();
+    mockRedisCacheMiss();
 
     mockRest({
       guild: { owner_id: OWNER_ID, roles: [everyoneRole()] },
@@ -258,7 +259,7 @@ describe("dispatchRpc error shaping", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockValkeyCacheMiss();
+    mockRedisCacheMiss();
 
     container.client = {
       application: { owner: { id: OWNER_ID } },
@@ -334,7 +335,7 @@ describe("dispatchRpc error shaping", () => {
   });
 
   it("carries a CodedRpcError's retryable/retryAfterMs override onto the envelope", async () => {
-    const { CodedRpcError, RpcFailureCodes } = await import("#src/contracts/rpc/Index.ts");
+    const { CodedRpcError, RpcFailureCodes } = await import("@contracts/rpc/Index.ts");
     failWhoAmI(
       new CodedRpcError(RpcFailureCodes.HandlerError, "try again shortly", {
         retryable: true,
@@ -428,7 +429,7 @@ describe("implementRpc input parsing", () => {
     vi.clearAllMocks();
     mockLogger();
     repositoryCache.clear();
-    mockValkeyCacheMiss();
+    mockRedisCacheMiss();
 
     guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
@@ -572,7 +573,7 @@ describe("static RPC registry", () => {
 
   it("keeps serving a module's reads while that module is not loaded", async () => {
     repositoryCache.clear();
-    mockValkeyCacheMiss();
+    mockRedisCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },
@@ -596,7 +597,7 @@ describe("static RPC registry", () => {
 
   it("refuses a write that needs a module which is not loaded", async () => {
     repositoryCache.clear();
-    mockValkeyCacheMiss();
+    mockRedisCacheMiss();
     const guild = { id: GUILD_ID, ownerId: OWNER_ID, members: { fetch: vi.fn() } };
     container.client = {
       guilds: { cache: new Map([[GUILD_ID, guild]]) },

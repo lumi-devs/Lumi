@@ -1,6 +1,6 @@
-import { container } from "#src/lib/Services.js";
-import { scheduledJobsGauge } from "#src/observability/Index.ts";
-import type { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
+import { container } from "@lib/Services.js";
+import { scheduledJobsGauge } from "@observability/Index.ts";
+import type { ScheduledTaskRunner } from "@scheduler/Runner.js";
 
 const SAMPLED_STATES = [
   "waiting",

@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   DashboardEventSchema,
   DashboardEventStream,
   type DashboardEvent,
-} from "#src/contracts/Events.js";
-import { dashboardEventPublishFailures } from "#src/observability/Index.ts";
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
-import { requireGuildId, requireGuildManager } from "#src/lib/rpc/Implement.js";
-import type { BusMessage } from "#src/lib/event-bus/Types.js";
+} from "@contracts/Events.js";
+import { dashboardEventPublishFailures } from "@observability/Index.ts";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
+import { requireGuildId, requireGuildManager } from "@rpc/Implement.js";
+import type { BusMessage } from "@event-bus/Types.js";
 
 export const MaxSseConnections = 200;
 

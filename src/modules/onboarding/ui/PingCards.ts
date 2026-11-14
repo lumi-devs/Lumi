@@ -9,18 +9,18 @@ import {
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, MessageFlags, SeparatorSpacingSize } from "discord.js";
-import type { PingData } from "#src/modules/onboarding/services/PingCollect.js";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { PingId } from "#src/modules/core/Constants.js";
-import { formatDuration } from "#src/lib/utilities/Time.js";
+import type { PingData } from "@modules/onboarding/services/PingCollect.js";
+import { componentEmoji } from "@ui/Panels.js";
+import type { LumiT } from "@i18n/Index.js";
+import { PingId } from "@interactions/ModuleIds.js";
+import { formatDuration } from "@utilities/Time.js";
 
 export const PingFlags = MessageFlags.IsComponentsV2;
 export const EphemeralFlags =
   MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral;
 
 export type PingCategory =
-  "gateway" | "engine" | "host" | "postgres" | "valkey" | "bot";
+  "gateway" | "engine" | "host" | "postgres" | "redis" | "bot";
 
 function fmtMs(n: number | null): string {
   if (n === null || n < 0) return "Analyzing…";
@@ -95,7 +95,7 @@ export function buildOverviewCard(
     position: "📈",
     servers: "🏰",
     members: "👥",
-    valkey: "🔴",
+    redis: "🔴",
     sql: "🐘",
   };
 
@@ -121,7 +121,7 @@ export function buildOverviewCard(
   }
 
   content += `### __External Services__\n`;
-  content += `${E.valkey} **Valkey Cache**: ${fmtMs(data.valkeyReadMs)} | Hit Ratio: ${data.valkeyHitRatio.toFixed(1)}%\n`;
+  content += `${E.redis} **Redis Cache**: ${fmtMs(data.redisReadMs)} | Hit Ratio: ${data.redisHitRatio.toFixed(1)}%\n`;
   content += `${E.sql} **Database**: ${fmtMs(data.prismaMs)} | Load: ${data.txRate.toFixed(1)} tx/s\n`;
 
   c.addTextDisplayComponents(new TextDisplayBuilder().setContent(content));
@@ -323,7 +323,7 @@ function buildPostgresCard(data: PingData, t?: LumiT): ContainerBuilder {
   return c;
 }
 
-function buildValkeyCard(data: PingData, t?: LumiT): ContainerBuilder {
+function buildRedisCard(data: PingData, t?: LumiT): ContainerBuilder {
   const c = detailCard(
     `🧠 ${t ? t("core:pingCachePerformance") : "Cache Performance"}`,
     data,
@@ -333,21 +333,21 @@ function buildValkeyCard(data: PingData, t?: LumiT): ContainerBuilder {
     new TextDisplayBuilder().setContent(
       [
         executiveSection("Memory Usage", [
-          ["Current Usage", fmtMB(data.valkeyMemUsedBytes)],
-          ["Peak Usage", fmtMB(data.valkeyMemPeakBytes)],
+          ["Current Usage", fmtMB(data.redisMemUsedBytes)],
+          ["Peak Usage", fmtMB(data.redisMemPeakBytes)],
         ]),
         executiveSection(
           "Cache Hits & Efficiency",
           [
-            ["Hit Ratio", `${data.valkeyHitRatio.toFixed(2)}%`],
-            ["Tracked Keys", `${data.valkeyTotalKeys.toLocaleString()}`],
+            ["Hit Ratio", `${data.redisHitRatio.toFixed(2)}%`],
+            ["Tracked Keys", `${data.redisTotalKeys.toLocaleString()}`],
           ],
         ),
         executiveSection(
           "Connection",
           [
-            ["Valkey Version", `v${data.valkeyVersion}`],
-            ["Active Clients", `${data.valkeyClients} connected`],
+            ["Redis Version", `v${data.redisVersion}`],
+            ["Active Clients", `${data.redisClients} connected`],
           ],
         ),
       ].join("\n"),
@@ -416,8 +416,8 @@ export function buildDetailCard(
     case "postgres":
       c = buildPostgresCard(data, t);
       break;
-    case "valkey":
-      c = buildValkeyCard(data, t);
+    case "redis":
+      c = buildRedisCard(data, t);
       break;
     case "bot":
       c = buildBotCard(data, t);

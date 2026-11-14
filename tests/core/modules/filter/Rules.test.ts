@@ -8,8 +8,8 @@ import {
   findBlockedInvite,
   findBlockedLink,
   type RuleConfig,
-} from "#src/modules/filter/services/Rules.js";
-import { MaxRegexLength } from "#src/lib/regex-worker/Validate.js";
+} from "@modules/filter/services/Rules.js";
+import { MaxRegexLength } from "@lib/regex-worker/Validate.js";
 
 const baseConfig: RuleConfig = {
   terms: [],

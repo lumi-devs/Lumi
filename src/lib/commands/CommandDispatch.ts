@@ -1,5 +1,5 @@
-import { UserError } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+import { UserError } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
 import { RateLimitManager } from "@sapphire/ratelimits";
 import {
   ApplicationIntegrationType,
@@ -12,33 +12,33 @@ import {
   type Message,
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
+import { CommandContext } from "@commands/Context.js";
 import {
   commandRegistry,
   asHandler,
   type CommandDef,
   type SubcommandHandler,
-} from "#src/lib/commands/CommandDef.js";
-import { PrefixArgs } from "#src/lib/commands/PrefixArgs.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
+} from "@commands/CommandDef.js";
+import { PrefixArgs } from "@commands/PrefixArgs.js";
+import { authorize } from "@api/permissions/Authorize.js";
 import {
   gateSourceFromChatInput,
   gateSourceFromMessage,
   type GateSource,
-} from "#src/lib/api/permissions/PreconditionChecks.js";
-import { memberRoleIds } from "#src/lib/api/permissions/Subject.js";
-import { denyGated } from "#src/lib/api/permissions/PreconditionChecks.js";
-import { instrumentedRun } from "#src/lib/Telemetry.js";
+} from "@api/permissions/PreconditionChecks.js";
+import { memberRoleIds } from "@api/permissions/Subject.js";
+import { denyGated } from "@api/permissions/PreconditionChecks.js";
+import { instrumentedRun } from "@lib/Telemetry.js";
 import {
   handleDenied,
   resolveErrorCard,
   respond,
   respondMessage,
-} from "#src/lib/utilities/CommandResponse.js";
-import { ephemeralCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { suggestSimilar, didYouMean } from "#src/lib/utilities/DidYouMean.js";
-import { runBeforeInvokeHooks } from "#src/lib/commands/Hooks.js";
-import { getDefaultPrefix } from "#src/lib/Env.js";
+} from "@utilities/CommandResponse.js";
+import { ephemeralCard, makeWarningCard, type CardReply } from "@ui/Cards.js";
+import { suggestSimilar } from "@utilities/DidYouMean.js";
+import { runBeforeInvokeHooks } from "@commands/Hooks.js";
+import { getDefaultPrefix } from "@lib/Env.js";
 
 export interface CommandErrorContext {
   commandName: string;
@@ -79,16 +79,10 @@ async function tryLocalErrorHandler(
 }
 
 function unknownCommandSuggestions(input: string): string[] {
-  const seen = new Set<string>();
-  const names: string[] = [];
-  for (const def of commandRegistry.values()) {
-    if (seen.has(def.name)) continue;
-    seen.add(def.name);
-    names.push(def.name);
-  }
-  const best = didYouMean(input, names);
-  if (!best) return [];
-  return suggestSimilar(input, names);
+  return suggestSimilar(
+    input,
+    [...commandRegistry.values()].map((def) => def.name),
+  );
 }
 
 async function replyUnknownCommand(

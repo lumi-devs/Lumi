@@ -1,14 +1,14 @@
 import { describe } from "bun:test";
-import Valkey, { type RedisOptions as ValkeyOptions } from "iovalkey";
+import Redis, { type RedisOptions as RedisOptions } from "ioredis";
 
-export const testDatabaseUrl = process.env.LUMI_TEST_DATABASE_URL;
-export const testValkeyUrl = process.env.LUMI_TEST_VALKEY_URL;
+const testDatabaseUrl = process.env.LUMI_TEST_DATABASE_URL;
+const testRedisUrl = process.env.LUMI_TEST_REDIS_URL;
 
-export const hasIntegrationEnv = Boolean(testDatabaseUrl && testValkeyUrl);
+const hasIntegrationEnv = Boolean(testDatabaseUrl && testRedisUrl);
 
 const SkipMessage =
-  "[integration] Skipping - set LUMI_TEST_DATABASE_URL and LUMI_TEST_VALKEY_URL " +
-  "to a throwaway Postgres/Valkey to run this suite (see agents/conventions/testing.md).";
+  "[integration] Skipping - set LUMI_TEST_DATABASE_URL and LUMI_TEST_REDIS_URL " +
+  "to a throwaway Postgres/Redis to run this suite (see agents/conventions/testing.md).";
 
 if (!hasIntegrationEnv) {
   console.warn(SkipMessage);
@@ -27,18 +27,18 @@ export function requireTestDatabaseUrl(): string {
   return testDatabaseUrl;
 }
 
-export function requireTestValkeyUrl(): string {
-  if (!testValkeyUrl) throw new Error("LUMI_TEST_VALKEY_URL is not set");
-  return testValkeyUrl;
+function requireTestRedisUrl(): string {
+  if (!testRedisUrl) throw new Error("LUMI_TEST_REDIS_URL is not set");
+  return testRedisUrl;
 }
 
-export function createTestValkey(): Valkey {
-  return new Valkey(requireTestValkeyUrl(), { maxRetriesPerRequest: 2 });
+export function createTestRedis(): Redis {
+  return new Redis(requireTestRedisUrl(), { maxRetriesPerRequest: 2 });
 }
 
-export function parseTestValkeyOptions(): ValkeyOptions {
-  const url = new URL(requireTestValkeyUrl());
-  const opts: ValkeyOptions = {
+export function parseTestRedisOptions(): RedisOptions {
+  const url = new URL(requireTestRedisUrl());
+  const opts: RedisOptions = {
     host: url.hostname,
     port: url.port ? Number(url.port) : 6379,
   };
@@ -50,18 +50,18 @@ export function parseTestValkeyOptions(): ValkeyOptions {
   return opts;
 }
 
-export async function scanKeys(valkey: Valkey, pattern: string): Promise<string[]> {
+export async function scanKeys(redis: Redis, pattern: string): Promise<string[]> {
   const found: string[] = [];
   let cursor = "0";
   do {
-    const [next, keys] = await valkey.scan(cursor, "MATCH", pattern, "COUNT", 200);
+    const [next, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 200);
     cursor = next;
     found.push(...keys);
   } while (cursor !== "0");
   return found;
 }
 
-export async function deleteByPrefix(valkey: Valkey, prefix: string): Promise<void> {
-  const keys = await scanKeys(valkey, `${prefix}*`);
-  if (keys.length) await valkey.del(...keys);
+export async function deleteByPrefix(redis: Redis, prefix: string): Promise<void> {
+  const keys = await scanKeys(redis, `${prefix}*`);
+  if (keys.length) await redis.del(...keys);
 }

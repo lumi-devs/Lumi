@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { TempVcGeneratorView, TempVcRecordView } from "#src/contracts/Views.js";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+import type { TempVcGeneratorView, TempVcRecordView } from "@contracts/Views.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export const tempvcRpc = {
   "guild.tempvc.generators.list": rpcAction<{

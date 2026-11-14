@@ -1,13 +1,13 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { Guild } from "discord.js";
-import { makeWarningCard } from "#src/lib/ui/Cards.js";
+import { makeWarningCard } from "@ui/Cards.js";
 import {
   getServerLockState,
   shouldLeaveOnJoin,
-} from "#src/modules/admin/services/ServerLock.js";
-import { resolveAnnounceChannel } from "#src/modules/admin/services/GlobalAnnounce.js";
+} from "@lib/operations/ServerLock.js";
+import { resolveAnnounceChannel } from "@lib/operations/GlobalAnnounce.js";
 
 async function leaveWhenLocked(
   services: Container,

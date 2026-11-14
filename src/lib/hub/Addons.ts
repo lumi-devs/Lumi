@@ -1,22 +1,22 @@
-import type { Container } from "#src/lib/Services.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { formatPageFooter, row, type Row } from "#src/modules/onboarding/ui/Common.js";
-import { hubTabRow } from "#src/modules/onboarding/ui/Hub.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { Container } from "@lib/Services.js";
+import type { DownloaderUtility } from "@utilities/DownloaderUtility.js";
+import type { LumiT } from "@i18n/Index.js";
+import { formatPageFooter, row, type Row } from "@lib/hub/Common.js";
+import { hubTabRow } from "@lib/hub/Hub.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, type CardReply } from "@ui/Cards.js";
 import {
   componentEmoji,
   createPaginationRow,
   createStringSelectMenu,
   settingRow,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
 import { time, TimestampStyles } from "@discordjs/formatters";
-import { cutText } from "#src/shared/Index.ts";
+import { cutText } from "@shared/Index.ts";
 import { ButtonStyle } from "discord.js";
 
 const AddonRowsPerPage = 3;

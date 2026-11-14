@@ -1,4 +1,4 @@
-import { row, type Row } from "#src/modules/onboarding/ui/Common.js";
+import { row, type Row } from "@lib/hub/Common.js";
 import {
   ageButtonCustomId,
   ageModalCustomId,
@@ -6,16 +6,16 @@ import {
   normalizeSetupState,
   stepCustomId,
   type SetupWizardState,
-} from "#src/modules/onboarding/services/SetupWizard.js";
-import { SetupStepId } from "#src/modules/core/Constants.js";
-import { makeCard, makeSuccessCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+} from "@modules/onboarding/services/SetupWizard.js";
+import { SetupStepId } from "@interactions/ModuleIds.js";
+import { makeCard, makeSuccessCard, type CardReply } from "@ui/Cards.js";
+import { resolveCardColor } from "@ui/Palette.js";
 import {
   buildSafeActionRows,
   createActionButton,
   createChannelSelectMenu,
   createStringSelectMenu,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import {
   LabelBuilder,
   ModalBuilder,

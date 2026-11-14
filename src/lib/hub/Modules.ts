@@ -1,18 +1,18 @@
-import { chunk } from "#src/shared/Index.ts";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { resolveChannelTypeIds, sectionsOf } from "#src/contracts/Index.ts";
-import { FieldType, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
-import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
+import { chunk } from "@shared/Index.ts";
+import type { LumiT } from "@i18n/Index.js";
+import { resolveChannelTypeIds, sectionsOf } from "@contracts/Index.ts";
+import { FieldType, type ConfigField } from "@module-system/ConfigSchema.js";
+import type { ModuleMeta } from "@module-system/Meta.js";
 import {
   formatFieldValue,
   formatPageFooter,
   formatSubtitle,
   row,
   type Row,
-} from "#src/modules/onboarding/ui/Common.js";
-import { hubTabRow } from "#src/modules/onboarding/ui/Hub.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+} from "@lib/hub/Common.js";
+import { hubTabRow } from "@lib/hub/Hub.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, noPingCard, type CardReply } from "@ui/Cards.js";
 import {
   buildSafeActionRows,
   createActionButton,
@@ -23,11 +23,11 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import { StringSelectMenuOptionBuilder } from "@discordjs/builders";
-import { cutText } from "#src/shared/Index.ts";
+import { cutText } from "@shared/Index.ts";
 import { ButtonStyle, ChannelType } from "discord.js";
-import { ConfigButtonId } from "#src/modules/core/Constants.js";
+import { ConfigButtonId } from "@interactions/ModuleIds.js";
 
 export const FeaturesPerPage = 4;
 export const FieldsPerPage = 5;

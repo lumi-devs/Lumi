@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 import { MessageFlags } from "discord.js";
-import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "#src/modules/welcome/services/Welcome.js";
-import { WelcomeDefaults, loadWelcomeConfig } from "#src/modules/welcome/services/Welcome.js";
-import { sendWelcomeCard } from "#src/modules/welcome/services/Welcome.js";
+import { buildDmWelcomeCard, buildGoodbyeCard, buildWelcomeCard, renderWelcomeTemplate, templateVarsFor, type WelcomeTemplateVars } from "@modules/welcome/services/Welcome.js";
+import { WelcomeDefaults, loadWelcomeConfig } from "@modules/welcome/services/Welcome.js";
+import { sendWelcomeCard } from "@modules/welcome/services/Welcome.js";
 import {
   MessageContentSchema,
   MessageTemplateVars,
   renderMessageContent,
-} from "#src/lib/utilities/MessageContent.js";
-import { WelcomeMemberAddListener } from "#src/modules/welcome/listeners/GuildMemberAdd.js";
-import { WelcomeMemberRemoveListener } from "#src/modules/welcome/listeners/GuildMemberRemove.js";
-import { container } from "#src/lib/Services.js";
+} from "@utilities/MessageContent.js";
+import { WelcomeMemberAddListener } from "@modules/welcome/listeners/GuildMemberAdd.js";
+import { WelcomeMemberRemoveListener } from "@modules/welcome/listeners/GuildMemberRemove.js";
+import { container } from "@lib/Services.js";
 
 beforeEach(() => {
   vi.clearAllMocks();

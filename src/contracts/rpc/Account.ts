@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export const GdprRequesters = [
   "DISCORD_DELETED_USER",

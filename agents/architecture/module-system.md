@@ -28,7 +28,7 @@ All hooks take `(services, ...)` — no `this.container`:
 - `onUnload(services)` — tear down everything `onLoad` registered. Nothing
   does this automatically.
 - `deleteUserData(services, userId)` / `exportUserData(services, userId)` —
-  GDPR hooks called by `@lumi/lib/gdpr/requests.js`. Return `null` from export when there is
+  GDPR hooks called by `@gdpr/Requests.js`. Return `null` from export when there is
   nothing. Redact third-party IDs rather than exporting them verbatim
   (`ModModule.exportUserData` pattern, GDPR Recital 63).
 

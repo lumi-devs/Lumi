@@ -1,7 +1,7 @@
 // @ts-expect-error - ahocorasick does not provide type declarations
 import AhoCorasick from "ahocorasick";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { MaxRegexLength } from "#src/lib/regex-worker/Validate.js";
+import type { LumiT } from "@i18n/Index.js";
+import { MaxRegexLength } from "@lib/regex-worker/Validate.js";
 
 interface AhoMatcher {
   search(text: string): Array<[number, string[]]>;

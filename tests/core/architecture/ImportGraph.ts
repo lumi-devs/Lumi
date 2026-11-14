@@ -107,7 +107,7 @@ export function parseImports(filePath: string): ImportRef[] {
   return refs;
 }
 
-export type ResolvedKind = "relative" | "builtin" | "external" | "unresolved";
+type ResolvedKind = "relative" | "builtin" | "external" | "unresolved";
 
 export interface ResolvedImport {
   kind: ResolvedKind;
@@ -129,15 +129,37 @@ function tryResolveFile(candidateNoExt: string): string | undefined {
   return undefined;
 }
 
-export function resolveSpecifier(fromFile: string, specifier: string): ResolvedImport {
-  if (specifier.startsWith("#lib/")) {
-    const candidate = join(REPO_ROOT, "src/lib", specifier.slice("#lib/".length).replace(/\.js$/, ""));
-    const found = tryResolveFile(candidate);
-    return { kind: "relative", path: found ?? candidate };
-  }
+const AliasRoots: Record<string, string> = {
+  "@lib/": "src/lib",
+  "@modules/": "src/modules",
+  "@contracts/": "src/contracts",
+  "@observability/": "src/observability",
+  "@shared/": "src/shared",
+  "@cli/": "src/cli",
+  "@scripts/": "src/scripts",
+  "@languages/": "src/languages",
+  "@api/": "src/lib/api",
+  "@cache/": "src/lib/cache",
+  "@redis/": "src/lib/redis",
+  "@db/": "src/lib/prisma",
+  "@rpc/": "src/lib/rpc",
+  "@ui/": "src/lib/ui",
+  "@commands/": "src/lib/commands",
+  "@listeners/": "src/lib/listeners",
+  "@interactions/": "src/lib/interactions",
+  "@module-system/": "src/lib/module-system",
+  "@utilities/": "src/lib/utilities",
+  "@i18n/": "src/lib/i18n",
+  "@scheduler/": "src/lib/scheduler",
+  "@downloader/": "src/lib/downloader",
+  "@discord/": "src/lib/discord",
+  "@event-bus/": "src/lib/event-bus",
+};
 
-  if (specifier.startsWith("#src/")) {
-    const candidate = join(REPO_ROOT, "src", specifier.slice("#src/".length).replace(/\.js$/, ""));
+export function resolveSpecifier(fromFile: string, specifier: string): ResolvedImport {
+  const alias = Object.keys(AliasRoots).find((prefix) => specifier.startsWith(prefix));
+  if (alias) {
+    const candidate = join(REPO_ROOT, AliasRoots[alias]!, specifier.slice(alias.length).replace(/\.js$/, ""));
     const found = tryResolveFile(candidate);
     return { kind: "relative", path: found ?? candidate };
   }

@@ -1,9 +1,9 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { formatDuration } from "#src/lib/utilities/Time.js";
+import type { CommandContext } from "@commands/Context.js";
+import { formatDuration } from "@utilities/Time.js";
 import {
   CooldownError,
   EconomyError,
-} from "#src/modules/economy/services/BankService.js";
+} from "@modules/economy/services/BankService.js";
 
 export async function reportEconomyError(
   ctx: CommandContext,

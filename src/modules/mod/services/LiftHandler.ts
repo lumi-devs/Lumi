@@ -1,9 +1,9 @@
-import { type Container } from "#src/lib/Services.js";
-import { Time } from "#src/shared/Index.ts";
-import {acquireValkeyLock} from "#src/lib/valkey/Lock.js";
-import type { ModLiftPayload } from "#src/modules/mod/tasks/ModLift.js";
-import { liftModerationCaseWithUndo } from "#src/modules/mod/services/CaseLift.js";
-import { errorCode } from "#src/lib/utilities/Errors.js";
+import { type Container } from "@lib/Services.js";
+import { Time } from "@shared/Index.ts";
+import {acquireRedisLock} from "@redis/Lock.js";
+import type { ModLiftPayload } from "@modules/mod/tasks/ModLift.js";
+import { liftModerationCaseWithUndo } from "@modules/mod/services/CaseLift.js";
+import { errorCode } from "@utilities/Errors.js";
 
 const ActionLabels: Record<string, string> = {
   mute: "Mute",
@@ -15,8 +15,8 @@ export async function handleModLiftFire(
   services: Container,
   payload: ModLiftPayload,
 ): Promise<void> {
-  const { release } = await acquireValkeyLock(
-    services.valkey,
+  const { release } = await acquireRedisLock(
+    services.redis,
     `lumi:lock:mod-lift:${payload.caseId}`,
     { ttlMs: Time.Second * 30, acquireTimeoutMs: Time.Minute },
   );

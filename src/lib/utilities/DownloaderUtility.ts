@@ -1,5 +1,5 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import { container, type Container } from "#src/lib/Services.js";
+import { defineUtility } from "@module-system/Utility.js";
+import { container, type Container } from "@lib/Services.js";
 import {
   resolver,
   AddonModulesRoot,
@@ -7,15 +7,15 @@ import {
   PinRoot,
   RepoAlreadyInstalledError,
   type RepoUpdateResult,
-} from "#src/lib/downloader/Resolver.js";
-import { pathExists } from "#src/lib/downloader/Validate.js";
+} from "@downloader/Resolver.js";
+import { pathExists } from "@downloader/Validate.js";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { errorFrom } from "#src/lib/utilities/Errors.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
-import { execFileAsync } from "#src/lib/utilities/ExecFile.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
+import { errorFrom } from "@utilities/Errors.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
+import { execFileAsync } from "@utilities/ExecFile.js";
+import { commandRegistry } from "@commands/CommandDef.js";
 
 interface AutoUpdateConfig {
   enabled: boolean;
@@ -207,7 +207,7 @@ async function addRepo(
 }
 
 async function bustUpdateCheckCache(services: Container): Promise<void> {
-  await services.valkey?.del?.(ValkeyKeys.addonUpdateCheck())?.catch?.(() => undefined);
+  await services.redis?.del?.(RedisKeys.addonUpdateCheck())?.catch?.(() => undefined);
 }
 
 async function fetchRepoHashes(
@@ -288,7 +288,6 @@ async function checkForModuleUpdate(
   try {
     await fs.access(repoPath);
   } catch {
-
     await addRepo(services, repo.name, repo.url, branch);
   }
 
@@ -684,8 +683,8 @@ export const downloaderUtility = defineUtility({
   },
 
   async checkForUpdates(services: Container): Promise<string[]> {
-    const cacheKey = ValkeyKeys.addonUpdateCheck();
-    const cached = await services.valkey.get(cacheKey);
+    const cacheKey = RedisKeys.addonUpdateCheck();
+    const cached = await services.redis.get(cacheKey);
     if (cached) {
       try {
         return JSON.parse(cached) as string[];
@@ -709,9 +708,9 @@ export const downloaderUtility = defineUtility({
       }
     }
 
-    await services.valkey.setex(
+    await services.redis.setex(
       cacheKey,
-      ValkeyTTL.addonUpdateCheck,
+      RedisTTL.addonUpdateCheck,
       JSON.stringify(pending),
     );
     return pending;
@@ -799,7 +798,7 @@ export const downloaderUtility = defineUtility({
 
 export type DownloaderUtility = typeof downloaderUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     downloader: typeof downloaderUtility;
   }

@@ -1,6 +1,6 @@
 # Lumi Configuration Architecture & Reference
 
-This directory contains the operational and infrastructure configurations for Lumi (`postgres/`, `valkey/`, `observability/`).
+This directory contains the operational and infrastructure configurations for Lumi (`postgres/`, `redis/`, `observability/`).
 
 > [!NOTE]
 > Application-level settings (presence, branding colors/links, emoji symbols) are compiled directly into the binary with production-grade defaults. There are no `config/bot.ts` / `config/emojis.ts` override files — presence is fixed to Watching "the server" / online, card colors come from the built-in palette in `packages/core/src/lib/ui/palette.ts`, and emoji are unicode literals at each use site.
@@ -18,8 +18,8 @@ config/
 │   ├── pg_hba.conf           # PostgreSQL host-based authentication rules
 │   ├── primary.conf          # PostgreSQL WAL & replication parameters
 │   └── replica-entrypoint.sh # Standby DB bootstrap script (runs pg_basebackup)
-├── valkey/
-│   ├── valkey-replica.conf    # Valkey replica node configuration
+├── redis/
+│   ├── redis-replica.conf    # Redis replica node configuration
 │   └── sentinel-entrypoint.sh # Dynamic Sentinel configuration boot generator
 └── observability/
     ├── alerts.yml            # Prometheus alert rules for Lumi SLOs
@@ -32,7 +32,7 @@ config/
 
 ---
 
-### Database Infrastructure (`postgres/` & `valkey/`)
+### Database Infrastructure (`postgres/` & `redis/`)
 
 #### PostgreSQL Streaming Replication (`config/postgres/`)
 
@@ -60,16 +60,16 @@ Lumi's database architecture uses PostgreSQL 17 streaming replication paired wit
   ```
 * **`replica-entrypoint.sh`**: Standby boot wrapper. If `$PGDATA/PG_VERSION` is missing, it executes `pg_basebackup` against the primary with `-R` (generating `standby.signal` and `primary_conninfo` automatically), then executes standard PostgreSQL startup.
 
-#### Valkey & Sentinel High Availability (`config/valkey/`)
+#### Redis & Sentinel High Availability (`config/redis/`)
 
-* **`valkey-replica.conf`**: Defines replication node behavior with `appendonly yes`, `maxmemory 128mb`, and `maxmemory-policy noeviction`.
-* **`sentinel-entrypoint.sh`**: Dynamically generates `/data/sentinel.conf` at runtime before starting `valkey-sentinel`. Key environment variable controls include:
+* **`redis-replica.conf`**: Defines replication node behavior with `appendonly yes`, `maxmemory 128mb`, and `maxmemory-policy noeviction`.
+* **`sentinel-entrypoint.sh`**: Dynamically generates `/data/sentinel.conf` at runtime before starting `redis-sentinel`. Key environment variable controls include:
 
 | Environment Variable | Default | Description |
 | :--- | :--- | :--- |
-| `SENTINEL_MASTER_NAME` | `mymaster` | Symbolic name assigned to the Valkey master set |
-| `SENTINEL_MASTER_HOST` | `valkey` | Hostname of the primary Valkey instance |
-| `SENTINEL_MASTER_PORT` | `6379` | Network port of the primary Valkey instance |
+| `SENTINEL_MASTER_NAME` | `mymaster` | Symbolic name assigned to the Redis master set |
+| `SENTINEL_MASTER_HOST` | `redis` | Hostname of the primary Redis instance |
+| `SENTINEL_MASTER_PORT` | `6379` | Network port of the primary Redis instance |
 | `SENTINEL_QUORUM` | `2` | Number of Sentinels required to reach quorum for failover |
 | `SENTINEL_DOWN_AFTER_MS` | `5000` | Milliseconds of unreachability before declaring a node down |
 | `SENTINEL_FAILOVER_TIMEOUT_MS` | `30000` | Timeout period for a failover execution |

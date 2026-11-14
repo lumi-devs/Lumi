@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { runCli } from "#src/cli/Main.js";
+import { runCli } from "@cli/Main.js";
 
 function captureConsole() {
   const logs: string[] = [];

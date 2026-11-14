@@ -1,9 +1,9 @@
 import { QueueEvents, type QueueEventsOptions } from "bullmq";
-import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "#src/lib/scheduler/Queue.js";
-import { getQueuePrefix } from "#src/lib/scheduler/Queue.js";
-import { container } from "#src/lib/Services.js";
-import { failedJobsTotal } from "#src/observability/Index.ts";
-import type { ScheduledTaskRunner } from "#src/lib/scheduler/Runner.js";
+import type { FailedJobInfo, QueueConnectionOptions, QueueLogger } from "@scheduler/Queue.js";
+import { getQueuePrefix } from "@scheduler/Queue.js";
+import { container } from "@lib/Services.js";
+import { failedJobsTotal } from "@observability/Index.ts";
+import type { ScheduledTaskRunner } from "@scheduler/Runner.js";
 
 export class QueueEventsWatcher {
   readonly #events: QueueEvents;

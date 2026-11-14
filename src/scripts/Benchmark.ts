@@ -1,8 +1,8 @@
 import { performance } from "perf_hooks";
-import { evaluateNodeMatch } from "#src/lib/api/permissions/PermitResolver.js";
-import { makeInfoCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
+import { evaluateNodeMatch } from "@api/permissions/PermitResolver.js";
+import { makeInfoCard, makeSuccessCard } from "@ui/Cards.js";
 import { userMention, roleMention, channelMention, time } from "@discordjs/formatters";
-import { cutText, isNullish } from "#src/shared/Index.ts";
+import { cutText, isNullish } from "@shared/Index.ts";
 
 function calculateP99(latencies: number[]): number {
   if (!latencies.length) return 0;

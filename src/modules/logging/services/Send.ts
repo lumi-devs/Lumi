@@ -1,6 +1,6 @@
-import { type Container } from "#src/lib/Services.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import { queueSend } from "#src/lib/outbound/SendQueue.js";
+import { type Container } from "@lib/Services.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
+import { queueSend } from "@lib/outbound/SendQueue.js";
 
 const Module = "logging";
 

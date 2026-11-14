@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   defineUtility,
   getUtility,
   tryGetUtility,
-} from "#src/lib/module-system/Utility.js";
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
+} from "@module-system/Utility.js";
+import { defineModule } from "@module-system/Module.js";
+import { cfg } from "@module-system/ConfigSchema.js";
 
 describe("module-system defineUtility and defineModule", () => {
   beforeEach(() => {
@@ -18,7 +18,7 @@ describe("module-system defineUtility and defineModule", () => {
     } as any;
 
     (container as any).db = { dummyDb: true } as any;
-    (container as any).valkey = { dummyValkey: true } as any;
+    (container as any).redis = { dummyRedis: true } as any;
   });
 
   describe("defineUtility", () => {
@@ -32,7 +32,7 @@ describe("module-system defineUtility and defineModule", () => {
     });
 
     it("fetches utility with tryGetUtility and throws on getUtility if missing", async () => {
-      const { loadUtilities } = await import("#src/lib/module-system/Utility.js");
+      const { loadUtilities } = await import("@module-system/Utility.js");
       expect(tryGetUtility("nonexistent" as any)).toBeUndefined();
       expect(() => getUtility("nonexistent" as any)).toThrow(
         'Utility "nonexistent" is not loaded',

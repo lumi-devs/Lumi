@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { defineModuleConfig } from "#src/lib/module-system/ModuleConfig.js";
-import type { Container } from "#src/lib/Services.js";
-import { container } from "#src/lib/Services.js";
+import { defineModuleConfig } from "@module-system/ModuleConfig.js";
+import type { Container } from "@lib/Services.js";
+import { container } from "@lib/Services.js";
 
 const Defaults = {
   counter: 0,
@@ -58,7 +58,7 @@ describe("ScopedConfig nested access", () => {
     mockConfig = createMockConfig();
     services = { db: { config: mockConfig } } as unknown as Container;
     events = [];
-    (container as any).valkey = {
+    (container as any).redis = {
       set: vi.fn(async () => {
         events.push("acquire");
         return "OK";

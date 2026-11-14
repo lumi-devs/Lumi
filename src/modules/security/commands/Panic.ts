@@ -1,14 +1,14 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { enterPanic } from "#src/modules/security/services/Panic.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { enterPanic } from "@modules/security/services/Panic.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
 import {
   buildPanicAlreadyActiveCard,
   buildPanicCancelledCard,
   buildPanicStatusCard,
-} from "#src/modules/security/ui/PanicCard.js";
+} from "@modules/security/ui/PanicCard.js";
 
 export const panicDef: CommandDef = {
   name: "panic",

@@ -10,9 +10,9 @@ import type {
   SlashCommandOptionsOnlyBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandContext } from "@commands/Context.js";
 export type { CommandContext };
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 
 export type CommandBuilder =
   | SlashCommandBuilder

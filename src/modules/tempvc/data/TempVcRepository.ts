@@ -1,5 +1,5 @@
 import type { TempVcGenerator, TempVcRecord } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 
 interface TempVcRecordInput {
   ownerId: string;

@@ -1,10 +1,10 @@
-import { UserError } from "#src/shared/Index.ts";
-import { container, type Container } from "#src/lib/Services.js";
+import { UserError } from "@shared/Index.ts";
+import { container, type Container } from "@lib/Services.js";
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { getVcRecord, type VcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import { assertOwner } from "#src/modules/tempvc/services/PanelHelpers.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
+import type { LumiT } from "@i18n/Index.js";
+import { getVcRecord, type VcRecord } from "@modules/tempvc/data/Tempvc.js";
+import { assertOwner } from "@modules/tempvc/services/PanelHelpers.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
 
 interface ResolvedVc {
   channel: VoiceBasedChannel;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { scheduleTask, QueuePriority } from "#src/lib/scheduler/Schedule.js";
+import { container } from "@lib/Services.js";
+import { scheduleTask, QueuePriority } from "@scheduler/Schedule.js";
 
 describe("schedule-task", () => {
   beforeEach(() => {

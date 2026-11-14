@@ -1,17 +1,17 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { Container } from "#src/lib/Services.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { Container } from "@lib/Services.js";
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { runModerationFlow, type ModerationCommand } from "#src/lib/api/moderation/ModerationFlow.js";
-import { parseSnowflakeList, resolveMembers } from "#src/lib/discord/MassTargets.js";
-import type { ConfirmPromptOptions } from "#src/lib/utilities/Confirm.js";
-import { applyLocalizedBuilder } from "#src/lib/i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { LumiT } from "@i18n/Index.js";
+import { runModerationFlow, type ModerationCommand } from "@api/moderation/ModerationFlow.js";
+import { parseSnowflakeList, resolveMembers } from "@discord/MassTargets.js";
+import type { ConfirmPromptOptions } from "@utilities/Confirm.js";
+import { applyLocalizedBuilder } from "@i18n/Index.js";
 import { userMention } from "@discordjs/formatters";
 import type { ModerationCase } from "@prisma/client";
 import type { AutocompleteInteraction, GuildMember } from "discord.js";
-import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
-import { respondWithReasonChoices } from "#src/modules/mod/services/ReasonAutocomplete.js";
+import { KickAction } from "@modules/mod/services/actions/KickAction.js";
+import { respondWithReasonChoices } from "@modules/mod/services/ReasonAutocomplete.js";
 
 const Root = "commands";
 

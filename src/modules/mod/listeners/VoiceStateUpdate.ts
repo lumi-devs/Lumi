@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { VoiceState } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
+import { defineListener } from "@listeners/ListenerDef.js";
 
 export const VoiceStateUpdateListener = defineListener({
   name: "modVoiceStateUpdate",

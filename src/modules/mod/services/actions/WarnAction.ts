@@ -1,8 +1,8 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { incrementWarnCount, checkThresholds } from "#src/modules/mod/services/Thresholds.js";
-import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+import { makeSuccessCard } from "@ui/Cards.js";
+import { incrementWarnCount, checkThresholds } from "@modules/mod/services/Thresholds.js";
+import { runModerationAction } from "@modules/mod/services/RunModerationAction.js";
 
 export interface WarnApplyOptions {
   guild: Guild;

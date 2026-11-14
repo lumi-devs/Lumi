@@ -1,5 +1,5 @@
-import { sectionsOf } from "#src/contracts/Index.ts";
-import { securityModule } from "#src/modules/security/Index.js";
+import { sectionsOf } from "@contracts/Index.ts";
+import { securityModule } from "@modules/security/Index.js";
 import { describe, expect, it } from "bun:test";
 
 const fields = securityModule.meta.configFields ?? [];

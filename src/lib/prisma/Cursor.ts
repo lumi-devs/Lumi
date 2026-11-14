@@ -1,4 +1,4 @@
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
 
 const MAX_CURSOR_LENGTH = 512;
 

@@ -1,5 +1,5 @@
 import type { AfkEntry } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 
 export class AfkRepository extends Repository {
   public findEntry(guildId: string, userId: string): Promise<AfkEntry | null> {

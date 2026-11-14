@@ -1,5 +1,5 @@
 import type { RESTOptions } from "@discordjs/rest";
-import { envParseInteger, getDiscordProxyUrl } from "#src/lib/Env.js";
+import { envParseInteger, getDiscordProxyUrl } from "@lib/Env.js";
 import {
   ActivityType,
   GatewayIntentBits,

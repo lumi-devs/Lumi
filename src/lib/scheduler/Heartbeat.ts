@@ -1,7 +1,7 @@
-import { container } from "#src/lib/Services.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { container } from "@lib/Services.js";
+import { tryParseJSON } from "@shared/Index.ts";
+import type {RedisClient} from "@redis/Cluster.js";
+import { RedisKeys } from "@redis/Store.js";
 
 const PublishIntervalMs = 10_000;
 const TtlMs = PublishIntervalMs * 3;
@@ -18,13 +18,13 @@ export interface SchedulerHeartbeatWatcher {
 }
 
 export function publishSchedulerHeartbeat(
-  valkey: ValkeyClient,
+  redis: RedisClient,
   holder: string,
 ): SchedulerHeartbeatWatcher {
   const publish = async () => {
     try {
-      await valkey.set(
-        ValkeyKeys.schedulerHeartbeat(),
+      await redis.set(
+        RedisKeys.schedulerHeartbeat(),
         JSON.stringify({ holder, updatedAt: Date.now() } satisfies SchedulerHeartbeat),
         "PX",
         TtlMs,
@@ -47,9 +47,9 @@ export function publishSchedulerHeartbeat(
 }
 
 export async function readSchedulerHeartbeat(
-  valkey: ValkeyClient,
+  redis: RedisClient,
 ): Promise<SchedulerHeartbeat | null> {
-  const raw = await valkey.get(ValkeyKeys.schedulerHeartbeat());
+  const raw = await redis.get(RedisKeys.schedulerHeartbeat());
   if (!raw) return null;
   const parsed = tryParseJSON(raw) as SchedulerHeartbeat | null;
   if (!parsed || typeof parsed.updatedAt !== "number" || typeof parsed.holder !== "string") {

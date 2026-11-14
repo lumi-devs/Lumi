@@ -1,4 +1,4 @@
-import type { ConfigField, ModuleConfigSchema } from "#src/lib/module-system/ConfigSchema.js";
+import type { ConfigField, ModuleConfigSchema } from "@module-system/ConfigSchema.js";
 
 export interface ModuleDefinition {
   name?: string | undefined;

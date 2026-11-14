@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { CONTRACT_VERSION } from "#src/contracts/Version.js";
-import { RpcClient, RpcError, isContractMismatch, isGuildMissing } from "#src/contracts/rpc/Client.js";
-import { RpcFailureCodes } from "#src/contracts/rpc/Envelope.js";
+import { CONTRACT_VERSION } from "@contracts/Version.js";
+import { RpcClient, RpcError, isContractMismatch, isGuildMissing } from "@contracts/rpc/Client.js";
+import { RpcFailureCodes } from "@contracts/rpc/Envelope.js";
 
 let server: ReturnType<typeof Bun.serve> | undefined;
 

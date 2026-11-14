@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { validateAddon } from "#src/lib/downloader/Validate.js";
+import { validateAddon } from "@downloader/Validate.js";
 
 let root: string;
 
@@ -122,24 +122,42 @@ describe("validateAddon", () => {
     expect(errors.some((e) => e.includes("container"))).toBe(true);
   });
 
-  it("passes shared #lib imports and flags dead @lumi/#core aliases", async () => {
+  it("accepts @lumi imports and rejects repo-internal aliases", async () => {
     const dir = await makeAddon("aliases", {
       "Index.ts": GOOD_INDEX,
-      "lib/x.ts": `import { makeInfoCard } from "#src/lib/ui/Cards.js";\nimport { Utility } from "#src/lib/module-system/Utility.js";\nimport { x } from "@lumi/lib/ui/other.js";\nimport { y } from "#core/thing.js";\nexport { makeInfoCard, Service };\n`,
+      "lib/x.ts": `import { makeInfoCard } from "@lumi/ui";\nimport { defineModule } from "@lumi/module";\nimport { x } from "@lumi/lib/ui/Cards.js";\nimport { y } from "@ui/Cards.js";\nimport { z } from "@modules/sibling/Index.js";\nimport { w } from "#core/thing.js";\nexport { makeInfoCard, defineModule };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes("#lib/ui/Cards.js"))).toBe(false);
-    expect(errors.some((e) => e.includes("#lib/module-system/utility.js"))).toBe(false);
-    expect(errors.some((e) => e.includes("@lumi/lib/ui/other.js") && e.includes("does not resolve"))).toBe(true);
+    expect(errors.some((e) => e.includes('"@lumi/ui"'))).toBe(false);
+    expect(errors.some((e) => e.includes('"@lumi/module"'))).toBe(false);
+    expect(errors.some((e) => e.includes('"@lumi/lib/ui/Cards.js"'))).toBe(false);
+    expect(errors.some((e) => e.includes("@ui/Cards.js") && e.includes("does not resolve"))).toBe(true);
+    expect(errors.some((e) => e.includes("@modules/sibling/Index.js") && e.includes("does not resolve"))).toBe(true);
     expect(errors.some((e) => e.includes("#core/thing.js") && e.includes("does not resolve"))).toBe(true);
+  });
+
+  it("blocks sibling modules imported through the @lumi namespace", async () => {
+    const dir = await makeAddon("sibling", {
+      "Index.ts": `${GOOD_INDEX}\nimport { other } from "@lumi/modules/afk/Index.js";\nexport { other };\n`,
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("@lumi/modules/afk/Index.js") && e.includes("self-contained"))).toBe(true);
+  });
+
+  it("blocks imports of the package name instead of @lumi", async () => {
+    const dir = await makeAddon("package-name", {
+      "Index.ts": `${GOOD_INDEX}\nimport { z } from "@lumi-devs/lumi/module";\nexport { z };\n`,
+    });
+    const { errors } = await validateAddon(dir);
+    expect(errors.some((e) => e.includes("@lumi-devs/lumi/module") && e.includes("does not resolve"))).toBe(true);
   });
 
   it("blocks bot-internals imports (closes the container.prisma bypass)", async () => {
     const dir = await makeAddon("database-bypass", {
-      "Index.ts": `${GOOD_INDEX}\nimport { prisma } from "#src/lib/prisma/Client.js";\nexport { prisma };\n`,
+      "Index.ts": `${GOOD_INDEX}\nimport { prisma } from "@lumi/lib/prisma/Client.js";\nexport { prisma };\n`,
     });
     const { errors } = await validateAddon(dir);
-    expect(errors.some((e) => e.includes("#src/lib/prisma/Client.js") && e.includes("bot internals"))).toBe(true);
+    expect(errors.some((e) => e.includes("@lumi/lib/prisma/Client.js") && e.includes("bot internals"))).toBe(true);
   });
 
   it("validates a valid manifest.json contract", async () => {

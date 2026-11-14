@@ -3,7 +3,7 @@ import {
   ButtonBuilder,
   StringSelectMenuBuilder,
 } from "@discordjs/builders";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { ButtonStyle, MessageFlags, type VoiceBasedChannel } from "discord.js";
 import { channelMention, userMention } from "@discordjs/formatters";
 import {
@@ -11,15 +11,15 @@ import {
   PanelMessageDefault,
   PanelTitleDefault,
   TempVcPanelId,
-} from "#src/modules/tempvc/Constants.js";
-import { parseHexColor } from "#src/lib/utilities/MessageContent.js";
-import { renderMessageBlocksV2Container } from "#src/lib/utilities/MessageBlocksV2.js";
-import { clampMessageDocumentV2, type MessageDocumentV2 } from "#src/contracts/Index.ts";
-import type { VcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { makeCard, makeInfoCard, makeErrorCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { formatStatusBadge } from "#src/lib/ui/Layout.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+} from "@modules/tempvc/Constants.js";
+import { parseHexColor } from "@utilities/MessageContent.js";
+import { renderMessageBlocksV2Container } from "@utilities/MessageBlocksV2.js";
+import { clampMessageDocumentV2, type MessageDocumentV2 } from "@contracts/Index.ts";
+import type { VcRecord } from "@modules/tempvc/data/Tempvc.js";
+import type { LumiT } from "@i18n/Index.js";
+import { makeCard, makeInfoCard, makeErrorCard, type CardReply } from "@ui/Cards.js";
+import { formatStatusBadge } from "@ui/Layout.js";
+import { resolveCardColor } from "@ui/Palette.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -27,7 +27,7 @@ import {
   createBackButton,
   createActionButton,
   buildSafeActionRows,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 
 type PanelMessage = CardReply;
 

@@ -1,11 +1,10 @@
 import { Events } from "discord.js";
 import { Colors, roleMention, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import type { Container } from "#src/lib/Services.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
-import { isSuspiciousAccount } from "#src/modules/security/services/Suspicious.js";
-import { loadVerificationConfig, assignPending } from "#src/modules/security/services/Verification.js";
+import type { Container } from "@lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { tryGetUtility } from "@module-system/Utility.js";
+import { loadVerificationConfig, assignPending } from "@modules/security/services/Verification.js";
 import {
   loadJoinGateConfig,
   evaluateJoinFilters,
@@ -14,7 +13,8 @@ import {
   isRaidActive,
   isSuspiciousJoiner,
   recordRecentJoiner,
-} from "#src/modules/security/services/JoinGate.js";
+} from "@modules/security/services/JoinGate.js";
+import { isSuspiciousAccount } from "@modules/security/services/JoinHeuristics.js";
 
 export const SecurityMemberJoinListener = defineListener({
   name: "securityMemberJoin",
@@ -68,7 +68,6 @@ export const SecurityMemberJoinListener = defineListener({
     if (gated) return;
 
     if (await isRaidActive(member.guild.id)) {
-
       const shouldGate =
         config.raidAccountType === "all" ||
         (await isSuspiciousJoiner(member, config));

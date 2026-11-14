@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, mock, beforeEach } from "bun:test";
-import type { Container } from "#src/lib/Services.js";
-import { EconomyRepository } from "#src/modules/economy/data/EconomyRepository.js";
-import { balanceDef } from "#src/modules/economy/commands/Balance.js";
-import { bankDef } from "#src/modules/economy/commands/Bank.js";
+import type { Container } from "@lib/Services.js";
+import { EconomyRepository } from "@modules/economy/data/EconomyRepository.js";
+import { balanceDef } from "@modules/economy/commands/Balance.js";
+import { bankDef } from "@modules/economy/commands/Bank.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 
 const mockLogger = {
@@ -14,7 +14,7 @@ const mockLogger = {
 
 const container: Record<string, unknown> = {};
 
-mock.module("#src/lib/Services.js", () => ({ container }));
+mock.module("@lib/Services.js", () => ({ container }));
 
 describe("economy display names", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;

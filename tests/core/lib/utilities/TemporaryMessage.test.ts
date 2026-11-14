@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   deleteMessageLater,
   deleteReplyLater,
-} from "#src/lib/utilities/TemporaryMessage.js";
+} from "@utilities/TemporaryMessage.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

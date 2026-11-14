@@ -10,7 +10,7 @@ import {
   markDraining,
   isDraining,
   bootstrapTelemetry
-} from '#src/observability/Index.ts';
+} from '@observability/Index.ts';
 
 describe('Observability Context Tests', () => {
   it('runWithContext stores and retrieves request context via AsyncLocalStorage', () => {
@@ -38,12 +38,12 @@ describe('Observability Context Tests', () => {
 describe('Observability Readiness Probes Tests', () => {
   it('registers and executes readiness probes', async () => {
     registerReadinessProbe('db', () => ({ status: 'ok', detail: 'connected' }));
-    registerReadinessProbe('valkey', async () => ({ status: 'ok' }));
+    registerReadinessProbe('redis', async () => ({ status: 'ok' }));
 
     const report = await runReadinessProbes();
     expect(report.ready).toBe(true);
     expect(report.checks.db?.status).toBe('ok');
-    expect(report.checks.valkey?.status).toBe('ok');
+    expect(report.checks.redis?.status).toBe('ok');
   });
 
   it('fails readiness when a probe fails', async () => {

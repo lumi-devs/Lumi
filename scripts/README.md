@@ -3,7 +3,7 @@
 This directory contains CLI tools, build-time code generators, integration testing suites, database seeders, and operational scripts supporting the Lumi monorepo and addon ecosystem.
 
 > [!NOTE]
-> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Valkey) running.
+> All scripts in this directory are executed using [Bun](https://bun.sh) (`bun run` or `bun <script-path>`). Some testing and provisioning scripts require a configured `.env` file with backing datastores (PostgreSQL, Redis) running.
 
 ---
 
@@ -11,12 +11,12 @@ This directory contains CLI tools, build-time code generators, integration testi
 
 | Script | Invocation Alias | Primary Purpose | Environment Requirements |
 | :--- | :--- | :--- | :--- |
-| `setup.sh` | `bun run setup` | Interactive first-run wizard: generates `.env`, verifies the bot token, optionally starts `docker compose` | Offline CLI (curl/docker optional) |
-| `generate-manifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
-| `validate-addon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
-| `create-addon.ts` | `bun run addon:create <name>` | Scaffolds a new addon/module directory from a minimal template | Offline CLI |
-| `benchmark.ts` | `bun run bench` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
-| `verify-resilience.ts` | `bun run verify:resilience` | Fault-tolerance & event-bus message durability test suite | Valkey Streams |
+| `setup.sh` | `bash scripts/setup.sh` | Interactive first-run wizard: generates `.env`, verifies the bot token, optionally starts `docker compose` | Offline CLI (curl/docker optional) |
+| `src/scripts/GenerateManifests.ts` | `bun run modules:manifest` | Build-time manifest generator for internal & external modules | Node/Bun file system |
+| `src/scripts/ValidateAddon.ts` | `bun run validate <path>` | Structural and architectural validator for local third-party addons | Offline CLI |
+| `CreateAddon.ts` | `bun scripts/CreateAddon.ts <name>` | Scaffolds a new addon/module directory from a minimal template | Offline CLI |
+| `src/scripts/Benchmark.ts` | `bun src/scripts/Benchmark.ts` | Performance benchmark suite measuring PermitResolver, Card UI, & formatters | Offline CLI |
+| `src/scripts/VerifyResilience.ts` | `bun src/scripts/VerifyResilience.ts` | Fault-tolerance & event-bus message durability test suite | Redis Streams |
 
 ---
 
@@ -24,27 +24,24 @@ This directory contains CLI tools, build-time code generators, integration testi
 
 ### `setup.sh`
 
-**Command:** `bun run setup`
+**Command:** `bash scripts/setup.sh`
 
 Interactive onboarding wizard for a fresh checkout. Bash, not Bun/TS, since it runs before any dependency is installed.
 
 #### Overview & Mechanics
 
-1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Valkey credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
+1. Prompts for every mandatory variable in `.env.example` (bot token, client ID, Postgres/Redis credentials), plus a few common general/dashboard settings, and writes the result to `.env` (mode `600`). Refuses to clobber an existing `.env` without confirmation.
 2. Verifies the entered bot token with a live `GET https://discord.com/api/v10/users/@me` request (`Authorization: Bot <token>`) and prints the resolved bot username on success. A failed/unreachable check is a warning, not a hard stop - setup still completes so you can fix `.env` by hand.
-3. Optionally runs `docker compose up -d postgres pgbouncer valkey` if Docker is available.
+3. Optionally runs `docker compose up -d postgres pgbouncer redis` if Docker is available.
 
 #### Usage Examples
 
 ```bash
 # Full interactive setup
-bun run setup
-
-# Same thing, direct invocation
 bash scripts/setup.sh
 ```
 
-### `generate-manifests.ts`
+### `src/scripts/GenerateManifests.ts`
 
 **Command:** `bun run modules:manifest [extra-directories...]`
 
@@ -66,12 +63,12 @@ The Lumi runtime (`ModuleStore`) requires module configuration schemas, default 
 bun run modules:manifest
 
 # Generate manifests for core modules AND a local addon development directory
-bun scripts/generate-manifests.ts ../my-custom-addon
+bun src/scripts/GenerateManifests.ts ../my-custom-addon
 ```
 
 ---
 
-### `validate-addon.ts`
+### `src/scripts/ValidateAddon.ts`
 
 **Command:** `bun run validate <path-to-addon-or-repo>`
 
@@ -99,9 +96,9 @@ bun run validate ./my-addons-repository
 
 ---
 
-### `create-addon.ts`
+### `CreateAddon.ts`
 
-**Command:** `bun run addon:create <name> [--dir <path>] [--display-name <text>] [--author <name>] [--force]`
+**Command:** `bun scripts/CreateAddon.ts <name> [--dir <path>] [--display-name <text>] [--author <name>] [--force]`
 
 Scaffolds a new addon directory with the minimal boilerplate a real addon needs - `info.json`, `index.ts` (`@DefineModule` + a `configSchema` field + a no-op `deleteUserData`), one command stub, and a `README.md` - mirroring `hello-world` in [`lumi-devs/lumi-addons`](https://github.com/lumi-devs/lumi-addons)'s `examples/`, as documented in the [Addon Overview](https://lumi-devs.github.io/Lumi-docs/addons/overview).
 
@@ -113,10 +110,10 @@ Writes into `./addons/<name>` by default (gitignored - a personal scratch direct
 
 ```bash
 # Scaffold ./addons/welcome-messages
-bun run addon:create welcome-messages
+bun scripts/CreateAddon.ts welcome-messages
 
 # Custom output location and metadata
-bun run addon:create tag-manager --dir ../lumi-addons --author "Your Name"
+bun scripts/CreateAddon.ts tag-manager --dir ../lumi-addons --author "Your Name"
 
 # Validate what got generated
 bun run validate ./addons/welcome-messages
@@ -124,28 +121,28 @@ bun run validate ./addons/welcome-messages
 
 ---
 
-### `verify-resilience.ts`
+### `src/scripts/VerifyResilience.ts`
 
-**Command:** `bun run verify:resilience`
+**Command:** `bun src/scripts/VerifyResilience.ts`
 
-A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Valkey Streams**.
+A fault-tolerance and distributed event-bus verification suite that tests message delivery semantics, consumer group isolation, high-concurrency burst loads, and connection failure recovery across **Redis Streams**.
 
 #### Test Scenarios
 
 | Backend | Scenario Name | Assertion / Target |
 | :--- | :--- | :--- |
-| **Valkey Streams** | Basic publish & consume round-trip | Verified message delivery and payload integrity |
-| **Valkey Streams** | Sequential ordering under queue load | Strict FIFO sequence preservation across 10+ messages |
-| **Valkey Streams** | Consumer group isolation & fanout | Independent delivery across `GROUP_ALPHA` and `GROUP_BETA` |
-| **Valkey Streams** | High-throughput burst load | 100 parallel message dispatches with >=90% delivery assertion |
-| **Valkey Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
-| **Valkey Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
+| **Redis Streams** | Basic publish & consume round-trip | Verified message delivery and payload integrity |
+| **Redis Streams** | Sequential ordering under queue load | Strict FIFO sequence preservation across 10+ messages |
+| **Redis Streams** | Consumer group isolation & fanout | Independent delivery across `GROUP_ALPHA` and `GROUP_BETA` |
+| **Redis Streams** | High-throughput burst load | 100 parallel message dispatches with >=90% delivery assertion |
+| **Redis Streams** | Lifecycle & graceful shutdown | Clean socket disconnects without unhandled rejections |
+| **Redis Streams** | Bus re-initialization | Re-establishment of stream consumers after connection drop |
 
 #### Usage Examples
 
 ```bash
-# Run resilience verification suite against local Valkey
-bun run verify:resilience
+# Run resilience verification suite against local Redis
+bun src/scripts/VerifyResilience.ts
 ```
 
 ---

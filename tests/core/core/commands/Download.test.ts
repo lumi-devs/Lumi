@@ -1,30 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { downloadDef } from "#src/modules/admin/commands/Download.js";
-import { PermitResolver } from "#src/lib/api/permissions/PermitResolver.js";
+import { container } from "@lib/Services.js";
+import { CommandContext } from "@commands/Context.js";
+import { asHandler } from "@commands/CommandDef.js";
+import { downloadDef } from "@modules/admin/commands/Download.js";
+import { PermitResolver } from "@api/permissions/PermitResolver.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/Confirm.js", () => ({
+vi.mock("@utilities/Confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
+import { getUtility } from "@module-system/Utility.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
 
 function makeServices() {
   return {

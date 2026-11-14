@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import type { User } from "discord.js";
-import { hasAdvertisingIndicators } from "#src/modules/security/services/JoinHeuristics.js";
+import { hasAdvertisingIndicators } from "@modules/security/services/JoinHeuristics.js";
 
 function user(globalName: string | null, username = "member"): User {
   return { globalName, username } as User;

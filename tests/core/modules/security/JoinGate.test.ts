@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   applyGateAction,
   loadJoinGateConfig,
   evaluateJoinFilters,
-} from "#src/modules/security/services/JoinGate.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
+} from "@modules/security/services/JoinGate.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
 
-vi.mock("#lib/api/moderation/Quarantine.js", () => ({
+vi.mock("@api/moderation/Quarantine.js", () => ({
   QuarantineAction: { apply: vi.fn() },
 }));
 
-vi.mock("#lib/api/moderation/ModLog.js", () => ({
+vi.mock("@api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn(),
 }));
 
@@ -37,16 +37,16 @@ function makeGateConfig(filterAdvertising: { enabled: boolean; action: "kick" })
 }
 
 function setContainer(overrides: {
-  valkey?: Record<string, unknown>;
+  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).valkey = {
+  (container as any).redis = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
     multi: vi.fn(),
-    ...overrides.valkey,
+    ...overrides.redis,
   };
   (container as any).db = {
     config: { getModuleConfig: vi.fn().mockResolvedValue(null) },

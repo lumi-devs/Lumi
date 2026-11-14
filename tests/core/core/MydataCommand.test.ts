@@ -1,35 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { mydataDef } from "#src/modules/onboarding/commands/Mydata.js";
+import { CommandContext } from "@commands/Context.js";
+import { asHandler } from "@commands/CommandDef.js";
+import { mydataDef } from "@modules/onboarding/commands/Mydata.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/Confirm.js", () => ({
+vi.mock("@utilities/Confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/gdpr/Requests.js", () => ({
+vi.mock("@lib/gdpr/Requests.js", () => ({
   executeGdprExport: vi.fn(),
   executeGdprDeletion: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { executeGdprExport, executeGdprDeletion } from "#src/lib/gdpr/Requests.js";
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
+import { getUtility } from "@module-system/Utility.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { executeGdprExport, executeGdprDeletion } from "@lib/gdpr/Requests.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
 
 function makeServices() {
   return {

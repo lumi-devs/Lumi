@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   DownloadResolver,
   ModuleRoot,
   AddonModulesRoot,
-} from "#src/lib/downloader/Resolver.js";
+} from "@downloader/Resolver.js";
 
 describe("Add-on Module Classification (DownloadResolver#installModule)", () => {
   let resolver: DownloadResolver;
@@ -66,7 +66,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     );
     await fs.writeFile(
       path.join(sourcePath, "Index.ts"),
-      `import { defineModule } from "@lumi-devs/lumi/module";\nexport const meta = defineModule({ name: "${moduleName}" });`,
+      `import { defineModule } from "@lumi/module";\nexport const meta = defineModule({ name: "${moduleName}" });`,
     );
 
     const result = await resolver.installModule(repoName, moduleName);
@@ -87,7 +87,7 @@ describe("Add-on Module Classification (DownloadResolver#installModule)", () => 
     await fs.mkdir(sourcePath, { recursive: true });
     await fs.writeFile(
       path.join(sourcePath, "Index.ts"),
-      `import { defineModule } from "@lumi-devs/lumi/module";\nexport const meta = defineModule({ name: "${moduleName}" });`,
+      `import { defineModule } from "@lumi/module";\nexport const meta = defineModule({ name: "${moduleName}" });`,
     );
 
     await expect(resolver.installModule(repoName, moduleName)).rejects.toThrow(

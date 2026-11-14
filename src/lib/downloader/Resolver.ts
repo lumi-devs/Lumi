@@ -1,16 +1,16 @@
-import { container } from "#src/lib/Services.js";
-import { Time } from "#src/shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { Time } from "@shared/Index.ts";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { ModuleInfo, RepoInfo } from "#src/lib/downloader/Types.js";
-import { validateAddon } from "#src/lib/downloader/Validate.js";
+import type { ModuleInfo, RepoInfo } from "@downloader/Types.js";
+import { validateAddon } from "@downloader/Validate.js";
 import { z } from "zod";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { withSerializedWork } from "#src/lib/utilities/SerializedWork.js";
-import { execFileAsync } from "#src/lib/utilities/ExecFile.js";
-import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "#src/lib/Env.js";
-import { verifyCommitSignature, type SignatureVerification } from "#src/lib/downloader/Signature.js";
+import { logError } from "@utilities/Errors.js";
+import { withSerializedWork } from "@utilities/SerializedWork.js";
+import { execFileAsync } from "@utilities/ExecFile.js";
+import { getAddonAllowedSignersFile, getAddonSignaturePolicy, getRepoRoot } from "@lib/Env.js";
+import { verifyCommitSignature, type SignatureVerification } from "@downloader/Signature.js";
 
 const execGit = (args: string[]) =>
   execFileAsync("git", args, {
@@ -169,58 +169,64 @@ export class DownloadResolver {
     url = parseUrl(url);
     branch = branchSchema.parse(branch);
 
-    return withSerializedWork(name, async () => {
-      const repoPath = path.join(ModuleRoot, name);
-      const gitFolder = path.join(repoPath, ".git");
+    return withSerializedWork(name, () => this.#installRepo(name, url, branch));
+  }
 
-      if (await this._exists(repoPath)) {
-        if (!(await this._exists(gitFolder))) {
-          container.logger?.warn?.(
-            `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
-          );
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-        }
-      }
+  async #installRepo(
+    name: string,
+    url: string,
+    branch: string,
+  ): Promise<AddRepoResult> {
+    const repoPath = path.join(ModuleRoot, name);
+    const gitFolder = path.join(repoPath, ".git");
 
-      const isExisting =
-        (await this._exists(repoPath)) && (await this._exists(gitFolder));
-
-      if (isExisting) {
-        const inDb = await container.db?.downloader?.readDownloaderRepo(name);
-        if (inDb) {
-          const sha = await this._getHeadSha(repoPath);
-          throw new RepoAlreadyInstalledError(name, sha);
-        }
-        container.logger?.info?.(
-          `[Downloader] ${name} exists on disk but is not registered in DB. Re-registering...`,
+    if (await this._exists(repoPath)) {
+      if (!(await this._exists(gitFolder))) {
+        container.logger?.warn?.(
+          `[Downloader] ${name} exists at ${repoPath} but is not a valid git repository. Cleaning up...`,
         );
-        const sha = await this._getHeadSha(repoPath);
-        const repoInfo = await this._readRepoInfo(repoPath);
-        return { sha, signedBy: null, signatureWarning: null, repoInfo };
-      }
-
-      container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
-      await fs.mkdir(ModuleRoot, { recursive: true });
-      const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
-      await execGit(cloneArgs).catch(async () => {
         await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-        throw new Error("Git clone failed");
-      });
-
-      const sha = await this._getHeadSha(repoPath);
-
-      if (sha) {
-        try {
-          const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, sha);
-          return { sha, signedBy, signatureWarning, repoInfo: await this._readRepoInfo(repoPath) };
-        } catch (err) {
-          await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
-          throw err;
-        }
       }
+    }
 
-      return { sha, signedBy: null, signatureWarning: null, repoInfo: await this._readRepoInfo(repoPath) };
+    const isExisting =
+      (await this._exists(repoPath)) && (await this._exists(gitFolder));
+
+    if (isExisting) {
+      const inDb = await container.db?.downloader?.readDownloaderRepo(name);
+      if (inDb) {
+        const sha = await this._getHeadSha(repoPath);
+        throw new RepoAlreadyInstalledError(name, sha);
+      }
+      container.logger?.info?.(
+        `[Downloader] ${name} exists on disk but is not registered in DB. Re-registering...`,
+      );
+      const sha = await this._getHeadSha(repoPath);
+      const repoInfo = await this._readRepoInfo(repoPath);
+      return { sha, signedBy: null, signatureWarning: null, repoInfo };
+    }
+
+    container.logger?.info?.(`[Downloader] Cloning repo: ${url}`);
+    await fs.mkdir(ModuleRoot, { recursive: true });
+    const cloneArgs = buildGitCloneArgs(branch, url, repoPath);
+    await execGit(cloneArgs).catch(async () => {
+      await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+      throw new Error("Git clone failed");
     });
+
+    const sha = await this._getHeadSha(repoPath);
+
+    if (sha) {
+      try {
+        const { signedBy, signatureWarning } = await this._checkSignaturePolicy(repoPath, sha);
+        return { sha, signedBy, signatureWarning, repoInfo: await this._readRepoInfo(repoPath) };
+      } catch (err) {
+        await fs.rm(repoPath, { recursive: true, force: true }).catch(() => { });
+        throw err;
+      }
+    }
+
+    return { sha, signedBy: null, signatureWarning: null, repoInfo: await this._readRepoInfo(repoPath) };
   }
 
   public async updateRepo(
@@ -242,7 +248,7 @@ export class DownloadResolver {
         container.logger?.info?.(
           `[Downloader] Repository ${name} tracked in DB but missing from disk. Auto-restoring clone...`,
         );
-        const added = await this.addRepo(name, url, branch);
+        const added = await this.#installRepo(name, url, branch);
         return {
           oldSha: null,
           newSha: added.sha ?? "",

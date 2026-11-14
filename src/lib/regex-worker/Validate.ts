@@ -1,4 +1,4 @@
-import { getRegexProbeWorker } from "#src/lib/regex-worker/Handler.js";
+import { getRegexProbeWorker } from "@lib/regex-worker/Handler.js";
 
 export const MaxRegexLength = 256;
 

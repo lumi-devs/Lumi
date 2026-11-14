@@ -13,8 +13,8 @@ await api.kv.del(userId, "nickname");
 ```
 
 `set` takes an optional `{ ttlMs }` - expired rows read as missing and
-are swept by `purgeExpiredModuleData`. Below this, `services.valkey` is
-raw Valkey for hot ephemeral state (cooldowns, windows, locks).
+are swept by `purgeExpiredModuleData`. Below this, `services.redis` is
+raw Redis for hot ephemeral state (cooldowns, windows, locks).
 
 ## Module files
 

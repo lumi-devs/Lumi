@@ -1,7 +1,7 @@
-import type { Container } from "#src/lib/Services.js";
-import { isHexColor } from "#src/lib/utilities/MessageContent.js";
-import { isSnowflakeId } from "#src/lib/utilities/Snowflakes.js";
-import type { MessageDocumentV2 } from "#src/contracts/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { isHexColor } from "@utilities/MessageContent.js";
+import { isSnowflakeId } from "@utilities/Snowflakes.js";
+import type { MessageDocumentV2 } from "@contracts/Index.ts";
 
 export type ReactionRoleMode = "buttons" | "select" | "reactions";
 
@@ -38,7 +38,6 @@ export interface ReactionRoleMenu {
 }
 
 const ReactionRoleLimits = {
-  maxMenus: 25,
   titleMin: 1,
   titleMax: 100,
   descriptionMax: 1000,

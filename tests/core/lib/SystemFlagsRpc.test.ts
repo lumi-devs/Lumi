@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { FeatureFlagRepository } from "#src/lib/prisma/repositories/FeatureFlagRepository.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { FeatureFlagRepository } from "@db/repositories/FeatureFlagRepository.js";
 import { createMockPrismaClient } from "../mocks/Prisma.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
 const BOT_OWNER_ID = "111111111111111111";
 const INTRUDER_ID = "333333333333333333";
@@ -31,15 +32,12 @@ describe("system.flags RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-    };
+    const redis = createMemoryRedis();
 
     const db = {} as any;
     db.featureFlags = new FeatureFlagRepository(
       prisma as any,
-      valkey as any,
+      redis as any,
       container.logger,
       db,
     );

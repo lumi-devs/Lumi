@@ -12,9 +12,9 @@ and also compiles the `lumi` and `lumi-setup` binaries to `/usr/local/bin`.
 
 ## Compose services
 
-Default (`docker compose up -d`): `postgres`, `valkey`, `migrate` (one-shot
+Default (`docker compose up -d`): `postgres`, `redis`, `migrate` (one-shot
 `prisma migrate deploy`, exits), `bot` (container `lumi-bot`, waits on
-`migrate` plus healthy `postgres`/`valkey`).
+`migrate` plus healthy `postgres`/`redis`).
 
 Opt-in profiles:
 

@@ -1,7 +1,7 @@
-import { type Container } from "#src/lib/Services.js";
+import { type Container } from "@lib/Services.js";
 import type { ModerationCase } from "@prisma/client";
-import type { WarnDecayPayload } from "#src/modules/mod/tasks/WarnDecay.js";
-import { decrementWarnCounts } from "#src/modules/mod/services/Thresholds.js";
+import type { WarnDecayPayload } from "@modules/mod/tasks/WarnDecay.js";
+import { decrementWarnCounts } from "@modules/mod/services/Thresholds.js";
 
 export async function handleWarnDecayFire(
   services: Container,

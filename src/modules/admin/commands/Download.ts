@@ -1,29 +1,24 @@
-import type { Container } from "#src/lib/Services.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
+import { getUtility } from "@module-system/Utility.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { respondWithChoices } from "#src/lib/utilities/Autocomplete.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { respondWithChoices } from "@utilities/Autocomplete.js";
 import {
   installedModuleChoices,
   repoModuleChoices,
   repoNameChoices,
-} from "#src/modules/admin/services/DownloaderAutocomplete.js";
+} from "@modules/admin/services/DownloaderAutocomplete.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import { errorFrom } from "#src/lib/utilities/Errors.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-
-function downloaderService(): DownloaderUtility {
-  return getUtility("downloader");
-}
+import { makeInfoCard } from "@ui/Cards.js";
+import { componentEmoji } from "@ui/Panels.js";
+import { errorFrom } from "@utilities/Errors.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
 
 async function panel(ctx: CommandContext): Promise<void> {
   const t = await ctx.fetchT();
@@ -58,7 +53,7 @@ async function install(ctx: CommandContext): Promise<void> {
   );
 
   try {
-    await downloaderService().installModule(
+    await getUtility("downloader").installModule(
       ctx.services,
       repoName,
       moduleName,
@@ -93,7 +88,7 @@ async function uninstall(ctx: CommandContext): Promise<void> {
   );
 
   try {
-    await downloaderService().uninstallModule(ctx.services, moduleName);
+    await getUtility("downloader").uninstallModule(ctx.services, moduleName);
     ctx.services.logger.info(
       `[Download] Uninstalled ${moduleName} by ${ctx.user.tag}`,
     );
@@ -134,7 +129,7 @@ async function rollback(ctx: CommandContext): Promise<void> {
   );
 
   try {
-    const result = await downloaderService().rollbackModule(
+    const result = await getUtility("downloader").rollbackModule(
       ctx.services,
       moduleName,
       revision,
@@ -253,7 +248,7 @@ export const downloadDef: CommandDef = {
     if (focused.name === "repo") {
       return respondWithChoices(
         interaction,
-        await repoNameChoices(services, downloaderService(), focused.value),
+        await repoNameChoices(services, getUtility("downloader"), focused.value),
       );
     }
 
@@ -265,7 +260,7 @@ export const downloadDef: CommandDef = {
         interaction,
         await repoModuleChoices(
           services,
-          downloaderService(),
+          getUtility("downloader"),
           interaction,
           "repo",
           focused.value,
@@ -275,7 +270,7 @@ export const downloadDef: CommandDef = {
 
     return respondWithChoices(
       interaction,
-      await installedModuleChoices(services, downloaderService(), focused.value),
+      await installedModuleChoices(services, getUtility("downloader"), focused.value),
     );
   },
 };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+import { container } from "@lib/Services.js";
+import { runModerationAction } from "@modules/mod/services/RunModerationAction.js";
 
 Object.assign(container, {
   logger: {
@@ -8,21 +8,21 @@ Object.assign(container, {
   },
 });
 
-vi.mock("#lib/api/moderation/ModLog.js", () => ({
+vi.mock("@api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn(),
 }));
 
-vi.mock("#src/modules/mod/services/Helpers.js", () => ({
+vi.mock("@modules/mod/services/Helpers.js", () => ({
   scheduleCaseLift: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#src/modules/mod/services/AppealDm.js", () => ({
+vi.mock("@modules/mod/services/AppealDm.js", () => ({
   sendAppealLinkDm: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
-import { scheduleCaseLift } from "#src/modules/mod/services/Helpers.js";
-import { sendAppealLinkDm } from "#src/modules/mod/services/AppealDm.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
+import { scheduleCaseLift } from "@modules/mod/services/Helpers.js";
+import { sendAppealLinkDm } from "@modules/mod/services/AppealDm.js";
 
 describe("runModerationAction", () => {
   const mockCase: any = { id: 1, caseNumber: 5, expiresAt: null };

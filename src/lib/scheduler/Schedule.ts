@@ -1,7 +1,7 @@
 import type { JobsOptions } from "bullmq";
-import { container } from "#src/lib/Services.js";
-import type { ScheduledTasks } from "#src/lib/types/Common.js";
-import { wrapWithTraceContext } from "#src/lib/scheduler/Otel.js";
+import { container } from "@lib/Services.js";
+import type { ScheduledTasks } from "@lib/types/Common.js";
+import { wrapWithTraceContext } from "@scheduler/Otel.js";
 
 export const QueuePriority = {
   CRITICAL: 1,

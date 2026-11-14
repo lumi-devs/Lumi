@@ -14,7 +14,7 @@ entry per subcommand in `handlers` plus `defaultSub`.
 ## 2. The `CommandDef` shape
 
 ```ts
-import type { CommandDef } from "@lumi/lib/commands/command-def.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 
 export const sayDef: CommandDef = {
   name: "say",
@@ -60,18 +60,18 @@ builders + a direct send.
 
 Set `autocomplete: async (services, interaction) => ...` on the def and funnel
 through `filterAutocompleteChoices` + `respondWithChoices`
-(`@lumi/lib/utilities/autocomplete.js`) — never `interaction.respond` directly.
+(`@utilities/Autocomplete.js`) — never `interaction.respond` directly.
 See `agents/domains/autocomplete.md`.
 
 ## 5. i18n
 
-`applyLocalizedBuilder` from `@lumi/lib/i18n/index.js` for command/option
+`applyLocalizedBuilder` from `@i18n/Index.ts.js` for command/option
 name/description (single `en-US` locale today — just add the key there, no
 mirror files). Runtime reply text via bound `t(...)`. See `i18n.md`.
 
 ## 6. Tests
 
 Per `testing.md`: `packages/core/tests/modules/<module>/`. Stub `container`
-fields directly (`db`, `valkey`, `logger` as `vi.fn()`s) rather than live
+fields directly (`db`, `redis`, `logger` as `vi.fn()`s) rather than live
 services; one `it` per behavior. Thin commands are best tested one layer down,
 on the helper they call.

@@ -1,10 +1,10 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import { CommandContext } from "@commands/Context.js";
 import {
   getServerLockState,
   setServerLockState,
-} from "#src/modules/admin/services/ServerLock.js";
+} from "@lib/operations/ServerLock.js";
 
 export const serverlockDef: CommandDef = {
   name: "serverlock",

@@ -1,4 +1,4 @@
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 
 export class DownloaderRepository extends Repository {
   public readDownloaderRepo(name: string) {

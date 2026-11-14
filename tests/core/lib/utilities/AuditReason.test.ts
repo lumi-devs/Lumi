@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { User } from "discord.js";
-import { formatAuditReason } from "#lib/utilities/AuditReason.js";
+import { formatAuditReason } from "@utilities/AuditReason.js";
 
 const actor = { tag: "mod#0001", id: "123456789012345678" } as User;
 const PREFIX_LEN = `[${actor.tag} | ${actor.id}] `.length;

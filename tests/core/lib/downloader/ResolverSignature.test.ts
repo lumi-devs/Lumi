@@ -3,13 +3,13 @@ import { promises as fs } from "node:fs";
 import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   DownloadResolver,
   ModuleRoot,
   AddonModulesRoot,
   AddonSignatureRejectedError,
-} from "#src/lib/downloader/Resolver.js";
+} from "@downloader/Resolver.js";
 
 function hasSshKeygen(): boolean {
   try {
@@ -50,7 +50,7 @@ async function writeModuleInfo(moduleDir: string, version: string) {
   );
   await fs.writeFile(
     path.join(moduleDir, "Index.ts"),
-    `import { defineModule } from "@lumi-devs/lumi/module";\nexport const meta = defineModule({ name: "${name}" });\n`,
+    `import { defineModule } from "@lumi/module";\nexport const meta = defineModule({ name: "${name}" });\n`,
   );
 }
 

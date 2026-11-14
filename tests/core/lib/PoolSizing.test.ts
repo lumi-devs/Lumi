@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "bun:test";
-import { getShardCount, resolvePgPoolSize } from "#lib/Env.js";
+import { getShardCount, resolvePgPoolSize } from "@lib/Env.js";
 
 const KEYS = ["SHARD_COUNT", "SHARDS", "POSTGRES_POOL_MAX", "POSTGRES_POOL_TOTAL"];
 let saved: Record<string, string | undefined>;

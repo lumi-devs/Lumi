@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { FilterMessageListener } from "#src/modules/filter/listeners/MessageCreate.js";
-import { container } from "#src/lib/Services.js";
-import { getUtility, tryGetUtility } from "#src/lib/module-system/Utility.js";
-import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
+import { FilterMessageListener } from "@modules/filter/listeners/MessageCreate.js";
+import { container } from "@lib/Services.js";
+import { getUtility, tryGetUtility } from "@module-system/Utility.js";
+import { deleteMessageLater } from "@utilities/TemporaryMessage.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/TemporaryMessage.js", () => ({
+vi.mock("@utilities/TemporaryMessage.js", () => ({
   deleteMessageLater: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string, _opts?: any) => {
     if (key === "filter:defaultWarnMessage") return "Default warning for {user}: {reason}";
     return key;

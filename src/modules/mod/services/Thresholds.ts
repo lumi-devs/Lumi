@@ -1,17 +1,17 @@
-import type { Container } from "#src/lib/Services.js";
-import { createMemberBatcher } from "#src/lib/client/MemberBatcher.js";
+import type { Container } from "@lib/Services.js";
+import { createMemberBatcher } from "@lib/client/MemberBatcher.js";
 import type { Guild, GuildMember } from "discord.js";
-import {pipelineBySlot} from "#src/lib/valkey/Cluster.js";
-import { tryParseJSON } from "#src/shared/Index.ts";
-import { type WarnThresholdAction } from "#src/contracts/rpc/Index.ts";
-import { Time } from "#src/shared/Index.ts";
-import { thresholdKey } from "#src/modules/mod/data/ThresholdRules.js";
-import { BanAction } from "#src/modules/mod/services/actions/BanAction.js";
-import { MuteAction } from "#src/modules/mod/services/actions/MuteAction.js";
-import { KickAction } from "#src/modules/mod/services/actions/KickAction.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { VoiceMuteAction } from "#src/modules/mod/services/actions/VoiceMuteAction.js";
-import { isImmuneToAutomatedAction } from "#src/lib/api/moderation/Immunity.js";
+import {pipelineBySlot} from "@redis/Cluster.js";
+import { tryParseJSON } from "@shared/Index.ts";
+import { type WarnThresholdAction } from "@contracts/rpc/Index.ts";
+import { Time } from "@shared/Index.ts";
+import { thresholdKey } from "@modules/mod/data/ThresholdRules.js";
+import { BanAction } from "@modules/mod/services/actions/BanAction.js";
+import { MuteAction } from "@modules/mod/services/actions/MuteAction.js";
+import { KickAction } from "@modules/mod/services/actions/KickAction.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { VoiceMuteAction } from "@modules/mod/services/actions/VoiceMuteAction.js";
+import { isImmuneToAutomatedAction } from "@api/moderation/Immunity.js";
 
 type ThresholdAction = WarnThresholdAction;
 
@@ -61,7 +61,7 @@ export async function getThresholds(
   container: Container,
   guildId: string,
 ): Promise<WarnThresholds> {
-  const cached = await container.valkey.get(thresholdKey(guildId));
+  const cached = await container.redis.get(thresholdKey(guildId));
   if (cached) {
     const parsedCache = tryParseJSON(cached) as WarnThresholds | null;
     if (parsedCache) return parsedCache;
@@ -76,7 +76,7 @@ export async function getThresholds(
     };
   }
 
-  await container.valkey.setex(
+  await container.redis.setex(
     thresholdKey(guildId),
     ThresholdTtl,
     JSON.stringify(parsed),
@@ -92,7 +92,7 @@ export async function incrementWarnCount(
   userId: string,
 ): Promise<number> {
   const key = warnCountKey(guildId, userId);
-  const exists = await container.valkey.exists(key);
+  const exists = await container.redis.exists(key);
 
   if (!exists) {
     const count = await container.db.moderation.countModerationCases(
@@ -100,16 +100,16 @@ export async function incrementWarnCount(
       userId,
       "warn",
     );
-    await container.valkey.set(key, String(count), "EX", WarnCountTtl);
+    await container.redis.set(key, String(count), "EX", WarnCountTtl);
     return count;
   }
 
-  const pipe = container.valkey.pipeline();
+  const pipe = container.redis.pipeline();
   pipe.incr(key);
   pipe.expire(key, WarnCountTtl);
   const results = await pipe.exec();
   if (!results || results[0]?.[0]) {
-    container.logger.error("[Thresholds] Valkey pipeline execution failed:", results?.[0]?.[0]);
+    container.logger.error("[Thresholds] Redis pipeline execution failed:", results?.[0]?.[0]);
     return 0;
   }
   return (results?.[0]?.[1] as number | null) ?? 0;
@@ -123,7 +123,7 @@ export async function decrementWarnCount(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.valkey.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
+  await container.redis.eval(DecrementWarnCountScript, 1, warnCountKey(guildId, userId));
 }
 
 export async function decrementWarnCounts(
@@ -132,7 +132,7 @@ export async function decrementWarnCounts(
 ): Promise<void> {
   if (entries.length === 0) return;
   await pipelineBySlot(
-    container.valkey,
+    container.redis,
     entries,
     ({ guildId, userId }) => warnCountKey(guildId, userId),
     (pipe, { guildId, userId }) => {
@@ -191,7 +191,7 @@ export async function checkThresholds(
   const botUser = container.client.user;
   if (!botUser) return;
 
-  const claimed = await container.valkey.set(
+  const claimed = await container.redis.set(
     thresholdFiredKey(guildId, userId, targetCount),
     "1",
     "EX",

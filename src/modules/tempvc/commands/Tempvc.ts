@@ -1,6 +1,6 @@
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { Container } from "#src/lib/Services.js";
+import type { CommandContext } from "@commands/Context.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   SlashCommandBuilder,
   ChannelType,
@@ -16,17 +16,17 @@ import {
   StringSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { getVcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import { buildPanel } from "#src/modules/tempvc/ui/Panel.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
-import { TempvcMaxGenerators } from "#src/modules/tempvc/Constants.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { getVcRecord } from "@modules/tempvc/data/Tempvc.js";
+import { buildPanel } from "@modules/tempvc/ui/Panel.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
+import { TempvcMaxGenerators } from "@modules/tempvc/Constants.js";
 import {
   makeErrorCard,
   makeInfoCard,
   type CardReply,
-} from "#src/lib/ui/Cards.js";
-import { createStringSelectMenu, createActionButton } from "#src/lib/ui/Panels.js";
+} from "@ui/Cards.js";
+import { createStringSelectMenu, createActionButton } from "@ui/Panels.js";
 
 const DefaultNameTemplate = "{username}'s Channel";
 

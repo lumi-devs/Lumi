@@ -1,4 +1,4 @@
-import type { MessageDocumentV2 } from "#src/contracts/Index.ts";
+import type { MessageDocumentV2 } from "@contracts/Index.ts";
 
 export interface StickyEntry {
   channel_id: string;

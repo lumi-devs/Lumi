@@ -2,36 +2,23 @@
 
 ## Formatting and cards
 
-Never construct `new EmbedBuilder()` in a command. Pure string formatting
-lives in `src/lib/ui/Format.ts` (`pagify`, headers, escapes); code blocks
+Never construct `new EmbedBuilder()` in a command. Code blocks
 and inline code come from `codeBlock` / `inlineCode` in
 `@discordjs/formatters`. Chat-input mentions use
 `chatInputApplicationCommandMention` from the same package.
 embeds come from the card builders in `src/lib/ui/Cards.ts`
 (`makeSuccessCard`, `makeErrorCard`, `makeInfoCard`, `makeWarningCard`,
-`makeListCard`) or the `ctx.reply*` shortcuts. `api.ui` / `api.fmt`
-expose both per guild.
-
-## Antispam
-
-```ts
-const spam = api.spam("join-burst", [{ windowMs: 10_000, limit: 5 }]);
-await spam.stamp(userId);
-await spam.isSpammy(userId);
-```
-
-Valkey-backed sliding windows (`src/lib/utilities/AntiSpam.ts`).
+`makeListCard`) or the `ctx.reply*` shortcuts.
 
 ## Filters
 
-`src/lib/discord/Filters.ts`: URL/invite/mass-mention filters,
-smart-quote normalization, spoiler escaping - the primitives behind the
+`src/lib/discord/Filters.ts`: the URL filter primitives behind the
 filter module's rule engine.
 
 ## Bulk delete
 
 ```ts
-import { massPurge } from "#src/lib/discord/MassPurge.js";
+import { massPurge } from "@discord/MassPurge.js";
 
 const { deleted, scanned } = await massPurge(services, channel, {
   limit: 100,

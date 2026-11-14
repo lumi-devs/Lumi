@@ -1,6 +1,6 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import type { Guild, GuildMember, User } from "discord.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
 
 export const MaxMassTargets = 25;
 

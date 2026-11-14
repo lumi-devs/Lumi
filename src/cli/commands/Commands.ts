@@ -1,10 +1,10 @@
 import path from "node:path";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
-import { commandRegistry, loadCommandDefs } from "#lib/commands/CommandDef.js";
-import { finalizeBuilder } from "#lib/commands/CommandDispatch.js";
-import { envParseString, getBotToken, getDevModulePaths } from "#lib/Env.js";
-import { DefaultModuleRoot, walk } from "#src/scripts/GenerateManifests.ts";
+import { commandRegistry, loadCommandDefs } from "@commands/CommandDef.js";
+import { finalizeBuilder } from "@commands/CommandDispatch.js";
+import { envParseString, getBotToken, getDevModulePaths } from "@lib/Env.js";
+import { DefaultModuleRoot, walk } from "@scripts/GenerateManifests.ts";
 
 export const help = `Usage: lumi commands deploy [--guild <id>]
 

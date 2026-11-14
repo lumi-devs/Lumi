@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { buildPermitExplainView } from "#src/modules/admin/ui/Permissions.js";
-import type { PermitTierExplanation } from "#src/lib/api/permissions/PermitResolver.js";
+import { buildPermitExplainView } from "@lib/hub/Permissions.js";
+import type { PermitTierExplanation } from "@api/permissions/PermitResolver.js";
 
 function cardText(card: { components?: unknown }): string {
   return JSON.stringify(card);

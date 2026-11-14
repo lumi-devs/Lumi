@@ -1,8 +1,8 @@
-import { container, type Container } from "#src/lib/Services.js";
-import type { EventBus, BusMessage } from "#src/lib/event-bus/Types.js";
-import type { ScheduledTasks } from "#src/lib/types/Common.js";
-import { taskFireStream, type FireEnvelope } from "#src/lib/scheduler/Bus.js";
-import { extractTraceContext, otelContext } from "#src/observability/Index.ts";
+import { container, type Container } from "@lib/Services.js";
+import type { EventBus, BusMessage } from "@event-bus/Types.js";
+import type { ScheduledTasks } from "@lib/types/Common.js";
+import { taskFireStream, type FireEnvelope } from "@scheduler/Bus.js";
+import { extractTraceContext, otelContext } from "@observability/Index.ts";
 
 export type TaskFireMode = "unicast" | "broadcast";
 

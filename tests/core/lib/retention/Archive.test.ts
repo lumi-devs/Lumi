@@ -6,10 +6,10 @@ import { gunzipSync } from "node:zlib";
 import {
   purgeInBatchesWithArchive,
   writeRetentionArchive,
-} from "#src/lib/Retention.js";
+} from "@lib/Retention.js";
 
-function mockLogger(): import("#src/shared/Index.ts").ILogger {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("#src/shared/Index.ts").ILogger;
+function mockLogger(): import("@shared/Index.ts").ILogger {
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as import("@shared/Index.ts").ILogger;
 }
 
 describe("writeRetentionArchive", () => {

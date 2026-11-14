@@ -1,12 +1,12 @@
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { Container } from "#src/lib/Services.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { Container } from "@lib/Services.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { GuildSettingsUtility } from "#src/modules/admin/utilities/GuildSettingsUtility.js";
-import type { PermissionUtility } from "#src/modules/admin/utilities/PermissionUtility.js";
+} from "@interactions/InteractionDef.js";
+import { getUtility } from "@module-system/Utility.js";
+import type { GuildSettingsUtility } from "@utilities/GuildSettingsUtility.js";
+import type { PermissionUtility } from "@utilities/PermissionUtility.js";
 import {
   accessDenied,
   hasAdminPermit,
@@ -15,20 +15,20 @@ import {
   renderPermissions,
   renderRepoModules,
   renderSettings,
-} from "#src/modules/onboarding/services/HubPanel.js";
-import { buildAutoUpdateSettingsView } from "#src/modules/admin/ui/Addons.js";
+} from "@modules/onboarding/services/HubPanel.js";
+import { buildAutoUpdateSettingsView } from "@lib/hub/Addons.js";
 import {
   buildPermitAssignTargetView,
   type PermitKind,
-} from "#src/modules/admin/ui/Permissions.js";
-import { ephemeralCard, makeErrorCard, makeWarningCard } from "#src/lib/ui/Cards.js";
+} from "@lib/hub/Permissions.js";
+import { ephemeralCard, makeErrorCard, makeWarningCard } from "@ui/Cards.js";
 import {
   HubAddonModActionId,
   HubPermitAssignId,
   HubPermitExplainNodeId,
   HubPermitPickId,
-} from "#src/modules/core/Constants.js";
-import { UserError } from "#src/shared/Index.ts";
+} from "@interactions/ModuleIds.js";
+import { UserError } from "@shared/Index.ts";
 import type { AnySelectMenuInteraction } from "discord.js";
 
 const ownerOnly = () =>

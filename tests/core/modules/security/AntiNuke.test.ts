@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   loadAntiNukeConfig,
   recordAction,
   isExempt,
   respond,
-} from "#src/modules/security/services/AntiNuke.js";
-import { QuarantineAction } from "#src/lib/api/moderation/Quarantine.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
+} from "@modules/security/services/AntiNuke.js";
+import { QuarantineAction } from "@api/moderation/Quarantine.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
 
-vi.mock("#lib/api/moderation/Quarantine.js", () => ({
+vi.mock("@api/moderation/Quarantine.js", () => ({
   QuarantineAction: { apply: vi.fn() },
 }));
 
-vi.mock("#lib/api/moderation/ModLog.js", () => ({
+vi.mock("@api/moderation/ModLog.js", () => ({
   logToChannel: vi.fn(),
 }));
 
@@ -52,16 +52,16 @@ function makeMultiMock(count: number) {
 }
 
 function setContainer(overrides: {
-  valkey?: Record<string, unknown>;
+  redis?: Record<string, unknown>;
   db?: Record<string, unknown>;
 }) {
-  (container as any).valkey = {
+  (container as any).redis = {
     incr: vi.fn(),
     expire: vi.fn(),
     set: vi.fn(),
     exists: vi.fn().mockResolvedValue(0),
     multi: vi.fn(() => makeMultiMock(1)),
-    ...overrides.valkey,
+    ...overrides.redis,
   };
   (container as any).db = {
     config: { getModuleConfig: vi.fn().mockResolvedValue(null) },
@@ -153,7 +153,7 @@ describe("recordAction", () => {
   it("stays silent under the limit and sets the window expiry once", async () => {
     const multiMock = makeMultiMock(1);
     const multi = vi.fn(() => multiMock);
-    setContainer({ valkey: { multi } });
+    setContainer({ redis: { multi } });
 
     const result = await recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBeNull();
@@ -167,7 +167,7 @@ describe("recordAction", () => {
   it("trips once when the limit is exceeded", async () => {
     const multi = vi.fn(() => makeMultiMock(4));
     const set = vi.fn().mockResolvedValue("OK");
-    setContainer({ valkey: { multi, set } });
+    setContainer({ redis: { multi, set } });
 
     const result = await recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBe(4);
@@ -183,7 +183,7 @@ describe("recordAction", () => {
   it("does not re-trip while the cooldown key exists", async () => {
     const multi = vi.fn(() => makeMultiMock(5));
     const set = vi.fn().mockResolvedValue(null);
-    setContainer({ valkey: { multi, set } });
+    setContainer({ redis: { multi, set } });
 
     const result = await recordAction(guild, "u1", "ban", baseConfig);
     expect(result).toBeNull();

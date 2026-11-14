@@ -4,8 +4,8 @@ import {
   clearInteractionDefsForTest,
   defineInteraction,
   interactionDefs,
-} from "#src/lib/interactions/InteractionDef.js";
-import { dispatchInteraction } from "#src/lib/interactions/InteractionDispatch.js";
+} from "@interactions/InteractionDef.js";
+import { dispatchInteraction } from "@interactions/InteractionDispatch.js";
 
 function fakeInteraction(kind: "button" | "select", customId: string) {
   return {

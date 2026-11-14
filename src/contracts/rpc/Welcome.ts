@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
 
 export const WelcomeTestKinds = ["welcome", "goodbye"] as const;
 

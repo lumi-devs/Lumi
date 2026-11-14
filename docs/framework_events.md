@@ -5,7 +5,7 @@
 One file per event under `listeners/`, auto-attached on module load:
 
 ```ts
-import { defineListener } from "#lib/listeners/ListenerDef.js";
+import { defineListener } from "@lumi/listeners";
 
 export const onJoin = defineListener({
   event: "guildMemberAdd",

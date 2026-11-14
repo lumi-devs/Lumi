@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { logToChannel } from "#src/lib/api/moderation/ModLog.js";
+import type { Container } from "@lib/Services.js";
+import { logToChannel } from "@api/moderation/ModLog.js";
 import type { User } from "discord.js";
 
 export interface CaseTypeDef {
@@ -24,7 +24,7 @@ export function registerCaseTypes(...defs: CaseTypeDef[]): void {
   }
 }
 
-export function registeredCaseType(name: string): CaseTypeDef | undefined {
+function registeredCaseType(name: string): CaseTypeDef | undefined {
   return registry.get(name.toLowerCase());
 }
 

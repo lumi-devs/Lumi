@@ -1,7 +1,7 @@
-import { container, type Container } from "#src/lib/Services.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
-import { fieldsFromSchema, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
-import type { ModuleDefinition, ModuleMeta } from "#src/lib/module-system/Meta.js";
+import { container, type Container } from "@lib/Services.js";
+import { LumiInfo } from "@utilities/Version.js";
+import { fieldsFromSchema, type ConfigField } from "@module-system/ConfigSchema.js";
+import type { ModuleDefinition, ModuleMeta } from "@module-system/Meta.js";
 
 export interface ModuleHooks {
   onLoad?: (services: Container) => unknown;

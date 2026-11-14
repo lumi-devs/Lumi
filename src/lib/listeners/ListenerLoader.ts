@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomUUIDv7 } from "bun";
 import type { Client } from "discord.js";
-import { runWithContext } from "#src/observability/Index.ts";
-import type { Container } from "#src/lib/Services.js";
+import { runWithContext } from "@observability/Index.ts";
+import type { Container } from "@lib/Services.js";
 import {
   addListenerDef,
   type ListenerDef,
-} from "#src/lib/listeners/ListenerDef.js";
+} from "@listeners/ListenerDef.js";
 
 interface Emitter {
   on(event: string | symbol, listener: (...args: never[]) => unknown): unknown;

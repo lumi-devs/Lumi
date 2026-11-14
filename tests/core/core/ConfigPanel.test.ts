@@ -1,14 +1,14 @@
-import { FieldType, type ConfigField } from "#src/lib/module-system/ConfigSchema.js";
-import type { ModuleMeta } from "#src/lib/module-system/Meta.js";
+import { FieldType, type ConfigField } from "@module-system/ConfigSchema.js";
+import type { ModuleMeta } from "@module-system/Meta.js";
 import {
   FeaturesPerPage,
   FieldsPerPage,
   buildFeatureDetailView,
   buildFeatureListView,
   buildFieldEditView,
-} from "#src/modules/admin/ui/Modules.js";
-import type { CardReply } from "#src/lib/ui/Cards.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+} from "@lib/hub/Modules.js";
+import type { CardReply } from "@ui/Cards.js";
+import { resolveCardColor } from "@ui/Palette.js";
 import { describe, expect, it } from "bun:test";
 
 type JsonNode = Record<string, any>;

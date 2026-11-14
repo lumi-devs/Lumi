@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ChannelType, PermissionFlagsBits } from "discord.js";
 import { Routes } from "discord-api-types/v10";
-import { enterPanic, revertPanic } from "#src/modules/security/services/Panic.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { enterPanic, revertPanic } from "@modules/security/services/Panic.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 const SendMessagesBit = PermissionFlagsBits.SendMessages.toString();
@@ -16,14 +17,7 @@ function setContainer(overrides: {
   discordRest?: FakeDiscordRestPort;
 }) {
   (container as any).discordRest = overrides.discordRest ?? new FakeDiscordRestPort();
-  (container as any).valkey = {
-    incr: vi.fn(),
-    expire: vi.fn(),
-    set: vi.fn(),
-    exists: vi.fn().mockResolvedValue(0),
-    get: vi.fn().mockResolvedValue(null),
-    setex: vi.fn(),
-  };
+  (container as any).redis = createMemoryRedis();
   (container as any).db = {
     ...overrides.db,
   };
@@ -34,7 +28,7 @@ function setContainer(overrides: {
       put: overrides.restPut ?? vi.fn().mockResolvedValue(undefined),
     },
   };
-  (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn() };
+  (container as any).logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() };
 }
 
 beforeEach(() => {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { runCli } from "#src/cli/Main.js";
+import { runCli } from "@cli/Main.js";
 
 function captureConsole() {
   const logs: string[] = [];

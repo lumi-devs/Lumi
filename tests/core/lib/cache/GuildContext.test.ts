@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { getGuildContext } from "#src/lib/cache/GuildContext.js";
-import { BrandColors } from "#src/lib/ui/Palette.js";
-import { container } from "#src/lib/Services.js";
+import { getGuildContext } from "@cache/GuildContext.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { BrandColors } from "@ui/Palette.js";
+import { container } from "@lib/Services.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 
 describe("getGuildContext", () => {
   let getGuildSettings: any;
@@ -13,6 +15,8 @@ describe("getGuildContext", () => {
     isGuildIgnored = vi.fn();
     getModuleConfig = vi.fn();
 
+    (container as any).redis = createMemoryRedis();
+    repositoryCache.clear();
     (container as any).db = {
       config: { getGuildSettings, getModuleConfig },
       access: { isGuildIgnored },

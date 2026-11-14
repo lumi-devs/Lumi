@@ -1,6 +1,6 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
-import { ModuleName } from "#src/modules/reactionroles/Constants.js";
+import { defineModule } from "@module-system/Module.js";
+import { cfg } from "@module-system/ConfigSchema.js";
+import { ModuleName } from "@modules/reactionroles/Constants.js";
 
 export const reactionRolesModule = defineModule({
   name: ModuleName,

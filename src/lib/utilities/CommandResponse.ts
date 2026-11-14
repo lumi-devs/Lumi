@@ -1,6 +1,6 @@
-import { container, type Container } from "#src/lib/Services.js";
-import { UserError } from "#src/shared/Index.ts";
-import { resolveKey } from "#src/lib/i18n/Index.js";
+import { container, type Container } from "@lib/Services.js";
+import { UserError } from "@shared/Index.ts";
+import { resolveKey } from "@i18n/Index.js";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes } from "discord.js";
 import {
   MessageFlags,
@@ -10,12 +10,12 @@ import {
   type MessageReplyOptions,
 } from "discord.js";
 import { trace, SpanStatusCode } from "@opentelemetry/api";
-import { ephemeralCard, makeErrorCard, type CardReply } from "#src/lib/ui/Cards.js";
-import { errorFrom } from "#src/lib/utilities/Errors.js";
+import { ephemeralCard, makeErrorCard, type CardReply } from "@ui/Cards.js";
+import { errorFrom } from "@utilities/Errors.js";
 import {
   deleteMessageLater,
   deleteReplyLater,
-} from "#src/lib/utilities/TemporaryMessage.js";
+} from "@utilities/TemporaryMessage.js";
 
 export const ErrorTitles: Partial<Record<string, string>> = {
   PermissionDenied: "Permission Denied",

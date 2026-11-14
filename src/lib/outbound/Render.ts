@@ -1,7 +1,7 @@
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Colors } from "discord.js";
-import { isNullish } from "#src/shared/Index.ts";
-import { makeCard, noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { isNullish } from "@shared/Index.ts";
+import { makeCard, noPingCard, type CardReply } from "@ui/Cards.js";
 
 export interface AuditEntry {
   action: string;

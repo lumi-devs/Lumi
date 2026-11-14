@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { CodedRpcError, RpcFailureCodes } from "#src/contracts/rpc/Index.ts";
-import { withIdempotency } from "#src/lib/rpc/Idempotency.js";
-import { createMemoryValkey } from "../mocks/MemoryValkey.js";
+import { container } from "@lib/Services.js";
+import { CodedRpcError, RpcFailureCodes } from "@contracts/rpc/Index.ts";
+import { withIdempotency } from "@rpc/Idempotency.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
 const GUILD_ID = "123456789012345678";
 const TIMEOUT_MS = 10_000;
@@ -10,11 +10,11 @@ const TIMEOUT_MS = 10_000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe("withIdempotency", () => {
-  let valkey: ReturnType<typeof createMemoryValkey>;
+  let redis: ReturnType<typeof createMemoryRedis>;
 
   beforeEach(() => {
-    valkey = createMemoryValkey();
-    (container as any).valkey = valkey;
+    redis = createMemoryRedis();
+    (container as any).redis = redis;
   });
 
   it("runs the handler once and returns its result", async () => {
@@ -108,7 +108,7 @@ describe("withIdempotency", () => {
 
     await withIdempotency("test.action", GUILD_ID, 5_000, { a: 1 }, fn, 2_000);
 
-    expect(valkey.set).toHaveBeenCalledWith(
+    expect(redis.set).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(String),
       "PX",
@@ -124,14 +124,14 @@ describe("withIdempotency", () => {
 
     await withIdempotency("test.action", GUILD_ID, 10, { a: 1 }, fn, 10);
 
-    expect(valkey.pexpire).toHaveBeenCalled();
-    for (const call of valkey.pexpire.mock.calls) {
+    expect(redis.pexpire).toHaveBeenCalled();
+    for (const call of redis.pexpire.mock.calls) {
       expect(call[1]).toBe(20);
     }
 
-    const callsAtCompletion = valkey.pexpire.mock.calls.length;
+    const callsAtCompletion = redis.pexpire.mock.calls.length;
     await sleep(50);
-    expect(valkey.pexpire.mock.calls.length).toBe(callsAtCompletion);
+    expect(redis.pexpire.mock.calls.length).toBe(callsAtCompletion);
   });
 
   it("uses explicit idempotencyKey when provided instead of hashing input", async () => {

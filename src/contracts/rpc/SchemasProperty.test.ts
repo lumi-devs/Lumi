@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import fc from "fast-check";
 import { z } from "zod";
-import { boundedArray, PageSchema, PageSizeSchema, SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+import { boundedArray, PageSchema, PageSizeSchema, SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 describe("SnowflakeSchema (property)", () => {
   it("accepts every digit string of length 17-20", () => {

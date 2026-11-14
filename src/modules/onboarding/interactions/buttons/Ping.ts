@@ -1,17 +1,17 @@
-import { collectPingData } from "#src/modules/onboarding/services/PingCollect.js";
-import type { Container } from "#src/lib/Services.js";
+import { collectPingData } from "@modules/onboarding/services/PingCollect.js";
+import type { Container } from "@lib/Services.js";
 import {
   buildOverviewCard,
   buildDetailCard,
   type PingCategory,
-} from "#src/modules/onboarding/ui/PingCards.js";
+} from "@modules/onboarding/ui/PingCards.js";
 import { MessageFlags, type Interaction } from "discord.js";
 import {
   acknowledge,
   checkSecurity,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import { PingId } from "#src/modules/core/Constants.js";
+} from "@interactions/InteractionDef.js";
+import { PingId } from "@interactions/ModuleIds.js";
 
 export const ping = defineInteraction({
   prefix: PingId.prefix,
@@ -29,7 +29,7 @@ export const ping = defineInteraction({
 
     await acknowledge(interaction);
 
-    const { pingViewStates } = await import("#src/modules/onboarding/commands/Ping.js");
+    const { pingViewStates } = await import("@modules/onboarding/commands/Ping.js");
     pingViewStates.set(userId, category);
 
     const data = await collectPingData(services);

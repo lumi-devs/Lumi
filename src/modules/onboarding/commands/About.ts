@@ -1,4 +1,4 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import {
   type ChatInputCommandInteraction,
   type Message,
@@ -9,15 +9,15 @@ import {
 } from "discord.js";
 import { time, TimestampStyles } from "@discordjs/formatters";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
-import { collectPingData } from "#src/modules/onboarding/services/PingCollect.js";
-import { fmtMB } from "#src/modules/onboarding/ui/PingCards.js";
-import { makeCard } from "#src/lib/ui/Cards.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
+import { createActionButton, buildSafeActionRows } from "@ui/Panels.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { LumiInfo } from "@utilities/Version.js";
+import { collectPingData } from "@modules/onboarding/services/PingCollect.js";
+import { fmtMB } from "@modules/onboarding/ui/PingCards.js";
+import { makeCard } from "@ui/Cards.js";
+import { resolveCardColor } from "@ui/Palette.js";
 
 async function buildAboutCard(
   services: Container,
@@ -51,7 +51,7 @@ async function buildAboutCard(
     `### ⚙️ __${coreArchHeader}__\n` +
       `_Lumi version_ v${LumiInfo.version}\n` +
       `*Bun* v${data.runtime.replace(/^Bun v/, "")} · *discord.js* v${data.djsVersion}\n` +
-      `*PostgreSQL* 18 · *Valkey* v${data.valkeyVersion}`,
+      `*PostgreSQL* 18 · *Redis* v${data.redisVersion}`,
 
     `### 📦 __Codebase__\n` +
       `**${data.codeLines.toLocaleString()}** lines of TypeScript · **${data.modules.length}** modules · **${data.depCount.toLocaleString()}** dependencies\n` +

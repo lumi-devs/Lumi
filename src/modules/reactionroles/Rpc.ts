@@ -1,9 +1,9 @@
-import { clampMessageDocumentV2 } from "#src/contracts/Index.ts";
-import { container } from "#src/lib/Services.js";
-import { reactionrolesRpc } from "#src/contracts/rpc/Index.ts";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
-import type { ReactionRoleMenu } from "#src/modules/reactionroles/data/Reactionroles.js";
+import { clampMessageDocumentV2 } from "@contracts/Index.ts";
+import { container } from "@lib/Services.js";
+import { reactionrolesRpc } from "@contracts/rpc/Index.ts";
+import { getUtility } from "@module-system/Utility.js";
+import { implementRpc } from "@rpc/Implement.js";
+import type { ReactionRoleMenu } from "@modules/reactionroles/data/Reactionroles.js";
 
 function toView(menu: ReactionRoleMenu) {
   return {

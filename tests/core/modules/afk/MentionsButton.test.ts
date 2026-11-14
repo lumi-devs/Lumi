@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import mentionsButton from "#src/modules/afk/interactions/buttons/Mentions.js";
-import { AfkMentionsId } from "#src/modules/afk/Constants.js";
-import { InteractionAccessDeniedError } from "#src/lib/interactions/InteractionDef.js";
+import mentionsButton from "@modules/afk/interactions/buttons/Mentions.js";
+import { AfkMentionsId } from "@modules/afk/Constants.js";
+import { InteractionAccessDeniedError } from "@interactions/InteractionDef.js";
 
-vi.mock("#src/modules/afk/data/Afk.js", () => ({
+vi.mock("@modules/afk/data/Afk.js", () => ({
   getAfkMentions: vi.fn(),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-import { getAfkMentions } from "#src/modules/afk/data/Afk.js";
+import { getAfkMentions } from "@modules/afk/data/Afk.js";
 
 const USER_ID = "111111111111111111";
 

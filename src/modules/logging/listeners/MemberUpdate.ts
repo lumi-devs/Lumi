@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { Colors, type GuildMember, type PartialGuildMember } from "discord.js";
 import { escapeMarkdown, roleMention, userMention } from "@discordjs/formatters";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { isToggleEnabled, sendLog } from "#src/modules/logging/services/Send.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { isToggleEnabled, sendLog } from "@modules/logging/services/Send.js";
 
 export const LoggingMemberUpdateListener = defineListener({
   name: "loggingMemberUpdate",

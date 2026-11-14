@@ -1,4 +1,4 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
+import { defineModule } from "@module-system/Module.js";
 
 export const onboardingModule = defineModule({
   name: "onboarding",

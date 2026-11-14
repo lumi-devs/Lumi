@@ -1,14 +1,14 @@
 
 
-import Valkey, { type RedisOptions } from "iovalkey";
-import { StreamBus, type StreamStats } from "#src/lib/event-bus/StreamBus.js";
-import type { EventBus } from "#src/lib/event-bus/Types.js";
+import Redis, { type RedisOptions } from "ioredis";
+import { StreamBus, type StreamStats } from "@event-bus/StreamBus.js";
+import type { EventBus } from "@event-bus/Types.js";
 
-export type ValkeyOptions = RedisOptions;
+
 
 export interface CreateEventBusOptions {
 
-  valkey?: ValkeyOptions;
+  redis?: RedisOptions;
 
   defaultMaxLen?: number;
   log?: (level: "info" | "warn" | "error", msg: string, meta?: object) => void;
@@ -27,7 +27,7 @@ export interface CreateEventBusOptions {
 export interface OwnedEventBus {
   bus: EventBus;
 
-  publisher: Valkey;
+  publisher: Redis;
 
   close: () => Promise<void>;
 }
@@ -35,13 +35,13 @@ export interface OwnedEventBus {
 export function createEventBus(
   opts: CreateEventBusOptions = {},
 ): OwnedEventBus {
-  const connectionOpts = opts.valkey;
+  const connectionOpts = opts.redis;
   if (!connectionOpts) {
-    throw new Error("createEventBus(): `valkey` options required");
+    throw new Error("createEventBus(): `redis` options required");
   }
 
-  const publisher = new Valkey({ ...connectionOpts, lazyConnect: true });
-  const subscriber = new Valkey({
+  const publisher = new Redis({ ...connectionOpts, lazyConnect: true });
+  const subscriber = new Redis({
     ...connectionOpts,
     lazyConnect: true,
 

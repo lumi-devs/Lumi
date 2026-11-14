@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { z } from "zod";
 import {
   CodedRpcError,
@@ -8,10 +8,10 @@ import {
   type RpcOutputOf,
   type RpcRequest,
   type RpcSliceEntry,
-} from "#src/contracts/rpc/Index.ts";
-import { snowflakeString } from "#src/lib/module-system/ConfigSchema.js";
-import { authorize } from "#src/lib/api/permissions/Authorize.js";
-import { checkGuildManagerRest } from "#src/lib/rpc/DiscordRestLookup.js";
+} from "@contracts/rpc/Index.ts";
+import { snowflakeString } from "@module-system/ConfigSchema.js";
+import { authorize } from "@api/permissions/Authorize.js";
+import { checkGuildManagerRest } from "@rpc/DiscordRestLookup.js";
 
 interface RpcAuthContexts {
   guildManager: { guildId: string; actorId: string };

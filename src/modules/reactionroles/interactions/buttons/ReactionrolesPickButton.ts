@@ -3,14 +3,14 @@ import type {
   GuildMember,
 } from "discord.js";
 import { MessageFlags } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { ReactionRolePickId } from "#src/modules/reactionroles/Constants.js";
-import type { ReactionRolesUtility } from "#src/modules/reactionroles/utilities/ReactionRolesUtility.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { defineInteraction } from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { getUtility } from "@module-system/Utility.js";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@ui/Cards.js";
+import { logError } from "@utilities/Errors.js";
+import { ReactionRolePickId } from "@modules/reactionroles/Constants.js";
+import type { ReactionRolesUtility } from "@modules/reactionroles/utilities/ReactionRolesUtility.js";
 
 export const reactionrolesPickButton = defineInteraction({
   prefix: ReactionRolePickId.prefix,

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { rpcAction, RpcTimeouts } from "#src/contracts/rpc/Define.js";
-import { PageSizeSchema, SnowflakeSchema } from "#src/contracts/rpc/Schemas.js";
+import { rpcAction, RpcTimeouts } from "@contracts/rpc/Define.js";
+import { PageSizeSchema, SnowflakeSchema } from "@contracts/rpc/Schemas.js";
 
 export const economyRpc = {
   "guild.economy.balance": rpcAction<{

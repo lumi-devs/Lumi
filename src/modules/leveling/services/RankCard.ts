@@ -1,5 +1,5 @@
 import type { OverlayOptions } from "sharp";
-import { Semaphore } from "#src/lib/utilities/Concurrency.js";
+import { Semaphore } from "@utilities/Concurrency.js";
 
 const avatarFetch = new Semaphore(4);
 const avatarCache = new Map<string, { buf: Buffer; expires: number }>();

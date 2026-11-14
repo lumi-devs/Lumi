@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { ILogger } from "#src/shared/Index.ts";
+import type { ILogger } from "@shared/Index.ts";
 
 export const RetentionBatchSize = 1000;
 

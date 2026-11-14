@@ -8,7 +8,7 @@ import {
   ChannelType,
   type APIButtonComponentWithCustomId,
 } from "discord.js";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   createUserSelectMenu,
   createRoleSelectMenu,
@@ -23,12 +23,12 @@ import {
   navRow,
   pageFooter,
   HubTabs,
-} from "#src/lib/ui/Panels.js";
-import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "#src/lib/ui/Layout.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { BrandColors } from "#src/lib/ui/Palette.js";
-import { makeSuccessCard } from "#src/lib/ui/Cards.js";
-import { createStringSelectMenu as createStringSelectFromIndex } from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
+import { formatBreadcrumbHeader, formatStatusBadge, formatSubtitle, formatBreadcrumbs } from "@ui/Layout.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { BrandColors } from "@ui/Palette.js";
+import { makeSuccessCard } from "@ui/Cards.js";
+import { createStringSelectMenu as createStringSelectFromIndex } from "@ui/Panels.js";
 
 describe("Panel & Card Utility Standardization", () => {
   beforeEach(() => {

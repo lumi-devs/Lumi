@@ -14,13 +14,13 @@ never raw Prisma from a module. (`services.prisma.$connect()` /
 
 The addon validator errors on the removed class API (`@DefineModule`/
 `BaseCommand`/`Module`, `validate.ts:477`) — addons never touch the database
-directly at all; persistence is `lumi/kv` / `lumi/valkey` over host RPC.
+directly at all; persistence is `lumi/kv` / `lumi/redis` over host RPC.
 
 ## Repository pattern
 
 One class per domain under `packages/core/src/lib/prisma/repositories/`,
 extending the abstract `Repository` base (`Repository.ts:7`). Constructor takes
-`(prisma, valkey, logger, db, reader?)` — `reader` is an optional replica
+`(prisma, redis, logger, db, reader?)` — `reader` is an optional replica
 client for lag-tolerant fleet sweeps (used by `ModerationRepository` and
 `AfkRepository`, `database-service.ts:101,108`).
 
@@ -33,7 +33,7 @@ directly — see `EconomyRepository.applyMutation`
 (`modules/economy/data/EconomyRepository.ts:74`).
 
 `AuditRepository` never hits Postgres on the hot path: `queueAuditLog`
-(`AuditRepository.ts:73`) XADDs into Valkey Streams (`auditLogsQueue` bucket
+(`AuditRepository.ts:73`) XADDs into Redis Streams (`auditLogsQueue` bucket
 picked once per process, `:48,75`), and `flushAuditLogsToPostgres` (`:89`)
 drains them, reclaiming delivered-but-unacked entries first. Malformed payloads
 land in `droppedIds` (`:144`) rather than failing the batch. Read it in full
@@ -63,8 +63,8 @@ that module's own keys can't collide — copy that pattern past one channel key.
 ## `InvalidationBus` (`container.invalidation`)
 
 Thin `InvalidationBus extends InfraInvalidationBus`
-(`packages/core/src/lib/valkey/buses.ts:12`, `invalidate` override at `:21`);
-the real implementation is `packages/infrastructure/src/cache/valkey.ts`
+(`packages/core/src/lib/redis/buses.ts:12`, `invalidate` override at `:21`);
+the real implementation is `packages/infrastructure/src/cache/redis.ts`
 (channel `"lumi:cache:invalidate"`, `:317`). `invalidate(...keys)` (`:364`)
 deletes locally and publishes so every shard evicts too — this is what makes
 `getOrSet` safe across the fleet. Lifecycle `start`/`stop`/`close`

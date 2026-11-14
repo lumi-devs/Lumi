@@ -5,10 +5,10 @@ import {
   resolveAuditRetentionDays,
   resolveConfigHistoryRetentionDays,
   resolveModerationRetentionDays,
-} from "#src/lib/Env.js";
-import { evictGuildValkeyState } from "#src/lib/valkey/GuildEviction.js";
-import { DefaultClusterName, readClusterShards } from "#src/lib/sharding/ShardTelemetry.js";
-import { type Container } from "#src/lib/Services.js";
+} from "@lib/Env.js";
+import { evictGuildRedisState } from "@redis/GuildEviction.js";
+import { DefaultClusterName, readClusterShards } from "@lib/sharding/ShardTelemetry.js";
+import { type Container } from "@lib/Services.js";
 
 function daysAgo(days: number): Date {
   const date = new Date();
@@ -56,7 +56,7 @@ export async function handleDataRetentionFire(services: Container): Promise<void
 async function purgeDepartedGuilds(services: Container, cutoffDate: Date): Promise<number | null> {
   const clusterName = getClusterName() ?? DefaultClusterName;
   const { missingShardIds, shards, shardCount } = await readClusterShards({
-    valkey: services.valkey,
+    redis: services.redis,
     clusterName,
   });
 
@@ -70,8 +70,8 @@ async function purgeDepartedGuilds(services: Container, cutoffDate: Date): Promi
   const purgedGuildIds = await services.db.purgeDepartedGuilds(cutoffDate);
 
   for (const guildId of purgedGuildIds) {
-    await evictGuildValkeyState(
-      services.valkey,
+    await evictGuildRedisState(
+      services.redis,
       services.invalidation,
       services.logger,
       guildId,

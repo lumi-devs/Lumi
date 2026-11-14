@@ -1,11 +1,11 @@
 import type { Guild, GuildModuleConfig, Prisma } from "@prisma/client";
-import { type ILogger } from "#src/shared/Index.ts";
-import type {ValkeyClient} from "#src/lib/valkey/Cluster.js";
-import { ValkeyKeys, ValkeyTTL } from "#src/lib/valkey/Store.js";
-import type { DatabaseClient } from "#src/lib/prisma/Client.js";
-import type { DatabaseService } from "#src/lib/prisma/DatabaseService.js";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
-import type { ConfigHistoryRepository } from "#src/lib/prisma/repositories/ConfigHistoryRepository.js";
+import { type ILogger } from "@shared/Index.ts";
+import type {RedisClient} from "@redis/Cluster.js";
+import { RedisKeys, RedisTTL } from "@redis/Store.js";
+import type { DatabaseClient } from "@db/Client.js";
+import type { DatabaseService } from "@db/DatabaseService.js";
+import { Repository } from "@db/repositories/Repository.js";
+import type { ConfigHistoryRepository } from "@db/repositories/ConfigHistoryRepository.js";
 
 export type ScopedConfigScope = "global" | "channel" | "role" | "user" | "member" | "custom";
 
@@ -15,7 +15,7 @@ interface ScopeLevel {
   scopeId: string;
 }
 
-export function scopeCascade(
+function scopeCascade(
   guildId: string,
   scope: ScopedConfigScope,
   scopeId: string,
@@ -46,12 +46,12 @@ export function scopeCascade(
 export class ConfigRepository extends Repository {
   public constructor(
     prisma: DatabaseClient,
-    valkey: ValkeyClient,
+    redis: RedisClient,
     logger: ILogger,
     db: DatabaseService,
     private readonly configHistory: ConfigHistoryRepository,
   ) {
-    super(prisma, valkey, logger, db);
+    super(prisma, redis, logger, db);
   }
 
   public async isDashboardEnabled(guildId: string): Promise<boolean> {
@@ -65,8 +65,8 @@ export class ConfigRepository extends Repository {
 
   public getGuildSettings(guildId: string): Promise<Readonly<Guild>> {
     return this.getOrSet(
-      ValkeyKeys.guildSettings(guildId),
-      ValkeyTTL.guildConfig,
+      RedisKeys.guildSettings(guildId),
+      RedisTTL.guildConfig,
       () => {
         return this.prisma.guild.upsert({
           where: { id: guildId },
@@ -86,7 +86,7 @@ export class ConfigRepository extends Repository {
   }
 
   public async invalidateGuildSettings(guildId: string): Promise<void> {
-    await this.invalidate(ValkeyKeys.guildSettings(guildId));
+    await this.invalidate(RedisKeys.guildSettings(guildId));
   }
 
   public async getModuleConfig(
@@ -104,17 +104,13 @@ export class ConfigRepository extends Repository {
     scope: ScopedConfigScope,
     scopeId: string,
   ): Promise<Record<string, unknown>> {
-    const cacheKey = ValkeyKeys.scopedConfig(moduleName, guildId, scope, scopeId);
-    return this.getOrSet(cacheKey, ValkeyTTL.scopedConfig, async () => {
+    const cacheKey = RedisKeys.scopedConfig(moduleName, guildId, scope, scopeId);
+    return this.getOrSet(cacheKey, RedisTTL.scopedConfig, async () => {
       const rows = await this.prisma.moduleScopedConfig.findMany({
         where: { guildId, moduleName, scope, scopeId },
       });
       return Object.fromEntries(rows.map((r) => [r.configKey, r.value]));
     });
-  }
-
-  public getGlobalRows(moduleName: string): Promise<Record<string, unknown>> {
-    return this.getScopedRows(moduleName, "", "global", "");
   }
 
   public async getScopedConfig(
@@ -185,7 +181,7 @@ export class ConfigRepository extends Repository {
       create: { guildId, moduleName, scope, scopeId, configKey: key, value },
     });
     await this.invalidate(
-      ValkeyKeys.scopedConfig(moduleName, guildId, scope, scopeId),
+      RedisKeys.scopedConfig(moduleName, guildId, scope, scopeId),
     );
     if (actorId) {
       this.configHistory
@@ -217,31 +213,16 @@ export class ConfigRepository extends Repository {
       where: { guildId, moduleName, scope, scopeId, configKey: key },
     });
     await this.invalidate(
-      ValkeyKeys.scopedConfig(moduleName, guildId, scope, scopeId),
+      RedisKeys.scopedConfig(moduleName, guildId, scope, scopeId),
     );
-  }
-
-  public async clearScopedConfig(
-    guildId: string,
-    moduleName: string,
-    scope: ScopedConfigScope,
-    scopeId: string,
-  ): Promise<number> {
-    const result = await this.prisma.moduleScopedConfig.deleteMany({
-      where: { guildId, moduleName, scope, scopeId },
-    });
-    await this.invalidate(
-      ValkeyKeys.scopedConfig(moduleName, guildId, scope, scopeId),
-    );
-    return result.count;
   }
 
   public getAllModuleConfig(
     guildId: string,
     moduleName: string,
   ): Promise<Record<string, unknown>> {
-    const cacheKey = ValkeyKeys.guildConfig(moduleName, guildId);
-    return this.getOrSet(cacheKey, ValkeyTTL.guildConfig, async () => {
+    const cacheKey = RedisKeys.guildConfig(moduleName, guildId);
+    return this.getOrSet(cacheKey, RedisTTL.guildConfig, async () => {
       const configs = await this.prisma.guildModuleConfig.findMany({
         where: { guildId, moduleName },
       });
@@ -252,10 +233,10 @@ export class ConfigRepository extends Repository {
   public getAllModuleConfigsForGuild(
     guildId: string,
   ): Promise<Map<string, Record<string, unknown>>> {
-    const cacheKey = ValkeyKeys.guildAllModuleConfigs(guildId);
+    const cacheKey = RedisKeys.guildAllModuleConfigs(guildId);
     return this.getOrSet(
       cacheKey,
-      ValkeyTTL.guildAllModuleConfigs,
+      RedisTTL.guildAllModuleConfigs,
       async () => {
         const configs = await this.prisma.guildModuleConfig.findMany({
           where: { guildId },
@@ -319,8 +300,8 @@ export class ConfigRepository extends Repository {
     moduleName: string,
   ): Promise<void> {
     await this.invalidate(
-      ValkeyKeys.guildConfig(moduleName, guildId),
-      ValkeyKeys.guildAllModuleConfigs(guildId),
+      RedisKeys.guildConfig(moduleName, guildId),
+      RedisKeys.guildAllModuleConfigs(guildId),
     );
   }
 

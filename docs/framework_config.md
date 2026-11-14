@@ -35,6 +35,6 @@ removes the key from the current scope only. Guild writes are audited to
 the config history with the actor when one is passed.
 
 Storage: `guild_module_config` for guild scope, `module_scoped_config`
-for everything else, both Valkey-cached with exact-key invalidation on
+for everything else, both Redis-cached with exact-key invalidation on
 write. Merge happens at read time, so scoped reads always see fresh
 guild values.

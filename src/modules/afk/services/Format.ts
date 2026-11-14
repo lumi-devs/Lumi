@@ -1,6 +1,6 @@
-import { cutText } from "#src/shared/Index.ts";
-import { formatDuration } from "#src/lib/utilities/Time.js";
-import { AfkMaxReasonLength } from "#src/modules/afk/Constants.js";
+import { cutText } from "@shared/Index.ts";
+import { formatDuration } from "@utilities/Time.js";
+import { AfkMaxReasonLength } from "@modules/afk/Constants.js";
 
 export function sanitizeReason(reason: string): string {
   const f =

@@ -7,7 +7,7 @@ import {
   type NewsChannel,
   type TextChannel,
 } from "discord.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
 
 type AnnounceOutcome = "sent" | "failed" | "skipped";
 

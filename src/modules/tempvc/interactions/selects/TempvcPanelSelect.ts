@@ -4,31 +4,21 @@ import type {
   GuildMember,
   VoiceBasedChannel,
 } from "discord.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+import { fetchTyped } from "@i18n/Index.js";
+import type { LumiT } from "@i18n/Index.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { ephemeralCard, makeSuccessCard } from "#src/lib/ui/Cards.js";
-import type { VcRecord } from "#src/modules/tempvc/data/Tempvc.js";
-import { TempVcPanelId } from "#src/modules/tempvc/Constants.js";
-import { showLimitModal, showRenameModal } from "#src/modules/tempvc/services/PanelHelpers.js";
-import { resolveOwnedRecord } from "#src/modules/tempvc/services/PanelGuard.js";
-import type { TempVcUtility } from "#src/modules/tempvc/utilities/TempVcUtility.js";
-import {
-  buildBackRows,
-  buildBlockView,
-  buildDeleteConfirmView,
-  buildKickView,
-  buildPanel,
-  buildTransferView,
-  buildTrustView,
-  buildUnblockView,
-  buildUntrustView,
-} from "#src/modules/tempvc/ui/Panel.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import { getUtility } from "@module-system/Utility.js";
+import { ephemeralCard, makeSuccessCard } from "@ui/Cards.js";
+import type { VcRecord } from "@modules/tempvc/data/Tempvc.js";
+import { TempVcPanelId } from "@modules/tempvc/Constants.js";
+import { handlePanelMenuAction } from "@modules/tempvc/services/PanelHelpers.js";
+import { resolveOwnedRecord } from "@modules/tempvc/services/PanelGuard.js";
+import type { TempVcUtility } from "@modules/tempvc/utilities/TempVcUtility.js";
+import { buildBackRows } from "@modules/tempvc/ui/Panel.js";
 
 const SelectActions = new Set([
   "select_kick",
@@ -99,57 +89,16 @@ export const tempVcPanelSelect = defineInteraction({
     if (!record) return;
 
     if (action === "panelmenu") {
-      switch (selected) {
-        case "name":
-          await showRenameModal(interaction, channel, t);
-          return;
-        case "limit":
-          await showLimitModal(interaction, channel, t);
-          return;
-        case "lock": {
-          const next = await service.setLock(
-            services,
-            channel,
-            record,
-            !record.locked,
-          );
-          await interaction.editReply(await buildPanel(services, channel, next, t));
-          return;
-        }
-        case "hide": {
-          const next = await service.setHide(
-            services,
-            channel,
-            record,
-            !record.hidden,
-          );
-          await interaction.editReply(await buildPanel(services, channel, next, t));
-          return;
-        }
-        case "kick":
-          await interaction.editReply(buildKickView(channel, record, t));
-          return;
-        case "trust":
-          await interaction.editReply(buildTrustView(channel, record, t));
-          return;
-        case "untrust":
-          await interaction.editReply(buildUntrustView(channel, record, t));
-          return;
-        case "block":
-          await interaction.editReply(buildBlockView(channel, record, t));
-          return;
-        case "unblock":
-          await interaction.editReply(buildUnblockView(channel, record, t));
-          return;
-        case "transfer":
-          await interaction.editReply(buildTransferView(channel, record, t));
-          return;
-        case "delete":
-          await interaction.editReply(buildDeleteConfirmView(channel, t));
-          return;
-        default:
-          return;
-      }
+      await handlePanelMenuAction(
+        services,
+        service,
+        interaction,
+        channel,
+        record,
+        selected ?? "",
+        t,
+      );
+      return;
     }
 
     const ids = interaction.values.filter((id) => id !== record.ownerId);

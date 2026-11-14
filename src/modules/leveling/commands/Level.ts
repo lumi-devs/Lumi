@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
 import {
   LevelError,
   LevelService,
-} from "#src/modules/leveling/services/LevelService.js";
+} from "@modules/leveling/services/LevelService.js";
 
 type AdjustOp = "add" | "remove";
 type AdjustKind = "xp" | "level";

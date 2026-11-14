@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import type { Guild, GuildMember, User } from "discord.js";
 
 interface NotesApplyOptions {

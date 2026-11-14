@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { handleRpcHttpRequest } from "#src/lib/rpc/HttpServer.js";
-import { container } from "#src/lib/Services.js";
-import { signGdprExportToken } from "#src/lib/gdpr/ExportToken.js";
+import { handleRpcHttpRequest } from "@rpc/HttpServer.js";
+import { container } from "@lib/Services.js";
+import { signGdprExportToken } from "@lib/gdpr/ExportToken.js";
 
 const USER_ID = "111111111111111111";
 

@@ -1,15 +1,10 @@
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
+import type { CommandDef } from "@commands/CommandDef.js";
 import { SlashCommandBuilder, AttachmentBuilder } from "discord.js";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { makeSuccessCard, makeListCard, ephemeralCard } from "#src/lib/ui/Cards.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { executeGdprDeletion, executeGdprExport } from "#src/lib/gdpr/Requests.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import type { DownloaderUtility } from "#src/modules/admin/utilities/DownloaderUtility.js";
-
-function downloaderService(): DownloaderUtility {
-  return getUtility("downloader");
-}
+import { CommandContext } from "@commands/Context.js";
+import { makeSuccessCard, makeListCard, ephemeralCard } from "@ui/Cards.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { executeGdprDeletion, executeGdprExport } from "@lib/gdpr/Requests.js";
+import { getUtility } from "@module-system/Utility.js";
 
 export const mydataDef: CommandDef = {
   name: "mydata",
@@ -60,7 +55,7 @@ export const mydataDef: CommandDef = {
     );
   },
   "3rdparty": async (ctx: CommandContext) => {
-    const installed = await downloaderService().getInstalledModules(ctx.services);
+    const installed = await getUtility("downloader").getInstalledModules(ctx.services);
 
     if (installed.length === 0) {
       await ctx.replyInfo(

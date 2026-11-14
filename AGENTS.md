@@ -3,7 +3,7 @@
 Operating spec for any AI coding agent working in this repository.
 
 Lumi is a self-hosted, modular Discord bot: Bun + TypeScript, discord.js v14
-(native, no framework), Prisma/PostgreSQL, Valkey. Single-process monolith.
+(native, no framework), Prisma/PostgreSQL, Redis. Single-process monolith.
 
 ## Repo shape
 
@@ -23,9 +23,18 @@ tests/            # mirrors src/ (tests/core, tests/api, tests/cli)
 data/addons/      # third-party addon root, same module shape, same loader
 ```
 
-Import aliases (`tsconfig.base.json` paths, honored by Bun at runtime):
-`#src/*` -> `src/*`, `#lib/*` -> `src/lib/*`. Code uses `#src/*`
-canonically. Always keep the `.js` suffix on relative specifiers.
+Import aliases (`tsconfig.base.json` paths, honored by Bun at runtime).
+Internal code uses the granular domains:
+`@lib/*` -> `src/lib/*`, `@modules/*` -> `src/modules/*`,
+`@contracts/*` -> `src/contracts/*`, `@observability/*`, `@shared/*`,
+`@cli/*`, `@scripts/*`, plus per-area lib aliases: `@api/*`, `@cache/*`,
+`@redis/*`, `@db/*` (prisma), `@rpc/*`, `@ui/*`, `@commands/*`,
+`@listeners/*`, `@interactions/*`, `@module-system/*`, `@utilities/*`,
+`@i18n/*`, `@scheduler/*`, `@downloader/*`, `@discord/*`, `@event-bus/*`.
+Addons import the public surface: `@lumi/module`, `@lumi/commands`,
+`@lumi/ui`, `@lumi/config`, `@lumi/services`, ... (anything else under
+`@lumi/*` minus bot internals). Always keep the `.js` suffix on relative
+specifiers.
 
 ## Module system
 
@@ -35,7 +44,7 @@ Feature modules live under `src/modules/<name>/`, each exporting a
 (core `src/modules` + `data/addons`), sorts dependencies topologically,
 and loads every module in-process — core modules and addons share the
 piece loaders, with a separate `#loadAddon` path per origin. There is no
-sandbox, no isolate, no SDK: modules import `#lib/*` directly.
+sandbox, no isolate, no SDK: modules import the shared lib through its domain aliases directly.
 
 **Zero cross-module import law**: a module must never import from a
 sibling module. Shared code belongs under `src/lib/*`.
@@ -65,8 +74,8 @@ order, reorderable via RPC (`guild.permits.move`), the hub panel
 - **Database access**: modules go through `container.db`, never
   `container.prisma` directly.
 - **Discord embeds**: never construct `new EmbedBuilder()` in a command —
-  use the card builders in `#src/lib/ui/Cards.js` or `ctx.replySuccess` /
-  `ctx.replyError`. Pure string formatting lives in `#src/lib/ui/Format.js`.
+  use the card builders in `@ui/Cards.js` or `ctx.replySuccess` /
+  `ctx.replyError`.
 - **No shims**: never add compatibility re-exports or alias layers.
   Replace, don't wrap. No code comments in new or edited code.
 - **No framework**: discord.js native only. Framework-independent
@@ -79,7 +88,7 @@ order, reorderable via RPC (`guild.permits.move`), the hub panel
 
 - `bun run typecheck` — single `tsc --noEmit` over `src` + `tests`.
 - `bun run lint` / `bun run lint:fix` — eslint over `src tests`.
-- `bun run test` — `bun test tests/`.
+- `bun run test` — isolated per-file runner (`scripts/RunTests.ts`), one process per test file. `bun run test:coverage` runs a single parallel `bun test` pass with coverage.
 - `bun run db:generate` — regenerate the Prisma client after a schema change.
 - `bun run db:migrate` — `prisma migrate dev` (needs Postgres up).
 - `bun src/Index.ts` — run the bot. `lumi` bin -> `src/cli/Main.ts`.

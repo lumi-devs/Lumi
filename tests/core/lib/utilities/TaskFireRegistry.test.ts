@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   registerTaskFireHandler,
   getRegisteredFireHandlers,
   TaskFireConsumer,
-} from "#src/lib/scheduler/Fires.js";
-import type { EventBus } from "#src/lib/event-bus/Types.js";
+} from "@scheduler/Fires.js";
+import type { EventBus } from "@event-bus/Types.js";
 
 describe("Task Fire Registry & Consumer", () => {
   let mockBus: any;

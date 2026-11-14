@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ButtonStyle } from "discord.js";
 import {
   restartChoiceRow,
   scheduleProcessRestart,
-} from "#src/lib/Restart.js";
+} from "@lib/Restart.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

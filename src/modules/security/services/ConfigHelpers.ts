@@ -1,4 +1,4 @@
-import type { GateAction } from "#src/modules/security/services/JoinGate.js";
+import type { GateAction } from "@modules/security/services/JoinGate.js";
 
 export function getConfigNumber(
 	raw: Record<string, unknown>,

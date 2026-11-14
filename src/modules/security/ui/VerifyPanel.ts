@@ -1,15 +1,15 @@
 import { ActionRowBuilder, type ButtonBuilder } from "@discordjs/builders";
-import { Time } from "#src/shared/Index.ts";
+import { Time } from "@shared/Index.ts";
 import { ButtonStyle } from "discord.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { createActionButton, buildSafeActionRows } from "#src/lib/ui/Panels.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, makeInfoCard, makeWarningCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { LumiT } from "@i18n/Index.js";
+import { createActionButton, buildSafeActionRows } from "@ui/Panels.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, makeInfoCard, makeWarningCard, type CardReply } from "@ui/Cards.js";
 import {
   buildCaptchaRows,
   sequenceDisplay,
   type CaptchaState,
-} from "#src/modules/security/services/Captcha.js";
+} from "@modules/security/services/Captcha.js";
 
 export const VerifyButtonId = "sec:verify";
 

@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { PermissionRepository } from "#src/lib/prisma/repositories/PermissionRepository.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
+import { container } from "@lib/Services.js";
+import { PermissionRepository } from "@db/repositories/PermissionRepository.js";
+import { RedisKeys } from "@redis/Store.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 
-vi.mock("#src/observability/Index.ts", () => ({
+vi.mock("@observability/Index.ts", () => ({
   cacheHits: { inc: vi.fn() },
   cacheMisses: { inc: vi.fn() },
 }));
@@ -12,36 +13,14 @@ vi.mock("#src/observability/Index.ts", () => ({
 describe("PermissionRepository", () => {
   let prisma: ReturnType<typeof createMockPrismaClient>;
   let repo: PermissionRepository;
-  let mockValkey: any;
-  let store: Map<string, string>;
+  let mockRedis: any;
 
   beforeEach(() => {
     prisma = createMockPrismaClient();
-    store = new Map();
     (container as any).invalidation = {
       invalidate: vi.fn().mockResolvedValue(undefined),
     };
-    mockValkey = {
-      get: vi.fn(async (k: string) => store.get(k) ?? null),
-      mget: vi.fn(async (...args: any[]) => {
-        const keys = Array.isArray(args[0]) ? args[0] : args;
-        return keys.map((k: string) => store.get(k) ?? null);
-      }),
-      set: vi.fn(async (k: string, v: string) => {
-        store.set(k, v);
-        return "OK";
-      }),
-      del: vi.fn(async (...keys: string[]) => {
-        for (const k of keys) store.delete(k);
-        return keys.length;
-      }),
-      pipeline: vi.fn().mockReturnValue({
-        set: vi.fn().mockReturnThis(),
-        setex: vi.fn().mockReturnThis(),
-        del: vi.fn().mockReturnThis(),
-        exec: vi.fn().mockResolvedValue([]),
-      }),
-    };
+    mockRedis = createMemoryRedis();
     const mockDb = {
       ensureGuild: vi.fn().mockResolvedValue(undefined),
     };
@@ -51,7 +30,7 @@ describe("PermissionRepository", () => {
       error: vi.fn(),
       debug: vi.fn(),
     };
-    repo = new PermissionRepository(prisma as any, mockValkey, mockLogger as any, mockDb as any);
+    repo = new PermissionRepository(prisma as any, mockRedis, mockLogger as any, mockDb as any);
   });
 
   it("ensureBuiltinPermits creates standard builtin permits for a guild", async () => {
@@ -111,7 +90,7 @@ describe("PermissionRepository", () => {
   });
 
   it("resolves permit chains with quarantine detection", async () => {
-    store.set(ValkeyKeys.quarantineState("guild-1", "user-bad"), "1");
+    mockRedis.$store.set(RedisKeys.quarantineState("guild-1", "user-bad"), "1");
 
     const result = await repo.getPermitChain("guild-1", "user-bad", [
       { targetType: "user", targetId: "user-bad" },

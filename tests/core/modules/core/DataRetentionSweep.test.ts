@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { handleDataRetentionFire } from "#src/modules/core/services/DataRetention.js";
-import { readClusterShards } from "#src/lib/sharding/ShardTelemetry.js";
+import { container } from "@lib/Services.js";
+import { handleDataRetentionFire } from "@modules/core/services/DataRetention.js";
+import { readClusterShards } from "@lib/sharding/ShardTelemetry.js";
 
 function asMock<T extends (...args: any[]) => any>(fn: T): Mock<T> {
   return fn as unknown as Mock<T>;
 }
 
-vi.mock("#lib/sharding/ShardTelemetry.js", () => ({
+vi.mock("@lib/sharding/ShardTelemetry.js", () => ({
   DefaultClusterName: "default",
   readClusterShards: vi.fn(),
 }));
 
-vi.mock("#lib/valkey/GuildEviction.js", () => ({
-  evictGuildValkeyState: vi.fn().mockResolvedValue(undefined),
+vi.mock("@redis/GuildEviction.js", () => ({
+  evictGuildRedisState: vi.fn().mockResolvedValue(undefined),
 }));
 
 const baseShard = {
@@ -67,7 +67,7 @@ describe("core data retention sweep", () => {
       debug: vi.fn(),
       warn: vi.fn(),
     };
-    (container as any).valkey = {};
+    (container as any).redis = {};
     (container as any).invalidation = { invalidate: vi.fn().mockResolvedValue(undefined) };
     asMock(readClusterShards).mockResolvedValue(fleetReady);
   });

@@ -1,14 +1,14 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
 import type {
   Guild,
   GuildMember,
   GuildTextBasedChannel,
   Message,
 } from "discord.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { acquireValkeyLock } from "#src/lib/valkey/Lock.js";
-import { ModuleName, ReactionRoleKeys } from "#src/modules/reactionroles/Constants.js";
+import { logError } from "@utilities/Errors.js";
+import { acquireRedisLock } from "@redis/Lock.js";
+import { ModuleName, ReactionRoleKeys } from "@modules/reactionroles/Constants.js";
 import {
   deleteMenu,
   findMenuByMessage,
@@ -24,16 +24,16 @@ import {
   type ReactionRoleMenu,
   type ReactionRoleMode,
   type ReactionRoleOption,
-} from "#src/modules/reactionroles/data/Reactionroles.js";
-import { reactionRoleRegistry } from "#src/modules/reactionroles/data/Registry.js";
-import { buildMenuCard } from "#src/modules/reactionroles/ui/MenuCard.js";
+} from "@modules/reactionroles/data/Reactionroles.js";
+import { reactionRoleRegistry } from "@modules/reactionroles/data/Registry.js";
+import { buildMenuCard } from "@modules/reactionroles/ui/MenuCard.js";
 import {
   applyOptionToggle,
   applySelectToggle,
   type RoleToggleResult,
-} from "#src/modules/reactionroles/services/RoleToggle.js";
-import { getMaxMenus } from "#src/modules/reactionroles/Config.js";
-import { clampMessageDocumentV2, type MessageDocumentV2 } from "#src/contracts/Index.ts";
+} from "@modules/reactionroles/services/RoleToggle.js";
+import { getMaxMenus } from "@modules/reactionroles/Config.js";
+import { clampMessageDocumentV2, type MessageDocumentV2 } from "@contracts/Index.ts";
 
 export class ReactionRoleMenuLockedError extends Error {
   public constructor() {
@@ -50,8 +50,8 @@ async function withMenuLock<T>(
 ): Promise<T> {
   let lock;
   try {
-    lock = await acquireValkeyLock(
-      services.valkey,
+    lock = await acquireRedisLock(
+      services.redis,
       ReactionRoleKeys.menuWrite(guildId, menuId),
     );
   } catch {
@@ -80,6 +80,25 @@ function resolveOptionId(menu: ReactionRoleMenu, label: string): string {
     if (!taken.has(candidate)) return candidate;
   }
   return `${base}-${Date.now().toString(36)}`.slice(0, 32);
+}
+
+interface OptionInput {
+  label: string;
+  emoji?: string | null;
+  description?: string | null;
+  roleId: string;
+  requiredRoleId?: string | null;
+}
+
+function buildOption(id: string, input: OptionInput): ReactionRoleOption {
+  return {
+    id,
+    label: input.label.trim(),
+    emoji: input.emoji?.trim() || null,
+    description: input.description?.trim() || null,
+    roleId: input.roleId,
+    requiredRoleId: input.requiredRoleId?.trim() || null,
+  };
 }
 
 const reactionRolesUtility = defineUtility({
@@ -207,13 +226,7 @@ const reactionRolesUtility = defineUtility({
     services: Container,
     guildId: string,
     menuId: string,
-    input: {
-      label: string;
-      emoji?: string | null;
-      description?: string | null;
-      roleId: string;
-      requiredRoleId?: string | null;
-    },
+    input: OptionInput,
   ): Promise<ReactionRoleMenu> {
     return withMenuLock(services, guildId, menuId, async () => {
       const menu = await getMenu(services, guildId, menuId);
@@ -229,14 +242,7 @@ const reactionRolesUtility = defineUtility({
         throw new Error("That role is already an option on this menu.");
       }
       const id = resolveOptionId(menu, input.label);
-      const option: ReactionRoleOption = {
-        id,
-        label: input.label.trim(),
-        emoji: input.emoji?.trim() || null,
-        description: input.description?.trim() || null,
-        roleId: input.roleId,
-        requiredRoleId: input.requiredRoleId?.trim() || null,
-      };
+      const option = buildOption(id, input);
       const saved = await saveMenu(services, { ...menu, options: [...menu.options, option] });
       await reactionRoleRegistry.invalidateMenus(guildId);
       return saved;
@@ -248,13 +254,7 @@ const reactionRolesUtility = defineUtility({
     guildId: string,
     menuId: string,
     optionId: string,
-    input: {
-      label: string;
-      emoji?: string | null;
-      description?: string | null;
-      roleId: string;
-      requiredRoleId?: string | null;
-    },
+    input: OptionInput,
   ): Promise<ReactionRoleMenu> {
     return withMenuLock(services, guildId, menuId, async () => {
       const menu = await getMenu(services, guildId, menuId);
@@ -269,14 +269,7 @@ const reactionRolesUtility = defineUtility({
         throw new Error("That role is already another option on this menu.");
       }
       const options = [...menu.options];
-      options[index] = {
-        id: optionId,
-        label: input.label.trim(),
-        emoji: input.emoji?.trim() || null,
-        description: input.description?.trim() || null,
-        roleId: input.roleId,
-        requiredRoleId: input.requiredRoleId?.trim() || null,
-      };
+      options[index] = buildOption(optionId, input);
       const saved = await saveMenu(services, { ...menu, options });
       await reactionRoleRegistry.invalidateMenus(guildId);
       return saved;
@@ -405,7 +398,7 @@ export default reactionRolesUtility;
 
 export type ReactionRolesUtility = typeof reactionRolesUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     reactionroles: typeof reactionRolesUtility;
   }

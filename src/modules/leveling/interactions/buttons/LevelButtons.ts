@@ -1,18 +1,18 @@
-import type { ButtonInteraction } from "discord.js";
+import type { ButtonInteraction, StringSelectMenuInteraction } from "discord.js";
 import {
   acknowledge,
   defineInteraction,
-} from "#src/lib/interactions/InteractionDef.js";
-import type { Container } from "#src/lib/Services.js";
-import type { BoardKind } from "#src/modules/leveling/services/LevelService.js";
+} from "@interactions/InteractionDef.js";
+import type { Container } from "@lib/Services.js";
+import type { BoardKind } from "@modules/leveling/services/LevelService.js";
 import {
   parseBoardPage,
   renderBoardMessage,
-} from "#src/modules/leveling/commands/Leaderboard.js";
+} from "@modules/leveling/commands/Leaderboard.js";
 
 export async function showBoard(
   services: Container,
-  interaction: ButtonInteraction,
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
   guildId: string,
   board: BoardKind,
   page: number,

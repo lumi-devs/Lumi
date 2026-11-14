@@ -7,7 +7,7 @@ beforeEach(() => {
   vi.spyOn(Bun, "spawn").mockImplementation(() => fakeSpawnResult("") as any);
 });
 
-const { resolver, ModuleRoot, AddonModulesRoot } = await import("#src/lib/downloader/Resolver.js");
+const { resolver, ModuleRoot, AddonModulesRoot } = await import("@downloader/Resolver.js");
 
 const RepoName = "resolver-test-repo";
 const ModuleName = "resolver-test-addon";

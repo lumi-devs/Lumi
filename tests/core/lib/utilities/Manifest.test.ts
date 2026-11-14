@@ -8,9 +8,9 @@ import {
   readManifest,
   writeManifest,
   ManifestFile,
-} from "#src/lib/module-system/Manifest.js";
-import { cfg, FieldType } from "#src/lib/module-system/ConfigSchema.js";
-import { LumiInfo } from "#src/lib/utilities/Version.js";
+} from "@module-system/Manifest.js";
+import { cfg, FieldType } from "@module-system/ConfigSchema.js";
+import { LumiInfo } from "@utilities/Version.js";
 
 describe("Module Manifest Utilities", () => {
   let tmpDir: string;

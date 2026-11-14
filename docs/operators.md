@@ -23,7 +23,7 @@ else; there is no in-bot backup command.
 
 ## Cache and scheduler
 
-Valkey for ephemeral state (cooldowns, antispam, sticky message ids) and
+Redis for ephemeral state (cooldowns, antispam, sticky message ids) and
 one BullMQ queue with priorities for scheduled module tasks. One process
 runs everything: gateway, RPC, and scheduling together.
 
@@ -31,7 +31,7 @@ runs everything: gateway, RPC, and scheduling together.
 
 ```
 bun src/Index.ts            # the bot
-docker compose up bot       # bot + postgres + valkey
+docker compose up bot       # bot + postgres + redis
 ```
 
 `CMD` runs `bun src/Index.ts`; `/usr/local/bin/lumi` is the compiled CLI.

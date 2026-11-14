@@ -1,8 +1,8 @@
 import { PermissionFlagsBits } from "discord.js";
-import { UserError } from "#src/shared/Index.ts";
-import { container } from "#src/lib/Services.js";
-import { envParseString } from "#src/lib/Env.js";
-import type { PermitTargetType } from "#src/lib/prisma/repositories/PermissionRepository.js";
+import { UserError } from "@shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { envParseString } from "@lib/Env.js";
+import type { PermitTargetType } from "@db/repositories/PermissionRepository.js";
 
 const OwnerIds: ReadonlySet<string> = new Set(
   envParseString("OWNER_IDS", "")

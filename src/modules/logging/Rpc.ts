@@ -1,17 +1,17 @@
-import { container } from "#src/lib/Services.js";
-import { loggingRpc } from "#src/contracts/rpc/Index.ts";
+import { container } from "@lib/Services.js";
+import { loggingRpc } from "@contracts/rpc/Index.ts";
 import { Routes } from "discord-api-types/v10";
 import {
   dismissLogClaim,
   issueLogClaimCode,
   listLogClaims,
   LogClaimCodeTtlMs,
-} from "#src/modules/logging/services/Claims.js";
-import { implementRpc } from "#src/lib/rpc/Implement.js";
+} from "@modules/logging/services/Claims.js";
+import { implementRpc } from "@rpc/Implement.js";
 import {
   fetchChannelRest,
   GuildTextBasedChannelTypes,
-} from "#src/lib/rpc/DiscordRestLookup.js";
+} from "@rpc/DiscordRestLookup.js";
 
 export const loggingRpcHandlers = implementRpc(loggingRpc, {
   "guild.logClaims.list": async ({ guildId }) => ({

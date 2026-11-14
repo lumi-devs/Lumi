@@ -14,9 +14,9 @@ import {
   TextDisplayBuilder,
   type MessageActionRowComponentBuilder,
 } from "@discordjs/builders";
-import { componentEmoji } from "#src/lib/ui/Panels.js";
-import { Time } from "#src/shared/Index.ts";
-import { fitLines, type CardReply } from "#src/lib/ui/Cards.js";
+import { componentEmoji } from "@ui/Panels.js";
+import { Time } from "@shared/Index.ts";
+import { fitLines, type CardReply } from "@ui/Cards.js";
 
 export function computePageCount(itemCount: number, perPage: number): number {
   return Math.max(1, Math.ceil(itemCount / perPage));

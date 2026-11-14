@@ -1,9 +1,9 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { type Guild, type GuildMember, type User, Colors } from "discord.js";
-import { formatAuditReason } from "#src/lib/utilities/AuditReason.js";
-import { liftAllActiveCases } from "#src/modules/mod/services/Helpers.js";
-import { ValkeyKeys } from "#src/lib/valkey/Store.js";
-import { runModerationAction } from "#src/modules/mod/services/RunModerationAction.js";
+import { formatAuditReason } from "@utilities/AuditReason.js";
+import { liftAllActiveCases } from "@modules/mod/services/Helpers.js";
+import { RedisKeys } from "@redis/Store.js";
+import { runModerationAction } from "@modules/mod/services/RunModerationAction.js";
 
 export interface VoiceMuteApplyOptions {
   guild: Guild;
@@ -35,7 +35,7 @@ export class VoiceMuteAction {
         }
 
         await container.invalidation.invalidate(
-          ValkeyKeys.voiceMuteState(guild.id, targetMember.id),
+          RedisKeys.voiceMuteState(guild.id, targetMember.id),
         );
 
         return container.db.moderation.createModerationCase({
@@ -63,7 +63,7 @@ export class VoiceMuteAction {
 
   public static async undo(options: VoiceMuteUndoOptions) {
     const { guild, targetMember, moderator, reason } = options;
-    const key = ValkeyKeys.voiceMuteState(guild.id, targetMember.id);
+    const key = RedisKeys.voiceMuteState(guild.id, targetMember.id);
     await container.invalidation.invalidate(key);
     const auditReason = formatAuditReason(moderator, reason);
 
@@ -100,7 +100,7 @@ export class VoiceMuteAction {
     targetId: string,
     reason: string,
   ): Promise<void> {
-    const key = ValkeyKeys.voiceMuteState(guildId, targetId);
+    const key = RedisKeys.voiceMuteState(guildId, targetId);
     await container.invalidation.invalidate(key);
     await container.discordRest.clearVoiceMute(guildId, targetId, reason);
   }

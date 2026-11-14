@@ -1,34 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { CommandContext } from "#src/lib/commands/Context.js";
-import { asHandler } from "#src/lib/commands/CommandDef.js";
-import { repoDef } from "#src/modules/admin/commands/Repo.js";
+import { CommandContext } from "@commands/Context.js";
+import { asHandler } from "@commands/CommandDef.js";
+import { repoDef } from "@modules/admin/commands/Repo.js";
 
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn(),
   tryGetUtility: vi.fn(),
 }));
 
-vi.mock("#lib/utilities/Confirm.js", () => ({
+vi.mock("@utilities/Confirm.js", () => ({
   confirmPrompt: vi.fn().mockResolvedValue({ confirmed: true, message: {} }),
 }));
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   fetchT: vi.fn().mockResolvedValue((key: string) => key),
   fetchTyped: vi.fn().mockResolvedValue((key: string) => key),
 }));
 
-vi.mock("#lib/utilities/CommandResponse.js", () => ({
+vi.mock("@utilities/CommandResponse.js", () => ({
   sendInteractionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("#lib/utilities/Pagination.js", () => ({
+vi.mock("@utilities/Pagination.js", () => ({
   paginateContainer: vi.fn().mockResolvedValue(undefined),
   paginateList: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { getUtility } from "#src/lib/module-system/Utility.js";
-import { sendInteractionReply } from "#src/lib/utilities/CommandResponse.js";
-import { paginateList } from "#src/lib/utilities/Pagination.js";
+import { getUtility } from "@module-system/Utility.js";
+import { sendInteractionReply } from "@utilities/CommandResponse.js";
+import { paginateList } from "@utilities/Pagination.js";
 
 function makeServices() {
   return {

@@ -1,6 +1,6 @@
-import { type Container } from "#src/lib/Services.js";
-import { mapWithConcurrency } from "#src/lib/utilities/Concurrency.js";
-import { sweepExpiredPending } from "#src/modules/security/services/Verification.js";
+import { type Container } from "@lib/Services.js";
+import { mapWithConcurrency } from "@utilities/Concurrency.js";
+import { sweepExpiredPending } from "@modules/security/services/Verification.js";
 
 const SweepConcurrency = 10;
 

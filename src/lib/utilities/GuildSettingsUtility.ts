@@ -1,11 +1,10 @@
-import { defineUtility } from "#src/lib/module-system/Utility.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineUtility } from "@module-system/Utility.js";
+import type { Container } from "@lib/Services.js";
 import type { Guild } from "@prisma/client";
 import {
-  DefaultLanguage,
   isSupportedLanguage,
   SupportedLanguages,
-} from "#src/lib/i18n/Index.js";
+} from "@i18n/Index.js";
 
 async function applyGuildUpdate(
   services: Container,
@@ -63,22 +62,12 @@ export const guildSettingsUtility = defineUtility({
       (s) => s.locale === language,
       `Language is already set to ${language}.`,
     );
-  },
-
-  async resetLanguage(services: Container, guildId: string) {
-    await applyGuildUpdate(
-      services,
-      guildId,
-      { locale: DefaultLanguage },
-      (s) => s.locale === DefaultLanguage,
-      `Language is already set to ${DefaultLanguage}.`,
-    );
   }
 });
 
 export type GuildSettingsUtility = typeof guildSettingsUtility;
 
-declare module "#lib/module-system/Utility.js" {
+declare module "@module-system/Utility.js" {
   interface Utilities {
     "guild-settings": typeof guildSettingsUtility;
   }

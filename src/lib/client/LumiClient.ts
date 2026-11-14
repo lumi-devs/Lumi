@@ -1,28 +1,25 @@
-import { Time } from "#src/shared/Index.ts";
-import { disconnectDatabase } from "#src/lib/prisma/Client.js";
-import { getConsumerId } from "#src/lib/Env.js";
-import { registerCoreFireHandlers } from "#src/lib/scheduler/CoreHandlers.js";
-import { flushAllMessageDeletes } from "#src/lib/discord/Coalesce.js";
-import { TaskFireConsumer } from "#src/lib/scheduler/Fires.js";
-import type { OwnedEventBus } from "#src/lib/event-bus/Factory.js";
+import { Time } from "@shared/Index.ts";
+import { disconnectDatabase } from "@db/Client.js";
+import { getConsumerId } from "@lib/Env.js";
+import { registerCoreFireHandlers } from "@scheduler/CoreHandlers.js";
+import { flushAllMessageDeletes } from "@discord/Coalesce.js";
+import { TaskFireConsumer } from "@scheduler/Fires.js";
+import type { OwnedEventBus } from "@event-bus/Factory.js";
 import { Client } from "discord.js";
-import { ownedEventBusOf, type Container } from "#src/lib/Services.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
-import { buildClientOptions } from "#src/lib/client/ClientOptions.js";
-import { installProducerOnlyTasks } from "#src/lib/scheduler/Producer.js";
-import { dispatchInteraction } from "#src/lib/interactions/InteractionDispatch.js";
+import { ownedEventBusOf, type Container } from "@lib/Services.js";
+import { installProducerOnlyTasks } from "@scheduler/Producer.js";
+import { dispatchInteraction } from "@interactions/InteractionDispatch.js";
 import {
   dispatchAutocomplete,
   dispatchChatInput,
   dispatchContextMenu,
   dispatchMessage,
-} from "#src/lib/commands/CommandDispatch.js";
-import { registerWorkerProbes } from "#src/lib/client/ReadinessProbes.js";
+} from "@commands/CommandDispatch.js";
+import { registerWorkerProbes } from "@lib/client/ReadinessProbes.js";
 
 interface ClientState {
   ownedEventBus: OwnedEventBus | null;
   taskFireConsumer: TaskFireConsumer | null;
-  repositoryCacheUnbind: (() => void) | null;
   livenessInterval: ReturnType<typeof setInterval> | null;
 }
 
@@ -34,7 +31,6 @@ function stateOf(client: Client): ClientState {
     state = {
       ownedEventBus: null,
       taskFireConsumer: null,
-      repositoryCacheUnbind: null,
       livenessInterval: null,
     };
     clientStates.set(client, state);
@@ -45,20 +41,10 @@ function stateOf(client: Client): ClientState {
 export function attachClient(client: Client, services: Container): void {
   services.client = client;
   installProducerOnlyTasks(services);
-  const state = stateOf(client);
-  state.ownedEventBus = ownedEventBusOf(services) ?? null;
-  state.repositoryCacheUnbind = repositoryCache.attachToInvalidationBus(
-    services.invalidation,
-  );
+  stateOf(client).ownedEventBus = ownedEventBusOf(services) ?? null;
   client.on("messageCreate", (m) => {
     if (!m.author.bot) services.stats.messages++;
   });
-}
-
-export function createClient(services: Container): Client {
-  const client = new Client(buildClientOptions());
-  attachClient(client, services);
-  return client;
 }
 
 export async function wireApp(client: Client, services: Container): Promise<void> {
@@ -70,6 +56,7 @@ export async function wireApp(client: Client, services: Container): Promise<void
   stateOf(client).taskFireConsumer = taskFireConsumer;
 
   await services.moduleStore.discover();
+  await services.moduleStore.loadSharedUtilities();
   for (const record of services.moduleStore.all()) {
     if (!record.enabled) continue;
     await services.moduleStore.loadModule(record.name).catch((err: unknown) => {
@@ -146,10 +133,6 @@ export async function destroyLumi(
   const warnOnCleanupError = (what: string) => (err: unknown) =>
     services.logger.warn(`[Client] ${what} failed:`, err);
   const state = stateOf(client);
-  if (state.repositoryCacheUnbind) {
-    state.repositoryCacheUnbind();
-    state.repositoryCacheUnbind = null;
-  }
   if (state.livenessInterval) {
     clearInterval(state.livenessInterval);
     state.livenessInterval = null;
@@ -176,6 +159,6 @@ export async function destroyLumi(
     .close()
     .catch(warnOnCleanupError("Invalidation close"));
   await services.signals.close().catch(warnOnCleanupError("Signals close"));
-  await services.valkey.quit().catch(warnOnCleanupError("Valkey quit"));
+  await services.redis.quit().catch(warnOnCleanupError("Redis quit"));
   await disconnectDatabase().catch(warnOnCleanupError("Database disconnect"));
 }

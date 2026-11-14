@@ -1,10 +1,10 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { commandRegistry } from "#src/lib/commands/CommandDef.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
+import { commandRegistry } from "@commands/CommandDef.js";
 import { styleText } from "node:util";
-import { getShardCount, isPrimaryShard } from "#src/lib/Env.js";
-import { getUtility } from "#src/lib/module-system/Utility.js";
+import { getShardCount, isPrimaryShard } from "@lib/Env.js";
+import { getUtility } from "@module-system/Utility.js";
 
 async function publishStats(services: Container, guilds: number) {
   const stats = {

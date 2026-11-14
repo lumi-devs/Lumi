@@ -1,4 +1,4 @@
-import { RelayTask } from "#src/lib/scheduler/Tasks.js";
+import { RelayTask } from "@scheduler/Tasks.js";
 
 export class SendMessageTask extends RelayTask<"send-message"> {
   public constructor() {

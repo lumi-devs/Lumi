@@ -1,6 +1,6 @@
 import { Events, type Client } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import {
   guildCount,
   rest429Total,
@@ -8,8 +8,8 @@ import {
   restInvalidRequestWarnings,
   shardLatency,
   shardStatus,
-} from "#src/observability/Index.ts";
-import { getDiscordProxyUrl } from "#src/lib/Env.js";
+} from "@observability/Index.ts";
+import { getDiscordProxyUrl } from "@lib/Env.js";
 
 const RefreshMs = 15_000;
 

@@ -1,14 +1,14 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import { container, type Container } from "#src/lib/Services.js";
-import { cfg } from "#src/lib/module-system/ConfigSchema.js";
+import { defineModule } from "@module-system/Module.js";
+import { container, type Container } from "@lib/Services.js";
+import { cfg } from "@module-system/ConfigSchema.js";
 import {
   ModuleName,
   PanelMessageDefault,
   PanelTitleDefault,
-} from "#src/modules/tempvc/Constants.js";
-import { tempVcRegistry } from "#src/modules/tempvc/data/Registry.js";
-import { registerTaskFireHandler } from "#src/lib/scheduler/Fires.js";
-import { handleTempVcCleanupFire } from "#src/modules/tempvc/services/CleanupHandler.js";
+} from "@modules/tempvc/Constants.js";
+import { tempVcRegistry } from "@modules/tempvc/data/Registry.js";
+import { registerTaskFireHandler } from "@scheduler/Fires.js";
+import { handleTempVcCleanupFire } from "@modules/tempvc/services/CleanupHandler.js";
 
 export const tempVcModule = defineModule({
   name: ModuleName,

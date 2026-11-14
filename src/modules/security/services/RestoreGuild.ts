@@ -1,4 +1,4 @@
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import { ChannelType } from "discord.js";
 import {
   Routes,
@@ -7,11 +7,11 @@ import {
   type RESTPostAPIGuildChannelJSONBody,
   type RESTPostAPIGuildRoleJSONBody,
 } from "discord-api-types/v10";
-import type { GuildBackupData } from "#src/modules/security/data/BackupTypes.js";
+import type { GuildBackupData } from "@modules/security/data/BackupTypes.js";
 import {
   fetchGuildChannelsRestUncached,
   fetchGuildRolesRestUncached,
-} from "#src/lib/rpc/DiscordRestLookup.js";
+} from "@rpc/DiscordRestLookup.js";
 
 interface LocalRoleOrder {
   id: string;

@@ -9,13 +9,13 @@ import {
 import {
   bootstrapClientApp,
   registerProcessErrorHandlers,
-} from "#lib/client/Bootstrap.js";
+} from "@lib/client/Bootstrap.js";
 
 const attachClient = mock(() => {});
 const loginLumi = mock(() => Promise.resolve("mock.bot.token.12345"));
 const destroyLumi = mock(() => Promise.resolve(undefined));
 
-mock.module("#src/lib/client/LumiClient.js", () => ({
+mock.module("@lib/client/LumiClient.js", () => ({
   attachClient,
   loginLumi,
   destroyLumi,
@@ -31,18 +31,18 @@ const container: Record<string, any> = { logger };
 const createServices = mock(() => ({ client: undefined }));
 const useServices = mock(() => {});
 
-mock.module("#src/lib/Services.js", () => ({
+mock.module("@lib/Services.js", () => ({
   container,
   createServices,
   useServices,
   ownedEventBusOf: () => undefined,
 }));
 
-mock.module("#src/lib/client/ClientOptions.js", () => ({
+mock.module("@lib/client/ClientOptions.js", () => ({
   buildClientOptions: () => ({ intents: [] }),
 }));
 
-mock.module("#src/observability/Index.ts", () => ({
+mock.module("@observability/Index.ts", () => ({
   shutdownTracing: () => Promise.resolve(undefined),
   runDrainSequence: () => Promise.resolve(undefined),
 }));

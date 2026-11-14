@@ -1,9 +1,9 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { GuildMember, PartialGuildMember } from "discord.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
-import { LevelingModuleName } from "#src/modules/leveling/Constants.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
+import { LevelingModuleName } from "@modules/leveling/Constants.js";
 
 export const levelingGuildMemberRemoveListener = defineListener({
   name: "levelingGuildMemberRemove",

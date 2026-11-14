@@ -1,15 +1,15 @@
-import { type Container } from "#src/lib/Services.js";
+import { type Container } from "@lib/Services.js";
 import { Colors, PermissionsBitField } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { cutText, Time } from "#src/shared/Index.ts";
-import { tryGetUtility } from "#src/lib/module-system/Utility.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
-import type { GuildMessage } from "#src/lib/types/Common.js";
-import { swallow } from "#src/lib/utilities/Errors.js";
-import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
-import { getHitReason, type FilterHit } from "#src/modules/filter/services/Rules.js";
-import type { FilterUtility } from "#src/modules/filter/utilities/FilterUtility.js";
+import { cutText, Time } from "@shared/Index.ts";
+import { tryGetUtility } from "@module-system/Utility.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
+import type { GuildMessage } from "@lib/types/Common.js";
+import { swallow } from "@utilities/Errors.js";
+import { deleteMessageLater } from "@utilities/TemporaryMessage.js";
+import { fetchTyped } from "@i18n/Index.js";
+import { getHitReason, type FilterHit } from "@modules/filter/services/Rules.js";
+import type { FilterUtility } from "@modules/filter/utilities/FilterUtility.js";
 
 async function isExempt(services: Container, message: GuildMessage): Promise<boolean> {
   const stored = await services.db.config.getModuleConfig(

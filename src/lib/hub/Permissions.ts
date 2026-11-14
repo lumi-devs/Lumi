@@ -1,8 +1,8 @@
-import type { LumiT } from "#src/lib/i18n/Index.js";
-import { row, type Row, formatPageFooter } from "#src/modules/onboarding/ui/Common.js";
-import { hubTabRow } from "#src/modules/onboarding/ui/Hub.js";
-import { resolveCardColor } from "#src/lib/ui/Palette.js";
-import { makeCard, noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { LumiT } from "@i18n/Index.js";
+import { row, type Row, formatPageFooter } from "@lib/hub/Common.js";
+import { hubTabRow } from "@lib/hub/Hub.js";
+import { resolveCardColor } from "@ui/Palette.js";
+import { makeCard, noPingCard, type CardReply } from "@ui/Cards.js";
 import {
   componentEmoji,
   createBackButton,
@@ -11,15 +11,15 @@ import {
   createStringSelectMenu,
   createUserSelectMenu,
   settingRow,
-} from "#src/lib/ui/Panels.js";
+} from "@ui/Panels.js";
 import {
   ButtonBuilder,
   StringSelectMenuOptionBuilder,
 } from "@discordjs/builders";
 import { roleMention, userMention } from "@discordjs/formatters";
 import { ButtonStyle } from "discord.js";
-import { HubPermitAssignId, HubPermitExplainNodeId, HubPermitPickId } from "#src/modules/core/Constants.js";
-import type { PermitTierExplanation } from "#src/lib/api/permissions/PermitResolver.js";
+import { HubPermitAssignId, HubPermitExplainNodeId, HubPermitPickId } from "@interactions/ModuleIds.js";
+import type { PermitTierExplanation } from "@api/permissions/PermitResolver.js";
 
 const tierMark = (verdict: PermitTierExplanation["verdict"]): string =>
   verdict === "allow" ? "✅" : verdict === "deny" ? "⛔" : "➖";

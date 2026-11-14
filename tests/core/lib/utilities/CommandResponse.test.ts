@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { UserError } from "#src/shared/Index.ts";
+import { container } from "@lib/Services.js";
+import { UserError } from "@shared/Index.ts";
 import { DiscordAPIError, HTTPError, RESTJSONErrorCodes, MessageFlags } from "discord.js";
 import { trace } from "@opentelemetry/api";
 import {
@@ -12,16 +12,16 @@ import {
   respond,
   respondMessage,
   handleDenied,
-} from "#src/lib/utilities/CommandResponse.js";
-import * as temporaryMessage from "#src/lib/utilities/TemporaryMessage.js";
+} from "@utilities/CommandResponse.js";
+import * as temporaryMessage from "@utilities/TemporaryMessage.js";
 
 const resolveKey = vi.fn();
 
-vi.mock("#lib/i18n/Index.js", () => ({
+vi.mock("@i18n/Index.js", () => ({
   resolveKey,
 }));
 
-vi.mock("#lib/utilities/TemporaryMessage.js", () => ({
+vi.mock("@utilities/TemporaryMessage.js", () => ({
   deleteMessageLater: vi.fn(),
   deleteReplyLater: vi.fn(),
 }));

@@ -1,5 +1,5 @@
 import type { ModNote } from "@prisma/client";
-import { Repository } from "#src/lib/prisma/repositories/Repository.js";
+import { Repository } from "@db/repositories/Repository.js";
 
 export class ModNoteRepository extends Repository {
   public async create(

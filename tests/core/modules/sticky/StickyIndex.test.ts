@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import { stickyIndex } from "#src/modules/sticky/data/StickyIndex.js";
+import { container } from "@lib/Services.js";
+import { stickyIndex } from "@modules/sticky/data/StickyIndex.js";
 
 describe("stickyIndex", () => {
   let onResyncHandlers: Array<() => void>;

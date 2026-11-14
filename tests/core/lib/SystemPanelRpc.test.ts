@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { AuditRepository } from "#src/lib/prisma/repositories/AuditRepository.js";
-import { AccessRepository } from "#src/lib/prisma/repositories/AccessRepository.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { AuditRepository } from "@db/repositories/AuditRepository.js";
+import { AccessRepository } from "@db/repositories/AccessRepository.js";
 import { createMockPrismaClient } from "../mocks/Prisma.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 
 const GUILD_ID = "123456789012345678";
 const BOT_OWNER_ID = "111111111111111111";
@@ -68,15 +69,11 @@ describe("system panel RPC handlers", () => {
 
     (container as any).invalidation = { invalidate: vi.fn() };
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    };
+    const redis = createMemoryRedis();
 
     const db = {} as any;
-    db.audit = new AuditRepository(prisma as any, valkey as any, container.logger, db);
-    db.access = new AccessRepository(prisma as any, valkey as any, container.logger, db);
+    db.audit = new AuditRepository(prisma as any, redis as any, container.logger, db);
+    db.access = new AccessRepository(prisma as any, redis as any, container.logger, db);
     (container as any).db = db;
 
     registerRpcHandlers();

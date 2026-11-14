@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { ModerationRepository } from "#src/lib/prisma/repositories/ModerationRepository.js";
+import { ModerationRepository } from "@db/repositories/ModerationRepository.js";
 
 class AsyncMutex {
   private tail: Promise<void> = Promise.resolve();

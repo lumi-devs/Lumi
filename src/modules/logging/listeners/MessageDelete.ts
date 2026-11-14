@@ -1,15 +1,15 @@
 import { Events } from "discord.js";
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import { Colors, type Message, type PartialMessage } from "discord.js";
 import {
   channelMention,
   escapeMarkdown,
   userMention,
 } from "@discordjs/formatters";
-import { cutText } from "#src/shared/Index.ts";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { isIgnoredChannel, isToggleEnabled, sendLog } from "#src/modules/logging/services/Send.js";
-import { fetchTyped } from "#src/lib/i18n/Index.js";
+import { cutText } from "@shared/Index.ts";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { isIgnoredChannel, isToggleEnabled, sendLog } from "@modules/logging/services/Send.js";
+import { fetchTyped } from "@i18n/Index.js";
 
 export const LoggingMessageDeleteListener = defineListener({
   name: "loggingMessageDelete",

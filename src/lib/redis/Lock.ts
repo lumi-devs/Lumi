@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { ValkeyClient } from "#src/lib/valkey/Cluster.js";
-import type { CacheLogger } from "#src/lib/valkey/Store.js";
+import type { RedisClient } from "@redis/Cluster.js";
+import type { CacheLogger } from "@redis/Store.js";
 
-export const ValkeyReleaseScript = `
+const ReleaseScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 else
@@ -10,7 +10,7 @@ else
 end
 `;
 
-export const ValkeyExtendScript = `
+export const RedisExtendScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('PEXPIRE', KEYS[1], ARGV[2])
 else
@@ -18,7 +18,7 @@ else
 end
 `;
 
-export const ValkeyVerifyScript = `
+const VerifyScript = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   return 1
 else
@@ -26,31 +26,25 @@ else
 end
 `;
 
-export async function verifyValkeyLock(
-  valkey: ValkeyClient,
+export async function verifyRedisLock(
+  redis: RedisClient,
   key: string,
   token: string,
 ): Promise<boolean> {
-  const held = await valkey.eval(ValkeyVerifyScript, 1, key, token);
+  const held = await redis.eval(VerifyScript, 1, key, token);
   return held === 1;
 }
 
-export interface ValkeyLockOptions {
-
+export interface RedisLockOptions {
   ttlMs?: number;
-
   acquireTimeoutMs?: number;
-
   retryDelayMs?: number;
-
   maxRetryDelayMs?: number;
-
   onLostLock?: () => void;
-
   logger?: CacheLogger;
 }
 
-const Defaults: Required<Omit<ValkeyLockOptions, "logger">> = {
+const Defaults: Required<Omit<RedisLockOptions, "logger">> = {
   ttlMs: 15_000,
   acquireTimeoutMs: 30_000,
   retryDelayMs: 25,
@@ -58,18 +52,16 @@ const Defaults: Required<Omit<ValkeyLockOptions, "logger">> = {
   onLostLock: () => undefined,
 };
 
-export interface ValkeyLock {
-
+export interface RedisLock {
   release: () => Promise<void>;
-
   token: string;
 }
 
-export async function acquireValkeyLock(
-  valkey: ValkeyClient,
+export async function acquireRedisLock(
+  redis: RedisClient,
   key: string,
-  options: ValkeyLockOptions = {},
-): Promise<ValkeyLock> {
+  options: RedisLockOptions = {},
+): Promise<RedisLock> {
   const opts = { ...Defaults, ...options };
   const log = options.logger ?? console;
   const token = randomUUID();
@@ -77,10 +69,10 @@ export async function acquireValkeyLock(
   let delay = opts.retryDelayMs;
 
   while (true) {
-    const ok = await valkey.set(key, token, "PX", opts.ttlMs, "NX");
+    const ok = await redis.set(key, token, "PX", opts.ttlMs, "NX");
     if (ok === "OK") break;
     if (Date.now() >= deadline) {
-      throw new Error(`Timeout acquiring Valkey lock: ${key}`);
+      throw new Error(`Timeout acquiring Redis lock: ${key}`);
     }
     await Bun.sleep(delay);
     delay = Math.min(delay * 2, opts.maxRetryDelayMs);
@@ -91,7 +83,7 @@ export async function acquireValkeyLock(
   const noteRenewFailure = (err?: unknown): void => {
     consecutiveRenewFailures++;
     const plural = consecutiveRenewFailures === 1 ? "" : "s";
-    const message = `[valkey-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${plural})`;
+    const message = `[redis-lock] Failed to renew lock "${key}" (${consecutiveRenewFailures} consecutive failure${plural})`;
     if (err === undefined) log.error?.(message);
     else log.error?.(message, err);
     if (consecutiveRenewFailures === 2) {
@@ -101,8 +93,8 @@ export async function acquireValkeyLock(
   const renew = setInterval(
     () => {
       if (released) return;
-      valkey
-        .eval(ValkeyExtendScript, 1, key, token, opts.ttlMs.toString())
+      redis
+        .eval(RedisExtendScript, 1, key, token, opts.ttlMs.toString())
         .then((res: unknown) => {
           if (released) return;
           if (res === 1) {
@@ -124,7 +116,7 @@ export async function acquireValkeyLock(
     if (released) return;
     released = true;
     clearInterval(renew);
-    await valkey.eval(ValkeyReleaseScript, 1, key, token).catch(() => null);
+    await redis.eval(ReleaseScript, 1, key, token).catch(() => null);
   };
 
   return { release, token };

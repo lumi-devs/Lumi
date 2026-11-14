@@ -4,11 +4,11 @@ import {
   type Guild,
   type GuildAuditLogsEntry,
 } from "discord.js";
-import { isNullish } from "#src/shared/Index.ts";
-import type { Container } from "#src/lib/Services.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import { evaluateNukeEvent, type NukeKind } from "#src/modules/security/services/AntiNuke.js";
-import { flagRestorePending } from "#src/modules/security/services/Backup.js";
+import { isNullish } from "@shared/Index.ts";
+import type { Container } from "@lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import { evaluateNukeEvent, type NukeKind } from "@modules/security/services/AntiNuke.js";
+import { flagRestorePending } from "@modules/security/services/Backup.js";
 
 const KindByEvent: Partial<Record<AuditLogEvent, NukeKind>> = {
   [AuditLogEvent.MemberBanAdd]: "ban",

@@ -1,9 +1,9 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lib/Services.js";
 import {
   FieldType,
   fieldsFromSchema,
-} from "#src/lib/module-system/ConfigSchema.js";
-import { configLock } from "#src/lib/prisma/GuildTransaction.js";
+} from "@module-system/ConfigSchema.js";
+import { configLock } from "@db/GuildTransaction.js";
 
 export async function clearStaleConfigRefs(
   services: Container,

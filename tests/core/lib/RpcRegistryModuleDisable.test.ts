@@ -1,21 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 
 const mockedReadManifest = vi.fn();
 const mockedMetaFromManifest = vi.fn();
 
-vi.mock("#lib/module-system/Manifest.js", () => ({
+vi.mock("@module-system/Manifest.js", () => ({
   readManifest: mockedReadManifest,
   metaFromManifest: mockedMetaFromManifest,
 }));
 
-import { ModuleStore } from "#src/lib/module-system/ModuleStore.js";
-import { getRpcHandler, registerRpcHandlers, restoreStaticRpcOwner } from "#src/lib/rpc/Registry.js";
-import { AfkRepository } from "#src/modules/afk/data/AfkRepository.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { ModuleStore } from "@module-system/ModuleStore.js";
+import { getRpcHandler, registerRpcHandlers, restoreStaticRpcOwner } from "@rpc/Registry.js";
+import { AfkRepository } from "@modules/afk/data/AfkRepository.js";
+import { repositoryCache } from "@cache/CacheStore.js";
 import { createMockPrismaClient } from "../mocks/Prisma.js";
+import { createMemoryRedis } from "../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../helpers/FakeRestPort.js";
 
 const GUILD_ID = "123456789012345678";
@@ -101,16 +102,11 @@ describe("owner-based RPC registry follows ModuleStore#unload", () => {
     };
     repositoryCache.clear();
 
-    const valkey = {
-      get: vi.fn().mockResolvedValue(null),
-      setex: vi.fn(),
-      set: vi.fn(),
-      pipeline: vi.fn(() => ({ setex: vi.fn(), set: vi.fn(), exec: vi.fn() })),
-    };
-    (container as any).valkey = valkey;
+    const redis = createMemoryRedis();
+    (container as any).redis = redis;
 
     const db = { ensureGuild: vi.fn().mockResolvedValue(undefined) } as any;
-    db.afk = new AfkRepository(prisma as any, valkey as any, container.logger, db);
+    db.afk = new AfkRepository(prisma as any, redis as any, container.logger, db);
     db.modules = {
       getGlobalModuleStates: vi.fn().mockResolvedValue(new Map()),
       isModuleGlobalEnabled: vi.fn(),

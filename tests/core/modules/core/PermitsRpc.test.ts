@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
-import type { RpcActionName } from "#src/contracts/rpc/Index.ts";
-import { getRpcHandler, registerRpcHandlers } from "#src/lib/rpc/Registry.js";
-import { repositoryCache } from "#src/lib/cache/CacheStore.js";
+import { container } from "@lib/Services.js";
+import type { RpcActionName } from "@contracts/rpc/Index.ts";
+import { getRpcHandler, registerRpcHandlers } from "@rpc/Registry.js";
+import { repositoryCache } from "@cache/CacheStore.js";
+import { createMemoryRedis } from "../../mocks/MemoryRedis.js";
 import { FakeDiscordRestPort } from "../../helpers/FakeRestPort.js";
 
 let permissionsUtility: any;
-vi.mock("#lib/module-system/Utility.js", () => ({
+vi.mock("@module-system/Utility.js", () => ({
   getUtility: vi.fn().mockImplementation(() => permissionsUtility),
   tryGetUtility: vi.fn().mockImplementation(() => permissionsUtility),
 }));
@@ -41,7 +42,7 @@ describe("core module permit RPC handlers", () => {
     discordRest = new FakeDiscordRestPort();
     seedGuildManager();
     (container as any).discordRest = discordRest;
-    (container as any).valkey = { get: vi.fn().mockResolvedValue(null), setex: vi.fn() };
+    (container as any).redis = createMemoryRedis();
 
     permissionsUtility = {
       listPermits: vi.fn().mockResolvedValue([]),

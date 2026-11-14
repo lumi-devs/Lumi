@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "bun:test";
-import { container } from "#src/lib/Services.js";
+import { container } from "@lib/Services.js";
 import {
   countMenus,
   deleteMenu,
@@ -15,8 +15,8 @@ import {
   validateMenuDraft,
   validateOptionDraft,
   type ReactionRoleMenu,
-} from "#src/modules/reactionroles/data/Reactionroles.js";
-import { ReactionRoleRepository } from "#src/modules/reactionroles/data/ReactionRoleRepository.js";
+} from "@modules/reactionroles/data/Reactionroles.js";
+import { ReactionRoleRepository } from "@modules/reactionroles/data/ReactionRoleRepository.js";
 import { createMockPrismaClient } from "../../mocks/Prisma.js";
 
 function makeMenu(overrides: Partial<ReactionRoleMenu> = {}): ReactionRoleMenu {

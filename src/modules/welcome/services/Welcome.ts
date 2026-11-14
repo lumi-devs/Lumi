@@ -1,16 +1,16 @@
 import { userMention } from "@discordjs/formatters";
 import type { Guild } from "discord.js";
-import { container } from "#src/lib/Services.js";
-import { clampMessageDocumentV2, splitOnSeparator, type MessageDocumentV2 } from "#src/contracts/Index.ts";
-import { makeInfoCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { container } from "@lib/Services.js";
+import { clampMessageDocumentV2, splitOnSeparator, type MessageDocumentV2 } from "@contracts/Index.ts";
+import { makeInfoCard, type CardReply } from "@ui/Cards.js";
 import {
   renderMessageContent,
   type MessageButton,
-} from "#src/lib/utilities/MessageContent.js";
-import { renderTemplate } from "#src/lib/utilities/Template.js";
-import { renderMessageBlocksV2 } from "#src/lib/utilities/MessageBlocksV2.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
+} from "@utilities/MessageContent.js";
+import { renderTemplate } from "@utilities/Template.js";
+import { renderMessageBlocksV2 } from "@utilities/MessageBlocksV2.js";
+import { logError } from "@utilities/Errors.js";
+import { toStringArray } from "@module-system/ConfigSchema.js";
 
 export interface WelcomeTemplateVars {
   user: string;

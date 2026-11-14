@@ -1,25 +1,25 @@
-import type { Container } from "#src/lib/Services.js";
-import { respondWithChoices, filterAutocompleteChoices } from "#src/lib/utilities/Autocomplete.js";
+import type { Container } from "@lib/Services.js";
+import { respondWithChoices, filterAutocompleteChoices } from "@utilities/Autocomplete.js";
 import { SlashCommandBuilder, type AutocompleteInteraction } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
-import { massPurge } from "#src/lib/discord/MassPurge.js";
+import type { CommandDef } from "@commands/CommandDef.js";
+import type { CommandContext } from "@commands/Context.js";
+import { massPurge } from "@discord/MassPurge.js";
 import {
   Message,
   PermissionFlagsBits,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { makeErrorCard, makeSuccessCard, makeWarningCard } from "#src/lib/ui/Cards.js";
-import { confirmPrompt } from "#src/lib/utilities/Confirm.js";
-import { logError } from "#src/lib/utilities/Errors.js";
-import { deleteMessageLater } from "#src/lib/utilities/TemporaryMessage.js";
-import { parseDuration, formatDuration } from "#src/lib/utilities/Time.js";
+import { makeErrorCard, makeSuccessCard, makeWarningCard } from "@ui/Cards.js";
+import { confirmPrompt } from "@utilities/Confirm.js";
+import { logError } from "@utilities/Errors.js";
+import { deleteMessageLater } from "@utilities/TemporaryMessage.js";
+import { parseDuration, formatDuration } from "@utilities/Time.js";
 import {
   MatchBatchSize,
   getRegexWorker,
-} from "#src/lib/regex-worker/Handler.js";
-import { validateRegexPattern } from "#src/lib/regex-worker/Validate.js";
-import type { LumiT } from "#src/lib/i18n/Index.js";
+} from "@lib/regex-worker/Handler.js";
+import { validateRegexPattern } from "@lib/regex-worker/Validate.js";
+import type { LumiT } from "@i18n/Index.js";
 
 type MessageFilter = (message: Message) => boolean;
 

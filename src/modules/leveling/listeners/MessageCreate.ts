@@ -1,10 +1,10 @@
 import { Events } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineListener } from "@listeners/ListenerDef.js";
+import type { Container } from "@lib/Services.js";
 import type { Message } from "discord.js";
-import { getLevelingConfig } from "#src/modules/leveling/Config.js";
-import { LevelingModuleName } from "#src/modules/leveling/Constants.js";
-import { LevelService } from "#src/modules/leveling/services/LevelService.js";
+import { getLevelingConfig } from "@modules/leveling/Config.js";
+import { LevelingModuleName } from "@modules/leveling/Constants.js";
+import { LevelService } from "@modules/leveling/services/LevelService.js";
 
 export const levelingMessageCreateListener = defineListener({
   name: "levelingMessageCreate",
