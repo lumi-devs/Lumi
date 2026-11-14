@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   push:
-    branches: [main, develop/v2]
+    branches: [main, v2/develop]
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
