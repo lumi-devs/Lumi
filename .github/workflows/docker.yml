@@ -3,8 +3,9 @@ name: Docker Packaging & Publish
 on:
   release:
     types: [published]
+  push:
+    branches: [main, develop/v2]
   workflow_dispatch:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
