@@ -165,11 +165,7 @@ export function createModuleDataHelpers(ctx: DbContext) {
         (row.expiresAt !== null && row.expiresAt.getTime() <= Date.now())
       ) {
         try {
-          await cache.set(
-            cachedKey,
-            { hit: false },
-            row ? 1 : NegativeTtlMs,
-          );
+          await cache.set(cachedKey, { hit: false }, row ? 1 : NegativeTtlMs);
         } catch {
           return null;
         }
@@ -365,9 +361,7 @@ export function createModuleDataHelpers(ctx: DbContext) {
         where: {
           ...(query.guildId !== undefined ? { guildId: query.guildId } : {}),
           moduleName: query.moduleName,
-          ...(query.targetId !== undefined
-            ? { targetId: query.targetId }
-            : {}),
+          ...(query.targetId !== undefined ? { targetId: query.targetId } : {}),
           ...(keyFilter !== undefined ? { key: keyFilter } : {}),
           AND: [
             { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },

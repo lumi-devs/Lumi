@@ -14,9 +14,16 @@ user, channel, message, or any feature-specific id; use a stable sentinel such
 as the guild id when the value is guild-wide.
 
 ```ts
-await services.helpers.moduleData.set(guildId, moduleName, targetId, key, value, {
-  ttlMs: 60_000,
-});
+await services.helpers.moduleData.set(
+  guildId,
+  moduleName,
+  targetId,
+  key,
+  value,
+  {
+    ttlMs: 60_000,
+  },
+);
 const value = await services.helpers.moduleData.get<T>(
   guildId,
   moduleName,

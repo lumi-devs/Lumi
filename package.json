@@ -16,14 +16,13 @@
     "test:watch": "bun run dashboard:sync && vitest",
     "test:coverage": "bun run dashboard:sync && vitest run --coverage",
     "setup": "bun run scripts/setup.ts",
+    "setup:check": "bun run scripts/setup.ts --check",
     "db:studio": "prisma studio",
     "seed": "bun run scripts/seed.ts",
     "build": "bun build src/index.ts --target=bun --external canvas --outdir=dist",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
-    "build": "bun build src/index.ts --target=bun --external canvas --outdir=dist",
     "dev:bot": "bun --watch src/index.ts",
     "dashboard:dev": "bun run --cwd apps/dashboard dev",
     "dashboard:sync": "bun run --cwd apps/dashboard sync",
@@ -48,7 +47,7 @@
     "prettier-plugin-svelte": "^4.1.1"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.4"
 }

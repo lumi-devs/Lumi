@@ -158,10 +158,7 @@ describe("ModuleHost", () => {
 
     await host.mount("afk");
 
-    expect(loader.loadAll).toHaveBeenCalledWith(
-      [addon],
-      expect.anything(),
-    );
+    expect(loader.loadAll).toHaveBeenCalledWith([addon], expect.anything());
     expect(registry.get("afk")?.module).toBe("afk");
   });
 

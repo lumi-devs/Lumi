@@ -41,9 +41,7 @@
     {
       "name": "backups",
       "version": "2.0.0",
-      "provides": [
-        "security.backups"
-      ]
+      "provides": ["security.backups"]
     }
   ],
   "conflicts": [],

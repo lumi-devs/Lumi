@@ -32,7 +32,11 @@ import {
 function versionSatisfies(current: string, required: string): boolean {
   const currentParts = current.split(".").map(Number);
   const requiredParts = required.split(".").map(Number);
-  for (let i = 0; i < Math.max(currentParts.length, requiredParts.length); i++) {
+  for (
+    let i = 0;
+    i < Math.max(currentParts.length, requiredParts.length);
+    i++
+  ) {
     const c = currentParts[i] ?? 0;
     const r = requiredParts[i] ?? 0;
     if (c > r) return true;
@@ -57,9 +61,12 @@ export async function runSetup(options: SetupOptions): Promise<number> {
     return 1;
   }
 
-  const minBunVersion = "1.4.2";
+  const minBunVersion = "1.4.4";
   const currentBunVersion = process.versions.bun;
-  if (currentBunVersion && !versionSatisfies(currentBunVersion, minBunVersion)) {
+  if (
+    currentBunVersion &&
+    !versionSatisfies(currentBunVersion, minBunVersion)
+  ) {
     process.stderr.write(
       `Bun version ${currentBunVersion} is below minimum required ${minBunVersion}.\n`,
     );

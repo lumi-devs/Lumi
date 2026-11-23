@@ -7,9 +7,22 @@ import path from "node:path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@lumi/foundation": path.resolve(__dirname, "../../packages/foundation/src/index.ts"),
-      "@lumi/module-kit": path.resolve(__dirname, "../../packages/module-kit/src/index.ts"),
-      "@lumi/cache": path.resolve(__dirname, "../../packages/cache/src/index.ts"),
+      "@lumi/foundation": path.resolve(
+        import.meta.dirname,
+        "../../packages/foundation/src/index.ts",
+      ),
+      "@lumi/module-kit": path.resolve(
+        import.meta.dirname,
+        "../../packages/module-kit/src/index.ts",
+      ),
+      "@lumi/cache": path.resolve(
+        import.meta.dirname,
+        "../../packages/cache/src/index.ts",
+      ),
+      "@lumi/redis": path.resolve(
+        import.meta.dirname,
+        "../../packages/redis/src/index.ts",
+      ),
     },
   },
   plugins: [
@@ -38,6 +51,11 @@ export default defineConfig({
     }),
   ],
   ssr: {
-    noExternal: ["@lumi/foundation", "@lumi/module-kit", "@lumi/cache"],
+    noExternal: [
+      "@lumi/foundation",
+      "@lumi/module-kit",
+      "@lumi/cache",
+      "@lumi/redis",
+    ],
   },
 });

@@ -70,9 +70,7 @@
     {
       "name": "panic",
       "version": "2.0.0",
-      "provides": [
-        "security.panic"
-      ]
+      "provides": ["security.panic"]
     }
   ],
   "conflicts": [],

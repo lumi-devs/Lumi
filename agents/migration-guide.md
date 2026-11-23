@@ -269,10 +269,10 @@ bun dist/index.js
 | `guildSettings.prefix`         | Guild `prefix` setting (`/lumi` → Settings) |
 | `guildSettings.modLogChannel`  | `logging` module log channels               |
 | `guildSettings.welcomeChannel` | No direct equivalent (no welcome module)    |
-| `guildSettings.levelUpChannel` | `leveling` → `announceChannel`    |
-| `guildSettings.currencyName`   | `economy` → `currencyName`        |
-| `guildSettings.autoModRules`   | `automod` heat filters             |
-| `guildSettings.tempVcCategory` | `tempvc` → `categoryId`             |
+| `guildSettings.levelUpChannel` | `leveling` → `announceChannel`              |
+| `guildSettings.currencyName`   | `economy` → `currencyName`                  |
+| `guildSettings.autoModRules`   | `automod` heat filters                      |
+| `guildSettings.tempVcCategory` | `tempvc` → `categoryId`                     |
 
 ### Example: Economy Config Migration
 

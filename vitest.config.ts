@@ -18,9 +18,7 @@ export default defineConfig({
       "modules/**/tests/**/*.test.ts",
       "apps/*/tests/**/*.test.ts",
     ],
-    exclude: [
-      "data/repos/**/tests/**/*.test.ts",
-    ],
+    exclude: ["data/repos/**/tests/**/*.test.ts"],
   },
   resolve: {
     alias: [

@@ -1,3 +1,4 @@
+import { logger } from "@lumi/foundation";
 import { serverConfig } from "./env.js";
 
 export interface PermitNodesResponse {
@@ -308,6 +309,19 @@ export async function setModuleStateViaRpc(
     },
   );
   return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
+export async function invalidateGuildConfig(guildId: string): Promise<void> {
+  const result = await rpcRequest(
+    `/api/v1/guilds/${encodeURIComponent(guildId)}/config/invalidate`,
+    { method: "POST" },
+  );
+  if (!result.ok) {
+    logger.warn("[dashboard] guild config invalidation failed", {
+      guildId,
+      error: result.error,
+    });
+  }
 }
 
 export async function restoreBackupViaRpc(

@@ -2,8 +2,8 @@
 
 The `Roles` category contains three independently toggleable modules:
 
-| Module             | Directory                  | Permit node        |
-| ------------------ | -------------------------- | ------------------ |
+| Module       | Directory                  | Permit node        |
+| ------------ | -------------------------- | ------------------ |
 | `autorole`   | `modules/roles/autorole`   | `roles.autorole`   |
 | `voiceroles` | `modules/roles/voiceroles` | `roles.voiceroles` |
 | `bulkrole`   | `modules/roles/bulkrole`   | `roles.bulkrole`   |

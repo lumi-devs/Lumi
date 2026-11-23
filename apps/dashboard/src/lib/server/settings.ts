@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { getPrisma } from "./prisma";
+import { getPrisma } from "./prisma.js";
+import { invalidateGuildConfig } from "./rpc.js";
 
 export type GuildSettings = Record<string, unknown>;
 
@@ -59,6 +60,7 @@ async function mutateSettings(
         },
         { isolationLevel: "Serializable" },
       );
+      await invalidateGuildConfig(guildId);
       return;
     } catch (error) {
       if (!isRetryable(error) || attempt === 3) throw error;

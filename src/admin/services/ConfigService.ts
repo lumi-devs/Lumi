@@ -39,8 +39,10 @@ export class ConfigService {
 
   private async read(guildId: string): Promise<GuildSettings> {
     if (!this.options.cache) return this.load(guildId);
-    const settings = await this.options.cache.getOrLoad(guildId, ConfigTtlMs, () =>
-      this.load(guildId),
+    const settings = await this.options.cache.getOrLoad(
+      guildId,
+      ConfigTtlMs,
+      () => this.load(guildId),
     );
 
     return settings ? structuredClone(settings) : {};
@@ -70,7 +72,6 @@ export class ConfigService {
           { isolationLevel: "Serializable" },
         );
         await this.options.cache?.delete(guildId);
-        await this.options.invalidation?.invalidate("config", [guildId]);
         return settings;
       } catch (error) {
         if (

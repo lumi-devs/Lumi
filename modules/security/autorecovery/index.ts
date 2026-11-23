@@ -14,7 +14,10 @@ import {
 } from "@lumi/ui";
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { z } from "zod";
-import { latestBackup, restoreBackup } from "../../shared/backup-store/index.js";
+import {
+  latestBackup,
+  restoreBackup,
+} from "../../shared/backup-store/index.js";
 import {
   deleteStored,
   getStoredJson,

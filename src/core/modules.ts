@@ -172,9 +172,7 @@ export class ModuleHost implements AddonRuntime {
 
   async mount(name: string): Promise<void> {
     const discovered = await this.options.loader.discover();
-    const target = discovered.find(
-      (module) => module.manifest.name === name,
-    );
+    const target = discovered.find((module) => module.manifest.name === name);
     if (!target) {
       throw new Error(`Add-on "${name}" was not discovered.`);
     }

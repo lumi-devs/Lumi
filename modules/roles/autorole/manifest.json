@@ -13,9 +13,7 @@
     {
       "name": "autorole",
       "version": "2.0.0",
-      "provides": [
-        "roles.autorole"
-      ]
+      "provides": ["roles.autorole"]
     }
   ],
   "configFields": [

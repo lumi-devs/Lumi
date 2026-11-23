@@ -71,9 +71,9 @@ describe("tryKeyLock", () => {
     expect(release).not.toBeNull();
     await release?.();
 
-    await expect(
-      withKeyLock(local, "k", async () => "after"),
-    ).resolves.toBe("after");
+    await expect(withKeyLock(local, "k", async () => "after")).resolves.toBe(
+      "after",
+    );
   });
 
   it("returns null on a single failed distributed attempt", async () => {

@@ -29,7 +29,6 @@ const OptionalInt = (min: number, max: number) =>
       { message: `Expected an integer between ${min} and ${max}, or empty.` },
     );
 
-
 const RoleMenuGroupSchema = z.object({
   id: z.string().trim().max(64).optional(),
   name: z.string().trim().min(1).max(64),
@@ -83,7 +82,6 @@ function optionalText(data: FormData, name: string): string | null {
   return value === "" ? null : value;
 }
 
-
 async function menuBelongsTo(guildId: string, id: string | undefined) {
   if (!id) return null;
   return getPrisma().roleMenuGroup.findFirst({ where: { id, guildId } });
@@ -98,29 +96,28 @@ export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
   const prisma = getPrisma();
 
-  const [groups, categories, panels, tickets, nodes] =
-    await Promise.all([
-      prisma.roleMenuGroup.findMany({
-        where: { guildId },
-        orderBy: { name: "asc" },
-        include: { options: { orderBy: { position: "asc" } } },
-      }),
-      prisma.ticketCategory.findMany({
-        where: { guildId },
-        orderBy: { position: "asc" },
-      }),
-      prisma.ticketPanel.findMany({
-        where: { guildId },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.ticket.findMany({
-        where: { guildId },
-        orderBy: { lastActivityAt: "desc" },
-        take: 50,
-        include: { category: { select: { name: true } } },
-      }),
-      fetchPermitNodes(guildId),
-    ]);
+  const [groups, categories, panels, tickets, nodes] = await Promise.all([
+    prisma.roleMenuGroup.findMany({
+      where: { guildId },
+      orderBy: { name: "asc" },
+      include: { options: { orderBy: { position: "asc" } } },
+    }),
+    prisma.ticketCategory.findMany({
+      where: { guildId },
+      orderBy: { position: "asc" },
+    }),
+    prisma.ticketPanel.findMany({
+      where: { guildId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.ticket.findMany({
+      where: { guildId },
+      orderBy: { lastActivityAt: "desc" },
+      take: 50,
+      include: { category: { select: { name: true } } },
+    }),
+    fetchPermitNodes(guildId),
+  ]);
 
   return {
     nodes,
@@ -155,7 +152,6 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-
   saveMenu: async (event) => {
     const { guildId, userId, data } = await requireGuildForm(event);
 

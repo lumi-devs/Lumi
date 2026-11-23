@@ -12,11 +12,7 @@ import {
 } from "./categories.js";
 import { feedbackCommand, infoCommand, listCommand } from "./info.js";
 import { blacklistCommand, tagCommand } from "./moderation.js";
-import {
-  CategoryNameLimit,
-  ensureModule,
-  replyError,
-} from "./shared.js";
+import { CategoryNameLimit, ensureModule, replyError } from "./shared.js";
 import {
   addNote,
   changeMember,

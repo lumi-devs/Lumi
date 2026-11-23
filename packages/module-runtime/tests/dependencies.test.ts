@@ -36,8 +36,6 @@ describe("checkDependencies", () => {
   it("reports a missing dependency", () => {
     expect(
       checkDependencies("afk", { utility: "^2.0.0" }, available({})),
-    ).toEqual([
-      { module: "afk", dependency: "utility", reason: "missing" },
-    ]);
+    ).toEqual([{ module: "afk", dependency: "utility", reason: "missing" }]);
   });
 });

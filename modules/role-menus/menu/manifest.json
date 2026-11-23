@@ -14,10 +14,7 @@
     {
       "name": "role-menus",
       "version": "2.0.0",
-      "provides": [
-        "role-menus.menu",
-        "role-menus.temp-roles"
-      ]
+      "provides": ["role-menus.menu", "role-menus.temp-roles"]
     }
   ],
   "configFields": [
@@ -26,10 +23,7 @@
       "label": "Default Selection Mode",
       "type": "select",
       "description": "Whether new role menus allow one or multiple choices",
-      "choices": [
-        "single",
-        "multiple"
-      ],
+      "choices": ["single", "multiple"],
       "default": "multiple",
       "category": "Defaults"
     },

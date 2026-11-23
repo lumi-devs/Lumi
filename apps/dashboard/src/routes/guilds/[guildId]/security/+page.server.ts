@@ -10,6 +10,7 @@ import { publicWebBaseUrl } from "#lib/server/env.js";
 import { verifyGuildTargets } from "#lib/server/guildTargets.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { getRedis } from "#lib/server/redis.js";
+import { invalidateModuleCatalog } from "#lib/server/modules.js";
 import {
   fetchBackupPreview,
   restoreBackupViaRpc,
@@ -383,19 +384,15 @@ export const actions: Actions = {
     if (!targets.ok) return fail(targets.status, { error: targets.message });
 
     const existing = await readGuildSettings(guildId);
-    const current = parseOr(
-      VerificationLoad,
-      existing.verification,
-      {
-        enabled: false,
-        verifiedRoleId: null,
-        pendingRoleId: null,
-        timeoutMinutes: 10,
-        kickOnTimeout: false,
-        mode: "emoji",
-        target: "everyone",
-      },
-    );
+    const current = parseOr(VerificationLoad, existing.verification, {
+      enabled: false,
+      verifiedRoleId: null,
+      pendingRoleId: null,
+      timeoutMinutes: 10,
+      kickOnTimeout: false,
+      mode: "emoji",
+      target: "everyone",
+    });
     await setGuildSetting(guildId, "verification", {
       ...current,
       ...parsed.data,
@@ -415,6 +412,7 @@ export const actions: Actions = {
       "verification",
       parsed.data.enabled,
     );
+    await invalidateModuleCatalog(guildId);
     await recordAudit({
       guildId,
       userId,
@@ -494,19 +492,15 @@ export const actions: Actions = {
     if (!parsed.ok) return fail(400, { error: parsed.message });
 
     const settings = await readGuildSettings(guildId);
-    const verification = parseOr(
-      VerificationLoad,
-      settings.verification,
-      {
-        enabled: false,
-        verifiedRoleId: null,
-        pendingRoleId: null,
-        timeoutMinutes: 10,
-        kickOnTimeout: false,
-        mode: "emoji",
-        target: "everyone",
-      },
-    );
+    const verification = parseOr(VerificationLoad, settings.verification, {
+      enabled: false,
+      verifiedRoleId: null,
+      pendingRoleId: null,
+      timeoutMinutes: 10,
+      kickOnTimeout: false,
+      mode: "emoji",
+      target: "everyone",
+    });
     if (!verification.verifiedRoleId) {
       return fail(400, {
         error:

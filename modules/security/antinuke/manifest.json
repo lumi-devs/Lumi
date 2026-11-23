@@ -42,11 +42,7 @@
       "type": "select",
       "description": "Action taken when ban threshold trips",
       "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ],
+      "choices": ["log", "quarantine", "ban"],
       "category": "Member Actions"
     },
     {
@@ -65,11 +61,7 @@
       "type": "select",
       "description": "Action taken when kick threshold trips",
       "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ],
+      "choices": ["log", "quarantine", "ban"],
       "category": "Member Actions"
     },
     {
@@ -88,11 +80,7 @@
       "type": "select",
       "description": "Action taken when channel-delete threshold trips",
       "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ],
+      "choices": ["log", "quarantine", "ban"],
       "category": "Channel & Role Actions"
     },
     {
@@ -111,11 +99,7 @@
       "type": "select",
       "description": "Action taken when role-delete threshold trips",
       "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ],
+      "choices": ["log", "quarantine", "ban"],
       "category": "Channel & Role Actions"
     },
     {
@@ -134,11 +118,7 @@
       "type": "select",
       "description": "Action taken when webhook-create threshold trips",
       "default": "quarantine",
-      "choices": [
-        "log",
-        "quarantine",
-        "ban"
-      ],
+      "choices": ["log", "quarantine", "ban"],
       "category": "Webhook & Vanity"
     },
     {
@@ -179,9 +159,7 @@
     {
       "name": "antinuke",
       "version": "2.0.0",
-      "provides": [
-        "security.antinuke"
-      ]
+      "provides": ["security.antinuke"]
     }
   ],
   "conflicts": [],

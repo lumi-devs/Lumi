@@ -54,11 +54,7 @@
       "type": "select",
       "description": "How members prove they're human",
       "default": "emoji",
-      "choices": [
-        "emoji",
-        "none",
-        "web"
-      ],
+      "choices": ["emoji", "none", "web"],
       "category": "Setup"
     },
     {
@@ -74,10 +70,7 @@
       "type": "select",
       "description": "Require verification from everyone or only suspicious accounts",
       "default": "everyone",
-      "choices": [
-        "everyone",
-        "suspicious"
-      ],
+      "choices": ["everyone", "suspicious"],
       "category": "Setup"
     }
   ],
@@ -88,9 +81,7 @@
     {
       "name": "verification",
       "version": "2.0.0",
-      "provides": [
-        "security.verification"
-      ]
+      "provides": ["security.verification"]
     }
   ],
   "conflicts": [],

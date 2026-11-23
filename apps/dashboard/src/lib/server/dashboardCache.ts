@@ -1,5 +1,10 @@
-import { createCache, type CacheRedis, type InvalidationBus, type CacheMetrics, type NamespacedCache } from "@lumi/cache";
-import { getRedis, getInvalidationBus, dashboardKey } from "./redis.js";
+import {
+  createCache,
+  type CacheMetrics,
+  type CacheRedis,
+  type NamespacedCache,
+} from "@lumi/cache";
+import { getInvalidationBus, getRedis } from "./redis.js";
 import { logger } from "@lumi/foundation";
 import type { GuildSummary } from "./discord.js";
 import type { CatalogModule } from "./modules.js";
@@ -9,12 +14,16 @@ const globalForDashboardCache = globalThis as typeof globalThis & {
 };
 
 export interface DashboardCache {
-  userGuilds: NamespacedCache<readonly GuildSummary[]>;
-  moduleCatalog: NamespacedCache<readonly CatalogModule[]>;
+  userGuilds: NamespacedCache<GuildSummary[]>;
+  moduleCatalog: NamespacedCache<CatalogModule[]>;
   close(): Promise<void>;
 }
 
-function createDashboardCacheMetrics(): CacheMetrics {
+type DashboardCacheMetrics = CacheMetrics & {
+  getStats(): Record<string, unknown>;
+};
+
+function createDashboardCacheMetrics(): DashboardCacheMetrics {
   const hits = new Map<string, number>();
   const misses = new Map<string, number>();
   const negativeHits = new Map<string, number>();
@@ -64,9 +73,10 @@ function createDashboardCacheMetrics(): CacheMetrics {
       const stats: Record<string, unknown> = {};
       for (const ns of namespaces) {
         const durations = fillDurations.get(ns) ?? [];
-        const avgFill = durations.length > 0
-          ? durations.reduce((a, b) => a + b, 0) / durations.length
-          : 0;
+        const avgFill =
+          durations.length > 0
+            ? durations.reduce((a, b) => a + b, 0) / durations.length
+            : 0;
         stats[ns] = {
           hits: hits.get(ns) ?? 0,
           misses: misses.get(ns) ?? 0,
@@ -109,7 +119,7 @@ function createDashboardCache(): DashboardCache {
   const invalidation = getInvalidationBus();
   const metrics = dashboardCacheMetrics;
 
-  const userGuildsCache = createCache<readonly import("./discord.js").GuildSummary[]>({
+  const userGuildsCache = createCache<GuildSummary[]>({
     redis,
     invalidation,
     metrics,
@@ -119,7 +129,7 @@ function createDashboardCache(): DashboardCache {
     l1MaxTtlMs: 30_000,
   }).namespace("userGuilds");
 
-  const moduleCatalogCache = createCache<readonly import("./modules.js").CatalogModule[]>({
+  const moduleCatalogCache = createCache<CatalogModule[]>({
     redis,
     invalidation,
     metrics,

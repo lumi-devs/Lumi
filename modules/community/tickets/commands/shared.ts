@@ -44,7 +44,6 @@ export async function replyError(
   await replyCard(interaction, makeErrorCard(title, body));
 }
 
-
 export async function ensureModule(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,

@@ -538,8 +538,12 @@ export class ModuleLoader {
     }
 
     removed.sort((a, b) => {
-      const aDependsOnB = this.dependents.get(b.manifest.name)?.has(a.manifest.name);
-      const bDependsOnA = this.dependents.get(a.manifest.name)?.has(b.manifest.name);
+      const aDependsOnB = this.dependents
+        .get(b.manifest.name)
+        ?.has(a.manifest.name);
+      const bDependsOnA = this.dependents
+        .get(a.manifest.name)
+        ?.has(b.manifest.name);
       if (aDependsOnB && !bDependsOnA) return 1;
       if (bDependsOnA && !aDependsOnB) return -1;
       return 0;

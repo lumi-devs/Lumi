@@ -21,7 +21,7 @@ for arg in "$@"; do
 done
 
 if [ ! -f .env ]; then
-  echo "ERROR: .env not found. Run ./scripts/setup.sh first."
+  echo "ERROR: .env not found. Run bun run setup first."
   exit 1
 fi
 
@@ -32,7 +32,7 @@ fi
 
 if [ "$RUN_MIGRATE" = true ]; then
   echo "Running migrations..."
-  docker compose --profile migrate run --rm migrate
+  docker compose run --rm migrate
 fi
 
 echo "Starting full stack..."
@@ -44,5 +44,5 @@ else
   echo "Services:"
   echo "  Bot:      http://localhost:8091"
   echo "  Metrics:  http://localhost:9090"
-  echo "  Dashboard: http://localhost:3000"
+  echo "  Dashboard: http://localhost:4173"
 fi

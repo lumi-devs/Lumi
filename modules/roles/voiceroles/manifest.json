@@ -13,9 +13,7 @@
     {
       "name": "voiceroles",
       "version": "2.0.0",
-      "provides": [
-        "roles.voice"
-      ]
+      "provides": ["roles.voice"]
     }
   ],
   "configFields": [

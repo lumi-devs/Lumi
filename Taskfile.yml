@@ -1,8 +1,8 @@
-version: '3'
+version: "3"
 
 vars:
-  COMPOSE: 'docker compose'
-  BUN: 'bun'
+  COMPOSE: "docker compose"
+  BUN: "bun"
 
 tasks:
   # Stack Management
@@ -41,7 +41,7 @@ tasks:
   migrate:
     desc: "Run pending migrations"
     cmds:
-      - "{{.COMPOSE}} --profile migrate run --rm migrate"
+      - "{{.COMPOSE}} run --rm migrate"
 
   migrate:create:
     desc: "Create new migration"

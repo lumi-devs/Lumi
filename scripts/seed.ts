@@ -34,9 +34,15 @@ async function main() {
 
   // Enable some modules for the guild
   const modules = [
-    { module: "moderation", config: { logChannelId: "777777777777777777", dmOnAction: true } },
+    {
+      module: "moderation",
+      config: { logChannelId: "777777777777777777", dmOnAction: true },
+    },
     { module: "logging", config: { ignoredChannels: [], ignoredEvents: [] } },
-    { module: "roles.autorole", config: { roleIds: ["555555555555555555"], botRoleIds: [] } },
+    {
+      module: "roles.autorole",
+      config: { roleIds: ["555555555555555555"], botRoleIds: [] },
+    },
     { module: "utility.reminders", config: {} },
   ];
 

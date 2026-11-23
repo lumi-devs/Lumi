@@ -7,8 +7,24 @@ x-lumi-image: &lumi-image
 x-dashboard-image: &dashboard-image
   image: ghcr.io/lumi-devs/lumi-dashboard:${LUMI_TAG:-latest}
   build:
-    context: ./apps/dashboard
-    dockerfile: Dockerfile
+    context: .
+    dockerfile: apps/dashboard/Dockerfile
+
+x-hardening: &hardening
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:exec,size=256M
 
 services:
   postgres:
@@ -29,6 +45,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    <<: *hardening
+    read_only: false
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    tmpfs:
+      - /tmp:exec,size=64M
+      - /var/run/postgresql:exec,size=16M
 
   redis:
     image: docker.io/redis:8-alpine
@@ -50,64 +77,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  bot:
-    <<: *lumi-image
-    container_name: lumi-bot
-    environment:
-      BOT_TOKEN: ${BOT_TOKEN}
-      OWNER_IDS: ${OWNER_IDS}
-      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      CACHE_NAMESPACE: ${CACHE_NAMESPACE:-lumi}
-      DEFAULT_PREFIX: "${DEFAULT_PREFIX:-,}"
-      GIT_TOKEN: ${GIT_TOKEN:-}
-      GIT_USERNAME: ${GIT_USERNAME:-x-access-token}
-      WEB_BASE_URL: ${WEB_BASE_URL:-}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      METRICS_ENABLED: "true"
-      METRICS_PORT: "9090"
-      RPC_HTTP_HOST: 0.0.0.0
-      RPC_HTTP_PORT: "8091"
-      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8091:8091"
-      - "127.0.0.1:9090:9090"
-
-  dashboard:
-    <<: *dashboard-image
-    container_name: lumi-dashboard
-    environment:
-      RPC_URL: http://bot:8091
-      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN}
-      ORIGIN: ${WEB_BASE_URL:-http://localhost:3000}
-      BOT_TOKEN: ${BOT_TOKEN}
-      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-    depends_on:
-      bot:
-        condition: service_started
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"
+    <<: *hardening
+    read_only: false
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    tmpfs:
+      - /tmp:exec,size=64M
 
   migrate:
-    <<: *lumi-image
-    profiles: ["migrate"]
+    <<: [*lumi-image, *hardening]
     container_name: lumi-migrate
     command: ["run", "db:migrate:deploy"]
     environment:
@@ -116,7 +98,92 @@ services:
       postgres:
         condition: service_healthy
     restart: "no"
+    read_only: false
+
+  bot:
+    <<: [*lumi-image, *hardening]
+    container_name: lumi-bot
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+      OWNER_IDS: ${OWNER_IDS}
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      CACHE_NAMESPACE: ${CACHE_NAMESPACE:-lumi}
+      DEFAULT_PREFIX: "${DEFAULT_PREFIX:-,}"
+      GIT_TOKEN: ${GIT_TOKEN:-}
+      GIT_USERNAME: ${GIT_USERNAME:-x-access-token}
+      WEB_BASE_URL: ${WEB_BASE_URL:?set WEB_BASE_URL in .env}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      METRICS_ENABLED: "true"
+      METRICS_PORT: "9090"
+      RPC_HTTP_HOST: 0.0.0.0
+      RPC_HTTP_PORT: "8091"
+      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8091/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:9090:9090"
+    tmpfs:
+      - /tmp:exec,size=256M
+    volumes:
+      - lumi_data:/app/data
+
+  dashboard:
+    <<: [*dashboard-image, *hardening]
+    container_name: lumi-dashboard
+    environment:
+      RPC_URL: http://bot:8091
+      RPC_INTERNAL_TOKEN: ${RPC_INTERNAL_TOKEN:?set RPC_INTERNAL_TOKEN in .env}
+      ORIGIN: ${WEB_BASE_URL:?set WEB_BASE_URL in .env}
+      WEB_BASE_URL: ${WEB_BASE_URL:?set WEB_BASE_URL in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set DISCORD_CLIENT_ID in .env}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set DISCORD_CLIENT_SECRET in .env}
+      DISCORD_OAUTH_REDIRECT_URI: ${DISCORD_OAUTH_REDIRECT_URI:-${WEB_BASE_URL}/auth/callback}
+      BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+      DATABASE_URL: postgresql://lumi:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/lumi
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      SESSION_MAX_AGE_SECONDS: ${SESSION_MAX_AGE_SECONDS:-2592000}
+      DASHBOARD_INSECURE_COOKIES: ${DASHBOARD_INSECURE_COOKIES:-0}
+      OWNER_IDS: ${OWNER_IDS}
+      NODE_ENV: production
+      PORT: "4173"
+    depends_on:
+      bot:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4173/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "127.0.0.1:4173:4173"
+    tmpfs:
+      - /tmp:exec,size=256M
 
 volumes:
   postgres_data:
   redis_data:
+  lumi_data:

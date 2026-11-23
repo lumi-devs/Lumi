@@ -17,6 +17,7 @@ import {
 import {
   type CatalogModule,
   type ConfigField,
+  invalidateModuleCatalog,
   moduleCatalog,
 } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
@@ -222,6 +223,7 @@ export const actions: Actions = {
       targetType: "module",
       changes: { configKey: module.configKey },
     });
+    await invalidateModuleCatalog(guildId);
     return {
       success: `Saved ${module.displayName} configuration.`,
       ...(warning ? { warning } : {}),
@@ -259,6 +261,7 @@ export const actions: Actions = {
       targetType: "module",
       changes: { configKey: module.configKey },
     });
+    await invalidateModuleCatalog(guildId);
     return {
       success: `Reset ${module.displayName} configuration.`,
       ...(warning ? { warning } : {}),
@@ -286,6 +289,7 @@ export const actions: Actions = {
       targetId: module.name,
       targetType: "module",
     });
+    await invalidateModuleCatalog(guildId);
     const warning = sync.ok
       ? undefined
       : `${sync.error ?? "The bot did not apply the change."} It will apply on the next bot restart.`;

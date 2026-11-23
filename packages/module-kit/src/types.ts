@@ -104,7 +104,6 @@ export interface TaskDefinition {
   timezone?: string;
 }
 
-
 export interface UserDataDeletionResult {
   deleted?: number;
   anonymised?: number;

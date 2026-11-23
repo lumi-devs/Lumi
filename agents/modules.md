@@ -32,7 +32,6 @@ only difference is their discovery root (`modules/` vs `data/addons/`) and
 - `stats` — Message, voice, member, status, and boost tracking with canvas cards, 10-minute snapshots, and a 90-day raw-data retention cap
 - `tickets` — Private-thread ticket panels, categories, claims, priorities, notes, tags, feedback, and HTML transcripts
 
-
 ### Role Menus
 
 - `role-menus` — Button, select, and reaction role menus with single/multiple modes and temporary roles

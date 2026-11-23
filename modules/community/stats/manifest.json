@@ -14,10 +14,7 @@
     {
       "name": "stats",
       "version": "1.0.0",
-      "provides": [
-        "stats.tracking",
-        "stats.view"
-      ]
+      "provides": ["stats.tracking", "stats.view"]
     }
   ],
   "configFields": [

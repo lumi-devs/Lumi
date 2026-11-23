@@ -38,9 +38,7 @@
     {
       "name": "autorecovery",
       "version": "2.0.0",
-      "provides": [
-        "security.autorecovery"
-      ]
+      "provides": ["security.autorecovery"]
     }
   ],
   "conflicts": [],

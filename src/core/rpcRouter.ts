@@ -10,6 +10,7 @@ import type { SyncGuildCommands } from "./commandSync.js";
 import {
   createAddonHandler,
   createBackupHandler,
+  createConfigHandler,
   createGuildHandler,
   createModuleHandler,
   createPermitNodesHandler,
@@ -26,7 +27,7 @@ export interface RpcRouterOptions {
   readonly logger: Logger;
   readonly token: string | undefined;
   readonly getSyncGuildCommands: () => SyncGuildCommands | undefined;
-  readonly invalidation: { invalidate(namespace: string, keys: string[]): Promise<void> };
+  readonly configCache: { delete(...keys: string[]): Promise<void> };
 }
 
 export function createRpcRouter(
@@ -60,7 +61,10 @@ export function createRpcRouter(
     prisma,
     syncCommands: (guildId) =>
       options.getSyncGuildCommands()?.(guildId) ?? Promise.resolve(),
-    invalidation: options.invalidation,
+    token,
+  });
+  const configHandler = createConfigHandler({
+    configCache: options.configCache,
     token,
   });
   const backupHandler = createBackupHandler({
@@ -91,6 +95,11 @@ export function createRpcRouter(
       url.pathname.includes("/backups/")
     ) {
       await backupHandler(req, res);
+      return;
+    }
+
+    if (/^\/api\/v1\/guilds\/[0-9]+\/config\/invalidate$/.test(url.pathname)) {
+      await configHandler(req, res);
       return;
     }
 

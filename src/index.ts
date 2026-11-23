@@ -188,7 +188,7 @@ async function main(): Promise<void> {
       logger,
       token: process.env.RPC_INTERNAL_TOKEN,
       getSyncGuildCommands: () => syncGuildCommands,
-      invalidation: coreServices.invalidation,
+      configCache: coreServices.configCache,
     }),
   });
   await rpc.start();
@@ -204,12 +204,10 @@ async function main(): Promise<void> {
     );
   }
 
-
   const dataLifecycle = createDataLifecycleService({
     loader: moduleLoader,
     services,
   });
-
 
   scheduler.register({
     name: "addons-autoupdate",

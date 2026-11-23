@@ -1,6 +1,9 @@
+import { logger } from "@lumi/foundation";
 import { fetchModules, type RpcConfigField } from "./rpc.js";
 import { getDashboardCache } from "./dashboardCache.js";
 import type { ConfigField } from "@lumi/module-kit";
+
+export type { ConfigField };
 
 const MODULE_CATALOG_TTL_MS = 60_000;
 
@@ -42,33 +45,45 @@ export async function moduleCatalog(
   const cache = getDashboardCache();
   const cacheKey = `modules:catalog:${guildId}`;
 
-  return cache.moduleCatalog.getOrLoad(cacheKey, MODULE_CATALOG_TTL_MS, async () => {
-    const modules = await fetchModules(guildId);
-    if (!modules) return null;
+  const cached = await cache.moduleCatalog.getOrLoad(
+    cacheKey,
+    MODULE_CATALOG_TTL_MS,
+    async () => {
+      const modules = await fetchModules(guildId);
+      if (!modules) return null;
 
-    const catalog: CatalogModule[] = modules
-      .map((module) => ({
-        name: module.name,
-        displayName: module.displayName,
-        emoji: module.emoji,
-        description: module.description,
-        version: module.version,
-        configKey: module.configKey ?? module.name,
-        configFields: module.configFields
-          .map(toConfigField)
-          .filter((field): field is ConfigField => field !== null),
-        isAddon: module.origin === "addon",
-        category: module.category,
-        enabled: module.enabled,
-      }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      const catalog: CatalogModule[] = modules
+        .map((module) => ({
+          name: module.name,
+          displayName: module.displayName,
+          emoji: module.emoji,
+          description: module.description,
+          version: module.version,
+          configKey: module.configKey ?? module.name,
+          configFields: module.configFields
+            .map(toConfigField)
+            .filter((field): field is ConfigField => field !== null),
+          isAddon: module.origin === "addon",
+          category: module.category,
+          enabled: module.enabled,
+        }))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-    return catalog;
-  }) ?? null;
+      return catalog;
+    },
+  );
+  return cached;
 }
 
 export async function invalidateModuleCatalog(guildId: string): Promise<void> {
   const cache = getDashboardCache();
   const cacheKey = `modules:catalog:${guildId}`;
-  await cache.moduleCatalog.delete(cacheKey);
+  try {
+    await cache.moduleCatalog.delete(cacheKey);
+  } catch (error) {
+    logger.warn("[dashboard] module catalog invalidation failed", {
+      guildId,
+      error,
+    });
+  }
 }

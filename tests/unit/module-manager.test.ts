@@ -27,11 +27,7 @@ describe("ModuleManager", () => {
       update: { enabled: false },
       create: { guildId: "guild", module: "afk", enabled: false },
     });
-    expect(moduleLoader.setEnabled).toHaveBeenCalledWith(
-      "afk",
-      "guild",
-      false,
-    );
+    expect(moduleLoader.setEnabled).toHaveBeenCalledWith("afk", "guild", false);
     expect(syncCommands).toHaveBeenCalledWith("guild");
   });
 
@@ -40,11 +36,7 @@ describe("ModuleManager", () => {
 
     await manager.enable("guild", "afk");
 
-    expect(moduleLoader.setEnabled).toHaveBeenCalledWith(
-      "afk",
-      "guild",
-      true,
-    );
+    expect(moduleLoader.setEnabled).toHaveBeenCalledWith("afk", "guild", true);
     expect(syncCommands).toHaveBeenCalledWith("guild");
   });
 });

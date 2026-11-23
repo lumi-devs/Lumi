@@ -293,8 +293,8 @@
 {/snippet}
 <h2>Feature configuration</h2>
 <p class="muted">
-  Configure role menus, and ticket categories stored in the
-  database. Discord message panels are still sent by the bot.
+  Configure role menus, and ticket categories stored in the database. Discord
+  message panels are still sent by the bot.
 </p>
 {#if form?.success}
   <div class="notice ok" role="status">{form.success}</div>
@@ -302,7 +302,6 @@
 {#if form?.error}
   <div class="notice error" role="alert">{form.error}</div>
 {/if}
-
 
 <div class="panel">
   <h3>Role menus</h3>

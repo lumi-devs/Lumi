@@ -40,12 +40,7 @@
       "type": "escalation",
       "description": "Choose how many active warnings trigger a timeout, kick, ban, or quarantine.",
       "default": {},
-      "choices": [
-        "timeout",
-        "kick",
-        "ban",
-        "quarantine"
-      ],
+      "choices": ["timeout", "kick", "ban", "quarantine"],
       "category": "Warn Escalation"
     }
   ],
@@ -53,9 +48,7 @@
     {
       "name": "mod",
       "version": "2.0.0",
-      "provides": [
-        "moderation.cases"
-      ]
+      "provides": ["moderation.cases"]
     }
   ],
   "conflicts": [],

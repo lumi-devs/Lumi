@@ -86,10 +86,7 @@ export async function manageableGuilds(
         body: fetchError.body,
       });
     } else {
-      logger.error(
-        "[dashboard] fetchUserGuilds unexpected error:",
-        fetchError,
-      );
+      logger.error("[dashboard] fetchUserGuilds unexpected error:", fetchError);
     }
     if (
       fetchError instanceof DiscordError &&

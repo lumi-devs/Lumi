@@ -14,6 +14,8 @@
   "dependencies": {
     "@lumi/cache": "workspace:*",
     "@lumi/foundation": "workspace:*",
+    "@lumi/module-kit": "workspace:*",
+    "@lumi/redis": "workspace:*",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "ioredis": "^6.0.0",

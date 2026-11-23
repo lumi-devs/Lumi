@@ -1,7 +1,9 @@
+import { createHash, randomBytes } from "node:crypto";
 import { logger } from "@lumi/foundation";
 import { z } from "zod/v4";
 import { getDashboardCache } from "./dashboardCache.js";
-import { dashboardKey, getRedis } from "./redis";
+import { serverConfig } from "./env.js";
+import { dashboardKey } from "./redis.js";
 
 const ApiBase = "https://discord.com/api/v10";
 const OAuthBase = "https://discord.com/oauth2/authorize";
@@ -10,6 +12,7 @@ const TokenUrl = `${ApiBase}/oauth2/token`;
 const USER_GUILDS_CACHE_TTL = 45_000;
 
 export const ManageGuildPermission = 1n << 5n;
+export const AdministratorPermission = 1n << 3n;
 
 const OAuthTokenSchema = z.object({
   access_token: z.string().min(1),
@@ -207,7 +210,6 @@ export function fetchOAuthUser(accessToken: string): Promise<OAuthUser> {
   return oauthGet("/users/@me", accessToken, OAuthUserSchema);
 }
 
-
 export async function fetchUserGuilds(
   accessToken: string,
   userId: string,
@@ -215,15 +217,18 @@ export async function fetchUserGuilds(
   const cache = getDashboardCache();
   const cacheKey = dashboardKey("user", userId, "guilds");
 
-  return cache.userGuilds.getOrLoad(cacheKey, USER_GUILDS_CACHE_TTL, () =>
-    fetchUserGuildsUncached(accessToken),
-  ) ?? [];
+  const guilds = await cache.userGuilds.getOrLoad(
+    cacheKey,
+    USER_GUILDS_CACHE_TTL,
+    () => fetchUserGuildsUncached(accessToken),
+  );
+  return guilds ?? [];
 }
 
 async function fetchUserGuildsUncached(
   accessToken: string,
 ): Promise<GuildSummary[]> {
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const response = await fetch(`${ApiBase}/users/@me/guilds`, {
       headers: { authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(15_000),
@@ -239,9 +244,11 @@ async function fetchUserGuildsUncached(
       return parsed.data;
     }
 
-    if (response.status === 429) {
+    if (response.status === 429 && attempt < 2) {
       const retryAfter = Number(response.headers.get("retry-after") ?? "1");
-      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+      const { promise, resolve } = Promise.withResolvers<void>();
+      setTimeout(resolve, retryAfter * 1000);
+      await promise;
       continue;
     }
 
@@ -252,8 +259,9 @@ async function fetchUserGuildsUncached(
     });
     throw new DiscordError("Failed to fetch user guilds.", response.status);
   }
-}
 
+  throw new DiscordError("Failed to fetch user guilds.", 429);
+}
 
 export function canManageGuild(guild: GuildSummary): boolean {
   if (guild.owner) return true;

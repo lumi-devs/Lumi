@@ -35,7 +35,7 @@ describe("validateManifest", () => {
   it("accepts dependencies, conflicts, and capabilities", () => {
     const manifest = validateManifest({
       ...base,
-      dependencies: { "info": "^2.0.0" },
+      dependencies: { info: "^2.0.0" },
       requirements: ["lodash@^4.17.21"],
       conflicts: ["afk-legacy"],
       capabilities: [
@@ -47,7 +47,7 @@ describe("validateManifest", () => {
       ],
     });
 
-    expect(manifest.dependencies).toEqual({ "info": "^2.0.0" });
+    expect(manifest.dependencies).toEqual({ info: "^2.0.0" });
     expect(manifest.conflicts).toEqual(["afk-legacy"]);
     expect(manifest.capabilities[0]?.provides).toEqual(["utility.afk"]);
   });

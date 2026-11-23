@@ -10,15 +10,21 @@ import {
 describe("ConfigService", () => {
   it("invalidates cache and emits pub/sub on mutate", async () => {
     const mockPrisma = {
-      $transaction: vi.fn().mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          guild: {
-            findUnique: vi.fn().mockResolvedValue({ settings: { existing: true } }),
-            upsert: vi.fn().mockResolvedValue({}),
+      $transaction: vi
+        .fn()
+        .mockImplementation(
+          async (callback: (tx: unknown) => Promise<unknown>) => {
+            const tx = {
+              guild: {
+                findUnique: vi
+                  .fn()
+                  .mockResolvedValue({ settings: { existing: true } }),
+                upsert: vi.fn().mockResolvedValue({}),
+              },
+            };
+            return callback(tx);
           },
-        };
-        return callback(tx);
-      }),
+        ),
     } as unknown as PrismaClient;
 
     const mockCache = {
@@ -41,7 +47,7 @@ describe("ConfigService", () => {
     await service.set("123", "key", "value");
 
     expect(mockCache.delete).toHaveBeenCalledWith("123");
-    expect(mockInvalidation.invalidate).toHaveBeenCalledWith("config", ["123"]);
+    expect(mockInvalidation.invalidate).not.toHaveBeenCalled();
   });
 
   it("loads from database when cache misses", async () => {
@@ -52,9 +58,17 @@ describe("ConfigService", () => {
     } as unknown as PrismaClient;
 
     const mockCache = {
-      getOrLoad: vi.fn().mockImplementation(async (_key: string, _ttl: number, loader: () => Promise<unknown>) => {
-        return loader();
-      }),
+      getOrLoad: vi
+        .fn()
+        .mockImplementation(
+          async (
+            _key: string,
+            _ttl: number,
+            loader: () => Promise<unknown>,
+          ) => {
+            return loader();
+          },
+        ),
     } as unknown as NamespacedCache<GuildSettings>;
 
     const service = new ConfigService({

@@ -40,7 +40,10 @@ export interface ModuleRouteOptions {
   moduleLoader: Pick<ModuleLoader, "listGlobal" | "setEnabled" | "isEnabled">;
   prisma?: PrismaClient;
   syncCommands?: (guildId: string) => Promise<void>;
-  invalidation?: { invalidate(namespace: string, keys: string[]): Promise<void> };
+  token: string | undefined;
+}
+export interface ConfigRouteOptions {
+  configCache: { delete(...keys: string[]): Promise<void> };
   token: string | undefined;
 }
 export interface AddonRouteOptions {
@@ -116,7 +119,7 @@ function createResponseFinisher(
 export function createModuleHandler(
   options: ModuleRouteOptions,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-  const { moduleLoader, prisma, syncCommands, invalidation, token } = options;
+  const { moduleLoader, prisma, syncCommands, token } = options;
   return async function handleModuleStateRequest(
     req: IncomingMessage,
     res: ServerResponse,
@@ -203,15 +206,52 @@ export function createModuleHandler(
     }
     await moduleLoader.setEnabled(moduleName, guildId, enabled);
     await syncCommands?.(guildId);
-    if (invalidation) {
-      await invalidation.invalidate("modules", [guildId]);
-    }
     finish(200, { module: moduleName, enabled });
   };
 }
 
 function addonError(error: unknown): string {
   return error instanceof Error ? error.message : "Add-on operation failed.";
+}
+
+export function createConfigHandler(
+  options: ConfigRouteOptions,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  const { configCache, token } = options;
+
+  return async function handleConfigRequest(
+    req: IncomingMessage,
+    res: ServerResponse,
+  ): Promise<void> {
+    const startedAt = performance.now();
+    const url = new URL(
+      req.url ?? "/",
+      `http://${req.headers.host ?? "localhost"}`,
+    );
+    const route = url.pathname;
+    const method = req.method ?? "GET";
+    const finish = createResponseFinisher(req, res, route, startedAt);
+
+    if (!isAuthorized(req, token)) {
+      finish(401, { error: "unauthorized" });
+      return;
+    }
+
+    const match = route.match(
+      /^\/api\/v1\/guilds\/([0-9]+)\/config\/invalidate$/,
+    );
+    if (!match) {
+      finish(404, { error: "not found" });
+      return;
+    }
+    if (method !== "POST") {
+      finish(405, { error: "method_not_allowed" });
+      return;
+    }
+
+    await configCache.delete(match[1]!);
+    finish(200, { ok: true });
+  };
 }
 
 export function createAddonHandler(

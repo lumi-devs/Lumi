@@ -60,9 +60,9 @@ describe("moduleItems", () => {
         enabled: false,
       }),
     ]);
-    expect(moduleItems(modules, isEnabled).map((item) => item.name)).not.toContain(
-      "addon-status",
-    );
+    expect(
+      moduleItems(modules, isEnabled).map((item) => item.name),
+    ).not.toContain("addon-status");
   });
 
   it("falls back to Other when category is absent", () => {
