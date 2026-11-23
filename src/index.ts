@@ -247,7 +247,6 @@ async function main(): Promise<void> {
     services,
     logger,
     errorStore,
-    host,
     commandSync,
     guildSync,
     scheduler,

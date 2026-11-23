@@ -1,5 +1,4 @@
 export {
-  activeModules,
   type CacheMetrics,
   cacheEvictions,
   cacheFillDuration,
@@ -10,20 +9,11 @@ export {
   cacheStaleWrites,
   cacheWrites,
   commandsExecuted,
-  dbQueriesTotal,
-  dbQueryDuration,
   economyTransactions,
-  guildsTotal,
   httpRequestDuration,
   httpRequests,
-  pgPoolSize,
-  pgPoolUsed,
-  pgPoolWaiting,
   prometheusCacheMetrics,
-  redisCommandDuration,
   registry,
-  shardsOnline,
-  usersTotal,
 } from "./metrics.js";
 export { type MetricsServer, startMetricsServer } from "./server.js";
 

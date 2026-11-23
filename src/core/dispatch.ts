@@ -96,6 +96,7 @@ async function requireAdmin(
   interaction: Interaction,
   context: DispatchContext,
   message: string,
+  enforcePermits?: boolean,
 ): Promise<boolean> {
   if (
     !interaction.isRepliable() ||
@@ -110,10 +111,12 @@ async function requireAdmin(
     roleIds: roleIdsFrom(interaction.member, interaction.guildId),
     guildOwnerId: interaction.guild?.ownerId,
     memberPermissions: interaction.memberPermissions,
-    enforcePermits: await permitEnforcementEnabled(
-      context.services.configService,
-      interaction.guildId,
-    ),
+    enforcePermits:
+      enforcePermits ??
+      (await permitEnforcementEnabled(
+        context.services.configService,
+        interaction.guildId,
+      )),
     client: context.client,
     permits: context.services.permits,
   });
@@ -129,6 +132,7 @@ async function requirePermit(
   interaction: Interaction,
   context: DispatchContext,
   permitNode: string,
+  enforcePermits?: boolean,
 ): Promise<boolean> {
   if (!interaction.isRepliable()) return false;
   if (!interaction.guildId || !("member" in interaction)) {
@@ -152,10 +156,12 @@ async function requirePermit(
       roleIds: roleIdsFrom(interaction.member, interaction.guildId),
       channelId: interaction.channelId ?? undefined,
       guildOwnerId: interaction.guild?.ownerId,
-      enforcePermits: await permitEnforcementEnabled(
-        context.services.configService,
-        interaction.guildId,
-      ),
+      enforcePermits:
+        enforcePermits ??
+        (await permitEnforcementEnabled(
+          context.services.configService,
+          interaction.guildId,
+        )),
       client: context.client,
       permits: context.services.permits,
     },
@@ -267,6 +273,17 @@ async function handleChatInput(
     return;
   }
 
+  let enforcePermits: boolean | undefined;
+  if (
+    (command.requiresAdmin || command.requiredPermit) &&
+    interaction.guildId
+  ) {
+    enforcePermits = await permitEnforcementEnabled(
+      context.services.configService,
+      interaction.guildId,
+    );
+  }
+
   if (command.requiresAdmin) {
     if (!interaction.guildId) {
       await interaction
@@ -285,13 +302,19 @@ async function handleChatInput(
       interaction,
       context,
       "You need **Manage Server** or an admin permit to use that command.",
+      enforcePermits,
     );
     if (!allowed) return;
   }
 
   if (
     command.requiredPermit &&
-    !(await requirePermit(interaction, context, command.requiredPermit))
+    !(await requirePermit(
+      interaction,
+      context,
+      command.requiredPermit,
+      enforcePermits,
+    ))
   ) {
     return;
   }

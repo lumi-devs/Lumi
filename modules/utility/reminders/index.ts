@@ -450,7 +450,7 @@ const deliveryTask: TaskDefinition = {
 
 const cleanupTask: TaskDefinition = {
   name: "retention-cleanup",
-  cron: "*/60 * * * *",
+  cron: "0 * * * *",
   async handler(services) {
     await cleanupDeliveredReminders(services);
   },

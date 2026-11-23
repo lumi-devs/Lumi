@@ -96,6 +96,13 @@ function isAuthorized(
     provided.length === expected.length && timingSafeEqual(provided, expected)
   );
 }
+function normalizeRoute(pathname: string): string {
+  return pathname
+    .split("/")
+    .map((segment) => (/^\d{16,20}$/.test(segment) ? ":id" : segment))
+    .join("/");
+}
+
 function createResponseFinisher(
   req: IncomingMessage,
   res: ServerResponse,
@@ -103,11 +110,12 @@ function createResponseFinisher(
   startedAt: number,
 ): (status: number, body: unknown) => void {
   const method = req.method ?? "GET";
+  const label = normalizeRoute(route);
   return (status: number, body: unknown): void => {
     const seconds = (performance.now() - startedAt) / 1000;
-    httpRequests.inc({ method, route, status: String(status) });
+    httpRequests.inc({ method, route: label, status: String(status) });
     httpRequestDuration.observe(
-      { method, route, status: String(status) },
+      { method, route: label, status: String(status) },
       seconds,
     );
     res.setHeader("content-type", "application/json");

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
 
 export interface CacheFacade {
@@ -29,6 +30,13 @@ interface Flight {
   promise: Promise<unknown>;
 }
 
+/**
+ * Raw Redis JSON facade used by modules and by cross-process coordination
+ * (dashboard, worker). Keys are NOT namespaced and values are plain JSON so
+ * that external consumers can read them directly.
+ *
+ * Bot-internal caches should use `@lumi/cache` instead.
+ */
 export function createCacheFacade(redis: Redis | undefined): CacheFacade {
   const flights = new Map<string, Flight>();
 
@@ -142,9 +150,9 @@ export function createCacheFacade(redis: Redis | undefined): CacheFacade {
       return redis.scard(key);
     },
     async takeLock(key, ttlMs) {
-      const token = crypto.randomUUID();
-      const lockKey = `lock:${key}`;
       if (!redis) return null;
+      const token = randomUUID();
+      const lockKey = `lock:${key}`;
       const acquired = await redis.set(
         lockKey,
         token,

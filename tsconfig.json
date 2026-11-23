@@ -33,6 +33,7 @@
       "@lumi/ui": ["./packages/ui/src"],
       "@lumi/observability": ["./packages/observability/src"],
       "@lumi/scheduler": ["./packages/scheduler/src"],
+      "@lumi/cron": ["./packages/cron/src"],
       "@lumi/module-kit": ["./packages/module-kit/src"],
       "@lumi/module-runtime": ["./packages/module-runtime/src"],
       "@lumi/downloader": ["./packages/downloader/src"]

@@ -1,7 +1,6 @@
 import {
   Counter,
   collectDefaultMetrics,
-  Gauge,
   Histogram,
   Registry,
 } from "prom-client";
@@ -67,67 +66,6 @@ export const cacheStaleWrites = new Counter({
   registers: [registry],
 });
 
-export const dbQueryDuration = new Histogram({
-  name: "lumi_db_query_duration_seconds",
-  help: "Database query duration.",
-  labelNames: ["model", "operation", "role"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5],
-  registers: [registry],
-});
-
-export const redisCommandDuration = new Histogram({
-  name: "lumi_redis_command_duration_seconds",
-  help: "Redis command duration.",
-  labelNames: ["command", "role"] as const,
-  buckets: [0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5],
-  registers: [registry],
-});
-
-export const pgPoolSize = new Gauge({
-  name: "lumi_pg_pool_size",
-  help: "Configured Postgres pool size.",
-  labelNames: ["role"] as const,
-  registers: [registry],
-});
-
-export const pgPoolUsed = new Gauge({
-  name: "lumi_pg_pool_used",
-  help: "Postgres connections currently in use.",
-  labelNames: ["role"] as const,
-  registers: [registry],
-});
-
-export const pgPoolWaiting = new Gauge({
-  name: "lumi_pg_pool_waiting",
-  help: "Queries waiting for a Postgres connection.",
-  labelNames: ["role"] as const,
-  registers: [registry],
-});
-
-export const guildsTotal = new Gauge({
-  name: "lumi_guilds_total",
-  help: "Guilds the bot is currently a member of.",
-  registers: [registry],
-});
-
-export const usersTotal = new Gauge({
-  name: "lumi_users_total",
-  help: "Cached users across all guilds.",
-  registers: [registry],
-});
-
-export const shardsOnline = new Gauge({
-  name: "lumi_shards_online",
-  help: "Shards that have reported ready.",
-  registers: [registry],
-});
-
-export const activeModules = new Gauge({
-  name: "lumi_active_modules",
-  help: "Modules successfully loaded by the module loader.",
-  registers: [registry],
-});
-
 export const commandsExecuted = new Counter({
   name: "lumi_commands_executed_total",
   help: "Slash commands executed.",
@@ -154,13 +92,6 @@ export const httpRequestDuration = new Histogram({
   help: "HTTP request duration for the internal RPC server.",
   labelNames: ["method", "route", "status"] as const,
   buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5],
-  registers: [registry],
-});
-
-export const dbQueriesTotal = new Counter({
-  name: "lumi_db_queries_total",
-  help: "Database queries executed.",
-  labelNames: ["model", "operation"] as const,
   registers: [registry],
 });
 

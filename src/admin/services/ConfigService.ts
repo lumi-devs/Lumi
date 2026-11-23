@@ -45,7 +45,7 @@ export class ConfigService {
       () => this.load(guildId),
     );
 
-    return settings ? structuredClone(settings) : {};
+    return settings ?? {};
   }
 
   private async mutate(
@@ -86,12 +86,14 @@ export class ConfigService {
   }
 
   async getAll(guildId: string): Promise<GuildSettings> {
-    return this.read(guildId);
+    return structuredClone(await this.read(guildId));
   }
 
   async get(guildId: string, key: string): Promise<unknown> {
-    const settings = await this.read(guildId);
-    return settings[key];
+    const value = (await this.read(guildId))[key];
+    return value !== null && typeof value === "object"
+      ? structuredClone(value)
+      : value;
   }
 
   async set(guildId: string, key: string, value: unknown): Promise<void> {

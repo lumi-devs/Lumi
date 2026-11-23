@@ -27,7 +27,7 @@ const snapshotTask: TaskDefinition = {
 
 const retentionTask: TaskDefinition = {
   name: "retention",
-  cron: "*/1440 * * * *",
+  cron: "0 4 * * *",
   timezone: "UTC",
   async handler(services) {
     await purgeOldStats(services);

@@ -9,7 +9,7 @@ import type { BotServices } from "./contracts.js";
 import { type BotInteraction, handleInteraction } from "./dispatch.js";
 import type { ErrorStore } from "./errorStore.js";
 import type { GuildSync } from "./guildSync.js";
-import type { CommandRegistry, ModuleHost } from "./modules.js";
+import type { CommandRegistry } from "./modules.js";
 import { isBotOwner } from "./owner.js";
 import { handlePrefixMessage } from "./prefix.js";
 
@@ -20,7 +20,6 @@ export interface ClientEventsOptions {
   readonly services: BotServices;
   readonly logger: Logger;
   readonly errorStore: ErrorStore;
-  readonly host: Pick<ModuleHost, "load">;
   readonly commandSync: CommandSync;
   readonly guildSync: GuildSync;
   readonly scheduler: DistributedScheduler;
@@ -38,7 +37,6 @@ export function registerClientEvents(options: ClientEventsOptions): void {
     services,
     logger,
     errorStore,
-    host,
     commandSync,
     guildSync,
     scheduler,
@@ -95,7 +93,6 @@ export function registerClientEvents(options: ClientEventsOptions): void {
       return;
     }
     await guildSync.syncRecord(guild);
-    await host.load(await moduleLoader.discover());
     await guildSync.syncModules(guild.id);
     await commandSync.syncGuild(guild.id);
   });
