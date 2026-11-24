@@ -4,8 +4,6 @@ WORKDIR /app
 ENV TMPDIR=/tmp
 
 RUN apk add --no-cache \
-    postgresql-client \
-    redis \
     python3 \
     make \
     g++ \
@@ -23,12 +21,11 @@ FROM docker.io/oven/bun:1.4.4-alpine AS runtime
 WORKDIR /app
 
 RUN apk add --no-cache \
-    postgresql-client \
-    redis \
     vips \
     cairo \
     pango \
     giflib \
+    font-noto \
     curl \
     tini
 

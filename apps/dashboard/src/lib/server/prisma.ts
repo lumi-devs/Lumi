@@ -3,24 +3,19 @@ import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 import { serverConfig } from "./env";
 
-type PrismaGlobal = typeof globalThis & {
-  __lumiDashboardPrisma?: PrismaClient;
-  __lumiDashboardPool?: Pool;
-};
-
-const globalForPrisma = globalThis as PrismaGlobal;
+let pool: Pool | null = null;
+let prisma: PrismaClient | null = null;
 
 export function getPrisma(): PrismaClient {
-  if (globalForPrisma.__lumiDashboardPrisma) {
-    return globalForPrisma.__lumiDashboardPrisma;
-  }
+  if (prisma) return prisma;
 
-  const pool = new Pool({ connectionString: serverConfig().databaseUrl });
+  pool = new Pool({
+    connectionString: serverConfig().databaseUrl,
+    max: 10,
+    idleTimeoutMillis: 30_000,
+  });
   const adapter = new PrismaPg(pool);
-  const prisma = new PrismaClient({ adapter });
-
-  globalForPrisma.__lumiDashboardPool = pool;
-  globalForPrisma.__lumiDashboardPrisma = prisma;
+  prisma = new PrismaClient({ adapter });
   return prisma;
 }
 

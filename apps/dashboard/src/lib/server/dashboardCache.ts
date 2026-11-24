@@ -9,9 +9,7 @@ import type { GuildSummary } from "./discord.js";
 import type { CatalogModule } from "./modules.js";
 import { getInvalidationBus, getRedis } from "./redis.js";
 
-const globalForDashboardCache = globalThis as typeof globalThis & {
-  __lumiDashboardCache?: DashboardCache;
-};
+let dashboardCacheInstance: DashboardCache | null = null;
 
 export interface DashboardCache {
   userGuilds: NamespacedCache<GuildSummary[]>;
@@ -149,11 +147,11 @@ function createDashboardCache(): DashboardCache {
 }
 
 export function getDashboardCache(): DashboardCache {
-  if (globalForDashboardCache.__lumiDashboardCache) {
-    return globalForDashboardCache.__lumiDashboardCache;
+  if (dashboardCacheInstance) {
+    return dashboardCacheInstance;
   }
   const cache = createDashboardCache();
-  globalForDashboardCache.__lumiDashboardCache = cache;
+  dashboardCacheInstance = cache;
   return cache;
 }
 

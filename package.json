@@ -22,7 +22,7 @@
     "seed": "bun run scripts/seed.ts",
     "build": "bun build src/index.ts --target=bun --external canvas --outdir=dist",
     "docker:build": "docker build --format docker -t lumi-bot:latest -f Dockerfile . && docker build --format docker -t lumi-dashboard:latest -f apps/dashboard/Dockerfile .",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate && bun scripts/sync-prisma.ts",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "dev:bot": "bun --watch src/index.ts",
@@ -32,21 +32,22 @@
     "dashboard:typecheck": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync && ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json && ./node_modules/.bin/tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/client": "^7.10.1",
     "canvas": "^3.2.3",
-    "discord.js": "^14.27.0",
-    "ioredis": "^6.0.0",
-    "isomorphic-git": "^1.44.12",
+    "discord.js": "^14.28.1",
+    "ioredis": "^6.1.0",
+    "isomorphic-git": "^1.44.19",
     "prisma": "^7.10.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.3",
-    "@types/bun": "^1.4.4",
-    "@vitest/coverage-v8": "^5.0.5",
-    "prettier": "^3.6.2",
+    "@biomejs/biome": "^2.6.8",
+    "@types/bun": "^1.4.5",
+    "@vitest/coverage-v8": "^5.1.1",
+    "prettier": "^3.10.1",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.5",
-    "prettier-plugin-svelte": "^4.1.1"
+    "vitest": "^5.1.1",
+    "prettier-plugin-svelte": "^4.2.0"
   },
   "engines": {
     "bun": ">=1.4.4"

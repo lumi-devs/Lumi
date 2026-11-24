@@ -3,17 +3,12 @@ import { InvalidationBus } from "@lumi/redis";
 import Redis from "ioredis";
 import { serverConfig } from "./env.js";
 
-const globalForRedis = globalThis as typeof globalThis & {
-  __lumiDashboardRedis?: Redis;
-};
-
-const globalForInvalidation = globalThis as typeof globalThis & {
-  __lumiDashboardInvalidation?: InvalidationBus;
-};
+let redisInstance: Redis | null = null;
+let busInstance: InvalidationBus | null = null;
 
 export function getRedis(): Redis {
-  if (globalForRedis.__lumiDashboardRedis) {
-    return globalForRedis.__lumiDashboardRedis;
+  if (redisInstance) {
+    return redisInstance;
   }
 
   const config = serverConfig();
@@ -37,7 +32,7 @@ export function getRedis(): Redis {
     logger.error("[dashboard] redis error", error.message);
   });
 
-  globalForRedis.__lumiDashboardRedis = redis;
+  redisInstance = redis;
   return redis;
 }
 
@@ -46,11 +41,11 @@ export function dashboardKey(...parts: Array<string | number>): string {
 }
 
 export function getInvalidationBus(): InvalidationBus {
-  if (globalForInvalidation.__lumiDashboardInvalidation) {
-    return globalForInvalidation.__lumiDashboardInvalidation;
+  if (busInstance) {
+    return busInstance;
   }
 
   const bus = new InvalidationBus(getRedis());
-  globalForInvalidation.__lumiDashboardInvalidation = bus;
+  busInstance = bus;
   return bus;
 }

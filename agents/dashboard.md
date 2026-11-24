@@ -183,6 +183,9 @@ URLs; there is no browser test runner in the repository.
 
 ## Deployment notes
 
+- Server singletons (`getPrisma()`, `getRedis()`, `getInvalidationBus()`, `getDashboardCache()`) are clean module-scoped instances in `src/lib/server/`. Global state pollution (`globalThis.__lumi*`) is strictly forbidden.
+- The Postgres pool in `src/lib/server/prisma.ts` is explicitly bounded (`max: 10`, `idleTimeoutMillis: 30_000`) to prevent connection starvation and memory bloat.
+- The dashboard container image uses a multi-stage production pruning build (`builder`, `prod-deps`, `runtime`), eliminating devDependencies (Vite, Biome, Vitest, TypeScript) and reducing the image size by ~80%.
 - Build with `bun run dashboard:build` and serve `apps/dashboard/build/index.js`.
   `adapter-node` defaults the request protocol to `https` unless
   `PROTOCOL_HEADER` names a trusted proxy header. Set
