@@ -59,6 +59,19 @@ profile before starting the bot.
 `docker compose` requires `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, and
 `RPC_INTERNAL_TOKEN`; setup generates them when they are missing.
 
+## Container Images
+
+Container images can be built locally using `bun run docker:build`:
+
+```sh
+bun run docker:build
+# or manually with docker/podman:
+docker build --format docker -t lumi-bot:latest -f Dockerfile .
+docker build --format docker -t lumi-dashboard:latest -f apps/dashboard/Dockerfile .
+```
+
+Always use `--format docker` (or Docker Buildx) so `HEALTHCHECK` directives are preserved in the image metadata. The dashboard build uses `--ignore-scripts` to avoid unnecessary native compilation of bot-only assets like `canvas`.
+
 ## Database
 
 - `prisma.config.ts` supplies the schema path, migrations path, and URL

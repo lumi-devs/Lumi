@@ -13,14 +13,15 @@
     "lint:fix": "biome lint --write .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "bun run dashboard:sync && vitest run",
-    "test:watch": "bun run dashboard:sync && vitest",
-    "test:coverage": "bun run dashboard:sync && vitest run --coverage",
+    "test": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync && cd ../.. && vitest run",
+    "test:watch": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync && cd ../.. && vitest",
+    "test:coverage": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync && cd ../.. && vitest run --coverage",
     "setup": "bun run scripts/setup.ts",
     "setup:check": "bun run scripts/setup.ts --check",
     "db:studio": "prisma studio",
     "seed": "bun run scripts/seed.ts",
     "build": "bun build src/index.ts --target=bun --external canvas --outdir=dist",
+    "docker:build": "docker build --format docker -t lumi-bot:latest -f Dockerfile . && docker build --format docker -t lumi-dashboard:latest -f apps/dashboard/Dockerfile .",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -49,6 +50,9 @@
   },
   "engines": {
     "bun": ">=1.4.4"
+  },
+  "overrides": {
+    "effect": "^3.22.1"
   },
   "packageManager": "bun@1.4.4"
 }

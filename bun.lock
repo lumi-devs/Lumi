@@ -28,6 +28,8 @@
       "dependencies": {
         "@lumi/cache": "workspace:*",
         "@lumi/foundation": "workspace:*",
+        "@lumi/module-kit": "workspace:*",
+        "@lumi/redis": "workspace:*",
         "@prisma/adapter-pg": "^7.10.1",
         "@prisma/client": "^7.10.1",
         "ioredis": "^6.0.0",
@@ -54,6 +56,13 @@
         "@lumi/foundation": "workspace:*",
         "devalue": "^6.0.3",
       },
+      "devDependencies": {
+        "@types/node": "^26.6.5",
+      },
+    },
+    "packages/cron": {
+      "name": "@lumi/cron",
+      "version": "2.0.0",
       "devDependencies": {
         "@types/node": "^26.6.5",
       },
@@ -132,6 +141,7 @@
       "name": "@lumi/permits",
       "version": "2.0.0",
       "dependencies": {
+        "@lumi/cron": "workspace:*",
         "@lumi/redis": "workspace:*",
         "@prisma/client": "^7.10.1",
         "discord.js": "^14.27.0",
@@ -155,6 +165,7 @@
       "name": "@lumi/scheduler",
       "version": "2.0.0",
       "dependencies": {
+        "@lumi/cron": "workspace:*",
         "@lumi/foundation": "workspace:*",
         "@lumi/redis": "workspace:*",
       },
@@ -172,6 +183,9 @@
         "@types/node": "^26.6.5",
       },
     },
+  },
+  "overrides": {
+    "effect": "^3.22.1",
   },
   "packages": {
     "@babel/helper-string-parser": ["@babel/helper-string-parser@7.29.11", "", {}, "sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g=="],
@@ -237,6 +251,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@lumi/cache": ["@lumi/cache@workspace:packages/cache"],
+
+    "@lumi/cron": ["@lumi/cron@workspace:packages/cron"],
 
     "@lumi/dashboard": ["@lumi/dashboard@workspace:apps/dashboard"],
 
@@ -556,7 +572,7 @@
 
     "dunder-proto": ["dunder-proto@1.0.1", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.1", "es-errors": "^1.3.0", "gopd": "^1.2.0" } }, "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A=="],
 
-    "effect": ["effect@3.20.0", "", { "dependencies": { "@standard-schema/spec": "^1.0.0", "fast-check": "^3.23.1" } }, "sha512-qMLfDJscrNG8p/aw+IkT9W7fgj50Z4wG5bLBy0Txsxz8iUHjDIkOgO3SV0WZfnQbNG2VJYb0b+rDLMrhM4+Krw=="],
+    "effect": ["effect@3.22.5", "", { "dependencies": { "@standard-schema/spec": "^1.0.0", "fast-check": "^3.23.1" } }, "sha512-AdIU4llI19BzhJ4xUBZix7kS8oiYSlCsJ61j3UM3UyJw9ecDrsrrweDFm/Ku1nHbJWMLoynK+1Me4it3Zkmjpw=="],
 
     "elkjs": ["elkjs@0.11.1", "", {}, "sha512-zxxR9k+rx5ktMwT/FwyLdPCrq7xN6e4VGGHH8hA01vVYKjTFik7nHOxBnAYtrgYUB1RpAiLvA1/U2YraWxyKKg=="],
 

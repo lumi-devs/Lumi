@@ -7,7 +7,7 @@ COPY packages/ ./packages/
 COPY modules/shared/ ./modules/shared/
 COPY apps/dashboard/package.json ./apps/dashboard/
 
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder bun run db:generate
 
 COPY apps/dashboard/ ./apps/dashboard/
