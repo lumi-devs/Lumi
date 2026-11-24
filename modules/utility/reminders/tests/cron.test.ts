@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidCron, nextCronOccurrence } from "../cron.js";
+import { isValidCron, nextCronOccurrence } from "@lumi/cron";
 
 const from = new Date("2026-01-01T00:07:30.000Z");
 

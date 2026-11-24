@@ -247,3 +247,52 @@ export function matchesCron(
     return false;
   }
 }
+
+export function isValidCron(cron: string): boolean {
+  try {
+    const parsed = parseCron(cron);
+    return (
+      parsed.minute.length > 0 &&
+      parsed.hour.length > 0 &&
+      parsed.dayOfMonth.length > 0 &&
+      parsed.month.length > 0 &&
+      parsed.dayOfWeek.length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
+const DefaultMaxLookaheadDays = 366;
+
+export function nextCronOccurrence(
+  cron: string,
+  from: Date,
+  timezoneOrLookahead?: string | number,
+  maxLookaheadDays = DefaultMaxLookaheadDays,
+): Date | null {
+  try {
+    parseCron(cron);
+  } catch {
+    return null;
+  }
+
+  const timezone =
+    typeof timezoneOrLookahead === "string" ? timezoneOrLookahead : undefined;
+  const limitDays =
+    typeof timezoneOrLookahead === "number"
+      ? timezoneOrLookahead
+      : maxLookaheadDays;
+
+  const candidate = new Date(from.getTime());
+  candidate.setUTCSeconds(0, 0);
+  candidate.setUTCMinutes(candidate.getUTCMinutes() + 1);
+  const limit = from.getTime() + limitDays * 86_400_000;
+
+  while (candidate.getTime() <= limit) {
+    if (matchesCron(cron, candidate, timezone)) return candidate;
+    candidate.setUTCMinutes(candidate.getUTCMinutes() + 1);
+  }
+  return null;
+}
+

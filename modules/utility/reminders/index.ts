@@ -20,7 +20,7 @@ import {
   ReminderConfigSchema,
   readReminderConfig,
 } from "./config.js";
-import { isValidCron } from "./cron.js";
+import { isValidCron } from "@lumi/cron";
 import { deliverDueReminders } from "./delivery.js";
 import { DurationParseError, parseDuration } from "./duration.js";
 import { canCreateReminder } from "./policy.js";

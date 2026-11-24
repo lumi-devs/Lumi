@@ -5,6 +5,7 @@ import {
   type ListenerDefinition,
   type ModuleDefinition,
   type ModuleServices,
+  type TaskDefinition,
 } from "@lumi/module-kit";
 import { ephemeralCard } from "@lumi/ui";
 import {
@@ -25,13 +26,12 @@ import { replyError } from "./reply.js";
 import { adminPanelCard } from "./ui-admin.js";
 import { handleVoiceStateChange } from "./voice.js";
 
-let sweepTimer: ReturnType<typeof setInterval> | null = null;
-
-const stopSweep = (): void => {
-  if (sweepTimer) {
-    clearInterval(sweepTimer);
-    sweepTimer = null;
-  }
+const tempVcSweepTask: TaskDefinition = {
+  name: "tempvc-sweep",
+  cron: "*/1 * * * *",
+  handler: async (services) => {
+    await sweepExpiredTempChannels(services);
+  },
 };
 
 const tempvcCommand: CommandDefinition = {
@@ -159,18 +159,13 @@ const tempvcModule: ModuleDefinition = defineModule({
   },
   commands: [tempvcCommand],
   listeners: [onVoiceStateListener, onInteractionListener],
-  tasks: [],
+  tasks: [tempVcSweepTask],
   async onLoad(services) {
-    stopSweep();
-    sweepTimer = setInterval(() => {
-      void sweepExpiredTempChannels(services).catch(() => undefined);
-    }, 60_000);
     void sweepExpiredTempChannels(services).catch(() => undefined);
     services.observability.logger.info("[tempvc] Module loaded");
-    return [stopSweep];
+    return [];
   },
   async onUnload(services) {
-    stopSweep();
     services.observability.logger.info("[tempvc] Module unloaded");
   },
 });

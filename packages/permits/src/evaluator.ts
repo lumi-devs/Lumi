@@ -1,6 +1,6 @@
 import type { Client } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
-import { matchesCron, zonedTimeParts } from "./cron.js";
+import { matchesCron, zonedTimeParts } from "@lumi/cron";
 import type {
   EvaluatedPermit,
   EvaluatePermitOptions,

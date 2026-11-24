@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCron } from "../src/cron.js";
+import { parseCron } from "@lumi/cron";
 import {
   evaluateNodeMatch,
   isBotOwner,

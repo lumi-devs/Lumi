@@ -2,7 +2,7 @@ import type { ModuleServices } from "@lumi/module-kit";
 import { cardCreateOptions } from "@lumi/ui";
 import type { ReminderConfig } from "./config.js";
 import { ModuleName, readReminderConfig } from "./config.js";
-import { nextCronOccurrence } from "./cron.js";
+import { nextCronOccurrence } from "@lumi/cron";
 import type { ReminderRecord } from "./store.js";
 import {
   claimReminder,

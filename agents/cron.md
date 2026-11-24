@@ -15,15 +15,28 @@ Package: `@lumi/cron` (`packages/cron`). Zero-dependency 5-field cron parsing, s
 ## Key API
 
 ```ts
-import { parseCron, matchesCron, zonedTimeParts, type ParsedCron } from "@lumi/cron";
+import {
+  parseCron,
+  isValidCron,
+  matchesCron,
+  nextCronOccurrence,
+  zonedTimeParts,
+  type ParsedCron,
+} from "@lumi/cron";
 
 // 1. Parse and validate syntax (throws Error on invalid expressions or out-of-range values)
 const parsed: ParsedCron = parseCron("*/15 * * * *");
 
-// 2. Check if a date matches a cron expression in a specific timezone (or UTC if omitted)
+// 2. Safe boolean check for five-field cron expressions
+const valid = isValidCron("0 9 * * 1-5"); // true
+
+// 3. Check if a date matches a cron expression in a specific timezone (or UTC if omitted)
 const isDue = matchesCron("0 12 * * Mon-Fri", new Date(), "America/New_York");
 
-// 3. Extract zoned time components for custom schedule calculations
+// 4. Calculate next occurrence (with optional timezone and lookahead cap)
+const nextDate = nextCronOccurrence("0 9 * * *", new Date(), "America/New_York");
+
+// 5. Extract zoned time components for custom schedule calculations
 const parts = zonedTimeParts(new Date(), "Europe/London");
 ```
 
