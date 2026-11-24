@@ -15,13 +15,15 @@ import type { DataLifecycleService } from "./dataLifecycle.js";
 import type { ErrorStore } from "./errorStore.js";
 import type { BuiltinCommandDefinition } from "./modules.js";
 
-interface OwnerCommandOptions {
+export interface OwnerCommandOptions {
   client: Client;
   prisma: PrismaClient;
   cache: DbHelpers["cache"];
   configService: ConfigService;
   dataLifecycle: DataLifecycleService;
   errorStore: ErrorStore;
+  reloadModule?: (name: string) => Promise<void>;
+  listModules?: () => string[];
 }
 
 async function replyJson(
@@ -217,12 +219,32 @@ export function createOwnerCommands(
         )
         .addSubcommand((command) =>
           command
+            .setName("reload")
+            .setDescription("Hot-reload an add-on or module from disk without restarting")
+            .addStringOption((option) =>
+              option
+                .setName("module")
+                .setDescription("Module name (e.g. confessions, activity-roles)")
+                .setRequired(true)
+                .setAutocomplete(true),
+            ),
+        )
+        .addSubcommand((command) =>
+          command
             .setName("errors_trace")
             .setDescription("Show a recorded error trace")
             .addStringOption((option) =>
               option.setName("id").setDescription("Trace ID").setRequired(true),
             ),
         ),
+      async autocomplete(interaction): Promise<void> {
+        const focused = interaction.options.getFocused().toLowerCase();
+        const modules = options.listModules ? options.listModules() : [];
+        const filtered = modules
+          .filter((m) => m.toLowerCase().includes(focused))
+          .slice(0, 25);
+        await interaction.respond(filtered.map((m) => ({ name: m, value: m })));
+      },
       async execute(interaction): Promise<void> {
         const subcommand = interaction.options.getSubcommand();
         const reply = (title: string, body: string) =>
@@ -430,6 +452,40 @@ export function createOwnerCommands(
                 "```",
               ]),
             );
+            return;
+          }
+          case "reload": {
+            if (!options.reloadModule) {
+              await fail("Module reloader is not available in this runtime context.");
+              return;
+            }
+            const name = interaction.options
+              .getString("module", true)
+              .trim()
+              .toLowerCase();
+            const startedAt = Date.now();
+            await interaction.deferReply({ ephemeral: true });
+            try {
+              await options.reloadModule(name);
+              const elapsed = Date.now() - startedAt;
+              await interaction.editReply(
+                ui.cardMessage(
+                  ui.makeInfoCard(
+                    "Module Reloaded",
+                    `Successfully reloaded module **${name}** in ${elapsed}ms without restarting the bot.`,
+                  ),
+                ),
+              );
+            } catch (error) {
+              await interaction.editReply(
+                ui.cardMessage(
+                  ui.makeErrorCard(
+                    "Reload Failed",
+                    `Failed to reload module "${name}": ${errorMessage(error)}`,
+                  ),
+                ),
+              );
+            }
             return;
           }
           default:

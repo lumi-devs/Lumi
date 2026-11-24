@@ -1,5 +1,4 @@
 import type { NamespacedCache } from "@lumi/cache";
-import type { InvalidationBus } from "@lumi/redis";
 import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -34,20 +33,14 @@ describe("ConfigService", () => {
       set: vi.fn(),
     } as unknown as NamespacedCache<GuildSettings>;
 
-    const mockInvalidation = {
-      invalidate: vi.fn().mockResolvedValue(undefined),
-    } as unknown as InvalidationBus;
-
     const service = new ConfigService({
       prisma: mockPrisma,
       cache: mockCache,
-      invalidation: mockInvalidation,
     });
 
     await service.set("123", "key", "value");
 
     expect(mockCache.delete).toHaveBeenCalledWith("123");
-    expect(mockInvalidation.invalidate).not.toHaveBeenCalled();
   });
 
   it("loads from database when cache misses", async () => {

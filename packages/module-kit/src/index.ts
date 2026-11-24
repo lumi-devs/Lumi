@@ -21,8 +21,6 @@ export interface ModuleDefinition {
   description: string;
   version: string;
   config: unknown;
-  configVersion?: number;
-  configMigrations?: Readonly<Record<number, (config: unknown) => unknown>>;
   dataLifecycle?: ModuleDataLifecycle;
   commands: readonly CommandDefinition[];
   listeners: readonly ListenerDefinition[];
@@ -41,5 +39,6 @@ export function defineModule<T extends ModuleDefinition>(def: T): T {
   return def;
 }
 
+export * from "./data.js";
 export * from "./lock.js";
 export * from "./types.js";

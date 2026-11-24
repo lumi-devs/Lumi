@@ -62,7 +62,6 @@ export function createCoreServices(options: CoreServicesOptions): CoreServices {
     configService: new ConfigService({
       prisma: db,
       cache: configCache,
-      invalidation,
     }),
     scheduler: new DistributedScheduler(options.redis),
     healthMonitor: createHealthMonitor(),

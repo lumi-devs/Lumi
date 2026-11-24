@@ -2,10 +2,11 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { logger } from "@lumi/foundation";
-import type {
-  Disposer,
-  ModuleDefinition,
-  ModuleServices,
+import {
+  type Disposer,
+  type ModuleDefinition,
+  type ModuleServices,
+  createScopedDataStore,
 } from "@lumi/module-kit";
 import { type ModuleManifest, validateManifest } from "./manifest.js";
 
@@ -393,7 +394,13 @@ export class ModuleLoader {
         else this.dependents.set(dep, new Set([name]));
       }
 
-      const moduleServices: ModuleServices = { ...services, moduleName: name };
+      const moduleServices: ModuleServices = {
+        ...services,
+        moduleName: name,
+        data: services.helpers?.moduleData
+          ? createScopedDataStore(services.helpers.moduleData, name)
+          : services.data,
+      };
       let disposers: Disposer[] = [];
       try {
         disposers = await module.definition.onLoad(moduleServices);

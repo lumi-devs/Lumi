@@ -134,7 +134,6 @@ async function main(): Promise<void> {
     moduleManager,
     addons: null as unknown as AddonManager,
     moduleConfig: createModuleConfigService({
-      loader: moduleLoader,
       config: configService,
     }),
     modules: {
@@ -235,6 +234,10 @@ async function main(): Promise<void> {
       configService,
       dataLifecycle,
       errorStore,
+      reloadModule: async (name) => {
+        await host.reload(name);
+      },
+      listModules: () => moduleLoader.listAll().map((m) => m.manifest.name),
     }),
   ]);
 

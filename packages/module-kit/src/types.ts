@@ -4,6 +4,7 @@ import type { HealthMonitor } from "@lumi/observability";
 import type { PermitRepository } from "@lumi/permits";
 import type { DistributedScheduler } from "@lumi/scheduler";
 import type * as Ui from "@lumi/ui";
+import type { ScopedDataAccessor, ScopedDataStore } from "./data.js";
 import type {
   AutocompleteInteraction,
   ChatInputCommandInteraction,
@@ -52,8 +53,11 @@ export interface ModuleServices {
   client: Client;
   modules: ModuleRegistryAccess;
   helpers: DbHelpers;
+  data?: ScopedDataStore;
   readonly moduleName?: string;
 }
+
+export type { ScopedDataAccessor, ScopedDataStore };
 
 export type CommandData =
   | SlashCommandBuilder

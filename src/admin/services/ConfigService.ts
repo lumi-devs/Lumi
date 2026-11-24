@@ -1,5 +1,4 @@
 import type { NamespacedCache } from "@lumi/cache";
-import type { InvalidationBus } from "@lumi/redis";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 export type GuildSettings = Record<string, unknown>;
@@ -23,7 +22,6 @@ function isRetryableConfigConflict(error: unknown): boolean {
 export interface ConfigServiceOptions {
   readonly prisma: PrismaClient;
   readonly cache?: NamespacedCache<GuildSettings>;
-  readonly invalidation?: InvalidationBus;
 }
 
 export class ConfigService {

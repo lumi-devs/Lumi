@@ -1,5 +1,9 @@
 import type { AddonRuntime } from "@lumi/downloader";
-import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
+import {
+  type CommandDefinition,
+  type ModuleServices,
+  createScopedDataStore,
+} from "@lumi/module-kit";
 import type { LoadedModule, ModuleLoader } from "@lumi/module-runtime";
 import type {
   Client,
@@ -58,6 +62,10 @@ export function servicesForModule(
     modules: services.modules,
     helpers: services.helpers,
     discord: services.discord,
+    data:
+      moduleName && services.helpers?.moduleData
+        ? createScopedDataStore(services.helpers.moduleData, moduleName)
+        : undefined,
   };
   return moduleName == null ? view : { ...view, moduleName };
 }
