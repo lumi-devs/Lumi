@@ -81,6 +81,7 @@ Modules tab and dashboard. Use a short label such as `Utility`, `Community`, or
 modules/<category>/<module>/
 ├── manifest.json       # Required: metadata, deps, entry point, config UI
 ├── index.ts            # Required: module definition export
+├── admin.ts            # Optional: decoupled Components V2 admin panel, actions & modals
 ├── commands/           # Optional: command files
 │   └── my-command.ts
 ├── listeners/          # Optional: event listeners
@@ -90,6 +91,18 @@ modules/<category>/<module>/
 └── tests/              # Optional: vitest tests
     └── my-module.test.ts
 ```
+
+### Module Enablement vs Configuration
+
+- **Enablement**: The `GuildModule` table is the sole source of truth for whether
+  a module is enabled in a guild. Never store or duplicate an `enabled` flag inside
+  `Guild.settings`.
+- **Decoupled Admin Panels**: If a module provides an interactive Discord admin
+  panel (such as `autorole`, `voiceroles`, `role-menus`, `tempvc`), its Components
+  V2 card builders, button handlers, select menu actions, and modal submissions
+  belong in `modules/<category>/<module>/admin.ts`. The central `/lumi` framework
+  in `src/admin/panel/` acts as the router and delegates to the module's admin
+  handler without monolithic coupling.
 
 ---
 

@@ -23,11 +23,10 @@ commands; `/bulkrole` remains a slash command.
 
 ### Storage
 
-Settings are stored in `Guild.settings` under `autorole`:
+Module enablement is tracked strictly via the `GuildModule` database table. Settings are stored in `Guild.settings` under `autorole`:
 
 ```ts
 {
-  enabled: boolean;
   paused: boolean;
   roleIds: string[];
   delaySeconds: number;
@@ -38,6 +37,10 @@ Settings are stored in `Guild.settings` under `autorole`:
   onlyOnJoin: boolean;
 }
 ```
+
+Interactive panel rendering, actions, and modals are implemented in
+`modules/roles/autorole/admin.ts` (for autorole) and
+`modules/roles/voiceroles/admin.ts` (for voiceroles), decoupled from `src/admin/`.
 
 Delayed assignments are durable in `autorole_pending` (`AutorolePending`): one
 row per guild and member with the pending role IDs and `assign_at`.

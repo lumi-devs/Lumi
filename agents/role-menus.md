@@ -29,7 +29,9 @@ roles do not leak.
 ## Management
 
 `/config role-menus` (or `/lumi` → Modules → Role Menus) opens an ephemeral
-panel. It lists groups with pagination, creates groups, edits group settings,
+panel. All panel builders, interactive button actions, select menu dispatchers,
+and modals are implemented in `modules/role-menus/menu/admin.ts`, decoupled from
+`src/admin/`. It lists groups with pagination, creates groups, edits group settings,
 adds/removes role options, toggles require-one and auto-toggle, posts as buttons,
 select or reactions, refreshes posted menus, and deletes groups with their
 messages and temporary-role records. The command definition is **prefix-only**;

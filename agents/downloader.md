@@ -75,7 +75,11 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
 - Parses `manifest.json` with `validateManifest` and requires `name` to match
   the directory (or an explicit `expectedName` when validating a staged copy).
 - Requires `entry`; it must be a relative, existing JavaScript/TypeScript file
-  inside the add-on directory.
+  strictly inside the add-on directory. Any path containing directory traversal
+  (`..`), leading slashes, or escaping outside the add-on root is rejected.
+- Directory discovery: bundled modules allow nested category grouping up to depth 4;
+  downloaded add-ons under `data/addons/` are strictly flat (depth 1 direct
+  child directories only). Arbitrary recursive walks are banned.
 - Accepts an optional `category` (1–32 characters) used only for UI grouping.
 - Requires every `requirements` entry to be a registry package spec; path-like
   specs, local paths, URLs, and git specs are rejected.
@@ -83,7 +87,7 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
 - Rejects symbolic links, hard links, and other non-regular files anywhere in
   the add-on.
 - Scans every JavaScript/TypeScript file with `Bun.Transpiler.scanImports`:
-  - relative imports must stay inside the add-on;
+  - relative imports must stay inside the add-on (path traversal rejected);
   - `node:*`, `bun`, and `bun:*` are allowed;
   - internal `@lumi/*` packages are rejected;
   - other bare imports must be a host runtime package (`discord.js`,
@@ -91,6 +95,10 @@ failed runs are reported to bot owners through `AddonManagerOptions.notify`.
     `@lumi/ui`, `@lumi/foundation`) or be listed in `requirements`;
   - computed `import()`/`require()` specifiers and `import.meta.require` are
     rejected.
+
+When reloading an add-on or module via `reload(moduleName)`, the runtime
+re-reads and validates the fresh `manifest.json` from disk, safely disposes
+previous event listeners, and remounts clean state.
 
 Storage paths for repos, add-ons, and backups only accept names matching
 `^[a-z][a-z0-9-]*$`; repository URLs must be absolute `https:` URLs without

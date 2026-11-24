@@ -26,12 +26,21 @@ entry.
   file. No hidden global registries, no side-effect imports.
 - Built-in commands have `module: null` and always run. Module commands only run
   when that module is enabled for the guild.
+- The `GuildModule` database table is the single source of truth for whether a
+  module is enabled for a guild. Never dual-track or write enablement flags into
+  `Guild.settings[configKey].enabled`.
+- Decoupled module admin panels: when a module provides an interactive admin or
+  configuration panel UI (e.g. `tempvc`, `autorole`, `voiceroles`, `role-menus`),
+  its Components V2 panel builder, action handlers, and modal logic belong inside
+  `modules/<category>/<module>/admin.ts`. `src/admin/panel/` acts as the delegating
+  router and top-level container only.
 - Addons are untrusted. Install with validation, path checks, and atomic
   switches. Never let an addon import bot internals (`@lumi/db`, `@lumi/redis`,
   `@lumi/cache`, `@lumi/module-runtime`, `@lumi/downloader`). Addons are not sandboxed.
   Addon npm dependencies live in `manifest.json` `requirements` and are installed
   with `bun install --production --ignore-scripts --no-save`; registry semver
-  ranges only.
+  ranges only. Addon discovery under `data/addons/` is strictly flat (depth 1
+  direct child directories only); directory traversal (`..`) is banned.
 - The database is Postgres via Prisma with versioned migrations. Do not copy
   Redbot's idempotent-DDL approach.
 - Redis is a single endpoint. No Cluster/Sentinel code paths. Multi-replica

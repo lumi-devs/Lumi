@@ -10,6 +10,7 @@
 | [modules.md](./modules.md)                   | You are adding/changing a module, manifest, command, or listener.                |
 | [module-data.md](./module-data.md)           | You are storing generic per-guild module state via `helpers.moduleData`.         |
 | [downloader.md](./downloader.md)             | You are changing addon install/update/validation flows.                          |
+| [cron.md](./cron.md)                         | You are changing cron schedules, parser validation, or timezone rules.           |
 | [commands.md](./commands.md)                 | You are adding a built-in command or changing dispatch.                          |
 | [permissions.md](./permissions.md)           | You are changing permits, access tiers, the permission panel, or command gating. |
 | [tickets.md](./tickets.md)                   | You are changing ticket panels, threads, categories, or transcripts.             |

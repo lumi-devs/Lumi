@@ -19,6 +19,7 @@ packages/foundation/      shared pino logger
 packages/module-kit/      module/command/listener/context/service contracts
 packages/module-runtime/  discovery, manifest validation, loader, lifecycle
 packages/downloader/      git repository manager, addon validation, installs
+packages/cron/            standalone 5-field cron parser, schedule validation, timezone matching
 packages/ui/              card builders, palette, layout helpers
 packages/observability/   Prometheus registry, metrics, /metrics + /healthz
 packages/scheduler/       distributed cron with Redis locks
@@ -26,13 +27,15 @@ packages/scheduler/       distributed cron with Redis locks
 
 ## Three workspace roots, three responsibilities
 
-- `src/` — the process. It wires dependencies, owns the lifecycle, and is never
+- `src/` — the process. It wires dependencies, owns the lifecycle, provides the
+  root `/lumi` frame and delegating routers for module admin panels, and is never
   imported by anything else.
 - `modules/*` — first-party product features grouped into category directories;
   each module directory holds one toggleable module with its own manifest.
   Bundled modules are loaded by the module runtime at boot, exactly like addons,
-  and may not import the app. UI grouping comes from the optional manifest
-  `category`, independent of the directory layout.
+  and may not import the app. Interactive admin/config panels live directly in
+  `modules/<category>/<module>/admin.ts`. UI grouping comes from the optional
+  manifest `category`, independent of the directory layout.
 - `packages/*` — reusable libraries with narrow, declared dependencies. They
   never import the app or bundled modules.
 
@@ -66,6 +69,7 @@ independently.
 
 ```
 foundation        (pino)
+cron              (Intl; zero dependencies) <- scheduler
 observability     (prom-client)
 redis             (ioredis) <- scheduler, permits
 db                (prisma, pg) <- downloader
