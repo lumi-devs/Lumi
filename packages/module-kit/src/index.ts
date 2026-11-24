@@ -11,6 +11,7 @@ import type {
   ModuleServices,
   TaskDefinition,
 } from "./types.js";
+
 export type { ConfigField } from "@lumi/module-runtime";
 
 export interface ModuleDefinition {
@@ -40,5 +41,5 @@ export function defineModule<T extends ModuleDefinition>(def: T): T {
   return def;
 }
 
-export * from "./types.js";
 export * from "./lock.js";
+export * from "./types.js";

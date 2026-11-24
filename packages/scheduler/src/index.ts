@@ -1,5 +1,5 @@
-import { logger } from "@lumi/foundation";
 import { matchesCron, parseCron } from "@lumi/cron";
+import { logger } from "@lumi/foundation";
 import { DistributedLock, type Redis } from "@lumi/redis";
 
 export interface ScheduledJob {
@@ -98,6 +98,7 @@ export class DistributedScheduler {
     try {
       const lock = new DistributedLock(this.redis, `scheduler:${job.name}`, {
         ttlMs: job.lockTtlMs ?? 60_000,
+        maxRetries: 1,
       });
       const acquired = await lock.acquire();
       if (!acquired) return;

@@ -126,7 +126,7 @@ export function createCacheFacade(redis: Redis | undefined): CacheFacade {
     async incrBy(key, amount, ttlMs) {
       if (!redis) return 0;
       const value = await redis.incrby(key, amount);
-      await redis.pexpire(key, Math.max(1, ttlMs));
+      if (ttlMs && value === amount) await redis.pexpire(key, Math.max(1, ttlMs));
       return value;
     },
     async sAdd(key, members) {

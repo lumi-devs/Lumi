@@ -101,6 +101,10 @@ export const quarantineDef: CommandDefinition = {
       metadata: { oldRoles },
     });
 
+    await services.helpers.cache
+      .setString(`lumi:mod:${guild.id}:quarantine:${target.id}`, "true")
+      .catch(() => undefined);
+
     await interaction.reply(
       ephemeralCard(
         makeWarningCard("Quarantined", [
@@ -173,13 +177,33 @@ export const unquarantineDef: CommandDefinition = {
     const oldRoles =
       ((quarantineCase?.metadata as { oldRoles?: string[] } | null)
         ?.oldRoles as string[]) ?? [];
-    const validRoles = oldRoles.filter((id) => guild.roles.cache.has(id));
+    const botTop = guild.members.me?.roles.highest.position ?? 0;
+    const actorTop =
+      actor.id === guild.ownerId ? Infinity : actor.roles.highest.position;
+    const validRoles = oldRoles
+      .map((id) => guild.roles.cache.get(id))
+      .filter(
+        (r): r is NonNullable<typeof r> =>
+          Boolean(
+            r && !r.managed && r.position < botTop && r.position < actorTop,
+          ),
+      )
+      .map((r) => r.id);
 
-    await member.roles.set(validRoles, reason);
+    await member.roles.set(validRoles, reason).catch((error) => {
+      services.observability?.logger?.warn?.(
+        "unquarantine role restore failed",
+        { error },
+      );
+    });
 
     if (quarantineCase) {
       await services.helpers.moderation.close(quarantineCase.id);
     }
+
+    await services.helpers.cache
+      .del(`lumi:mod:${guild.id}:quarantine:${target.id}`)
+      .catch(() => undefined);
 
     await services.helpers.moderation.create({
       guildId: guild.id,

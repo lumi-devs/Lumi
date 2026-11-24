@@ -1,5 +1,4 @@
 import { totalmem } from "node:os";
-import type { PrismaClient } from "@prisma/client";
 import { cacheHits, cacheMisses } from "@lumi/observability";
 import {
   type CardReply,
@@ -9,6 +8,7 @@ import {
   makeErrorCard,
   row,
 } from "@lumi/ui";
+import type { PrismaClient } from "@prisma/client";
 import {
   type ButtonInteraction,
   ButtonStyle,
@@ -17,41 +17,19 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 
-interface PingSession {
-  page: number;
-  updatedAt: number;
-}
-
-const pingSessions = new Map<string, PingSession>();
-const PingSessionTtlMs = 60 * 60 * 1000;
-const MaxPingSessions = 10_000;
 const ShardsPerPage = 10;
-
-function prunePingSessions(): void {
-  const now = Date.now();
-  for (const [userId, session] of pingSessions) {
-    if (now - session.updatedAt > PingSessionTtlMs) pingSessions.delete(userId);
-  }
-  while (pingSessions.size >= MaxPingSessions) {
-    const oldest = pingSessions.keys().next().value;
-    if (oldest === undefined) break;
-    pingSessions.delete(oldest);
-  }
-}
+const pingUserPages = new Map<string, number>();
 
 function pingPage(userId: string): number {
-  const session = pingSessions.get(userId);
-  if (!session) return 0;
-  if (Date.now() - session.updatedAt > PingSessionTtlMs) {
-    pingSessions.delete(userId);
-    return 0;
-  }
-  return session.page;
+  return pingUserPages.get(userId) ?? 0;
 }
 
 function setPingPage(userId: string, page: number): void {
-  prunePingSessions();
-  pingSessions.set(userId, { page, updatedAt: Date.now() });
+  if (pingUserPages.size > 200) {
+    const first = pingUserPages.keys().next().value;
+    if (first !== undefined) pingUserPages.delete(first);
+  }
+  pingUserPages.set(userId, page);
 }
 
 function formatUptime(ms: number): string {

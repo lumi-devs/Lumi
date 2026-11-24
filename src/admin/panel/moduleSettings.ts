@@ -20,6 +20,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import {
   backButton,
   cut,
@@ -28,7 +29,6 @@ import {
 } from "./common.js";
 import { fieldPages } from "./configFields.js";
 import { escalationSummary, renderEscalationEditor } from "./escalation.js";
-import type { BotServices } from "../../core/contracts.js";
 
 const FieldsPerPage = 4;
 const MaxOptions = 25;
@@ -146,11 +146,7 @@ export async function isModuleFeatureEnabled(
   guildId: string,
   moduleName: string,
 ): Promise<boolean> {
-  if (!services.moduleLoader.isEnabled(guildId, moduleName)) return false;
-  const field = enabledConfigField(services, moduleName);
-  if (!field) return true;
-  const config = await readModuleConfig(services, guildId, moduleName);
-  return Boolean(fieldValue(field, config));
+  return services.moduleLoader.isEnabled(guildId, moduleName);
 }
 
 export function findField(
@@ -199,7 +195,10 @@ export async function renderModuleDetail(
   const enabled = await isModuleFeatureEnabled(services, guildId, moduleName);
 
   const sections = current.map((field) => {
-    const value = fieldValue(field, config);
+    const value =
+      field.key === "enabled" && field.type === "boolean"
+        ? enabled
+        : fieldValue(field, config);
     const lines = fieldLine(field, value);
     if (field.type === "boolean") {
       const isEnabled = Boolean(value);

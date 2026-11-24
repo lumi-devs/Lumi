@@ -1,11 +1,11 @@
 import { isBotOwner } from "@lumi/permits";
 import type { AutocompleteInteraction } from "discord.js";
+import type { BotServices } from "../../../core/contracts.js";
 import {
   hasAdminAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
 } from "../../access.js";
-import type { BotServices } from "../../../core/contracts.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 
 export async function autocompleteNode(

@@ -13,7 +13,6 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { z } from "zod";
-import { getSecurityConfig } from "../core/config.js";
 import {
   applyResponse,
   fetchMember,
@@ -27,6 +26,7 @@ import {
   sendSecurityLog,
   setStoredJson,
 } from "../../shared/security.js";
+import { getSecurityConfig } from "../core/config.js";
 
 const ModuleName = "antinuke";
 

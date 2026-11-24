@@ -17,8 +17,8 @@ import {
 import { handleHubInteraction } from "../admin/panel/HubPanel.js";
 import type { PermitPanel } from "../admin/panel/PermitPanel.js";
 import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
-import type { BotServices } from "./contracts.js";
 import { handlePingButton } from "./commands.js";
+import type { BotServices } from "./contracts.js";
 import type { ErrorStore } from "./errorStore.js";
 import { commandErrorCard } from "./errors.js";
 import { isModuleLocked } from "./locks.js";

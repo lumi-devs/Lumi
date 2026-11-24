@@ -2,6 +2,7 @@ import type { InstalledAddon } from "@lumi/downloader";
 import { errorMessage } from "@lumi/foundation";
 import { isBotOwner } from "@lumi/permits";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
+import type { BotServices } from "../../core/contracts.js";
 import {
   type AddonView,
   addRepoModal,
@@ -16,7 +17,6 @@ import {
   showPanel,
 } from "./common.js";
 import { toggleModule } from "./moduleActions.js";
-import type { BotServices } from "../../core/contracts.js";
 
 async function show(
   interaction: PanelInteraction,

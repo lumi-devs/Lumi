@@ -1,7 +1,7 @@
 import {
   chmod,
-  mkdtemp,
   mkdir,
+  mkdtemp,
   readFile,
   rm,
   symlink,

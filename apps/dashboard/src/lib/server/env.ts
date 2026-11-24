@@ -31,8 +31,6 @@ export interface ServerConfig {
   redisPort: number;
   redisPassword: string | null;
   redisDb: number;
-  dataDir: string;
-  modulesDir: string | null;
   rpcUrl: string | null;
   rpcInternalToken: string | null;
   ownerIds: string[];
@@ -75,8 +73,6 @@ export function serverConfig(): ServerConfig {
     redisPort: Number.isFinite(port) ? port : 6379,
     redisPassword: Trim(process.env.REDIS_PASSWORD),
     redisDb: Number.isFinite(db) ? db : 0,
-    dataDir: Trim(process.env.LUMI_DATA_DIR) ?? "data",
-    modulesDir: Trim(process.env.LUMI_MODULES_DIR),
     rpcUrl: Trim(process.env.RPC_URL),
     rpcInternalToken: Trim(process.env.RPC_INTERNAL_TOKEN),
     ownerIds: parseOwnerIds(process.env.OWNER_IDS),

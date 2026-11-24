@@ -1,6 +1,5 @@
 import { createCache, type NamespacedCache } from "@lumi/cache";
 import { createDbHelpers, prisma as defaultPrisma } from "@lumi/db";
-import type { PrismaClient } from "@prisma/client";
 import {
   createHealthMonitor,
   type HealthMonitor,
@@ -9,6 +8,7 @@ import {
 import { PermitRepository } from "@lumi/permits";
 import { InvalidationBus } from "@lumi/redis";
 import { DistributedScheduler } from "@lumi/scheduler";
+import type { PrismaClient } from "@prisma/client";
 import type { Client } from "discord.js";
 import type { Redis } from "ioredis";
 import {

@@ -1,5 +1,5 @@
-import { logger } from "@lumi/foundation";
 import { createHash, randomBytes } from "node:crypto";
+import { logger } from "@lumi/foundation";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
@@ -237,6 +237,16 @@ export const actions: Actions = {
       });
     }
 
+    const marked = await getPrisma().verificationToken.updateMany({
+      where: { id: row.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (marked.count === 0) {
+      return fail(409, {
+        error: "This verification link was already used.",
+      });
+    }
+
     try {
       await addMemberRole(
         row.guildId,
@@ -246,6 +256,12 @@ export const actions: Actions = {
       );
     } catch (error) {
       logger.error("[dashboard] verification role grant failed", error);
+      await getPrisma()
+        .verificationToken.update({
+          where: { id: row.id },
+          data: { usedAt: null },
+        })
+        .catch(() => undefined);
       return fail(502, {
         error:
           "The verified role could not be assigned. Check the bot's role hierarchy and permissions, then try again.",
@@ -263,16 +279,6 @@ export const actions: Actions = {
         "Verification completed",
       ).catch((error: unknown) => {
         logger.warn("[dashboard] pending role removal failed", error);
-      });
-    }
-
-    const marked = await getPrisma().verificationToken.updateMany({
-      where: { id: row.id, usedAt: null },
-      data: { usedAt: new Date() },
-    });
-    if (marked.count === 0) {
-      return fail(409, {
-        error: "This verification link was already used.",
       });
     }
 

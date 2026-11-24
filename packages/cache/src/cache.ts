@@ -27,7 +27,7 @@ export interface CacheOptions {
 export interface InvalidationBus {
   subscribe(namespace: string, listener: (keys: string[]) => void): () => void;
   invalidate(namespace: string, keys: string[]): Promise<void>;
-  onResync(): Promise<void>;
+  onResync(listener: () => void): () => void;
 }
 
 export interface CacheMetrics {
@@ -118,16 +118,10 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
       this.discard(keys);
     });
 
-    void this.invalidation
-      .onResync()
-      .then(() => {
-        this.l1.clear();
-
-        for (const fullKey of this.flights.keys()) this.markDiscarded(fullKey);
-      })
-      .catch((error: unknown) => {
-        logger.error("cache resync failed", { error });
-      });
+    this.invalidation.onResync(() => {
+      this.l1.clear();
+      for (const fullKey of this.flights.keys()) this.markDiscarded(fullKey);
+    });
   }
 
   namespace(name: string): NamespacedCache<T> {
@@ -291,6 +285,19 @@ export class Cache<T = unknown> implements NamespacedCache<T> {
   ): Promise<T | null> {
     const startedAt = Date.now();
     try {
+      const redisValue = await this.redis.get(fullKey);
+      if (redisValue !== null) {
+        try {
+          const decoded = this.codec.decode(redisValue);
+          const writeTtlMs = decoded === null ? negativeTtlMs : ttlMs;
+          this.setL1(fullKey, decoded, writeTtlMs);
+          this.recordL1Hit(decoded);
+          return decoded;
+        } catch {
+          // ignore corrupted Redis value and proceed to reload
+        }
+      }
+
       const value = await loader();
       if ((this.loadGenerations.get(fullKey) ?? 0) !== generation) {
         this.metrics?.recordStaleWrite(this.label);

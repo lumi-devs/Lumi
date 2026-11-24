@@ -165,7 +165,11 @@ export function createModuleDataHelpers(ctx: DbContext) {
         (row.expiresAt !== null && row.expiresAt.getTime() <= Date.now())
       ) {
         try {
-          await cache.set(cachedKey, { hit: false }, row ? 1 : NegativeTtlMs);
+          if (!row) {
+            await cache.set(cachedKey, { hit: false }, NegativeTtlMs);
+          } else {
+            await cache.del(cachedKey);
+          }
         } catch {
           return null;
         }

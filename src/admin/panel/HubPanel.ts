@@ -1,5 +1,6 @@
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import type { ModalSubmitInteraction } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import {
   hasAdminAccess,
   permitEnforcementEnabled,
@@ -21,8 +22,7 @@ import {
 import { prefixModal } from "./moduleSettings.js";
 import { PermitPanel } from "./PermitPanel.js";
 import { handleRolesModuleModal } from "./roles/index.js";
-import { handleTempVcGeneratorModal } from "./tempvc.js";
-import type { BotServices } from "../../core/contracts.js";
+import { handleTempVcGeneratorModal } from "../../../modules/utility/tempvc/admin.js";
 
 export async function handleHubInteraction(
   interaction: PanelInteraction,

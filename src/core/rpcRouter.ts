@@ -1,10 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { PrismaClient } from "@prisma/client";
 import type { AddonManager } from "@lumi/downloader";
 import type { Logger } from "@lumi/foundation";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { HealthMonitor } from "@lumi/observability";
 import type { PermitRepository } from "@lumi/permits";
+import type { PrismaClient } from "@prisma/client";
 import type { Client } from "discord.js";
 import type { SyncGuildCommands } from "./commandSync.js";
 import {

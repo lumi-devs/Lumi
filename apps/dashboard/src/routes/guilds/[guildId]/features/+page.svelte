@@ -18,6 +18,7 @@
 </script>
 
 {#snippet menuForm(menu: any)}
+  {@const uid = `menu-${menu?.id ?? "new"}`}
   <form method="POST" action="?/saveMenu">
     <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
     {#if menu}<input type="hidden" name="id" value={menu.id} />{/if}

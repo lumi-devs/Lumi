@@ -26,8 +26,8 @@ import {
   LoggingConfigKey,
   LoggingConfigSchema,
 } from "./config.js";
-import { isIgnored, sendLog } from "./services.js";
 import { fencedCode, inlineCode } from "./format.js";
+import { isIgnored, sendLog } from "./services.js";
 
 function eventCard(
   title: string,

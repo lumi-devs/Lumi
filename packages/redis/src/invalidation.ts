@@ -30,12 +30,15 @@ export class InvalidationBus {
     Set<(keys: string[]) => void>
   >();
   private readonly channel = "lumi:invalidation";
-  private resyncCallbacks: (() => void)[] = [];
+  private readonly resyncListeners: Set<() => void> = new Set();
   private hasConnected = false;
 
   constructor(redis: Redis) {
     this.publisher = redis;
     this.subscriber = redis.duplicate();
+    this.subscriber.on("error", (error: unknown) => {
+      logger.error("invalidation subscriber error", { error });
+    });
     this.setupSubscriber();
   }
 
@@ -63,9 +66,13 @@ export class InvalidationBus {
   }
 
   private signalResync(): void {
-    const callbacks = this.resyncCallbacks;
-    this.resyncCallbacks = [];
-    for (const callback of callbacks) callback();
+    for (const listener of this.resyncListeners) {
+      try {
+        listener();
+      } catch (error) {
+        logger.error("invalidation listener resync failed", { error });
+      }
+    }
   }
 
   private handleInvalidation(msg: InvalidationMessage): void {
@@ -104,10 +111,11 @@ export class InvalidationBus {
     await this.publisher.publish(this.channel, JSON.stringify(message));
   }
 
-  onResync(): Promise<void> {
-    return new Promise((resolve) => {
-      this.resyncCallbacks.push(resolve);
-    });
+  onResync(listener: () => void): () => void {
+    this.resyncListeners.add(listener);
+    return () => {
+      this.resyncListeners.delete(listener);
+    };
   }
 
   async close(): Promise<void> {

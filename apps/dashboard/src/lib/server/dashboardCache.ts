@@ -1,13 +1,13 @@
 import {
-  createCache,
   type CacheMetrics,
   type CacheRedis,
+  createCache,
   type NamespacedCache,
 } from "@lumi/cache";
-import { getInvalidationBus, getRedis } from "./redis.js";
 import { logger } from "@lumi/foundation";
 import type { GuildSummary } from "./discord.js";
 import type { CatalogModule } from "./modules.js";
+import { getInvalidationBus, getRedis } from "./redis.js";
 
 const globalForDashboardCache = globalThis as typeof globalThis & {
   __lumiDashboardCache?: DashboardCache;

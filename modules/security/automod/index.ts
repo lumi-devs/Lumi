@@ -30,8 +30,6 @@ import {
 import { z } from "zod";
 import { safeRegexTest } from "../../shared/regex.js";
 import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
-import { getSecurityConfig } from "../core/config.js";
-import { startPanic } from "../panic/state.js";
 import {
   applyResponse,
   deleteStored,
@@ -44,6 +42,8 @@ import {
   sendSecurityLog,
   setStoredJson,
 } from "../../shared/security.js";
+import { getSecurityConfig } from "../core/config.js";
+import { startPanic } from "../panic/state.js";
 
 const ModuleName = "automod";
 
@@ -285,18 +285,19 @@ const onMessageListener: ListenerDefinition = {
 
     const lastKey = securityKey("automod", "last", guild.id, member.id);
     const previous = (await services.helpers.cache.getString(lastKey)) ?? "";
-    const { reasons, heat: filterHeat } = applyFilters(message, config);
+    const { reasons: filterReasons, heat: filterHeat } = applyFilters(
+      message,
+      config,
+    );
 
     let heat = filterHeat;
     if (config.perDuplicate > 0 && previous && previous === message.content) {
       heat += config.perDuplicate;
-      reasons.push("duplicate");
     }
     if (config.perSimilar > 0 && previous) {
       const score = similarity(previous, message.content);
       if (score >= config.similarityThreshold) {
         heat += config.perSimilar;
-        reasons.push("similar");
       }
     }
     await services.helpers.cache.setString(
@@ -344,17 +345,17 @@ const onMessageListener: ListenerDefinition = {
       }
     }
 
-    if (reasons.length > 0) {
+    if (filterReasons.length > 0) {
       await message.delete().catch(() => undefined);
     }
 
     if (
-      reasons.length > 0 &&
+      filterReasons.length > 0 &&
       config.filterTimeoutMinutes > 0 &&
       (await timeoutMember(
         member,
         config.filterTimeoutMinutes,
-        `Automod filter: ${reasons.join(", ")}`,
+        `Automod filter: ${filterReasons.join(", ")}`,
       ))
     ) {
       await sendSecurityLog(
@@ -362,7 +363,7 @@ const onMessageListener: ListenerDefinition = {
         guild.id,
         securityCard("🤖 Automod Filter", [
           `**Member**\n<@${member.id}>`,
-          `**Filters**\n${reasons.join(", ")}`,
+          `**Filters**\n${filterReasons.join(", ")}`,
           `**Action**\nTimed out for ${config.filterTimeoutMinutes}m`,
         ]),
       );
@@ -370,14 +371,14 @@ const onMessageListener: ListenerDefinition = {
     }
 
     if (total < config.warnThreshold || config.warnThreshold === 0) {
-      if (reasons.length > 0) {
+      if (filterReasons.length > 0) {
         await sendSecurityLog(
           services,
           guild.id,
           securityCard("🤖 Automod Filter", [
             `**Member**\n<@${member.id}>`,
             `**Channel**\n<#${message.channelId}>`,
-            `**Filters**\n${reasons.join(", ")}`,
+            `**Filters**\n${filterReasons.join(", ")}`,
             `**Heat**\n${total}`,
           ]),
         );
@@ -386,10 +387,12 @@ const onMessageListener: ListenerDefinition = {
     }
 
     const outcome = await punish(services, message, member, config, total);
-    await deleteStored(
-      services,
-      securityKey("automod", "heat", guild.id, member.id),
-    );
+    if (outcome !== "warned" && outcome !== "logged") {
+      await deleteStored(
+        services,
+        securityKey("automod", "heat", guild.id, member.id),
+      );
+    }
     await sendSecurityLog(
       services,
       guild.id,
@@ -397,7 +400,7 @@ const onMessageListener: ListenerDefinition = {
         `**Member**\n<@${member.id}>`,
         `**Channel**\n<#${message.channelId}>`,
         `**Heat**\n${total}`,
-        `**Filters**\n${reasons.join(", ") || "heat"}`,
+        `**Filters**\n${filterReasons.join(", ") || "heat"}`,
         `**Action**\n${outcome}`,
       ]),
     );

@@ -9,6 +9,7 @@ export {
   createLock,
   DistributedLock,
   type LockOptions,
+  RELEASE_LOCK_SCRIPT,
   withLock,
 } from "./locks.js";
 

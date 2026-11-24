@@ -1,5 +1,5 @@
-import type { PrismaClient } from "@prisma/client";
 import type { ModuleLoader } from "@lumi/module-runtime";
+import type { PrismaClient } from "@prisma/client";
 
 export class ModuleManager {
   constructor(

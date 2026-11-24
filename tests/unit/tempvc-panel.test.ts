@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTempVcGenerators } from "../../src/admin/panel/tempvc.ts";
+import { parseTempVcGenerators } from "../../modules/utility/tempvc/admin.ts";
 
 const ChannelA = "111111111111111111";
 const ChannelB = "222222222222222222";

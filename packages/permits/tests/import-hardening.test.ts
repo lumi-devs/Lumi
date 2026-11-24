@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { type PermitExportData, importPermits } from "../src/transfer.js";
+import { importPermits, type PermitExportData } from "../src/transfer.js";
 
 function exportData(
   overrides: Partial<PermitExportData> = {},

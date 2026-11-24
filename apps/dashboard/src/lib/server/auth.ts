@@ -6,12 +6,12 @@ import {
   fetchUserGuilds,
   type GuildSummary,
   refreshOAuthToken,
-} from "./discord";
-import { serverConfig } from "./env";
-import { isBotOwner } from "./permissions";
-import { type SessionRecord, saveSession } from "./session";
-import type { GuildAccess } from "./types";
-import { assertCsrf } from "./validation";
+} from "./discord.js";
+import { serverConfig } from "./env.js";
+import { isBotOwner } from "./permissions.js";
+import { type SessionRecord, saveSession } from "./session.js";
+import type { GuildAccess } from "./types.js";
+import { assertCsrf } from "./validation.js";
 
 export function requireSession(event: RequestEvent): SessionRecord {
   if (!event.locals.session) {

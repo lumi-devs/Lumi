@@ -11,11 +11,11 @@ import {
   ButtonStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import { cut, type HubInteraction, pageRow, panelOptions } from "./common.js";
 import { isModuleFeatureEnabled } from "./moduleSettings.js";
 import { ModulesPerPage, moduleItems } from "./modules.js";
 import { paginate } from "./pages.js";
-import type { BotServices } from "../../core/contracts.js";
 
 export async function moduleStates(
   services: BotServices,

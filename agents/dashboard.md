@@ -118,6 +118,7 @@ The dashboard calls these bot endpoints:
 | `GET`    | `/api/v1/guilds/X`                   | Bearer token or loopback |
 | `GET`    | `/api/v1/guilds/X/modules`           | Bearer token or loopback |
 | `POST`   | `/api/v1/guilds/X/modules/Y/state`   | Bearer token or loopback |
+| `POST`   | `/api/v1/guilds/X/config/invalidate` | Bearer token or loopback |
 | `GET`    | `/api/v1/guilds/X/backups/Y/preview` | Bearer token or loopback |
 | `POST`   | `/api/v1/guilds/X/backups/Y/restore` | Bearer token or loopback |
 | `GET`    | `/api/v1/addons`                     | Bearer token or loopback |

@@ -2,7 +2,7 @@ import type Redis from "ioredis";
 import { createKeys, TTL } from "./keys.js";
 
 const keys = createKeys();
-const releaseScript =
+export const RELEASE_LOCK_SCRIPT =
   "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
 
 export interface LockOptions {
@@ -45,7 +45,9 @@ export class DistributedLock {
         this.token = token;
         return true;
       }
-      await new Promise((resolve) => setTimeout(resolve, this.retryMs));
+      if (i < this.maxRetries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, this.retryMs));
+      }
     }
     return false;
   }
@@ -55,7 +57,7 @@ export class DistributedLock {
     if (!this.acquired || token === null) return;
     this.acquired = false;
     this.token = null;
-    await this.redis.eval(releaseScript, 1, this.key, token);
+    await this.redis.eval(RELEASE_LOCK_SCRIPT, 1, this.key, token);
   }
 }
 

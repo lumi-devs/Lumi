@@ -16,8 +16,7 @@ bun run test
 secrets, checks PostgreSQL/Redis, and runs Prisma generate/migrate. Use
 `bun run setup:check` to validate without writing.
 
-Bun is 1.4.2 from nixpkgs. Do not use `Bun.SQL` (1.4.2 has pipeline/transaction
-bugs fixed in 1.4.3). Prisma + `pg` is the supported database path.
+Bun is 1.4.4 from nixpkgs. Prisma + `pg` is the supported database path.
 
 ## Environment
 

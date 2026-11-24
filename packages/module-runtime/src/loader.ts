@@ -1,7 +1,7 @@
-import { logger } from "@lumi/foundation";
 import type { Dirent } from "node:fs";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
+import { logger } from "@lumi/foundation";
 import type {
   Disposer,
   ModuleDefinition,
@@ -244,7 +244,9 @@ export class ModuleLoader {
       const modulePath = join(dir, entry.name);
       const manifest = await this.readManifest(modulePath);
       if (!manifest) {
-        if (depth < 4) {
+        // Bundled modules can be nested in categories up to depth 4 (e.g. category/sub/module).
+        // Addons must be strictly flat direct folders under the addons root directory (no subdir recursion).
+        if (origin === "bundled" && depth < 4) {
           await this.discoverDirectory(
             modulePath,
             origin,
@@ -381,7 +383,7 @@ export class ModuleLoader {
           );
         }
       }
-      if (dependencyIssues.some((issue) => issue.reason === "unsatisfied")) {
+      if (dependencyIssues.length > 0) {
         continue;
       }
 
@@ -487,6 +489,13 @@ export class ModuleLoader {
     const module = this.modules.get(moduleName);
     if (!module) return;
 
+    const freshManifest = await this.readManifest(module.path);
+    if (!freshManifest) {
+      throw new Error(
+        `Failed to read or validate manifest for module "${moduleName}" during reload.`,
+      );
+    }
+
     const services = this.moduleServices.get(moduleName) ?? {
       ...this.requireServices(),
       moduleName,
@@ -494,21 +503,35 @@ export class ModuleLoader {
 
     try {
       await module.definition.onUnload(services);
+    } catch (error) {
+      logger.error(
+        `Error during onUnload while reloading module "${moduleName}":`,
+        error,
+      );
     } finally {
       await this.runDisposers(moduleName);
     }
 
-    const definition = await this.loadDefinition(module.path, module.manifest);
+    const definition = await this.loadDefinition(module.path, freshManifest);
     if (!definition) {
-      throw new Error(`Failed to reload module "${moduleName}".`);
+      throw new Error(`Failed to reload module "${moduleName}": invalid definition.`);
     }
 
+    module.manifest = freshManifest;
     module.definition = definition;
-    const disposers = await definition.onLoad(services);
-    this.moduleDisposers.set(
-      moduleName,
-      Array.isArray(disposers) ? disposers : [],
-    );
+    try {
+      const disposers = await definition.onLoad(services);
+      this.moduleDisposers.set(
+        moduleName,
+        Array.isArray(disposers) ? disposers : [],
+      );
+    } catch (error) {
+      logger.error(
+        `Error during onLoad while reloading module "${moduleName}":`,
+        error,
+      );
+      throw error;
+    }
   }
 
   async unload(moduleName: string): Promise<LoadedModule[]> {
@@ -544,8 +567,8 @@ export class ModuleLoader {
       const bDependsOnA = this.dependents
         .get(a.manifest.name)
         ?.has(b.manifest.name);
-      if (aDependsOnB && !bDependsOnA) return 1;
-      if (bDependsOnA && !aDependsOnB) return -1;
+      if (aDependsOnB && !bDependsOnA) return -1;
+      if (bDependsOnA && !aDependsOnB) return 1;
       return 0;
     });
 

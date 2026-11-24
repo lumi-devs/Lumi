@@ -1,8 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { Cookies } from "@sveltejs/kit";
 import { z } from "zod";
-import { serverConfig } from "./env";
-import { dashboardKey, getRedis } from "./redis";
+import { serverConfig } from "./env.js";
+import { dashboardKey, getRedis } from "./redis.js";
 
 export const SessionCookie = "lumi_dashboard_session";
 

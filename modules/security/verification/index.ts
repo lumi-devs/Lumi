@@ -24,7 +24,6 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { z } from "zod";
-import { getSecurityConfig } from "../core/config.js";
 import {
   deleteStored,
   fetchMember,
@@ -35,6 +34,7 @@ import {
   sendSecurityLog,
   setStoredJson,
 } from "../../shared/security.js";
+import { getSecurityConfig } from "../core/config.js";
 import {
   buildVerificationUrl,
   generateVerificationToken,
@@ -460,7 +460,11 @@ const verificationSweep: TaskDefinition = {
           services,
           pendingKey(guild.id, userId),
         );
-        if (!pending || pending.expiresAt > Date.now()) continue;
+        if (!pending) {
+          await clearPending(services, guild.id, userId);
+          continue;
+        }
+        if (pending.expiresAt > Date.now()) continue;
 
         const member = await fetchMember(guild, userId);
         if (!member) {

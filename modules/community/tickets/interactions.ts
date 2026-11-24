@@ -459,7 +459,10 @@ async function createTicketFromAnswers(
     .send({
       ...cardCreateOptions(openingCard),
       ...(pingRoles.length > 0
-        ? { content: pingRoles.map((roleId) => `<@&${roleId}>`).join(" ") }
+        ? {
+            content: pingRoles.map((roleId) => `<@&${roleId}>`).join(" "),
+            allowedMentions: { roles: pingRoles },
+          }
         : {}),
     })
     .catch(() => undefined);

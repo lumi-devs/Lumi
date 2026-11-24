@@ -1,7 +1,7 @@
 import { logger } from "@lumi/foundation";
-import { fetchModules, type RpcConfigField } from "./rpc.js";
-import { getDashboardCache } from "./dashboardCache.js";
 import type { ConfigField } from "@lumi/module-kit";
+import { getDashboardCache } from "./dashboardCache.js";
+import { fetchModules, type RpcConfigField } from "./rpc.js";
 
 export type { ConfigField };
 

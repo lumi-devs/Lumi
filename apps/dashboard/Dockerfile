@@ -2,15 +2,6 @@
 FROM docker.io/oven/bun:1.4.4-alpine AS base
 WORKDIR /app
 
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    vips-dev \
-    cairo-dev \
-    pango-dev \
-    giflib-dev
-
 COPY package.json bunfig.toml bun.lock prisma.config.ts ./
 COPY packages/ ./packages/
 COPY modules/shared/ ./modules/shared/

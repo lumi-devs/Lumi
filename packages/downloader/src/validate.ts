@@ -30,6 +30,21 @@ const ForbiddenPackages = new Set([
   "@lumi/core",
 ]);
 
+const DangerousBuiltins = new Set([
+  "child_process",
+  "node:child_process",
+  "worker_threads",
+  "node:worker_threads",
+  "cluster",
+  "node:cluster",
+  "bun:ffi",
+  "bun:jsc",
+  "v8",
+  "node:v8",
+  "vm",
+  "node:vm",
+]);
+
 const StaticCallArgument =
   /^\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\$]|\\.)*`)\s*[,)]/;
 const UnscannableDynamicImportRe = /(?:^|[^.\w])import\s*\(\s*/g;
@@ -109,6 +124,16 @@ function checkImport(
     if (target !== root && !target.startsWith(root + sep)) {
       errors.push(`${rel}: import "${spec}" escapes the addon directory.`);
     }
+    return;
+  }
+
+  if (
+    DangerousBuiltins.has(spec) ||
+    DangerousBuiltins.has(spec.replace(/^node:/, ""))
+  ) {
+    errors.push(
+      `${rel}: "${spec}" is dangerous and cannot be imported by add-ons.`,
+    );
     return;
   }
 

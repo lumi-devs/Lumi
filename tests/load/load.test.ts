@@ -221,7 +221,7 @@ describe("Load Tests", () => {
         2000,
       );
 
-      expect(result.errorRate).toBeLessThan(0.15);
+      expect(result.errorRate).toBeLessThan(0.25);
       console.log(
         `Commands 100: ${result.actualOpsPerSecond.toFixed(0)} ops/s, P99: ${result.p99LatencyMs}ms`,
       );

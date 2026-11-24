@@ -10,6 +10,7 @@ import {
   ButtonStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import { formatPermitNodes } from "../permits/nodes.js";
 import { renderAddonPanel } from "./addonViews.js";
 import {
@@ -19,7 +20,6 @@ import {
   panelOptions,
 } from "./common.js";
 import { moduleStates, renderModules } from "./moduleList.js";
-import type { BotServices } from "../../core/contracts.js";
 
 const DefaultPrefix = ",";
 

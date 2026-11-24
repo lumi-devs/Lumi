@@ -17,32 +17,56 @@ import { createTicketsHelpers } from "./helpers/tickets.js";
 import { createUtilityHelpers } from "./helpers/utility.js";
 import { createVerificationHelpers } from "./helpers/verification.js";
 
-const connectionString = process.env.DATABASE_URL;
+let defaultPool: Pool | null = null;
+let defaultPrisma: PrismaClient | null = null;
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not set.");
+export function getDatabasePool(): Pool {
+  if (!defaultPool) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("DATABASE_URL is not set.");
+    }
+    defaultPool = new Pool({ connectionString });
+    defaultPool.on("error", (error) => {
+      logger.error("postgres pool error", { error });
+    });
+  }
+  return defaultPool;
 }
 
-const pool = new Pool({ connectionString });
+export function getPrismaClient(): PrismaClient {
+  if (!defaultPrisma) {
+    const pool = getDatabasePool();
+    const adapter = new PrismaPg(pool);
+    defaultPrisma = new PrismaClient({ adapter });
+  }
+  return defaultPrisma;
+}
 
-const adapter = new PrismaPg(pool);
-
-export const prisma = new PrismaClient({ adapter });
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    return Reflect.get(getPrismaClient(), prop);
+  },
+});
 
 export async function connectDatabase(): Promise<void> {
-  await prisma.$connect();
+  await getPrismaClient().$connect();
 }
 
 export async function disconnectDatabase(): Promise<void> {
-  try {
-    await prisma.$disconnect();
-  } catch (error) {
-    logger.error("prisma disconnect failed", { error });
+  if (defaultPrisma) {
+    try {
+      await defaultPrisma.$disconnect();
+    } catch (error) {
+      logger.error("prisma disconnect failed", { error });
+    }
   }
-  try {
-    await pool.end();
-  } catch (error) {
-    logger.error("postgres pool shutdown failed", { error });
+  if (defaultPool) {
+    try {
+      await defaultPool.end();
+    } catch (error) {
+      logger.error("postgres pool shutdown failed", { error });
+    }
   }
 }
 
@@ -86,13 +110,13 @@ export type {
 } from "./helpers/economy.js";
 export type { LevelingXpInput } from "./helpers/leveling.js";
 export type {
-  ModuleDataEntry,
-  ModuleDataQuery,
-  ModuleDataSetOptions,
-} from "./helpers/moduleData.js";
-export type {
   ModerationCaseInput,
   ModerationCaseKind,
   ModerationCaseUpdate,
 } from "./helpers/moderation.js";
+export type {
+  ModuleDataEntry,
+  ModuleDataQuery,
+  ModuleDataSetOptions,
+} from "./helpers/moduleData.js";
 export type { StatsSeriesPoint, StatsSnapshotCounts } from "./helpers/stats.js";

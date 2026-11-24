@@ -22,6 +22,9 @@ export interface CommandSync {
 
 export function createCommandSync(options: CommandSyncOptions): CommandSync {
   const { client, registry, moduleLoader, logger } = options;
+  const pendingSyncs = new Map<string, Promise<void>>();
+  const lastSyncTime = new Map<string, number>();
+  const MinSyncIntervalMs = 5000;
 
   async function registerGuild(guild: Guild): Promise<void> {
     const payload = commandPayloadForGuild(registry, moduleLoader, guild.id);
@@ -38,7 +41,32 @@ export function createCommandSync(options: CommandSyncOptions): CommandSync {
 
   async function syncGuild(guildId: string): Promise<void> {
     const guild = client.guilds.cache.get(guildId);
-    if (guild) await registerGuild(guild);
+    if (!guild) return;
+
+    const existing = pendingSyncs.get(guildId);
+    if (existing) return existing;
+
+    const now = Date.now();
+    const last = lastSyncTime.get(guildId) ?? 0;
+    if (now - last < MinSyncIntervalMs) {
+      const waitMs = MinSyncIntervalMs - (now - last);
+      const promise = new Promise<void>((resolve) =>
+        setTimeout(resolve, waitMs),
+      ).then(async () => {
+        pendingSyncs.delete(guildId);
+        lastSyncTime.set(guildId, Date.now());
+        await registerGuild(guild);
+      });
+      pendingSyncs.set(guildId, promise);
+      return promise;
+    }
+
+    lastSyncTime.set(guildId, now);
+    const promise = registerGuild(guild).finally(() => {
+      pendingSyncs.delete(guildId);
+    });
+    pendingSyncs.set(guildId, promise);
+    return promise;
   }
 
   async function syncAll(): Promise<void> {

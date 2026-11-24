@@ -15,6 +15,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import {
   backButton,
   cut,
@@ -25,7 +26,6 @@ import {
 import { isModuleFeatureEnabled } from "./moduleSettings.js";
 import { ModulesPerPage } from "./modules.js";
 import { paginate } from "./pages.js";
-import type { BotServices } from "../../core/contracts.js";
 
 export type AddonView =
   | { kind: "home" }

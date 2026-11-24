@@ -12,7 +12,9 @@ import {
   permitEnforcementEnabled,
   roleIdsFrom,
 } from "../admin/access.js";
+import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 import type { BotServices } from "./contracts.js";
+import type { ErrorStore } from "./errorStore.js";
 import { commandErrorCard } from "./errors.js";
 import { isModuleLocked } from "./locks.js";
 import {
@@ -38,6 +40,7 @@ export interface PrefixContext {
   moduleLoader: Pick<ModuleLoader, "isActive">;
   services: BotServices;
   logger: PrefixLogger;
+  errorStore?: ErrorStore;
 }
 
 function idFromValue(value: string | null, pattern: RegExp): string | null {
@@ -258,6 +261,25 @@ export async function handlePrefixMessage(
       message = full;
     }
     if (message.author.bot || !message.guild) return;
+    if (
+      !isBotOwner(message.author.id) &&
+      context.services.prisma &&
+      context.services.helpers?.cache
+    ) {
+      const [userBlocked, guildBlocked] = await Promise.all([
+        isUserBlacklisted(
+          context.services.prisma,
+          context.services.helpers.cache,
+          message.author.id,
+        ),
+        isGuildBlacklisted(
+          context.services.prisma,
+          context.services.helpers.cache,
+          message.guild.id,
+        ),
+      ]);
+      if (userBlocked || guildBlocked) return;
+    }
 
     const prefix = await resolvePrefix(
       context.client,
@@ -374,6 +396,42 @@ export async function handlePrefixMessage(
       return;
     }
 
+    const scope = `${message.guild.id}:${message.author.id}:${command.data.name}`;
+    if (
+      command.cooldownSeconds &&
+      command.cooldownSeconds > 0 &&
+      context.services.helpers?.cache
+    ) {
+      const hits = await context.services.helpers.cache.incr(
+        `command-cooldown:${scope}`,
+        command.cooldownSeconds * 1000,
+      );
+      if (hits > 1) {
+        await replyError(
+          message,
+          "Slow Down",
+          `That command is on cooldown for ${command.cooldownSeconds}s.`,
+        );
+        return;
+      }
+    }
+
+    const release =
+      command.concurrency === undefined || !context.services.helpers?.cache
+        ? null
+        : await context.services.helpers.cache.takeLock(
+            `command-running:${scope}`,
+            60_000,
+          );
+    if (command.concurrency !== undefined && !release) {
+      await replyError(
+        message,
+        "Already Running",
+        "That command is already running for you.",
+      );
+      return;
+    }
+
     const syntheticInteraction = createSyntheticInteraction(
       message,
       command,
@@ -390,14 +448,24 @@ export async function handlePrefixMessage(
         );
       }
     } catch (error) {
+      const record = await context.errorStore?.record?.({
+        error,
+        source: "command",
+        guildId: message.guild.id,
+        userId: message.author.id,
+        command: command.data.name,
+      });
       context.logger.error("Prefix command failed", {
         command: name,
         guildId: message.guild.id,
+        traceId: record?.id,
         error,
       });
       await message
-        .reply(cardMessage(commandErrorCard(error)))
+        .reply(cardMessage(commandErrorCard(error, record?.id)))
         .catch(() => undefined);
+    } finally {
+      await release?.();
     }
   } catch (error) {
     context.logger.error("Prefix dispatch failed", {

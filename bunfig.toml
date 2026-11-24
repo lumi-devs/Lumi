@@ -2,3 +2,4 @@
 root = "."
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
+pathIgnorePatterns = ["data/repos/**"]

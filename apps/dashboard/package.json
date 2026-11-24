@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "bun build/index.js",
-    "typecheck": "svelte-kit sync && tsc --noEmit"
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc --noEmit"
   },
   "dependencies": {
     "@lumi/cache": "workspace:*",

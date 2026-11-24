@@ -104,7 +104,6 @@ const nickDef: CommandDefinition = {
         .setRequired(false)
         .setMaxLength(32),
     ),
-  requiredPermit: "mod.nick",
   async execute(interaction, services) {
     const guild = interaction.guild;
     if (!guild) {
@@ -119,21 +118,34 @@ const nickDef: CommandDefinition = {
       return;
     }
 
-    if (!(await hasNickPermit(interaction, services))) {
+    const config = await getNickConfig(services, guild.id);
+    const requestedUser = interaction.options.getUser("user");
+    const isSelf = !requestedUser || requestedUser.id === interaction.user.id;
+
+    if (isSelf) {
+      if (!config.allowSelfNick && !(await hasNickPermit(interaction, services))) {
+        await interaction.reply(
+          ephemeralCard(
+            makeErrorCard(
+              "Self Nicknames Disabled",
+              "Changing your own nickname is disabled on this server.",
+            ),
+          ),
+        );
+        return;
+      }
+    } else if (!(await hasNickPermit(interaction, services))) {
       await interaction.reply(
         ephemeralCard(
           makeErrorCard(
             "Missing Permit",
-            "You need the `mod.nick` permit to change nicknames.",
+            "You need the `mod.nick` permit to change nicknames of other users.",
           ),
         ),
       );
       return;
     }
 
-    const config = await getNickConfig(services, guild.id);
-    const requestedUser = interaction.options.getUser("user");
-    const isSelf = !requestedUser || requestedUser.id === interaction.user.id;
     const trimmed = interaction.options.getString("nickname");
     const nickname = trimmed === null ? null : trimmed.trim();
 

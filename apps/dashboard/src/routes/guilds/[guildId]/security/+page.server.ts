@@ -1,5 +1,5 @@
-import { logger } from "@lumi/foundation";
 import { createHash, randomBytes } from "node:crypto";
+import { logger } from "@lumi/foundation";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
@@ -8,9 +8,9 @@ import { storedBackupStats } from "#lib/server/backups.js";
 import { type DiscordRole, fetchGuildRoles } from "#lib/server/discord.js";
 import { publicWebBaseUrl } from "#lib/server/env.js";
 import { verifyGuildTargets } from "#lib/server/guildTargets.js";
+import { invalidateModuleCatalog } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { getRedis } from "#lib/server/redis.js";
-import { invalidateModuleCatalog } from "#lib/server/modules.js";
 import {
   fetchBackupPreview,
   restoreBackupViaRpc,

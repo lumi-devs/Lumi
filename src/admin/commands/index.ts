@@ -4,9 +4,9 @@ import {
   type ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import { renderHubPanel } from "../panel/hubViews.js";
 import { renderModuleDetail } from "../panel/moduleSettings.js";
-import type { BotServices } from "../../core/contracts.js";
 import { permitCommand } from "./permit.js";
 
 export const moduleCommands = [

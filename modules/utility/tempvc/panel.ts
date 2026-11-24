@@ -245,10 +245,10 @@ async function createTempVoiceChannelUnlocked(
             PermissionFlagsBits.Speak,
             PermissionFlagsBits.Stream,
             PermissionFlagsBits.UseVAD,
-            PermissionFlagsBits.ManageChannels,
             PermissionFlagsBits.MoveMembers,
             PermissionFlagsBits.MuteMembers,
             PermissionFlagsBits.DeafenMembers,
+            PermissionFlagsBits.SetVoiceChannelStatus,
           ],
         },
         {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DistributedScheduler } from "../src/index.js";
 
 const createMockRedis = () => {
@@ -22,13 +22,21 @@ const createMockRedis = () => {
   };
 };
 
+interface InternalScheduler {
+  tick(): Promise<void>;
+  lastRunMinute: Map<string, string>;
+  jobs: Map<string, unknown>;
+}
+
 describe("@lumi/scheduler — DistributedScheduler", () => {
   let mockRedis: ReturnType<typeof createMockRedis>;
   let scheduler: DistributedScheduler;
+  let internal: InternalScheduler;
 
   beforeEach(() => {
     mockRedis = createMockRedis();
     scheduler = new DistributedScheduler(mockRedis as any);
+    internal = scheduler as unknown as InternalScheduler;
   });
 
   afterEach(async () => {
@@ -103,11 +111,11 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
 
     await scheduler.start();
 
-    const tickPromise = scheduler["tick"]();
+    const tickPromise = internal.tick();
 
     await Promise.resolve();
 
-    await scheduler["tick"]();
+    await internal.tick();
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -131,7 +139,7 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
     mockRedis.eval.mockResolvedValue(1);
 
     await scheduler.start();
-    await scheduler["tick"]();
+    await internal.tick();
 
     consoleError.mockRestore();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -151,7 +159,7 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
     mockRedis.eval.mockResolvedValue(1);
 
     await scheduler.start();
-    await scheduler["tick"]();
+    await internal.tick();
 
     expect(mockRedis.set).toHaveBeenCalledTimes(1);
     expect(mockRedis.eval).toHaveBeenCalledTimes(1);
@@ -172,7 +180,7 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
     mockRedis.eval.mockResolvedValue(1);
 
     await scheduler.start();
-    await scheduler["tick"]();
+    await internal.tick();
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -192,10 +200,10 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
 
     await scheduler.start();
 
-    await scheduler["tick"]();
+    await internal.tick();
     expect(handler).toHaveBeenCalledTimes(1);
 
-    await scheduler["tick"]();
+    await internal.tick();
     expect(handler).toHaveBeenCalledTimes(1);
 
     await scheduler.stop();
@@ -214,12 +222,12 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
 
     await scheduler.start();
 
-    await scheduler["tick"]();
+    await internal.tick();
     expect(handler).toHaveBeenCalledTimes(1);
 
-    scheduler["lastRunMinute"].clear();
+    internal.lastRunMinute.clear();
 
-    await scheduler["tick"]();
+    await internal.tick();
     expect(handler).toHaveBeenCalledTimes(2);
 
     await scheduler.stop();
@@ -233,7 +241,7 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
       handler: vi.fn(),
     });
     consoleError.mockRestore();
-    expect(scheduler["jobs"].has("bad-job")).toBe(false);
+    expect(internal.jobs.has("bad-job")).toBe(false);
   });
 
   it("allows re-registering after unregister", () => {
@@ -248,6 +256,6 @@ describe("@lumi/scheduler — DistributedScheduler", () => {
       cron: "0 * * * *",
       handler: vi.fn(),
     });
-    expect(scheduler["jobs"].has("job")).toBe(true);
+    expect(internal.jobs.has("job")).toBe(true);
   });
 });

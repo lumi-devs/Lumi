@@ -97,8 +97,15 @@ export async function runBulkRoleJob(
 
   let members: GuildMember[];
   try {
-    const fetched = await guild.members.fetch();
-    members = [...fetched.values()];
+    if (
+      guild.members.cache.size >= (guild.memberCount ?? 0) &&
+      guild.members.cache.size > 0
+    ) {
+      members = [...guild.members.cache.values()];
+    } else {
+      const fetched = await guild.members.fetch();
+      members = [...fetched.values()];
+    }
   } catch (error) {
     await updateBulkRoleJob(services, job.id, {
       status: "failed",

@@ -1,8 +1,8 @@
 import { errorMessage } from "@lumi/foundation";
 import { ephemeralCard } from "@lumi/ui";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { roleIdsFrom } from "../../access.js";
 import type { BotServices } from "../../../core/contracts.js";
+import { roleIdsFrom } from "../../access.js";
 import { allExplanationCard, explanationCard } from "../../permits/explain.js";
 import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
 import { openPermitsRow, replyPermitError } from "./shared.js";

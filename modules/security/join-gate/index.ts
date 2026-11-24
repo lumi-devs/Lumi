@@ -11,7 +11,6 @@ import { type GuildMember, SlashCommandBuilder } from "discord.js";
 import { z } from "zod";
 import { safeRegexTest } from "../../shared/regex.js";
 import { warnInvalidRegexPatterns } from "../../shared/regex-warnings.js";
-import { getSecurityConfig } from "../core/config.js";
 import {
   applyJoinAction,
   incrementWindow,
@@ -22,6 +21,7 @@ import {
   securityKey,
   sendSecurityLog,
 } from "../../shared/security.js";
+import { getSecurityConfig } from "../core/config.js";
 
 const ModuleName = "join-gate";
 

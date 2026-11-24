@@ -1,5 +1,4 @@
 import type { DbHelpers } from "@lumi/db";
-import type { PrismaClient } from "@prisma/client";
 import type { AddonManager } from "@lumi/downloader";
 import type { Logger } from "@lumi/foundation";
 import type {
@@ -11,6 +10,7 @@ import type { HealthMonitor } from "@lumi/observability";
 import type { PermitRepository } from "@lumi/permits";
 import type { DistributedScheduler } from "@lumi/scheduler";
 import type * as Ui from "@lumi/ui";
+import type { PrismaClient } from "@prisma/client";
 import type { Client, PermissionFlagsBits } from "discord.js";
 import type { Redis } from "ioredis";
 import type { ConfigService } from "../admin/services/ConfigService.js";

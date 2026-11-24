@@ -1,10 +1,8 @@
 import { logger } from "@lumi/foundation";
 import { requireGuildId } from "#lib/server/auth.js";
 import { fetchBotGuild, fetchBotUser } from "#lib/server/discord.js";
-import { configFor, effectiveModuleEnabled } from "#lib/server/moduleConfig.js";
 import { moduleCatalog } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
-import { readGuildSettings } from "#lib/server/settings.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
@@ -18,7 +16,6 @@ export const load: PageServerLoad = async (event) => {
     latestSnapshot,
     latestBackup,
     catalog,
-    settings,
   ] = await Promise.all([
     prisma.permit.count({ where: { guildId } }),
     prisma.ticket.count({ where: { guildId, status: "open" } }),
@@ -37,7 +34,6 @@ export const load: PageServerLoad = async (event) => {
       select: { id: true, reason: true, createdAt: true },
     }),
     moduleCatalog(guildId),
-    readGuildSettings(guildId),
   ]);
 
   let botPresent = false;
@@ -58,13 +54,7 @@ export const load: PageServerLoad = async (event) => {
   );
 
   const bundled = catalog?.filter((module) => !module.isAddon) ?? [];
-  const enabledModules = bundled.filter((module) =>
-    effectiveModuleEnabled(
-      module.configFields,
-      configFor(settings, module.configKey),
-      module.enabled,
-    ),
-  ).length;
+  const enabledModules = bundled.filter((module) => module.enabled).length;
 
   return {
     botPresent,

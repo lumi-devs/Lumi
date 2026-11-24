@@ -72,9 +72,10 @@ const avatarDef: CommandDefinition = {
   async execute(interaction) {
     const target = interaction.options.getUser("user") ?? interaction.user;
     const isSelf = target.id === interaction.user.id;
-    const avatarUrl = target.avatar
-      ? target.displayAvatarURL({ size: 4096, extension: "png" })
-      : null;
+    const avatarUrl = target.displayAvatarURL({
+      size: 4096,
+      extension: "png",
+    });
     const card = buildAvatarCard({
       displayName: target.displayName,
       userId: target.id,
@@ -172,7 +173,15 @@ const serverinfoDef: CommandDefinition = {
     .setName("serverinfo")
     .setDescription("Get information about the server"),
   async execute(interaction) {
-    const guild = interaction.guild!;
+    if (!interaction.guild) {
+      await interaction.reply(
+        ephemeralCard(
+          makeErrorCard("Server Only", "This command can only be used in a server."),
+        ),
+      );
+      return;
+    }
+    const guild = interaction.guild;
     const banner = guild.bannerURL({ size: 512 });
 
     await interaction.reply(

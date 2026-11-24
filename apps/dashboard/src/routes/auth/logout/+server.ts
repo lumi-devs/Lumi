@@ -14,8 +14,8 @@ export const POST: RequestHandler = async ({ locals, cookies, request }) => {
     safeEqual(submitted, session.csrfToken)
   ) {
     await destroySession(locals.sessionId);
+    clearSessionCookie(cookies);
   }
 
-  clearSessionCookie(cookies);
   throw redirect(303, "/");
 };

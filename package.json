@@ -2,6 +2,7 @@
   "name": "lumi-v2",
   "version": "2.0.0",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -24,10 +25,10 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "dev:bot": "bun --watch src/index.ts",
-    "dashboard:dev": "bun run --cwd apps/dashboard dev",
-    "dashboard:sync": "bun run --cwd apps/dashboard sync",
-    "dashboard:build": "bun run --cwd apps/dashboard build",
-    "dashboard:typecheck": "bun run --cwd apps/dashboard typecheck"
+    "dashboard:dev": "cd apps/dashboard && ./node_modules/.bin/vite dev --host 0.0.0.0 --port 4173",
+    "dashboard:sync": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync",
+    "dashboard:build": "cd apps/dashboard && ./node_modules/.bin/vite build",
+    "dashboard:typecheck": "cd apps/dashboard && ./node_modules/.bin/svelte-kit sync && ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json && ./node_modules/.bin/tsc --noEmit"
   },
   "dependencies": {
     "canvas": "^3.2.3",

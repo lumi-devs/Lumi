@@ -103,6 +103,7 @@ export async function hasRolePermit(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,
   node: string,
+  enforcePermits = false,
 ): Promise<boolean> {
   if (!interaction.guildId) return false;
   try {
@@ -114,6 +115,7 @@ export async function hasRolePermit(
         channelId: interaction.channelId,
         guildOwnerId: interaction.guild?.ownerId,
         permitNode: node,
+        managerBypass: !enforcePermits,
       },
       services.client,
     );
@@ -134,8 +136,11 @@ export async function canManageRolesCommand(
   services: ModuleServices,
   node: string,
 ): Promise<boolean> {
-  if (hasManageServer(interaction)) return true;
-  return hasRolePermit(interaction, services, node);
+  const enforcePermits =
+    (await services.config.get(interaction.guildId ?? "", "enforcePermits")) ===
+    true;
+  if (!enforcePermits && hasManageServer(interaction)) return true;
+  return hasRolePermit(interaction, services, node, enforcePermits);
 }
 
 export interface RoleHierarchyInput {

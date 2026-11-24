@@ -1,11 +1,11 @@
 import { uptime } from "node:os";
-import type { PrismaClient } from "@prisma/client";
 import {
   buildSafeActionRows,
   createActionButton,
   makeCard,
   row,
 } from "@lumi/ui";
+import type { PrismaClient } from "@prisma/client";
 import {
   ButtonStyle,
   type ChatInputCommandInteraction,

@@ -58,51 +58,23 @@ describe("createGuildSync", () => {
     expect(setEnabled).toHaveBeenCalledWith("missing", "guild", true);
   });
 
-  it("keeps modules with disabled feature flags inactive", async () => {
+  it("determines module enabled state from GuildModule rows", async () => {
     const setEnabled = vi.fn(async () => {});
     const sync = createGuildSync({
       prisma: {
         guildModule: {
-          findMany: async () => [{ module: "feature", enabled: true }],
-        },
-        guild: {
-          findUnique: async () => ({
-            settings: {
-              feature: { enabled: false },
-              enabledFeature: { enabled: true },
-            },
-          }),
+          findMany: async () => [
+            { module: "disabledFeature", enabled: false },
+            { module: "enabledFeature", enabled: true },
+          ],
         },
       } as never,
       permits: {} as never,
       moduleLoader: {
         listAll: () => [
-          {
-            manifest: {
-              name: "feature",
-              configFields: [
-                { key: "enabled", type: "boolean", default: false },
-              ],
-            },
-          },
-          {
-            manifest: {
-              name: "enabledFeature",
-              configKey: "enabledFeature",
-              configFields: [
-                { key: "enabled", type: "boolean", default: false },
-              ],
-            },
-          },
-          {
-            manifest: {
-              name: "defaultFeature",
-              configFields: [
-                { key: "enabled", type: "boolean", default: false },
-              ],
-            },
-          },
-          { manifest: { name: "noFlag" } },
+          { manifest: { name: "disabledFeature" } },
+          { manifest: { name: "enabledFeature" } },
+          { manifest: { name: "defaultFeature" } },
         ],
         setEnabled,
       } as never,
@@ -111,9 +83,8 @@ describe("createGuildSync", () => {
 
     await sync.syncModules("guild");
 
-    expect(setEnabled).toHaveBeenCalledWith("feature", "guild", false);
+    expect(setEnabled).toHaveBeenCalledWith("disabledFeature", "guild", false);
     expect(setEnabled).toHaveBeenCalledWith("enabledFeature", "guild", true);
-    expect(setEnabled).toHaveBeenCalledWith("defaultFeature", "guild", false);
-    expect(setEnabled).toHaveBeenCalledWith("noFlag", "guild", true);
+    expect(setEnabled).toHaveBeenCalledWith("defaultFeature", "guild", true);
   });
 });

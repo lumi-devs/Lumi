@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
-const mocks = vi.hoisted(() => {
+const hoistedFn = vi.hoisted ?? ((fn: () => any) => fn());
+
+const mocks = hoistedFn(() => {
   const client: Record<string, Mock> = {
     setFromMessage: vi.fn(),
     setText: vi.fn(),

@@ -45,6 +45,11 @@ export async function withKeyLock<T>(
         await promise;
       }
     }
+    if (!release) {
+      throw new Error(
+        `Failed to acquire distributed lock for "${key}" within ${deadlineMs}ms`,
+      );
+    }
     try {
       return await task();
     } finally {
@@ -63,5 +68,6 @@ export async function tryKeyLock(
   if (services.helpers.cache.distributed) {
     return services.helpers.cache.takeLock(key, ttlMs).catch(() => null);
   }
+  if (LocalLocks.has(key)) return null;
   return acquireLocal(key);
 }

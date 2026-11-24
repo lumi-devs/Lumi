@@ -8,8 +8,8 @@ import { listGroups, postGroup, refreshGroup } from "./posting.js";
 import {
   canManage,
   disabledCard,
-  missingGuildCard,
   ModuleName,
+  missingGuildCard,
   PermitNode,
   resolveGroupOrReply,
 } from "./shared.js";

@@ -205,7 +205,12 @@ export async function applyResponse(
   if (!member) return "failed";
   const quarantined = await member.roles
     .set([config.quarantineRoleId], reason)
-    .then(() => true)
+    .then(async () => {
+      await services.helpers.cache
+        .setString(`lumi:mod:${guild.id}:quarantine:${targetId}`, "true")
+        .catch(() => undefined);
+      return true;
+    })
     .catch((error: unknown) => {
       services.observability?.logger?.warn?.("security quarantine failed", {
         guildId: guild.id,

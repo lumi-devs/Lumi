@@ -2,19 +2,9 @@ import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 import { recordAudit } from "#lib/server/audit.js";
 import { requireGuildForm, requireGuildId } from "#lib/server/auth.js";
-import {
-  configFor,
-  effectiveModuleEnabled,
-  enabledConfigField,
-} from "#lib/server/moduleConfig.js";
-import { moduleCatalog, invalidateModuleCatalog } from "#lib/server/modules.js";
+import { invalidateModuleCatalog, moduleCatalog } from "#lib/server/modules.js";
 import { getPrisma } from "#lib/server/prisma.js";
 import { setModuleStateViaRpc } from "#lib/server/rpc.js";
-import {
-  ensureGuild,
-  readGuildSettings,
-  setGuildSetting,
-} from "#lib/server/settings.js";
 import { checkbox, formString, parseInput } from "#lib/server/validation.js";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -24,21 +14,19 @@ const ToggleSchema = z.object({
 
 export const load: PageServerLoad = async (event) => {
   const guildId = await requireGuildId(event);
-  const [catalog, rows, settings] = await Promise.all([
+  const [catalog, rows] = await Promise.all([
     moduleCatalog(guildId),
     getPrisma().guildModule.findMany({ where: { guildId } }),
-    readGuildSettings(guildId),
   ]);
   const modules = (catalog ?? [])
     .filter((module) => !module.isAddon)
-    .map((module) => ({
-      ...module,
-      enabled: effectiveModuleEnabled(
-        module.configFields,
-        configFor(settings, module.configKey),
-        module.enabled,
-      ),
-    }));
+    .map((module) => {
+      const row = rows.find((r) => r.module === module.name);
+      return {
+        ...module,
+        enabled: row !== undefined ? row.enabled : module.enabled,
+      };
+    });
   const known = new Set((catalog ?? []).map((module) => module.name));
   const byCategory = new Map<string, typeof modules>();
   for (const module of modules) {
@@ -85,23 +73,6 @@ export const actions: Actions = {
     if (!module) return fail(404, { error: "That module is not available." });
 
     const enabled = checkbox(data, "enabled");
-    await ensureGuild(guildId);
-    const field = enabledConfigField(module.configFields);
-    if (field) {
-      const settings = await readGuildSettings(guildId);
-      const config = configFor(settings, module.configKey);
-      await setGuildSetting(guildId, module.configKey, {
-        ...config,
-        [field.key]: enabled,
-      });
-    }
-    await getPrisma().guildModule.upsert({
-      where: {
-        guildId_module: { guildId, module: parsed.data.module },
-      },
-      update: { enabled },
-      create: { guildId, module: parsed.data.module, enabled },
-    });
     const sync = await setModuleStateViaRpc(
       guildId,
       parsed.data.module,

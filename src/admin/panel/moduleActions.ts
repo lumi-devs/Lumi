@@ -5,6 +5,7 @@ import type {
   ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
+import type { BotServices } from "../../core/contracts.js";
 import {
   type MessageModalSubmit,
   type ModuleActionParams,
@@ -24,7 +25,6 @@ import {
 } from "./escalation.js";
 import { renderModules } from "./moduleList.js";
 import {
-  enabledConfigField,
   fieldModal,
   fieldValue,
   findField,
@@ -39,8 +39,7 @@ import {
   writeModuleConfig,
 } from "./moduleSettings.js";
 import { handleRolesModuleAction } from "./roles/index.js";
-import type { BotServices } from "../../core/contracts.js";
-import { handleTempVcModuleAction } from "./tempvc.js";
+import { handleTempVcModuleAction } from "../../../modules/utility/tempvc/admin.js";
 
 function pageNumber(raw: string | undefined): number {
   return Number(raw) || 0;
@@ -58,16 +57,11 @@ export async function toggleModule(
     guildId,
     moduleName,
   );
-  const field = enabledConfigField(services, moduleName);
-  if (field) {
-    const config = await readModuleConfig(services, guildId, moduleName);
-    config[field.key] = !wasEnabled;
-    await writeModuleConfig(services, guildId, moduleName, config);
-  }
   if (wasEnabled) await services.moduleManager.disable(guildId, moduleName);
   else await services.moduleManager.enable(guildId, moduleName);
   return wasEnabled;
 }
+
 
 export async function handleModuleAction(
   interaction: ButtonInteraction | AnySelectMenuInteraction,
@@ -114,15 +108,6 @@ export async function handleModuleAction(
     case "modreset": {
       await showPanel(interaction, async () => {
         await writeModuleConfig(services, guildId, target, {});
-        if (enabledConfigField(services, target)) {
-          const enabled = await isModuleFeatureEnabled(
-            services,
-            guildId,
-            target,
-          );
-          if (enabled) await services.moduleManager.enable(guildId, target);
-          else await services.moduleManager.disable(guildId, target);
-        }
         return renderModuleDetail(
           interaction,
           services,
@@ -149,14 +134,25 @@ export async function handleModuleAction(
       const field = findField(services, target, extra);
       if (!field) return true;
       await showPanel(interaction, async () => {
+        if (field.key === "enabled" && field.type === "boolean") {
+          const wasEnabled = await isModuleFeatureEnabled(
+            services,
+            guildId,
+            target,
+          );
+          if (wasEnabled) await services.moduleManager.disable(guildId, target);
+          else await services.moduleManager.enable(guildId, target);
+          return renderModuleDetail(
+            interaction,
+            services,
+            target,
+            pageNumber(extra2),
+          );
+        }
         const config = await readModuleConfig(services, guildId, target);
         const next = !fieldValue(field, config);
         config[field.key] = next;
         await writeModuleConfig(services, guildId, target, config);
-        if (field.key === "enabled" && field.type === "boolean") {
-          if (next) await services.moduleManager.enable(guildId, target);
-          else await services.moduleManager.disable(guildId, target);
-        }
         return renderModuleDetail(
           interaction,
           services,

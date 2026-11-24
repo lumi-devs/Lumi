@@ -12,13 +12,13 @@ import {
   type MessageActionRowComponentBuilder,
   type ModalSubmitInteraction,
 } from "discord.js";
+import type { BotServices } from "../../../core/contracts.js";
 import {
   backButton,
   type HubInteraction,
   type MessageModalSubmit,
   panelOptions,
 } from "../common.js";
-import type { BotServices } from "../../../core/contracts.js";
 
 export const AutoroleModuleName = "autorole";
 export const VoiceRolesModuleName = "voiceroles";
