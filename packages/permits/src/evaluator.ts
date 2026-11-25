@@ -12,12 +12,12 @@ import type {
   PermitTierExplanation,
 } from "./types.js";
 
-const OwnerIds: ReadonlySet<string> = new Set(
-  (process.env.OWNER_IDS ?? "")
+export function ownerIds(): string[] {
+  return (process.env.OWNER_IDS ?? "")
     .split(",")
     .map((id) => id.trim())
-    .filter((id) => id.length > 0),
-);
+    .filter((id) => id.length > 0);
+}
 
 export function evaluateNodeMatch(
   grantedNode: string,
@@ -179,7 +179,7 @@ function privilegedResult(
 ): EvaluatedPermit | null {
   const { guildId, userId, guildOwnerId } = options;
 
-  if (OwnerIds.has(userId)) {
+  if (isBotOwner(userId)) {
     return {
       rows: [{ tier: "owner", verdict: "allow", detail: "bot owner" }],
       allowed: true,
@@ -284,8 +284,9 @@ export async function evaluatePermit(
   return evaluatePermitWithChain(options, chainResult, container.client);
 }
 
-export function isBotOwner(userId: string): boolean {
-  return OwnerIds.has(userId);
+export function isBotOwner(userId?: string | null): boolean {
+  if (!userId) return false;
+  return ownerIds().includes(userId);
 }
 
 export function isGuildOwner(

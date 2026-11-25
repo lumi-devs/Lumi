@@ -14,7 +14,7 @@ import {
   targetMention,
   targetTypeLabel,
 } from "../../permits/format.js";
-import { formatPermitNodeLines } from "../../permits/nodes.js";
+import { formatPermitNodeLines } from "../../../core/permitNodes.js";
 import { backButton } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 

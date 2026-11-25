@@ -7,7 +7,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { isValidNode, parseNodeList } from "../../permits/nodes.js";
+import { isValidNode, parseNodeList } from "../../../core/permitNodes.js";
 import { cut } from "../common.js";
 import type { PermitHost } from "./host.js";
 

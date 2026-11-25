@@ -6,7 +6,7 @@ import {
   row,
 } from "@lumi/ui";
 import { ButtonStyle } from "discord.js";
-import { roleIdsFrom } from "../../access.js";
+import { roleIdsFrom } from "../../../core/access.js";
 import { allExplanationCard } from "../../permits/explain.js";
 import type { ExplainFlow } from "../../permits/flows.js";
 import { backButton } from "../common.js";

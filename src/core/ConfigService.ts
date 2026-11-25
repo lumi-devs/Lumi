@@ -1,4 +1,5 @@
 import type { NamespacedCache } from "@lumi/cache";
+import type { InvalidationBus } from "@lumi/redis";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 export type GuildSettings = Record<string, unknown>;
@@ -22,6 +23,7 @@ function isRetryableConfigConflict(error: unknown): boolean {
 export interface ConfigServiceOptions {
   readonly prisma: PrismaClient;
   readonly cache?: NamespacedCache<GuildSettings>;
+  readonly invalidation?: InvalidationBus;
 }
 
 export class ConfigService {
@@ -37,13 +39,11 @@ export class ConfigService {
 
   private async read(guildId: string): Promise<GuildSettings> {
     if (!this.options.cache) return this.load(guildId);
-    const settings = await this.options.cache.getOrLoad(
-      guildId,
-      ConfigTtlMs,
-      () => this.load(guildId),
+    const settings = await this.options.cache.getOrLoad(guildId, ConfigTtlMs, () =>
+      this.load(guildId),
     );
 
-    return settings ?? {};
+    return settings ? structuredClone(settings) : {};
   }
 
   private async mutate(
@@ -70,6 +70,7 @@ export class ConfigService {
           { isolationLevel: "Serializable" },
         );
         await this.options.cache?.delete(guildId);
+        await this.options.invalidation?.invalidate("config", [guildId]);
         return settings;
       } catch (error) {
         if (
@@ -84,14 +85,12 @@ export class ConfigService {
   }
 
   async getAll(guildId: string): Promise<GuildSettings> {
-    return structuredClone(await this.read(guildId));
+    return this.read(guildId);
   }
 
   async get(guildId: string, key: string): Promise<unknown> {
-    const value = (await this.read(guildId))[key];
-    return value !== null && typeof value === "object"
-      ? structuredClone(value)
-      : value;
+    const settings = await this.read(guildId);
+    return settings[key];
   }
 
   async set(guildId: string, key: string, value: unknown): Promise<void> {

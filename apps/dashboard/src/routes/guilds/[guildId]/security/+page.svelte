@@ -3,7 +3,27 @@
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   let { data, form } = $props();
 
-  function statsSummary(stats: any): string {
+  interface BackupStats {
+    roles: number;
+    channels: number;
+    categories: number;
+    text: number;
+    voice?: number;
+    stages?: number;
+    forums?: number;
+    media?: number;
+    announcements?: number;
+    overwrites: number;
+  }
+
+  interface BackupChange {
+    id: string;
+    name: string;
+    action: "create" | "update";
+    fields: string[];
+  }
+
+  function statsSummary(stats?: BackupStats | null): string {
     if (!stats) return "—";
     const parts = [
       `${stats.roles} roles`,
@@ -519,9 +539,9 @@
         <div class="field">
           <strong>Roles</strong>
           <p class="hint">
-            {preview.diff.roles.filter((c: any) => c.action === "create")
+            {preview.diff.roles.filter((c: BackupChange) => c.action === "create")
               .length} create ·
-            {preview.diff.roles.filter((c: any) => c.action === "update")
+            {preview.diff.roles.filter((c: BackupChange) => c.action === "update")
               .length} update ·
             {preview.diff.unchangedRoles} unchanged
           </p>
@@ -546,9 +566,9 @@
         <div class="field">
           <strong>Channels</strong>
           <p class="hint">
-            {preview.diff.channels.filter((c: any) => c.action === "create")
+            {preview.diff.channels.filter((c: BackupChange) => c.action === "create")
               .length} create ·
-            {preview.diff.channels.filter((c: any) => c.action === "update")
+            {preview.diff.channels.filter((c: BackupChange) => c.action === "update")
               .length} update ·
             {preview.diff.unchangedChannels} unchanged
           </p>

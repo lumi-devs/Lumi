@@ -14,7 +14,7 @@ import type { Redis } from "ioredis";
 import {
   ConfigService,
   type GuildSettings,
-} from "../admin/services/ConfigService.js";
+} from "./ConfigService.js";
 
 export interface CoreServicesOptions {
   client: Client;

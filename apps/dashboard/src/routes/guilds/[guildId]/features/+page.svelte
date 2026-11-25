@@ -3,6 +3,9 @@
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   import NodePicker from "#lib/components/NodePicker.svelte";
   let { data, form } = $props();
+  type Menu = (typeof data.menus)[number];
+  type Category = (typeof data.categories)[number];
+
 
   function lines(value: unknown): string {
     return Array.isArray(value) ? value.join("\n") : "";
@@ -17,7 +20,7 @@
   }
 </script>
 
-{#snippet menuForm(menu: any)}
+{#snippet menuForm(menu: Menu | null | undefined)}
   {@const uid = `menu-${menu?.id ?? "new"}`}
   <form method="POST" action="?/saveMenu">
     <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />
@@ -108,7 +111,7 @@
   </form>
 {/snippet}
 
-{#snippet categoryForm(category: any)}
+{#snippet categoryForm(category: Category | null | undefined)}
   {@const uid = `category-${category?.id ?? "new"}`}
   <form method="POST" action="?/saveCategory">
     <input type="hidden" name="_csrf" value={data.csrfToken ?? ""} />

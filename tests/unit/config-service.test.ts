@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ConfigService,
   type GuildSettings,
-} from "../../src/admin/services/ConfigService.js";
+} from "../../src/core/ConfigService.js";
 
 describe("ConfigService", () => {
   it("invalidates cache and emits pub/sub on mutate", async () => {

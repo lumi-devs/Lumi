@@ -1,4 +1,8 @@
-import { ModuleManager, moduleCommands, PermitPanel } from "@lumi/admin";
+import {
+  handleHubInteraction,
+  moduleCommands,
+  PermitPanel,
+} from "@lumi/admin";
 import {
   boot,
   createAboutCommand,
@@ -15,6 +19,7 @@ import {
   createRpcServer,
   errorMessage,
   logger,
+  ModuleManager,
   redisOptionsFromEnv,
   registerClientEvents,
   registerShutdownHandlers,
@@ -255,6 +260,7 @@ async function main(): Promise<void> {
     scheduler,
     createPermitPanel: (guildId, interaction) =>
       new PermitPanel({ permitRepo, guildId, interaction, moduleLoader }),
+    handleComponentInteraction: handleHubInteraction,
   });
 
   await boot({ token: process.env.BOT_TOKEN ?? "", client });

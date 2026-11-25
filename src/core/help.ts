@@ -8,10 +8,10 @@ import {
   hasPermitAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
-} from "../admin/access.js";
-import type { ConfigService } from "../admin/services/ConfigService.js";
+} from "./access.js";
+import type { ConfigService } from "./ConfigService.js";
 import type { BuiltinCommandDefinition, CommandRegistry } from "./modules.js";
-import { isBotOwner } from "./owner.js";
+import { isBotOwner } from "@lumi/permits";
 
 interface HelpOptions {
   registry: CommandRegistry;

@@ -4,7 +4,7 @@ import {
   hasAdminAccess,
   hasPermitAccess,
   roleIdsFrom,
-} from "../../src/admin/access.ts";
+} from "../../src/core/access.ts";
 
 function permits(allowed: boolean) {
   return {

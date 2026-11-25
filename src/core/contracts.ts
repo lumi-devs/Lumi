@@ -13,8 +13,8 @@ import type * as Ui from "@lumi/ui";
 import type { PrismaClient } from "@prisma/client";
 import type { Client, PermissionFlagsBits } from "discord.js";
 import type { Redis } from "ioredis";
-import type { ConfigService } from "../admin/services/ConfigService.js";
-import type { ModuleManager } from "../admin/services/ModuleManager.js";
+import type { ConfigService } from "./ConfigService.js";
+import type { ModuleManager } from "./ModuleManager.js";
 
 export interface BotServices {
   readonly client: Client;

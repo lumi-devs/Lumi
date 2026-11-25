@@ -11,7 +11,7 @@ import {
   hasPermitAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
-} from "../admin/access.js";
+} from "./access.js";
 import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 import type { BotServices } from "./contracts.js";
 import type { ErrorStore } from "./errorStore.js";
@@ -22,9 +22,9 @@ import {
   type RegisteredCommand,
   servicesForModule,
 } from "./modules.js";
-import { isBotOwner } from "./owner.js";
+import { isBotOwner } from "@lumi/permits";
 
-const DefaultPrefix = process.env.DEFAULT_PREFIX ?? ",";
+export const DefaultPrefix = process.env.DEFAULT_PREFIX ?? ",";
 const UserMention = /^<@!?(\d+)>$/;
 const RoleMention = /^<@&(\d+)>$/;
 const ChannelMention = /^<#(\d+)>$/;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ModuleManager } from "../../src/admin/services/ModuleManager.ts";
+import { ModuleManager } from "../../src/core/ModuleManager.ts";
 
 function setup() {
   const moduleLoader = { setEnabled: vi.fn(async () => {}) };

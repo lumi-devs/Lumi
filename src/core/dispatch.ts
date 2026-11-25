@@ -13,9 +13,7 @@ import {
   hasPermitAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
-} from "../admin/access.js";
-import { handleHubInteraction } from "../admin/panel/HubPanel.js";
-import type { PermitPanel } from "../admin/panel/PermitPanel.js";
+} from "./access.js";
 import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 import { handlePingButton } from "./commands.js";
 import type { BotServices } from "./contracts.js";
@@ -23,7 +21,13 @@ import type { ErrorStore } from "./errorStore.js";
 import { commandErrorCard } from "./errors.js";
 import { isModuleLocked } from "./locks.js";
 import { type CommandRegistry, servicesForModule } from "./modules.js";
-import { isBotOwner } from "./owner.js";
+import { isBotOwner } from "@lumi/permits";
+
+export interface PermitPanelLike {
+  handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void>;
+  handleInteraction(interaction: ButtonInteraction): Promise<void>;
+  handleSelectMenu(interaction: AnySelectMenuInteraction): Promise<void>;
+}
 
 export type BotInteraction =
   ButtonInteraction | AnySelectMenuInteraction | ModalSubmitInteraction;
@@ -35,7 +39,14 @@ export interface DispatchContext {
   services: BotServices;
   logger: { error(message: string, meta?: unknown): void };
   errorStore: ErrorStore;
-  createPermitPanel(guildId: string, interaction: BotInteraction): PermitPanel;
+  createPermitPanel(
+    guildId: string,
+    interaction: BotInteraction,
+  ): PermitPanelLike;
+  handleComponentInteraction?: (
+    interaction: BotInteraction,
+    services: BotServices,
+  ) => Promise<boolean>;
 }
 
 async function handleAutocomplete(
@@ -423,7 +434,12 @@ async function handleComponent(
   ) {
     return;
   }
-  if (await handleHubInteraction(interaction, context.services)) return;
+  if (
+    context.handleComponentInteraction &&
+    (await context.handleComponentInteraction(interaction, context.services))
+  ) {
+    return;
+  }
   if (!interaction.customId.startsWith("permit_")) return;
 
   const guildId = interaction.guildId;

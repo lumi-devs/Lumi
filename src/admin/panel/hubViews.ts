@@ -11,7 +11,8 @@ import {
   type MessageActionRowComponentBuilder,
 } from "discord.js";
 import type { BotServices } from "../../core/contracts.js";
-import { formatPermitNodes } from "../permits/nodes.js";
+import { DefaultPrefix } from "../../core/prefix.js";
+import { formatPermitNodes } from "../../core/permitNodes.js";
 import { renderAddonPanel } from "./addonViews.js";
 import {
   type HubInteraction,
@@ -21,7 +22,6 @@ import {
 } from "./common.js";
 import { moduleStates, renderModules } from "./moduleList.js";
 
-const DefaultPrefix = ",";
 
 function currentPrefix(settings: Record<string, unknown>): string {
   return typeof settings.prefix === "string" && settings.prefix.length > 0

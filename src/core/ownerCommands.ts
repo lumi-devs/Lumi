@@ -1,4 +1,4 @@
-import type { ConfigService, GuildSettings } from "@lumi/admin";
+import type { ConfigService, GuildSettings } from "./ConfigService.js";
 import type { DbHelpers } from "@lumi/db";
 import { errorMessage } from "@lumi/foundation";
 import * as ui from "@lumi/ui";

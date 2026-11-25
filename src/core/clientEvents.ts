@@ -2,15 +2,18 @@ import type { Logger } from "@lumi/foundation";
 import type { ModuleLoader } from "@lumi/module-runtime";
 import type { DistributedScheduler } from "@lumi/scheduler";
 import type { Client, Guild } from "discord.js";
-import type { PermitPanel } from "../admin/panel/PermitPanel.js";
 import { isGuildBlacklisted, isUserBlacklisted } from "./blacklist.js";
 import type { CommandSync } from "./commandSync.js";
 import type { BotServices } from "./contracts.js";
-import { type BotInteraction, handleInteraction } from "./dispatch.js";
+import {
+  type BotInteraction,
+  handleInteraction,
+  type PermitPanelLike,
+} from "./dispatch.js";
 import type { ErrorStore } from "./errorStore.js";
 import type { GuildSync } from "./guildSync.js";
 import type { CommandRegistry } from "./modules.js";
-import { isBotOwner } from "./owner.js";
+import { isBotOwner } from "@lumi/permits";
 import { handlePrefixMessage } from "./prefix.js";
 
 export interface ClientEventsOptions {
@@ -26,7 +29,11 @@ export interface ClientEventsOptions {
   readonly createPermitPanel: (
     guildId: string,
     interaction: BotInteraction,
-  ) => PermitPanel;
+  ) => PermitPanelLike;
+  readonly handleComponentInteraction?: (
+    interaction: BotInteraction,
+    services: BotServices,
+  ) => Promise<boolean>;
 }
 
 export function registerClientEvents(options: ClientEventsOptions): void {
@@ -41,6 +48,7 @@ export function registerClientEvents(options: ClientEventsOptions): void {
     guildSync,
     scheduler,
     createPermitPanel,
+    handleComponentInteraction,
   } = options;
 
   client.on("interactionCreate", async (interaction) => {
@@ -52,6 +60,7 @@ export function registerClientEvents(options: ClientEventsOptions): void {
       logger,
       errorStore,
       createPermitPanel,
+      handleComponentInteraction,
     });
   });
 

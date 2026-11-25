@@ -18,6 +18,7 @@ export {
   evaluatePermit,
   isBotOwner,
   isGuildOwner,
+  ownerIds,
   PermitResolver,
 } from "./evaluator.js";
 export { PermitRepository } from "./repository.js";

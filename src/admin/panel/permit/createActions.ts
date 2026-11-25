@@ -14,7 +14,7 @@ import {
   namespaceForNode,
   suggestPermitName,
   uniquePermitName,
-} from "../../permits/nodes.js";
+} from "../../../core/permitNodes.js";
 import type { PermitHost } from "./host.js";
 
 const SelectOptionLimit = 25;

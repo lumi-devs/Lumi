@@ -1,7 +1,6 @@
 import type { PermitRepository } from "@lumi/permits";
 import { type Client, PermissionFlagsBits } from "discord.js";
-
-import type { ConfigService } from "./services/ConfigService.js";
+import type { ConfigService } from "./ConfigService.js";
 
 export interface PermitAccessOptions {
   guildId: string;
@@ -10,12 +9,11 @@ export interface PermitAccessOptions {
   channelId?: string;
   guildOwnerId?: string | null;
   enforcePermits?: boolean;
-
   client?: unknown;
   permits: PermitRepository;
 }
 
-interface AdminAccessOptions extends PermitAccessOptions {
+export interface AdminAccessOptions extends PermitAccessOptions {
   memberPermissions?: { has(permission: bigint): boolean } | null;
 }
 
@@ -46,7 +44,7 @@ export async function hasPermitAccess(
   return result.allowed;
 }
 
-interface MemberRoles {
+export interface MemberRoles {
   roles?: string[] | { cache?: { values(): IterableIterator<{ id: string }> } };
 }
 

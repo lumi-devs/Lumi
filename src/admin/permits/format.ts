@@ -1,7 +1,7 @@
 import type { PermitTargetType, Polarity } from "@lumi/permits";
 import { formatTimestamp as formatDiscordTimestamp } from "@lumi/ui";
 import { channelMention, roleMention, userMention } from "discord.js";
-import { GlobalPermitNamespace, permitNamespaces } from "./nodes.js";
+import { GlobalPermitNamespace, permitNamespaces } from "../../core/permitNodes.js";
 
 export const formatTimestamp = (value: Date | string): string =>
   formatDiscordTimestamp(value, "F");

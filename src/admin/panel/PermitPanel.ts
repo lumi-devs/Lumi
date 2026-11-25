@@ -11,7 +11,7 @@ import {
   permitFlowKey,
   setPermitFlow,
 } from "../permits/flows.js";
-import { permitNodeCatalog } from "../permits/nodes.js";
+import { permitNodeCatalog } from "../../core/permitNodes.js";
 import {
   handleAssignAction,
   handleAssignSelect,

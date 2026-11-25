@@ -3,6 +3,8 @@
   import ConfirmForm from "#lib/components/ConfirmForm.svelte";
   let { data, form } = $props();
 
+  type ModuleItem = (typeof data.groups)[number]["modules"][number];
+
   let enabledOverrides = $state<Record<string, boolean>>({});
   let pendingModules = $state<Record<string, boolean>>({});
 
@@ -15,7 +17,7 @@
   }
 </script>
 
-{#snippet toggleForm(module: any, size: boolean)}
+{#snippet toggleForm(module: ModuleItem, size: boolean)}
   <form
     method="POST"
     action="?/toggle"
@@ -52,7 +54,7 @@
   </form>
 {/snippet}
 
-{#snippet configureLink(module: any, size: boolean)}
+{#snippet configureLink(module: ModuleItem, size: boolean)}
   <a
     class="button secondary"
     class:small={size}

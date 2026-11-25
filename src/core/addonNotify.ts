@@ -1,7 +1,7 @@
 import type { AddonNotifier } from "@lumi/downloader";
 import { makeInfoCard, makeWarningCard } from "@lumi/ui";
 import type { Client } from "discord.js";
-import { ownerIds } from "./owner.js";
+import { ownerIds } from "@lumi/permits";
 
 export function createAddonNotifier(client: Client): AddonNotifier {
   return async (report) => {

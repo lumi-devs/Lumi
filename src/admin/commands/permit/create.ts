@@ -9,7 +9,7 @@ import {
   parseNodeList,
   suggestPermitName,
   uniquePermitName,
-} from "../../permits/nodes.js";
+} from "../../../core/permitNodes.js";
 import { openPermitsRow, replyPermitError } from "./shared.js";
 
 export async function createPermit(

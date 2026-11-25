@@ -21,6 +21,7 @@ import {
   TextInputStyle,
 } from "discord.js";
 import type { BotServices } from "../../core/contracts.js";
+import { DefaultPrefix } from "../../core/prefix.js";
 import {
   backButton,
   cut,
@@ -32,7 +33,6 @@ import { escalationSummary, renderEscalationEditor } from "./escalation.js";
 
 const FieldsPerPage = 4;
 const MaxOptions = 25;
-const DefaultPrefix = ",";
 
 type FieldValue = unknown;
 

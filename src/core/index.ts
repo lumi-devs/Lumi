@@ -19,7 +19,32 @@ export { createClient } from "./gateway.js";
 export { createGuildSync } from "./guildSync.js";
 export { createHelpCommand } from "./help.js";
 export { boot, shutdown } from "./lifecycle.js";
-export { isBotOwner, ownerIds } from "./owner.js";
+export { isBotOwner, ownerIds } from "@lumi/permits";
+export { ConfigService, type GuildSettings } from "./ConfigService.js";
+export { ModuleManager } from "./ModuleManager.js";
+export {
+  hasAdminAccess,
+  hasPermitAccess,
+  permitEnforcementEnabled,
+  roleIdsFrom,
+} from "./access.js";
+export {
+  collectPermitNodes,
+  formatPermitNodeLines,
+  formatPermitNodes,
+  GlobalPermitNamespace,
+  isValidNode,
+  namespaceForNode,
+  namespaceLabel,
+  nodeDescription,
+  nodesInNamespace,
+  parseNodeList,
+  permitNamespaces,
+  permitNodeCatalog,
+  readablePermitName,
+  suggestPermitName,
+  uniquePermitName,
+} from "./permitNodes.js";
 export { createOwnerCommands } from "./ownerCommands.js";
 export { handlePrefixMessage } from "./prefix.js";
 export { redisOptionsFromEnv } from "./redis.js";

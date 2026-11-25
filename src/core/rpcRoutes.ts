@@ -14,7 +14,7 @@ import {
   restoreBackup,
   toBackupRecord,
 } from "../../modules/shared/backup-store/index.js";
-import { permitNodeCatalog } from "../admin/permits/nodes.js";
+import { permitNodeCatalog } from "./permitNodes.js";
 
 export interface StatusRouteOptions {
   client: Client;

@@ -5,8 +5,8 @@ import {
   hasAdminAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
-} from "../../access.js";
-import { isValidNode, permitNodeCatalog } from "../../permits/nodes.js";
+} from "../../../core/access.js";
+import { isValidNode, permitNodeCatalog } from "../../../core/permitNodes.js";
 
 export async function autocompleteNode(
   interaction: AutocompleteInteraction,

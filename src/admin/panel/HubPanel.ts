@@ -5,7 +5,7 @@ import {
   hasAdminAccess,
   permitEnforcementEnabled,
   roleIdsFrom,
-} from "../access.js";
+} from "../../core/access.js";
 import { handleAddonInteraction } from "./addons.js";
 import {
   type MessageModalSubmit,

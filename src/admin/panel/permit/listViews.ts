@@ -12,7 +12,7 @@ import {
 } from "@lumi/ui";
 import { ButtonStyle } from "discord.js";
 import { formatTimestamp, polarityIcon } from "../../permits/format.js";
-import { formatPermitNodes } from "../../permits/nodes.js";
+import { formatPermitNodes } from "../../../core/permitNodes.js";
 import { backButton, cut } from "../common.js";
 import { paginate } from "../pages.js";
 import type { PermitCardContext } from "./host.js";

@@ -16,7 +16,7 @@ import {
   nodesInNamespace,
   permitNamespaces,
   suggestPermitName,
-} from "../../permits/nodes.js";
+} from "../../../core/permitNodes.js";
 import { backButton } from "../common.js";
 import type { PermitCardContext } from "./host.js";
 
